@@ -45,8 +45,16 @@ class SettingsHighlightScope extends StatefulWidget {
 
 class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
   final Set<String> _mountedIds = {};
+
+  /// Highlight ids already delivered during this page visit: the target was
+  /// reached and its pulse started. Delivery is sticky for the visit — a row
+  /// that unmounts (scrolled out of the lazy list) and remounts must not
+  /// treat the unchanged id as pending again, or newly mounted rows start
+  /// seeking and yank the list back to the end.
+  final Set<String> _deliveredIds = {};
   Object? _seeker;
   String? _queryId;
+  String? _lastHighlightId;
 
   @override
   void didChangeDependencies() {
@@ -54,11 +62,36 @@ class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
     _queryId = GoRouter.maybeOf(
       context,
     )?.state.uri.queryParameters['highlight'];
+    _dropStaleDelivery();
+  }
+
+  @override
+  void didUpdateWidget(SettingsHighlightScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _dropStaleDelivery();
+  }
+
+  void _dropStaleDelivery() {
+    final current = highlightId;
+    if (current != _lastHighlightId) {
+      _lastHighlightId = current;
+      _deliveredIds.clear();
+    }
   }
 
   String? get highlightId => widget.highlightId ?? _queryId;
 
   bool isMounted(String id) => _mountedIds.contains(id);
+
+  /// True once the highlight for [id] has been delivered this page visit.
+  bool isDelivered(String id) => _deliveredIds.contains(id);
+
+  /// Records that the highlight for [id] reached its target and started
+  /// pulsing. Afterwards no row may seek or highlight again for [id] until
+  /// the highlight id changes.
+  void markDelivered(String id) {
+    _deliveredIds.add(id);
+  }
 
   void register(String id) => _mountedIds.add(id);
 
@@ -176,6 +209,7 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
     _scope?.register(widget.id);
     if (_armed) return;
     if (_isTarget(context)) {
+      if (_scope?.isDelivered(widget.id) ?? false) return;
       _armed = true;
       _done = false;
       _fade.value = 1;
@@ -184,6 +218,7 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
     }
     final pending = _scope?.highlightId;
     if (!_seekArmed && pending != null && pending != widget.id) {
+      if (_scope!.isDelivered(pending)) return;
       _seekArmed = true;
       final scope = _scope!;
       WidgetsBinding.instance.addPostFrameCallback((_) => _maybeSeek(scope));
@@ -197,11 +232,14 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
   Future<void> _maybeSeek(SettingsHighlightScopeState scope) async {
     final pending = scope.highlightId;
     if (pending == null || _cancelled || !mounted) return;
-    if (scope.isMounted(pending)) return;
+    if (scope.isDelivered(pending) || scope.isMounted(pending)) return;
     if (!scope.claimSeek(this)) return;
     _seeking = true;
     try {
-      while (!_cancelled && mounted && !scope.isMounted(pending)) {
+      while (!_cancelled &&
+          mounted &&
+          !scope.isDelivered(pending) &&
+          !scope.isMounted(pending)) {
         final position = Scrollable.maybeOf(context)?.position;
         if (position == null || !position.hasPixels) return;
         if (!position.hasContentDimensions ||
@@ -236,6 +274,7 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
           : const Duration(milliseconds: 300),
     );
     if (_cancelled || !mounted) return;
+    _scope?.markDelivered(widget.id);
     if (reduceMotion) {
       _pulse.value = 1;
       await Future<void>.delayed(const Duration(seconds: 2));

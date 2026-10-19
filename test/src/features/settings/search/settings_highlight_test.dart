@@ -77,13 +77,18 @@ Future<void> _pumpTarget(
 // Row 75 of 80 in the 600 px test viewport: never mounted until the scope's
 // seeker steps the list toward it. Driven through the scope (no activeId),
 // like the real screens driven by the route query.
-Future<void> _pumpLongList(WidgetTester tester, String highlightId) async {
+Future<void> _pumpLongList(
+  WidgetTester tester,
+  String highlightId, {
+  ScrollController? controller,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: SettingsHighlightScope(
           highlightId: highlightId,
           child: ListView.builder(
+            controller: controller,
             itemCount: 80,
             itemBuilder: (context, i) => SettingsHighlightTarget(
               id: 'item$i',
@@ -211,6 +216,50 @@ void main() {
       expect(_highlightOf('Setting 75'), findsNothing);
       expect(find.text('Setting 75'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('scrolling after delivery never seeks again', (tester) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await _pumpLongList(tester, 'item75', controller: controller);
+
+      for (
+        var i = 0;
+        i < 60 && find.text('Setting 75').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.text('Setting 75'), findsOneWidget);
+
+      // Wait for the pulse tint, then run the highlight to completion: the
+      // scope marks the id delivered.
+      for (
+        var i = 0;
+        i < 60 && _tintedDecoration(tester, 'Setting 75') == null;
+        i++
+      ) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(_tintedDecoration(tester, 'Setting 75'), isNotNull);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(_highlightOf('Setting 75'), findsNothing);
+
+      // The user scrolls the delivered target back out of the lazy list.
+      // Newly mounted rows see the unchanged highlight id, but delivery is
+      // sticky for the visit: no row seeks, so the offset stays put instead
+      // of jumping back to the end.
+      controller.jumpTo(1500);
+      await tester.pump();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(controller.offset, 1500);
+      expect(_highlightOf('Setting 75'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpAndSettle();
     });
   });
 }
