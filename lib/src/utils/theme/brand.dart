@@ -172,7 +172,7 @@ Widget _brandRow({
         child: DefaultTextStyle.merge(
           style: TextStyle(
             color: color,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
           maxLines: 1,

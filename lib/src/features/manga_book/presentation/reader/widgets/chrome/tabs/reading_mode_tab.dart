@@ -505,7 +505,7 @@ class _GroupHeading extends StatelessWidget {
             text,
             style: context.theme.textTheme.titleSmall?.copyWith(
               color: context.theme.colorScheme.primary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

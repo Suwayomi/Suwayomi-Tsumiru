@@ -127,8 +127,8 @@ flutter:
       fonts:
         - asset: assets/fonts/Font-Awesome-7-Brands-Regular-400.otf
     # Inter, the app typeface (theme-kit brand rule): Regular 400, Medium 500,
-    # SemiBold 600. No Bold file; 700+ falls back to SemiBold. Scripts Inter
-    # doesn't cover use the platform fonts (no fontFamilyFallback on the theme).
+    # SemiBold 600, Bold 700. Scripts Inter doesn't cover use the platform
+    # fonts (no fontFamilyFallback on the theme).
     - family: Inter
       fonts:
         - asset: assets/fonts/inter/Inter-Regular.ttf
@@ -137,6 +137,8 @@ flutter:
           weight: 500
         - asset: assets/fonts/inter/Inter-SemiBold.ttf
           weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700
 
 # flutter_gen removed from the build pipeline: flutter_gen_runner's build.yaml is
 # incompatible with build_runner_core 9.x (Flutter 3.35 / Dart 3.9). Its output,
