@@ -155,26 +155,24 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     // read it back: refresh tokens, the Basic credential and the session
     // cookie are what keep a session alive.
     unawaited(storage.delete(key: _kPasswordKey).catchError((Object _) {}));
-    final results = await Future.wait([
-      readSecureOrAbsent(storage, _kSimpleCookieKey),
-      readSecureOrAbsent(storage, _kUiAccessKey),
-      readSecureOrAbsent(storage, _kUiRefreshKey),
-      readSecureOrAbsent(storage, _kAccountBindingKey),
-    ]);
+    final simpleCookie = await readSecureOrAbsent(storage, _kSimpleCookieKey);
+    final accessToken = await readSecureOrAbsent(storage, _kUiAccessKey);
+    final refreshToken = await readSecureOrAbsent(storage, _kUiRefreshKey);
+    final binding = await readSecureOrAbsent(storage, _kAccountBindingKey);
     return AuthCredentialsState(
       sessionEpoch: _sessionEpoch,
       sessionChanging: sessionChanging,
       accountBinding: AccountBinding.decode(
-        results[3],
-        accessToken: results[1],
-        refreshToken: results[2],
+        binding,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
       ),
-      simpleLoginCookie: results[0],
-      uiAccessToken: results[1],
-      uiRefreshToken: results[2],
-      uiAccessTokenExpiresAt: results[1] == null
+      simpleLoginCookie: simpleCookie,
+      uiAccessToken: accessToken,
+      uiRefreshToken: refreshToken,
+      uiAccessTokenExpiresAt: accessToken == null
           ? null
-          : decodeJwtExp(results[1]!),
+          : decodeJwtExp(accessToken),
     );
   }
 

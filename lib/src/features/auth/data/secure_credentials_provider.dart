@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -38,18 +39,31 @@ const kSecureStorage = FlutterSecureStorage(
   mOptions: MacOsOptions(usesDataProtectionKeychain: false),
 );
 
-/// A refused keychain read (macOS denied prompt) throws. Read it as absent so
-/// launch proceeds; a throwing build is retried by Riverpod and re-prompts.
+bool _keychainRefused = false;
+
+/// Whether the keychain refused a read in this process. Once it has, launch
+/// reads skip the keychain, so one launch asks the user at most once.
+bool get keychainRefusedThisRun => _keychainRefused;
+
+@visibleForTesting
+void debugResetKeychainRefusal() => _keychainRefused = false;
+
+/// Reads [key] on the launch path. A refused keychain read (macOS denied
+/// prompt) reads as absent so launch proceeds, and later reads skip the
+/// keychain. Callers read one at a time, so a refusal stops the rest before
+/// they prompt. A throwing build would be retried by Riverpod and re-prompt.
 Future<String?> readSecureOrAbsent(
   FlutterSecureStorage storage,
   String key,
 ) async {
+  if (_keychainRefused) return null;
   try {
     return await storage.read(key: key);
   } catch (error) {
+    _keychainRefused = true;
     logger.w(
-      'Secure storage read refused for $key, treating as absent: '
-      '${error is PlatformException ? error.code : error.runtimeType}',
+      'Keychain refused a read for $key; treating credentials as absent for '
+      'this run: ${error is PlatformException ? error.code : error.runtimeType}',
     );
     return null;
   }

@@ -12,10 +12,12 @@ import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/basic_auth_migration.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
+import 'package:tsumiru/src/features/offline/data/background/record_seal.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 
 class _DeniedStorage implements FlutterSecureStorage {
   int reads = 0;
+  final List<String> writes = [];
 
   @override
   Future<String?> read({
@@ -30,6 +32,18 @@ class _DeniedStorage implements FlutterSecureStorage {
     reads++;
     throw PlatformException(code: '-128', message: 'User canceled');
   }
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => writes.add(key);
 
   @override
   Future<void> delete({
@@ -87,6 +101,8 @@ ProviderContainer _container(FlutterSecureStorage storage) {
 }
 
 void main() {
+  setUp(debugResetKeychainRefusal);
+
   test(
     'a refused keychain read leaves the credentials absent instead of stalling startup',
     () async {
@@ -109,6 +125,38 @@ void main() {
       expect(headers, isEmpty);
     },
   );
+
+  test('startup asks the keychain once when it refuses a read', () async {
+    final storage = _DeniedStorage();
+    final container = _container(storage);
+
+    final auth = await container
+        .read(authCredentialsStoreProvider.future)
+        .timeout(const Duration(seconds: 5));
+    final basic = await container
+        .read(credentialsProvider.future)
+        .timeout(const Duration(seconds: 5));
+    final headers = await container
+        .read(customHttpHeadersProvider.future)
+        .timeout(const Duration(seconds: 5));
+
+    expect(storage.reads, 1);
+    expect(auth.uiAccessToken, isNull);
+    expect(basic, isNull);
+    expect(headers, isEmpty);
+  });
+
+  test('a refused keychain never creates a new record key', () async {
+    RecordSeal.debugKey = null;
+    final storage = _DeniedStorage();
+    await RecordSeal.load(
+      storage,
+      create: true,
+    ).timeout(const Duration(seconds: 5));
+    expect(RecordSeal.ready, isFalse);
+    expect(storage.reads, 1);
+    expect(storage.writes, isEmpty);
+  });
 
   test('a refused keychain read is not retried', () async {
     final storage = _DeniedStorage();
