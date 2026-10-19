@@ -363,6 +363,10 @@ class QuickSearchRoute extends ShellRouteData {
         ),
         child: GlobalShortcutHost(child: SearchStackScreen(child: navigator)),
       );
+
+  @override
+  Page<void> pageBuilder(context, state, navigator) =>
+      navigationShellPage(context, state, builder(context, state, navigator));
 }
 
 // Shell Routes
@@ -378,6 +382,14 @@ class NavigationShellRoute extends StatefulShellRouteData {
       return NavigationShellScreen(child: navigationShell);
     },
   );
+
+  @override
+  Page<void> pageBuilder(context, state, navigationShell) =>
+      navigationShellPage(
+        context,
+        state,
+        builder(context, state, navigationShell),
+      );
 }
 
 final navigationShellStateProvider = Provider((ref) => NavigationShellState());

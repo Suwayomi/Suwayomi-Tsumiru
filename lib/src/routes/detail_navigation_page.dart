@@ -24,6 +24,21 @@ Page<void> detailNavigationPage(
   );
 }
 
+/// The outer shells' own page ([QuickSearchRoute] and [NavigationShellRoute]):
+/// whenever either enters with the sidebar inside (a sidebar jump with no
+/// main shell underneath, e.g. after a deep link or restart, or the root
+/// page leaving from above it), the default slide would animate the sidebar
+/// along with the page. It needs the same fade as the detail pages, so the
+/// sidebar stays still in every direction. Branch switches never rebuild
+/// these pages; pushes above them keep their own transitions.
+Page<void> navigationShellPage(
+  BuildContext context,
+  GoRouterState state,
+  Widget shell,
+) {
+  return _detailNavigationPage(context, state, shell);
+}
+
 /// The shell's own page: entering or leaving the detail shell from the main
 /// navigation transitions this page (sidebar included), so it needs the same
 /// fade as the routes above. Pushes inside the shell animate only the inner
