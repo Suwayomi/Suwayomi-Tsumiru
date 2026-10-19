@@ -63,6 +63,7 @@ import '../widgets/shell/detail_navigation_shell_screen.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
 
 part 'router_config.g.dart';
+part 'detail_navigation_page.dart';
 part 'sub_routes/browser_routes.dart';
 part 'sub_routes/common_routes.dart';
 part 'sub_routes/downloads_routes.dart';

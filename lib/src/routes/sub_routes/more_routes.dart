@@ -31,6 +31,10 @@ class AboutRoute extends GoRouteData with $AboutRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: AboutScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const AboutScreen());
 }
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {
@@ -41,6 +45,10 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: SettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const SettingsScreen());
 }
 
 class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
@@ -51,6 +59,10 @@ class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: LibrarySettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const LibrarySettingsScreen());
 }
 
 class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
@@ -61,6 +73,10 @@ class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: EditCategoryScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const EditCategoryScreen());
 }
 
 class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
@@ -71,6 +87,10 @@ class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: ReaderSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const ReaderSettingsScreen());
 }
 
 class AppearanceSettingsRoute extends GoRouteData
@@ -82,6 +102,10 @@ class AppearanceSettingsRoute extends GoRouteData
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: AppearanceScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const AppearanceScreen());
 }
 
 class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
@@ -92,6 +116,10 @@ class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: GeneralScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const GeneralScreen());
 }
 
 class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
@@ -102,6 +130,10 @@ class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: BrowseSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const BrowseSettingsScreen());
 }
 
 class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
@@ -112,6 +144,10 @@ class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: ExtensionStoreScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const ExtensionStoreScreen());
 }
 
 class BackupRoute extends GoRouteData with $BackupRoute {
@@ -122,6 +158,10 @@ class BackupRoute extends GoRouteData with $BackupRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: BackupScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const BackupScreen());
 }
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
@@ -132,6 +172,10 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: ServerScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const ServerScreen());
 }
 
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
@@ -142,6 +186,10 @@ class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: DownloadsSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const DownloadsSettingsScreen());
 }
 
 class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
@@ -152,6 +200,10 @@ class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: OfflineSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const OfflineSettingsScreen());
 }
 
 class NotificationsSettingsRoute extends GoRouteData
@@ -163,6 +215,10 @@ class NotificationsSettingsRoute extends GoRouteData
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: NotificationsSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const NotificationsSettingsScreen());
 }
 
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
@@ -173,6 +229,10 @@ class ConnectionRoute extends GoRouteData with $ConnectionRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: ConnectionScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const ConnectionScreen());
 }
 
 class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
@@ -183,6 +243,10 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: TrackingSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const TrackingSettingsScreen());
 }
 
 class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
@@ -193,6 +257,10 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: SyncYomiSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const SyncYomiSettingsScreen());
 }
 
 class KoreaderSyncSettingsRoute extends GoRouteData
@@ -204,6 +272,10 @@ class KoreaderSyncSettingsRoute extends GoRouteData
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: KoreaderSyncSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const KoreaderSyncSettingsScreen());
 }
 
 class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
@@ -214,6 +286,10 @@ class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const DetailNavigationShellScreen(child: HotkeysSettingsScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const HotkeysSettingsScreen());
 }
 
 class AccountRoute extends GoRouteData with $AccountRoute {
@@ -224,6 +300,10 @@ class AccountRoute extends GoRouteData with $AccountRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: AccountScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const AccountScreen());
 }
 
 class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
@@ -234,4 +314,8 @@ class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
   @override
   Widget build(context, state) =>
       const DetailNavigationShellScreen(child: ManageUsersScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const ManageUsersScreen());
 }
