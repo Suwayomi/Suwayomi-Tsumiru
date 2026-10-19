@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -54,6 +55,7 @@ Future<GoRouter> _pumpPush(
   WidgetTester tester, {
   required Size size,
   bool reduceMotion = false,
+  TargetPlatform? platform,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -92,6 +94,7 @@ Future<GoRouter> _pumpPush(
         upcomingProvider.overrideWith((ref) async => UpcomingData.empty),
       ],
       child: MaterialApp.router(
+        theme: platform == null ? null : ThemeData(platform: platform),
         routerConfig: router,
         builder: (context, child) => ReduceMotionScope(child: child!),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -104,7 +107,53 @@ Future<GoRouter> _pumpPush(
   return router;
 }
 
+CustomTransitionPage _settingsPage(WidgetTester tester) {
+  final route = ModalRoute.of(tester.element(find.byType(SettingsScreen)));
+  return route!.settings as CustomTransitionPage;
+}
+
 void main() {
+  testWidgets(
+    'phone page uses the Android builder timing',
+    (tester) async {
+      final router = await _pumpPush(
+        tester,
+        size: const Size(412, 900),
+        platform: TargetPlatform.android,
+      );
+      unawaited(router.push(const SettingsRoute().location));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      final builder = const PredictiveBackPageTransitionsBuilder();
+      final page = _settingsPage(tester);
+      expect(page.transitionDuration, builder.transitionDuration);
+      expect(page.reverseTransitionDuration, builder.reverseTransitionDuration);
+      expect(page.transitionDuration, const Duration(milliseconds: 450));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'phone page uses the iOS builder timing',
+    (tester) async {
+      final router = await _pumpPush(
+        tester,
+        size: const Size(412, 900),
+        platform: TargetPlatform.iOS,
+      );
+      unawaited(router.push(const SettingsRoute().location));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      final builder = const CupertinoPageTransitionsBuilder();
+      final page = _settingsPage(tester);
+      expect(page.transitionDuration, builder.transitionDuration);
+      expect(page.reverseTransitionDuration, builder.reverseTransitionDuration);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'settings fades without scaling the sidebar at 1400x900',
     (tester) async {
@@ -151,18 +200,39 @@ void main() {
   );
 
   testWidgets(
-    'settings keeps the default MaterialPage transition at 412x900',
+    'settings keeps the platform transition at 412x900',
     (tester) async {
-      final router = await _pumpPush(tester, size: const Size(412, 900));
+      final router = await _pumpPush(
+        tester,
+        size: const Size(412, 900),
+        platform: TargetPlatform.android,
+      );
       unawaited(router.push(const SettingsRoute().location));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 500));
+      // Half-way through the platform transition.
+      await tester.pump(const Duration(milliseconds: 150));
 
       expect(find.byType(BigScreenNavigationBar), findsNothing);
       final route = ModalRoute.of(tester.element(find.byType(SettingsScreen)));
       expect(route, isA<PageRoute>());
-      expect(route!.settings, isA<MaterialPage>());
+      // Stable identity: a CustomTransitionPage even on phones, so resizing
+      // across the 600 px breakpoint updates the route in place.
+      final page = route!.settings;
+      expect(page, isA<CustomTransitionPage>());
+      final builder = const PredictiveBackPageTransitionsBuilder();
+      expect(
+        (page as CustomTransitionPage).transitionDuration,
+        builder.transitionDuration,
+      );
+      expect(
+        page.reverseTransitionDuration,
+        builder.reverseTransitionDuration,
+      );
+      // The platform transition is actually in flight, not instant.
+      expect(tester.hasRunningAnimations, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.hasRunningAnimations, isFalse);
       expect(tester.takeException(), isNull);
     },
   );
