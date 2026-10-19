@@ -232,13 +232,14 @@ final topBarSlotRegistryProvider =
       TopBarSlotRegistry.new,
     );
 
-/// Counts the mounted merged desktop top bars, so [DesktopWindowScaffold]
+/// Counts the displayed merged desktop top bars, so [DesktopWindowScaffold]
 /// knows when its standalone title strip is redundant. The bar draws itself
-/// only inside the navigation shells, so a non-zero count means a shell is
-/// showing the bar; routes outside the shells (reader, onboarding) mount no
-/// bar and keep the strip with its window controls and drag area. A count,
-/// not a flag: shell transitions can mount the incoming bar before the
-/// outgoing one unmounts.
+/// only inside the navigation shells, and each bar registers only while its
+/// own route is on top and ticking: routes pushed above the shells (reader,
+/// onboarding) leave the shell mounted offstage, which unregisters and keeps
+/// the strip with its window controls and drag area. A count, not a flag:
+/// shell transitions can mount the incoming bar before the outgoing one
+/// unmounts.
 class MergedTopBarRegistry extends Notifier<int> {
   /// False once this container (and the registry with it) is disposed, so
   /// deferred removals can skip the dead notifier. A plain field: safe to
@@ -373,20 +374,39 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   bool _scheduled = false;
   bool _shown = false;
 
+  /// Whether this bar's route currently shows it: the route on top of its
+  /// Navigator and not held offstage. Routes pushed above the shells (the
+  /// reader on the navigator above them) leave the shell mounted offstage, so
+  /// a bare mount count would keep hiding the standalone strip there.
+  bool _isBarVisible() {
+    final route = ModalRoute.of(context);
+    return (route?.isCurrent ?? true) && TickerMode.of(context);
+  }
+
+  bool _wantVisible = true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // The registry is captured here: `ref` is unusable in dispose. Published
     // post-frame: the window scaffold watches this registry, and publishing
-    // synchronously would setState it mid-build.
+    // synchronously would setState it mid-build. ModalRoute and TickerMode
+    // subscribe here, so a push or pop above this bar re-runs this and the
+    // registration follows what is displayed, not what stays mounted.
     _registry = ref.read(mergedTopBarRegistryProvider.notifier);
+    _wantVisible = _isBarVisible();
     if (_scheduled) return;
     _scheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       if (!mounted) return;
-      _shown = true;
-      _registry.show();
+      if (_wantVisible && !_shown) {
+        _shown = true;
+        _registry.show();
+      } else if (!_wantVisible && _shown) {
+        _shown = false;
+        _registry.hide();
+      }
     });
   }
 
