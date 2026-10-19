@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
@@ -50,7 +51,7 @@ double _titleBlockHeight(BuildContext context, int maxLines) =>
             maxLines +
         _kTitlePadding * 2;
 
-class MangaCoverGridTile extends StatelessWidget {
+class MangaCoverGridTile extends StatefulWidget {
   const MangaCoverGridTile({
     super.key,
     required this.manga,
@@ -66,6 +67,7 @@ class MangaCoverGridTile extends StatelessWidget {
     this.gridStyle = LibraryGridStyle.uniform,
     this.outlineOnCovers = false,
     this.limitTitleLines = true,
+    this.highlighted = false,
   });
   final MangaDto manga;
   final VoidCallback? onPressed;
@@ -103,69 +105,134 @@ class MangaCoverGridTile extends StatelessWidget {
   /// whole title slot (see [_kMaxTitleShare]).
   final bool limitTitleLines;
 
-  bool get _overlayTitle => showTitle && !titleBelow;
+  /// Extra highlight driven by an embedding row (the descriptive list tile):
+  /// hovering or keyboard-focusing the row outlines the cover the same way as
+  /// hovering or focusing the cover itself.
+  final bool highlighted;
+
+  @override
+  State<MangaCoverGridTile> createState() => _MangaCoverGridTileState();
+}
+
+class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
+  var _hovered = false;
+  var _focused = false;
+  var _pointerFocused = false;
+  late final _focusNode = FocusNode(onKeyEvent: _onKeyEvent);
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    if (_focused) setState(() {});
+  }
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (_pointerFocused && event is KeyDownEvent) {
+      setState(() => _pointerFocused = false);
+    }
+    return KeyEventResult.ignored;
+  }
+
+  bool get _overlayTitle => widget.showTitle && !widget.titleBelow;
+
+  bool get _keyboardFocused =>
+      _focused &&
+      !_pointerFocused &&
+      FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
 
   @override
   Widget build(BuildContext context) {
-    final freeform = gridStyle.isFreeform;
-    final card = _card(context, outline: outlineOnCovers, freeform: freeform);
+    final freeform = widget.gridStyle.isFreeform;
+    final card = _card(
+      context,
+      outline: widget.outlineOnCovers,
+      freeform: freeform,
+    );
     return InkResponse(
-      onTap: onPressed ??
-          () => Navigator.push(
-                context,
-                PageRouteBuilder(
-                  fullscreenDialog: true,
-                  opaque: false,
-                  pageBuilder: (context, _, _) => MangaThumbnailViewer(
-                    imageUrl: manga.thumbnailUrl ?? "",
-                  ),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                    if (context.reduceMotion) {
-                      return ReducedRouteTransition(
-                        animation: animation,
-                        child: child,
-                      );
-                    }
-
-                    const begin = Offset(-1.0, 0.0);
-                    const end = Offset.zero;
-                    const curve = Curves.ease;
-
-                    final tween = Tween(begin: begin, end: end);
-                    final curvedAnimation = CurvedAnimation(
-                      parent: animation,
-                      curve: curve,
-                    );
-
-                    return SlideTransition(
-                      position: tween.animate(curvedAnimation),
-                      child: child,
-                    );
-                  },
-                ),
+      focusNode: _focusNode,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      focusColor: Colors.transparent,
+      onTapDown: (_) => setState(() => _pointerFocused = true),
+      onHover: (hovered) => setState(() => _hovered = hovered),
+      onFocusChange: (focused) => setState(() {
+        _focused = focused;
+        if (!focused) _pointerFocused = false;
+      }),
+      onTap: () {
+        _focusNode.requestFocus();
+        if (widget.onPressed != null) {
+          widget.onPressed!();
+        } else {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              fullscreenDialog: true,
+              opaque: false,
+              pageBuilder: (context, _, _) => MangaThumbnailViewer(
+                imageUrl: widget.manga.thumbnailUrl ?? "",
               ),
-      onLongPress: onLongPress,
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                if (context.reduceMotion) {
+                  return ReducedRouteTransition(
+                    animation: animation,
+                    child: child,
+                  );
+                }
+
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                const curve = Curves.ease;
+
+                final tween = Tween(begin: begin, end: end);
+                final curvedAnimation = CurvedAnimation(
+                  parent: animation,
+                  curve: curve,
+                );
+
+                return SlideTransition(
+                  position: tween.animate(curvedAnimation),
+                  child: child,
+                );
+              },
+            ),
+          );
+        }
+      },
+      onLongPress: widget.onLongPress,
       child: freeform
           // The tile's height comes from the cover, so nothing may stretch.
           // Non-uniform bottom-aligns: the aligned grid stretches a row's tiles
           // to its tallest, so `end` gives the flush baseline.
           ? Column(
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: gridStyle == LibraryGridStyle.nonUniform
+              mainAxisAlignment: widget.gridStyle == LibraryGridStyle.nonUniform
                   ? MainAxisAlignment.end
                   : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 card,
-                if (titleBelow)
+                if (widget.titleBelow)
                   _TitleBlock(
-                    title: manga.title,
-                    limitLines: limitTitleLines,
+                    title: widget.manga.title,
+                    limitLines: widget.limitTitleLines,
                   ),
               ],
             )
-          : titleBelow
+          : widget.titleBelow
               // Uniform + title below: the cover flexes and the title takes a
               // fixed block, so every cover in a row ends up the same height.
               ? LayoutBuilder(
@@ -174,8 +241,9 @@ class MangaCoverGridTile extends StatelessWidget {
                     final cap = constraints.hasBoundedHeight
                         ? constraints.maxHeight * _kMaxTitleShare
                         : twoLines;
-                    final blockHeight =
-                        limitTitleLines ? min(twoLines, cap) : cap;
+                    final blockHeight = widget.limitTitleLines
+                        ? min(twoLines, cap)
+                        : cap;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -183,8 +251,8 @@ class MangaCoverGridTile extends StatelessWidget {
                         SizedBox(
                           height: blockHeight,
                           child: _TitleBlock(
-                            title: manga.title,
-                            limitLines: limitTitleLines,
+                            title: widget.manga.title,
+                            limitLines: widget.limitTitleLines,
                           ),
                         ),
                       ],
@@ -204,14 +272,19 @@ class MangaCoverGridTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: KBorderRadius.r12.radius,
-        side: selected
+        side: widget.selected
             ? BorderSide(color: context.theme.colorScheme.primary, width: 3)
-            : outline
+            : _hovered || _keyboardFocused || widget.highlighted
                 ? BorderSide(
-                    color: context.theme.colorScheme.outlineVariant,
-                    width: 1,
+                    color: context.theme.colorScheme.primary,
+                    width: 2,
                   )
-                : BorderSide.none,
+                : outline
+                    ? BorderSide(
+                        color: context.theme.colorScheme.outlineVariant,
+                        width: 1,
+                      )
+                    : BorderSide.none,
       ),
       // A flat Stack, not a GridTile: GridTile lays its child out with
       // Positioned.fill, which leaves the Stack nothing to size itself from —
@@ -229,17 +302,17 @@ class MangaCoverGridTile extends StatelessWidget {
               bottom: 0,
               child: _overlayTitleBar(context),
             ),
-          if (showBadges)
+          if (widget.showBadges)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: MangaBadgesRow(
-                manga: manga,
-                showCountBadges: showCountBadges,
+                manga: widget.manga,
+                showCountBadges: widget.showCountBadges,
               ),
             ),
-          if (selected)
+          if (widget.selected)
             Positioned(
               top: 4,
               right: 4,
@@ -253,18 +326,21 @@ class MangaCoverGridTile extends StatelessWidget {
           // descriptive-list cover): overlay the button on the cover corner.
           // With an overlaid title, the button lives in the footer row
           // instead so it can't cover the text.
-          if (onContinueReading != null && !selected && !_overlayTitle)
+          if (widget.onContinueReading != null &&
+              !widget.selected &&
+              !_overlayTitle)
             Positioned(
               right: 6,
               bottom: 6,
-              child: ContinueReadingButton(onPressed: onContinueReading!),
+              child:
+                  ContinueReadingButton(onPressed: widget.onContinueReading!),
             ),
-          if (showBadges)
+          if (widget.showBadges)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: _CoverReadProgressBar(manga: manga),
+              child: _CoverReadProgressBar(manga: widget.manga),
             ),
         ],
       ),
@@ -275,7 +351,7 @@ class MangaCoverGridTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
         dense: true,
         title: Text(
-          manga.title,
+          widget.manga.title,
           overflow: TextOverflow.ellipsis,
           maxLines: 2,
           // Drawn on the cover art, not the theme surface: always white over
@@ -290,9 +366,9 @@ class MangaCoverGridTile extends StatelessWidget {
         ),
         // The button shares the footer row: the title takes the remaining
         // width, so it can never sit under the button.
-        trailing: onContinueReading != null
+        trailing: widget.onContinueReading != null
             ? ContinueReadingButton(
-                onPressed: onContinueReading!,
+                onPressed: widget.onContinueReading!,
                 size: 28,
                 iconSize: 16,
               )
@@ -300,7 +376,7 @@ class MangaCoverGridTile extends StatelessWidget {
       );
 
   Widget _cover(BuildContext context, {required bool freeform}) {
-    if (manga.thumbnailUrl.isBlank) {
+    if (widget.manga.thumbnailUrl.isBlank) {
       final fallback = ImageIcon(
         AssetImage(Assets.icons.darkIcon.path),
         size: context.height * .2,
@@ -321,7 +397,7 @@ class MangaCoverGridTile extends StatelessWidget {
           width: 0,
           color: context.theme.canvasColor,
         ),
-        boxShadow: showDarkOverlay
+        boxShadow: widget.showDarkOverlay
             ? [
                 BoxShadow(
                   color: context.theme.canvasColor.withValues(alpha: .5),
@@ -347,7 +423,7 @@ class MangaCoverGridTile extends StatelessWidget {
       // switch re-decoded (and re-shimmered) the whole grid.
       child: LayoutBuilder(
         builder: (context, constraints) => ServerImage(
-          imageUrl: manga.thumbnailUrl ?? "",
+          imageUrl: widget.manga.thumbnailUrl ?? "",
           memCacheWidth: constraints.hasBoundedWidth
               ? (constraints.maxWidth *
                       MediaQuery.devicePixelRatioOf(context))
