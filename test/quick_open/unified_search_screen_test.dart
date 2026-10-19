@@ -62,6 +62,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Go to'), findsOneWidget);
+    // 'reader' now also matches Reader settings rows, so the handoff row
+    // can sit below the fold of the lazily built list; scroll to it like
+    // the empty-state test does for 'Reader'.
+    expect(find.text('Settings'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('Search all sources'),
+      100,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.textContaining('Search all sources'), findsOneWidget);
   });
 

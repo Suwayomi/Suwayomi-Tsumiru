@@ -8,9 +8,11 @@
 // SettingsHighlightTarget on that page, and every target on the page must
 // have a registry entry. Screens are pumped with every condition satisfied
 // (keyboard runtime is inherent to the test VM; auto-refresh defaults on;
-// theme dark + custom; recommendations on; full permissions), so a new
-// conditional tile without an entry — or an entry whose tile was removed —
-// fails here, not silently in search.
+// theme dark + custom; recommendations on; full permissions; Reader:
+// force-horizontal off, fullscreen on, flash on, split on, rotate on,
+// volume keys on, Android override), so a new conditional tile without an
+// entry — or an entry whose tile was removed — fails here, not silently in
+// search.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,9 +35,15 @@ import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/ap
 import 'package:tsumiru/src/features/settings/presentation/general/general_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/data/library_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/library_settings_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/reader_settings_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import 'package:tsumiru/src/features/settings/search/settings_search_registry.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 
 class _FixedSettings extends Settings {
   @override
@@ -202,6 +210,32 @@ void main() {
       );
       await _pumpScreen(tester, container, const LibrarySettingsScreen());
       _expectIdsMatchRegistry(tester, librarySettingsSearchEntries);
+    });
+
+    testWidgets('Reader entries match ReaderSettingsScreen targets', (
+      tester,
+    ) async {
+      // Android-only rows (keep-screen-on, ignore-safe-area, Navigation)
+      // never render on the desktop test VM without this.
+      debugAndroidOverride = true;
+      addTearDown(() => debugAndroidOverride = null);
+      // The Reader page is long and its rows build lazily, so pump it on a
+      // tall surface: every target must be mounted to be counted.
+      tester.view.physicalSize = const Size(800, 10000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final container = await _container();
+      // Every gate satisfied: force-horizontal off, fullscreen on, flash
+      // on, split on, rotate on, volume keys on. Keyboard runtime is
+      // inherent to the Linux test VM, so the mouse-speed row renders.
+      container.read(forceHorizontalSeekbarProvider.notifier).update(false);
+      container.read(readerFullscreenProvider.notifier).update(true);
+      container.read(flashOnPageChangeProvider.notifier).update(true);
+      container.read(dualPageSplitPagedProvider.notifier).update(true);
+      container.read(rotateWidePagesProvider.notifier).update(true);
+      container.read(volumeTapProvider.notifier).update(true);
+      await _pumpScreen(tester, container, const ReaderSettingsScreen());
+      _expectIdsMatchRegistry(tester, readerSettingsSearchEntries);
     });
   });
 }
