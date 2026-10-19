@@ -53,10 +53,15 @@ Future<void> migrateBasicAuthCredentials({
     return;
   }
   if (vault[kBasicCredentialsSecureKey] == null) {
-    // Keep the legacy copy if the move failed, so the next launch retries.
-    if (!await vault.update({kBasicCredentialsSecureKey: legacy}, prefs)) {
-      return;
-    }
+    // Keep the legacy copy if the move failed, so the next launch retries. The
+    // failed write must not set the invalidation marker: the legacy copy is
+    // still the durable one, and the snapshot holds the value for this run.
+    final moved = await vault.update(
+      {kBasicCredentialsSecureKey: legacy},
+      prefs,
+      invalidateOnFailure: false,
+    );
+    if (!moved) return;
   }
   await clearLegacyBasicCredentials(prefs);
 }

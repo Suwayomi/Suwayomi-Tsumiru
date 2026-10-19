@@ -138,10 +138,25 @@ class CredentialSnapshot {
   /// affect the marker.
   ///
   /// Returns whether the complete account state reached the platform store.
-  Future<bool> update(Map<String, String?> changes, SharedPreferences prefs) {
+  ///
+  /// [invalidateOnFailure] is false for the Basic credential migration: the
+  /// legacy preference is still the durable copy, so a refused write must not
+  /// make the next launch delete the credential instead of migrating it.
+  Future<bool> update(
+    Map<String, String?> changes,
+    SharedPreferences prefs, {
+    bool invalidateOnFailure = true,
+  }) {
     _values.addAll(changes);
     final target = Map<String, String?>.from(_values);
-    final result = _persistTail.then((_) => _persist(target, changes, prefs));
+    final result = _persistTail.then(
+      (_) => _persist(
+        target,
+        changes,
+        prefs,
+        invalidateOnFailure: invalidateOnFailure,
+      ),
+    );
     _persistTail = result.then((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
@@ -149,8 +164,9 @@ class CredentialSnapshot {
   Future<bool> _persist(
     Map<String, String?> target,
     Map<String, String?> changes,
-    SharedPreferences prefs,
-  ) async {
+    SharedPreferences prefs, {
+    required bool invalidateOnFailure,
+  }) async {
     var complete = true;
     for (final key in kCredentialKeys) {
       final value = target[key];
@@ -173,7 +189,7 @@ class CredentialSnapshot {
     if (complete) {
       await _clearCredentialInvalidation(prefs);
     } else {
-      await _markCredentialsInvalidated(prefs);
+      if (invalidateOnFailure) await _markCredentialsInvalidated(prefs);
       markCredentialPersistenceFailed();
     }
     return complete;

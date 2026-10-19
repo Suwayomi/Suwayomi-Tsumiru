@@ -562,26 +562,48 @@ void main() {
     expect(backing['custom.headers'], isNotNull);
   });
 
-  test('a working keychain loads every stored credential', () async {
-    final token = _testToken();
-    final storage = _FlakyStorage({
-      'auth.simple.cookie': 'JSESSIONID=abc123',
-      'auth.ui.accessToken': token,
-      'auth.ui.refreshToken': 'refresh',
-      kBasicCredentialsSecureKey: 'Basic abc',
-      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
-    });
-    final c = _container(storage);
+  test(
+    'a refused Basic migration is retried next launch instead of lost',
+    () async {
+      SharedPreferences.setMockInitialValues({'basicCredentials': 'Basic abc'});
+      _prefs = await SharedPreferences.getInstance();
+      final token = _testToken();
+      final backing = <String, String>{
+        'auth.simple.cookie': 'JSESSIONID=abc123',
+        'auth.ui.accessToken': token,
+        'auth.ui.refreshToken': 'refresh',
+        'custom.headers': '{"CF-Access-Client-Id":"abc"}',
+      };
 
-    final auth = await c.read(authCredentialsStoreProvider.future);
-    expect(auth.simpleLoginCookie, 'JSESSIONID=abc123');
-    expect(auth.uiAccessToken, token);
-    expect(auth.uiRefreshToken, 'refresh');
-    expect(await c.read(credentialsProvider.future), 'Basic abc');
-    expect(await c.read(customHttpHeadersProvider.future), {
-      'CF-Access-Client-Id': 'abc',
-    });
-  });
+      // Launch 1: the keychain reads work, but the migration's write is
+      // refused. The legacy preference stays as the only durable copy, so the
+      // account is not marked invalidated.
+      await migrateBasicAuthCredentials(
+        prefs: _prefs,
+        secure: _FlakyStorage(backing)..failWrites = true,
+      );
+      expect(_prefs.getString('basicCredentials'), 'Basic abc');
+      expect(_invalidated(), isFalse);
+
+      // Launch 2, keychain working again: the migration retries and the login
+      // survives, with the credentials already in secure storage.
+      debugResetKeychainRefusal();
+      final nextStorage = _FlakyStorage(backing);
+      await migrateBasicAuthCredentials(prefs: _prefs, secure: nextStorage);
+
+      expect(_prefs.getString('basicCredentials'), isNull);
+      expect(backing[kBasicCredentialsSecureKey], 'Basic abc');
+      final restarted = _container(nextStorage);
+      expect(await restarted.read(credentialsProvider.future), 'Basic abc');
+      final auth = await restarted.read(authCredentialsStoreProvider.future);
+      expect(auth.simpleLoginCookie, 'JSESSIONID=abc123');
+      expect(auth.uiAccessToken, token);
+      expect(auth.uiRefreshToken, 'refresh');
+      expect(await restarted.read(customHttpHeadersProvider.future), {
+        'CF-Access-Client-Id': 'abc',
+      });
+    },
+  );
 
   test('a refused keychain never creates a record key', () async {
     RecordSeal.debugKey = null;
