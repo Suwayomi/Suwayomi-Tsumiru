@@ -61,9 +61,25 @@ class HistoryScreen extends ConsumerWidget {
                     onNavigate: () => ref
                         .read(historySearchQueryProvider.notifier)
                         .clearQuery(),
-                    leading: [
+                    // Built synchronously (not in a child widget): the list
+                    // hands out row indices as [selectable] runs, so rows
+                    // built here take the first indices in visual order.
+                    leadingBuilder: (selectable) => [
                       if (historyTop.isNotEmpty)
-                        HistoryDropdownSection(items: historyTop),
+                        SearchSectionHeader(l10n.history),
+                      for (final item in historyTop)
+                        selectable(
+                          action: () {
+                            MangaRoute(mangaId: item.manga.id).push(context);
+                            ref
+                                .read(historySearchQueryProvider.notifier)
+                                .clearQuery();
+                          },
+                          tile: (onTap) => HistoryDropdownRow(
+                            item: item,
+                            onTap: onTap,
+                          ),
+                        ),
                     ],
                     hasLeadingResults: historyTop.isNotEmpty,
                     // Enter opens the top History result first; the field
@@ -182,46 +198,39 @@ class HistoryScreen extends ConsumerWidget {
   }
 }
 
-/// First dropdown section on desktop History: up to 3 matching entries in the
-/// same row look as the unified Library rows (cover, series title, chapter).
-/// Opening one clears the header query, like every dropdown result.
-class HistoryDropdownSection extends ConsumerWidget {
-  const HistoryDropdownSection({super.key, required this.items});
+/// One History dropdown row: the same look as the unified Library rows
+/// (cover, series title, chapter). A pure tile — the History page wraps it in
+/// the dropdown's selectable row (see [SelectableRowBuilder]) so leading rows
+/// join the keyboard order first with the same highlight, hover, Semantics,
+/// and scroll behaviour; Enter runs the same action as a tap.
+class HistoryDropdownRow extends StatelessWidget {
+  const HistoryDropdownRow({super.key, required this.item, required this.onTap});
 
-  final List<HistoryItemDto> items;
+  final HistoryItemDto item;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SearchSectionHeader(context.l10n.history),
-        for (final item in items)
-          ListTile(
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: ServerImage(
-                imageUrl: item.manga.thumbnailUrl ?? "",
-                size: const Size(40, 56),
-              ),
-            ),
-            title: Text(
-              item.manga.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.textTheme.bodySmall,
-            ),
-            onTap: () {
-              MangaRoute(mangaId: item.manga.id).push(context);
-              ref.read(historySearchQueryProvider.notifier).clearQuery();
-            },
-          ),
-      ],
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: ServerImage(
+          imageUrl: item.manga.thumbnailUrl ?? "",
+          size: const Size(40, 56),
+        ),
+      ),
+      title: Text(
+        item.manga.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        item.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.textTheme.bodySmall,
+      ),
+      onTap: onTap,
     );
   }
 }

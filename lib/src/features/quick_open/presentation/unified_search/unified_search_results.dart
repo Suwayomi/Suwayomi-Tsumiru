@@ -116,6 +116,17 @@ bool submitUnifiedQuery(
   return false; // pure operator query, nothing typed to hand off
 }
 
+/// Builds one selectable dropdown row: keyboard highlight paints the row's
+/// existing hover colour, mouse hover moves the highlight, Semantics carries
+/// the selected state for screen readers. The same [action] drives tap and
+/// Enter. Host-provided leading sections build through this so their rows
+/// join the keyboard order ahead of the unified rows.
+typedef SelectableRowBuilder =
+    Widget Function({
+      required VoidCallback action,
+      required Widget Function(VoidCallback onTap) tile,
+    });
+
 /// Keyboard highlight state for one [UnifiedSearchResults] list, owned by the
 /// host (desktop dropdown, Ctrl+K overlay). Focus stays in the host's text
 /// field the whole time; Up/Down move [index], Enter activates it exactly as
@@ -189,7 +200,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
     required this.close,
     this.caret,
     this.showLibrarySection = true,
-    this.leading = const <Widget>[],
+    this.leadingBuilder,
     required this.onSetQuery,
     required this.onApplySuggestion,
     required this.selection,
@@ -207,8 +218,10 @@ class UnifiedSearchResults extends HookConsumerWidget {
   /// False hides the Library section (the Library grid is already filtered).
   final bool showLibrarySection;
 
-  /// Extra sections rendered before the unified ones (History on its page).
-  final List<Widget> leading;
+  /// Extra sections rendered before the unified ones (History on its page),
+  /// built with [SelectableRowBuilder] so their rows join the keyboard order
+  /// first with the same highlight, hover, Semantics, and scroll behaviour.
+  final List<Widget> Function(SelectableRowBuilder selectable)? leadingBuilder;
 
   /// Tapping an example replaces the field text (host splices its controller).
   final ValueChanged<String> onSetQuery;
@@ -254,9 +267,8 @@ class UnifiedSearchResults extends HookConsumerWidget {
     final rowContexts = <int, BuildContext>{};
     var nextRow = 0;
 
-    // A selectable row: keyboard highlight paints the row's existing hover
-    // colour, mouse hover moves the highlight, Semantics carries the selected
-    // state for screen readers. The same [action] drives tap and Enter.
+    // The host's leading rows build through this first, so they take the
+    // first indices in visual order. See [SelectableRowBuilder].
     Widget selectable({
       required VoidCallback action,
       required Widget Function(VoidCallback onTap) tile,
@@ -331,7 +343,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
               ),
             ),
         ],
-        ...leading,
+        ...?leadingBuilder?.call(selectable),
         if (suggestions.isNotEmpty) ...[
           SearchSectionHeader(l.unifiedSearchFiltersSection),
           for (final s in suggestions)
@@ -384,6 +396,14 @@ class UnifiedSearchResults extends HookConsumerWidget {
               tile: (onTap) => ListTile(
                 leading: Icon(t.icon),
                 title: Text(t.label(l)),
+                subtitle: t.subtitle == null
+                    ? null
+                    : Text(
+                        t.subtitle!(l),
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                 onTap: onTap,
               ),
             ),

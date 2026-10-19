@@ -453,6 +453,30 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('a field suggestion takes part in the order', (tester) async {
+      await _pumpWithRouter(tester, await _container());
+
+      // 'unread:' offers value completions at the top of the order, so the
+      // first Down reaches the suggestion row.
+      await tester.enterText(_field(), 'unread:');
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('unread:true'), findsOneWidget);
+
+      await _down(tester);
+      expect(_isHighlighted(tester, find.text('unread:true')), isTrue);
+      await _submit(tester);
+      await tester.pump();
+
+      // Enter spliced the suggestion over the active token, trailing space
+      // included, exactly as tapping the row would.
+      expect(
+        tester.widget<TextField>(_field()).controller?.text,
+        'unread:true ',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('hover moves the highlight', (tester) async {
       final sem = tester.ensureSemantics();
       await _pumpWithRouter(

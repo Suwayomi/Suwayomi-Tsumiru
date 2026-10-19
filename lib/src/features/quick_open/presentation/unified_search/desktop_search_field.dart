@@ -85,7 +85,7 @@ class DesktopSearchField extends HookConsumerWidget {
     required this.query,
     required this.onChanged,
     this.onNavigate,
-    this.leading = const <Widget>[],
+    this.leadingBuilder,
     this.hasLeadingResults = false,
     this.showLibrarySection = true,
     this.hintText,
@@ -105,8 +105,10 @@ class DesktopSearchField extends HookConsumerWidget {
   /// touches this).
   final VoidCallback? onNavigate;
 
-  /// Extra result sections before the unified ones (History on its page).
-  final List<Widget> leading;
+  /// Extra result sections before the unified ones (History on its page),
+  /// built with [SelectableRowBuilder] so their rows join the keyboard order
+  /// first with the same highlight, hover, Semantics, and scroll behaviour.
+  final List<Widget> Function(SelectableRowBuilder selectable)? leadingBuilder;
 
   /// Whether [leading] currently holds matches (drives dropdown visibility).
   final bool hasLeadingResults;
@@ -340,7 +342,7 @@ class DesktopSearchField extends HookConsumerWidget {
                         caret: caret,
                         showLibrarySection: showLibrarySection,
                         selection: selection,
-                        leading: leading,
+                        leadingBuilder: leadingBuilder,
                         onSetQuery: setText,
                         onApplySuggestion: (s) {
                           final edit = applySuggestion(
