@@ -416,6 +416,10 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   bool _scheduled = false;
   bool _shown = false;
 
+  /// One key per shown toolbar, kept across builds so the slot content keeps
+  /// its State when the one-bar/two-row switch moves it between ancestors.
+  final Map<String, GlobalKey> _slotContentKeys = {};
+
   /// Whether this bar's route currently shows it: the route on top of its
   /// Navigator and not held offstage. Routes pushed above the shells (the
   /// reader on the navigator above them) leave the shell mounted offstage, so
@@ -565,14 +569,23 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     String location,
   ) {
     if (entry == null) return const SizedBox.shrink();
+    // The one-bar and two-row layouts give this slot different ancestors
+    // (Container/Stack vs Column), which would remount stateful controls on
+    // every breakpoint crossing: the search field owns its focus node, so
+    // focus and the open dropdown would die on resize. The stable GlobalKey
+    // reparents the same subtree instead, keeping State, focus and text.
+    final key = '$location#${entry.slotKey}';
     return AnimatedSwitcher(
       duration: context.reduceMotion
           ? Duration.zero
           : const Duration(milliseconds: 150),
       child: Container(
-        key: ValueKey('$location#${entry.slotKey}'),
+        key: ValueKey(key),
         alignment: Alignment.center,
-        child: entry.content,
+        child: KeyedSubtree(
+          key: _slotContentKeys.putIfAbsent(key, GlobalKey.new),
+          child: entry.content,
+        ),
       ),
     );
   }
