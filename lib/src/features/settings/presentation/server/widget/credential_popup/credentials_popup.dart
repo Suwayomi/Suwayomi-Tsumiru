@@ -15,7 +15,7 @@ import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../../../features/auth/data/auth_credentials_store.dart';
-import '../../../../../../features/auth/data/basic_auth_migration.dart';
+import '../../../../../../features/auth/data/credential_snapshot.dart';
 import '../../../../../../features/auth/data/secure_credentials_provider.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../features/auth/presentation/sign_in_action.dart';
@@ -35,14 +35,10 @@ part 'credentials_popup.g.dart';
 class Credentials extends _$Credentials {
   @override
   Future<String?> build() async {
-    final storage = ref.read(secureStorageProvider);
-    if (credentialsInvalidated(ref.read(sharedPreferencesProvider))) {
-      // The store retries the full cleanup and owns clearing the marker; this
-      // credential must simply not be read while it may be stale.
-      await deleteSecure(storage, kBasicCredentialsSecureKey);
-      return null;
-    }
-    return readSecureOrAbsent(storage, kBasicCredentialsSecureKey);
+    final prefs = ref.read(sharedPreferencesProvider);
+    final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
+    await vault.ensureLoaded(prefs);
+    return vault[kBasicCredentialsKey];
   }
 
   /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
@@ -52,29 +48,17 @@ class Credentials extends _$Credentials {
       epoch,
     ) async {
       await future;
-      final storage = ref.read(secureStorageProvider);
       final credentials = ref.read(authCredentialsStoreProvider.notifier);
       if (epoch != credentials.serverEpoch) return;
-      if (value == null) {
-        state = const AsyncData(null);
-        await deleteCredential(ref, storage, kBasicCredentialsSecureKey);
-        return;
-      }
-      final written = await writeSecure(
-        storage,
-        kBasicCredentialsSecureKey,
-        value,
-      );
+      final prefs = ref.read(sharedPreferencesProvider);
+      final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
+      await vault.update({kBasicCredentialsKey: value}, prefs);
       if (epoch != credentials.serverEpoch) {
-        await deleteCredential(ref, storage, kBasicCredentialsSecureKey);
+        // A switch started while the write was in flight: its complete state
+        // must not keep this server's Basic credential.
+        await vault.update({kBasicCredentialsKey: null}, prefs);
         return;
       }
-      await clearInvalidationAfterSignIn(
-        ref,
-        storage,
-        overwrittenKeys: [kBasicCredentialsSecureKey],
-        writes: [written],
-      );
       state = AsyncData(value);
     }, forEpoch: forEpoch);
   }

@@ -27,9 +27,9 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/credent
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
-import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 
+/// A keychain that refuses every read, and optionally every write and delete.
 class _DeniedStorage implements FlutterSecureStorage {
   _DeniedStorage({this.failWrites = false});
   final bool failWrites;
@@ -83,37 +83,6 @@ class _DeniedStorage implements FlutterSecureStorage {
       throw PlatformException(code: '-25293', message: 'User denied');
     }
   }
-
-  @override
-  noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError('${invocation.memberName} not stubbed');
-}
-
-class _InMemoryStorage implements FlutterSecureStorage {
-  _InMemoryStorage(this._store);
-  final Map<String, String> _store;
-
-  @override
-  Future<String?> read({
-    required String key,
-    AppleOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    WebOptions? webOptions,
-    AppleOptions? mOptions,
-    WindowsOptions? wOptions,
-  }) async => _store[key];
-
-  @override
-  Future<void> delete({
-    required String key,
-    AppleOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    WebOptions? webOptions,
-    AppleOptions? mOptions,
-    WindowsOptions? wOptions,
-  }) async {}
 
   @override
   noSuchMethod(Invocation invocation) =>
@@ -292,6 +261,9 @@ class _RecordingToast extends Toast {
   }) => messages.add(msg);
 }
 
+bool _invalidated() =>
+    _prefs.getBool(DBKeys.authCredentialsInvalidated.name) ?? false;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -302,49 +274,260 @@ void main() {
   });
 
   test(
-    'a refused keychain read leaves the credentials absent instead of stalling startup',
+    'a refused keychain is asked once and every credential reads absent',
     () async {
-      final container = _container(_DeniedStorage());
+      final storage = _DeniedStorage();
+      final c = _container(storage);
 
-      final auth = await container
+      final auth = await c
           .read(authCredentialsStoreProvider.future)
           .timeout(const Duration(seconds: 5));
-      final basic = await container
+      final basic = await c
           .read(credentialsProvider.future)
           .timeout(const Duration(seconds: 5));
-      final headers = await container
+      final headers = await c
           .read(customHttpHeadersProvider.future)
           .timeout(const Duration(seconds: 5));
 
+      expect(storage.reads, 1);
       expect(auth.uiAccessToken, isNull);
       expect(auth.uiRefreshToken, isNull);
       expect(auth.simpleLoginCookie, isNull);
       expect(basic, isNull);
       expect(headers, isEmpty);
+
+      c.invalidate(credentialsProvider);
+      await c.read(credentialsProvider.future);
+      expect(storage.reads, 1, reason: 'a refused keychain is not asked again');
     },
   );
 
-  test('startup asks the keychain once when it refuses a read', () async {
-    final storage = _DeniedStorage();
-    final container = _container(storage);
+  testWidgets(
+    'a sign-in whose writes are refused still works after the session rebuild',
+    (tester) async {
+      final storage = _DeniedStorage(failWrites: true);
+      final prefs = await _uiLoginPreferences();
+      final chain = _UiLoginChain();
+      late WidgetRef ref;
+      late _RecordingToast toast;
 
-    final auth = await container
-        .read(authCredentialsStoreProvider.future)
-        .timeout(const Duration(seconds: 5));
-    final basic = await container
-        .read(credentialsProvider.future)
-        .timeout(const Duration(seconds: 5));
-    final headers = await container
-        .read(customHttpHeadersProvider.future)
-        .timeout(const Duration(seconds: 5));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              toast = _RecordingToast(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
 
-    expect(storage.reads, 1);
-    expect(auth.uiAccessToken, isNull);
-    expect(basic, isNull);
-    expect(headers, isEmpty);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            secureStorageProvider.overrideWithValue(storage),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            unauthenticatedGraphQlClientProvider.overrideWithValue(
+              GraphQLClient(link: chain, cache: GraphQLCache()),
+            ),
+            toastProvider.overrideWithValue(toast),
+          ],
+          child: MaterialApp(
+            navigatorKey: rootNavigatorKey,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (context, widgetRef, _) {
+                ref = widgetRef;
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final first = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      await first
+          .read(authCredentialsStoreProvider.future)
+          .timeout(const Duration(seconds: 5));
+
+      await performSignIn(
+        ref,
+        authType: AuthType.uiLogin,
+        serverBaseUrl: 'http://127.0.0.1',
+        username: 'reader',
+        password: 'password',
+      ).timeout(const Duration(seconds: 5));
+
+      // The sign-in restarts the session container. The new container must
+      // still see the sign-in: it lives in memory, not in a keychain that
+      // refused the save.
+      final restarted = _sessionContainer(storage, prefs, chain);
+      final state = await restarted
+          .read(authCredentialsStoreProvider.future)
+          .timeout(const Duration(seconds: 5));
+      expect(state.uiAccessToken, chain.token);
+      expect(state.uiRefreshToken, 'test-refresh');
+      expect(storage.reads, 1);
+
+      final token = await restarted
+          .read(authCoordinatorProvider.notifier)
+          .usableUiAccessToken(
+            gqlClient: () => throw StateError('unexpected refresh'),
+            trigger: 'test',
+          )
+          .timeout(const Duration(seconds: 5));
+      expect(token, chain.token);
+      restarted.dispose();
+
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  test(
+    'a refused replacement signs out next launch instead of restoring the old account',
+    () async {
+      final backing = <String, String>{
+        'auth.ui.accessToken': 'old-access',
+        'auth.ui.refreshToken': 'old-refresh',
+      };
+      final storage = _FlakyStorage(backing)..failWrites = true;
+      final first = _container(storage);
+      await first.read(authCredentialsStoreProvider.future);
+
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .saveUiLoginTokens(
+            accessToken: 'new-access',
+            refreshToken: 'new-refresh',
+          );
+
+      // The write was refused: the old account is still in storage.
+      expect(backing['auth.ui.accessToken'], 'old-access');
+      expect(_invalidated(), isTrue);
+
+      // Next launch, keychain working again. The unknown-on-disk state must
+      // not be handed to the user as the previous account.
+      debugResetKeychainRefusal();
+      final restarted = _container(_FlakyStorage(backing));
+      final state = await restarted.read(authCredentialsStoreProvider.future);
+      expect(state.uiAccessToken, isNull);
+      expect(state.uiRefreshToken, isNull);
+      expect(backing, isEmpty);
+      expect(_invalidated(), isFalse);
+    },
+  );
+
+  test(
+    'a switch whose credential delete is refused cannot reuse the old sign-in',
+    () async {
+      final backing = <String, String>{
+        'auth.ui.accessToken': _testToken(),
+        'auth.ui.refreshToken': 'old-refresh',
+        'auth.simple.cookie': 'JSESSIONID=old',
+        kBasicCredentialsSecureKey: 'Basic old',
+      };
+      final first = _container(_FlakyStorage(backing, failDeletes: true));
+      final before = await first.read(authCredentialsStoreProvider.future);
+      expect(before.uiAccessToken, isNotNull);
+
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .clearAllForServerSwitch();
+      expect(_invalidated(), isTrue);
+      expect(backing, isNotEmpty);
+
+      debugResetKeychainRefusal();
+      final restarted = _container(_FlakyStorage(backing));
+      final auth = await restarted.read(authCredentialsStoreProvider.future);
+      final basic = await restarted.read(credentialsProvider.future);
+
+      expect(auth.uiAccessToken, isNull);
+      expect(auth.uiRefreshToken, isNull);
+      expect(auth.simpleLoginCookie, isNull);
+      expect(basic, isNull);
+      expect(backing, isEmpty);
+      expect(_invalidated(), isFalse);
+    },
+  );
+
+  test(
+    'a sign-in that saves after a refused one is read next launch',
+    () async {
+      final backing = <String, String>{
+        'auth.ui.accessToken': 'old-access',
+        'auth.ui.refreshToken': 'old-refresh',
+      };
+      final storage = _FlakyStorage(backing)..failWrites = true;
+      final first = _container(storage);
+      await first.read(authCredentialsStoreProvider.future);
+
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .saveUiLoginTokens(accessToken: 'refused-access', refreshToken: 'r');
+      expect(_invalidated(), isTrue);
+
+      storage.failWrites = false;
+      final token = _testToken();
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .saveUiLoginTokens(accessToken: token, refreshToken: 'saved-refresh');
+      expect(_invalidated(), isFalse);
+      expect(backing['auth.ui.accessToken'], token);
+
+      debugResetKeychainRefusal();
+      final restarted = _container(_FlakyStorage(backing));
+      final state = await restarted.read(authCredentialsStoreProvider.future);
+      expect(state.uiAccessToken, token);
+      expect(state.uiRefreshToken, 'saved-refresh');
+    },
+  );
+
+  test('proxy headers read at startup survive a later refused write', () async {
+    final storage = _FlakyStorage({
+      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
+    });
+    final c = _container(storage);
+    expect(await c.read(customHttpHeadersProvider.future), {
+      'CF-Access-Client-Id': 'abc',
+    });
+
+    storage.failWrites = true;
+    await c
+        .read(authCredentialsStoreProvider.notifier)
+        .saveSimpleLoginCookie('JSESSIONID=x');
+    expect(_invalidated(), isTrue);
+
+    c.invalidate(customHttpHeadersProvider);
+    expect(await c.read(customHttpHeadersProvider.future), {
+      'CF-Access-Client-Id': 'abc',
+    });
   });
 
-  test('a refused keychain never creates a new record key', () async {
+  test('a working keychain loads every stored credential', () async {
+    final token = _testToken();
+    final storage = _FlakyStorage({
+      'auth.simple.cookie': 'JSESSIONID=abc123',
+      'auth.ui.accessToken': token,
+      'auth.ui.refreshToken': 'refresh',
+      kBasicCredentialsSecureKey: 'Basic abc',
+      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
+    });
+    final c = _container(storage);
+
+    final auth = await c.read(authCredentialsStoreProvider.future);
+    expect(auth.simpleLoginCookie, 'JSESSIONID=abc123');
+    expect(auth.uiAccessToken, token);
+    expect(auth.uiRefreshToken, 'refresh');
+    expect(await c.read(credentialsProvider.future), 'Basic abc');
+    expect(await c.read(customHttpHeadersProvider.future), {
+      'CF-Access-Client-Id': 'abc',
+    });
+  });
+
+  test('a refused keychain never creates a record key', () async {
     RecordSeal.debugKey = null;
     final storage = _DeniedStorage();
     await RecordSeal.load(
@@ -354,308 +537,5 @@ void main() {
     expect(RecordSeal.ready, isFalse);
     expect(storage.reads, 1);
     expect(storage.writes, isEmpty);
-  });
-
-  test('a refused keychain read is not retried', () async {
-    final storage = _DeniedStorage();
-    final container = _container(storage);
-
-    await container
-        .read(authCredentialsStoreProvider.future)
-        .timeout(const Duration(seconds: 5));
-    await container
-        .read(credentialsProvider.future)
-        .timeout(const Duration(seconds: 5));
-    final readsAfterLoad = storage.reads;
-
-    await Future<void>.delayed(const Duration(seconds: 2));
-
-    expect(storage.reads, readsAfterLoad);
-  });
-
-  test('a readable keychain still loads the stored credentials', () async {
-    final container = _container(
-      _InMemoryStorage({
-        'auth.simple.cookie': 'JSESSIONID=abc123',
-        kBasicCredentialsSecureKey: 'Basic abc',
-      }),
-    );
-
-    final auth = await container.read(authCredentialsStoreProvider.future);
-    final basic = await container.read(credentialsProvider.future);
-
-    expect(auth.simpleLoginCookie, 'JSESSIONID=abc123');
-    expect(basic, 'Basic abc');
-  });
-
-  test(
-    'a fresh sign-in after a refused read reaches the authenticated request path',
-    () async {
-      final storage = _DeniedStorage();
-      final prefs = await _uiLoginPreferences();
-      final chain = _UiLoginChain();
-
-      final first = _sessionContainer(storage, prefs, chain);
-      addTearDown(first.dispose);
-      final refused = await first
-          .read(authCredentialsStoreProvider.future)
-          .timeout(const Duration(seconds: 5));
-      expect(refused.uiAccessToken, isNull);
-
-      await first
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: GraphQLClient(link: chain, cache: GraphQLCache()),
-            username: 'reader',
-            password: 'password',
-          )
-          .timeout(const Duration(seconds: 5));
-      expect(storage.reads, 1);
-
-      // The sign-in restarts the session container; that container must see
-      // the new token without asking the keychain again.
-      final restarted = _sessionContainer(storage, prefs, chain);
-      addTearDown(restarted.dispose);
-      final token = await restarted
-          .read(authCoordinatorProvider.notifier)
-          .usableUiAccessToken(
-            gqlClient: () => throw StateError('unexpected refresh'),
-            trigger: 'test',
-          )
-          .timeout(const Duration(seconds: 5));
-
-      expect(token, chain.token);
-      expect(storage.reads, 1);
-    },
-  );
-
-  testWidgets('a refused write still signs in and shows one notice', (
-    tester,
-  ) async {
-    final storage = _DeniedStorage(failWrites: true);
-    final prefs = await _uiLoginPreferences();
-    final chain = _UiLoginChain();
-    late WidgetRef ref;
-    late String notice;
-    late _RecordingToast toast;
-
-    // A throwaway tree, so the recording toast has a context to build from.
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) {
-            toast = _RecordingToast(context);
-            return const SizedBox();
-          },
-        ),
-      ),
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          secureStorageProvider.overrideWithValue(storage),
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          unauthenticatedGraphQlClientProvider.overrideWithValue(
-            GraphQLClient(link: chain, cache: GraphQLCache()),
-          ),
-          toastProvider.overrideWithValue(toast),
-        ],
-        child: MaterialApp(
-          navigatorKey: rootNavigatorKey,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Consumer(
-            builder: (context, widgetRef, _) {
-              ref = widgetRef;
-              notice = context.l10n.authCredentialsNotSaved;
-              return const SizedBox();
-            },
-          ),
-        ),
-      ),
-    );
-
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(MaterialApp)),
-    );
-    await container
-        .read(authCredentialsStoreProvider.future)
-        .timeout(const Duration(seconds: 5));
-
-    await performSignIn(
-      ref,
-      authType: AuthType.uiLogin,
-      serverBaseUrl: 'http://127.0.0.1',
-      username: 'reader',
-      password: 'password',
-    ).timeout(const Duration(seconds: 5));
-
-    expect(storage.writeAttempts, greaterThan(0));
-    final token = await container
-        .read(authCoordinatorProvider.notifier)
-        .usableUiAccessToken(
-          gqlClient: () => throw StateError('unexpected refresh'),
-          trigger: 'test',
-        )
-        .timeout(const Duration(seconds: 5));
-    expect(token, chain.token);
-    expect(toast.messages, [notice]);
-
-    // Tear the scope down so the proactive-refresh timer is cancelled.
-    await tester.pumpWidget(const SizedBox());
-  });
-
-  test(
-    'a switch whose credential delete is refused cannot reuse the old sign-in after restart',
-    () async {
-      final backing = <String, String>{
-        'auth.ui.accessToken': _testToken(),
-        'auth.ui.refreshToken': 'old-refresh',
-        kBasicCredentialsSecureKey: 'Basic old',
-      };
-      final first = _container(_FlakyStorage(backing, failDeletes: true));
-      final beforeSwitch = await first.read(authCredentialsStoreProvider.future);
-      expect(beforeSwitch.uiAccessToken, isNotNull);
-      expect(backing, isNotEmpty);
-
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .clearAllForServerSwitch();
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
-      expect(backing, isNotEmpty);
-
-      // Next launch: the keychain works again, but the old sign-in survived
-      // the switch and belongs to the previous server.
-      debugResetKeychainRefusal();
-      final restarted = _container(_FlakyStorage(backing));
-      final afterRestart = await restarted.read(
-        authCredentialsStoreProvider.future,
-      );
-      final basic = await restarted.read(credentialsProvider.future);
-
-      expect(afterRestart.uiAccessToken, isNull);
-      expect(afterRestart.uiRefreshToken, isNull);
-      expect(afterRestart.simpleLoginCookie, isNull);
-      expect(basic, isNull);
-      expect(backing, isEmpty);
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isFalse);
-    },
-  );
-
-  test(
-    'a fully saved sign-in clears the marker instead of being discarded next launch',
-    () async {
-      // Phase 1: the marker is set by a switch whose deletes the keychain
-      // refuses, leaving the old server's credentials in storage.
-      final backing = <String, String>{
-        'auth.ui.accessToken': 'old-token',
-        'auth.ui.refreshToken': 'old-refresh',
-        kBasicCredentialsSecureKey: 'Basic old',
-      };
-      final storage = _FlakyStorage(backing, failDeletes: true);
-      final first = _container(storage);
-      await first.read(authCredentialsStoreProvider.future);
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .clearAllForServerSwitch();
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
-      expect(backing, isNotEmpty);
-
-      // The user grants access: the sign-in saves, and the credentials it did
-      // not write are deleted, so the marker has nothing left to protect.
-      storage.failDeletes = false;
-      final token = _testToken();
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .saveUiLoginTokens(accessToken: token, refreshToken: 'new-refresh');
-
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isFalse);
-      expect(backing['auth.ui.accessToken'], token);
-      expect(backing['auth.ui.refreshToken'], 'new-refresh');
-      expect(backing[kBasicCredentialsSecureKey], isNull);
-
-      // Next launch reads the fresh sign-in rather than deleting it as stale.
-      debugResetKeychainRefusal();
-      final restarted = _container(_FlakyStorage(backing));
-      final afterRestart = await restarted.read(
-        authCredentialsStoreProvider.future,
-      );
-      expect(afterRestart.uiAccessToken, token);
-      expect(afterRestart.uiRefreshToken, 'new-refresh');
-      expect(afterRestart.uiAuthorizationHeader, {
-        'Authorization': 'Bearer $token',
-      });
-      expect(await restarted.read(credentialsProvider.future), isNull);
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isFalse);
-
-      // Phase 2: the sign-in saves, but the stale-key deletes still fail, so
-      // the marker stays and the next launch keeps treating storage as stale.
-      debugResetKeychainRefusal();
-      final stale = <String, String>{
-        'auth.simple.cookie': 'JSESSIONID=old',
-        kBasicCredentialsSecureKey: 'Basic old',
-      };
-      final refused = _FlakyStorage(stale, failDeletes: true);
-      final second = _container(refused);
-      await second.read(authCredentialsStoreProvider.future);
-      await second
-          .read(authCredentialsStoreProvider.notifier)
-          .clearAllForServerSwitch();
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
-
-      await second
-          .read(authCredentialsStoreProvider.notifier)
-          .saveSimpleLoginCookie('JSESSIONID=new');
-
-      expect(stale['auth.simple.cookie'], 'JSESSIONID=new');
-      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
-    },
-  );
-
-  test('a header read before a refused write still loads afterwards', () async {
-    final storage = _FlakyStorage({
-      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
-    });
-    final container = _container(storage);
-    expect(
-      await container.read(customHttpHeadersProvider.future),
-      {'CF-Access-Client-Id': 'abc'},
-    );
-
-    storage.failWrites = true;
-    expect(await writeSecure(storage, 'auth.simple.cookie', 'x'), isFalse);
-
-    // The refused write flips the process-wide refusal; a provider rebuilt
-    // after it must still see what was already read this run.
-    container.invalidate(customHttpHeadersProvider);
-    expect(await container.read(customHttpHeadersProvider.future), {
-      'CF-Access-Client-Id': 'abc',
-    });
-  });
-
-  test('a refused legacy password cleanup does not stop credential reads', () async {
-    final token = _testToken();
-    final storage = _FlakyStorage(
-      {
-        'auth.password': 'old-password',
-        'auth.ui.accessToken': token,
-        'auth.ui.refreshToken': 'refresh',
-        'custom.headers': '{"X-Proxy":"secret"}',
-      },
-      failDeletes: true,
-    );
-    final container = _container(storage);
-
-    final auth = await container
-        .read(authCredentialsStoreProvider.future)
-        .timeout(const Duration(seconds: 5));
-    final headers = await container
-        .read(customHttpHeadersProvider.future)
-        .timeout(const Duration(seconds: 5));
-
-    expect(auth.uiAccessToken, token);
-    expect(headers, {'X-Proxy': 'secret'});
-    expect(keychainRefusedThisRun, isFalse);
   });
 }

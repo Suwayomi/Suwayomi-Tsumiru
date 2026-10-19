@@ -7,10 +7,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'credential_snapshot.dart';
 import 'secure_credentials_provider.dart';
 
 /// Secure-storage key under which basic-auth credentials now live.
-const kBasicCredentialsSecureKey = 'auth.basic.credentials';
+const kBasicCredentialsSecureKey = kBasicCredentialsKey;
 
 /// Legacy SharedPreferences key (DBKeys.basicCredentials.name).
 const _kLegacyBasicCredentialsKey = 'basicCredentials';
@@ -33,12 +34,15 @@ Future<void> migrateBasicAuthCredentials({
   final legacy = prefs.getString(_kLegacyBasicCredentialsKey);
   if (legacy == null) return;
 
-  final existing = await readSecureOrAbsent(secure, kBasicCredentialsSecureKey);
+  final vault = credentialSnapshot(secure, prefs);
+  await vault.ensureLoaded(prefs);
   // A refused keychain keeps the legacy copy for the next launch.
   if (keychainRefusedThisRun) return;
-  if (existing == null) {
+  if (vault[kBasicCredentialsSecureKey] == null) {
     // Keep the legacy copy if the move failed, so the next launch retries.
-    if (!await writeSecure(secure, kBasicCredentialsSecureKey, legacy)) return;
+    if (!await vault.update({kBasicCredentialsSecureKey: legacy}, prefs)) {
+      return;
+    }
   }
   await prefs.remove(_kLegacyBasicCredentialsKey);
 }

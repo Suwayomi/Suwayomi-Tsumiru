@@ -8,6 +8,8 @@ import 'dart:convert';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../global_providers/global_providers.dart';
+import 'credential_snapshot.dart';
 import 'secure_credentials_provider.dart';
 
 /// Generic custom HTTP headers sent with every request to the Suwayomi
@@ -27,21 +29,23 @@ import 'secure_credentials_provider.dart';
 /// [AsyncValue.value] (falling back to empty before the load completes).
 class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
   /// Secure-storage key holding the JSON-encoded header map.
-  static const secureKey = 'custom.headers';
+  static const secureKey = kCustomHeadersKey;
 
   @override
-  Future<Map<String, String>> build() async => decode(
-    await readSecureOrAbsent(ref.read(secureStorageProvider), secureKey),
-  );
+  Future<Map<String, String>> build() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
+    await vault.ensureLoaded(prefs);
+    return decode(vault[secureKey]);
+  }
 
   Future<void> _persist(Map<String, String> headers) async {
     state = AsyncData(Map<String, String>.from(headers));
-    final storage = ref.read(secureStorageProvider);
-    if (headers.isEmpty) {
-      await deleteSecure(storage, secureKey);
-    } else {
-      await writeSecure(storage, secureKey, encode(headers));
-    }
+    final prefs = ref.read(sharedPreferencesProvider);
+    await credentialSnapshot(
+      ref.read(secureStorageProvider),
+      prefs,
+    ).update({secureKey: headers.isEmpty ? null : encode(headers)}, prefs);
   }
 
   /// Replace the whole map (used by import/reset flows).
