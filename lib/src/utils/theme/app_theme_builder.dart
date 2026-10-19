@@ -57,6 +57,9 @@ ThemeData buildAppTheme({
 
   return ThemeData(
     useMaterial3: true,
+    // App typeface (theme-kit brand rule). Platform fallback stays in place
+    // for scripts Inter doesn't cover, so no fontFamilyFallback.
+    fontFamily: 'Inter',
     colorScheme: scheme,
     extensions: [brandColors],
     scaffoldBackgroundColor: scheme.surface,

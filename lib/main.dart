@@ -19,6 +19,7 @@ import 'package:workmanager/workmanager.dart';
 
 import 'src/constants/brand_icons.dart';
 import 'src/constants/enum.dart';
+import 'src/constants/inter_license.dart';
 import 'src/constants/timeout_constants.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
 import 'src/features/account/data/account_bootstrap.dart';
@@ -101,6 +102,7 @@ Future<void> _startApp() async {
   // re-shimmer on every tab switch. A cap, not an allocation.
   PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
   registerBrandIconsLicense();
+  registerInterLicense();
   await _setUpCrashReporting();
   // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
   // any download service is started. Must run after the binding is ready.
