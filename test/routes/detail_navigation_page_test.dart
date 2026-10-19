@@ -151,18 +151,34 @@ void main() {
   );
 
   testWidgets(
-    'settings keeps the default MaterialPage transition at 412x900',
+    'settings keeps the platform transition at 412x900',
     (tester) async {
       final router = await _pumpPush(tester, size: const Size(412, 900));
       unawaited(router.push(const SettingsRoute().location));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 500));
+      // Half-way through the 300 ms platform transition.
+      await tester.pump(const Duration(milliseconds: 150));
 
       expect(find.byType(BigScreenNavigationBar), findsNothing);
       final route = ModalRoute.of(tester.element(find.byType(SettingsScreen)));
       expect(route, isA<PageRoute>());
-      expect(route!.settings, isA<MaterialPage>());
+      // Stable identity: a CustomTransitionPage even on phones, so resizing
+      // across the 600 px breakpoint updates the route in place.
+      final page = route!.settings;
+      expect(page, isA<CustomTransitionPage>());
+      expect(
+        (page as CustomTransitionPage).transitionDuration,
+        const Duration(milliseconds: 300),
+      );
+      expect(
+        page.reverseTransitionDuration,
+        const Duration(milliseconds: 300),
+      );
+      // The platform transition is actually in flight, not instant.
+      expect(tester.hasRunningAnimations, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.hasRunningAnimations, isFalse);
       expect(tester.takeException(), isNull);
     },
   );
