@@ -13,7 +13,9 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../../domain/filter/filter_model.dart';
@@ -78,98 +80,120 @@ class SourceMangaListScreen extends HookConsumerWidget {
     );
     return source.showUiWhenData(
       context,
-      (data) => Scaffold(
-        appBar: AppBar(
-          title: Text(data?.displayName ?? context.l10n.source),
-          actions: [
+      (data) {
+        // Native desktop draws the title and actions in the shell bar
+        // instead of an app bar; the type chips and search box stay in the
+        // page body.
+        final topBar = showsMergedTopBar(context);
+        final title = Text(data?.displayName ?? context.l10n.source);
+        final actions = <Widget>[
+          IconButton(
+            onPressed: () => showSearch.value = true,
+            icon: const Icon(Icons.search_rounded),
+          ),
+          const SourceMangaDisplayIconPopup(),
+          if ((data?.isConfigurable).ifNull())
             IconButton(
-              onPressed: () => showSearch.value = true,
-              icon: const Icon(Icons.search_rounded),
+              onPressed: () => SourcePreferenceRoute(
+                sourceId: sourceId,
+              ).go(context),
+              icon: const Icon(Icons.settings_rounded),
             ),
-            const SourceMangaDisplayIconPopup(),
-            if ((data?.isConfigurable).ifNull())
-              IconButton(
-                onPressed: () => SourcePreferenceRoute(
-                  sourceId: sourceId,
-                ).go(context),
-                icon: const Icon(Icons.settings_rounded),
-              ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: kCalculateAppBarBottomSize([true, showSearch.value]),
-            child: Column(
+        ];
+        final toolbarBottom = Column(
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    SourceTypeSelectableChip(
-                      value: SourceType.POPULAR,
-                      groupValue: sourceType,
-                      onSelected: (val) {
-                        if (sourceType == SourceType.POPULAR) return;
-                        SourceTypeRoute(
-                          sourceId: sourceId,
-                          sourceType: SourceType.POPULAR,
-                        ).go(context);
-                      },
-                    ),
-                    if ((data?.supportsLatest).ifNull())
-                      SourceTypeSelectableChip(
-                        value: SourceType.LATEST,
-                        groupValue: sourceType,
-                        onSelected: (val) {
-                          if (sourceType == SourceType.LATEST) return;
-                          SourceTypeRoute(
-                            sourceId: sourceId,
-                            sourceType: SourceType.LATEST,
-                          ).go(context);
-                        },
-                      ),
-                    Builder(
-                      builder: (context) => SourceTypeSelectableChip(
-                        value: SourceType.SEARCH,
-                        groupValue: sourceType,
-                        onSelected: (val) => SourceTypeRoute(
-                          sourceId: sourceId,
-                          sourceType: SourceType.SEARCH,
-                        ).go(context),
-                      ),
-                    ),
-                  ],
+                SourceTypeSelectableChip(
+                  value: SourceType.POPULAR,
+                  groupValue: sourceType,
+                  onSelected: (val) {
+                    if (sourceType == SourceType.POPULAR) return;
+                    SourceTypeRoute(
+                      sourceId: sourceId,
+                      sourceType: SourceType.POPULAR,
+                    ).go(context);
+                  },
                 ),
-                const Divider(height: 0),
-                if (showSearch.value)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: SizedBox(
-                      width: context.isLargeTablet
-                          ? context.widthScale(scale: .5)
-                          : null,
-                      child: Padding(
-                        padding: KEdgeInsets.h16v4.size,
-                        child: SearchField(
-                          initialText: query.value,
-                          onClose: () => showSearch.value = (false),
-                          onSubmitted: (val) {
-                            if (sourceType == SourceType.SEARCH) {
-                              query.value = (val);
-                              controller.refresh();
-                            } else {
-                              if (val == null) return;
-                              SourceTypeRoute(
-                                sourceId: sourceId,
-                                sourceType: SourceType.SEARCH,
-                                query: val,
-                              ).go(context);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
+                if ((data?.supportsLatest).ifNull())
+                  SourceTypeSelectableChip(
+                    value: SourceType.LATEST,
+                    groupValue: sourceType,
+                    onSelected: (val) {
+                      if (sourceType == SourceType.LATEST) return;
+                      SourceTypeRoute(
+                        sourceId: sourceId,
+                        sourceType: SourceType.LATEST,
+                      ).go(context);
+                    },
                   ),
+                Builder(
+                  builder: (context) => SourceTypeSelectableChip(
+                    value: SourceType.SEARCH,
+                    groupValue: sourceType,
+                    onSelected: (val) => SourceTypeRoute(
+                      sourceId: sourceId,
+                      sourceType: SourceType.SEARCH,
+                    ).go(context),
+                  ),
+                ),
               ],
             ),
+            const Divider(height: 0),
+            if (showSearch.value)
+              Align(
+                alignment: Alignment.centerRight,
+                child: SizedBox(
+                  width: context.isLargeTablet
+                      ? context.widthScale(scale: .5)
+                      : null,
+                  child: Padding(
+                    padding: KEdgeInsets.h16v4.size,
+                    child: SearchField(
+                      initialText: query.value,
+                      onClose: () => showSearch.value = (false),
+                      onSubmitted: (val) {
+                        if (sourceType == SourceType.SEARCH) {
+                          query.value = (val);
+                          controller.refresh();
+                        } else {
+                          if (val == null) return;
+                          SourceTypeRoute(
+                            sourceId: sourceId,
+                            sourceType: SourceType.SEARCH,
+                            query: val,
+                          ).go(context);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+        final listBody = RefreshIndicator(
+          onRefresh: () async => controller.refresh(),
+          child: SourceMangaDisplayView(
+            sourceId: sourceId,
+            sourceType: sourceType,
+            controller: controller,
+            source: data,
           ),
-        ),
+        );
+        final scaffold = Scaffold(
+          appBar: topBar
+              ? null
+              : AppBar(
+                  title: title,
+                  actions: actions,
+                  bottom: PreferredSize(
+                    preferredSize: kCalculateAppBarBottomSize([
+                      true,
+                      showSearch.value,
+                    ]),
+                    child: toolbarBottom,
+                  ),
+                ),
         // Edge-drag would fight the system back gesture; the filter button is
         // the way in.
         endDrawerEnableOpenDragGesture: false,
@@ -195,15 +219,14 @@ class SourceMangaListScreen extends HookConsumerWidget {
                 ),
               )
             : null,
-        body: RefreshIndicator(
-          onRefresh: () async => controller.refresh(),
-          child: SourceMangaDisplayView(
-            sourceId: sourceId,
-            sourceType: sourceType,
-            controller: controller,
-            source: data,
-          ),
-        ),
+        body: topBar
+            ? Column(
+                children: [
+                  toolbarBottom,
+                  Expanded(child: listBody),
+                ],
+              )
+            : listBody,
         floatingActionButton:
             sourceType == SourceType.SEARCH && filterList.isNotBlank
                 ? Builder(
@@ -234,14 +257,30 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     ),
                   )
                 : null,
-      ),
+      );
+        return titleTopBarSlot(
+          topBar: topBar,
+          leading: detailNavigationBackButton(context),
+          title: title,
+          actions: actions,
+          child: scaffold,
+        );
+      },
       refresh: () => ref.refresh(sourceProvider(sourceId)),
-      wrapper: (body) => Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.source),
-        ),
-        body: body,
-      ),
+      wrapper: (body) {
+        final topBar = showsMergedTopBar(context);
+        final title = Text(context.l10n.source);
+        final scaffold = Scaffold(
+          appBar: topBar ? null : AppBar(title: title),
+          body: body,
+        );
+        return titleTopBarSlot(
+          topBar: topBar,
+          leading: detailNavigationBackButton(context),
+          title: title,
+          child: scaffold,
+        );
+      },
     );
   }
 }

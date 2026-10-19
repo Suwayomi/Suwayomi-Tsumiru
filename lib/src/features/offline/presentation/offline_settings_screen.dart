@@ -10,9 +10,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/platform/is_android_native.dart';
+import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../widgets/section_title.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../notifications/controller/notification_settings_providers.dart';
 import '../../notifications/controller/notifications_controller.dart';
@@ -254,16 +256,26 @@ class OfflineSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTileTheme(
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.onDeviceDownloads);
+    final content = ListTileTheme(
       data: ListTileThemeData(
         subtitleTextStyle: TextStyle(
           color: context.theme.colorScheme.onSurfaceVariant,
         ),
       ),
       child: Scaffold(
-        appBar: AppBar(title: Text(context.l10n.onDeviceDownloads)),
+        appBar: topBar ? null : AppBar(title: title),
         body: ListView(children: buildOnDeviceStorageTiles(context, ref)),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: content,
     );
   }
 }

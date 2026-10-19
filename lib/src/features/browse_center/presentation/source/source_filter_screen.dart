@@ -11,6 +11,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../constants/language_list.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -59,11 +60,17 @@ class SourceFilterScreen extends HookConsumerWidget {
 
     refresh() => ref.refresh(sourceListProvider.future);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: detailNavigationBackButton(context),
-        title: Text(context.l10n.sources),
-      ),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.sources);
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+            ),
       body: sourceMapData.showUiWhenData(
         context,
         (data) {
@@ -141,6 +148,12 @@ class SourceFilterScreen extends HookConsumerWidget {
         },
         refresh: refresh,
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

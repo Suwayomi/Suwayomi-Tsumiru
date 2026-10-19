@@ -12,6 +12,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -66,38 +67,45 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
     void setSelected(Iterable<String> ids) =>
         selectedIds.value = ids.toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: detailNavigationBackButton(context),
-        title: Text(l10n.migrationSelectSourcesTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.migrationSelectPinned,
-            icon: const Icon(Icons.push_pin_outlined),
-            onPressed: () =>
-                setSelected([for (final s in allSources) if (s.isPinned) s.id]),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(l10n.migrationSelectSourcesTitle);
+    final actions = <Widget>[
+      IconButton(
+        tooltip: l10n.migrationSelectPinned,
+        icon: const Icon(Icons.push_pin_outlined),
+        onPressed: () =>
+            setSelected([for (final s in allSources) if (s.isPinned) s.id]),
+      ),
+      IconButton(
+        tooltip: l10n.migrationSelectNone,
+        icon: const Icon(Icons.deselect),
+        onPressed: () => setSelected(const []),
+      ),
+      PopupMenuButton<void>(
+        itemBuilder: (context) => [
+          PopupMenuItem<void>(
+            onTap: () => setSelected(
+                [for (final s in allSources) if (!s.isHidden) s.id]),
+            child: Text(l10n.migrationSelectEnabled),
           ),
-          IconButton(
-            tooltip: l10n.migrationSelectNone,
-            icon: const Icon(Icons.deselect),
-            onPressed: () => setSelected(const []),
-          ),
-          PopupMenuButton<void>(
-            itemBuilder: (context) => [
-              PopupMenuItem<void>(
-                onTap: () => setSelected(
-                    [for (final s in allSources) if (!s.isHidden) s.id]),
-                child: Text(l10n.migrationSelectEnabled),
-              ),
-              PopupMenuItem<void>(
-                onTap: () => setSelected([for (final s in allSources) s.id]),
-                child: Text(l10n.migrationSelectAllSources),
-              ),
-            ],
-            popUpAnimationStyle: context.motionStyle,
+          PopupMenuItem<void>(
+            onTap: () => setSelected([for (final s in allSources) s.id]),
+            child: Text(l10n.migrationSelectAllSources),
           ),
         ],
+        popUpAnimationStyle: context.motionStyle,
       ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+              actions: actions,
+            ),
       floatingActionButton: selected.isEmpty
           ? null
           : FloatingActionButton.extended(
@@ -177,6 +185,13 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
           ),
         ],
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: actions,
+      child: scaffold,
     );
   }
 

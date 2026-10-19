@@ -35,6 +35,7 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../helpers/unreachable_server_stubs.dart';
@@ -45,6 +46,20 @@ void _setSize(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+}
+
+void _mockWindowManager() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
 }
 
 Fragment$MangaDto _manga(int id, String title) => Fragment$MangaDto(
@@ -480,7 +495,19 @@ void main() {
         );
         addTearDown(container.dispose);
         _setSize(tester, size);
-        Widget home() => const Scaffold(body: HistoryScreen());
+        _mockWindowManager();
+        // Native desktop draws the toolbar in the shell bar above the
+        // page; narrower surfaces keep the page on its own.
+        Widget home() => Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                if (showsMergedTopBar(context)) const DesktopTopBar(),
+                const Expanded(child: HistoryScreen()),
+              ],
+            ),
+          ),
+        );
         if (withRouter) {
           await tester.pumpWidget(
             UncontrolledProviderScope(
@@ -538,28 +565,22 @@ void main() {
       }
 
       Finder headerField() => find.descendant(
-        of: find.byType(AppBar),
+        of: find.byType(DesktopTopBar),
         matching: find.byType(DesktopSearchField),
       );
 
       Finder headerTextField() =>
           find.descendant(of: headerField(), matching: find.byType(TextField));
 
-      testWidgets('header field replaces the title; no second box', (
+      testWidgets('header field lives in the shell bar; no AppBar', (
         tester,
       ) async {
         await pumpHistory(tester);
         expect(tester.takeException(), isNull);
 
+        expect(find.byType(DesktopTopBar), findsOneWidget);
+        expect(find.byType(AppBar), findsNothing);
         expect(headerField(), findsOneWidget);
-        expect(
-          find.descendant(
-            of: find.byType(AppBar),
-            matching: find.text('History'),
-          ),
-          findsNothing,
-          reason: 'the sidebar already names the page',
-        );
         // One search box, not two: no inline "Search history..." bar.
         expect(find.byType(SearchField), findsNothing);
       });
@@ -570,7 +591,9 @@ void main() {
         await pumpHistory(tester);
 
         await tester.enterText(headerTextField(), 'sw');
-        await tester.pump();
+        // Settled: the keystroke crosses the platform channel and the
+        // filtered rebuild (plus overlay frames) lands.
+        await tester.pumpAndSettle();
 
         // The list below filters live.
         expect(find.text('Chapter 12'), findsWidgets);
@@ -584,7 +607,9 @@ void main() {
         final container = await pumpHistory(tester);
 
         await tester.enterText(headerTextField(), 'sw');
-        await tester.pump();
+        // Settled: the keystroke crosses the platform channel and the
+        // filtered rebuild (plus overlay frames) lands.
+        await tester.pumpAndSettle();
         expect(find.text('Search all sources for "sw"'), findsOneWidget);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -862,6 +887,7 @@ void main() {
       );
       addTearDown(container.dispose);
       _setSize(tester, _desktop);
+      _mockWindowManager();
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -870,8 +896,20 @@ void main() {
               initialLocation: '/history',
               routes: [
                 GoRoute(
+                  // Native desktop draws the toolbar in the shell bar
+                  // above the page.
                   path: '/history',
-                  builder: (_, _) => const Scaffold(body: HistoryScreen()),
+                  builder: (_, _) => Scaffold(
+                    body: Builder(
+                      builder: (context) => Column(
+                        children: [
+                          if (showsMergedTopBar(context))
+                            const DesktopTopBar(),
+                          const Expanded(child: HistoryScreen()),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 GoRoute(
                   path: '/manga/:mangaId',
@@ -894,7 +932,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final headerField = find.descendant(
-        of: find.byType(AppBar),
+        of: find.byType(DesktopTopBar),
         matching: find.byType(TextField),
       );
       await tester.enterText(headerField, 'sw');

@@ -8,7 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../settings/search/settings_search_registry.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/tracking_settings_providers.dart';
@@ -27,14 +29,18 @@ class TrackingSettingsScreen extends ConsumerWidget {
         .ifNull(true);
     final trackersAsync = ref.watch(trackersProvider);
 
-    return ListTileTheme(
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.tracking);
+    final content = ListTileTheme(
       data: ListTileThemeData(
         subtitleTextStyle: TextStyle(
           color: context.theme.colorScheme.onSurfaceVariant,
         ),
       ),
       child: Scaffold(
-        appBar: AppBar(title: Text(context.l10n.tracking)),
+        appBar: topBar ? null : AppBar(title: title),
         body: SettingsHighlightScope(
           child: ListView(
             children: [
@@ -72,6 +78,12 @@ class TrackingSettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: content,
     );
   }
 }

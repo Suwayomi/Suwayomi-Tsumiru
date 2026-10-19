@@ -32,6 +32,7 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/manga_cover/providers/manga_cover_providers.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
@@ -93,8 +94,8 @@ Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
 /// manga (Action x2, Fantasy x1). Never hits the network.
 ///
 /// On desktop widths the screen goes inside a replica of the desktop shell: a
-/// 256 px sidebar (the extended rail width in `big_screen_navigation_bar.dart`)
-/// plus a 40 px title strip, with the library in a nested [Navigator] like
+/// 256 px sidebar plus the real [DesktopTopBar] (which shows the library
+/// toolbar from its slot), with the library in a nested [Navigator] like
 /// go_router's branch Navigator. The nested Navigator owns its own Overlay
 /// covering only the content area, which is what caught the window-global
 /// anchor bug (panels pinned to the window's right edge instead of the
@@ -154,6 +155,17 @@ Future<ProviderContainer> _pumpLibrary(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   const library = LibraryScreen(categoryId: 1);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
   final Widget home = surface.width >= 1200
       ? Scaffold(
           body: Row(
@@ -162,7 +174,7 @@ Future<ProviderContainer> _pumpLibrary(
               Expanded(
                 child: Column(
                   children: [
-                    const SizedBox(height: 40),
+                    const DesktopTopBar(),
                     Expanded(
                       child: Navigator(
                         onGenerateRoute: (_) =>
@@ -190,8 +202,17 @@ Future<ProviderContainer> _pumpLibrary(
   return container;
 }
 
+/// Taps the toolbar's Filter button. The shell bar slot is narrower than the
+/// old body header, so at 1400 the toolbar is in compact mode (icon buttons,
+/// no text labels): tap the Filter icon, which both modes render, instead of
+/// the label text that only full mode shows.
+Finder _filterButton() => find.descendant(
+  of: find.byType(DesktopLibraryToolbar),
+  matching: find.byIcon(Icons.filter_list_rounded),
+);
+
 Future<void> _openFilterPanel(WidgetTester tester) async {
-  await tester.tap(find.text('Filter'));
+  await tester.tap(_filterButton());
   await tester.pumpAndSettle();
 }
 
@@ -209,10 +230,7 @@ Future<(Rect, Rect)> _openFilterAndMeasure(
   await _pumpLibrary(tester, surface: surface);
   await _openFilterPanel(tester);
   final buttonBox = find.ancestor(
-    of: find.descendant(
-      of: find.byType(DesktopLibraryToolbar),
-      matching: find.text('Filter'),
-    ),
+    of: _filterButton(),
     matching: find.byType(DesktopToolbarBox),
   );
   expect(buttonBox, findsOneWidget);
@@ -309,6 +327,22 @@ void main() {
       expect(find.text('Downloaded'), findsOneWidget);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Downloaded'), findsNothing);
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('click outside closes the panel', (tester) async {
+      const surface = Size(1400, 980);
+      await _pumpLibrary(tester, surface: surface);
+      await _openFilterPanel(tester);
+      expect(find.text('Downloaded'), findsOneWidget);
+
+      // Left of the right-aligned 720 px panel: hits the route's
+      // barrier, which dismisses without touching the page behind it.
+      await tester.tapAt(const Offset(20, 500));
       await tester.pumpAndSettle();
 
       expect(find.text('Downloaded'), findsNothing);
@@ -425,6 +459,11 @@ void main() {
         tester,
         const Size(1400, 980),
       );
+      // The button driving the panel lives inside the shell bar, not the
+      // page body: the panel opens from the top bar.
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      expect(barRect.contains(buttonRect.topCenter), isTrue);
+      expect(barRect.contains(buttonRect.bottomCenter), isTrue);
       expect(panelRect.width, 720);
       expect(panelRect.right - buttonRect.right, lessThanOrEqualTo(1.0));
       expect(panelRect.right - buttonRect.right, greaterThanOrEqualTo(-1.0));

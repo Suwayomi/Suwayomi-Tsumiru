@@ -9,7 +9,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_theme.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'widgets/app_theme_selector/app_theme_providers.dart';
@@ -24,8 +26,12 @@ class AppearanceScreen extends ConsumerWidget {
   @override
   Widget build(context, ref) {
     final themeMode = ref.watch(appThemeModeProvider);
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.appearance)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.appearance);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: SettingsHighlightScope(
         child: ListView(
           children: [
@@ -70,6 +76,12 @@ class AppearanceScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

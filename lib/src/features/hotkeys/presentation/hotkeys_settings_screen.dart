@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../data/hotkey_binding.dart';
 
 class HotkeysSettingsScreen extends StatelessWidget {
@@ -39,14 +41,24 @@ class HotkeysSettingsScreen extends StatelessWidget {
       for (final h in readerHotkeyDisplays)
         _HotkeyRow(label: h.label(l), chords: [h.displayKeys]),
     ];
-    return Scaffold(
-      appBar: AppBar(title: Text(l.keyboardShortcuts)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(l.keyboardShortcuts);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: ListView(padding: const EdgeInsets.only(bottom: 24), children: rows),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

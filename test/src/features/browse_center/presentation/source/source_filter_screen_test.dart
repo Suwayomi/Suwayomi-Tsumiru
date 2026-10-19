@@ -66,6 +66,11 @@ Future<Widget> _harness(Map<String, List<SourceDto>> byLang) async {
 void main() {
   testWidgets('renders Komikku structure: language switch, All Sources switch, '
       'per-source checkbox with flag', (tester) async {
+    // Phone surface: the page keeps its own AppBar (desktop draws the
+    // toolbar in the shell bar instead).
+    tester.view.physicalSize = const Size(412, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     // Default enabled langs include "en" (not "ko"), so en expands and ko does not.
     await tester.pumpWidget(await _harness({
       'en': [_src(id: '1', name: 'Asura Scans')],

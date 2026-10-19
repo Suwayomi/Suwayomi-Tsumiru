@@ -16,6 +16,8 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import 'widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import 'widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
@@ -61,8 +63,12 @@ class ReaderSettingsScreen extends ConsumerWidget {
     void Function(T?) setEnum<T>(Refreshable<dynamic> notifier) =>
         (v) => (ref.read(notifier) as dynamic).update(v);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.reader)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.reader);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: SettingsHighlightScope(
         child: ListView(
           children: [
@@ -533,6 +539,12 @@ class ReaderSettingsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

@@ -10,20 +10,28 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/navigation_bar_data.dart';
 import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
-import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
-import '../tsumiru_logo.dart';
+import '../../utils/platform/platform_runtime.dart';
 import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
 
-/// Wide-desktop-only navigation sidebar (shown when [BuildContext.isWideDesktop]).
+/// Whether the sidebar shows expanded rows at this window width: below 1200
+/// px it shows collapsed whatever the user chose, and returns to their choice
+/// at 1200 and above. The saved preference itself never changes.
+bool sidebarIsExpanded(BuildContext context, bool preference) =>
+    preference && MediaQuery.sizeOf(context).width >= 1200;
+
+/// Wide-desktop-only navigation sidebar (shown when [BuildContext.isDesktop]).
 ///
-/// Expanded (208 px): logo header with collapse chevron, then 40 px rows with
-/// icon + label and 2 px gaps. Collapsed (60 px): centred logo (tap to
-/// expand), 44 px icon-only rows with 6 px gaps, the label as a hover
-/// [Tooltip]. Width animates over 200 ms unless reduced motion is requested.
+/// Expanded (208 px): 40 px rows with icon + label and 2 px gaps. Collapsed
+/// (60 px, 80 px on macOS so the traffic lights fit above the column): 44 px
+/// icon-only rows with 6 px gaps, the label as a hover [Tooltip]. The logo
+/// header lives in the desktop top bar above the sidebar, so the sidebar
+/// starts directly under the bar; on macOS collapsed the expand chevron sits
+/// at the sidebar's bottom, since the bar shows no logo to click. Width
+/// animates over 200 ms unless reduced motion is requested.
 class DesktopSidebar extends ConsumerWidget {
   const DesktopSidebar({
     super.key,
@@ -36,11 +44,27 @@ class DesktopSidebar extends ConsumerWidget {
 
   static const double expandedWidth = 208;
   static const double collapsedWidth = 60;
-  static const double _headerHeight = 56;
+
+  /// Collapsed width on macOS, so the traffic-lights inset above still lines
+  /// up with the column.
+  static const double macCollapsedWidth = 80;
+
   static const double _rowHeight = 40;
   static const double _collapsedRowHeight = 44;
   static const double _rowGap = 2;
   static const double _collapsedRowGap = 6;
+
+  /// The sidebar's width for this state. [expanded] is the effective state
+  /// ([sidebarIsExpanded]), not the raw preference. [isMacOS] defaults to the
+  /// test-overridable platform check.
+  static double widthFor({
+    required bool expanded,
+    bool? isMacOS,
+    required double windowWidth,
+  }) {
+    if (expanded && windowWidth >= 1200) return expandedWidth;
+    return (isMacOS ?? isMacOSRuntime) ? macCollapsedWidth : collapsedWidth;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,18 +73,22 @@ class DesktopSidebar extends ConsumerWidget {
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final navList = NavigationBarData.getNavList(context);
 
-    final expanded = ref.watch(sidebarExpandedProvider).ifNull(true);
-    void toggleSidebar() =>
-        ref.read(sidebarExpandedProvider.notifier).update(!expanded);
+    final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
+    final expanded = sidebarIsExpanded(context, preference);
+    // The traffic-lights inset exists only on native macOS; web and tablets
+    // always use the logo column.
+    final isMacOS = isDesktopPlatform && isMacOSRuntime;
+    final windowWidth = MediaQuery.sizeOf(context).width;
+    void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
 
     final cs = context.colorScheme;
     final selectedBg = cs.primary.withValues(alpha: 0.22);
     final hoverBg = cs.onSurface.withValues(alpha: 0.05);
 
-    // The width animates between the two rest widths. The wide content (logo +
-    // label header, icon + label rows) cannot lay out in a narrow bar, so the
-    // content follows the live width and flips at the midpoint: every frame
-    // shows content that fits its frame, and rest states always match the pref.
+    // The width animates between the two rest widths. The wide content (icon
+    // + label rows) cannot lay out in a narrow bar, so the content follows
+    // the live width and flips at the midpoint: every frame shows content
+    // that fits its frame, and rest states always match the pref.
     Widget row(int index, bool showExpanded) {
       final data = navList[index];
       final selected = index == selectedIndex;
@@ -130,101 +158,83 @@ class DesktopSidebar extends ConsumerWidget {
       );
     }
 
-    Widget header(bool showExpanded) => SizedBox(
-      height: _headerHeight,
-      child: showExpanded
-          ? Padding(
-              padding: const EdgeInsets.only(left: 8, right: 4),
-              child: Row(
+    // The sidebar doesn't scroll on its own, so in a short window its rows
+    // would overflow the bottom. Let it scroll when it can't fit, while still
+    // filling the height when there's room. The macOS expand button floats
+    // over the bottom so it stays put while the rows scroll under it.
+    return LayoutBuilder(
+      builder: (context, constraints) => TweenAnimationBuilder<double>(
+        tween: Tween<double>(
+          begin: widthFor(
+            expanded: expanded,
+            isMacOS: isMacOS,
+            windowWidth: windowWidth,
+          ),
+          end: widthFor(
+            expanded: expanded,
+            isMacOS: isMacOS,
+            windowWidth: windowWidth,
+          ),
+        ),
+        duration: context.reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
+        builder: (context, width, _) {
+          final showExpanded = width > (expandedWidth + collapsedWidth) / 2;
+          final showExpandButton = isMacOS && !showExpanded;
+          final maxHeight = constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : null;
+          return SizedBox(
+            width: width,
+            height: maxHeight,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(right: BorderSide(color: cs.outlineVariant)),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Stack(
                 children: [
-                  Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => const AboutRoute().push(context),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Row(
-                          children: [
-                            const TsumiruLogo(size: 32),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                context.l10n.appTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                  Positioned.fill(
+                    child: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: ((maxHeight ?? 0) - 16).clamp(
+                            0.0,
+                            double.infinity,
+                          ),
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (var i = 0; i < navList.length; i++)
+                                row(i, showExpanded),
+                              if (showExpandButton) const SizedBox(height: 48),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    tooltip: context.l10n.collapseSidebar,
-                    onPressed: toggleSidebar,
-                  ),
-                ],
-              ),
-            )
-          : Center(
-              child: IconButton(
-                icon: const TsumiruLogo(size: 32),
-                tooltip: context.l10n.expandSidebar,
-                onPressed: toggleSidebar,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ),
-    );
-
-    // The sidebar doesn't scroll on its own, so in a short window its rows
-    // would overflow the bottom. Let it scroll when it can't fit, while still
-    // filling the height when there's room.
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: IntrinsicHeight(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                begin: expanded ? expandedWidth : collapsedWidth,
-                end: expanded ? expandedWidth : collapsedWidth,
-              ),
-              duration: context.reduceMotion
-                  ? Duration.zero
-                  : const Duration(milliseconds: 200),
-              builder: (context, width, _) {
-                final showExpanded =
-                    width > (expandedWidth + collapsedWidth) / 2;
-                return SizedBox(
-                  width: width,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        right: BorderSide(color: cs.outlineVariant),
+                  if (showExpandButton)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          tooltip: context.l10n.expandSidebar,
+                          onPressed: expand,
+                        ),
                       ),
                     ),
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        header(showExpanded),
-                        const SizedBox(height: 4),
-                        for (var i = 0; i < navList.length; i++)
-                          row(i, showExpanded),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

@@ -7,11 +7,13 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
@@ -72,8 +74,12 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final repository = ref.watch(syncyomiSettingsRepositoryProvider);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.syncyomi)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(l10n.syncyomi);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: ref.watch(syncYomiSettingsProvider).showUiWhenData(
         context,
         skipLoadingOnReload: true,
@@ -216,6 +222,12 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

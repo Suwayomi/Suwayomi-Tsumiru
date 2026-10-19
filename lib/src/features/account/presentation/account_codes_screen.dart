@@ -9,6 +9,8 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/app_utils.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 
@@ -108,8 +110,12 @@ class AccountCodesScreen extends HookConsumerWidget {
     final admitted = ref.watch(settledAccountAccessProvider).canManageUsers;
     final busy = useState(false);
     final codes = admitted ? ref.watch(accountCodesProvider) : null;
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.accountCodes)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.accountCodes);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: !admitted
           ? Center(child: Text(context.l10n.accountSettingsUnavailable))
           : Column(
@@ -207,6 +213,12 @@ class AccountCodesScreen extends HookConsumerWidget {
                 ),
               ],
             ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

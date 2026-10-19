@@ -9,6 +9,7 @@
 // padding left only 20 px for a 24 px icon, drawing circles as tall ovals.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,10 +17,25 @@ import 'package:tsumiru/src/features/browse_center/presentation/extension/contro
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/shell/animated_nav_icon.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
+
+void _mockWindowManager() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
+}
 
 Future<void> _pumpCollapsed(
   WidgetTester tester,
@@ -143,11 +159,7 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
     await _pumpCollapsed(tester, prefs);
-    // Default pref is expanded; tap the logo only if collapsed.
-    if (tester.getSize(find.byType(DesktopSidebar)).width == 60) {
-      await tester.tap(find.byType(TsumiruLogo));
-      await tester.pumpAndSettle();
-    }
+    // Default pref is expanded.
     expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
 
     final rows = _rowContainers(40);
@@ -161,17 +173,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('collapsed header logo renders square', (tester) async {
+  testWidgets('collapsed bar logo renders square at 28 px', (tester) async {
     SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
     final prefs = await SharedPreferences.getInstance();
-    await _pumpCollapsed(tester, prefs);
+    _mockWindowManager();
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
 
+    // The logo header moved to the top bar above the sidebar.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          downloadsPausedBadgeProvider.overrideWith((ref) => false),
+          extensionUpdateBadgeCountProvider.overrideWith((ref) async => 0),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Column(
+              children: [
+                const DesktopTopBar(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      BigScreenNavigationBar(
+                        selectedIndex: 0,
+                        onDestinationSelected: (_) {},
+                      ),
+                      const Expanded(child: SizedBox.expand()),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
+    expect(
+      find.descendant(
+        of: find.byType(DesktopSidebar),
+        matching: find.byType(TsumiruLogo),
+      ),
+      findsNothing,
+      reason: 'the sidebar carries no header of its own anymore',
+    );
     final logo = find.descendant(
-      of: find.byType(DesktopSidebar),
+      of: find.byType(DesktopTopBar),
       matching: find.byType(TsumiruLogo),
     );
     expect(logo, findsOneWidget);
-    expect(tester.getSize(logo), const Size(32, 32));
+    expect(tester.getSize(logo), const Size(28, 28));
     expect(tester.takeException(), isNull);
   });
 }

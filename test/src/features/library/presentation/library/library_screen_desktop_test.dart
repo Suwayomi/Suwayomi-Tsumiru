@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,9 +15,11 @@ import 'package:tsumiru/src/features/library/presentation/category/controller/ed
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_panels.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -25,6 +28,7 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/sorayomi.dart';
 import 'package:tsumiru/src/utils/theme/app_theme_builder.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
   defaultCategory: false,
@@ -119,6 +123,17 @@ Future<ProviderContainer> _pumpLibrary(
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
@@ -128,7 +143,20 @@ Future<ProviderContainer> _pumpLibrary(
         scrollBehavior: const AppScrollBehavior(),
         home: ScrollbarTheme(
           data: scrollbarTheme ?? const ScrollbarThemeData(),
-          child: const LibraryScreen(categoryId: 1),
+          // Native desktop draws the toolbar in the shell bar above the
+          // page; narrower surfaces keep the page on its own.
+          child: Builder(
+            builder: (context) => showsMergedTopBar(context)
+                ? const Scaffold(
+                    body: Column(
+                      children: [
+                        DesktopTopBar(),
+                        Expanded(child: LibraryScreen(categoryId: 1)),
+                      ],
+                    ),
+                  )
+                : const LibraryScreen(categoryId: 1),
+          ),
         ),
       ),
     ),
@@ -329,6 +357,83 @@ void main() {
         find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
         findsNothing,
       );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Library toolbar in the shell bar', () {
+    bool insideBar(WidgetTester tester, Rect barRect, Finder control) {
+      final rect = tester.getRect(control);
+      return barRect.left <= rect.left &&
+          rect.right <= barRect.right &&
+          barRect.top <= rect.top &&
+          rect.bottom <= barRect.bottom;
+    }
+
+    testWidgets('search, sort, filter and display sit inside the bar', (
+      tester,
+    ) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      expect(
+        insideBar(tester, barRect, find.byType(DesktopLibraryToolbar)),
+        isTrue,
+      );
+      expect(
+        insideBar(tester, barRect, find.byType(DesktopSearchField)),
+        isTrue,
+        reason: 'search field',
+      );
+      expect(
+        insideBar(tester, barRect, find.byIcon(Icons.sort_rounded)),
+        isTrue,
+        reason: 'sort control',
+      );
+      expect(
+        insideBar(tester, barRect, find.text('Filter')),
+        isTrue,
+        reason: 'filter control',
+      );
+      expect(
+        insideBar(tester, barRect, find.byTooltip('Display')),
+        isTrue,
+        reason: 'display control',
+      );
+
+      // Category tabs stay in the page body under the bar.
+      final tabTop = tester
+          .getTopLeft(find.text('One', findRichText: true))
+          .dy;
+      expect(tabTop, greaterThan(barRect.bottom - 1));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('filter panel opens under the filter button', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+
+      final buttonBox = find.ancestor(
+        of: find.descendant(
+          of: find.byType(DesktopLibraryToolbar),
+          matching: find.text('Filter'),
+        ),
+        matching: find.byType(DesktopToolbarBox),
+      );
+      expect(buttonBox, findsOneWidget);
+      await tester.tap(find.text('Filter'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DesktopLibraryFilterPanel), findsOneWidget);
+      final buttonRect = tester.getRect(buttonBox);
+      final panelRect = tester.getRect(find.byType(DesktopLibraryFilterPanel));
+      expect(
+        panelRect.top,
+        greaterThanOrEqualTo(buttonRect.bottom - 4),
+        reason: 'the panel opens under its button, not over it',
+      );
+      expect(panelRect.left, lessThan(buttonRect.right));
+      expect(panelRect.right, greaterThan(buttonRect.left));
       expect(tester.takeException(), isNull);
     });
   });

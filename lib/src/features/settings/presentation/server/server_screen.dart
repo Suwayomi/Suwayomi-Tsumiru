@@ -10,7 +10,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/network/graphql_errors.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/server_unreachable_view.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../controller/server_controller.dart';
 import '../../search/settings_search_registry.dart';
@@ -38,8 +40,12 @@ class ServerScreen extends ConsumerWidget {
       await ref.read(settingsProvider.future);
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.server)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.server);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
@@ -105,6 +111,12 @@ class ServerScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

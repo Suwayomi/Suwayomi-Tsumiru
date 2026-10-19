@@ -17,7 +17,9 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/network/cleartext_address.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../search/settings_search_registry.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
@@ -70,8 +72,12 @@ class ConnectionScreen extends HookConsumerWidget {
       return null;
     }, const []);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.connection)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.connection);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: ListTileTheme(
         data: ListTileThemeData(
           subtitleTextStyle: TextStyle(
@@ -149,6 +155,12 @@ class ConnectionScreen extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

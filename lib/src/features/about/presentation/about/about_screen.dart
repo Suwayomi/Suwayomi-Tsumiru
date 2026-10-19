@@ -17,6 +17,8 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../data/about_repository.dart';
 import '../../domain/about/about_dto.dart';
@@ -130,8 +132,12 @@ class AboutScreen extends HookConsumerWidget {
       return;
     }, [aboutAsync.value]);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.about)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.about);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(aboutProvider.future),
         child: ListView(
@@ -227,6 +233,12 @@ class AboutScreen extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -41,54 +42,73 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
       return null;
     }, []);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: detailNavigationBackButton(context),
-        title: Text(context.l10n.searchAllSources),
-        bottom: PreferredSize(
-          preferredSize: kCalculateAppBarBottomSize([true]),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: SizedBox(
-                  width: context.isLargeTablet
-                      ? context.widthScale(scale: .5)
-                      : null,
-                  child: Padding(
-                    padding: KEdgeInsets.h16v4.size,
-                    child: SearchField(
-                      initialText: query.value,
-                      onSubmitted: (value) => query.value = value,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+    // Native desktop draws the title and search box in the shell bar
+    // instead of an app bar; the results stay in the page body.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.searchAllSources);
+    final searchBox = Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
+        child: Padding(
+          padding: KEdgeInsets.h16v4.size,
+          child: SearchField(
+            initialText: query.value,
+            onSubmitted: (value) => query.value = value,
           ),
         ),
       ),
-      body: migrationSearchResult.showUiWhenData(
-        context,
-        (data) => data.isBlank
-            ? Emoticons(
-                title: context.l10n.noSourcesFound,
-                button: TextButton(
-                  onPressed: () => ref.invalidate(sourceMapFilteredProvider),
-                  child: Text(context.l10n.refresh),
-                ),
-              )
-            : ListView.builder(
-                itemBuilder: (context, index) {
-                  return MigrationSourceShortSearch(
-                    source: data[index].source,
-                    mangaList: data[index].mangaList,
-                    query: query.value,
-                  );
-                },
-                itemCount: data.length,
+    );
+    final results = migrationSearchResult.showUiWhenData(
+      context,
+      (data) => data.isBlank
+          ? Emoticons(
+              title: context.l10n.noSourcesFound,
+              button: TextButton(
+                onPressed: () => ref.invalidate(sourceMapFilteredProvider),
+                child: Text(context.l10n.refresh),
               ),
-      ),
+            )
+          : ListView.builder(
+              itemBuilder: (context, index) {
+                return MigrationSourceShortSearch(
+                  source: data[index].source,
+                  mangaList: data[index].mangaList,
+                  query: query.value,
+                );
+              },
+              itemCount: data.length,
+            ),
+    );
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+              bottom: PreferredSize(
+                preferredSize: kCalculateAppBarBottomSize([true]),
+                child: Column(
+                  children: [
+                    searchBox,
+                  ],
+                ),
+              ),
+            ),
+      body: topBar
+          ? Column(
+              children: [
+                searchBox,
+                Expanded(child: results),
+              ],
+            )
+          : results,
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
@@ -433,20 +434,64 @@ class UpdatesScreen extends HookConsumerWidget {
       resetList();
       return null;
     }, [filter]);
-    return Scaffold(
-      floatingActionButton: selectedChapters.value.isEmpty
-          ? const UpdateStatusFab()
-          : null,
-      appBar: selectedChapters.value.isNotEmpty
-          ? AppBar(
-              leading: IconButton(
-                onPressed: () => selectedChapters.value = ({}),
-                icon: const Icon(Icons.close_rounded),
-              ),
-              title: Text(
-                context.l10n.numSelected(selectedChapters.value.length),
-              ),
-            )
+    final selecting = selectedChapters.value.isNotEmpty;
+    // Native desktop draws the toolbars in the shell bar instead of an app
+    // bar; selection mode swaps the slot content like it swaps the app bar.
+    final topBar = showsMergedTopBar(context);
+    final closeSelection = IconButton(
+      onPressed: () => selectedChapters.value = ({}),
+      icon: const Icon(Icons.close_rounded),
+    );
+    final selectionTitle = Text(
+      context.l10n.numSelected(selectedChapters.value.length),
+    );
+    final search = DesktopSearchField(
+      query: ref.watch(unifiedSearchQueryProvider),
+      onChanged: (value) =>
+          ref.read(unifiedSearchQueryProvider.notifier).state = value,
+      onNavigate: () =>
+          ref.read(unifiedSearchQueryProvider.notifier).state = '',
+    );
+    final actions = <Widget>[
+      if (phone && !persistentBox)
+        const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
+      SyncYomiSyncButton(onSynced: resetList),
+      IconButton(
+        icon: const Icon(Icons.filter_list_rounded),
+        tooltip: context.l10n.filter,
+        // Tinted while filtered, so a short list reads as "filtered"
+        // rather than "nothing new". Komikku uses amber here; ours
+        // comes from the theme.
+        color: hasActiveFilters ? context.theme.colorScheme.primary : null,
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: KBorderRadius.rT16.radius,
+          ),
+          clipBehavior: Clip.hardEdge,
+          builder: (_) => const UpdatesFilterSheet(),
+          sheetAnimationStyle: context.motionStyle,
+        ),
+      ),
+      IconButton(
+        icon: const Icon(Icons.calendar_month_rounded),
+        tooltip: context.l10n.upcoming,
+        onPressed: () => const UpcomingRoute().push(context),
+      ),
+      const UpdateStatusPopupMenu(),
+    ];
+    final scaffold = Scaffold(
+      floatingActionButton: selecting ? null : const UpdateStatusFab(),
+      appBar: selecting
+          ? (topBar
+                ? null
+                : AppBar(
+                    leading: closeSelection,
+                    title: selectionTitle,
+                  ))
+          : topBar
+          ? null
           : AppBar(
               // Single-line, like every other tab. Stacking the last-updated
               // line in here made this the only header whose title sat at a
@@ -460,56 +505,14 @@ class UpdatesScreen extends HookConsumerWidget {
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 720),
-                        child: DesktopSearchField(
-                          query: ref.watch(unifiedSearchQueryProvider),
-                          onChanged: (value) =>
-                              ref
-                                      .read(unifiedSearchQueryProvider.notifier)
-                                      .state =
-                                  value,
-                          onNavigate: () =>
-                              ref
-                                      .read(unifiedSearchQueryProvider.notifier)
-                                      .state =
-                                  '',
-                        ),
+                        child: search,
                       ),
                     )
                   : Text(context.l10n.updates),
               bottom: persistentBox
                   ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
                   : null,
-              actions: [
-                if (phone && !persistentBox)
-                  const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
-                SyncYomiSyncButton(onSynced: resetList),
-                IconButton(
-                  icon: const Icon(Icons.filter_list_rounded),
-                  tooltip: context.l10n.filter,
-                  // Tinted while filtered, so a short list reads as "filtered"
-                  // rather than "nothing new". Komikku uses amber here; ours
-                  // comes from the theme.
-                  color: hasActiveFilters
-                      ? context.theme.colorScheme.primary
-                      : null,
-                  onPressed: () => showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: KBorderRadius.rT16.radius,
-                    ),
-                    clipBehavior: Clip.hardEdge,
-                    builder: (_) => const UpdatesFilterSheet(),
-                    sheetAnimationStyle: context.motionStyle,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.calendar_month_rounded),
-                  tooltip: context.l10n.upcoming,
-                  onPressed: () => const UpcomingRoute().push(context),
-                ),
-                const UpdateStatusPopupMenu(),
-              ],
+              actions: actions,
             ),
       bottomSheet: selectedChapters.value.isNotEmpty
           ? MultiChaptersActionsBottomAppBar(
@@ -551,6 +554,23 @@ class UpdatesScreen extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+    if (!topBar) return scaffold;
+    if (selecting) {
+      return TopBarSlot(
+        slotKey: 'selection',
+        content: DesktopTitleSlot(
+          leading: closeSelection,
+          title: selectionTitle,
+        ),
+        minWidth: titleTopBarSlotMinWidth(0),
+        child: scaffold,
+      );
+    }
+    return TopBarSlot(
+      content: desktopSearchSlotContent(search: search, actions: actions),
+      minWidth: searchTopBarSlotMinWidth(actions.length),
+      child: scaffold,
     );
   }
 }

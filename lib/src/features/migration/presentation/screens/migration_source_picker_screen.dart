@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -32,13 +33,27 @@ class MigrationSourcePickerScreen extends StatelessWidget {
   const MigrationSourcePickerScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+  Widget build(BuildContext context) {
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.migrationPickSourceTitle);
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+            ),
+      body: const MigrationSourcePickerBody(),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
       leading: detailNavigationBackButton(context),
-      title: Text(context.l10n.migrationPickSourceTitle),
-    ),
-    body: const MigrationSourcePickerBody(),
-  );
+      title: title,
+      child: scaffold,
+    );
+  }
 }
 
 class MigrationSourcePickerBody extends HookConsumerWidget {
@@ -225,32 +240,48 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
       selection.value = next;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: selecting
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => selection.value = const {},
-              )
-            : detailNavigationBackButton(context),
-        title: Text(selecting ? '${selection.value.length}' : data.sourceName),
-        actions: [
-          IconButton(
-            tooltip: l10n.migrationSelectAllSources,
-            icon: const Icon(Icons.select_all),
-            onPressed: () => selection.value = {for (final m in mangas) m.id},
-          ),
-          if (selecting)
-            IconButton(
-              tooltip: l10n.migrationInvertSelection,
-              icon: const Icon(Icons.flip_to_back),
-              onPressed: () => selection.value = {
-                for (final m in mangas)
-                  if (!selection.value.contains(m.id)) m.id,
-              },
-            ),
-        ],
+    // Native desktop draws the toolbars in the shell bar instead of an app
+    // bar; selection mode swaps the slot content like it swaps the app bar.
+    final topBar = showsMergedTopBar(context);
+    final closeSelection = IconButton(
+      icon: const Icon(Icons.close),
+      onPressed: () => selection.value = const {},
+    );
+    final title = Text(
+      selecting ? '${selection.value.length}' : data.sourceName,
+    );
+    final actions = <Widget>[
+      IconButton(
+        tooltip: l10n.migrationSelectAllSources,
+        icon: const Icon(Icons.select_all),
+        onPressed: () => selection.value = {for (final m in mangas) m.id},
       ),
+      if (selecting)
+        IconButton(
+          tooltip: l10n.migrationInvertSelection,
+          icon: const Icon(Icons.flip_to_back),
+          onPressed: () => selection.value = {
+            for (final m in mangas)
+              if (!selection.value.contains(m.id)) m.id,
+          },
+        ),
+    ];
+    final scaffold = Scaffold(
+      appBar: selecting
+          ? (topBar
+                ? null
+                : AppBar(
+                    leading: closeSelection,
+                    title: title,
+                    actions: actions,
+                  ))
+          : topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+              actions: actions,
+            ),
       body: library.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -302,6 +333,26 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
               ),
             )
           : null,
+    );
+    if (!topBar) return scaffold;
+    if (selecting) {
+      return TopBarSlot(
+        slotKey: 'selection',
+        content: DesktopTitleSlot(
+          leading: closeSelection,
+          title: title,
+          actions: actions,
+        ),
+        minWidth: titleTopBarSlotMinWidth(actions.length),
+        child: scaffold,
+      );
+    }
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: actions,
+      child: scaffold,
     );
   }
 }

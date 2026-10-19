@@ -9,7 +9,9 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/app_utils.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/popup_widgets/pop_button.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../auth/data/auth_session_status.dart';
 import '../../settings/presentation/connection/prompt_sign_in.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
@@ -86,17 +88,24 @@ class AccountScreen extends HookConsumerWidget {
         )
         .join(', ');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.accountTitle),
-        actions: [
-          IconButton(
-            tooltip: context.l10n.refresh,
-            onPressed: busy.value || !hasCredentials ? null : refresh,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.accountTitle);
+    final toolbarActions = <Widget>[
+      IconButton(
+        tooltip: context.l10n.refresh,
+        onPressed: busy.value || !hasCredentials ? null : refresh,
+        icon: const Icon(Icons.refresh_rounded),
       ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: title,
+              actions: toolbarActions,
+            ),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: ListView(
@@ -181,6 +190,13 @@ class AccountScreen extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: toolbarActions,
+      child: scaffold,
     );
   }
 }

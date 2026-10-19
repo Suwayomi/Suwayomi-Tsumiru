@@ -48,6 +48,16 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 1280, 900);
+  // Minimum window size: window_manager's setMinimumSize is lost on Linux,
+  // so enforce the floor here. Mirrors kMinWindowSize in
+  // lib/src/utils/desktop/desktop_window.dart: the smallest size the
+  // desktop two-row layout fits.
+  {
+    GdkGeometry hints = {0};
+    hints.min_width = 600;
+    hints.min_height = 600;
+    gtk_window_set_geometry_hints(window, NULL, &hints, GDK_HINT_MIN_SIZE);
+  }
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();

@@ -13,6 +13,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../offline/data/offline_download_providers.dart';
@@ -75,66 +76,69 @@ class DownloadsScreen extends HookConsumerWidget {
         Tab(text: context.l10n.downloadsOnDeviceTab),
       ],
     );
-    return Scaffold(
-      appBar: AppBar(
-        // Desktop replaces the title with the unified search box (the sidebar
-        // already names the page); phone and tablet keep it.
-        title: context.isDesktop
-            ? Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: DesktopSearchField(
-                    query: ref.watch(unifiedSearchQueryProvider),
-                    onChanged: (value) =>
-                        ref.read(unifiedSearchQueryProvider.notifier).state =
-                            value,
-                    onNavigate: () =>
-                        ref.read(unifiedSearchQueryProvider.notifier).state =
-                            '',
-                  ),
+    // Native desktop draws the search box and actions in the shell bar
+    // instead of an app bar; the tab bar stays in the page body.
+    final topBar = showsMergedTopBar(context);
+    final search = DesktopSearchField(
+      query: ref.watch(unifiedSearchQueryProvider),
+      onChanged: (value) =>
+          ref.read(unifiedSearchQueryProvider.notifier).state = value,
+      onNavigate: () =>
+          ref.read(unifiedSearchQueryProvider.notifier).state = '',
+    );
+    final actions = <Widget>[
+      if (phone && !persistentBox)
+        const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
+      if (!onDeviceTab && erroredChapterIds.isNotEmpty)
+        IconButton(
+          tooltip: context.l10n.retryAll,
+          onPressed: () async {
+            final toast = ref.read(toastProvider);
+            final repo = ref.read(downloadsRepositoryProvider);
+            final result = await AsyncValue.guard(() async {
+              for (final id in erroredChapterIds) {
+                await repo.removeChapterFromDownloadQueue(id);
+              }
+              await repo.addChaptersBatchToDownloadQueue(erroredChapterIds);
+            });
+            result.showToastOnError(toast);
+          },
+          icon: const Icon(Icons.replay_rounded),
+        ),
+      if (!onDeviceTab && (downloadsChapterIds).isNotBlank)
+        IconButton(
+          onPressed: !canDownload
+              ? null
+              : () => AppUtils.guard(
+                  ref.read(downloadsMapProvider.notifier).clearAll,
+                  ref.read(toastProvider),
                 ),
-              )
-            : Text(context.l10n.downloads),
-        bottom: persistentBox
-            ? PhoneSearchBoxBottom(
-                origin: PhoneSearchOrigin.plain,
-                below: tabBar,
-              )
-            : tabBar,
-        actions: [
-          if (phone && !persistentBox)
-            const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
-          if (!onDeviceTab && erroredChapterIds.isNotEmpty)
-            IconButton(
-              tooltip: context.l10n.retryAll,
-              onPressed: () async {
-                final toast = ref.read(toastProvider);
-                final repo = ref.read(downloadsRepositoryProvider);
-                final result = await AsyncValue.guard(() async {
-                  for (final id in erroredChapterIds) {
-                    await repo.removeChapterFromDownloadQueue(id);
-                  }
-                  await repo.addChaptersBatchToDownloadQueue(erroredChapterIds);
-                });
-                result.showToastOnError(toast);
-              },
-              icon: const Icon(Icons.replay_rounded),
-            ),
-          if (!onDeviceTab && (downloadsChapterIds).isNotBlank)
-            IconButton(
-              onPressed: !canDownload
-                  ? null
-                  : () => AppUtils.guard(
-                      ref.read(downloadsMapProvider.notifier).clearAll,
-                      ref.read(toastProvider),
-                    ),
-              tooltip: canDownload
-                  ? null
-                  : context.l10n.accountPermissionDenied,
-              icon: const Icon(Icons.delete_sweep_rounded),
-            ),
-        ],
+          tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
+          icon: const Icon(Icons.delete_sweep_rounded),
+        ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              // Desktop replaces the title with the unified search box (the
+              // sidebar already names the page); phone and tablet keep it.
+              title: context.isDesktop
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: search,
+                      ),
+                    )
+                  : Text(context.l10n.downloads),
+              bottom: persistentBox
+                  ? PhoneSearchBoxBottom(
+                      origin: PhoneSearchOrigin.plain,
+                      below: tabBar,
+                    )
+                  : tabBar,
+              actions: actions,
       ),
       // Defaulting to STOPPED (i.e. offering Resume) keeps the recovery action
       // reachable when the run state is unknown: starting an already-running
@@ -146,17 +150,45 @@ class DownloadsScreen extends HookConsumerWidget {
                     status: downloaderRunState ?? DownloaderState.STOPPED,
                   )
                 : null),
-      body: TabBarView(
-        controller: tabController,
-        children: [
-          _ServerDownloads(
-            downloadsChapterIds: downloadsChapterIds,
-            queueStatus: queueStatus,
-          ),
-          const OfflineFilesView(),
-        ],
-      ),
+      // Native desktop has no app bar to host the tab bar (the search box
+      // and actions live in the shell bar), so the tabs stay in the page
+      // body, like Browse's tabs.
+      body: topBar
+          ? Column(
+              children: [
+                tabBar,
+                Expanded(
+                  child: TabBarView(
+                    controller: tabController,
+                    children: [
+                      _ServerDownloads(
+                        downloadsChapterIds: downloadsChapterIds,
+                        queueStatus: queueStatus,
+                      ),
+                      const OfflineFilesView(),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : TabBarView(
+              controller: tabController,
+              children: [
+                _ServerDownloads(
+                  downloadsChapterIds: downloadsChapterIds,
+                  queueStatus: queueStatus,
+                ),
+                const OfflineFilesView(),
+              ],
+            ),
     );
+    return topBar
+        ? TopBarSlot(
+            content: desktopSearchSlotContent(search: search, actions: actions),
+            minWidth: searchTopBarSlotMinWidth(actions.length),
+            child: scaffold,
+          )
+        : scaffold;
   }
 }
 

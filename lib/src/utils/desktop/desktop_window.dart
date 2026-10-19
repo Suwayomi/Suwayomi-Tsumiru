@@ -15,9 +15,13 @@ import 'window_geometry.dart';
 import 'window_geometry_listener.dart';
 import 'window_geometry_store.dart';
 
-// Deliberately small so the window can shrink to the app's compact layout;
-// just large enough that it can't collapse to an unusable sliver.
-const kMinWindowSize = Size(300, 400);
+// The smallest size the desktop two-row layout fits: the desktop layout
+// needs width >= 600 with a shortestSide >= 600, and at 600 px the title
+// bar (brand plus window buttons) and every toolbar at its minimum still
+// lay out — narrower toolbars scroll internally instead of overflowing,
+// and the collapsed sidebar's rows fit the remaining height. Mirrored in
+// linux/my_application.cc, because window_manager's minimum is lost there.
+const kMinWindowSize = Size(600, 600);
 const kDefaultWindowSize = Size(1280, 900);
 
 /// Initialise the desktop window: hide the OS title bar, restore the saved

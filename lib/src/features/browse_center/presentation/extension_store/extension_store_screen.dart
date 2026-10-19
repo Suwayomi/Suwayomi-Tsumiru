@@ -15,8 +15,10 @@ import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension_store/extension_store_model.dart';
@@ -45,16 +47,23 @@ class ExtensionStoreScreen extends ConsumerWidget {
       ref.refresh(extensionStoreListProvider.future);
     }, ref.read(toastProvider));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.extensionStores),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: refresh,
-          ),
-        ],
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.extensionStores);
+    final actions = <Widget>[
+      IconButton(
+        icon: const Icon(Icons.refresh_rounded),
+        onPressed: refresh,
       ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: title,
+              actions: actions,
+            ),
       floatingActionButton: !canManage
           ? null
           : FloatingActionButton(
@@ -178,6 +187,13 @@ class ExtensionStoreScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: actions,
+      child: scaffold,
     );
   }
 }

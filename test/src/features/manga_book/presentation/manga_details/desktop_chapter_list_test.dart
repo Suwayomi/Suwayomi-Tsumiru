@@ -30,6 +30,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 import 'package:tsumiru/src/utils/theme/brand.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 ChapterDto _chapter({
   required int id,
@@ -206,8 +207,33 @@ Widget _app(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: MangaDetailsScreen(mangaId: 1)),
+      // Native desktop draws the back button and title in the shell bar
+      // above the page.
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => Column(
+            children: [
+              if (showsMergedTopBar(context)) const DesktopTopBar(),
+              const Expanded(child: MangaDetailsScreen(mangaId: 1)),
+            ],
+          ),
+        ),
+      ),
     ),
+  );
+}
+
+void _mockWindowManager() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
   );
 }
 
@@ -258,6 +284,7 @@ Future<void> _pumpDesktop(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  _mockWindowManager();
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -867,8 +894,16 @@ void main() {
       ),
       findsOneWidget,
     );
-    // Title once, beside the cover; no app bar title on tablets.
+    // Title in the shell bar and beside the cover; the wide title widget
+    // only appears at 1200 px and up.
     expect(find.byType(SeriesAppBarTitle), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(DesktopTopBar),
+        matching: find.text('Test series'),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.descendant(
         of: find.byType(SeriesHeader),
@@ -876,7 +911,6 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Test series'), findsOneWidget);
     // The selection header uses the same rule: labelled actions at this width.
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.tap(find.text('Chapter 2'));
@@ -915,7 +949,9 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Test series'), findsOneWidget);
+    // Below 1200 the bar slot shows back+title and the header keeps its
+    // beside-the-cover title: exactly two.
+    expect(find.text('Test series'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 
@@ -931,7 +967,7 @@ void main() {
     expect(find.text(' • Group A'), findsNothing);
     expect(
       find.descendant(
-        of: find.byType(SeriesAppBarTitle),
+        of: find.byType(DesktopTopBar),
         matching: find.text('Test series'),
       ),
       findsOneWidget,

@@ -10,7 +10,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/default_category.dart';
 import 'controller/edit_category_controller.dart';
 import 'widgets/category_create_fab.dart';
@@ -32,8 +34,12 @@ class EditCategoryScreen extends HookConsumerWidget {
       return;
     }, [categoryList.value]);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.editCategory)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.editCategory);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       floatingActionButton: categoryList.asError?.error != null
           ? null
           : const CategoryCreateFab(),
@@ -87,6 +93,12 @@ class EditCategoryScreen extends HookConsumerWidget {
           );
         }
       }, refresh: () => ref.refresh(categoryControllerProvider.future)),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

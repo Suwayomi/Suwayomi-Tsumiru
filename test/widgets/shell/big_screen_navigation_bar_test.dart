@@ -5,17 +5,24 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/navigation_bar_data.dart';
+import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
+import 'package:tsumiru/src/widgets/shell/sidebar_expanded.dart';
 import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
 
+/// Pumps the desktop shell frame: the top bar above the sidebar, the way the
+/// navigation shells draw them. The collapse chevron and the logo live in the
+/// bar, so tests drive them from there.
 Future<void> _pump(
   WidgetTester tester,
   SharedPreferences prefs, {
@@ -24,29 +31,46 @@ Future<void> _pump(
   ValueChanged<int>? onDestinationSelected,
   bool downloadsPaused = false,
 }) async {
-  // Default width (>= 1200) is desktop, so the custom sidebar + collapse
-  // toggle show; callers pass a narrower size to exercise the tablet rail.
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         downloadsPausedBadgeProvider.overrideWith((ref) => downloadsPaused),
+        extensionUpdateBadgeCountProvider.overrideWith((ref) async => 0),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: Row(
+          body: Column(
             children: [
-              BigScreenNavigationBar(
-                selectedIndex: selectedIndex,
-                onDestinationSelected: onDestinationSelected ?? (_) {},
+              const DesktopTopBar(),
+              Expanded(
+                child: Row(
+                  children: [
+                    BigScreenNavigationBar(
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: onDestinationSelected ?? (_) {},
+                    ),
+                    const Expanded(child: SizedBox.expand()),
+                  ],
+                ),
               ),
-              const Expanded(child: SizedBox.expand()),
             ],
           ),
         ),
@@ -64,32 +88,37 @@ double _sidebarWidth(WidgetTester tester) =>
 
 void main() {
   testWidgets(
-    'collapse toggles the desktop sidebar; the logo stays as expand',
+    'collapse toggles the desktop sidebar; the bar logo expands it again',
     (tester) async {
       SharedPreferences.setMockInitialValues(const {});
       final prefs = await SharedPreferences.getInstance();
       await _pump(tester, prefs);
 
-      // Default: expanded (labels beside icons), collapse chevron shown.
+      // Default: expanded (labels beside icons), collapse chevron in the bar.
       expect(find.byType(DesktopSidebar), findsOneWidget);
       expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
       expect(find.byIcon(Icons.chevron_left), findsOneWidget);
       expect(tester.takeException(), isNull);
 
-      // Collapse.
+      // Collapse from the bar.
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pumpAndSettle();
 
       expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
       expect(
+        find.byIcon(Icons.chevron_left),
+        findsNothing,
+        reason: 'collapsed bar shows the logo, not a chevron',
+      );
+      expect(
         find.byIcon(Icons.chevron_right),
         findsNothing,
-        reason: 'the header must not swap to a chevron when collapsed',
+        reason: 'the sidebar itself carries no toggle',
       );
       expect(
         find.byType(TsumiruLogo),
         findsOneWidget,
-        reason: 'collapsed sidebar keeps the logo (tap to expand)',
+        reason: 'collapsed bar keeps the logo (tap to expand)',
       );
       expect(
         tester.takeException(),
@@ -97,7 +126,7 @@ void main() {
         reason: 'the narrow collapsed sidebar must not overflow',
       );
 
-      // Expand again by tapping the logo.
+      // Expand again by tapping the bar logo.
       await tester.tap(find.byType(TsumiruLogo));
       await tester.pumpAndSettle();
       expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
@@ -132,18 +161,33 @@ void main() {
     expect(_sidebarWidth(tester), 60);
   });
 
-  testWidgets('900x900 shows the icon rail, not the desktop sidebar', (
+  testWidgets('900x900 auto-collapses the sidebar and keeps the preference', (
     tester,
   ) async {
+    // Saved preference is expanded (the default): below 1200 px the sidebar
+    // still shows collapsed, without touching the stored value.
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
     await _pump(tester, prefs, size: const Size(900, 900));
 
-    expect(find.byType(DesktopSidebar), findsNothing);
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(DesktopSidebar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(_sidebarWidth(tester), 60);
+    // The saved preference still says expanded (the provider writes its
+    // initial back on first read, so the stored value is never false here).
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DesktopSidebar)),
+    );
+    expect(container.read(sidebarExpandedProvider), isTrue);
+    expect(prefs.getBool('sidebarExpanded'), isNot(isFalse));
     expect(find.byIcon(Icons.chevron_left), findsNothing);
     expect(find.byIcon(Icons.chevron_right), findsNothing);
     expect(tester.takeException(), isNull);
+
+    // Back at 1400 px the saved preference applies again.
+    tester.view.physicalSize = const Size(1400, 900);
+    await tester.pumpAndSettle();
+    expect(_sidebarWidth(tester), 208);
   });
 
   testWidgets('1400x900 shows the full desktop sidebar', (tester) async {
@@ -157,19 +201,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('tablet width ignores the collapse pref (no stranded chevron)', (
+  testWidgets('a stored collapsed pref stays collapsed at desktop width', (
     tester,
   ) async {
-    // Persist "collapsed", then render at tablet width (600–1199).
     SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
     final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, size: const Size(900, 1200));
+    await _pump(tester, prefs, size: const Size(1400, 900));
 
-    // Tablet rail: the custom sidebar never shows, and no collapse/expand
-    // chevron — just the normal icon rail (the desktop-only toggle must not
-    // leak here).
-    expect(find.byType(DesktopSidebar), findsNothing);
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(_sidebarWidth(tester), 60);
+    expect(find.byType(NavigationRail), findsNothing);
     expect(find.byIcon(Icons.chevron_left), findsNothing);
     expect(find.byIcon(Icons.chevron_right), findsNothing);
     expect(tester.takeException(), isNull);
