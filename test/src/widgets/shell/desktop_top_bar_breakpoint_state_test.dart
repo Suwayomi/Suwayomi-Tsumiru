@@ -21,7 +21,6 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_title_bar.dart';
