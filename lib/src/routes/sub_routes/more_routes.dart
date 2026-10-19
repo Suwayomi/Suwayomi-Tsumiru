@@ -44,7 +44,11 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
 }
 
 class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
-  const LibrarySettingsRoute();
+  const LibrarySettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -64,7 +68,11 @@ class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
 }
 
 class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
-  const ReaderSettingsRoute();
+  const ReaderSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -75,7 +83,11 @@ class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
 
 class AppearanceSettingsRoute extends GoRouteData
     with $AppearanceSettingsRoute {
-  const AppearanceSettingsRoute();
+  const AppearanceSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -85,7 +97,11 @@ class AppearanceSettingsRoute extends GoRouteData
 }
 
 class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
-  const GeneralSettingsRoute();
+  const GeneralSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -95,7 +111,11 @@ class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
 }
 
 class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
-  const BrowseSettingsRoute();
+  const BrowseSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -115,7 +135,11 @@ class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
 }
 
 class BackupRoute extends GoRouteData with $BackupRoute {
-  const BackupRoute();
+  const BackupRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -125,7 +149,11 @@ class BackupRoute extends GoRouteData with $BackupRoute {
 }
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
-  const ServerSettingsRoute();
+  const ServerSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -135,13 +163,23 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
 }
 
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
-  const DownloadsSettingsRoute();
+  const DownloadsSettingsRoute({this.highlight, this.tab});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  /// Tab to open alongside [highlight]: 0 Server, 1 On device. Null (or an
+  /// out-of-range value) opens the Server tab. Any tabbed settings page can
+  /// reuse this `highlight` + `tab` pair; the entry's `tabIndex` carries it.
+  final int? tab;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: DownloadsSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(
+    child: DownloadsSettingsScreen(initialTab: tab ?? 0),
+  );
 }
 
 class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
@@ -156,7 +194,11 @@ class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
 
 class NotificationsSettingsRoute extends GoRouteData
     with $NotificationsSettingsRoute {
-  const NotificationsSettingsRoute();
+  const NotificationsSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -166,7 +208,11 @@ class NotificationsSettingsRoute extends GoRouteData
 }
 
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
-  const ConnectionRoute();
+  const ConnectionRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -176,7 +222,11 @@ class ConnectionRoute extends GoRouteData with $ConnectionRoute {
 }
 
 class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
-  const TrackingSettingsRoute();
+  const TrackingSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -186,7 +236,11 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
 }
 
 class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
-  const SyncYomiSettingsRoute();
+  const SyncYomiSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -197,7 +251,11 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
 
 class KoreaderSyncSettingsRoute extends GoRouteData
     with $KoreaderSyncSettingsRoute {
-  const KoreaderSyncSettingsRoute();
+  const KoreaderSyncSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 

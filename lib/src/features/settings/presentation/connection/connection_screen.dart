@@ -19,6 +19,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/network/cleartext_address.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
+import '../../search/settings_search_registry.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import 'custom_headers_section.dart';
@@ -77,16 +78,23 @@ class ConnectionScreen extends HookConsumerWidget {
             color: context.theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        child: ListView(
-          children: [
+        child: SettingsHighlightScope(
+          child: ListView(
+            children: [
             // Surfaced here (where the server is changed) and kept visible even
             // after dismissal, so it doubles as the "clear to re-enable offline"
             // recovery affordance for this server.
             const OfflineServerMismatchBanner(showAfterDismissal: true),
             SectionTitle(title: context.l10n.serverAddress),
-            const ServerUrlTile(),
+            const SettingsHighlightTarget(
+              id: 'serverUrl',
+              child: ServerUrlTile(),
+            ),
             if (showLanAddress.value || lanUrl != null)
-              const ServerLanUrlTile()
+              const SettingsHighlightTarget(
+                id: 'serverLanUrl',
+                child: ServerLanUrlTile(),
+              )
             else
               ListTile(
                 leading: const Icon(Icons.add_home_work_outlined),
@@ -119,22 +127,26 @@ class ConnectionScreen extends HookConsumerWidget {
             const InlineAuthSection(),
             const CustomHeadersSection(),
             if (!kIsWeb)
-              ListTile(
-                leading: const Icon(Icons.web_rounded),
-                title: Text(context.l10n.webUI),
-                onTap: () {
-                  final url = Endpoints.baseApi(
-                    baseUrl: ref.read(serverUrlProvider),
-                    port: ref.read(serverPortProvider),
-                    addPort: ref.read(serverPortToggleProvider).ifNull(),
-                    appendApiToUrl: false,
-                  );
-                  if (url.isNotBlank) {
-                    launchUrlInWeb(context, url, ref.read(toastProvider));
-                  }
-                },
+              SettingsHighlightTarget(
+                id: 'openInWeb',
+                child: ListTile(
+                  leading: const Icon(Icons.web_rounded),
+                  title: Text(context.l10n.webUI),
+                  onTap: () {
+                    final url = Endpoints.baseApi(
+                      baseUrl: ref.read(serverUrlProvider),
+                      port: ref.read(serverPortProvider),
+                      addPort: ref.read(serverPortToggleProvider).ifNull(),
+                      appendApiToUrl: false,
+                    );
+                    if (url.isNotBlank) {
+                      launchUrlInWeb(context, url, ref.read(toastProvider));
+                    }
+                  },
+                ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

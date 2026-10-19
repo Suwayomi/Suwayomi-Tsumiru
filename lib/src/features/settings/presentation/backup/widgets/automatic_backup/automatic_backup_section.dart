@@ -12,6 +12,7 @@ import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../controller/server_controller.dart';
 import '../../../../domain/settings/settings.dart';
+import '../../../../search/settings_search_registry.dart';
 import '../../data/backup_settings_repository.dart';
 
 class AutomaticBackupSection extends ConsumerWidget {
@@ -38,75 +39,93 @@ class AutomaticBackupSection extends ConsumerWidget {
             ListTile(
               subtitle: Text(context.l10n.manageSettingsPermissionRequired),
             ),
-          SettingsPropTile(
-            title: context.l10n.socksHost,
-            leading: const Icon(Icons.folder_rounded),
-            subtitle: data.backupPath,
-            description: context.l10n.backupLocationDescription,
-            type: SettingsPropType.textField(
-              hintText: context.l10n.enterProp(context.l10n.backupLocation),
-              value: data.backupPath,
-              onChanged: canManage ? repository.updateBackupLocation : null,
+          SettingsHighlightTarget(
+            id: 'backupLocation',
+            child: SettingsPropTile(
+              // The title used to read socksHost (copy-paste); the hint,
+              // description, and value are all the backup path.
+              title: context.l10n.backupLocation,
+              leading: const Icon(Icons.folder_rounded),
+              subtitle: data.backupPath,
+              description: context.l10n.backupLocationDescription,
+              type: SettingsPropType.textField(
+                hintText: context.l10n.enterProp(context.l10n.backupLocation),
+                value: data.backupPath,
+                onChanged: canManage ? repository.updateBackupLocation : null,
+              ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.access_alarm_rounded),
-            title: Text(context.l10n.backupTime),
-            subtitle: data.backupTime.toTimeOfDay != null
-                ? Text(data.backupTime.toTimeOfDay!.format(context))
-                : null,
-            onTap: canManage
-                ? () async {
-                    final backupTime = await showTimePicker(
-                      initialTime:
-                          data.backupTime.toTimeOfDay ??
-                          const TimeOfDay(hour: 0, minute: 0),
-                      context: context,
-                    );
-                    if (backupTime != null) {
-                      final result = await AppUtils.guard(
-                        () => repository.updateBackupTime(backupTime),
-                        ref.read(toastProvider),
+          SettingsHighlightTarget(
+            id: 'backupTime',
+            child: ListTile(
+              leading: const Icon(Icons.access_alarm_rounded),
+              title: Text(context.l10n.backupTime),
+              subtitle: data.backupTime.toTimeOfDay != null
+                  ? Text(data.backupTime.toTimeOfDay!.format(context))
+                  : null,
+              onTap: canManage
+                  ? () async {
+                      final backupTime = await showTimePicker(
+                        initialTime:
+                            data.backupTime.toTimeOfDay ??
+                            const TimeOfDay(hour: 0, minute: 0),
+                        context: context,
                       );
-                      if (result != null && context.mounted) {
-                        ref.read(settingsProvider.notifier).updateState(result);
-                      }
-                    } else {
-                      if (context.mounted) {
-                        ref
-                            .read(toastProvider)
-                            ?.showError(
-                              context.l10n.invalidProp(context.l10n.backupTime),
-                            );
+                      if (backupTime != null) {
+                        final result = await AppUtils.guard(
+                          () => repository.updateBackupTime(backupTime),
+                          ref.read(toastProvider),
+                        );
+                        if (result != null && context.mounted) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateState(result);
+                        }
+                      } else {
+                        if (context.mounted) {
+                          ref
+                              .read(toastProvider)
+                              ?.showError(
+                                context.l10n.invalidProp(
+                                  context.l10n.backupTime,
+                                ),
+                              );
+                        }
                       }
                     }
-                  }
-                : null,
-          ),
-          SettingsPropTile(
-            leading: const Icon(Icons.folder_rounded),
-            title: context.l10n.backupInterval,
-            subtitle: context.l10n.nDays(
-              data.backupInterval.ifNullOrZero(1).compact()!,
-            ),
-            type: SettingsPropType.numberSlider(
-              min: 1,
-              max: 31,
-              value: data.backupInterval,
-              onChanged: canManage ? repository.updateBackupInterval : null,
+                  : null,
             ),
           ),
-          SettingsPropTile(
-            leading: const Icon(Icons.cleaning_services_rounded),
-            title: context.l10n.backupCleanup,
-            subtitle: context.l10n.backupCleanupDescription(
-              data.backupTTL.ifNull(14).compact()!,
+          SettingsHighlightTarget(
+            id: 'backupInterval',
+            child: SettingsPropTile(
+              leading: const Icon(Icons.folder_rounded),
+              title: context.l10n.backupInterval,
+              subtitle: context.l10n.nDays(
+                data.backupInterval.ifNullOrZero(1).compact()!,
+              ),
+              type: SettingsPropType.numberSlider(
+                min: 1,
+                max: 31,
+                value: data.backupInterval,
+                onChanged: canManage ? repository.updateBackupInterval : null,
+              ),
             ),
-            type: SettingsPropType.numberSlider(
-              min: 0,
-              max: 1000,
-              value: data.backupTTL,
-              onChanged: canManage ? repository.updateBackupTTL : null,
+          ),
+          SettingsHighlightTarget(
+            id: 'backupCleanup',
+            child: SettingsPropTile(
+              leading: const Icon(Icons.cleaning_services_rounded),
+              title: context.l10n.backupCleanup,
+              subtitle: context.l10n.backupCleanupDescription(
+                data.backupTTL.ifNull(14).compact()!,
+              ),
+              type: SettingsPropType.numberSlider(
+                min: 0,
+                max: 1000,
+                value: data.backupTTL,
+                onChanged: canManage ? repository.updateBackupTTL : null,
+              ),
             ),
           ),
         ],

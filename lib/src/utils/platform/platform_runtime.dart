@@ -15,3 +15,14 @@ bool get isDesktopPlatform =>
 
 /// Runtimes where a physical keyboard is expected: native desktop or web.
 bool get isKeyboardRuntime => kIsWeb || isDesktopPlatform;
+
+/// Test-only override for the Android gates in reader settings. Null
+/// (the default) uses the real platform; widget tests set it to true to
+/// exercise the Android-only rows on a desktop VM.
+@visibleForTesting
+bool? debugAndroidOverride;
+
+/// True on Android. Tests opt into the Android-only rows via
+/// [debugAndroidOverride]; production reads the real platform.
+bool get isAndroidRuntime =>
+    debugAndroidOverride ?? (!kIsWeb && Platform.isAndroid);

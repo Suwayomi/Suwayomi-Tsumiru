@@ -29,6 +29,7 @@ import '../../../manga_book/presentation/manga_details/controller/manga_details_
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
 import '../../domain/settings/settings.dart';
+import '../../search/settings_search_registry.dart';
 import 'data/library_settings_repository.dart';
 import 'widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'widgets/refresh_chapters_from_source_tile/refresh_chapters_from_source_tile.dart';
@@ -109,140 +110,172 @@ class LibrarySettingsScreen extends ConsumerWidget {
               }
             }
 
-            return ListView(
-              children: [
+            return SettingsHighlightScope(
+              child: ListView(
+                children: [
                 SectionTitle(title: context.l10n.general),
-                ListTile(
-                  title: Text(context.l10n.categories),
-                  leading: const Icon(Icons.label_rounded),
-                  onTap: () => const EditCategoriesRoute().push(context),
+                SettingsHighlightTarget(
+                  id: 'categories',
+                  child: ListTile(
+                    title: Text(context.l10n.categories),
+                    leading: const Icon(Icons.label_rounded),
+                    onTap: () => const EditCategoriesRoute().push(context),
+                  ),
                 ),
-                ListTile(
-                  title: Text(context.l10n.defaultCategoryOnAdd),
-                  leading: const Icon(Icons.folder_special_outlined),
-                  subtitle: Text(defaultCategoryLabel),
-                  onTap: specialCategoryId == null
-                      ? null
-                      : () => showDialog<void>(
-                          context: context,
-                          builder: (context) => RadioListPopup<int>(
-                            title: context.l10n.defaultCategoryOnAdd,
-                            optionList: [
-                              -1,
-                              0,
-                              ...assignableCategories
-                                  .where((c) => c.id != 0)
-                                  .map((c) => c.id),
-                            ],
-                            value: defaultCategory,
-                            getOptionTitle: (v) => v == 0
-                                ? context.l10n.defaultCategory
-                                : v == -1
-                                ? context.l10n.alwaysAsk
-                                : categories.firstWhere((c) => c.id == v).name,
-                            onChange: (v) {
-                              ref
-                                  .read(libraryDefaultCategoryProvider.notifier)
-                                  .update(v);
-                              Navigator.pop(context);
-                            },
+                SettingsHighlightTarget(
+                  id: 'defaultCategory',
+                  child: ListTile(
+                    title: Text(context.l10n.defaultCategoryOnAdd),
+                    leading: const Icon(Icons.folder_special_outlined),
+                    subtitle: Text(defaultCategoryLabel),
+                    onTap: specialCategoryId == null
+                        ? null
+                        : () => showDialog<void>(
+                            context: context,
+                            builder: (context) => RadioListPopup<int>(
+                              title: context.l10n.defaultCategoryOnAdd,
+                              optionList: [
+                                -1,
+                                0,
+                                ...assignableCategories
+                                    .where((c) => c.id != 0)
+                                    .map((c) => c.id),
+                              ],
+                              value: defaultCategory,
+                              getOptionTitle: (v) => v == 0
+                                  ? context.l10n.defaultCategory
+                                  : v == -1
+                                  ? context.l10n.alwaysAsk
+                                  : categories
+                                        .firstWhere((c) => c.id == v)
+                                        .name,
+                              onChange: (v) {
+                                ref
+                                    .read(
+                                      libraryDefaultCategoryProvider.notifier,
+                                    )
+                                    .update(v);
+                                Navigator.pop(context);
+                              },
+                            ),
+                            animationStyle: context.motionStyle,
                           ),
-                          animationStyle: context.motionStyle,
-                        ),
+                  ),
                 ),
                 // HideEmptyCategoryTile(),
-                const RefreshChaptersFromSourceTile(),
-                const PersistentSearchBarTile(),
+                const SettingsHighlightTarget(
+                  id: 'refreshChaptersFromSource',
+                  child: RefreshChaptersFromSourceTile(),
+                ),
+                const SettingsHighlightTarget(
+                  id: 'persistentSearchBar',
+                  child: PersistentSearchBarTile(),
+                ),
                 SectionTitle(title: context.l10n.globalUpdate),
                 const ShowUpdateProgressBannerTile(),
-                SettingsPropTile(
-                  leading: const Icon(Icons.autorenew_rounded),
-                  title: context.l10n.automaticUpdate,
-                  subtitle: !canManage
-                      ? context.l10n.manageSettingsPermissionRequired
-                      : librarySettingsDto.globalUpdateInterval.isNotZero
-                      ? context.l10n.nHours(
-                          librarySettingsDto.globalUpdateInterval.toInt(),
-                        )
-                      : null,
-                  trailing: Switch(
-                    value: librarySettingsDto.globalUpdateInterval.isNotZero,
-                    onChanged: !canManage
+                SettingsHighlightTarget(
+                  id: 'automaticUpdate',
+                  child: SettingsPropTile(
+                    leading: const Icon(Icons.autorenew_rounded),
+                    title: context.l10n.automaticUpdate,
+                    subtitle: !canManage
+                        ? context.l10n.manageSettingsPermissionRequired
+                        : librarySettingsDto.globalUpdateInterval.isNotZero
+                        ? context.l10n.nHours(
+                            librarySettingsDto.globalUpdateInterval.toInt(),
+                          )
+                        : null,
+                    trailing: Switch(
+                      value: librarySettingsDto.globalUpdateInterval.isNotZero,
+                      onChanged: !canManage
+                          ? null
+                          : (value) =>
+                                onAutomaticUpdateIntervalUpdate(value ? 12 : 0),
+                    ),
+                    onTap: !canManage
                         ? null
-                        : (value) =>
-                              onAutomaticUpdateIntervalUpdate(value ? 12 : 0),
+                        : AppUtils.returnIf(
+                            librarySettingsDto.globalUpdateInterval.isZero,
+                            () => onAutomaticUpdateIntervalUpdate(12),
+                          ),
+                    type: SettingsPropType.numberPicker(
+                      min: 1,
+                      max: 10000000,
+                      value: librarySettingsDto.globalUpdateInterval.toInt(),
+                      onChanged: !canManage
+                          ? null
+                          : (value) => repository.updateGlobalUpdateInterval(
+                              value.toDouble(),
+                            ),
+                    ),
                   ),
-                  onTap: !canManage
-                      ? null
-                      : AppUtils.returnIf(
-                          librarySettingsDto.globalUpdateInterval.isZero,
-                          () => onAutomaticUpdateIntervalUpdate(12),
-                        ),
-                  type: SettingsPropType.numberPicker(
-                    min: 1,
-                    max: 10000000,
-                    value: librarySettingsDto.globalUpdateInterval.toInt(),
-                    onChanged: !canManage
+                ),
+                SettingsHighlightTarget(
+                  id: 'automaticallyRefreshMetadata',
+                  child: SettingsPropTile(
+                    title: context.l10n.automaticallyRefreshMetadata,
+                    trailing: const Icon(Icons.now_wallpaper_rounded),
+                    subtitle: personalState == PersonalSettingsState.unavailable
+                        ? context.l10n.accountSettingsUnavailable
+                        : context.l10n.automaticallyRefreshMetadataSubtitle,
+                    type: SettingsPropType.switchTile(
+                      value: librarySettingsDto.updateMangas,
+                      onChanged: !canEditPersonal
+                          ? null
+                          : (value) async {
+                              final result = await AppUtils.guard(
+                                () => repository.updateMangaMetaData(value),
+                                ref.read(toastProvider),
+                              );
+                              if (result != null && context.mounted) {
+                                ref
+                                    .read(settingsProvider.notifier)
+                                    .updateState(result);
+                              }
+                            },
+                    ),
+                  ),
+                ),
+                SettingsHighlightTarget(
+                  id: 'skipUpdatingEntries',
+                  child: ListTile(
+                    title: Text(context.l10n.skipUpdatingEntries),
+                    subtitle: Text(
+                      skipUpdatingEntriesList.isNotBlank
+                          ? skipUpdatingEntriesList.join(", ")
+                          : context.l10n.none,
+                    ),
+                    onTap: !canEditPersonal
                         ? null
-                        : (value) => repository.updateGlobalUpdateInterval(
-                            value.toDouble(),
+                        : () => showDialog(
+                            context: context,
+                            builder: (context) =>
+                                const SkipUpdatingEntriesPopup(),
+                            animationStyle: context.motionStyle,
                           ),
                   ),
                 ),
-                SettingsPropTile(
-                  title: context.l10n.automaticallyRefreshMetadata,
-                  trailing: const Icon(Icons.now_wallpaper_rounded),
-                  subtitle: personalState == PersonalSettingsState.unavailable
-                      ? context.l10n.accountSettingsUnavailable
-                      : context.l10n.automaticallyRefreshMetadataSubtitle,
-                  type: SettingsPropType.switchTile(
-                    value: librarySettingsDto.updateMangas,
-                    onChanged: !canEditPersonal
-                        ? null
-                        : (value) async {
-                            final result = await AppUtils.guard(
-                              () => repository.updateMangaMetaData(value),
-                              ref.read(toastProvider),
-                            );
-                            if (result != null && context.mounted) {
-                              ref
-                                  .read(settingsProvider.notifier)
-                                  .updateState(result);
-                            }
-                          },
+                SettingsHighlightTarget(
+                  id: 'updateCategories',
+                  child: ListTile(
+                    title: Text(context.l10n.updateCategories),
+                    subtitle: Text(
+                      libraryUpdateCategoriesSummary(context, categories),
+                    ),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (_) => const UpdateCategoriesDialog(),
+                      animationStyle: context.motionStyle,
+                    ),
                   ),
                 ),
-                ListTile(
-                  title: Text(context.l10n.skipUpdatingEntries),
-                  subtitle: Text(
-                    skipUpdatingEntriesList.isNotBlank
-                        ? skipUpdatingEntriesList.join(", ")
-                        : context.l10n.none,
+                SettingsHighlightTarget(
+                  id: 'duplicatedEntries',
+                  child: ListTile(
+                    title: Text(context.l10n.duplicatedEntries),
+                    subtitle: Text(context.l10n.duplicatedEntriesSubtitle),
+                    onTap: () => const LibraryDuplicatesRoute().push(context),
                   ),
-                  onTap: !canEditPersonal
-                      ? null
-                      : () => showDialog(
-                          context: context,
-                          builder: (context) =>
-                              const SkipUpdatingEntriesPopup(),
-                          animationStyle: context.motionStyle,
-                        ),
-                ),
-                ListTile(
-                  title: Text(context.l10n.updateCategories),
-                  subtitle: Text(
-                    libraryUpdateCategoriesSummary(context, categories),
-                  ),
-                  onTap: () => showDialog<void>(
-                    context: context,
-                    builder: (_) => const UpdateCategoriesDialog(),
-                    animationStyle: context.motionStyle,
-                  ),
-                ),
-                ListTile(
-                  title: Text(context.l10n.duplicatedEntries),
-                  subtitle: Text(context.l10n.duplicatedEntriesSubtitle),
-                  onTap: () => const LibraryDuplicatesRoute().push(context),
                 ),
                 Builder(
                   builder: (context) {
@@ -274,36 +307,43 @@ class LibrarySettingsScreen extends ConsumerWidget {
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ListTile(
-                          title: Text(context.l10n.chapterSwipeToLeft),
-                          subtitle: Text(swipeLeft.toLocale(context)),
-                          leading: const Icon(Icons.swipe_left_rounded),
-                          onTap: () => pickSwipe(
-                            title: context.l10n.chapterSwipeToLeft,
-                            value: swipeLeft,
-                            onChange: (v) => ref
-                                .read(chapterSwipeToLeftProvider.notifier)
-                                .update(v),
+                        SettingsHighlightTarget(
+                          id: 'chapterSwipeToLeft',
+                          child: ListTile(
+                            title: Text(context.l10n.chapterSwipeToLeft),
+                            subtitle: Text(swipeLeft.toLocale(context)),
+                            leading: const Icon(Icons.swipe_left_rounded),
+                            onTap: () => pickSwipe(
+                              title: context.l10n.chapterSwipeToLeft,
+                              value: swipeLeft,
+                              onChange: (v) => ref
+                                  .read(chapterSwipeToLeftProvider.notifier)
+                                  .update(v),
+                            ),
                           ),
                         ),
-                        ListTile(
-                          title: Text(context.l10n.chapterSwipeToRight),
-                          subtitle: Text(swipeRight.toLocale(context)),
-                          leading: const Icon(Icons.swipe_right_rounded),
-                          onTap: () => pickSwipe(
-                            title: context.l10n.chapterSwipeToRight,
-                            value: swipeRight,
-                            onChange: (v) => ref
-                                .read(chapterSwipeToRightProvider.notifier)
-                                .update(v),
+                        SettingsHighlightTarget(
+                          id: 'chapterSwipeToRight',
+                          child: ListTile(
+                            title: Text(context.l10n.chapterSwipeToRight),
+                            subtitle: Text(swipeRight.toLocale(context)),
+                            leading: const Icon(Icons.swipe_right_rounded),
+                            onTap: () => pickSwipe(
+                              title: context.l10n.chapterSwipeToRight,
+                              value: swipeRight,
+                              onChange: (v) => ref
+                                  .read(chapterSwipeToRightProvider.notifier)
+                                  .update(v),
+                            ),
                           ),
                         ),
                       ],
                     );
                   },
                 ),
-                // SectionTitle(title: context.l10n.advanced),
-              ],
+                  // SectionTitle(title: context.l10n.advanced),
+                ],
+              ),
             );
           }),
         ),

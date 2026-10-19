@@ -33,6 +33,7 @@ import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../../helpers/fake_extension_repository.dart';
 import '../../../../helpers/legacy_account_access.dart';
+import '../../../../helpers/unreachable_server_stubs.dart';
 
 const _desktop = Size(1400, 980);
 const _phone = Size(400, 800);
@@ -105,6 +106,7 @@ Future<ProviderContainer> _pumpBrowse(
         AsyncData(<String, List<Extension>>{'en': extensions}),
       ),
       librarySourceGroupsProvider.overrideWith((ref) async => []),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);

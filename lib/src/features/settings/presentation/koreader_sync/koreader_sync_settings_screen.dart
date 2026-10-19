@@ -17,6 +17,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
+import '../../search/settings_search_registry.dart';
 import 'data/koreader_sync_repository.dart';
 import 'domain/koreader_sync_domain.dart';
 import 'widgets/koreader_sync_dialog.dart';
@@ -86,71 +87,88 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
             refresh: refresh,
             skipLoadingOnReload: true,
             (status) {
-              return ListView(
-                children: [
-                  ListTile(
-                    title: Text(l10n.koreaderSyncStatus),
-                    subtitle: Text(
-                      status.isLoggedIn
-                          ? l10n.koreaderSyncConnectedAs(
-                              status.username ?? '',
-                              status.serverAddress ?? '',
-                            )
-                          : l10n.koreaderSyncStatusDisconnected,
-                    ),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (_) => KoreaderSyncDialog(status: status),
-                      animationStyle: context.motionStyle,
-                    ),
-                  ),
-                  _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
-                    title: l10n.koreaderSyncStrategyForward,
-                    value: server.strategyForward,
-                    options: koreaderSyncConflictStrategies,
-                    label: (value) => _strategyLabel(context, value),
-                    onSelected: (value) => save(
-                      () => ref
-                          .read(koreaderSyncRepositoryProvider)
-                          .updateStrategyForward(value),
-                    ),
-                  ),
-                  _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
-                    title: l10n.koreaderSyncStrategyBackward,
-                    value: server.strategyBackward,
-                    options: koreaderSyncConflictStrategies,
-                    label: (value) => _strategyLabel(context, value),
-                    onSelected: (value) => save(
-                      () => ref
-                          .read(koreaderSyncRepositoryProvider)
-                          .updateStrategyBackward(value),
-                    ),
-                  ),
-                  _ChoiceTile<Enum$KoreaderSyncChecksumMethod>(
-                    title: l10n.koreaderSyncChecksumMethod,
-                    value: server.checksumMethod,
-                    options: koreaderSyncChecksumMethods,
-                    label: (value) => _checksumLabel(context, value),
-                    onSelected: (value) => save(
-                      () => ref
-                          .read(koreaderSyncRepositoryProvider)
-                          .updateChecksumMethod(value),
-                    ),
-                  ),
-                  ListTile(
-                    title: Text(l10n.koreaderSyncPercentageTolerance),
-                    subtitle: Text(
-                      formatPercentageTolerance(server.percentageTolerance),
-                    ),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (_) => PercentageToleranceDialog(
-                        value: server.percentageTolerance,
+              return SettingsHighlightScope(
+                child: ListView(
+                  children: [
+                    SettingsHighlightTarget(
+                      id: 'koreaderSyncStatus',
+                      child: ListTile(
+                        title: Text(l10n.koreaderSyncStatus),
+                        subtitle: Text(
+                          status.isLoggedIn
+                              ? l10n.koreaderSyncConnectedAs(
+                                  status.username ?? '',
+                                  status.serverAddress ?? '',
+                                )
+                              : l10n.koreaderSyncStatusDisconnected,
+                        ),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => KoreaderSyncDialog(status: status),
+                          animationStyle: context.motionStyle,
+                        ),
                       ),
-                      animationStyle: context.motionStyle,
                     ),
-                  ),
-                ],
+                    SettingsHighlightTarget(
+                      id: 'koreaderSyncStrategyForward',
+                      child: _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
+                        title: l10n.koreaderSyncStrategyForward,
+                        value: server.strategyForward,
+                        options: koreaderSyncConflictStrategies,
+                        label: (value) => _strategyLabel(context, value),
+                        onSelected: (value) => save(
+                          () => ref
+                              .read(koreaderSyncRepositoryProvider)
+                              .updateStrategyForward(value),
+                        ),
+                      ),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'koreaderSyncStrategyBackward',
+                      child: _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
+                        title: l10n.koreaderSyncStrategyBackward,
+                        value: server.strategyBackward,
+                        options: koreaderSyncConflictStrategies,
+                        label: (value) => _strategyLabel(context, value),
+                        onSelected: (value) => save(
+                          () => ref
+                              .read(koreaderSyncRepositoryProvider)
+                              .updateStrategyBackward(value),
+                        ),
+                      ),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'koreaderSyncChecksumMethod',
+                      child: _ChoiceTile<Enum$KoreaderSyncChecksumMethod>(
+                        title: l10n.koreaderSyncChecksumMethod,
+                        value: server.checksumMethod,
+                        options: koreaderSyncChecksumMethods,
+                        label: (value) => _checksumLabel(context, value),
+                        onSelected: (value) => save(
+                          () => ref
+                              .read(koreaderSyncRepositoryProvider)
+                              .updateChecksumMethod(value),
+                        ),
+                      ),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'koreaderSyncPercentageTolerance',
+                      child: ListTile(
+                        title: Text(l10n.koreaderSyncPercentageTolerance),
+                        subtitle: Text(
+                          formatPercentageTolerance(server.percentageTolerance),
+                        ),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => PercentageToleranceDialog(
+                            value: server.percentageTolerance,
+                          ),
+                          animationStyle: context.motionStyle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           );

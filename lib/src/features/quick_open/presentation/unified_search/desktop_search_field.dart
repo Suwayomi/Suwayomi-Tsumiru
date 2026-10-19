@@ -157,6 +157,9 @@ class DesktopSearchField extends HookConsumerWidget {
       if (matchingGoToTargets(ref, text, context.l10n).isNotEmpty) {
         return true;
       }
+      if (matchingSettingsEntries(ref, context, text).isNotEmpty) {
+        return true;
+      }
       return false;
     }
 

@@ -13,6 +13,7 @@ import '../../../../features/auth/data/custom_headers_store.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/section_title.dart';
+import '../../search/settings_search_registry.dart';
 
 /// Connection-screen editor for generic custom HTTP headers.
 ///
@@ -108,12 +109,15 @@ class CustomHeadersSection extends HookConsumerWidget {
               ],
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: OutlinedButton.icon(
-            onPressed: () => addOrEdit(),
-            icon: const Icon(Icons.add_rounded),
-            label: Text(context.l10n.customHeaderAdd),
+        SettingsHighlightTarget(
+          id: 'customHeaders',
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: OutlinedButton.icon(
+              onPressed: () => addOrEdit(),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(context.l10n.customHeaderAdd),
+            ),
           ),
         ),
       ],

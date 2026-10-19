@@ -16,6 +16,7 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../search/settings_search_registry.dart';
 import 'widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import 'widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import 'widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
@@ -62,49 +63,71 @@ class ReaderSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.reader)),
-      body: ListView(
-        children: [
+      body: SettingsHighlightScope(
+        child: ListView(
+          children: [
           // Group order follows Komikku's reader settings: ungrouped basics
           // first, then Display, E-Ink, Reading, Paged, Long strip,
           // Navigation, Actions.
-          const ReaderModeTile(),
+          const SettingsHighlightTarget(
+            id: 'readerMode',
+            child: ReaderModeTile(),
+          ),
           // Tap zones and their inversion are per viewer, so they live in the
           // Paged and Long strip groups below — same as Komikku. Only the
           // overlay and the zone size are shared.
-          const ShowTapZonesOverlayTile(),
-          _BoolTile(
-            title: context.l10n.smallerTapZones,
-            value: ref.watch(smallerTapZonesProvider).ifNull(false),
-            onChanged: ref.read(smallerTapZonesProvider.notifier).update,
+          const SettingsHighlightTarget(
+            id: 'showTapZonesOverlay',
+            child: ShowTapZonesOverlayTile(),
           ),
-          _BoolTile(
-            title: context.l10n.forceHorizontalSeekbar,
-            value: forceHorizontal,
-            onChanged: ref.read(forceHorizontalSeekbarProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'smallerTapZones',
+            child: _BoolTile(
+              title: context.l10n.smallerTapZones,
+              value: ref.watch(smallerTapZonesProvider).ifNull(false),
+              onChanged: ref.read(smallerTapZonesProvider.notifier).update,
+            ),
+          ),
+          SettingsHighlightTarget(
+            id: 'forceHorizontalSeekbar',
+            child: _BoolTile(
+              title: context.l10n.forceHorizontalSeekbar,
+              value: forceHorizontal,
+              onChanged:
+                  ref.read(forceHorizontalSeekbarProvider.notifier).update,
+            ),
           ),
           if (!forceHorizontal) ...[
-            _BoolTile(
-              indent: true,
-              title: context.l10n.showVerticalSeekbarInLandscape,
+            SettingsHighlightTarget(
+              id: 'showVerticalSeekbar',
+              child: _BoolTile(
+                indent: true,
+                title: context.l10n.showVerticalSeekbarInLandscape,
               value:
                   ref.watch(landscapeVerticalSeekbarProvider).ifNull(false),
               onChanged:
                   ref.read(landscapeVerticalSeekbarProvider.notifier).update,
+              ),
             ),
-            _BoolTile(
-              indent: true,
-              title: context.l10n.leftHandedVerticalSeekbar,
+            SettingsHighlightTarget(
+              id: 'leftHandedVerticalSeekbar',
+              child: _BoolTile(
+                indent: true,
+                title: context.l10n.leftHandedVerticalSeekbar,
               value:
                   ref.watch(leftHandedVerticalSeekbarProvider).ifNull(false),
               onChanged:
                   ref.read(leftHandedVerticalSeekbarProvider.notifier).update,
+              ),
             ),
           ],
 
           // ── Display ──
           _Header(context.l10n.readerGroupDisplay),
-          _EnumChips<ReaderBackgroundColor>(
-            label: context.l10n.readerBackgroundColor,
+          SettingsHighlightTarget(
+            id: 'readerBackgroundColor',
+            child: _EnumChips<ReaderBackgroundColor>(
+              label: context.l10n.readerBackgroundColor,
             values: const [
               ReaderBackgroundColor.black,
               ReaderBackgroundColor.gray,
@@ -113,195 +136,317 @@ class ReaderSettingsScreen extends ConsumerWidget {
             ],
             selected: enumOf(readerBackgroundColorKeyProvider) ??
                 ReaderBackgroundColor.black,
-            labelOf: (v) => v.toLocale(context),
-            onSelected: setEnum(readerBackgroundColorKeyProvider.notifier),
+              labelOf: (v) => v.toLocale(context),
+              onSelected: setEnum(readerBackgroundColorKeyProvider.notifier),
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.readerFullscreen,
-            value: fullscreen,
-            onChanged: ref.read(readerFullscreenProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'readerFullscreen',
+            child: _BoolTile(
+              title: context.l10n.readerFullscreen,
+              value: fullscreen,
+              onChanged: ref.read(readerFullscreenProvider.notifier).update,
+            ),
           ),
           if (fullscreen)
-            _BoolTile(
-              indent: true,
-              title: context.l10n.showContentInCutoutArea,
-              value: ref.watch(drawUnderCutoutProvider).ifNull(true),
-              onChanged: ref.read(drawUnderCutoutProvider.notifier).update,
+            SettingsHighlightTarget(
+              id: 'showContentInCutoutArea',
+              child: _BoolTile(
+                indent: true,
+                title: context.l10n.showContentInCutoutArea,
+                value: ref.watch(drawUnderCutoutProvider).ifNull(true),
+                onChanged: ref.read(drawUnderCutoutProvider.notifier).update,
+              ),
             ),
-          _BoolTile(
-            title: context.l10n.showPageNumber,
-            value: ref.watch(showPageNumberProvider).ifNull(true),
-            onChanged: ref.read(showPageNumberProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'showPageNumber',
+            child: _BoolTile(
+              title: context.l10n.showPageNumber,
+              value: ref.watch(showPageNumberProvider).ifNull(true),
+              onChanged: ref.read(showPageNumberProvider.notifier).update,
+            ),
           ),
-          const ReaderInitialOverlayTile(),
+          const SettingsHighlightTarget(
+            id: 'readerOverlay',
+            child: ReaderInitialOverlayTile(),
+          ),
           // Not long-strip only: reader_wrapper pads whichever axis you are
           // not scrolling, so paged reading uses it too.
-          const ReaderPaddingSlider(),
-          if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) ...[
-            const ReaderKeepScreenOnTile(),
-            const ReaderIgnoreSafeAreaTile(),
+          const SettingsHighlightTarget(
+            id: 'readerPadding',
+            child: ReaderPaddingSlider(),
+          ),
+          if (!kIsWeb && (isAndroidRuntime || Platform.isIOS)) ...[
+            const SettingsHighlightTarget(
+              id: 'keepScreenOn',
+              child: ReaderKeepScreenOnTile(),
+            ),
+            const SettingsHighlightTarget(
+              id: 'ignoreSafeArea',
+              child: ReaderIgnoreSafeAreaTile(),
+            ),
           ],
 
           // ── E-Ink ──
           _Header(context.l10n.readerGroupEInk),
-          _BoolTile(
-            title: context.l10n.flashOnPageChange,
-            value: flash,
-            onChanged: ref.read(flashOnPageChangeProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'flashOnPageChange',
+            child: _BoolTile(
+              title: context.l10n.flashOnPageChange,
+              value: flash,
+              onChanged: ref.read(flashOnPageChangeProvider.notifier).update,
+            ),
           ),
           if (flash) ...[
-            _IntSliderTile(
-              title: context.l10n.flashDuration,
+            SettingsHighlightTarget(
+              id: 'flashDuration',
+              child: _IntSliderTile(
+                title: context.l10n.flashDuration,
               value: ref.watch(flashDurationProvider) ??
                   (DBKeys.flashDuration.initial as int),
               min: 1,
               max: 15,
-              labelOf: (v) => context.l10n.flashDurationMs(v * kFlashMsPerTick),
-              onChanged: ref.read(flashDurationProvider.notifier).update,
+                labelOf: (v) => context.l10n.flashDurationMs(v * kFlashMsPerTick),
+                onChanged: ref.read(flashDurationProvider.notifier).update,
+              ),
             ),
-            _IntSliderTile(
-              title: context.l10n.flashEvery,
+            SettingsHighlightTarget(
+              id: 'flashEvery',
+              child: _IntSliderTile(
+                title: context.l10n.flashEvery,
               value: ref.watch(flashPageIntervalProvider) ??
                   (DBKeys.flashPageInterval.initial as int),
               min: 1,
               max: 10,
-              labelOf: (v) => context.l10n.flashEveryPages(v),
-              onChanged: ref.read(flashPageIntervalProvider.notifier).update,
+                labelOf: (v) => context.l10n.flashEveryPages(v),
+                onChanged: ref.read(flashPageIntervalProvider.notifier).update,
+              ),
             ),
-            _EnumChips<FlashColor>(
-              label: context.l10n.flashWith,
-              values: FlashColor.values,
-              selected: enumOf(flashColorKeyProvider) ?? FlashColor.values.first,
-              labelOf: (v) => v.toLocale(context),
-              onSelected: setEnum(flashColorKeyProvider.notifier),
+            SettingsHighlightTarget(
+              id: 'flashWith',
+              child: _EnumChips<FlashColor>(
+                label: context.l10n.flashWith,
+                values: FlashColor.values,
+                selected:
+                    enumOf(flashColorKeyProvider) ?? FlashColor.values.first,
+                labelOf: (v) => v.toLocale(context),
+                onSelected: setEnum(flashColorKeyProvider.notifier),
+              ),
             ),
           ],
 
           // ── Reading ──
           _Header(context.l10n.readerGroupReading),
-          _BoolTile(
-            title: context.l10n.alwaysShowChapterTransition,
-            value: ref.watch(alwaysShowChapterTransitionProvider).ifNull(true),
-            onChanged:
-                ref.read(alwaysShowChapterTransitionProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'alwaysShowChapterTransition',
+            child: _BoolTile(
+              title: context.l10n.alwaysShowChapterTransition,
+              value:
+                  ref.watch(alwaysShowChapterTransitionProvider).ifNull(true),
+              onChanged:
+                  ref.read(alwaysShowChapterTransitionProvider.notifier).update,
+            ),
           ),
-          const SwipeChapterToggleTile(),
-          const ReaderLastPageSwipeTile(),
-          const ReaderScrollAnimationTile(),
-          const ReaderFeedbackToastsTile(),
+          const SettingsHighlightTarget(
+            id: 'swipeChapterToggle',
+            child: SwipeChapterToggleTile(),
+          ),
+          const SettingsHighlightTarget(
+            id: 'lastPageSwipe',
+            child: ReaderLastPageSwipeTile(),
+          ),
+          const SettingsHighlightTarget(
+            id: 'scrollAnimation',
+            child: ReaderScrollAnimationTile(),
+          ),
+          const SettingsHighlightTarget(
+            id: 'feedbackToasts',
+            child: ReaderFeedbackToastsTile(),
+          ),
 
-          if (isKeyboardRuntime) const ReaderMouseScrollSpeedSlider(),
+          if (isKeyboardRuntime)
+            const SettingsHighlightTarget(
+              id: 'mouseScrollSpeed',
+              child: ReaderMouseScrollSpeedSlider(),
+            ),
 
           // ── Paged ──
           _Header(context.l10n.readerGroupPagerViewer),
-          const ReaderNavigationLayoutTile(longStrip: false),
-          const ReaderTapInvertTile(longStrip: false),
-          _EnumChips<ImageScaleType>(
-            label: context.l10n.imageScaleType,
-            values: ImageScaleType.values,
-            selected:
-                enumOf(imageScaleTypeKeyProvider) ?? ImageScaleType.fitScreen,
-            labelOf: (v) => v.toLocale(context),
-            onSelected: setEnum(imageScaleTypeKeyProvider.notifier),
+          const SettingsHighlightTarget(
+            id: 'pagedTapZones',
+            child: ReaderNavigationLayoutTile(longStrip: false),
           ),
-          _EnumChips<PageLayout>(
-            label: context.l10n.pageLayout,
-            values: PageLayout.values,
-            selected: enumOf(pageLayoutKeyProvider) ?? PageLayout.automatic,
-            labelOf: (v) => v.toLocale(context),
-            onSelected: setEnum(pageLayoutKeyProvider.notifier),
+          const SettingsHighlightTarget(
+            id: 'pagedTapInvert',
+            child: ReaderTapInvertTile(longStrip: false),
           ),
-          _EnumChips<CenterMarginType>(
-            label: context.l10n.centerMarginType,
-            values: CenterMarginType.values,
-            selected:
-                enumOf(centerMarginTypeKeyProvider) ?? CenterMarginType.none,
-            labelOf: (v) => v.toLocale(context),
-            onSelected: setEnum(centerMarginTypeKeyProvider.notifier),
+          SettingsHighlightTarget(
+            id: 'imageScaleType',
+            child: _EnumChips<ImageScaleType>(
+              label: context.l10n.imageScaleType,
+              values: ImageScaleType.values,
+              selected:
+                  enumOf(imageScaleTypeKeyProvider) ?? ImageScaleType.fitScreen,
+              labelOf: (v) => v.toLocale(context),
+              onSelected: setEnum(imageScaleTypeKeyProvider.notifier),
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.cropBorders,
-            value: ref.watch(cropBordersProvider).ifNull(false),
-            onChanged: ref.read(cropBordersProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'pageLayout',
+            child: _EnumChips<PageLayout>(
+              label: context.l10n.pageLayout,
+              values: PageLayout.values,
+              selected: enumOf(pageLayoutKeyProvider) ?? PageLayout.automatic,
+              labelOf: (v) => v.toLocale(context),
+              onSelected: setEnum(pageLayoutKeyProvider.notifier),
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.splitWidePages,
-            value: splitPaged,
-            onChanged: ref.read(dualPageSplitPagedProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'centerMarginType',
+            child: _EnumChips<CenterMarginType>(
+              label: context.l10n.centerMarginType,
+              values: CenterMarginType.values,
+              selected:
+                  enumOf(centerMarginTypeKeyProvider) ?? CenterMarginType.none,
+              labelOf: (v) => v.toLocale(context),
+              onSelected: setEnum(centerMarginTypeKeyProvider.notifier),
+            ),
+          ),
+          SettingsHighlightTarget(
+            id: 'cropBordersPaged',
+            child: _BoolTile(
+              title: context.l10n.cropBorders,
+              value: ref.watch(cropBordersProvider).ifNull(false),
+              onChanged: ref.read(cropBordersProvider.notifier).update,
+            ),
+          ),
+          SettingsHighlightTarget(
+            id: 'splitWidePages',
+            child: _BoolTile(
+              title: context.l10n.splitWidePages,
+              value: splitPaged,
+              onChanged: ref.read(dualPageSplitPagedProvider.notifier).update,
+            ),
           ),
           if (splitPaged)
-            _BoolTile(
-              indent: true,
-              title: context.l10n.invertSplitPagesPlacement,
-              value: ref.watch(dualPageInvertPagedProvider).ifNull(false),
-              onChanged: ref.read(dualPageInvertPagedProvider.notifier).update,
+            SettingsHighlightTarget(
+              id: 'invertSplitPages',
+              child: _BoolTile(
+                indent: true,
+                title: context.l10n.invertSplitPagesPlacement,
+                value: ref.watch(dualPageInvertPagedProvider).ifNull(false),
+                onChanged:
+                    ref.read(dualPageInvertPagedProvider.notifier).update,
+              ),
             ),
-          _BoolTile(
-            title: context.l10n.rotateWidePagesToFit,
-            value: rotateWide,
-            onChanged: ref.read(rotateWidePagesProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'rotateWidePages',
+            child: _BoolTile(
+              title: context.l10n.rotateWidePagesToFit,
+              value: rotateWide,
+              onChanged: ref.read(rotateWidePagesProvider.notifier).update,
+            ),
           ),
           if (rotateWide)
-            _BoolTile(
-              indent: true,
-              title: context.l10n.invertWidePageRotation,
-              value: ref.watch(rotateWideInvertProvider).ifNull(false),
-              onChanged: ref.read(rotateWideInvertProvider.notifier).update,
+            SettingsHighlightTarget(
+              id: 'invertWidePageRotation',
+              child: _BoolTile(
+                indent: true,
+                title: context.l10n.invertWidePageRotation,
+                value: ref.watch(rotateWideInvertProvider).ifNull(false),
+                onChanged: ref.read(rotateWideInvertProvider.notifier).update,
+              ),
             ),
-          _BoolTile(
-            title: context.l10n.animatePageTransitions,
-            value: ref.watch(animatePageTransitionsProvider).ifNull(true),
-            onChanged: ref.read(animatePageTransitionsProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'animatePageTransitions',
+            child: _BoolTile(
+              title: context.l10n.animatePageTransitions,
+              value: ref.watch(animatePageTransitionsProvider).ifNull(true),
+              onChanged:
+                  ref.read(animatePageTransitionsProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.invertDoublePages,
-            value: ref.watch(invertDoublePagesProvider).ifNull(false),
-            onChanged: ref.read(invertDoublePagesProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'invertDoublePages',
+            child: _BoolTile(
+              title: context.l10n.invertDoublePages,
+              value: ref.watch(invertDoublePagesProvider).ifNull(false),
+              onChanged: ref.read(invertDoublePagesProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.dualPageSpreadInLandscape,
-            value: ref.watch(trueDualPageSpreadProvider).ifNull(false),
-            onChanged: ref.read(trueDualPageSpreadProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'dualPageSpread',
+            child: _BoolTile(
+              title: context.l10n.dualPageSpreadInLandscape,
+              value: ref.watch(trueDualPageSpreadProvider).ifNull(false),
+              onChanged: ref.read(trueDualPageSpreadProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.disableZoomIn,
-            value: disableZoomIn,
-            onChanged: ref.read(disableZoomInProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'disableZoomIn',
+            child: _BoolTile(
+              title: context.l10n.disableZoomIn,
+              value: disableZoomIn,
+              onChanged: ref.read(disableZoomInProvider.notifier).update,
+            ),
           ),
           // Both stay editable while zoom-in is off. The viewport already
           // ignores them in that state, and greying them out would strand
           // whatever value they were left on.
-          _BoolTile(
-            title: context.l10n.doubleTapToZoom,
-            value: ref.watch(pagedDoubleTapToZoomProvider).ifNull(true),
-            onChanged: ref.read(pagedDoubleTapToZoomProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'pagedDoubleTapToZoom',
+            child: _BoolTile(
+              title: context.l10n.doubleTapToZoom,
+              value: ref.watch(pagedDoubleTapToZoomProvider).ifNull(true),
+              onChanged:
+                  ref.read(pagedDoubleTapToZoomProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.pinchToZoom,
-            value: ref.watch(pagedPinchToZoomProvider).ifNull(true),
-            onChanged: ref.read(pagedPinchToZoomProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'pagedPinchToZoom',
+            child: _BoolTile(
+              title: context.l10n.pinchToZoom,
+              value: ref.watch(pagedPinchToZoomProvider).ifNull(true),
+              onChanged: ref.read(pagedPinchToZoomProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.disableZoomOut,
-            value: ref.watch(pagedDisableZoomOutProvider).ifNull(false),
-            onChanged: ref.read(pagedDisableZoomOutProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'pagedDisableZoomOut',
+            child: _BoolTile(
+              title: context.l10n.disableZoomOut,
+              value: ref.watch(pagedDisableZoomOutProvider).ifNull(false),
+              onChanged:
+                  ref.read(pagedDisableZoomOutProvider.notifier).update,
+            ),
           ),
 
           // ── Long strip ──
           _Header(context.l10n.readerGroupWebtoonViewer),
-          const ReaderNavigationLayoutTile(longStrip: true),
-          const ReaderTapInvertTile(longStrip: true),
-          _EnumChips<WebtoonScaleType>(
-            label: context.l10n.webtoonScaleType,
-            values: WebtoonScaleType.values,
-            selected:
-                enumOf(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen,
-            labelOf: (v) => v.toLocale(context),
-            onSelected: setEnum(webtoonScaleTypeKeyProvider.notifier),
+          const SettingsHighlightTarget(
+            id: 'longStripTapZones',
+            child: ReaderNavigationLayoutTile(longStrip: true),
+          ),
+          const SettingsHighlightTarget(
+            id: 'longStripTapInvert',
+            child: ReaderTapInvertTile(longStrip: true),
+          ),
+          SettingsHighlightTarget(
+            id: 'webtoonScaleType',
+            child: _EnumChips<WebtoonScaleType>(
+              label: context.l10n.webtoonScaleType,
+              values: WebtoonScaleType.values,
+              selected:
+                  enumOf(webtoonScaleTypeKeyProvider) ??
+                  WebtoonScaleType.fitScreen,
+              labelOf: (v) => v.toLocale(context),
+              onSelected: setEnum(webtoonScaleTypeKeyProvider.notifier),
+            ),
           ),
           // Greyed under Original size: native-size pages never widen, so a
           // width cap has nothing to do.
-          LongStripWidthLimitSlider(
+          SettingsHighlightTarget(
+            id: 'longStripWidthLimit',
+            child: LongStripWidthLimitSlider(
             enabled: (enumOf(webtoonScaleTypeKeyProvider) ??
                     WebtoonScaleType.fitScreen) !=
                 WebtoonScaleType.originalSize,
@@ -317,50 +462,76 @@ class ReaderSettingsScreen extends ConsumerWidget {
             onPercentCommitted: (v) => ref
                 .read(longStripWidthLimitPercentProvider.notifier)
                 .update(v.clamp(10, 100)),
-            onPxCommitted: (v) => ref
-                .read(longStripWidthLimitPxProvider.notifier)
-                .update(v.clamp(200, 2000)),
+              onPxCommitted: (v) => ref
+                  .read(longStripWidthLimitPxProvider.notifier)
+                  .update(v.clamp(200, 2000)),
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.cropBorders,
-            value: ref.watch(cropBordersWebtoonProvider).ifNull(false),
-            onChanged: ref.read(cropBordersWebtoonProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'cropBordersLongStrip',
+            child: _BoolTile(
+              title: context.l10n.cropBorders,
+              value: ref.watch(cropBordersWebtoonProvider).ifNull(false),
+              onChanged:
+                  ref.read(cropBordersWebtoonProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.doubleTapToZoom,
-            value: ref.watch(longStripDoubleTapToZoomProvider).ifNull(true),
-            onChanged:
-                ref.read(longStripDoubleTapToZoomProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'longStripDoubleTapToZoom',
+            child: _BoolTile(
+              title: context.l10n.doubleTapToZoom,
+              value: ref.watch(longStripDoubleTapToZoomProvider).ifNull(true),
+              onChanged:
+                  ref.read(longStripDoubleTapToZoomProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.pinchToZoom,
-            value: ref.watch(longStripPinchToZoomProvider).ifNull(true),
-            onChanged: ref.read(longStripPinchToZoomProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'longStripPinchToZoom',
+            child: _BoolTile(
+              title: context.l10n.pinchToZoom,
+              value: ref.watch(longStripPinchToZoomProvider).ifNull(true),
+              onChanged:
+                  ref.read(longStripPinchToZoomProvider.notifier).update,
+            ),
           ),
-          _BoolTile(
-            title: context.l10n.disableZoomOut,
-            value: ref.watch(longStripDisableZoomOutProvider).ifNull(false),
-            onChanged:
-                ref.read(longStripDisableZoomOutProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'longStripDisableZoomOut',
+            child: _BoolTile(
+              title: context.l10n.disableZoomOut,
+              value: ref.watch(longStripDisableZoomOutProvider).ifNull(false),
+              onChanged:
+                  ref.read(longStripDisableZoomOutProvider.notifier).update,
+            ),
           ),
 
           // ── Navigation ──
-          if (!kIsWeb && Platform.isAndroid) ...[
+          if (!kIsWeb && isAndroidRuntime) ...[
             _Header(context.l10n.readerGroupNavigation),
-            const ReaderVolumeTapTile(),
-            if (isVolumeTapEnabled) const ReaderVolumeTapInvertTile(),
+            const SettingsHighlightTarget(
+              id: 'volumeTap',
+              child: ReaderVolumeTapTile(),
+            ),
+            if (isVolumeTapEnabled)
+              const SettingsHighlightTarget(
+                id: 'volumeTapInvert',
+                child: ReaderVolumeTapInvertTile(),
+              ),
           ],
 
           // ── Actions ──
           _Header(context.l10n.readerGroupActions),
-          _BoolTile(
-            title: context.l10n.showActionsOnLongTap,
-            value: ref.watch(readWithLongTapProvider).ifNull(true),
-            onChanged: ref.read(readWithLongTapProvider.notifier).update,
+          SettingsHighlightTarget(
+            id: 'showActionsOnLongTap',
+            child: _BoolTile(
+              title: context.l10n.showActionsOnLongTap,
+              value: ref.watch(readWithLongTapProvider).ifNull(true),
+              onChanged: ref.read(readWithLongTapProvider.notifier).update,
+            ),
           ),
 
           const Gap(128),
-        ],
+          ],
+        ),
       ),
     );
   }

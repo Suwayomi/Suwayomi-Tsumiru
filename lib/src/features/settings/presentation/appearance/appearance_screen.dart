@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_theme.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/section_title.dart';
+import '../../search/settings_search_registry.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
@@ -25,23 +26,49 @@ class AppearanceScreen extends ConsumerWidget {
     final themeMode = ref.watch(appThemeModeProvider);
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.appearance)),
-      body: ListView(
-        children: [
-          const AppThemeModeTile(),
-          if (themeMode != ThemeMode.light) const IsTrueBlackTile(),
-          ThemeSelector(title: SectionTitle(title: context.l10n.appThemeTitle)),
-          Consumer(
-            builder: (context, ref, _) {
-              final theme = ref.watch(appThemeKeyProvider);
-              return theme == AppTheme.custom
-                  ? const CustomColorTile()
-                  : const SizedBox.shrink();
-            },
+      body: SettingsHighlightScope(
+        child: ListView(
+          children: [
+          const SettingsHighlightTarget(
+            id: 'appThemeMode',
+            child: AppThemeModeTile(),
           ),
-          const GridCoverWidthSlider(),
-          const ShowRecommendationsTile(),
-          const RecommendsInOverflowTile(),
-        ],
+          if (themeMode != ThemeMode.light)
+            const SettingsHighlightTarget(
+              id: 'pureBlack',
+              child: IsTrueBlackTile(),
+            ),
+          SettingsHighlightTarget(
+            id: 'theme',
+            child: ThemeSelector(
+              title: SectionTitle(title: context.l10n.appThemeTitle),
+            ),
+          ),
+          SettingsHighlightTarget(
+            id: 'customColor',
+            child: Consumer(
+              builder: (context, ref, _) {
+                final theme = ref.watch(appThemeKeyProvider);
+                return theme == AppTheme.custom
+                    ? const CustomColorTile()
+                    : const SizedBox.shrink();
+              },
+            ),
+          ),
+          const SettingsHighlightTarget(
+            id: 'mangaGridSize',
+            child: GridCoverWidthSlider(),
+          ),
+          const SettingsHighlightTarget(
+            id: 'showRecommendations',
+            child: ShowRecommendationsTile(),
+          ),
+            const SettingsHighlightTarget(
+              id: 'recommendsInOverflow',
+              child: RecommendsInOverflowTile(),
+            ),
+          ],
+        ),
       ),
     );
   }

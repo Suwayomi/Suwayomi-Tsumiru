@@ -17,7 +17,8 @@ import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 part 'force_portrait_tile.g.dart';
 
 @riverpod
-class ForcePortrait extends _$ForcePortrait with SharedPreferenceClientMixin<bool> {
+class ForcePortrait extends _$ForcePortrait
+    with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.forcePortrait);
 }
@@ -30,7 +31,8 @@ void applyForcePortrait(bool forcePortrait) {
   final shortestSide = views.isEmpty
       ? 0.0
       : (views.first.physicalSize / views.first.devicePixelRatio).shortestSide;
-  final isPhone = !kIsWeb &&
+  final isPhone =
+      !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS) &&
       shortestSide > 0 &&

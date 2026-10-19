@@ -13,6 +13,7 @@ import '../../../../utils/network/graphql_errors.dart';
 import '../../../../widgets/server_unreachable_view.dart';
 import '../../../account/data/account_providers.dart';
 import '../../controller/server_controller.dart';
+import '../../search/settings_search_registry.dart';
 import 'data/web_interface_repository.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
@@ -47,56 +48,60 @@ class ServerScreen extends ConsumerWidget {
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          child: ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Text(
-                  context.l10n.serverOwnSettingsCaption,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: context.theme.colorScheme.onSurfaceVariant,
+          child: SettingsHighlightScope(
+            child: ListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    context.l10n.serverOwnSettingsCaption,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-              if (serverSettings.isLoading && !serverSettings.hasValue)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              // On error these settings can't load (they live on the server).
-              // A connection failure gets the "can't reach server" view with a
-              // path to Connection settings, instead of a blank page.
-              if (serverSettings.hasError && !serverSettings.hasValue)
-                Builder(
-                  builder: (context) {
-                    final error = serverSettings.error!;
-                    final unwrapped = error is OperationMessageException
-                        ? error.exception
-                        : error;
-                    if (isConnectionError(unwrapped)) {
+                if (serverSettings.isLoading && !serverSettings.hasValue)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                // On error these settings can't load (they live on the server).
+                // A connection failure gets the "can't reach server" view with a
+                // path to Connection settings, instead of a blank page.
+                if (serverSettings.hasError && !serverSettings.hasValue)
+                  Builder(
+                    builder: (context) {
+                      final error = serverSettings.error!;
+                      final unwrapped = error is OperationMessageException
+                          ? error.exception
+                          : error;
+                      if (isConnectionError(unwrapped)) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 40),
+                          child: ServerUnreachableView(onRetry: onRefresh),
+                        );
+                      }
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: ServerUnreachableView(onRetry: onRefresh),
+                        padding: const EdgeInsets.all(24),
+                        child: Center(child: Text(error.toString())),
                       );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(child: Text(error.toString())),
-                    );
-                  },
-                ),
-              if (!canManage)
-                ListTile(
-                  subtitle: Text(context.l10n.manageSettingsPermissionRequired),
-                ),
-              const WebInterfaceSection(),
-              if (serverSettings.value != null) ...[
-                ServerBindingSection(serverBindingDto: serverSettings.value!),
-                SocksProxySection(socksProxyDto: serverSettings.value!),
-                CloudFlareSection(cloudFlareDto: serverSettings.value!),
-                MiscSettingsSection(miscSettingsDto: serverSettings.value!),
+                    },
+                  ),
+                if (!canManage)
+                  ListTile(
+                    subtitle: Text(
+                      context.l10n.manageSettingsPermissionRequired,
+                    ),
+                  ),
+                const WebInterfaceSection(),
+                if (serverSettings.value != null) ...[
+                  ServerBindingSection(serverBindingDto: serverSettings.value!),
+                  SocksProxySection(socksProxyDto: serverSettings.value!),
+                  CloudFlareSection(cloudFlareDto: serverSettings.value!),
+                  MiscSettingsSection(miscSettingsDto: serverSettings.value!),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
