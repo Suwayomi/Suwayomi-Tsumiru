@@ -4,19 +4,37 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gql/ast.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/basic_auth_migration.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
+import 'package:tsumiru/src/features/auth/presentation/sign_in_action.dart';
 import 'package:tsumiru/src/features/offline/data/background/record_seal.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/routes/router_config.dart';
+import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
+import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 
 class _DeniedStorage implements FlutterSecureStorage {
+  _DeniedStorage({this.failWrites = false});
+  final bool failWrites;
   int reads = 0;
+  int writeAttempts = 0;
   final List<String> writes = [];
 
   @override
@@ -43,7 +61,13 @@ class _DeniedStorage implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async => writes.add(key);
+  }) async {
+    writeAttempts++;
+    if (failWrites) {
+      throw PlatformException(code: '-25293', message: 'User denied');
+    }
+    writes.add(key);
+  }
 
   @override
   Future<void> delete({
@@ -54,7 +78,11 @@ class _DeniedStorage implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async {}
+  }) async {
+    if (failWrites) {
+      throw PlatformException(code: '-25293', message: 'User denied');
+    }
+  }
 
   @override
   noSuchMethod(Invocation invocation) =>
@@ -100,7 +128,107 @@ ProviderContainer _container(FlutterSecureStorage storage) {
   return container;
 }
 
+String _testToken() {
+  final payload = jsonEncode({
+    'exp':
+        DateTime.now().add(const Duration(hours: 2)).millisecondsSinceEpoch ~/
+        1000,
+  });
+  return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.test-signature';
+}
+
+/// Answers the real sign-in path: the `Login` mutation, then the account
+/// resolution the store commits behind it.
+class _UiLoginChain extends Link {
+  final operations = <String>[];
+  final token = _testToken();
+
+  @override
+  Stream<Response> request(Request request, [NextLink? forward]) async* {
+    final operation = request.operation.document.definitions
+        .whereType<OperationDefinitionNode>()
+        .single
+        .name!
+        .value;
+    operations.add(operation);
+    final user = {
+      '__typename': 'UserType',
+      'id': 2,
+      'username': 'Reader',
+      'roles': ['USER'],
+      'permissions': <String>[],
+    };
+    final payload = switch (operation) {
+      'Login' => {
+        'login': {
+          '__typename': 'LoginPayload',
+          'accessToken': token,
+          'refreshToken': 'test-refresh',
+        },
+      },
+      'AccountCapability' || 'CurrentAccount' => {'user': user},
+      'OfflineServerIdentity' => {
+        'metas': {
+          '__typename': 'MetaTypeConnection',
+          'nodes': [
+            {
+              '__typename': 'GlobalMetaType',
+              'key': 'tsumiru_server_instance_id',
+              'value': 'keychain-test-catalog',
+            },
+          ],
+        },
+      },
+      _ => throw StateError('Unexpected test operation: $operation'),
+    };
+    yield Response(
+      response: {},
+      data: {
+        '__typename': operation == 'Login' ? 'Mutation' : 'Query',
+        ...payload,
+      },
+    );
+  }
+}
+
+Future<SharedPreferences> _uiLoginPreferences() async {
+  SharedPreferences.setMockInitialValues({
+    DBKeys.authType.name: AuthType.uiLogin.index,
+  });
+  return SharedPreferences.getInstance();
+}
+
+ProviderContainer _sessionContainer(
+  FlutterSecureStorage storage,
+  SharedPreferences prefs,
+  _UiLoginChain chain,
+) => ProviderContainer(
+  overrides: [
+    secureStorageProvider.overrideWithValue(storage),
+    sharedPreferencesProvider.overrideWithValue(prefs),
+    unauthenticatedGraphQlClientProvider.overrideWithValue(
+      GraphQLClient(link: chain, cache: GraphQLCache()),
+    ),
+  ],
+);
+
+class _RecordingToast extends Toast {
+  // The super parameter is private to the Toast library.
+  // ignore: use_super_parameters
+  _RecordingToast(BuildContext context) : super(context);
+  final messages = <String>[];
+
+  @override
+  void show(
+    String msg, {
+    bool withMicrotask = false,
+    bool instantShow = false,
+  }) => messages.add(msg);
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(debugResetKeychainRefusal);
 
   test(
@@ -188,5 +316,123 @@ void main() {
 
     expect(auth.simpleLoginCookie, 'JSESSIONID=abc123');
     expect(basic, 'Basic abc');
+  });
+
+  test(
+    'a fresh sign-in after a refused read reaches the authenticated request path',
+    () async {
+      final storage = _DeniedStorage();
+      final prefs = await _uiLoginPreferences();
+      final chain = _UiLoginChain();
+
+      final first = _sessionContainer(storage, prefs, chain);
+      addTearDown(first.dispose);
+      final refused = await first
+          .read(authCredentialsStoreProvider.future)
+          .timeout(const Duration(seconds: 5));
+      expect(refused.uiAccessToken, isNull);
+
+      await first
+          .read(authCoordinatorProvider.notifier)
+          .loginUi(
+            gqlClient: GraphQLClient(link: chain, cache: GraphQLCache()),
+            username: 'reader',
+            password: 'password',
+          )
+          .timeout(const Duration(seconds: 5));
+      expect(storage.reads, 1);
+
+      // The sign-in restarts the session container; that container must see
+      // the new token without asking the keychain again.
+      final restarted = _sessionContainer(storage, prefs, chain);
+      addTearDown(restarted.dispose);
+      final token = await restarted
+          .read(authCoordinatorProvider.notifier)
+          .usableUiAccessToken(
+            gqlClient: () => throw StateError('unexpected refresh'),
+            trigger: 'test',
+          )
+          .timeout(const Duration(seconds: 5));
+
+      expect(token, chain.token);
+      expect(storage.reads, 1);
+    },
+  );
+
+  testWidgets('a refused write still signs in and shows one notice', (
+    tester,
+  ) async {
+    final storage = _DeniedStorage(failWrites: true);
+    final prefs = await _uiLoginPreferences();
+    final chain = _UiLoginChain();
+    late WidgetRef ref;
+    late String notice;
+    late _RecordingToast toast;
+
+    // A throwaway tree, so the recording toast has a context to build from.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            toast = _RecordingToast(context);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          secureStorageProvider.overrideWithValue(storage),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          unauthenticatedGraphQlClientProvider.overrideWithValue(
+            GraphQLClient(link: chain, cache: GraphQLCache()),
+          ),
+          toastProvider.overrideWithValue(toast),
+        ],
+        child: MaterialApp(
+          navigatorKey: rootNavigatorKey,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Consumer(
+            builder: (context, widgetRef, _) {
+              ref = widgetRef;
+              notice = context.l10n.authCredentialsNotSaved;
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    await container
+        .read(authCredentialsStoreProvider.future)
+        .timeout(const Duration(seconds: 5));
+
+    await performSignIn(
+      ref,
+      authType: AuthType.uiLogin,
+      serverBaseUrl: 'http://127.0.0.1',
+      username: 'reader',
+      password: 'password',
+    ).timeout(const Duration(seconds: 5));
+
+    expect(storage.writeAttempts, greaterThan(0));
+    final token = await container
+        .read(authCoordinatorProvider.notifier)
+        .usableUiAccessToken(
+          gqlClient: () => throw StateError('unexpected refresh'),
+          trigger: 'test',
+        )
+        .timeout(const Duration(seconds: 5));
+    expect(token, chain.token);
+    expect(toast.messages, [notice]);
+
+    // Tear the scope down so the proactive-refresh timer is cancelled.
+    await tester.pumpWidget(const SizedBox());
   });
 }

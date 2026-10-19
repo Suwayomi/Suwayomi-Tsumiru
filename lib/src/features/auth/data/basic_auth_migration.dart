@@ -37,7 +37,8 @@ Future<void> migrateBasicAuthCredentials({
   // A refused keychain keeps the legacy copy for the next launch.
   if (keychainRefusedThisRun) return;
   if (existing == null) {
-    await secure.write(key: kBasicCredentialsSecureKey, value: legacy);
+    // Keep the legacy copy if the move failed, so the next launch retries.
+    if (!await writeSecure(secure, kBasicCredentialsSecureKey, legacy)) return;
   }
   await prefs.remove(_kLegacyBasicCredentialsKey);
 }

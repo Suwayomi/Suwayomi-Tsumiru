@@ -154,7 +154,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     // Older versions stored the sign-in password here although nothing ever
     // read it back: refresh tokens, the Basic credential and the session
     // cookie are what keep a session alive.
-    unawaited(storage.delete(key: _kPasswordKey).catchError((Object _) {}));
+    unawaited(deleteSecure(storage, _kPasswordKey));
     final simpleCookie = await readSecureOrAbsent(storage, _kSimpleCookieKey);
     final accessToken = await readSecureOrAbsent(storage, _kUiAccessKey);
     final refreshToken = await readSecureOrAbsent(storage, _kUiRefreshKey);
@@ -382,9 +382,9 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       _mutate(() async {
         if (forEpoch != _serverEpoch) return;
         final storage = ref.read(secureStorageProvider);
-        await storage.write(key: _kSimpleCookieKey, value: cookieValue);
+        await writeSecure(storage, _kSimpleCookieKey, cookieValue);
         if (forEpoch != _serverEpoch) {
-          await storage.delete(key: _kSimpleCookieKey);
+          await deleteSecure(storage, _kSimpleCookieKey);
           return;
         }
         state = AsyncData(_current.copyWith(simpleLoginCookie: cookieValue));
@@ -392,7 +392,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
 
   Future<void> clearSimpleLoginCookie() => replaceCredentials(
     (_) => _mutate(() async {
-      await ref.read(secureStorageProvider).delete(key: _kSimpleCookieKey);
+      await deleteSecure(ref.read(secureStorageProvider), _kSimpleCookieKey);
       state = AsyncData(_current.copyWith(clearSimpleLoginCookie: true));
     }),
   );
@@ -448,19 +448,17 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   ) async {
     if (forEpoch != _serverEpoch) return;
     final storage = ref.read(secureStorageProvider);
-    await storage.write(key: _kUiAccessKey, value: accessToken);
-    await storage.write(key: _kUiRefreshKey, value: refreshToken);
+    await writeSecure(storage, _kUiAccessKey, accessToken);
+    await writeSecure(storage, _kUiRefreshKey, refreshToken);
     if (forEpoch != _serverEpoch) {
-      await storage.delete(key: _kUiAccessKey);
-      await storage.delete(key: _kUiRefreshKey);
+      await deleteSecure(storage, _kUiAccessKey);
+      await deleteSecure(storage, _kUiRefreshKey);
       return;
     }
-    await storage.write(
-      key: _kAccountBindingKey,
-      value: binding?.encode(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      ),
+    await writeSecure(
+      storage,
+      _kAccountBindingKey,
+      binding?.encode(accessToken: accessToken, refreshToken: refreshToken),
     );
     if (forEpoch != _serverEpoch) return;
     final expiresAt = decodeJwtExp(accessToken);
@@ -483,16 +481,17 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       _mutate(() async {
         if (forEpoch != null && forEpoch != _serverEpoch) return;
         final storage = ref.read(secureStorageProvider);
-        await storage.write(key: _kUiAccessKey, value: accessToken);
+        await writeSecure(storage, _kUiAccessKey, accessToken);
         if (forEpoch != null && forEpoch != _serverEpoch) {
-          await storage.delete(key: _kUiAccessKey);
+          await deleteSecure(storage, _kUiAccessKey);
           return;
         }
         final binding = _current.accountBinding;
         final refresh = _current.uiRefreshToken;
-        await storage.write(
-          key: _kAccountBindingKey,
-          value: binding != null && refresh != null
+        await writeSecure(
+          storage,
+          _kAccountBindingKey,
+          binding != null && refresh != null
               ? binding.encode(accessToken: accessToken, refreshToken: refresh)
               : null,
         );
@@ -514,9 +513,9 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   Future<void> _clearUiLoginTokens(int forEpoch) => _mutate(() async {
     if (forEpoch != _serverEpoch) return;
     final storage = ref.read(secureStorageProvider);
-    await storage.delete(key: _kUiAccessKey);
-    await storage.delete(key: _kUiRefreshKey);
-    await storage.delete(key: _kAccountBindingKey);
+    await deleteSecure(storage, _kUiAccessKey);
+    await deleteSecure(storage, _kUiRefreshKey);
+    await deleteSecure(storage, _kAccountBindingKey);
     state = AsyncData(
       _current.copyWith(
         clearAccountBinding: true,
@@ -559,12 +558,12 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     );
     final storage = ref.read(secureStorageProvider);
     await Future.wait([
-      storage.delete(key: _kPasswordKey),
-      storage.delete(key: _kSimpleCookieKey),
-      storage.delete(key: _kUiAccessKey),
-      storage.delete(key: _kUiRefreshKey),
-      storage.delete(key: _kAccountBindingKey),
-      storage.delete(key: _kBasicCredentialsKey),
+      deleteSecure(storage, _kPasswordKey),
+      deleteSecure(storage, _kSimpleCookieKey),
+      deleteSecure(storage, _kUiAccessKey),
+      deleteSecure(storage, _kUiRefreshKey),
+      deleteSecure(storage, _kAccountBindingKey),
+      deleteSecure(storage, _kBasicCredentialsKey),
     ]);
     ref.invalidate(credentialsProvider);
     await ref.read(credentialsProvider.future);

@@ -50,12 +50,12 @@ class Credentials extends _$Credentials {
       if (epoch != credentials.serverEpoch) return;
       if (value == null) {
         state = const AsyncData(null);
-        await storage.delete(key: kBasicCredentialsSecureKey);
+        await deleteSecure(storage, kBasicCredentialsSecureKey);
         return;
       }
-      await storage.write(key: kBasicCredentialsSecureKey, value: value);
+      await writeSecure(storage, kBasicCredentialsSecureKey, value);
       if (epoch != credentials.serverEpoch) {
-        await storage.delete(key: kBasicCredentialsSecureKey);
+        await deleteSecure(storage, kBasicCredentialsSecureKey);
         return;
       }
       state = AsyncData(value);

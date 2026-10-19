@@ -58,7 +58,11 @@ abstract final class RecordSeal {
         return false;
       }
       final fresh = _randomBytes(32);
-      await storage.write(key: storageKey, value: base64Encode(fresh));
+      // A key that never reached storage would seal records nothing can
+      // open later, so an unsaved key is no key (as before).
+      if (!await writeSecure(storage, storageKey, base64Encode(fresh))) {
+        return false;
+      }
       _key = fresh;
       _log('key-created');
       return true;

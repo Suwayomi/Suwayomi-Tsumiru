@@ -38,9 +38,9 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
     state = AsyncData(Map<String, String>.from(headers));
     final storage = ref.read(secureStorageProvider);
     if (headers.isEmpty) {
-      await storage.delete(key: secureKey);
+      await deleteSecure(storage, secureKey);
     } else {
-      await storage.write(key: secureKey, value: encode(headers));
+      await writeSecure(storage, secureKey, encode(headers));
     }
   }
 
@@ -91,8 +91,8 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
 
 final customHttpHeadersProvider =
     AsyncNotifierProvider<CustomHttpHeadersStore, Map<String, String>>(
-  CustomHttpHeadersStore.new,
-);
+      CustomHttpHeadersStore.new,
+    );
 
 /// Validate a header name for the editor. Returns an error string or null
 /// when valid. Header names are RFC 7230 tokens: no spaces, colons, or
