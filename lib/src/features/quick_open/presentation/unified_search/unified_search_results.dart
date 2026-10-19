@@ -235,6 +235,14 @@ class UnifiedSearchResults extends ConsumerWidget {
             ListTile(
               leading: Icon(t.icon),
               title: Text(t.label(l)),
+              subtitle: t.subtitle == null
+                  ? null
+                  : Text(
+                      t.subtitle!(l),
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
               onTap: () {
                 t.navigate(context);
                 close();

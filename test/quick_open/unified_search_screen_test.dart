@@ -6,21 +6,22 @@ import 'package:tsumiru/src/features/library/domain/category/category_model.dart
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
+import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_results.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 CategoryDto _cat(int id, String name) => Fragment$CategoryDto(
-      defaultCategory: false,
-      id: id,
-      includeInDownload: Enum$IncludeOrExclude.UNSET,
-      includeInUpdate: Enum$IncludeOrExclude.UNSET,
-      name: name,
-      order: id,
-      mangas: Fragment$CategoryDto$mangas(totalCount: 5),
-      meta: const [],
-    );
+  defaultCategory: false,
+  id: id,
+  includeInDownload: Enum$IncludeOrExclude.UNSET,
+  includeInUpdate: Enum$IncludeOrExclude.UNSET,
+  name: name,
+  order: id,
+  mangas: Fragment$CategoryDto$mangas(totalCount: 5),
+  meta: const [],
+);
 
 // Override the data providers so the test never hits the real GraphQL/offline
 // or SharedPreferences stack. `all` is the raw category list; `visible` is the
@@ -55,8 +56,9 @@ class _Categories extends CategoryController {
 }
 
 void main() {
-  testWidgets('typing shows the Go to section and an all-sources row',
-      (tester) async {
+  testWidgets('typing shows the Go to section and an all-sources row', (
+    tester,
+  ) async {
     await tester.pumpWidget(await _host());
     await tester.enterText(find.byType(TextField), 'reader');
     await tester.pumpAndSettle();
@@ -65,7 +67,10 @@ void main() {
     // 'reader' now also matches Reader settings rows, so the handoff row
     // can sit below the fold of the lazily built list; scroll to it like
     // the empty-state test does for 'Reader'.
-    expect(find.text('Settings'), findsOneWidget);
+    expect(
+      find.widgetWithText(SearchSectionHeader, 'Settings'),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.textContaining('Search all sources'),
       100,
@@ -74,55 +79,67 @@ void main() {
     expect(find.textContaining('Search all sources'), findsOneWidget);
   });
 
-  testWidgets('empty query shows the go-to launcher (not a blank box)',
-      (tester) async {
+  testWidgets('empty query shows the go-to launcher (not a blank box)', (
+    tester,
+  ) async {
     await tester.pumpWidget(await _host());
     await tester.pumpAndSettle();
     // The empty state teaches what's searchable by listing destinations.
     expect(find.text('Go to'), findsOneWidget);
     // 'Reader' can sit below the fold once examples push the list down; scroll
     // the launcher to prove real destinations render (not a blank box).
-    await tester.scrollUntilVisible(find.text('Reader'), 100,
-        scrollable: find.byType(Scrollable).last);
+    await tester.scrollUntilVisible(
+      find.text('Reader'),
+      100,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Reader'), findsWidgets);
     // Nothing typed → no library results and no global handoff row.
     expect(find.textContaining('Search all sources'), findsNothing);
   });
 
-  testWidgets('empty state offers example queries; tapping one fills the field',
-      (tester) async {
-    await tester.pumpWidget(await _host());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'empty state offers example queries; tapping one fills the field',
+    (tester) async {
+      await tester.pumpWidget(await _host());
+      await tester.pumpAndSettle();
 
-    expect(find.text('Examples'), findsOneWidget);
-    expect(find.text('unread:true'), findsOneWidget);
+      expect(find.text('Examples'), findsOneWidget);
+      expect(find.text('unread:true'), findsOneWidget);
 
-    await tester.tap(find.text('unread:true'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('unread:true'));
+      await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.controller!.text, 'unread:true');
-  });
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, 'unread:true');
+    },
+  );
 
-  testWidgets('typing an operator prefix shows a key suggestion; tapping completes it',
-      (tester) async {
-    await tester.pumpWidget(await _host());
-    await tester.enterText(find.byType(TextField), 'sou');
-    await tester.pumpAndSettle();
+  testWidgets(
+    'typing an operator prefix shows a key suggestion; tapping completes it',
+    (tester) async {
+      await tester.pumpWidget(await _host());
+      await tester.enterText(find.byType(TextField), 'sou');
+      await tester.pumpAndSettle();
 
-    expect(find.text('Filters'), findsOneWidget);
-    expect(find.text('source:'), findsOneWidget);
+      expect(find.text('Filters'), findsOneWidget);
+      expect(find.text('source:'), findsOneWidget);
 
-    await tester.tap(find.text('source:'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('source:'));
+      await tester.pumpAndSettle();
 
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.controller!.text, 'source:',
-        reason: 'tapping the key suggestion splices it into the field');
-  });
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(
+        field.controller!.text,
+        'source:',
+        reason: 'tapping the key suggestion splices it into the field',
+      );
+    },
+  );
 
-  testWidgets('a pure operator query hides the search-all-sources row',
-      (tester) async {
+  testWidgets('a pure operator query hides the search-all-sources row', (
+    tester,
+  ) async {
     await tester.pumpWidget(await _host());
     await tester.enterText(find.byType(TextField), 'unread:true');
     await tester.pumpAndSettle();
@@ -137,24 +154,33 @@ void main() {
     expect(find.text('Filters'), findsNothing);
   });
 
-  testWidgets('the go-to list uses visible categories, not the raw list',
-      (tester) async {
+  testWidgets('the go-to list uses visible categories, not the raw list', (
+    tester,
+  ) async {
     // 'Pornhwa' is in the raw list but NOT the visible set (it's hidden).
     // Mirrors the reported repro: typing the hidden category's name.
-    await tester.pumpWidget(await _host(
-      visible: [_cat(2, 'Seinen')],
-      all: [_cat(2, 'Seinen'), _cat(3, 'Pornhwa')],
-    ));
+    await tester.pumpWidget(
+      await _host(
+        visible: [_cat(2, 'Seinen')],
+        all: [_cat(2, 'Seinen'), _cat(3, 'Pornhwa')],
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'porn');
     await tester.pumpAndSettle();
-    expect(find.text('Pornhwa'), findsNothing,
-        reason: 'hidden category must not appear even when searched');
+    expect(
+      find.text('Pornhwa'),
+      findsNothing,
+      reason: 'hidden category must not appear even when searched',
+    );
 
     await tester.enterText(find.byType(TextField), 'sein');
     await tester.pumpAndSettle();
-    expect(find.text('Seinen'), findsOneWidget,
-        reason: 'visible category is searchable');
+    expect(
+      find.text('Seinen'),
+      findsOneWidget,
+      reason: 'visible category is searchable',
+    );
   });
 }
