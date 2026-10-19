@@ -4,8 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../../utils/logger/logger.dart';
 
 part 'secure_credentials_provider.g.dart';
 
@@ -34,3 +37,20 @@ const kSecureStorage = FlutterSecureStorage(
   // keychain works unsigned.
   mOptions: MacOsOptions(usesDataProtectionKeychain: false),
 );
+
+/// A refused keychain read (macOS denied prompt) throws. Read it as absent so
+/// launch proceeds; a throwing build is retried by Riverpod and re-prompts.
+Future<String?> readSecureOrAbsent(
+  FlutterSecureStorage storage,
+  String key,
+) async {
+  try {
+    return await storage.read(key: key);
+  } catch (error) {
+    logger.w(
+      'Secure storage read refused for $key, treating as absent: '
+      '${error is PlatformException ? error.code : error.runtimeType}',
+    );
+    return null;
+  }
+}

@@ -30,14 +30,9 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
   static const secureKey = 'custom.headers';
 
   @override
-  Future<Map<String, String>> build() async {
-    try {
-      final raw = await ref.read(secureStorageProvider).read(key: secureKey);
-      return decode(raw);
-    } catch (_) {
-      return const {};
-    }
-  }
+  Future<Map<String, String>> build() async => decode(
+    await readSecureOrAbsent(ref.read(secureStorageProvider), secureKey),
+  );
 
   Future<void> _persist(Map<String, String> headers) async {
     state = AsyncData(Map<String, String>.from(headers));

@@ -156,10 +156,10 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     // cookie are what keep a session alive.
     unawaited(storage.delete(key: _kPasswordKey).catchError((Object _) {}));
     final results = await Future.wait([
-      storage.read(key: _kSimpleCookieKey),
-      storage.read(key: _kUiAccessKey),
-      storage.read(key: _kUiRefreshKey),
-      storage.read(key: _kAccountBindingKey),
+      readSecureOrAbsent(storage, _kSimpleCookieKey),
+      readSecureOrAbsent(storage, _kUiAccessKey),
+      readSecureOrAbsent(storage, _kUiRefreshKey),
+      readSecureOrAbsent(storage, _kAccountBindingKey),
     ]);
     return AuthCredentialsState(
       sessionEpoch: _sessionEpoch,

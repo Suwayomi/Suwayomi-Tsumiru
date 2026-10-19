@@ -33,8 +33,10 @@ part 'credentials_popup.g.dart';
 @Riverpod(keepAlive: true)
 class Credentials extends _$Credentials {
   @override
-  Future<String?> build() async =>
-      ref.read(secureStorageProvider).read(key: kBasicCredentialsSecureKey);
+  Future<String?> build() async => readSecureOrAbsent(
+    ref.read(secureStorageProvider),
+    kBasicCredentialsSecureKey,
+  );
 
   /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
   /// meanwhile. Omit for a clear (set null).
