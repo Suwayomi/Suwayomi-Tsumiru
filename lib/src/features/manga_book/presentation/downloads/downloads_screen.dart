@@ -150,16 +150,37 @@ class DownloadsScreen extends HookConsumerWidget {
                     status: downloaderRunState ?? DownloaderState.STOPPED,
                   )
                 : null),
-      body: TabBarView(
-        controller: tabController,
-        children: [
-          _ServerDownloads(
-            downloadsChapterIds: downloadsChapterIds,
-            queueStatus: queueStatus,
-          ),
-          const OfflineFilesView(),
-        ],
-      ),
+      // Native desktop has no app bar to host the tab bar (the search box
+      // and actions live in the shell bar), so the tabs stay in the page
+      // body, like Browse's tabs.
+      body: topBar
+          ? Column(
+              children: [
+                tabBar,
+                Expanded(
+                  child: TabBarView(
+                    controller: tabController,
+                    children: [
+                      _ServerDownloads(
+                        downloadsChapterIds: downloadsChapterIds,
+                        queueStatus: queueStatus,
+                      ),
+                      const OfflineFilesView(),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : TabBarView(
+              controller: tabController,
+              children: [
+                _ServerDownloads(
+                  downloadsChapterIds: downloadsChapterIds,
+                  queueStatus: queueStatus,
+                ),
+                const OfflineFilesView(),
+              ],
+            ),
     );
     return topBar
         ? TopBarSlot(
