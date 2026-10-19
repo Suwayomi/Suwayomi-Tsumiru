@@ -63,6 +63,7 @@ import '../widgets/shell/detail_navigation_shell_screen.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
 
 part 'router_config.g.dart';
+part 'detail_navigation_page.dart';
 part 'sub_routes/browser_routes.dart';
 part 'sub_routes/common_routes.dart';
 part 'sub_routes/downloads_routes.dart';
@@ -362,6 +363,10 @@ class QuickSearchRoute extends ShellRouteData {
         ),
         child: GlobalShortcutHost(child: SearchStackScreen(child: navigator)),
       );
+
+  @override
+  Page<void> pageBuilder(context, state, navigator) =>
+      navigationShellPage(context, state, builder(context, state, navigator));
 }
 
 // Shell Routes
@@ -377,6 +382,14 @@ class NavigationShellRoute extends StatefulShellRouteData {
       return NavigationShellScreen(child: navigationShell);
     },
   );
+
+  @override
+  Page<void> pageBuilder(context, state, navigationShell) =>
+      navigationShellPage(
+        context,
+        state,
+        builder(context, state, navigationShell),
+      );
 }
 
 final navigationShellStateProvider = Provider((ref) => NavigationShellState());
@@ -391,4 +404,8 @@ class DetailNavigationShellRoute extends ShellRouteData {
   @override
   Widget builder(context, state, navigator) =>
       DetailNavigationShellScreen(child: navigator);
+
+  @override
+  Page<void> pageBuilder(context, state, navigator) =>
+      detailNavigationShellPage(context, state, navigator);
 }
