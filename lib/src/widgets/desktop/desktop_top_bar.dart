@@ -182,7 +182,9 @@ class DesktopTitleSlot extends StatelessWidget {
 
 /// One page's toolbar content, registered by route so the host always shows
 /// the current route's toolbar: during a push both pages are mounted, and the
-/// outgoing entry is ignored once the location moves on.
+/// outgoing entry is ignored once the location moves on. Each slot instance
+/// registers its own entry, so duplicate locations stack newest-last and the
+/// host shows the top of the stack.
 class TopBarSlotEntry {
   const TopBarSlotEntry({
     required this.content,
@@ -201,34 +203,58 @@ class TopBarSlotEntry {
   final Object slotKey;
 }
 
-class TopBarSlotRegistry extends Notifier<Map<String, TopBarSlotEntry>> {
+class TopBarSlotRegistry extends Notifier<Map<String, List<TopBarSlotEntry>>> {
   /// False once this container (and the registry with it) is disposed, so
   /// deferred slot removals can skip the dead notifier. A plain field: safe
   /// to read after disposal, unlike any notifier access.
   bool alive = true;
 
   @override
-  Map<String, TopBarSlotEntry> build() {
+  Map<String, List<TopBarSlotEntry>> build() {
     alive = true;
     ref.onDispose(() => alive = false);
     return const {};
   }
 
-  void setEntry(String routeKey, TopBarSlotEntry entry) {
-    state = {...state, routeKey: entry};
+  /// Publishes [entry] under [routeKey], replacing this slot's [previous]
+  /// instance when it re-publishes. Each location holds a stack: pushing the
+  /// same location twice registers two instances under one key (a route
+  /// pattern key is not unique per push), and the earlier registration stays
+  /// behind when the newer page pops.
+  void setEntry(
+    String routeKey,
+    TopBarSlotEntry? previous,
+    TopBarSlotEntry entry,
+  ) {
+    final entries = [...?state[routeKey]];
+    if (previous != null) {
+      entries.removeWhere((candidate) => identical(candidate, previous));
+    }
+    entries.add(entry);
+    state = {...state, routeKey: entries};
   }
 
-  /// Removes [routeKey] only while it still holds [entry]: a route that
-  /// re-registers after this slot unmounted (same location pushed again)
-  /// publishes a new instance, which a stale removal must not clear.
+  /// Removes [entry] only while it is still registered under [routeKey]: a
+  /// slot that re-published meanwhile owns a newer instance the stale
+  /// removal must not clear, and entries stacked below it stay registered.
   void removeEntry(String routeKey, TopBarSlotEntry entry) {
-    if (!identical(state[routeKey], entry)) return;
-    state = {...state}..remove(routeKey);
+    final entries = state[routeKey];
+    if (entries == null ||
+        !entries.any((candidate) => identical(candidate, entry))) {
+      return;
+    }
+    final next = [...entries]
+      ..removeWhere((candidate) => identical(candidate, entry));
+    if (next.isEmpty) {
+      state = {...state}..remove(routeKey);
+    } else {
+      state = {...state, routeKey: next};
+    }
   }
 }
 
 final topBarSlotRegistryProvider =
-    NotifierProvider<TopBarSlotRegistry, Map<String, TopBarSlotEntry>>(
+    NotifierProvider<TopBarSlotRegistry, Map<String, List<TopBarSlotEntry>>>(
       TopBarSlotRegistry.new,
     );
 
@@ -293,6 +319,8 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   late String _routeKey;
   late TopBarSlotRegistry _registry;
   TopBarSlotEntry? _entry;
+  String _publishedKey = '';
+  TopBarSlotEntry? _publishedEntry;
   bool _scheduled = false;
 
   String _currentRouteKey() => _matchedLocationOrNull(context) ?? '';
@@ -309,12 +337,25 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
     // Post-frame: the host bar is an ancestor that may still be building, and
     // publishing synchronously would setState it mid-build. The latest entry
     // wins: a second schedule before the frame only moves [_entry] forward.
+    // Re-publishing swaps this slot's own previous instance, so stacked
+    // duplicates under one location keep the earlier registrations.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       if (!mounted) return;
       final latest = _entry;
       if (latest == null) return;
-      ref.read(topBarSlotRegistryProvider.notifier).setEntry(_routeKey, latest);
+      final notifier = ref.read(topBarSlotRegistryProvider.notifier);
+      final previous = _publishedEntry;
+      if (previous != null && _publishedKey != _routeKey) {
+        notifier.removeEntry(_publishedKey, previous);
+      }
+      notifier.setEntry(
+        _routeKey,
+        _publishedKey == _routeKey ? previous : null,
+        latest,
+      );
+      _publishedKey = _routeKey;
+      _publishedEntry = latest;
     });
   }
 
@@ -336,11 +377,12 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   @override
   void dispose() {
     // Deferred like publishing: unmounting runs inside the frame that
-    // navigates away, where touching the provider throws, and a route that
-    // re-registers meanwhile owns a newer entry the guard keeps.
+    // navigates away, where touching the provider throws. Only the published
+    // instance is removed: a never-published pending entry owns nothing, and
+    // stacked duplicates under the same location keep theirs.
     final registry = _registry;
-    final routeKey = _routeKey;
-    final entry = _entry;
+    final routeKey = _publishedKey;
+    final entry = _publishedEntry;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (entry == null) return;
       // Whole-tree teardown disposes the container with the tree; the
@@ -460,7 +502,8 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
       isMacOS: isMacOS,
       windowWidth: width,
     );
-    final entry = ref.watch(topBarSlotRegistryProvider)[location];
+    final stacked = ref.watch(topBarSlotRegistryProvider)[location];
+    final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
     final merged =
         entry == null ||
         width >=
