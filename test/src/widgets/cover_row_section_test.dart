@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/cover_row_section.dart';
@@ -48,7 +51,7 @@ void main() {
     expect(find.byType(IconButton), findsNWidgets(2));
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(find.byType(CoverRowEdgeFade), findsOneWidget);
     expect(
       tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
       isTrue,
@@ -277,5 +280,63 @@ void main() {
 
     await tester.tap(find.text('See all'));
     expect(seeAllCalls, 1);
+  });
+
+  testWidgets('the edge fade ends fully in the background colour', (
+    tester,
+  ) async {
+    const background = Color(0xFF203040);
+    for (final dpr in [1.0, 1.25, 1.5]) {
+      tester.view.physicalSize = const Size(600, 200);
+      tester.view.devicePixelRatio = dpr;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: ColoredBox(
+                color: background,
+                child: SizedBox(
+                  width: 333.5,
+                  height: 100,
+                  child: CoverRowEdgeFade(
+                    fade: true,
+                    background: background,
+                    child: const ColoredBox(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(boundaryKey),
+      );
+      final image = (await tester.runAsync(
+        () => boundary.toImage(pixelRatio: dpr),
+      ))!;
+      final bytes = (await tester.runAsync(
+        () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+      ))!;
+      int red(int x) => bytes.getUint8((50 * image.width + x) * 4);
+      final last = image.width - 1;
+      for (final x in [last - 1, last]) {
+        expect(red(x), closeTo(0x20, 2), reason: 'dpr $dpr column $x');
+      }
+      final fadeColumns = (40 * dpr).round();
+      for (var x = last - fadeColumns + 1; x <= last; x++) {
+        expect(
+          red(x),
+          lessThanOrEqualTo(red(x - 1)),
+          reason: 'dpr $dpr column $x',
+        );
+      }
+    }
   });
 }
