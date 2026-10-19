@@ -10,9 +10,11 @@
 // (keyboard runtime is inherent to the test VM; auto-refresh defaults on;
 // theme dark + custom; recommendations on; full permissions; Reader:
 // force-horizontal off, fullscreen on, flash on, split on, rotate on,
-// volume keys on, Android override), so a new conditional tile without an
-// entry — or an entry whose tile was removed — fails here, not silently in
-// search.
+// volume keys on, Android override; Server: reachable settings with SOCKS
+// and FlareSolverr on, web UI flavour set, authenticated; Connection: LAN
+// address set; SyncYomi configured; KOReader supported; Tracking: tracker
+// list stubbed), so a new conditional tile without an entry — or an entry
+// whose tile was removed — fails here, not silently in search.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +22,7 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/app_theme.dart';
+import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
@@ -38,9 +41,13 @@ import 'package:tsumiru/src/features/settings/presentation/appearance/appearance
 import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/browse/browse_settings_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/connection/connection_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/downloads_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/general_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/koreader_sync/domain/koreader_sync_domain.dart';
+import 'package:tsumiru/src/features/settings/presentation/koreader_sync/koreader_sync_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/data/library_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/library_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/notifications/notifications_settings_screen.dart';
@@ -49,14 +56,74 @@ import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/data/graphql/__generated__/web_interface.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
+import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/search/settings_search_registry.dart';
+import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
+import 'package:tsumiru/src/features/tracking/presentation/settings/tracking_settings_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 
 class _FixedSettings extends Settings {
   @override
   Future<SettingsDto?> build() async => _serverSettings();
+}
+
+/// Reachable server with SOCKS and FlareSolverr switched on, so every
+/// conditional Server row renders.
+SettingsDto _serverSettingsOn() => Fragment$SettingsDto(
+  backupInterval: 0,
+  backupPath: '',
+  backupTTL: 0,
+  backupTime: '',
+  ip: '0.0.0.0',
+  port: 4567,
+  socksProxyEnabled: true,
+  socksProxyHost: 'localhost',
+  socksProxyPassword: '',
+  socksProxyPort: '1080',
+  socksProxyUsername: '',
+  socksProxyVersion: 5,
+  flareSolverrEnabled: true,
+  flareSolverrSessionName: 'default',
+  flareSolverrSessionTtl: 15,
+  flareSolverrTimeout: 60,
+  flareSolverrUrl: 'http://localhost:8191',
+  debugLogsEnabled: false,
+  systemTrayEnabled: false,
+  extensionRepos: const [],
+  maxSourcesInParallel: 0,
+  localSourcePath: '',
+  globalUpdateInterval: 12,
+  updateMangas: false,
+  excludeCompleted: false,
+  excludeNotStarted: false,
+  excludeUnreadChapters: false,
+  downloadAsCbz: false,
+  downloadsPath: '',
+  autoDownloadNewChapters: false,
+  autoDownloadNewChaptersLimit: 0,
+  excludeEntryWithUnreadChapters: false,
+);
+
+class _SocksFlareOnSettings extends Settings {
+  @override
+  Future<SettingsDto?> build() async => _serverSettingsOn();
+}
+
+/// Pins the endpoint resolver so pumping ConnectionScreen never probes the
+/// LAN address over the real network.
+class _FixedEndpoint extends ServerEndpointResolver {
+  @override
+  String? build() => DBKeys.serverUrl.initial;
 }
 
 class _EmptyCategories extends CategoryController {
@@ -363,6 +430,112 @@ void main() {
         const DownloadsSettingsScreen(initialTab: 1),
       );
       _expectIdsMatchRegistry(tester, testableDownloadsEntries());
+    });
+
+    testWidgets('Server entries match ServerScreen targets', (tester) async {
+      // Long page: every target must be mounted to be counted.
+      tester.view.physicalSize = const Size(800, 10000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final container = await _container(
+        extra: [
+          settingsProvider.overrideWith(_SocksFlareOnSettings.new),
+          // Authenticated + MANAGE_SETTINGS, like a logged-out legacy
+          // server: the web rows and Check for update all render.
+          settledAccountAccessProvider.overrideWithValue(
+            AccountAccess(capability: AccountCapability.unsupported),
+          ),
+          webInterfaceSettingsProvider.overrideWith(
+            (ref) async => Fragment$WebInterfaceSettingsDto(
+              webUIFlavor: Enum$WebUIFlavor.WEBUI,
+              webUIChannel: Enum$WebUIChannel.STABLE,
+              webUIUpdateCheckInterval: 12,
+            ),
+          ),
+          webInterfaceFlavorsProvider.overrideWith(
+            (ref) async => const [Enum$WebUIFlavor.WEBUI, Enum$WebUIFlavor.VUI],
+          ),
+          installedWebInterfaceProvider.overrideWith((ref) async => null),
+        ],
+      );
+      await _pumpScreen(tester, container, const ServerScreen());
+      _expectIdsMatchRegistry(tester, serverSettingsSearchEntries);
+    });
+
+    testWidgets('Connection entries match ConnectionScreen targets', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        DBKeys.serverLanUrl.name: 'http://192.168.1.100:4567',
+      });
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          serverEndpointResolverProvider.overrideWith(_FixedEndpoint.new),
+        ],
+      );
+      await _pumpScreen(tester, container, const ConnectionScreen());
+      _expectIdsMatchRegistry(tester, connectionSettingsSearchEntries);
+    });
+
+    testWidgets('SyncYomi entries match SyncYomiSettingsScreen targets', (
+      tester,
+    ) async {
+      final container = await _container(
+        extra: [
+          syncYomiSettingsProvider.overrideWith(
+            (ref) async => const SyncYomiSettings(
+              enabled: true,
+              host: 'https://sync.example',
+              apiKey: 'key',
+              interval: 'PT1H',
+              dataManga: true,
+              dataChapters: true,
+              dataCategories: true,
+              dataHistory: true,
+              dataTracking: true,
+            ),
+          ),
+          lastSyncStatusProvider.overrideWith((ref) async => null),
+        ],
+      );
+      await _pumpScreen(tester, container, const SyncYomiSettingsScreen());
+      _expectIdsMatchRegistry(tester, syncYomiSettingsSearchEntries);
+    });
+
+    testWidgets('KOReader entries match KoreaderSyncSettingsScreen targets', (
+      tester,
+    ) async {
+      final container = await _container(
+        extra: [
+          koreaderSyncSettingsProvider.overrideWith(
+            (ref) async => (
+              strategyForward: Enum$KoreaderSyncConflictStrategy.PROMPT,
+              strategyBackward: Enum$KoreaderSyncConflictStrategy.PROMPT,
+              checksumMethod: Enum$KoreaderSyncChecksumMethod.BINARY,
+              percentageTolerance: 0.05,
+            ),
+          ),
+          koSyncStatusProvider.overrideWith(
+            (ref) async => const KoSyncStatus(isLoggedIn: false),
+          ),
+        ],
+      );
+      await _pumpScreen(tester, container, const KoreaderSyncSettingsScreen());
+      _expectIdsMatchRegistry(tester, koreaderSyncSettingsSearchEntries);
+    });
+
+    testWidgets('Tracking entries match TrackingSettingsScreen targets', (
+      tester,
+    ) async {
+      final container = await _container(
+        extra: [
+          trackersProvider.overrideWith((ref) async => <Fragment$TrackerDto>[]),
+        ],
+      );
+      await _pumpScreen(tester, container, const TrackingSettingsScreen());
+      _expectIdsMatchRegistry(tester, trackingSettingsSearchEntries);
     });
   });
 }

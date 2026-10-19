@@ -24,6 +24,8 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
+import '../../../helpers/unreachable_server_stubs.dart';
+
 const _phone = Size(412, 900);
 
 void _setSize(WidgetTester tester, Size size) {
@@ -71,6 +73,7 @@ Future<ProviderContainer> _container({
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
       readingHistoryProvider.overrideWith(_FakeReadingHistory.new),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -177,8 +180,14 @@ void main() {
       expect(find.text('Go to'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
       Finder shown(String text) => find.text(text, skipOffstage: false);
-      expect(_dy(tester, shown('Library')), lessThan(_dy(tester, shown('Go to'))));
-      expect(_dy(tester, shown('Go to')), lessThan(_dy(tester, shown('Settings'))));
+      expect(
+        _dy(tester, shown('Library')),
+        lessThan(_dy(tester, shown('Go to'))),
+      );
+      expect(
+        _dy(tester, shown('Go to')),
+        lessThan(_dy(tester, shown('Settings'))),
+      );
       expect(
         _dy(tester, shown('Settings')),
         lessThan(_dy(tester, shown('Search all sources for "upd"'))),

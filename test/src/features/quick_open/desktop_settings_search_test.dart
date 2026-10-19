@@ -24,6 +24,8 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
+import '../../../helpers/unreachable_server_stubs.dart';
+
 const _desktop = Size(1400, 980);
 
 void _setSize(WidgetTester tester, Size size) {
@@ -65,6 +67,7 @@ Future<ProviderContainer> _container({
       sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -83,12 +86,10 @@ GoRouter _router(ProviderContainer container) => GoRouter(
             child: Consumer(
               builder: (context, ref, _) => DesktopSearchField(
                 query: ref.watch(unifiedSearchQueryProvider),
-                onChanged: (value) => ref
-                    .read(unifiedSearchQueryProvider.notifier)
-                    .state = value,
-                onNavigate: () => ref
-                    .read(unifiedSearchQueryProvider.notifier)
-                    .state = '',
+                onChanged: (value) =>
+                    ref.read(unifiedSearchQueryProvider.notifier).state = value,
+                onNavigate: () =>
+                    ref.read(unifiedSearchQueryProvider.notifier).state = '',
               ),
             ),
           ),
@@ -142,8 +143,7 @@ Finder _field() => find.descendant(
   matching: find.byType(TextField),
 );
 
-double _dy(WidgetTester tester, Finder finder) =>
-    tester.getCenter(finder).dy;
+double _dy(WidgetTester tester, Finder finder) => tester.getCenter(finder).dy;
 
 void main() {
   group('desktop Settings search section', () {

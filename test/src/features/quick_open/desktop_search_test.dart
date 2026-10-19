@@ -37,6 +37,8 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
 
+import '../../../helpers/unreachable_server_stubs.dart';
+
 const _desktop = Size(1400, 980);
 
 void _setSize(WidgetTester tester, Size size) {
@@ -99,6 +101,7 @@ Future<ProviderContainer> _pumpField(
       sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -162,6 +165,7 @@ Future<ProviderContainer> _pumpFieldWithRouter(
       sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -344,6 +348,7 @@ void main() {
           quickSearchToggleProvider.overrideWith(_ToggleOn.new),
           libraryMangaListProvider.overrideWith((ref) async => null),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+          ...unreachableServerStubs,
         ],
       );
       addTearDown(container.dispose);
@@ -397,6 +402,7 @@ void main() {
           visibleCategoryListProvider.overrideWithValue(
             const AsyncData(<Fragment$CategoryDto>[]),
           ),
+          ...unreachableServerStubs,
         ],
       );
       addTearDown(container.dispose);
@@ -469,6 +475,7 @@ void main() {
             visibleCategoryListProvider.overrideWithValue(
               const AsyncData(<Fragment$CategoryDto>[]),
             ),
+            ...unreachableServerStubs,
           ],
         );
         addTearDown(container.dispose);
@@ -653,8 +660,10 @@ void main() {
       );
       expect(find.text('Go to'), findsOneWidget);
       expect(find.text('Updates'), findsOneWidget);
+      // The Settings section grew (Server/Tracking rows also match "upd"),
+      // so the trailing row can sit below the fold: look offstage too.
       expect(
-        find.text('Search all sources for "upd"'),
+        find.text('Search all sources for "upd"', skipOffstage: false),
         findsOneWidget,
         reason: 'always offered while text is non-empty',
       );
@@ -681,6 +690,7 @@ void main() {
           quickSearchToggleProvider.overrideWith(_ToggleOn.new),
           libraryMangaListProvider.overrideWith((ref) async => library),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+          ...unreachableServerStubs,
         ],
       );
       addTearDown(container.dispose);
@@ -847,6 +857,7 @@ void main() {
           ),
           libraryMangaListProvider.overrideWith((ref) async => null),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+          ...unreachableServerStubs,
         ],
       );
       addTearDown(container.dispose);
@@ -910,6 +921,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(sp),
           libraryMangaListProvider.overrideWith((ref) async => null),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+          ...unreachableServerStubs,
         ],
       );
       addTearDown(container.dispose);

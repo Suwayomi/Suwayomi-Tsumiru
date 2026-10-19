@@ -28,7 +28,6 @@ import 'package:tsumiru/src/features/library/presentation/library/library_screen
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/phone_search_view.dart';
-import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -36,6 +35,8 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/cover_row_section.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
+
+import '../../../helpers/unreachable_server_stubs.dart';
 
 const _phone = Size(412, 900);
 const _desktop = Size(1400, 980);
@@ -166,6 +167,7 @@ Future<ProviderContainer> _pumpEntry(
         sourceMapFilteredProvider.overrideWithValue(AsyncData(sources)),
       if (origin == PhoneSearchOrigin.sources)
         pinnedSourcesProvider.overrideWithValue(pinned),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -205,6 +207,7 @@ Future<ProviderContainer> _pumpEntryWithRouter(
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
       readingHistoryProvider.overrideWith(() => _FakeReadingHistory(const [])),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -275,7 +278,6 @@ Future<ProviderContainer> _pumpLibrary(
         const AsyncData<bool?>(null),
       ),
       failedUpdateCountProvider.overrideWithValue(const AsyncData(0)),
-      syncYomiSettingsProvider.overrideWithValue(const AsyncData(null)),
       settledDefaultCategoryIdProvider.overrideWithValue(1),
       nonZeroCategoryListProvider.overrideWithValue(
         AsyncData([_category(1, 'One'), _category(2, 'Two')]),
@@ -293,6 +295,7 @@ Future<ProviderContainer> _pumpLibrary(
       categoryMangaListWithQueryAndFilterProvider(
         categoryId: 2,
       ).overrideWithValue(AsyncData<List<Fragment$MangaDto>?>(null)),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -328,6 +331,7 @@ Future<ProviderContainer> _pumpHistory(
       readingHistoryProvider.overrideWith(() => _FakeReadingHistory(const [])),
       libraryMangaListProvider.overrideWith((ref) async => const []),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);
@@ -361,10 +365,7 @@ void main() {
       // the page underneath stays visible and hit-testable.
       expect(find.text('unread:true'), findsNothing);
       expect(find.text('Go to'), findsNothing);
-      expect(
-        find.byIcon(Icons.search_rounded).hitTestable(),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.search_rounded).hitTestable(), findsOneWidget);
     });
 
     testWidgets('other origins keep the unified hint', (tester) async {
@@ -552,9 +553,7 @@ void main() {
       await _pumpEntry(
         tester,
         origin: PhoneSearchOrigin.history,
-        library: [
-          for (var i = 0; i < 8; i++) _manga(100 + i, 'Alpha Saga $i'),
-        ],
+        library: [for (var i = 0; i < 8; i++) _manga(100 + i, 'Alpha Saga $i')],
         history: [
           for (var i = 0; i < 4; i++)
             _historyItem(
@@ -670,7 +669,9 @@ void main() {
       await _pumpEntry(
         tester,
         origin: PhoneSearchOrigin.library,
-        library: [for (var i = 0; i < 10; i++) _manga(100 + i, 'Sword Saga $i')],
+        library: [
+          for (var i = 0; i < 10; i++) _manga(100 + i, 'Sword Saga $i'),
+        ],
       );
       await _openOverlay(tester);
 
@@ -733,10 +734,7 @@ void main() {
       expect(helpButton, findsOneWidget);
       // The tips button sits at the right end of the bar, immediately
       // before the clear button.
-      final clearButton = find.widgetWithIcon(
-        IconButton,
-        Icons.close_rounded,
-      );
+      final clearButton = find.widgetWithIcon(IconButton, Icons.close_rounded);
       expect(clearButton, findsOneWidget);
       expect(
         tester.getCenter(helpButton).dx,
@@ -761,19 +759,13 @@ void main() {
       await tester.tap(helpButton);
       await tester.pumpAndSettle();
 
-      expect(
-        find.widgetWithText(AlertDialog, 'Search tips'),
-        findsOneWidget,
-      );
+      expect(find.widgetWithText(AlertDialog, 'Search tips'), findsOneWidget);
 
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
 
       expect(find.byType(PhoneSearchOverlay), findsOneWidget);
-      expect(
-        tester.widget<TextField>(_overlayField()).controller?.text,
-        'sw',
-      );
+      expect(tester.widget<TextField>(_overlayField()).controller?.text, 'sw');
       expect(
         tester.widget<TextField>(_overlayField()).focusNode?.hasFocus,
         isTrue,

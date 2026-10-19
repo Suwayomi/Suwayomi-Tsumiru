@@ -8,7 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
+import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
+import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/settings/search/settings_search_registry.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_en.dart';
@@ -40,7 +44,10 @@ void main() {
 
   group('matchSettingsEntries', () {
     test('matches on title', () {
-      final entries = [_entry('a', 'App Theme Mode'), _entry('b', 'Clear Cache')];
+      final entries = [
+        _entry('a', 'App Theme Mode'),
+        _entry('b', 'Clear Cache'),
+      ];
       expect(idsOf(entries, 'theme'), ['a']);
     });
 
@@ -81,10 +88,9 @@ void main() {
         _entry('shown', 'Quick Search'),
         _entry('hidden', 'Quick Search Pro'),
       ];
-      expect(
-        idsOf(entries, 'quick search', shown: (id) => id == 'shown'),
-        ['shown'],
-      );
+      expect(idsOf(entries, 'quick search', shown: (id) => id == 'shown'), [
+        'shown',
+      ]);
     });
   });
 
@@ -92,7 +98,10 @@ void main() {
     late WidgetRef refOf;
     late BuildContext ctxOf;
 
-    Future<void> pumpScope(WidgetTester tester, ProviderContainer container) async {
+    Future<void> pumpScope(
+      WidgetTester tester,
+      ProviderContainer container,
+    ) async {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -155,6 +164,86 @@ void main() {
       await pumpScope(tester, container);
       expect(entryById('autoRefreshRetryDelay').visible(refOf, ctxOf), isTrue);
     });
+
+    testWidgets('socks host hidden while SOCKS is off', (tester) async {
+      Future<void> pumpSocks(WidgetTester tester, bool on) async {
+        SharedPreferences.setMockInitialValues({});
+        final sp = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sp),
+            settingsProvider.overrideWith(() => _SocksSettings(on)),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container.read(settingsProvider.future);
+        await pumpScope(tester, container);
+      }
+
+      await pumpSocks(tester, false);
+      expect(entryById('socksHost').visible(refOf, ctxOf), isFalse);
+      expect(entryById('enableSocksProxy').visible(refOf, ctxOf), isTrue);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('socks host shown while SOCKS is on', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          settingsProvider.overrideWith(() => _SocksSettings(true)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(settingsProvider.future);
+      await pumpScope(tester, container);
+      expect(entryById('socksHost').visible(refOf, ctxOf), isTrue);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('sync now hidden until host and key are set', (tester) async {
+      Future<bool> syncNowVisible(SyncYomiSettings settings) async {
+        SharedPreferences.setMockInitialValues({});
+        final sp = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sp),
+            syncYomiSettingsProvider.overrideWith((ref) async => settings),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container.read(syncYomiSettingsProvider.future);
+        await pumpScope(tester, container);
+        return entryById('syncYomiSyncNow').visible(refOf, ctxOf);
+      }
+
+      const unconfigured = SyncYomiSettings(
+        enabled: true,
+        host: '',
+        apiKey: '',
+        interval: 'PT0S',
+        dataManga: false,
+        dataChapters: false,
+        dataCategories: false,
+        dataHistory: false,
+        dataTracking: false,
+      );
+      const configured = SyncYomiSettings(
+        enabled: true,
+        host: 'https://sync.example',
+        apiKey: 'key',
+        interval: 'PT1H',
+        dataManga: true,
+        dataChapters: false,
+        dataCategories: false,
+        dataHistory: false,
+        dataTracking: false,
+      );
+      expect(await syncNowVisible(unconfigured), isFalse);
+      expect(await syncNowVisible(configured), isTrue);
+      expect(entryById('syncYomiSyncData').visible(refOf, ctxOf), isTrue);
+    });
   });
 
   group('settingsTitleSpans', () {
@@ -195,4 +284,48 @@ class _AutoRefreshOn extends AutoRefreshOnTimeout {
 class _AutoRefreshOff extends AutoRefreshOnTimeout {
   @override
   bool? build() => false;
+}
+
+SettingsDto _socksSettings(bool on) => Fragment$SettingsDto(
+  backupInterval: 0,
+  backupPath: '',
+  backupTTL: 0,
+  backupTime: '',
+  ip: '',
+  port: 0,
+  socksProxyEnabled: on,
+  socksProxyHost: '',
+  socksProxyPassword: '',
+  socksProxyPort: '',
+  socksProxyUsername: '',
+  socksProxyVersion: 5,
+  flareSolverrEnabled: false,
+  flareSolverrSessionName: '',
+  flareSolverrSessionTtl: 0,
+  flareSolverrTimeout: 0,
+  flareSolverrUrl: '',
+  debugLogsEnabled: false,
+  systemTrayEnabled: false,
+  extensionRepos: const [],
+  maxSourcesInParallel: 0,
+  localSourcePath: '',
+  globalUpdateInterval: 12,
+  updateMangas: false,
+  excludeCompleted: false,
+  excludeNotStarted: false,
+  excludeUnreadChapters: false,
+  downloadAsCbz: false,
+  downloadsPath: '',
+  autoDownloadNewChapters: false,
+  autoDownloadNewChaptersLimit: 0,
+  excludeEntryWithUnreadChapters: false,
+);
+
+class _SocksSettings extends Settings {
+  _SocksSettings(this.on);
+
+  final bool on;
+
+  @override
+  Future<SettingsDto?> build() async => _socksSettings(on);
 }
