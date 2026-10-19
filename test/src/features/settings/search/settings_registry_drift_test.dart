@@ -23,18 +23,27 @@ import 'package:tsumiru/src/constants/app_theme.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
+import 'package:tsumiru/src/features/browse_center/data/extension_store_repository/extension_store_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/notifications/controller/notification_settings_providers.dart';
+import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
+import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
 import 'package:tsumiru/src/features/settings/data/user_settings.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/appearance_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/browse/browse_settings_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/downloads/downloads_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/general_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/data/library_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/library_settings_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/notifications/notifications_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/reader_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
@@ -53,6 +62,12 @@ class _FixedSettings extends Settings {
 class _EmptyCategories extends CategoryController {
   @override
   Future<List<CategoryDto>?> build() async => [];
+}
+
+class _FixedDeleteChapters extends DeleteChaptersSettingsController {
+  @override
+  Future<DeleteChaptersSettings> build() async =>
+      const DeleteChaptersSettings();
 }
 
 class _CustomTheme extends AppThemeKey {
@@ -95,9 +110,7 @@ SettingsDto _serverSettings() => Fragment$SettingsDto(
   excludeEntryWithUnreadChapters: false,
 );
 
-Future<ProviderContainer> _container({
-  List<dynamic> extra = const [],
-}) async {
+Future<ProviderContainer> _container({List<dynamic> extra = const []}) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
@@ -150,11 +163,7 @@ void _expectIdsMatchRegistry(
 void main() {
   group('settings registry drift guard', () {
     testWidgets('General entries match GeneralScreen targets', (tester) async {
-      await _pumpScreen(
-        tester,
-        await _container(),
-        const GeneralScreen(),
-      );
+      await _pumpScreen(tester, await _container(), const GeneralScreen());
       _expectIdsMatchRegistry(tester, generalSettingsSearchEntries);
     });
 
@@ -175,10 +184,7 @@ void main() {
       tester,
     ) async {
       final dummyLink = HttpLink('http://localhost/');
-      final dummyClient = GraphQLClient(
-        link: dummyLink,
-        cache: GraphQLCache(),
-      );
+      final dummyClient = GraphQLClient(link: dummyLink, cache: GraphQLCache());
       final container = await _container(
         extra: [
           settingsProvider.overrideWith(_FixedSettings.new),
@@ -198,9 +204,8 @@ void main() {
               dummyClient,
               routing: UserSettingsRouting(
                 account: AccountRepository(dummyClient),
-                access: () => AccountAccess(
-                  capability: AccountCapability.unsupported,
-                ),
+                access: () =>
+                    AccountAccess(capability: AccountCapability.unsupported),
                 settings: () async => _serverSettings(),
                 updated: () {},
               ),
@@ -236,6 +241,128 @@ void main() {
       container.read(volumeTapProvider.notifier).update(true);
       await _pumpScreen(tester, container, const ReaderSettingsScreen());
       _expectIdsMatchRegistry(tester, readerSettingsSearchEntries);
+    });
+
+    testWidgets('Browse entries match BrowseSettingsScreen targets', (
+      tester,
+    ) async {
+      final container = await _container(
+        extra: [
+          settingsProvider.overrideWith(_FixedSettings.new),
+          settledAccountAccessProvider.overrideWithValue(
+            AccountAccess(capability: AccountCapability.unsupported),
+          ),
+          // The live store list retries its fetch (a pending timer the
+          // test binding rejects); the count only feeds the row's subtitle.
+          extensionStoreListProvider.overrideWith((ref) async => null),
+        ],
+      );
+      await _pumpScreen(tester, container, const BrowseSettingsScreen());
+      _expectIdsMatchRegistry(tester, browseSettingsSearchEntries);
+    });
+
+    testWidgets('Notifications entries match NotificationsSettingsScreen '
+        'targets', (tester) async {
+      final container = await _container();
+      // Every gate satisfied: new-chapter notifications on, so the five
+      // nested rows render.
+      container
+          .read(notificationsNewChaptersEnabledProvider.notifier)
+          .update(true);
+      await _pumpScreen(tester, container, const NotificationsSettingsScreen());
+      _expectIdsMatchRegistry(tester, notificationsSettingsSearchEntries);
+    });
+
+    testWidgets('Backup entries match BackupScreen targets', (tester) async {
+      final container = await _container(
+        extra: [
+          settingsProvider.overrideWith(_FixedSettings.new),
+          settledAccountAccessProvider.overrideWithValue(
+            AccountAccess(capability: AccountCapability.unsupported),
+          ),
+        ],
+      );
+      await _pumpScreen(tester, container, const BackupScreen());
+      _expectIdsMatchRegistry(tester, backupSettingsSearchEntries);
+    });
+
+    // The background-catchup rows only render on native Android
+    // (isAndroidNative), which is false on the test VM — so they can have
+    // registry entries without mounted targets here. Everything else must
+    // match in both directions.
+    final androidOnlyDownloadsIds = {
+      'backgroundCatchup',
+      'backgroundCheckInterval',
+      'backgroundFetchFiles',
+    };
+
+    List<SettingsSearchEntry> testableDownloadsEntries() =>
+        downloadsSettingsSearchEntries
+            .where(
+              (e) => e.tabIndex == 1 && !androidOnlyDownloadsIds.contains(e.id),
+            )
+            .toList();
+
+    Future<ProviderContainer> downloadsContainer() async {
+      final container = await _container(
+        extra: [
+          settingsProvider.overrideWith(_FixedSettings.new),
+          personalSettingsProvider.overrideWith(
+            (ref) async => _serverSettings(),
+          ),
+          personalSettingsStateProvider.overrideWithValue(
+            PersonalSettingsState.ready,
+          ),
+          settledAccountAccessProvider.overrideWithValue(
+            AccountAccess(capability: AccountCapability.unsupported),
+          ),
+          categoryControllerProvider.overrideWith(_EmptyCategories.new),
+          // The live controller fetches global metas with retry (a pending
+          // timer the test binding rejects); the rows only read its value.
+          deleteChaptersSettingsControllerProvider.overrideWith(
+            _FixedDeleteChapters.new,
+          ),
+          offlineEnabledProvider.overrideWithValue(true),
+          offlineUsageBytesProvider.overrideWith((ref) async => 0),
+        ],
+      );
+      // Mounts the keep-window switch under the on-device delete section.
+      container.read(localDeleteWhileReadingProvider.notifier).update(2);
+      return container;
+    }
+
+    // TabBarView only mounts the current tab, so each test sees exactly
+    // its own tab's targets — opened once per tab to prove each tab's ids
+    // exist on the tab its entries open.
+    testWidgets('Downloads Server-tab entries match their targets', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 10000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await _pumpScreen(
+        tester,
+        await downloadsContainer(),
+        const DownloadsSettingsScreen(initialTab: 0),
+      );
+      _expectIdsMatchRegistry(
+        tester,
+        downloadsSettingsSearchEntries.where((e) => e.tabIndex == 0).toList(),
+      );
+    });
+
+    testWidgets('Downloads On-device-tab entries match their targets', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 10000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await _pumpScreen(
+        tester,
+        await downloadsContainer(),
+        const DownloadsSettingsScreen(initialTab: 1),
+      );
+      _expectIdsMatchRegistry(tester, testableDownloadsEntries());
     });
   });
 }
