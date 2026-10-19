@@ -59,4 +59,6 @@ flutter build apk            # or: ios / linux / windows / macos / web
 
 Tsumiru started as a fork of [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi) and depends on [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server). Thanks to everyone who built and maintains both.
 
+The app typeface is [Inter](https://github.com/rsms/inter) by Rasmus Andersson, bundled (Regular, Medium, SemiBold) under the SIL Open Font License 1.1 — see [assets/fonts/inter/OFL.txt](assets/fonts/inter/OFL.txt), also registered with the app's licence list at startup like the Font Awesome licence.
+
 Licensed under the [Mozilla Public License 2.0](LICENSE). Source files keep their MPL-2.0 headers.

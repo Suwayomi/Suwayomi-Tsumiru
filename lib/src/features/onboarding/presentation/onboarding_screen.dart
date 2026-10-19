@@ -371,7 +371,7 @@ class _ThemeStep extends ConsumerWidget {
         Text(
           context.l10n.onboardingWelcomeTitle,
           style: context.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
@@ -1030,7 +1030,7 @@ class _ServerStep extends HookConsumerWidget {
         Text(
           context.l10n.onboardingServerTitle,
           style: context.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
@@ -1400,7 +1400,7 @@ class _FinishStep extends StatelessWidget {
           context.l10n.onboardingDoneTitle,
           textAlign: TextAlign.center,
           style: context.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),

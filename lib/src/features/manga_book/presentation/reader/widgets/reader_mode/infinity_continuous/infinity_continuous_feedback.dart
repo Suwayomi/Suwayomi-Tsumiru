@@ -369,7 +369,7 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
                   context.l10n.finished,
                   style: context.textTheme.titleMedium?.copyWith(
                     color: context.theme.colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               if (!isChapterStart) const Gap(4),
