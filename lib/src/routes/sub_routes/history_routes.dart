@@ -22,5 +22,10 @@ class HistoryRoute extends GoRouteData with $HistoryRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const HistoryScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: HistoryScreen());
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const HistoryScreen());
 }
