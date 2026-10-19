@@ -244,7 +244,9 @@ class DesktopSearchField extends HookConsumerWidget {
       // unmounted, but the controller itself is a plain state object.
       final registration = ref.read(desktopSearchFocusNodeProvider.notifier);
       void register() {
-        if (context.mounted) registration.state = focusNode;
+        if (context.mounted && registration.mounted) {
+          registration.state = focusNode;
+        }
       }
 
       WidgetsBinding.instance.addPostFrameCallback((_) => register());
@@ -267,9 +269,11 @@ class DesktopSearchField extends HookConsumerWidget {
         focusNode.removeListener(onFocus);
         // Deferred past the frame: unmount can run inside the build phase
         // (a pop rebuilds the tree), where provider writes are banned.
-        if (registration.state == focusNode) {
+        if (registration.mounted && registration.state == focusNode) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (registration.state == focusNode) registration.state = null;
+            if (registration.mounted && registration.state == focusNode) {
+              registration.state = null;
+            }
           });
         }
       };
