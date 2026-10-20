@@ -119,7 +119,7 @@ class BrowseScreen extends HookConsumerWidget {
         // Desktop replaces the title with a search box driving the current
         // tab's own filter (the sidebar already names the page). Phone and
         // tablet keep the title.
-        title: context.windowSizeClass >= WindowSizeClass.medium
+        title: context.usesDesktopShell
             ? Align(
                 alignment: Alignment.centerLeft,
                 child: ConstrainedBox(

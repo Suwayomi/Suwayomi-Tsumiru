@@ -108,14 +108,14 @@ Widget _groupedBody({
     // always-visible themed scrollbar travels in the gutter the slivers keep
     // (see LibraryMangaSliver); the left inset stays as before. Phone/tablet
     // keep the symmetric inset.
-    padding: context.windowSizeClass >= WindowSizeClass.medium
+    padding: context.usesDesktopShell
         ? const EdgeInsets.only(left: 8)
         : KEdgeInsets.h8.size,
     child: useTabs
         ? Builder(
             builder: (context) {
               final tabs = tabViews();
-              if (context.windowSizeClass == WindowSizeClass.compact) {
+              if (!context.usesDesktopShell) {
                 // Tabs share the ambient controller here, so no scrollbars (else "attached to more than one ScrollPosition").
                 return ScrollConfiguration(
                   behavior: ScrollConfiguration.of(
@@ -321,7 +321,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
-    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
+    final desktop = context.usesDesktopShell;
     // Native desktop draws the toolbar in the shell bar instead of the body.
     final topBar = showsMergedTopBar(context);
     useEffect(() {
@@ -589,7 +589,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         final showTabs = data!.length > 1 && _showTabBar(style, categoryTabsOn);
         // Desktop replaces the sliver app bar + TabBar with the toolbar row
         // and the tab strip, both pinned.
-        final desktop = context.windowSizeClass >= WindowSizeClass.medium;
+        final desktop = context.usesDesktopShell;
         // Native desktop draws the toolbar in the shell bar instead of the
         // pinned header.
         final topBar = showsMergedTopBar(context);
@@ -828,7 +828,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
-    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
+    final desktop = context.usesDesktopShell;
     // Native desktop draws the toolbar in the shell bar instead of the body.
     final topBar = showsMergedTopBar(context);
     useEffect(() {
@@ -1055,7 +1055,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
     // Desktop replaces the sliver app bar + TabBar with the toolbar row
     // and the tab strip, both pinned.
-    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
+    final desktop = context.usesDesktopShell;
     // Native desktop draws the toolbar in the shell bar instead of the
     // pinned header.
     final topBar = showsMergedTopBar(context);

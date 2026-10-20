@@ -34,7 +34,7 @@ class HistoryScreen extends ConsumerWidget {
     final historyState = ref.watch(readingHistoryProvider);
     final searchQuery = ref.watch(historySearchQueryProvider);
     final hasActiveFilters = ref.watch(historyHasActiveFiltersProvider);
-    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
+    final desktop = context.usesDesktopShell;
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     // The persistent-search setting puts the tappable box under the title;
     // otherwise phone pages get a search icon in the app bar.

@@ -43,9 +43,9 @@ class BigScreenNavigationBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Medium and up uses the custom sidebar; below large it shows collapsed
-    // whatever the user chose. Compact windows keep the icon rail.
-    if (context.windowSizeClass >= WindowSizeClass.medium) {
+    // The desktop shell uses the custom sidebar; below large it shows
+    // collapsed whatever the user chose. Landscape phones keep the icon rail.
+    if (context.usesDesktopShell) {
       return DesktopSidebar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onDestinationSelected,
@@ -56,13 +56,14 @@ class BigScreenNavigationBar extends ConsumerWidget {
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final navList = NavigationBarData.getNavList(context);
-    // A landscape phone is compact, so only it drops the app-icon header to
-    // make room for all destinations ("More" was falling off the bottom).
-    final isPhone = context.windowSizeClass == WindowSizeClass.compact;
+    // The rail shows for a landscape phone too, where the height is tight, so
+    // only that case drops the app-icon header to make room for all
+    // destinations ("More" was falling off the bottom).
+    final isPhone = !context.usesDesktopShell;
 
     const logoIcon = TsumiruLogo(size: 48);
 
-    // Compact window: compact logo (no collapse — already an icon rail).
+    // Landscape phone: compact logo (no collapse — already an icon rail).
     final leadingIcon = IconButton(
       onPressed: () => const AboutRoute().push(context),
       icon: logoIcon,

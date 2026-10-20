@@ -58,7 +58,7 @@ class MoreScreen extends ConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
-              title: context.windowSizeClass >= WindowSizeClass.medium
+              title: context.usesDesktopShell
                   ? Align(
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(

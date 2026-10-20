@@ -122,7 +122,7 @@ class ExtensionScreen extends HookConsumerWidget {
 
     return Column(
       children: [
-        if (context.windowSizeClass == WindowSizeClass.compact)
+        if (!context.usesDesktopShell)
           SizedBox(
             width: context.windowSizeClass >= WindowSizeClass.expanded
                 ? context.widthScale(scale: .5)

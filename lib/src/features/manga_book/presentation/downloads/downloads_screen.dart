@@ -123,7 +123,7 @@ class DownloadsScreen extends HookConsumerWidget {
           : AppBar(
               // Desktop replaces the title with the unified search box (the
               // sidebar already names the page); phone and tablet keep it.
-              title: context.windowSizeClass >= WindowSizeClass.medium
+              title: context.usesDesktopShell
                   ? Align(
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(

@@ -159,17 +159,23 @@ extension ContextExtensions on BuildContext {
   /// get the shortestSide from screen
   double get mediaQueryShortestSide => mediaQuerySize.shortestSide;
 
-  /// Material window size class for the current window
+  /// Material window size class for the current window, from its width only
   /// (developer.android.com "Use window size classes").
-  /// A window shorter than 600 on its shortest side stays compact even when
-  /// it is wide, which keeps a landscape phone on the phone layout.
   WindowSizeClass get windowSizeClass {
-    if (mediaQueryShortestSide < 600) return WindowSizeClass.compact;
+    if (width < 600) return WindowSizeClass.compact;
     if (width < 840) return WindowSizeClass.medium;
     if (width < 1200) return WindowSizeClass.expanded;
     if (width < 1600) return WindowSizeClass.large;
     return WindowSizeClass.extraLarge;
   }
+
+  /// Whether the desktop shell fits: width >= 600 with a shortestSide >= 600,
+  /// so a landscape phone keeps the icon rail and its own app bars. The only
+  /// layout rule that reads height, because the sidebar and merged top bar
+  /// need the room a wide but short window does not have.
+  bool get usesDesktopShell =>
+      windowSizeClass >= WindowSizeClass.medium &&
+      mediaQueryShortestSide >= 600;
 
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 

@@ -194,7 +194,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
           return false;
         },
         child: Scaffold(
-          appBar: context.windowSizeClass >= WindowSizeClass.medium
+          appBar: context.usesDesktopShell
               ? null
               : AppBar(
                   leading: detailNavigationBackButton(context),
@@ -220,7 +220,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                     ),
                   ),
                 ),
-          body: context.windowSizeClass >= WindowSizeClass.medium
+          body: context.usesDesktopShell
               ? SafeArea(
                   child: Column(
                     children: [

@@ -26,8 +26,7 @@ import 'sidebar_expanded.dart';
 bool sidebarIsExpanded(BuildContext context, bool preference) =>
     preference && context.windowSizeClass >= WindowSizeClass.large;
 
-/// Wide-desktop-only navigation sidebar (shown when the window is
-/// [WindowSizeClass.medium] or wider).
+/// Wide-desktop-only navigation sidebar (shown when [usesDesktopShell]).
 ///
 /// Expanded (208 px): 40 px rows with icon + label and 2 px gaps. Collapsed
 /// (60 px, 80 px on macOS so the traffic lights fit above the column): 44 px

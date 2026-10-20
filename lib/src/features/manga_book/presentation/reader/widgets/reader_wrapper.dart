@@ -227,8 +227,7 @@ class ReaderWrapper extends HookConsumerWidget {
     // sub-toggle keeps the side seekbar on a landscape phone.
     final screenSize = MediaQuery.sizeOf(context);
     final isLandscapePhone =
-        context.windowSizeClass == WindowSizeClass.compact &&
-        screenSize.width > screenSize.height;
+        screenSize.shortestSide < 600 && screenSize.width > screenSize.height;
     final forceHorizontalSeekbar = ref
         .watch(forceHorizontalSeekbarProvider)
         .ifNull(false);
