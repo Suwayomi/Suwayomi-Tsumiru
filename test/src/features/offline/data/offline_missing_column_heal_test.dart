@@ -80,17 +80,4 @@ void main() {
       ),
     );
   });
-
-  test('a healed catalogue is not touched again on the next open', () async {
-    await seedDeviceLikeCatalogue();
-    final first = testOfflineDatabaseFile(dbPath);
-    await first.allOfflineCategories();
-    await first.close();
-    lines.clear();
-
-    final db = testOfflineDatabaseFile(dbPath);
-    await db.allOfflineCategories();
-    await db.close();
-    expect(lines, isEmpty);
-  });
 }

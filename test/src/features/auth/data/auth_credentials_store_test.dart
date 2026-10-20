@@ -144,103 +144,38 @@ void main() {
     );
   });
 
-  test(
-    'direct credential replacement invalidates the previous session',
-    () async {
-      final c = _container(_InMemorySecureStorage());
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      var previous = store.sessionEpoch;
-      await store.saveUiLoginTokens(accessToken: 'A', refreshToken: 'R');
-      expect(store.sessionEpoch, greaterThan(previous));
-      previous = store.sessionEpoch;
-      await store.saveSimpleLoginCookie('cookie-B');
-      expect(store.sessionEpoch, greaterThan(previous));
-    },
-  );
+  test('tokens save and clear in store and state, and a legacy password is '
+      'deleted at launch', () async {
+    final storage = _InMemorySecureStorage({'auth.password': 'hunter2'});
+    final c = _container(storage);
+    addTearDown(c.dispose);
+    await c.read(authCredentialsStoreProvider.future);
+    await pumpEventQueue();
+    expect(await storage.read(key: 'auth.password'), isNull);
+
+    final store = c.read(authCredentialsStoreProvider.notifier);
+    await store.saveUiLoginTokens(
+      accessToken: 'ACCESS123',
+      refreshToken: 'REFRESH456',
+    );
+
+    expect(await storage.read(key: 'auth.ui.accessToken'), 'ACCESS123');
+    expect(await storage.read(key: 'auth.ui.refreshToken'), 'REFRESH456');
+    var state = c.read(authCredentialsStoreProvider).requireValue;
+    expect(state.uiAccessToken, 'ACCESS123');
+    expect(state.uiRefreshToken, 'REFRESH456');
+    expect(state.uiAuthorizationHeader, {'Authorization': 'Bearer ACCESS123'});
+
+    await store.clearUiLoginTokens();
+
+    expect(await storage.read(key: 'auth.ui.accessToken'), isNull);
+    expect(await storage.read(key: 'auth.ui.refreshToken'), isNull);
+    state = c.read(authCredentialsStoreProvider).requireValue;
+    expect(state.uiAccessToken, isNull);
+    expect(state.uiAuthorizationHeader, isNull);
+  });
 
   group('AuthCredentialsStore — build() (load from secure storage)', () {});
-
-  group('AuthCredentialsStore — UI Login', () {
-    test('saveUiLoginTokens persists AND updates state', () async {
-      final storage = _InMemorySecureStorage();
-      final c = _container(storage);
-      addTearDown(c.dispose);
-
-      // Force build so the notifier exists.
-      await c.read(authCredentialsStoreProvider.future);
-
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.saveUiLoginTokens(
-        accessToken: 'ACCESS123',
-        refreshToken: 'REFRESH456',
-      );
-
-      // Backing store written.
-      expect(await storage.read(key: 'auth.ui.accessToken'), 'ACCESS123');
-      expect(await storage.read(key: 'auth.ui.refreshToken'), 'REFRESH456');
-      // Riverpod state updated synchronously (no reload needed).
-      final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.uiAccessToken, 'ACCESS123');
-      expect(state.uiRefreshToken, 'REFRESH456');
-      // Convenience header projection.
-      expect(state.uiAuthorizationHeader, {
-        'Authorization': 'Bearer ACCESS123',
-      });
-    });
-
-    test(
-      'clearUiLoginTokens removes both tokens from store AND state',
-      () async {
-        final storage = _InMemorySecureStorage({
-          'auth.ui.accessToken': 'A',
-          'auth.ui.refreshToken': 'R',
-        });
-        final c = _container(storage);
-        addTearDown(c.dispose);
-        await c.read(authCredentialsStoreProvider.future);
-
-        final store = c.read(authCredentialsStoreProvider.notifier);
-        await store.clearUiLoginTokens();
-
-        expect(await storage.read(key: 'auth.ui.accessToken'), isNull);
-        expect(await storage.read(key: 'auth.ui.refreshToken'), isNull);
-        final state = c.read(authCredentialsStoreProvider).requireValue;
-        expect(state.uiAccessToken, isNull);
-        expect(state.uiAuthorizationHeader, isNull);
-      },
-    );
-  });
-
-  group('AuthCredentialsStore — Simple Login', () {
-    test('saveSimpleLoginCookie persists AND updates state', () async {
-      final storage = _InMemorySecureStorage();
-      final c = _container(storage);
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
-
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.saveSimpleLoginCookie('JSESSIONID=abc123');
-
-      final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.simpleLoginCookie, 'JSESSIONID=abc123');
-      expect(state.simpleLoginCookieHeader, {'Cookie': 'JSESSIONID=abc123'});
-    });
-  });
-
-  group('AuthCredentialsStore — password', () {
-    test('a password stored by an older version is deleted at launch: '
-        'nothing reads it, so keeping it was only exposure', () async {
-      final storage = _InMemorySecureStorage({'auth.password': 'hunter2'});
-      final c = _container(storage);
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
-      await pumpEventQueue();
-
-      expect(await storage.read(key: 'auth.password'), isNull);
-    });
-  });
 
   group('AuthCredentialsStore — basic credentials (migrated)', () {});
 }

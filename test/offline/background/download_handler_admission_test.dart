@@ -19,10 +19,10 @@ class _RealHttpOverrides extends HttpOverrides {}
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  for (final generation in [0, 1]) {
-    test(
-      'preadmission add generation $generation merges saved work once',
-      () async {
+  test(
+    'preadmission adds merge saved work once across generations',
+    () async {
+      for (final generation in [0, 1]) {
         final tmp = await Directory.systemTemp.createTemp('handler-admission-');
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
         addTearDown(() => server.close(force: true));
@@ -160,7 +160,7 @@ void main() {
           OfflinePaths(tmp.path),
         ).readManifest(1, 1);
         expect(manifest!.generation, generation);
-      },
-    );
-  }
+      }
+    },
+  );
 }

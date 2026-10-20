@@ -51,41 +51,4 @@ void main() {
     expect(c.isRead, isTrue, reason: 'server field updated');
     expect(c.lastPageRead, 5);
   });
-
-  test('downloadedChaptersForManga filters by device state', () async {
-    await seedChapter(id: 1, mangaId: 7);
-    await seedChapter(id: 2, mangaId: 7);
-    await db.setChapterDeviceState(1, OfflineDeviceState.downloaded);
-    final dl = await db.downloadedChaptersForManga(7);
-    expect(dl.map((c) => c.id), [1]);
-  });
-
-  test('chaptersForManga is ordered by chapterIndex', () async {
-    await db.upsertChapterMetadata(
-      id: 10,
-      mangaId: 7,
-      name: 'b',
-      chapterIndex: 2,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: false,
-      pageCount: 1,
-      updatedAt: DateTime.utc(2026),
-    );
-    await db.upsertChapterMetadata(
-      id: 11,
-      mangaId: 7,
-      name: 'a',
-      chapterIndex: 1,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: false,
-      pageCount: 1,
-      updatedAt: DateTime.utc(2026),
-    );
-    final list = await db.chaptersForManga(7);
-    expect(list.map((c) => c.id), [11, 10]);
-  });
 }

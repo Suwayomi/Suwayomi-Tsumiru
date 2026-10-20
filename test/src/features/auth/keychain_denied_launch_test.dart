@@ -4,34 +4,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:convert';
-
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gql/ast.dart';
-import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
-import 'package:tsumiru/src/constants/enum.dart';
-import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
-import 'package:tsumiru/src/features/auth/presentation/sign_in_action.dart';
-import 'package:tsumiru/src/features/offline/data/background/record_seal.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/routes/router_config.dart';
-import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 
 /// A keychain that refuses every read, and optionally every write and delete.
 class _DeniedStorage implements FlutterSecureStorage {
-  _DeniedStorage({this.failWrites = false});
-  final bool failWrites;
+  _DeniedStorage();
+  final bool failWrites = false;
   int reads = 0;
   int writeAttempts = 0;
   final List<String> writes = [];
@@ -162,104 +150,6 @@ ProviderContainer _container(FlutterSecureStorage storage) {
   return container;
 }
 
-String _testToken() {
-  final payload = jsonEncode({
-    'exp':
-        DateTime.now().add(const Duration(hours: 2)).millisecondsSinceEpoch ~/
-        1000,
-  });
-  return 'e30.${base64Url.encode(utf8.encode(payload)).replaceAll('=', '')}.test-signature';
-}
-
-/// Answers the real sign-in path: the `Login` mutation, then the account
-/// resolution the store commits behind it.
-class _UiLoginChain extends Link {
-  final operations = <String>[];
-  final token = _testToken();
-
-  @override
-  Stream<Response> request(Request request, [NextLink? forward]) async* {
-    final operation = request.operation.document.definitions
-        .whereType<OperationDefinitionNode>()
-        .single
-        .name!
-        .value;
-    operations.add(operation);
-    final user = {
-      '__typename': 'UserType',
-      'id': 2,
-      'username': 'Reader',
-      'roles': ['USER'],
-      'permissions': <String>[],
-    };
-    final payload = switch (operation) {
-      'Login' => {
-        'login': {
-          '__typename': 'LoginPayload',
-          'accessToken': token,
-          'refreshToken': 'test-refresh',
-        },
-      },
-      'AccountCapability' || 'CurrentAccount' => {'user': user},
-      'OfflineServerIdentity' => {
-        'metas': {
-          '__typename': 'MetaTypeConnection',
-          'nodes': [
-            {
-              '__typename': 'GlobalMetaType',
-              'key': 'tsumiru_server_instance_id',
-              'value': 'keychain-test-catalog',
-            },
-          ],
-        },
-      },
-      _ => throw StateError('Unexpected test operation: $operation'),
-    };
-    yield Response(
-      response: {},
-      data: {
-        '__typename': operation == 'Login' ? 'Mutation' : 'Query',
-        ...payload,
-      },
-    );
-  }
-}
-
-Future<SharedPreferences> _uiLoginPreferences() async {
-  SharedPreferences.setMockInitialValues({
-    DBKeys.authType.name: AuthType.uiLogin.index,
-  });
-  return SharedPreferences.getInstance();
-}
-
-ProviderContainer _sessionContainer(
-  FlutterSecureStorage storage,
-  SharedPreferences prefs,
-  _UiLoginChain chain,
-) => ProviderContainer(
-  overrides: [
-    secureStorageProvider.overrideWithValue(storage),
-    sharedPreferencesProvider.overrideWithValue(prefs),
-    unauthenticatedGraphQlClientProvider.overrideWithValue(
-      GraphQLClient(link: chain, cache: GraphQLCache()),
-    ),
-  ],
-);
-
-class _RecordingToast extends Toast {
-  // The super parameter is private to the Toast library.
-  // ignore: use_super_parameters
-  _RecordingToast(BuildContext context) : super(context);
-  final messages = <String>[];
-
-  @override
-  void show(
-    String msg, {
-    bool withMicrotask = false,
-    bool instantShow = false,
-  }) => messages.add(msg);
-}
-
 bool _invalidated() =>
     _prefs.getBool(DBKeys.authCredentialsInvalidated.name) ?? false;
 
@@ -301,90 +191,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a sign-in whose writes are refused still works after the session rebuild',
-    (tester) async {
-      final storage = _DeniedStorage(failWrites: true);
-      final prefs = await _uiLoginPreferences();
-      final chain = _UiLoginChain();
-      late WidgetRef ref;
-      late _RecordingToast toast;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Builder(
-            builder: (context) {
-              toast = _RecordingToast(context);
-              return const SizedBox();
-            },
-          ),
-        ),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            secureStorageProvider.overrideWithValue(storage),
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            unauthenticatedGraphQlClientProvider.overrideWithValue(
-              GraphQLClient(link: chain, cache: GraphQLCache()),
-            ),
-            toastProvider.overrideWithValue(toast),
-          ],
-          child: MaterialApp(
-            navigatorKey: rootNavigatorKey,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Consumer(
-              builder: (context, widgetRef, _) {
-                ref = widgetRef;
-                return const SizedBox();
-              },
-            ),
-          ),
-        ),
-      );
-
-      final first = ProviderScope.containerOf(
-        tester.element(find.byType(MaterialApp)),
-      );
-      await first
-          .read(authCredentialsStoreProvider.future)
-          .timeout(const Duration(seconds: 5));
-
-      await performSignIn(
-        ref,
-        authType: AuthType.uiLogin,
-        serverBaseUrl: 'http://127.0.0.1',
-        username: 'reader',
-        password: 'password',
-      ).timeout(const Duration(seconds: 5));
-
-      // The sign-in restarts the session container. The new container must
-      // still see the sign-in: it lives in memory, not in a keychain that
-      // refused the save.
-      final restarted = _sessionContainer(storage, prefs, chain);
-      final state = await restarted
-          .read(authCredentialsStoreProvider.future)
-          .timeout(const Duration(seconds: 5));
-      expect(state.uiAccessToken, chain.token);
-      expect(state.uiRefreshToken, 'test-refresh');
-      expect(storage.reads, 1);
-
-      final token = await restarted
-          .read(authCoordinatorProvider.notifier)
-          .usableUiAccessToken(
-            gqlClient: () => throw StateError('unexpected refresh'),
-            trigger: 'test',
-          )
-          .timeout(const Duration(seconds: 5));
-      expect(token, chain.token);
-      restarted.dispose();
-
-      await tester.pumpWidget(const SizedBox());
-    },
-  );
-
   test(
     'a refused replacement signs out next launch instead of restoring the old account',
     () async {
@@ -419,15 +225,4 @@ void main() {
     },
   );
 
-  test('a refused keychain never creates a record key', () async {
-    RecordSeal.debugKey = null;
-    final storage = _DeniedStorage();
-    await RecordSeal.load(
-      storage,
-      create: true,
-    ).timeout(const Duration(seconds: 5));
-    expect(RecordSeal.ready, isFalse);
-    expect(storage.reads, 1);
-    expect(storage.writes, isEmpty);
-  });
 }

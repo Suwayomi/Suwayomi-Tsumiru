@@ -32,76 +32,46 @@ void main() {
   });
   tearDown(() => root.deleteSync(recursive: true));
 
-  for (final pending in [false, true]) {
-    test(
-      'legacy recovery preserves timestamps and pending flags ($pending)',
-      () async {
-        final old = sqlite3.open(source);
-        old.execute(
-          "UPDATE offline_chapters SET last_page_read=8, last_read_at='1700000000', progress_dirty=?",
-          [pending ? 1 : 0],
+  test('migration preserves timestamps and pending flags, and keeps a '
+      'deliberate reset', () async {
+    void resetRows() {
+      for (final path in [source, target]) {
+        final db = sqlite3.open(path);
+        db.execute(
+          'UPDATE offline_chapters SET last_page_read=2, last_read_at=NULL, '
+          'progress_dirty=0, read_state_dirty=0, bookmark_dirty=0',
         );
-        old.close();
-        final current = sqlite3.open(target);
-        current.execute(
-          "UPDATE offline_chapters SET last_read_at='1800000000'",
-        );
-        current.close();
-
-        await reconcileAccountCatalogues(source, target, choices: {7: true});
-        await reconcileAccountCatalogues(source, target);
-
-        final recovered = sqlite3.open(target);
-        final row = recovered.select('SELECT * FROM offline_chapters').single;
-        expect(row['last_page_read'], 8);
-        expect(row['progress_dirty'], pending ? 1 : 0);
-        expect(row['read_state_dirty'], 0);
-        expect(row['bookmark_dirty'], 0);
-        expect(row['last_read_at'], '1700000000');
-        recovered.close();
-      },
-    );
-  }
-
-  test('recovering a bookmark does not enqueue a reading update', () async {
-    final old = sqlite3.open(source);
-    old.execute(
-      "UPDATE offline_chapters SET is_bookmarked=1, bookmark_dirty=1, last_read_at='1700000000'",
-    );
-    old.close();
-    await reconcileAccountCatalogues(source, target, choices: {7: true});
-    final recovered = sqlite3.open(target);
-    final row = recovered.select('SELECT * FROM offline_chapters').single;
-    expect(row['progress_dirty'], 0);
-    expect(row['read_state_dirty'], 0);
-    expect(row['bookmark_dirty'], 1);
-    expect(row['last_read_at'], '1700000000');
-    recovered.close();
-  });
-
-  test('imports source-only rows and preserves destination-only rows', () async {
-    for (final pair in [(source, 8), (target, 9)]) {
-      final db = sqlite3.open(pair.$1);
-      db.execute(
-        "INSERT INTO offline_chapters (id,manga_id,name,is_read,last_page_read,is_bookmarked) VALUES (?,1,'New',0,0,0)",
-        [pair.$2],
-      );
-      db.close();
+        db.close();
+      }
     }
-    await reconcileAccountCatalogues(source, target);
-    final db = sqlite3.open(target);
-    expect(
-      db
-          .select('SELECT id FROM offline_chapters ORDER BY id')
-          .map((r) => r['id']),
-      [7, 8, 9],
-    );
-    db.close();
-    expect(File('$target.legacy-recovery-backup').existsSync(), isTrue);
-    expect(File('$target.recovery-backup').existsSync(), isTrue);
-  });
 
-  test('choosing current progress preserves a deliberate reset', () async {
+    for (final pending in [false, true]) {
+      resetRows();
+      final old = sqlite3.open(source);
+      old.execute(
+        "UPDATE offline_chapters SET last_page_read=8, last_read_at='1700000000', progress_dirty=?",
+        [pending ? 1 : 0],
+      );
+      old.close();
+      final current = sqlite3.open(target);
+      current.execute("UPDATE offline_chapters SET last_read_at='1800000000'");
+      current.close();
+
+      await reconcileAccountCatalogues(source, target, choices: {7: true});
+      await reconcileAccountCatalogues(source, target);
+
+      final recovered = sqlite3.open(target);
+      final row = recovered.select('SELECT * FROM offline_chapters').single;
+      expect(row['last_page_read'], 8);
+      expect(row['progress_dirty'], pending ? 1 : 0);
+      expect(row['read_state_dirty'], 0);
+      expect(row['bookmark_dirty'], 0);
+      expect(row['last_read_at'], '1700000000');
+      recovered.close();
+    }
+
+    // Choosing the current side keeps a deliberate reset.
+    resetRows();
     final old = sqlite3.open(source);
     old.execute(
       'UPDATE offline_chapters SET last_page_read=112,progress_dirty=1',

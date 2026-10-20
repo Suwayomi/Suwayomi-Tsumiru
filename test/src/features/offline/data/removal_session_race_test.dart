@@ -83,10 +83,10 @@ Future<void> _seed(_Database db) async {
 }
 
 void main() {
-  for (final pauseAt in ['series', 'library', 'downloaded', 'confirmation']) {
-    testWidgets('$pauseAt removal cannot continue into another account', (
-      tester,
-    ) async {
+  testWidgets('a removal cannot continue into another account', (
+    tester,
+  ) async {
+    for (final pauseAt in ['series', 'library', 'downloaded', 'confirmation']) {
       await tester.runAsync(() async {
         FlutterSecureStorage.setMockInitialValues({});
         SharedPreferences.setMockInitialValues({});
@@ -197,6 +197,6 @@ void main() {
         await a.close();
         await b.close();
       });
-    });
-  }
+    }
+  });
 }

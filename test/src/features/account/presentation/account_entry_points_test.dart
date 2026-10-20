@@ -43,6 +43,8 @@ void main() {
     AccountCapability capability = AccountCapability.unknown,
     bool stored = false,
   }) async {
+    // Drop the previous scope so its provider cache cannot leak into this mount.
+    await tester.pumpWidget(const SizedBox());
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({
       DBKeys.authType.name: AuthType.uiLogin.index,
@@ -70,10 +72,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final popup in [false, true]) {
-    testWidgets('UI login reaches recovery and registration, popup=$popup', (
-      tester,
-    ) async {
+  testWidgets('UI login entry points reach recovery, and logout preserves mode',
+      (tester) async {
+    for (final popup in [false, true]) {
       await mount(
         tester,
         popup
@@ -92,12 +93,8 @@ void main() {
       expect(actions.submissions, [
         ['code', null, 'password'],
       ]);
-    });
-  }
+    }
 
-  testWidgets('logout calls shared action and preserves UI mode', (
-    tester,
-  ) async {
     await mount(tester, const InlineAuthSection(), stored: true);
     await tester.tap(find.text('Log out'));
     await tester.pumpAndSettle();

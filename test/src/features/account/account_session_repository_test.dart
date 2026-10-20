@@ -42,57 +42,49 @@ void main() {
     'roles': ['USER'],
     'permissions': <String>[],
   };
-  test(
-    'binds canonical identity and only the authenticated metadata root',
-    () async {
-      final replies = _Replies([
-        data({
-          'user': {'id': 2, '__typename': 'UserType'},
-        }),
-        data({'user': user}),
-        identity('user-2-root'),
-      ]);
-      final result = await AccountSessionRepository(
-        GraphQLClient(link: replies, cache: GraphQLCache()),
-      ).resolve(address: 'https://server:443', loginUsername: 'canonical');
-      expect(result.userId, 2);
-      expect(result.username, 'Canonical');
-      expect(result.catalogId, 'user-2-root');
-      expect(replies.operations, [
-        'AccountCapability',
-        'CurrentAccount',
-        'OfflineServerIdentity',
-      ]);
-    },
-  );
-  test(
-    'legacy validation uses shared identity without a current-user query',
-    () async {
-      final replies = _Replies([
-        Response(
-          response: {},
-          errors: [
-            const GraphQLError(
-              message: 'Cannot query field "user" on type "Query".',
-              extensions: {'classification': 'ValidationError'},
-            ),
-          ],
-        ),
-        identity('legacy-root'),
-      ]);
-      final result = await AccountSessionRepository(
-        GraphQLClient(link: replies, cache: GraphQLCache()),
-      ).resolve(address: 'https://server:443', loginUsername: 'legacy');
-      expect(result.userId, isNull);
-      expect(result.catalogId, 'legacy-root');
-      expect(replies.operations, [
-        'AccountCapability',
-        'OfflineServerIdentity',
-      ]);
-    },
-  );
-  test('unsafe account metadata cannot become a directory', () async {
-    final replies = _Replies([
+  test('binds canonical identity, supports legacy validation and refuses '
+      'unsafe metadata', () async {
+    final canonical = _Replies([
+      data({
+        'user': {'id': 2, '__typename': 'UserType'},
+      }),
+      data({'user': user}),
+      identity('user-2-root'),
+    ]);
+    final result = await AccountSessionRepository(
+      GraphQLClient(link: canonical, cache: GraphQLCache()),
+    ).resolve(address: 'https://server:443', loginUsername: 'canonical');
+    expect(result.userId, 2);
+    expect(result.username, 'Canonical');
+    expect(result.catalogId, 'user-2-root');
+    expect(canonical.operations, [
+      'AccountCapability',
+      'CurrentAccount',
+      'OfflineServerIdentity',
+    ]);
+
+    // Legacy validation uses the shared identity without a current-user query.
+    final legacy = _Replies([
+      Response(
+        response: {},
+        errors: [
+          const GraphQLError(
+            message: 'Cannot query field "user" on type "Query".',
+            extensions: {'classification': 'ValidationError'},
+          ),
+        ],
+      ),
+      identity('legacy-root'),
+    ]);
+    final legacyResult = await AccountSessionRepository(
+      GraphQLClient(link: legacy, cache: GraphQLCache()),
+    ).resolve(address: 'https://server:443', loginUsername: 'legacy');
+    expect(legacyResult.userId, isNull);
+    expect(legacyResult.catalogId, 'legacy-root');
+    expect(legacy.operations, ['AccountCapability', 'OfflineServerIdentity']);
+
+    // Unsafe account metadata cannot become a directory.
+    final unsafe = _Replies([
       data({
         'user': {'id': 2, '__typename': 'UserType'},
       }),
@@ -101,7 +93,7 @@ void main() {
     ]);
     await expectLater(
       AccountSessionRepository(
-        GraphQLClient(link: replies, cache: GraphQLCache()),
+        GraphQLClient(link: unsafe, cache: GraphQLCache()),
       ).resolve(address: 'https://server:443', loginUsername: 'reader'),
       throwsArgumentError,
     );

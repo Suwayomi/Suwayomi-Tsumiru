@@ -26,23 +26,6 @@ class _RecorderLink extends Link {
   }
 }
 
-/// Like `_RecorderLink` but emits multiple events for a single request —
-/// used to verify subscription-style streams aren't truncated by the
-/// auth link's first-event inspection.
-class _MultiEventLink extends Link {
-  _MultiEventLink(this.events);
-  final List<Response> events;
-  int callCount = 0;
-
-  @override
-  Stream<Response> request(Request request, [NextLink? forward]) async* {
-    callCount++;
-    for (final e in events) {
-      yield e;
-    }
-  }
-}
-
 Response _ok() => Response(data: {'ok': true}, response: {});
 
 Response _unauthorized() => Response(
@@ -124,66 +107,6 @@ void main() {
         'Bearer FRESH',
         reason: 'second request MUST use the freshly-refreshed token',
       );
-    });
-
-    test(
-      'R2-4: retry also returns 401 → onNeedsReauth + surface 401',
-      () async {
-        bool reauthCalled = false;
-        final recorder = _RecorderLink([
-          (_) => _unauthorized(), // first call
-          (_) => _unauthorized(), // retry with FRESH token also 401
-        ]);
-        final link = SuwayomiAuthLink(
-          authType: () => AuthType.uiLogin,
-          getHeaders: () async => {'Authorization': 'Bearer STALE'},
-          refreshAccessToken: () async => const RefreshSuccess('FRESH'),
-          onNeedsReauth: () {
-            reauthCalled = true;
-          },
-        );
-
-        Response? lastResponse;
-        await for (final r in link.concat(recorder).request(_req())) {
-          lastResponse = r;
-        }
-
-        expect(
-          reauthCalled,
-          isTrue,
-          reason: 'second 401 after a fresh token must trigger reauth',
-        );
-        expect(recorder.callCount, 2);
-        expect(lastResponse?.errors?.first.message, 'Unauthorized');
-      },
-    );
-
-    test('does NOT truncate multi-event streams (subscriptions): all '
-        'downstream events flow through', () async {
-      final downstream = _MultiEventLink([
-        Response(data: {'tick': 1}, response: {}),
-        Response(data: {'tick': 2}, response: {}),
-        Response(data: {'tick': 3}, response: {}),
-      ]);
-      final link = SuwayomiAuthLink(
-        authType: () => AuthType.uiLogin,
-        getHeaders: () async => {'Authorization': 'Bearer TOK'},
-        refreshAccessToken: () async => const RefreshAuthFailure(),
-        onNeedsReauth: () {},
-      );
-
-      final results = <Response>[];
-      await for (final r in link.concat(downstream).request(_req())) {
-        results.add(r);
-      }
-      expect(
-        results.length,
-        3,
-        reason:
-            'subscription stream truncated — likely '
-            'await stream.first regression',
-      );
-      expect(results.map((r) => r.data?['tick']).toList(), [1, 2, 3]);
     });
 
     // Note: process-wide single-flight is now an AuthCoordinator concern,

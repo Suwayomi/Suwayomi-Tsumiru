@@ -63,10 +63,10 @@ class _Preferred extends MangaPreferredScanlators {
 }
 
 void main() {
-  for (final operation in ['progress', 'bookmark', 'read batch']) {
-    testWidgets(
-      '$operation cannot acknowledge or write into B after switching from A',
-      (tester) async {
+  testWidgets(
+    'a write cannot acknowledge or write into B after switching from A',
+    (tester) async {
+      for (final operation in ['progress', 'bookmark', 'read batch']) {
         await tester.runAsync(() async {
           FlutterSecureStorage.setMockInitialValues({});
           SharedPreferences.setMockInitialValues({});
@@ -183,7 +183,7 @@ void main() {
           await a.close();
           await b.close();
         });
-      },
-    );
-  }
+      }
+    },
+  );
 }

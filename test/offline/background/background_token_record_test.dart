@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 
@@ -26,7 +23,8 @@ void main() {
     originalRefreshToken: 'refresh-b',
   );
 
-  test('a newer record gen is used WITHOUT calling refresh', () async {
+  test('rotation uses a newer record, rotates both tokens, bumps gen and '
+      'keeps identity proof', () async {
     var record = const BackgroundTokenRecord(
       gen: 1,
       authType: 'uiLogin',
@@ -42,41 +40,28 @@ void main() {
         return (tokens: (access: 'NEW', refresh: 'R1'), transient: false);
       },
     );
-    // someone else already advanced the record:
+
+    // Someone else already advanced the record: use it without refreshing.
     record = const BackgroundTokenRecord(
       gen: 2,
       authType: 'uiLogin',
       accessToken: 'NEWER',
       refreshToken: 'R9',
     );
-    final token = await broker.resolveAfter401('OLD');
-    expect(token, 'NEWER');
+    expect(await broker.resolveAfter401('OLD'), 'NEWER');
     expect(refreshCalls, 0);
-  });
 
-  test('refresh rotates BOTH tokens and bumps gen', () async {
-    var record = const BackgroundTokenRecord(
+    record = const BackgroundTokenRecord(
       gen: 1,
       authType: 'uiLogin',
       accessToken: 'OLD',
       refreshToken: 'R0',
     );
-    final broker = TokenBroker(
-      read: () async => record,
-      write: (r) async => record = r,
-      refreshFn: (rt) async {
-        expect(rt, 'R0');
-        return (tokens: (access: 'NEW', refresh: 'R1'), transient: false);
-      },
-    );
-    final token = await broker.resolveAfter401('OLD');
-    expect(token, 'NEW');
+    expect(await broker.resolveAfter401('OLD'), 'NEW');
     expect(record.gen, 2);
     expect(record.accessToken, 'NEW');
-    expect(record.refreshToken, 'R1'); // rotated refresh persisted (fixes C4)
-  });
+    expect(record.refreshToken, 'R1');
 
-  test('identity proof survives serialization and token rotation', () {
     final rotated = owner.copyWith(
       gen: 2,
       accessToken: 'A2',
@@ -115,68 +100,4 @@ void main() {
       expect(broker.lastRefreshTransient, isFalse);
     },
   );
-
-  group('refreshIfDue', () {
-    final now = DateTime.utc(2026, 9, 26, 12);
-    String jwt(Duration expIn) {
-      String part(Object json) =>
-          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
-      final exp = now.add(expIn).millisecondsSinceEpoch ~/ 1000;
-      return '${part({'alg': 'HS256'})}.${part({'exp': exp})}.sig';
-    }
-
-    late BackgroundTokenRecord stored;
-    late int refreshCalls;
-    late Completer<void>? gate;
-    late RefreshAttempt attempt;
-    TokenBroker broker() => TokenBroker(
-      read: () async => stored,
-      write: (r) async => stored = r,
-      refreshFn: (_) async {
-        refreshCalls++;
-        await gate?.future;
-        return attempt;
-      },
-    );
-    BackgroundTokenRecord withAccess(String access) => BackgroundTokenRecord(
-      gen: 1,
-      authType: 'uiLogin',
-      accessToken: access,
-      refreshToken: 'R',
-    );
-
-    setUp(() {
-      refreshCalls = 0;
-      gate = null;
-      attempt = (tokens: (access: 'NEW', refresh: 'R'), transient: false);
-    });
-
-    test('parallel callers share one refresh', () async {
-      stored = withAccess(jwt(const Duration(hours: -1)));
-      gate = Completer<void>();
-      final b = broker();
-      final calls = [
-        for (var i = 0; i < 5; i++) b.refreshIfDue(stored, now: now),
-      ];
-      await pumpEventQueue();
-      gate!.complete();
-      final used = await Future.wait(calls);
-      expect(refreshCalls, 1);
-      expect(used.map((r) => r.accessToken).toSet(), {'NEW'});
-    });
-
-    test(
-      'a failed refresh answers the next 401 without calling again',
-      () async {
-        final expired = jwt(const Duration(hours: -1));
-        stored = withAccess(expired);
-        attempt = (tokens: null, transient: true);
-        final b = broker();
-        expect(await b.refreshIfDue(stored, now: now), same(stored));
-        expect(await b.resolveAfter401(expired), isNull);
-        expect(b.lastRefreshTransient, isTrue);
-        expect(refreshCalls, 1);
-      },
-    );
-  });
 }

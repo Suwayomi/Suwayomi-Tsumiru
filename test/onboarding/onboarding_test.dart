@@ -22,41 +22,30 @@ Future<ProviderContainer> _container(Map<String, Object> prefs) async {
 }
 
 void main() {
-  group('serverConfiguredForOnboarding (migration predicate)', () {
-    test('unset / empty / default loopback → not configured', () {
-      expect(serverConfiguredForOnboarding(null), isFalse);
-      expect(serverConfiguredForOnboarding(''), isFalse);
-      expect(serverConfiguredForOnboarding('http://127.0.0.1'), isFalse);
-    });
-  });
+  Future<SharedPreferences> seeded(Map<String, Object> prefs) async {
+    SharedPreferences.setMockInitialValues(prefs);
+    final sp = await SharedPreferences.getInstance();
+    await seedFirstRunPreferences(sp);
+    return sp;
+  }
 
-  group('onboardingCompleteProvider', () {
-    test(
-      'defaults to false on a fresh install (so the wizard shows)',
-      () async {
-        final c = await _container({});
-        expect(c.read(onboardingCompleteProvider) ?? false, isFalse);
-      },
-    );
-  });
+  test('first-run completion predicate and Dark theme seed', () async {
+    // Migration predicate: unset / empty / default loopback are not configured.
+    expect(serverConfiguredForOnboarding(null), isFalse);
+    expect(serverConfiguredForOnboarding(''), isFalse);
+    expect(serverConfiguredForOnboarding('http://127.0.0.1'), isFalse);
 
-  group('seedFirstRunPreferences', () {
-    Future<SharedPreferences> seeded(Map<String, Object> prefs) async {
-      SharedPreferences.setMockInitialValues(prefs);
-      final sp = await SharedPreferences.getInstance();
-      await seedFirstRunPreferences(sp);
-      return sp;
-    }
+    // A fresh install defaults to false, so the wizard shows.
+    final c = await _container({});
+    expect(c.read(onboardingCompleteProvider) ?? false, isFalse);
 
-    test('a fresh install starts onboarding in Dark', () async {
-      final sp = await seeded({});
-      expect(sp.getBool('onboardingComplete'), isFalse);
-      expect(sp.getInt('themeMode'), ThemeMode.dark.index);
-    });
+    // A fresh install starts onboarding in Dark.
+    var sp = await seeded({});
+    expect(sp.getBool('onboardingComplete'), isFalse);
+    expect(sp.getInt('themeMode'), ThemeMode.dark.index);
 
-    test('a saved mode is never overwritten', () async {
-      final sp = await seeded({'themeMode': ThemeMode.light.index});
-      expect(sp.getInt('themeMode'), ThemeMode.light.index);
-    });
+    // A saved mode is never overwritten.
+    sp = await seeded({'themeMode': ThemeMode.light.index});
+    expect(sp.getInt('themeMode'), ThemeMode.light.index);
   });
 }

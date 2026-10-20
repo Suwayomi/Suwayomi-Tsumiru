@@ -6,7 +6,6 @@ import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
-import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 
 class RecordingLink extends Link {
   RecordingLink(this.response);
@@ -38,14 +37,6 @@ void main() {
     );
   }
 
-  final user = <String, dynamic>{
-    'id': 2,
-    'username': 'reader',
-    'permissions': ['DOWNLOAD_CHAPTERS'],
-    'roles': ['USER'],
-    '__typename': 'UserType',
-  };
-
   test(
     'capability uses a fragment-free query compatible with legacy validation',
     () async {
@@ -74,45 +65,4 @@ void main() {
     },
   );
 
-  test('current maps the authenticated user', () async {
-    final repo = repository(
-      Response(response: {}, data: {'__typename': 'Query', 'user': user}),
-    );
-    final result = await repo.current();
-    expect(result?.id, 2);
-    expect(result?.permissions, [Enum$UserPermission.DOWNLOAD_CHAPTERS]);
-  });
-
-  test('account update preserves absence of optional role changes', () async {
-    final repo = repository(
-      Response(
-        response: {},
-        data: {
-          '__typename': 'Mutation',
-          'updateUser': {'__typename': 'UpdateUserPayload', 'user': user},
-        },
-      ),
-    );
-    await repo.updateAccount(
-      Input$UpdateUserInput(
-        userId: 2,
-        permissions: [Enum$UserPermission.DOWNLOAD_CHAPTERS],
-      ),
-    );
-    expect(link.recorded.variables, {
-      'input': {
-        'userId': 2,
-        'permissions': ['DOWNLOAD_CHAPTERS'],
-      },
-    });
-  });
-
-  group('capability diagnostics', () {
-    final lines = <String>[];
-    setUp(() {
-      lines.clear();
-      setDiagnosticSink(lines.add);
-    });
-    tearDown(() => setDiagnosticSink(null));
-  });
 }

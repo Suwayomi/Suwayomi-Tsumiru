@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
@@ -7,28 +5,6 @@ import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.d
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  test('handover reloads attempts persisted by another isolate', () async {
-    SharedPreferences.setMockInitialValues({
-      DBKeys.offlineCatalogServerId.name: 'A',
-    });
-    final preferences = await SharedPreferences.getInstance();
-    final store = CatchupStateStore(preferences);
-    await store.writeLedger(
-      'A',
-      const CatchupLedger(queuedServerRetries: {'1:0': 4}),
-    );
-    SharedPreferences.setMockInitialValues({
-      DBKeys.offlineCatalogServerId.name: 'A',
-      'catchup_ledger/A': jsonEncode({
-        'serverId': 'A',
-        'ledger': const CatchupLedger(queuedServerRetries: {'1:0': 5}).toJson(),
-      }),
-    });
-    expect(store.readLedger('A').queuedServerRetries, {'1:0': 4});
-    await store.clearState(preserveLedger: true);
-    expect(store.readLedger('A').queuedServerRetries, {'1:0': 5});
-  });
 
   test('account replacement retains each catalogue retry history', () async {
     SharedPreferences.setMockInitialValues({

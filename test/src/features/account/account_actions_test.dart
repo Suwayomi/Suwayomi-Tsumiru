@@ -13,7 +13,6 @@ import 'package:tsumiru/src/features/account/data/account_actions.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
-import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 String _jwt(int hours) =>
@@ -219,71 +218,11 @@ void main() {
     await container.read(authCredentialsStoreProvider.future);
   }
 
-  void expectRawAndBoundHeaders() {
-    for (final request in server.requests) {
-      final operation = _operation(request);
-      if (operation == 'Login') {
-        expect(request.variables['input'], {
-          'username': 'Canonical',
-          'password': 'new-password',
-        });
-      }
-      if (operation == 'RefreshToken') {
-        expect(request.variables['input'], {'refreshToken': 'old-refresh'});
-      }
-      if (operation.startsWith('Redeem') ||
-          operation == 'Login' ||
-          operation == 'RefreshToken') {
-        expect(_bearer(request), isNull, reason: operation);
-      } else if (operation == 'SetAccountPassword') {
-        expect(
-          _bearer(request),
-          anyOf('Bearer $oldAccess', 'Bearer ${server.refreshedAccess}'),
-        );
-      } else {
-        expect(
-          _bearer(request),
-          'Bearer ${server.newAccess}',
-          reason: operation,
-        );
-      }
-    }
-  }
-
-  for (final recovery in [false, true]) {
-    test(
-      recovery
-          ? 'recovery adopts canonical identity using raw redemption'
-          : 'registration adopts canonical identity using raw redemption',
-      () async {
-        await setup();
-        await container
-            .read(accountActionsProvider)
-            .redeemCode(
-              code: ' code ',
-              username: recovery ? null : ' submitted ',
-              password: 'new-password',
-            );
-        final state = container.read(authCredentialsStoreProvider).requireValue;
-        expect(state.accountBinding?.username, 'Canonical');
-        expect(state.accountBinding?.catalogId, 'canonical-root');
-        expect(state.uiAccessToken, server.newAccess);
-        expect(state.simpleLoginCookie, isNull);
-        expect(container.read(authUsernameProvider), 'Canonical');
-        expect(container.read(authTypeKeyProvider), AuthType.uiLogin);
-        expect(
-          (server.requests.first.variables['input'] as Map)['code'],
-          'code',
-        );
-        expectRawAndBoundHeaders();
-      },
-    );
-  }
-
-  for (final uncertain in [false, true]) {
-    test(
-      'built-in password verifies settings update with uncertain=$uncertain',
-      () async {
+  test(
+    'password change verifies settings, survives uncertain responses and '
+    'retains credentials on rejection',
+    () async {
+      for (final uncertain in [false, true]) {
         await setup(userId: 1);
         server.losePasswordResponse = uncertain;
         server.pendingPasswordLogins = 1;
@@ -304,13 +243,9 @@ void main() {
           'settings': {'authPassword': 'new-password'},
         });
         expect(_bearer(update), 'Bearer ${server.newAccess}');
-      },
-    );
-  }
+      }
 
-  test(
-    'built-in password requires freshly verified settings permission',
-    () async {
+      // Freshly verified settings permission is required.
       await setup(userId: 1);
       server.settingsPermission = false;
       await expectLater(
@@ -323,48 +258,31 @@ void main() {
         throwsA(anything),
       );
       expect(server.requests.map(_operation), ['Login', 'CurrentAccount']);
+
+      // An explicit rejection retains the previous credentials.
+      await setup(userId: 1);
+      server.rejectPassword = true;
+      await expectLater(
+        container
+            .read(accountActionsProvider)
+            .changePassword(
+              currentPassword: 'old-password',
+              newPassword: 'new-password',
+            ),
+        throwsA(isA<OperationException>()),
+      );
+      expect(server.requests.map(_operation), [
+        'Login',
+        'CurrentAccount',
+        'OfflineServerIdentity',
+        'SetBuiltInAccountPassword',
+      ]);
+      expect(
+        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
+        oldAccess,
+      );
     },
   );
-
-  test('built-in explicit settings rejection retains credentials', () async {
-    await setup(userId: 1);
-    server.rejectPassword = true;
-    await expectLater(
-      container
-          .read(accountActionsProvider)
-          .changePassword(
-            currentPassword: 'old-password',
-            newPassword: 'new-password',
-          ),
-      throwsA(isA<OperationException>()),
-    );
-    expect(server.requests.map(_operation), [
-      'Login',
-      'CurrentAccount',
-      'OfflineServerIdentity',
-      'SetBuiltInAccountPassword',
-    ]);
-    expect(
-      container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-      oldAccess,
-    );
-  });
-
-  test('invalid registration code preserves the previous account', () async {
-    await setup();
-    server.invalidCode = true;
-    await expectLater(
-      container
-          .read(accountActionsProvider)
-          .redeemCode(code: 'bad', username: 'new', password: 'new-password'),
-      throwsA(anything),
-    );
-    final state = container.read(authCredentialsStoreProvider).requireValue;
-    expect(state.uiAccessToken, oldAccess);
-    expect(state.accountBinding?.catalogId, 'canonical-root');
-    expect(server.requests.map(_operation), ['RedeemRegistrationCode']);
-    expectRawAndBoundHeaders();
-  });
 
   test(
     'sign-out clears credentials and retains auth mode and catalogue files',

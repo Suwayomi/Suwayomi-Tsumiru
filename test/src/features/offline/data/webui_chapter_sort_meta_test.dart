@@ -10,55 +10,34 @@ import 'package:tsumiru/src/features/offline/data/offline_types.dart';
 import 'package:tsumiru/src/features/offline/data/webui_chapter_sort_meta.dart';
 
 void main() {
-  group('kWebUiSortByMetaKey / kWebUiReverseMetaKey', () {
-    test('match WebUI\'s own wire keys exactly (no device/app prefix, since '
-        'both are listed as GLOBAL_METADATA_KEYS on the WebUI side)', () {
-      expect(kWebUiSortByMetaKey, 'webUI_sortBy');
-      expect(kWebUiReverseMetaKey, 'webUI_reverse');
-    });
-  });
+  test('WebUI wire keys, axis parsing and the alphabetical flag', () {
+    // Match WebUI's own wire keys exactly (no device/app prefix, since both
+    // are listed as GLOBAL_METADATA_KEYS on the WebUI side).
+    expect(kWebUiSortByMetaKey, 'webUI_sortBy');
+    expect(kWebUiReverseMetaKey, 'webUI_reverse');
 
-  group('chapterSortAxisFromMetaValue', () {
-    test('parses every WebUI axis value by exact wire string', () {
-      for (final axis in ChapterSortAxis.values) {
-        if (axis == ChapterSortAxis.alphabetical) continue;
-        expect(chapterSortAxisFromMetaValue(axis.name), axis);
-      }
-    });
-  });
+    for (final axis in ChapterSortAxis.values) {
+      if (axis == ChapterSortAxis.alphabetical) continue;
+      expect(chapterSortAxisFromMetaValue(axis.name), axis);
+    }
 
-  group('chapterSortAxisFromMeta', () {
-    String? Function(String) metaOf(Map<String, String> meta) =>
-        (key) => meta[key];
-    final alphabeticalKey = MangaMetaKeys.chapterSortAlphabetical.key;
-
-    test('the alphabetical flag wins over a webUI_sortBy left in place', () {
+    for (final value in [true, false]) {
       expect(
-        chapterSortAxisFromMeta(
-          metaOf({
-            alphabeticalKey: 'true',
-            kWebUiSortByMetaKey: 'chapterNumber',
-          }),
-        ),
-        ChapterSortAxis.alphabetical,
+        chapterSortAscendingFromMetaValue(chapterSortAscendingToMetaValue(value)),
+        value,
       );
-    });
+    }
+
+    final alphabeticalKey = MangaMetaKeys.chapterSortAlphabetical.key;
+    expect(
+      chapterSortAxisFromMeta(
+        (key) => {
+          alphabeticalKey: 'true',
+          kWebUiSortByMetaKey: 'chapterNumber',
+        }[key],
+      ),
+      ChapterSortAxis.alphabetical,
+      reason: 'the alphabetical flag wins over a webUI_sortBy left in place',
+    );
   });
-
-  group('chapterSortAscendingFromMetaValue', () {});
-
-  group('chapterSortAscendingToMetaValue', () {
-    test('round-trips through chapterSortAscendingFromMetaValue', () {
-      for (final value in [true, false]) {
-        expect(
-          chapterSortAscendingFromMetaValue(
-            chapterSortAscendingToMetaValue(value),
-          ),
-          value,
-        );
-      }
-    });
-  });
-
-  group('ChapterSort <-> ChapterSortAxis mapping', () {});
 }

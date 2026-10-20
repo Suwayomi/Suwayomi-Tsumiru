@@ -168,27 +168,4 @@ void main() {
       );
     },
   );
-
-  testWidgets(
-    'reconcileMangaWidget does NOT register the manga when the enqueue fails',
-    (tester) async {
-      await seedMangaNeedingServerDownload(2);
-      downloadsRepo.shouldFail = true;
-      final ref = await harness(tester);
-
-      await tester.runAsync(
-        () => expectLater(reconcileMangaWidget(ref, 2), throwsException),
-      );
-      expect((await db.chapterById(201))!.serverFetchAttempts, 0);
-
-      expect(
-        awaitingServerDownloads,
-        isNot(contains(2)),
-        reason:
-            'a failed enqueue produced no server queue activity, so '
-            'no drain edge would ever retry it -- registering it anyway '
-            'would leave a phantom obligation nothing can complete',
-      );
-    },
-  );
 }

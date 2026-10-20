@@ -59,28 +59,26 @@ void main() {
     );
   });
 
-  test(
-    'user paging passes the cursor and case-insensitive username filter',
-    () async {
-      await repository.users(first: 25, after: 42, search: ' Reader ');
-      expect(link.requests.single.variables, {
-        'first': 25,
-        'after': '42',
-        'filter': {
-          'username': {'includesInsensitive': 'Reader'},
-        },
-      });
-      await repository.users(first: 25, search: ' ');
-      expect(link.requests.last.variables['filter'], isNull);
-      expect(link.requests.last.variables['after'], isNull);
-    },
-  );
+  test('admin permissions, paging and issued codes', () async {
+    // Paging passes the cursor and case-insensitive username filter.
+    await repository.users(first: 25, after: 42, search: ' Reader ');
+    expect(link.requests.single.variables, {
+      'first': 25,
+      'after': '42',
+      'filter': {
+        'username': {'includesInsensitive': 'Reader'},
+      },
+    });
+    await repository.users(first: 25, search: ' ');
+    expect(link.requests.last.variables['filter'], isNull);
+    expect(link.requests.last.variables['after'], isNull);
 
-  for (final capability in [
-    AccountCapability.unknown,
-    AccountCapability.unsupported,
-  ]) {
-    test('$capability cannot issue administration requests', () async {
+    // Unknown and unsupported capabilities cannot issue administration work.
+    final before = link.requests.length;
+    for (final capability in [
+      AccountCapability.unknown,
+      AccountCapability.unsupported,
+    ]) {
       access = AccountAccess(capability: capability);
       final calls = <Future<dynamic> Function()>[
         () => repository.users(first: 25),
@@ -102,36 +100,32 @@ void main() {
       for (final call in calls) {
         await expectLater(call(), throwsA(isA<AccountPermissionDenied>()));
       }
-      expect(link.requests, isEmpty);
+    }
+    expect(link.requests.length, before);
+
+    // Nonadministrators omit role and replace the complete permission list.
+    final input = accountPermissionUpdate(
+      userId: 5,
+      permissions: [Enum$UserPermission.DOWNLOAD_CHAPTERS],
+      canEditRoles: false,
+      role: Enum$UserRole.ADMIN,
+    );
+    expect(input.toJson(), {
+      'userId': 5,
+      'permissions': ['DOWNLOAD_CHAPTERS'],
     });
-  }
-
-  test(
-    'nonadministrators omit role and replace the complete permission list',
-    () {
-      final input = accountPermissionUpdate(
+    expect(
+      accountPermissionUpdate(
         userId: 5,
-        permissions: [Enum$UserPermission.DOWNLOAD_CHAPTERS],
-        canEditRoles: false,
-        role: Enum$UserRole.ADMIN,
-      );
-      expect(input.toJson(), {
-        'userId': 5,
-        'permissions': ['DOWNLOAD_CHAPTERS'],
-      });
-      expect(
-        accountPermissionUpdate(
-          userId: 5,
-          permissions: [],
-          canEditRoles: true,
-          role: Enum$UserRole.USER,
-        ).toJson(),
-        {'userId': 5, 'permissions': [], 'role': 'USER'},
-      );
-    },
-  );
+        permissions: [],
+        canEditRoles: true,
+        role: Enum$UserRole.USER,
+      ).toJson(),
+      {'userId': 5, 'permissions': [], 'role': 'USER'},
+    );
 
-  test('issued codes remain outside GraphQL cache and retain expiry', () async {
+    // Issued codes remain outside the GraphQL cache and retain expiry.
+    access = adminAccess();
     link.respond = (request) => Response(
       response: {},
       data: {

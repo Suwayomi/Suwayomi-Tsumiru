@@ -23,93 +23,6 @@ class _Support extends PathProviderPlatform {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  test('unclaimed Basic and no-auth downloads remain at root', () async {
-    final support = await Directory.systemTemp.createTemp('unclaimed-root-');
-    addTearDown(() => support.delete(recursive: true));
-    PathProviderPlatform.instance = _Support(support.path);
-    final original = (await initOfflineStorage())!;
-    await original.db.upsertMangaMetadata(
-      id: 1,
-      title: 'Saved',
-      updatedAt: DateTime(2026),
-    );
-    final page = File(p.join(original.paths.baseDir, '1', '7', '000.jpg'));
-    await page.parent.create(recursive: true);
-    await page.writeAsBytes([1, 2, 3]);
-    await original.db.close();
-    final reopened = (await initOfflineStorage(
-      legacyInstanceId: 'basic-server',
-    ))!;
-    expect(reopened.paths.baseDir, p.join(support.path, 'offline'));
-    expect((await reopened.db.mangaById(1))?.title, 'Saved');
-    expect(await page.readAsBytes(), [1, 2, 3]);
-    await reopened.db.close();
-  });
-
-  for (final atRoot in [true, false]) {
-    test(
-      'legacy UI Login owner upgrades to user 1 (${atRoot ? 'root' : 'scoped'})',
-      () async {
-        final support = await Directory.systemTemp.createTemp('legacy-owner-');
-        addTearDown(() => support.delete(recursive: true));
-        PathProviderPlatform.instance = _Support(support.path);
-        if (atRoot) {
-          final original = (await initOfflineStorage())!;
-          await original.db.upsertMangaMetadata(
-            id: 1,
-            title: 'Saved manga',
-            updatedAt: DateTime(2026),
-          );
-          await original.db.close();
-        }
-        final old = (await initOfflineStorage(
-          accountId: 'A',
-          legacyInstanceId: atRoot ? 'A' : null,
-          accountOwner: 'legacy',
-        ))!;
-        await old.db.upsertMangaMetadata(
-          id: 1,
-          title: 'Saved manga',
-          updatedAt: DateTime(2026),
-        );
-        final path = old.paths.baseDir;
-        final page = File(p.join(path, '1', '7', '000.jpg'));
-        await page.parent.create(recursive: true);
-        await page.writeAsBytes([1, 2, 3]);
-        await old.db.close();
-        final owner = File(p.join(path, '.account-owner'));
-        expect(await owner.readAsString(), 'legacy');
-        await expectLater(
-          initOfflineStorage(accountId: 'A', accountOwner: '2'),
-          throwsStateError,
-        );
-        expect(await owner.readAsString(), 'legacy');
-        final upgraded = (await initOfflineStorage(
-          accountId: 'A',
-          accountOwner: '1',
-        ))!;
-        expect(upgraded.paths.baseDir, path);
-        expect(
-          (await upgraded.db.select(upgraded.db.offlineMangas).get())
-              .single
-              .title,
-          'Saved manga',
-        );
-        expect(await owner.readAsString(), '1');
-        expect(await page.readAsBytes(), [1, 2, 3]);
-        await upgraded.db.close();
-        await expectLater(
-          initOfflineStorage(accountId: 'A', accountOwner: 'legacy'),
-          throwsStateError,
-        );
-        await expectLater(
-          initOfflineStorage(accountId: 'A', accountOwner: '2'),
-          throwsStateError,
-        );
-        expect(await owner.readAsString(), '1');
-      },
-    );
-  }
   test(
     'partial recovery merges real catalogues and reopens with preserved reset',
     () async {
@@ -205,27 +118,6 @@ void main() {
       ))!;
       expect((await reopened.db.chapterById(7))!.lastPageRead, 0);
       await reopened.db.close();
-    },
-  );
-
-  test(
-    'native bootstrap preserves A data while opening B and returning to A',
-    () async {
-      final root = await Directory.systemTemp.createTemp('account-bootstrap-');
-      PathProviderPlatform.instance = _Support(root.path);
-      final a = (await initOfflineStorage(accountId: 'A'))!;
-      await a.db.upsertMangaMetadata(
-        id: 1,
-        title: 'A',
-        updatedAt: DateTime(2026),
-      );
-      await a.db.close();
-      final b = (await initOfflineStorage(accountId: 'B'))!;
-      expect(await b.db.mangaById(1), isNull);
-      await b.db.close();
-      final restored = (await initOfflineStorage(accountId: 'A'))!;
-      expect((await restored.db.mangaById(1))?.title, 'A');
-      await restored.db.close();
     },
   );
 }

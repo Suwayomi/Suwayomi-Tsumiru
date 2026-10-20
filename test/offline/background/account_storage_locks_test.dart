@@ -8,10 +8,8 @@ import 'package:tsumiru/src/features/offline/data/background/work_order_admissio
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  for (final schedule in [false, true]) {
-    test(
-      'account directories share ${schedule ? 'schedule' : 'admission'} ownership',
-      () async {
+  test('account directories share one process lock', () async {
+    for (final schedule in [false, true]) {
         final root = await Directory.systemTemp.createTemp(
           'account-shared-lock-',
         );
@@ -41,7 +39,6 @@ void main() {
           offlineControlRoot(accountStoragePath(root.path, 'A')),
           root.path,
         );
-      },
-    );
-  }
+    }
+  });
 }

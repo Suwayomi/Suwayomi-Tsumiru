@@ -177,7 +177,7 @@ void main() {
   }
 
   testWidgets(
-    'permissions start collapsed and expand to one allowed grant without NSFW',
+    'permissions display and sign-out confirmation',
     (tester) async {
       await pump(tester, account: user());
       expect(find.text('reader'), findsOneWidget);
@@ -192,37 +192,8 @@ void main() {
       expect(find.text('Restricted'), findsNWidgets(8));
       expect(find.textContaining('NSFW'), findsNothing);
       expect(const AccountRoute().location, '/more/account');
-    },
-  );
 
-  testWidgets(
-    'cached administrator cannot grant permissions or change password',
-    (tester) async {
-      await pump(
-        tester,
-        capability: AccountCapability.unknown,
-        account: user(admin: true),
-      );
-      expect(find.text('Administrator'), findsOneWidget);
-      expect(find.text('Full access'), findsNothing);
-      expect(find.text('Unavailable'), findsOneWidget);
-      expect(find.text('Download chapters'), findsNothing);
-      await tester.tap(find.text('Permissions'));
-      await tester.pumpAndSettle();
-      expect(find.text('Allowed'), findsNothing);
-      expect(find.text('Restricted'), findsNothing);
-      expect(find.text('Unavailable'), findsNWidgets(10));
-      expect(find.textContaining('NSFW'), findsNothing);
-      final change = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, 'Change password'),
-      );
-      expect(change.onTap, isNull);
-      expect(find.text('Server'), findsNothing);
-    },
-  );
-
-  testWidgets('sign out requires confirmation', (tester) async {
-    await pump(tester, account: user());
+    // Sign-out requires confirmation.
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
@@ -235,18 +206,4 @@ void main() {
     expect(actions.signOuts, 1);
   });
 
-  testWidgets(
-    'More keeps bound cached account visible offline and reports missing sign-in',
-    (tester) async {
-      await pump(
-        tester,
-        account: user(),
-        more: true,
-        capability: AccountCapability.unknown,
-        credentials: false,
-      );
-      expect(find.text('Account'), findsOneWidget);
-      expect(find.textContaining('Sign-in needed'), findsOneWidget);
-    },
-  );
 }

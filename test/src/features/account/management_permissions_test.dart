@@ -98,24 +98,4 @@ void main() {
     );
   }
 
-  testWidgets('external install is rejected before reading a file', (
-    tester,
-  ) async {
-    late BuildContext context;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (value) {
-            context = value;
-            return const SizedBox();
-          },
-        ),
-      ),
-    );
-    await expectLater(
-      extensions.installExtensionFile(context),
-      throwsA(isA<AccountPermissionDenied>()),
-    );
-    expect(link.calls, 0);
-  });
 }

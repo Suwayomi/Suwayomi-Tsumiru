@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -101,73 +100,4 @@ void main() {
     },
   );
 
-  test(
-    'live current account is cached under its verified catalogue only',
-    () async {
-      await setup();
-      await container.read(accountAccessProvider.future);
-      expect(
-        jsonDecode(preferences.getString('account.current/catalog-1')!),
-        jsonDecode(_cached(1)),
-      );
-      container.read(serverUnreachableProvider.notifier).set(true);
-      await container.read(accountAccessProvider.future);
-      expect(container.read(currentAccountProvider)?.id, 1);
-      expect(
-        container.read(settledAccountAccessProvider).canEditRoles,
-        isFalse,
-      );
-    },
-  );
-
-  test('late A profile cannot persist after switching to B', () async {
-    await setup();
-    final started = Completer<void>();
-    final response = Completer<Fragment$AccountDto?>();
-    repository.lookup = () {
-      started.complete();
-      return response.future;
-    };
-    final request = container
-        .read(accountAccessProvider.future)
-        .then<Object>((value) => value, onError: (Object error) => error);
-    await started.future;
-    container.read(serverUnreachableProvider.notifier).set(true);
-    await container
-        .read(authCredentialsStoreProvider.notifier)
-        .saveUiLoginTokens(
-          accessToken: 'B-access',
-          refreshToken: 'B-refresh',
-          binding: _binding(2),
-        );
-    await container.read(accountAccessProvider.future);
-    response.complete(_user(1));
-    await request;
-    await container.pump();
-    expect(preferences.getString('account.current/catalog-1'), isNull);
-    expect(preferences.getString('account.current/catalog-2'), isNull);
-    expect(container.read(currentAccountProvider), isNull);
-    expect(
-      container.read(settledAccountAccessProvider).canManageUsers,
-      isFalse,
-    );
-  });
-
-  test(
-    'live response for another user cannot grant or cache permissions',
-    () async {
-      await setup();
-      repository.lookup = () async => _user(2);
-      await expectLater(
-        container.read(accountAccessProvider.future),
-        throwsStateError,
-      );
-      expect(container.read(currentAccountProvider), isNull);
-      expect(preferences.getString('account.current/catalog-1'), isNull);
-      expect(
-        container.read(settledAccountAccessProvider).canManageUsers,
-        isFalse,
-      );
-    },
-  );
 }

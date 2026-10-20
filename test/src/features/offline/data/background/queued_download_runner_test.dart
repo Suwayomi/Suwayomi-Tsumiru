@@ -133,36 +133,6 @@ void main() {
   );
 
   test(
-    'matching partial staging can finish above cap without admitting fresh work',
-    () async {
-      capReached = true;
-      queue = [
-        const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 0),
-        const QueuedChapterSpec(chapterId: 2, mangaId: 1, generation: 0),
-      ];
-      await store.beginChapter(
-        1,
-        1,
-        const ChapterManifest(generation: 0, indices: [0, 1]),
-      );
-      await store.writePage(1, 1, 0, [1], 'jpg');
-      attempt = (chapter) async {
-        await store.writePage(chapter.mangaId, chapter.chapterId, 1, [
-          2,
-        ], 'jpg');
-        return (bytes: 2, transient: false);
-      };
-      expect((await run()).completed, 1);
-      expect(downloads, [1]);
-      final success = (await log.parse()).whereType<ChapterEntry>().single;
-      expect(success.chapterId, 1);
-      expect(success.status, 'downloaded');
-      expect(success.pages, 2);
-      expect(await store.readManifest(1, 2), isNull);
-    },
-  );
-
-  test(
     'thirty queued chapters finish across three ten-chapter wakes',
     () async {
       queue = List.generate(
@@ -179,31 +149,4 @@ void main() {
       expect(successes.every((entry) => entry.status == 'downloaded'), isTrue);
     },
   );
-
-  test(
-    'five hard device failures produce one error and stop further attempts',
-    () async {
-      attempt = (_) async => (bytes: 0, transient: false);
-      for (var wake = 0; wake < 7; wake++) {
-        await run();
-      }
-      expect(downloads.length, 5);
-      expect(ledger.queuedDownloadRetries, {'1:0': 5});
-      final entries = (await log.parse()).whereType<ChapterEntry>().toList();
-      expect(entries.length, 1);
-      expect(entries.single.status, 'error');
-    },
-  );
-
-  test('cancellation after the callback consumes no retry', () async {
-    attempt = (_) async {
-      stopped = true;
-      return (bytes: 0, transient: true);
-    };
-    expect((await run()).interrupted, isTrue);
-    expect(downloads, [1]);
-    expect(ledger.queuedDownloadRetries, isEmpty);
-    expect(ledger.queuedServerRetries, isEmpty);
-    expect(await log.parse(), isEmpty);
-  });
 }

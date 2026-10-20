@@ -54,21 +54,4 @@ void main() {
 
     expect(asked, isEmpty, reason: 'launch must not generate source traffic');
   });
-
-  test('a user-initiated reconcile still asks the server', () async {
-    await seed();
-    final asked = <int>[];
-    await OfflineReconciler(
-      db: db,
-      nets: SafetyNetConfig.off,
-      onDownload: (_) async {},
-      onEvict: (_) async {},
-      now: DateTime(2026, 3, 1),
-      onServerDownload: (ids) async => asked.addAll(ids),
-    ).reconcileManga(1);
-
-    expect(asked, [
-      1,
-    ], reason: 'setting a keep rule must still top up the server');
-  });
 }

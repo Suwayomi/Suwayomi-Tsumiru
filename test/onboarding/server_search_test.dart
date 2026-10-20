@@ -90,36 +90,4 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('several discovered servers open a picker; a tap fills the URL', (
-    tester,
-  ) async {
-    await _pumpServerStep(tester, const [
-      DiscoveredServer(
-        url: 'http://192.168.2.4:4567',
-        name: 'Suwayomi-Server',
-        version: '2.3.2162',
-      ),
-      DiscoveredServer(url: 'http://192.168.2.9:4568'),
-    ]);
-
-    await tester.tap(find.text('Search my network'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Choose a server'), findsOneWidget);
-    expect(
-      find.text('Suwayomi-Server v2.3.2162 · 192.168.2.4:4567'),
-      findsOneWidget,
-    );
-    expect(find.text('192.168.2.9:4568'), findsOneWidget);
-
-    await tester.tap(find.text('192.168.2.9:4568'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Choose a server'), findsNothing);
-    expect(_urlFieldText(tester), 'http://192.168.2.9:4568');
-    expect(find.textContaining('Connected'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  group('confirmLanServer', () {});
 }

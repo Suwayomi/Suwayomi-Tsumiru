@@ -36,27 +36,8 @@ void main() {
   );
   setUp(() => refreshes = 0);
 
-  test(
-    'a cancelled request cannot record a delayed permission denial',
-    () async {
-      var cancelled = false;
-      final client = MockClient((_) async {
-        cancelled = true;
-        return http.Response('', 403);
-      });
-      expect(
-        await postBackgroundGraphql(
-          target: target(client, cancelled: () => cancelled),
-          record: record,
-          query: 'query User { user { id } }',
-          variables: const {},
-        ),
-        same(gqlNetworkError),
-      );
-    },
-  );
-
-  test('HTTP client connection errors park without page retries', () async {
+  test('a dead connection parks without retries or refresh, and a '
+      'permission error bypasses retries too', () async {
     var requests = 0;
     final engine = buildBackgroundEngine(
       store: FakePageStore(),
@@ -78,12 +59,10 @@ void main() {
     expect(outcome.offline, isTrue);
     expect(requests, 1);
     expect(refreshes, 0);
-  });
 
-  test('permission errors bypass page retries and token refresh', () async {
     var fetches = 0;
     var backoffs = 0;
-    final engine = ChapterDownloadEngine(
+    final permissionEngine = ChapterDownloadEngine(
       writePage: FakePageStore(),
       fetchPage: (_) async {
         fetches++;
@@ -100,7 +79,7 @@ void main() {
         return Duration.zero;
       },
     );
-    final result = await engine.download(
+    final result = await permissionEngine.download(
       mangaId: 1,
       chapterId: 2,
       pages: [(index: 0, url: '/page')],

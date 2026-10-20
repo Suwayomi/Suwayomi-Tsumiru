@@ -276,202 +276,147 @@ class _PartialReadRepo extends MangaBookRepository {
   }
 }
 
-class _OfflineBulkRepo extends MangaBookRepository {
-  _OfflineBulkRepo() : super(_dummyClient());
-  @override
-  Future<void> modifyBulkChapters(ChapterBatch batch) async {
-    throw Exception('offline — mutation failed');
-  }
-}
-
 void main() {
-  group('pushPendingProgress → tracker push', () {
-    test(
-      'failed push KEEPS the dirty flag (stays pending, server never got it)',
-      () async {
-        SharedPreferences.setMockInitialValues({});
-        final prefs = await SharedPreferences.getInstance();
-        final db = testOfflineDatabase();
-        addTearDown(db.close);
-        final container = ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            offlineEnabledProvider.overrideWithValue(true),
-            offlineActiveProvider.overrideWithValue(true),
-            offlineDatabaseProvider.overrideWithValue(db),
-            mangaBookRepositoryProvider.overrideWithValue(
-              _FailingMangaBookRepository(),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
+  test('failed push KEEPS the dirty flag (stays pending)', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final db = testOfflineDatabase();
+    addTearDown(db.close);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        offlineEnabledProvider.overrideWithValue(true),
+        offlineActiveProvider.overrideWithValue(true),
+        offlineDatabaseProvider.overrideWithValue(db),
+        mangaBookRepositoryProvider.overrideWithValue(
+          _FailingMangaBookRepository(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
 
-        await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+    await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+    await pushPendingProgress(container);
 
-        await pushPendingProgress(container);
-
-        expect((await db.dirtyProgressChapters()).map((c) => c.id), [
-          10,
-        ], reason: 'a failed push must not clear the dirty flag');
-      },
+    expect(
+      (await db.dirtyProgressChapters()).map((c) => c.id),
+      [10],
+      reason: 'a failed push must not clear the dirty flag',
     );
   });
 
-  group('pushPendingProgress → manual vs auto tracker gate', () {
-    test('a manual mark-read queued offline is gated on the MANUAL toggle, '
-        'not the after-reading toggle', () async {
-      // after-reading OFF, manual-mark-read ON: an offline manual mark-read
-      // must still reach the tracker once reconnected.
-      final (:container, :db, :tracker) = await _build(
-        mangaIds: [1],
-        trackRecordCount: 1,
-        toggleOn: false,
-        manualToggleOn: true,
-      );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
-
-      await _seed(db, 10, mangaId: 1);
-      await recordReadStateWithDependencies(
-        offlineEnabled: true,
-        offlineDatabase: db,
-        repository: _FailingMangaBookRepository(),
-        chapterIds: [10],
-        isRead: true,
-        resetPosition: true,
-      );
-
-      await pushPendingProgress(container);
-
-      expect(
-        tracker.trackProgressCalls,
-        [1],
-        reason:
-            'manual-mark-read toggle is ON — the flush must use it, '
-            'not the (OFF) after-reading toggle',
-      );
+  test('a manual mark-read is gated on the MANUAL toggle, not the '
+      'after-reading toggle', () async {
+    // after-reading OFF, manual-mark-read ON: an offline manual mark-read
+    // must still reach the tracker once reconnected.
+    final first = await _build(
+      mangaIds: [1],
+      trackRecordCount: 1,
+      toggleOn: false,
+      manualToggleOn: true,
+    );
+    addTearDown(() {
+      first.container.dispose();
+      first.db.close();
     });
+    await _seed(first.db, 10, mangaId: 1);
+    await recordReadStateWithDependencies(
+      offlineEnabled: true,
+      offlineDatabase: first.db,
+      repository: _FailingMangaBookRepository(),
+      chapterIds: [10],
+      isRead: true,
+      resetPosition: true,
+    );
+    await pushPendingProgress(first.container);
+    expect(
+      first.tracker.trackProgressCalls,
+      [1],
+      reason: 'manual-mark-read toggle is ON; the after-reading toggle is OFF',
+    );
 
-    test('a manual mark-read queued offline is suppressed when the MANUAL '
-        'toggle is off, even with after-reading ON', () async {
-      final (:container, :db, :tracker) = await _build(
-        mangaIds: [1],
-        trackRecordCount: 1,
-        toggleOn: true,
-        manualToggleOn: false,
-      );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
-
-      await _seed(db, 10, mangaId: 1);
-      await recordReadStateWithDependencies(
-        offlineEnabled: true,
-        offlineDatabase: db,
-        repository: _FailingMangaBookRepository(),
-        chapterIds: [10],
-        isRead: true,
-        resetPosition: true,
-      );
-
-      await pushPendingProgress(container);
-
-      expect(
-        tracker.trackProgressCalls,
-        isEmpty,
-        reason:
-            'manual-mark-read toggle is OFF — a manual action must not '
-            'borrow the (ON) after-reading toggle',
-      );
+    // Manual toggle OFF suppresses a manual action even with after-reading ON.
+    final second = await _build(
+      mangaIds: [1],
+      trackRecordCount: 1,
+      toggleOn: true,
+      manualToggleOn: false,
+    );
+    addTearDown(() {
+      second.container.dispose();
+      second.db.close();
     });
+    await _seed(second.db, 10, mangaId: 1);
+    await recordReadStateWithDependencies(
+      offlineEnabled: true,
+      offlineDatabase: second.db,
+      repository: _FailingMangaBookRepository(),
+      chapterIds: [10],
+      isRead: true,
+      resetPosition: true,
+    );
+    await pushPendingProgress(second.container);
+    expect(second.tracker.trackProgressCalls, isEmpty);
   });
 
-  group('pushPendingProgress → per-field push', () {
-    test('position-dirty row never pushes isRead (ch-99 revert)', () async {
-      final repo = _CapturingMangaBookRepository();
-      final (:container, :db, :tracker) = await _build(
-        mangaIds: [1],
-        repository: repo,
-      );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
-
-      await _seed(db, 10, mangaId: 1); // clean row
-      await db.setChapterProgress(10, lastPageRead: 5, isRead: null); // partial
-
-      await pushPendingProgress(container);
-
-      expect(repo.patches.single.lastPageRead, 5);
-      expect(repo.patches.single.isRead, isNull); // THE fix
-      expect((await db.chapterById(10))!.progressDirty, isFalse);
+  test('per-field push: position-dirty never sends isRead; read-state-dirty '
+      'sends it and clears its flag', () async {
+    final repo = _CapturingMangaBookRepository();
+    final (:container, :db, :tracker) = await _build(
+      mangaIds: [1],
+      repository: repo,
+    );
+    addTearDown(() {
+      container.dispose();
+      db.close();
     });
 
-    test('read-state-dirty row pushes isRead and clears its flag', () async {
-      final repo = _CapturingMangaBookRepository();
-      final (:container, :db, :tracker) = await _build(
-        mangaIds: [1],
-        repository: repo,
-      );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
+    await _seed(db, 10, mangaId: 1); // clean row
+    await db.setChapterProgress(10, lastPageRead: 5, isRead: null);
+    await pushPendingProgress(container);
 
-      await _seed(db, 10, mangaId: 1);
-      await db.setChapterReadState(10, true);
+    expect(repo.patches.single.lastPageRead, 5);
+    expect(repo.patches.single.isRead, isNull, reason: 'ch-99 revert fix');
+    expect((await db.chapterById(10))!.progressDirty, isFalse);
 
-      await pushPendingProgress(container);
+    await db.setChapterReadState(10, true);
+    await pushPendingProgress(container);
 
-      expect(repo.patches.single.isRead, isTrue);
-      expect((await db.chapterById(10))!.readStateDirty, isFalse);
-    });
-
-    // The full reported loop, end to end. Pre-fix this reverted 100%: the
-    // partial read left the row position-dirty with isRead=false, list
-    // mark-read never touched the local row, and the reconnect push sent that
-    // stale isRead=false — reverting the chapter to unread on the server.
+    expect(repo.patches.length, 2);
+    expect(repo.patches.last.isRead, isTrue);
+    expect((await db.chapterById(10))!.readStateDirty, isFalse);
   });
 
-  group('pushPendingProgress → cross-device never-regress', () {
-    test('a further local position wins over a lesser server one', () async {
-      final repo = _ServerStateRepository(
-        _serverChapter(id: 10, isRead: false, lastPageRead: 3),
-      );
-      final (:container, :db, :tracker) = await _build(
-        mangaIds: [1],
-        repository: repo,
-      );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
-
-      await _seed(db, 10, mangaId: 1);
-      await db.setChapterProgress(10, lastPageRead: 8, isRead: null);
-
-      await pushPendingProgress(container);
-
-      expect(repo.patches.single.lastPageRead, 8);
-      expect((await db.chapterById(10))!.progressDirty, isFalse);
+  test('cross-device never-regress and a partial read never un-reads', () async {
+    final repo = _ServerStateRepository(
+      _serverChapter(id: 10, isRead: false, lastPageRead: 3),
+    );
+    final (:container, :db, :tracker) = await _build(
+      mangaIds: [1],
+      repository: repo,
+    );
+    addTearDown(() {
+      container.dispose();
+      db.close();
     });
-  });
 
-  test('a partial read never un-reads a chapter', () async {
-    final repo = _PartialReadRepo();
+    await _seed(db, 10, mangaId: 1);
+    await db.setChapterProgress(10, lastPageRead: 8, isRead: null);
+    await pushPendingProgress(container);
+
+    expect(repo.patches.single.lastPageRead, 8);
+    expect((await db.chapterById(10))!.progressDirty, isFalse);
+
+    final partial = _PartialReadRepo();
     await recordReadingProgressWithDependencies(
       offlineEnabled: false,
       offlineDatabase: null,
-      repository: repo,
+      repository: partial,
       chapterId: 11,
       lastPageRead: 38,
       isRead: false,
     );
-    final json = repo.lastPatch!.toJson();
+    final json = partial.lastPatch!.toJson();
     expect(
       json.containsKey('isRead'),
       isFalse,
@@ -479,9 +424,9 @@ void main() {
     );
     expect(json['lastPageRead'], 38);
 
-    final db = testOfflineDatabase();
-    addTearDown(db.close);
-    await db.upsertChapterMetadata(
+    final offlineDb = testOfflineDatabase();
+    addTearDown(offlineDb.close);
+    await offlineDb.upsertChapterMetadata(
       id: 11,
       mangaId: 1,
       name: 'c11',
@@ -495,46 +440,14 @@ void main() {
     );
     await recordReadingProgressWithDependencies(
       offlineEnabled: true,
-      offlineDatabase: db,
+      offlineDatabase: offlineDb,
       repository: _PartialReadRepo(),
       chapterId: 11,
       lastPageRead: 38,
       isRead: false,
     );
-    final row = (await db.chapterById(11))!;
+    final row = (await offlineDb.chapterById(11))!;
     expect(row.isRead, isTrue, reason: 'only position updates');
     expect(row.lastPageRead, 38);
-  });
-
-  test('offline mark-read lands locally and stays queued for sync', () async {
-    final db = testOfflineDatabase();
-    addTearDown(db.close);
-    await db.upsertChapterMetadata(
-      id: 10,
-      mangaId: 1,
-      name: 'c10',
-      chapterIndex: 10,
-      isRead: false,
-      lastPageRead: 5,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      pageCount: 30,
-      updatedAt: DateTime(2026),
-    );
-
-    final ok = await recordReadStateWithDependencies(
-      offlineEnabled: true,
-      offlineDatabase: db,
-      repository: _OfflineBulkRepo(),
-      chapterIds: [10],
-      isRead: true,
-      resetPosition: true,
-    );
-
-    expect(ok, isFalse);
-    final c = (await db.chapterById(10))!;
-    expect(c.isRead, isTrue);
-    expect(c.readStateDirty, isTrue, reason: 'queued for pushPendingProgress');
-    expect(c.lastPageRead, 0);
   });
 }

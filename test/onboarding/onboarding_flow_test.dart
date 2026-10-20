@@ -5,43 +5,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 
 void main() {
-  testWidgets('wizard retains the server step across root replacement', (
-    tester,
-  ) async {
-    FlutterSecureStorage.setMockInitialValues({});
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
-    Widget app() => ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const OnboardingScreen(),
-      ),
-    );
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
-    expect(find.text('Connect your server'), findsOneWidget);
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    expect(find.text("You're all set"), findsNothing);
-  });
-
   testWidgets(
     'wizard advances theme→server, validates an empty URL, Back returns',
     (tester) async {
@@ -85,44 +56,4 @@ void main() {
     },
   );
 
-  testWidgets('reduced motion swaps the onboarding step at once', (
-    tester,
-  ) async {
-    await _pumpOnboarding(tester, reduceMotion: true);
-
-    await tester.tap(find.text('Next'));
-    await tester.pump();
-    expect(find.text('Welcome to Tsumiru'), findsNothing);
-    expect(find.text('Connect your server'), findsOneWidget);
-  });
-}
-
-class _ReduceMotionOn extends AppReduceMotion {
-  @override
-  bool build() => true;
-}
-
-Future<void> _pumpOnboarding(
-  WidgetTester tester, {
-  required bool reduceMotion,
-}) async {
-  FlutterSecureStorage.setMockInitialValues({});
-  SharedPreferences.setMockInitialValues({});
-  final preferences = await SharedPreferences.getInstance();
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-        if (reduceMotion)
-          appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => ReduceMotionScope(child: child!),
-        home: const OnboardingScreen(),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
 }

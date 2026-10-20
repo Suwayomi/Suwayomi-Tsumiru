@@ -51,47 +51,38 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
 
 void main() {
   group('migrateBasicAuthCredentials', () {
-    test(
-      'moves legacy SharedPreferences credential to secure storage',
-      () async {
-        SharedPreferences.setMockInitialValues({
-          'basicCredentials': 'Basic YWFyb246aHVudGVyMg==',
-        });
-        final prefs = await SharedPreferences.getInstance();
-        final secure = _InMemorySecureStorage();
+    test('moves the legacy credential once and is idempotent', () async {
+      SharedPreferences.setMockInitialValues({
+        'basicCredentials': 'Basic YWFyb246aHVudGVyMg==',
+      });
+      var prefs = await SharedPreferences.getInstance();
+      final secure = _InMemorySecureStorage();
 
-        await migrateBasicAuthCredentials(prefs: prefs, secure: secure);
+      await migrateBasicAuthCredentials(prefs: prefs, secure: secure);
 
-        expect(prefs.getString('basicCredentials'), isNull);
-        expect(
-          await secure.read(key: 'auth.basic.credentials'),
-          'Basic YWFyb246aHVudGVyMg==',
-        );
-      },
-    );
+      expect(prefs.getString('basicCredentials'), isNull);
+      expect(
+        await secure.read(key: 'auth.basic.credentials'),
+        'Basic YWFyb246aHVudGVyMg==',
+      );
 
-    test(
-      'is a no-op when secure storage already has the value (idempotent)',
-      () async {
-        SharedPreferences.setMockInitialValues({
-          'basicCredentials': 'Basic NEW_VALUE',
-        });
-        final prefs = await SharedPreferences.getInstance();
-        final secure = _InMemorySecureStorage();
-        await secure.write(
-          key: 'auth.basic.credentials',
-          value: 'Basic OLD_VALUE',
-        );
+      // An existing secure-store value wins; legacy plaintext is still cleared.
+      SharedPreferences.setMockInitialValues({
+        'basicCredentials': 'Basic NEW_VALUE',
+      });
+      prefs = await SharedPreferences.getInstance();
+      await secure.write(
+        key: 'auth.basic.credentials',
+        value: 'Basic OLD_VALUE',
+      );
 
-        await migrateBasicAuthCredentials(prefs: prefs, secure: secure);
+      await migrateBasicAuthCredentials(prefs: prefs, secure: secure);
 
-        // Existing secure-store value wins; legacy plaintext is still cleared.
-        expect(
-          await secure.read(key: 'auth.basic.credentials'),
-          'Basic OLD_VALUE',
-        );
-        expect(prefs.getString('basicCredentials'), isNull);
-      },
-    );
+      expect(
+        await secure.read(key: 'auth.basic.credentials'),
+        'Basic OLD_VALUE',
+      );
+      expect(prefs.getString('basicCredentials'), isNull);
+    });
   });
 }

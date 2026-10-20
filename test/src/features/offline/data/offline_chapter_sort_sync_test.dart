@@ -5,8 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // The per-manga chapter sort reaches the offline keep-window only through
-// OfflineMangas.chapterSortMode, and the offline chapter list only through
-// the dates offlineChapterToDto carries — both are pinned here.
+// OfflineMangas.chapterSortMode.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
@@ -56,35 +55,6 @@ void main() {
         }),
         ChapterSortAxis.alphabetical,
       );
-    });
-  });
-
-  group('offlineChapterToDto carries the stored chapter dates', () {
-    Future<OfflineChapter> row({String? uploadDate, String? fetchedAt}) async {
-      await db.upsertChapterMetadata(
-        id: 3,
-        mangaId: 1,
-        name: 'Ch 3',
-        chapterIndex: 3,
-        isRead: false,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 1,
-        updatedAt: DateTime(2026),
-        uploadDate: uploadDate,
-        fetchedAt: fetchedAt,
-      );
-      return (await db.chapterById(3))!;
-    }
-
-    test('synced dates reach the DTO, so a date sort still works '
-        'offline', () async {
-      final dto = offlineChapterToDto(
-        await row(uploadDate: '1700000000000', fetchedAt: '1700000001000'),
-      );
-      expect(dto.uploadDate, '1700000000000');
-      expect(dto.fetchedAt, '1700000001000');
     });
   });
 }

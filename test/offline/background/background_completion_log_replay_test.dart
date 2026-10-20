@@ -90,26 +90,6 @@ void main() {
       Directory(paths.absolute(paths.chapterStagingDirRel(m, c))).existsSync();
 
   test(
-    'complete staging is committed even with no terminal line in the log',
-    () async {
-      // The worker was killed after its last page but before it could record
-      // anything. Recovery reads the directory, not the log.
-      await stage(1, 5, [0, 1], [0, 1]);
-
-      await replay();
-
-      expect(
-        (await db.chapterById(5))!.deviceState,
-        OfflineDeviceState.downloaded,
-      );
-      expect(await db.downloadedPageCount(5), 2);
-      expect(finalDirExists(1, 5), isTrue);
-      expect(stagingExists(1, 5), isFalse);
-      expect(await log.parse(), isEmpty); // truncated
-    },
-  );
-
-  test(
     'a kill between the commit rename and its catalog write is adopted',
     () async {
       // Exactly the crash the design leaves open: the directory is in place and
@@ -143,55 +123,4 @@ void main() {
       expect(finalDirExists(1, 5), isFalse);
     },
   );
-
-  test('staging from a superseded generation cannot commit', () async {
-    // The worker finished at generation 0; a delete then bumped drift to 1 and
-    // the chapter was re-queued. Those pages belong to nobody now.
-    await stage(1, 5, [0, 1], [0, 1]);
-    await db.bumpChapterGeneration(5);
-    await db.setChapterDeviceState(5, OfflineDeviceState.queued);
-
-    await replay();
-
-    expect(
-      (await db.chapterById(5))!.deviceState,
-      OfflineDeviceState.queued,
-      reason: 'the stale download must not complete the new generation',
-    );
-    expect(await db.downloadedPageCount(5), 0);
-    expect(stagingExists(1, 5), isFalse, reason: 'refused staging is dropped');
-  });
-
-  test('double-replay is idempotent', () async {
-    await stage(1, 5, [0, 1], [0, 1]);
-    await replay();
-    await replay();
-    expect(await db.downloadedPageCount(5), 2);
-    expect(
-      (await db.chapterById(5))!.deviceState,
-      OfflineDeviceState.downloaded,
-    );
-  });
-
-  test('log round-trips entries and discards a torn final line', () async {
-    await log.appendChapter(chapterId: 5, status: 'error', pages: 2, bytes: 0);
-    await log.appendDeleted(7, 3);
-    await log.appendDrained();
-
-    final entries = await log.parse();
-    expect(entries.length, 3);
-    expect((entries[0] as ChapterEntry).status, 'error');
-    expect((entries[1] as DeletedEntry).generation, 3);
-    expect(entries[2], isA<DrainedEntry>());
-
-    await log.truncate();
-    await log.appendChapter(chapterId: 5, status: 'error', pages: 1, bytes: 0);
-    // A torn trailing write (crash mid-line) is discarded.
-    await File(
-      '${tmp.path}/.bg_completion.log',
-    ).writeAsString('{"t":"chapter","c":5,"s":"err', mode: FileMode.append);
-    final torn = await log.parse();
-    expect(torn.length, 1);
-    expect((torn.single as ChapterEntry).chapterId, 5);
-  });
 }

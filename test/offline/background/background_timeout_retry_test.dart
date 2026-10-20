@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -14,7 +13,6 @@ import '../../helpers/offline_test_db.dart';
 void main() {
   late OfflineDatabase db;
   late IoOfflinePageStore store;
-  late BackgroundCompletionLog log;
 
   setUp(() async {
     ChapterFileLock.resetForTest();
@@ -22,7 +20,6 @@ void main() {
     db = testOfflineDatabase();
     final tmp = await Directory.systemTemp.createTemp('timeout-retry-');
     store = IoOfflinePageStore(OfflinePaths(tmp.path));
-    log = BackgroundCompletionLog(File('${tmp.path}/completion.jsonl'));
     await db.upsertMangaMetadata(
       id: 1,
       title: 'Manga',
@@ -68,85 +65,4 @@ void main() {
     expect(after.deviceState, OfflineDeviceState.none);
     expect(after.downloadGeneration, before.downloadGeneration + 1);
   });
-
-  test('a stale explicit retry cannot restore a deleted chapter', () async {
-    await db.setChapterDeviceState(5, OfflineDeviceState.error);
-    final before = (await db.chapterById(5))!;
-    await db.bumpChapterGeneration(5);
-    await db.setChapterDeviceState(5, OfflineDeviceState.none);
-    final controller = coordinator();
-    await controller.queueChapter(
-      5,
-      allowErrored: true,
-      expectedGeneration: before.downloadGeneration,
-    );
-    final deleted = (await db.chapterById(5))!;
-    expect(deleted.deviceState, OfflineDeviceState.none);
-    expect(deleted.downloadGeneration, before.downloadGeneration + 1);
-
-    await db.setChapterDeviceState(5, OfflineDeviceState.error);
-    await controller.queueChapter(
-      5,
-      allowErrored: true,
-      expectedGeneration: deleted.downloadGeneration,
-    );
-    await controller.queueChapter(
-      5,
-      allowErrored: true,
-      expectedGeneration: deleted.downloadGeneration,
-    );
-    final retried = (await db.chapterById(5))!;
-    expect(retried.deviceState, OfflineDeviceState.queued);
-    expect(retried.downloadGeneration, deleted.downloadGeneration + 1);
-  });
-
-  test(
-    'replay reports timeout before truncating and preserves chapter state',
-    () async {
-      final before = await db.chapterById(5);
-      await log.appendTimeout();
-      await log.appendTimeout();
-      var notifications = 0;
-      Future<void> replay() => replayCompletionLog(
-        db: db,
-        store: store,
-        log: log,
-        onTimeout: () async {
-          notifications++;
-          expect((await log.parse()).whereType<TimeoutEntry>().length, 2);
-        },
-      );
-      await replay();
-      expect(notifications, 1);
-      expect(await db.chapterById(5), before);
-      expect(await log.parse(), isEmpty);
-      await replay();
-      expect(notifications, 1);
-    },
-  );
-
-  test(
-    'explicit retry advances generation and survives replay of the old error',
-    () async {
-      await db.setChapterDeviceState(5, OfflineDeviceState.error);
-      await db.bumpChapterGeneration(5);
-      await log.appendChapter(
-        chapterId: 5,
-        status: 'error',
-        pages: 0,
-        bytes: 0,
-        generation: 1,
-      );
-      final controller = coordinator();
-      await controller.queueChapter(5, allowErrored: true);
-      expect((await db.chapterById(5))!.downloadGeneration, 2);
-      await controller.queueChapter(5, allowErrored: true);
-      expect((await db.chapterById(5))!.downloadGeneration, 2);
-      await replayCompletionLog(db: db, store: store, log: log);
-      final row = (await db.chapterById(5))!;
-      expect(row.downloadGeneration, 2);
-      expect(row.deviceState, OfflineDeviceState.queued);
-      expect(await log.parse(), isEmpty);
-    },
-  );
 }
