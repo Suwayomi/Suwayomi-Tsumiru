@@ -222,6 +222,106 @@ class MangaDetailsScreen extends HookConsumerWidget {
       child: manga.showUiWhenData(
         context,
         (data) {
+          // The phone AppBar's toolbars, shared with the merged desktop bar so
+          // both show the same controls. Medium windows keep the phone body but
+          // suppress the AppBar, so the bar must carry these instead.
+          final selectionActions = [
+            IconButton(
+              onPressed: () {
+                final chapterList = [...?filteredChapterList.value];
+                selectedChapters.value = ({
+                  for (ChapterDto i in chapterList) i.id: i,
+                });
+              },
+              icon: const Icon(Icons.select_all_rounded),
+            ),
+            IconButton(
+              onPressed: () {
+                final chapterList = [...?filteredChapterList.value];
+                selectedChapters.value = ({
+                  for (ChapterDto i in chapterList)
+                    if (!selectedChapters.value.containsKey(i.id)) i.id: i,
+                });
+              },
+              icon: const Icon(Icons.flip_to_back_rounded),
+            ),
+            MultiSelectPopupButton(
+              filteredChapterList: filteredChapterList,
+              selectedChapters: selectedChapters,
+            ),
+          ];
+          final pageActions = [
+            if (!twoColumn && data != null)
+              IconButton(
+                tooltip: context.l10n.webView,
+                icon: const Icon(Icons.public_rounded),
+                onPressed: () =>
+                    MangaDescription.openInBrowser(context, ref, data),
+              ),
+            if (!twoColumn)
+              IconButton(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: KBorderRadius.rT16.radius,
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    builder: (_) => MangaChapterOrganizer(mangaId: mangaId),
+                    sheetAnimationStyle: context.motionStyle,
+                  );
+                },
+                icon: const Icon(Icons.filter_list_rounded),
+              ),
+            if (!twoColumn)
+              PopupMenuButton(
+                shape: RoundedRectangleBorder(
+                  borderRadius: KBorderRadius.r16.radius,
+                ),
+                icon: const Icon(Icons.more_vert_rounded),
+                itemBuilder: (context) => [
+                  if (ref.watch(showRecommendationsProvider).ifNull(true) &&
+                      ref.watch(recommendsInOverflowProvider).ifNull(false))
+                    PopupMenuItem(
+                      onTap: () => RecommendsRoute(
+                        mangaId: mangaId,
+                        mangaTitle: data?.title,
+                      ).push(context),
+                      child: Text(context.l10n.seeRecommendations),
+                    ),
+                  PopupMenuItem(
+                    onTap: () => Future.microtask(() {
+                      if (!context.mounted) return null;
+                      return showDialog(
+                        context: context,
+                        builder: (context) =>
+                            EditMangaCategoryDialog(mangaId: mangaId),
+                        animationStyle: context.motionStyle,
+                      );
+                    }),
+                    child: Text(context.l10n.editCategory),
+                  ),
+                  PopupMenuItem(
+                    onTap: () => startMigration(context, mangaId, data),
+                    child: Text(context.l10n.migrate),
+                  ),
+                  PopupMenuItem(
+                    onTap: () => refresh(true),
+                    child: Text(context.l10n.refresh),
+                  ),
+                  if (data?.realUrl != null)
+                    PopupMenuItem(
+                      onTap: () => openInBrowser(data!.realUrl!),
+                      child: Text(context.l10n.openSourceInBrowser),
+                    ),
+                  PopupMenuItem(
+                    onTap: openOnServer,
+                    child: Text(context.l10n.openOnServer),
+                  ),
+                ],
+                popUpAnimationStyle: context.motionStyle,
+              ),
+          ];
           final scaffold = FocusScope(
             node: pageScope,
             onKeyEvent: (node, event) {
@@ -249,32 +349,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       title: Text(
                         context.l10n.numSelected(selectedChapters.value.length),
                       ),
-                      actions: [
-                        IconButton(
-                          onPressed: () {
-                            final chapterList = [...?filteredChapterList.value];
-                            selectedChapters.value = ({
-                              for (ChapterDto i in chapterList) i.id: i,
-                            });
-                          },
-                          icon: const Icon(Icons.select_all_rounded),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            final chapterList = [...?filteredChapterList.value];
-                            selectedChapters.value = ({
-                              for (ChapterDto i in chapterList)
-                                if (!selectedChapters.value.containsKey(i.id))
-                                  i.id: i,
-                            });
-                          },
-                          icon: const Icon(Icons.flip_to_back_rounded),
-                        ),
-                        MultiSelectPopupButton(
-                          filteredChapterList: filteredChapterList,
-                          selectedChapters: selectedChapters,
-                        ),
-                      ],
+                      actions: selectionActions,
                     )
                   : PreferredSize(
                       preferredSize: const Size.fromHeight(kToolbarHeight),
@@ -319,99 +394,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                       data?.title ?? context.l10n.manga,
                                     ),
                                   ),
-                            actions: [
-                              if (!twoColumn && data != null)
-                                IconButton(
-                                  tooltip: context.l10n.webView,
-                                  icon: const Icon(Icons.public_rounded),
-                                  onPressed: () =>
-                                      MangaDescription.openInBrowser(
-                                        context,
-                                        ref,
-                                        data,
-                                      ),
-                                ),
-                              if (!twoColumn)
-                                IconButton(
-                                  onPressed: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: KBorderRadius.rT16.radius,
-                                      ),
-                                      clipBehavior: Clip.hardEdge,
-                                      builder: (_) => MangaChapterOrganizer(
-                                        mangaId: mangaId,
-                                      ),
-                                      sheetAnimationStyle: context.motionStyle,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.filter_list_rounded),
-                                ),
-                              if (!twoColumn)
-                                PopupMenuButton(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: KBorderRadius.r16.radius,
-                                  ),
-                                  icon: const Icon(Icons.more_vert_rounded),
-                                  itemBuilder: (context) => [
-                                    if (ref
-                                            .watch(showRecommendationsProvider)
-                                            .ifNull(true) &&
-                                        ref
-                                            .watch(recommendsInOverflowProvider)
-                                            .ifNull(false))
-                                      PopupMenuItem(
-                                        onTap: () => RecommendsRoute(
-                                          mangaId: mangaId,
-                                          mangaTitle: data?.title,
-                                        ).push(context),
-                                        child: Text(
-                                          context.l10n.seeRecommendations,
-                                        ),
-                                      ),
-                                    PopupMenuItem(
-                                      onTap: () => Future.microtask(() {
-                                        if (!context.mounted) return null;
-                                        return showDialog(
-                                          context: context,
-                                          builder: (context) =>
-                                              EditMangaCategoryDialog(
-                                                mangaId: mangaId,
-                                              ),
-                                          animationStyle: context.motionStyle,
-                                        );
-                                      }),
-                                      child: Text(context.l10n.editCategory),
-                                    ),
-                                    PopupMenuItem(
-                                      onTap: () => startMigration(
-                                        context,
-                                        mangaId,
-                                        data,
-                                      ),
-                                      child: Text(context.l10n.migrate),
-                                    ),
-                                    PopupMenuItem(
-                                      onTap: () => refresh(true),
-                                      child: Text(context.l10n.refresh),
-                                    ),
-                                    if (data?.realUrl != null)
-                                      PopupMenuItem(
-                                        onTap: () =>
-                                            openInBrowser(data!.realUrl!),
-                                        child: Text(
-                                          context.l10n.openSourceInBrowser,
-                                        ),
-                                      ),
-                                    PopupMenuItem(
-                                      onTap: openOnServer,
-                                      child: Text(context.l10n.openOnServer),
-                                    ),
-                                  ],
-                                  popUpAnimationStyle: context.motionStyle,
-                                ),
-                            ],
+                            actions: pageActions,
                           );
                         },
                       ),
@@ -499,12 +482,33 @@ class MangaDetailsScreen extends HookConsumerWidget {
               ),
             ),
           );
+          // Single-column with the merged bar: the phone body has no bar of
+          // its own, so the page's own toolbar moves to the shell bar. The
+          // selection toolbar swaps in the phone AppBar's selection actions.
+          if (topBar && !twoColumn && selectedChapters.value.isNotEmpty) {
+            return TopBarSlot(
+              slotKey: 'selection',
+              content: DesktopTitleSlot(
+                leading: IconButton(
+                  onPressed: () => selectedChapters.value = ({}),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+                title: Text(
+                  context.l10n.numSelected(selectedChapters.value.length),
+                ),
+                actions: selectionActions,
+              ),
+              minWidth: titleTopBarSlotMinWidth(selectionActions.length),
+              child: scaffold,
+            );
+          }
           return titleTopBarSlot(
             topBar: topBar,
             leading: detailNavigationBackButton(context),
             title: twoColumn
                 ? SeriesAppBarTitle(title: data?.title ?? context.l10n.manga)
                 : Text(data?.title ?? context.l10n.manga),
+            actions: pageActions,
             child: scaffold,
           );
         },

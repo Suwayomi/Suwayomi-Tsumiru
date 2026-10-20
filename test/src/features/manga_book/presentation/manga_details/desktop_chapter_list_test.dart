@@ -321,6 +321,59 @@ void main() {
     expect(find.byType(BigScreenMangaDetails), findsNothing);
     expect(find.byType(BrandFab), findsOneWidget);
 
+    // The phone body has no bar of its own at this width, so the merged bar
+    // carries the page's toolbar: filter and the overflow menu (Migrate).
+    final topBar = find.byType(DesktopTopBar);
+    expect(topBar, findsOneWidget);
+    expect(
+      find.descendant(
+        of: topBar,
+        matching: find.byIcon(Icons.filter_list_rounded),
+      ),
+      findsOneWidget,
+    );
+    final overflow = find.descendant(
+      of: topBar,
+      matching: find.byIcon(Icons.more_vert_rounded),
+    );
+    expect(overflow, findsOneWidget);
+    await tester.tap(overflow);
+    await tester.pumpAndSettle();
+    expect(find.text('Migrate'), findsOneWidget);
+    await tester.tapAt(const Offset(1, 1));
+    await tester.pumpAndSettle();
+
+    // Long-press starts a selection; the bar swaps to the selection toolbar.
+    await tester.scrollUntilVisible(
+      find.text('Chapter 2'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(SmallScreenMangaDetails),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.longPress(find.text('Chapter 2'));
+    await tester.pumpAndSettle();
+    final selectAll = find.descendant(
+      of: topBar,
+      matching: find.byIcon(Icons.select_all_rounded),
+    );
+    expect(selectAll, findsOneWidget);
+    await tester.tap(selectAll);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: topBar, matching: find.text('6 Selected')),
+      findsOneWidget,
+    );
+    // Close the selection so the two-column checks below start clean.
+    await tester.tap(
+      find.descendant(of: topBar, matching: find.byIcon(Icons.close_rounded)),
+    );
+    await tester.pumpAndSettle();
+    expect(selectAll, findsNothing);
+
     tester.view.physicalSize = const Size(840, 900);
     await tester.pumpAndSettle();
     expect(find.byType(BigScreenMangaDetails), findsOneWidget);
