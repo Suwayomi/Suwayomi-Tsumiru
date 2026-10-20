@@ -15,8 +15,10 @@ import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_brand.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_title_bar.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
+import 'package:tsumiru/src/widgets/shell/animated_nav_icon.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
@@ -312,41 +314,121 @@ void main() {
     setUp(() => debugMacOSOverride = true);
     tearDown(() => debugMacOSOverride = null);
 
-    testWidgets('expanded bar holds the inset and the chevron, no logo', (
-      tester,
-    ) async {
+    testWidgets('expanded: the brand row leads the sidebar, the bar keeps '
+        'only the inset', (tester) async {
       SharedPreferences.setMockInitialValues(const {});
       final prefs = await SharedPreferences.getInstance();
       await _pumpFrame(tester, prefs);
 
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
-      expect(find.byType(TsumiruLogo), findsNothing);
+      final sidebar = find.byType(DesktopSidebar);
+      final bar = find.byType(DesktopTopBar);
+      expect(tester.getSize(sidebar).width, 208);
       expect(find.byType(WindowCaptionButton), findsNothing);
-      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+
+      // The bar draws neither the logo nor a chevron on macOS.
+      expect(
+        find.descendant(of: bar, matching: find.byType(TsumiruLogo)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: bar, matching: find.byIcon(Icons.chevron_left)),
+        findsNothing,
+      );
+
+      // The sidebar's first row carries the logo, the name and the collapse
+      // chevron.
+      final logo = find.descendant(
+        of: sidebar,
+        matching: find.byType(TsumiruLogo),
+      );
+      expect(logo, findsOneWidget);
+      expect(tester.getSize(logo), const Size(28, 28));
+      expect(
+        find.descendant(of: sidebar, matching: find.text('Tsumiru')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sidebar, matching: find.byIcon(Icons.chevron_left)),
+        findsOneWidget,
+      );
+
+      // 40 px tall, with an 8 px gap before the first nav row.
+      final brand = tester.getRect(find.byType(DesktopBrandRow));
+      expect(brand.height, 40);
+      final navRows = find.descendant(
+        of: sidebar,
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.constraints?.maxHeight == 40,
+        ),
+      );
+      expect(navRows, findsNWidgets(6));
+      expect(tester.getRect(navRows.first).top, brand.bottom + 8);
+
+      // The logo sits over the nav rows' icon column.
+      final firstIcon = tester.getRect(
+        find
+            .descendant(of: sidebar, matching: find.byType(AnimatedNavIcon))
+            .first,
+      );
+      expect(tester.getRect(logo).left, firstIcon.left);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('collapsed sidebar is 80 px with the chevron at its bottom', (
-      tester,
-    ) async {
+    testWidgets('collapsed sidebar is 80 px and expands from the logo at its '
+        'top', (tester) async {
       SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
       final prefs = await SharedPreferences.getInstance();
       await _pumpFrame(tester, prefs);
 
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 80);
-      expect(find.byType(TsumiruLogo), findsNothing);
+      final sidebar = find.byType(DesktopSidebar);
+      final bar = find.byType(DesktopTopBar);
+      expect(tester.getSize(sidebar).width, 80);
       expect(find.byType(WindowCaptionButton), findsNothing);
-      final expand = find.byIcon(Icons.chevron_right);
-      expect(expand, findsOneWidget);
-      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
       expect(
-        tester.getRect(expand).bottom,
-        lessThanOrEqualTo(sidebarRect.bottom),
+        find.descendant(of: bar, matching: find.byType(TsumiruLogo)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: bar, matching: find.byIcon(Icons.chevron_left)),
+        findsNothing,
       );
 
-      await tester.tap(expand);
+      // The logo alone is the sidebar's first item, centred in its column.
+      final button = find.byType(DesktopBrandExpandButton);
+      expect(button, findsOneWidget);
+      expect(
+        find.descendant(of: sidebar, matching: find.byType(TsumiruLogo)),
+        findsOneWidget,
+      );
+      expect(
+        find.byIcon(Icons.chevron_right),
+        findsNothing,
+        reason: 'the old floating expand button is gone',
+      );
+
+      final firstRow = tester.getRect(
+        find
+            .descendant(
+              of: sidebar,
+              matching: find.byWidgetPredicate(
+                (w) => w is Container && w.constraints?.maxHeight == 44,
+              ),
+            )
+            .first,
+      );
+      // Centred over the nav rows' icon column, above the first row.
+      final firstIcon = find
+          .descendant(of: sidebar, matching: find.byType(AnimatedNavIcon))
+          .first;
+      expect(tester.getCenter(button).dx, tester.getCenter(firstIcon).dx);
+      expect(tester.getRect(button).bottom, lessThan(firstRow.top));
+
+      // Tap the logo to expand.
+      await tester.tap(button);
       await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
+      expect(tester.getSize(sidebar).width, 208);
+      expect(find.byType(DesktopBrandRow), findsOneWidget);
+      expect(find.text('Tsumiru'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -359,7 +441,20 @@ void main() {
       final titleBar = find.byType(DesktopTitleBar);
       expect(titleBar, findsOneWidget);
       expect(tester.getSize(titleBar).height, 40);
+      expect(
+        find.descendant(of: titleBar, matching: find.byType(TsumiruLogo)),
+        findsOneWidget,
+      );
+      // The title bar's logo is the only one: the sidebar's brand row shows
+      // only with the merged one-row bar.
       expect(find.byType(TsumiruLogo), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(DesktopSidebar),
+          matching: find.byType(DesktopBrandRow),
+        ),
+        findsNothing,
+      );
       expect(find.byType(WindowCaptionButton), findsNothing);
       expect(
         tester.getTopLeft(find.text('Toolbar')).dy,
