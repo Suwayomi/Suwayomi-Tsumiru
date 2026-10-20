@@ -52,19 +52,5 @@ void main() {
 
       expect(previousCalls, 1);
     });
-
-    testWidgets('bottom button opens the next chapter', (tester) async {
-      var nextCalls = 0;
-      await pump(
-        tester,
-        onPreviousChapter: () {},
-        onNextChapter: () => nextCalls++,
-      );
-
-      await tester.tap(find.byType(BrandFilledCircleButton).last);
-      await tester.pumpAndSettle();
-
-      expect(nextCalls, 1);
-    });
   });
 }

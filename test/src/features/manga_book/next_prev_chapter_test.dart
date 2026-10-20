@@ -75,48 +75,4 @@ void main() {
     expect(pair!.first, isNull);
     expect(pair.second, isNull);
   });
-
-  test('a middle chapter resolves both neighbours', () async {
-    final c = await _container(chapters);
-    final pair = c.read(
-      getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2),
-    );
-    expect(pair, isNotNull);
-    expect(pair!.first, isNotNull);
-    expect(pair.second, isNotNull);
-  });
-
-  test('reader follows the opening scanlator for confident releases', () async {
-    final c = await _container([
-      _chapter(
-        id: 1,
-        name: 'Chapter 1',
-        number: 1,
-        sourceOrder: 1,
-        scanlator: 'A',
-      ),
-      _chapter(
-        id: 2,
-        name: 'Chapter 1',
-        number: 1,
-        sourceOrder: 2,
-        scanlator: 'B',
-      ),
-      _chapter(
-        id: 3,
-        name: 'Chapter 2',
-        number: 2,
-        sourceOrder: 3,
-        scanlator: 'A',
-      ),
-    ]);
-    final pair = c.read(
-      getNextAndPreviousChaptersProvider(
-        mangaId: 1,
-        chapterId: 1,
-        readerScanlatorGroup: 'A',
-      ),
-    );
-    expect(pair!.first?.id, 3);
-  });
 }

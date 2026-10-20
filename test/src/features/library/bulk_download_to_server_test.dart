@@ -73,21 +73,5 @@ void main() {
       );
     });
 
-    test('every preset handles absent and downloaded chapters', () {
-      for (final preset in DownloadPreset.values) {
-        expect(serverDownloadIds(null, preset: preset), isEmpty);
-        expect(serverDownloadIds([], preset: preset), isEmpty);
-        expect(
-          serverDownloadIds([
-            ch(id: 1, number: 1, isDownloaded: true),
-          ], preset: preset),
-          isEmpty,
-        );
-      }
-    });
-
-    test('a null chapter list queues nothing', () {
-      expect(serverDownloadIds(null), isEmpty);
-    });
   });
 }

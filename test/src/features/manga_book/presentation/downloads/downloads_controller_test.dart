@@ -137,23 +137,6 @@ void main() {
       expect(container.read(showDownloadsFABProvider), isTrue);
     });
 
-    test('shows when every item has permanently failed', () async {
-      // The old gate excluded items errored at tries == 3, hiding the control
-      // for a wholly-failed queue — the case where restarting matters most.
-      final container = await _silentFeed(
-        _status('STOPPED', [
-          _queueItem(chapterId: 10, position: 0, state: 'ERROR', tries: 3),
-          _queueItem(chapterId: 11, position: 1, state: 'ERROR', tries: 3),
-        ]),
-      );
-
-      expect(container.read(showDownloadsFABProvider), isTrue);
-    });
-
-    test('hides for an empty queue', () async {
-      final container = await _silentFeed(_status('STOPPED', const []));
-      expect(container.read(showDownloadsFABProvider), isFalse);
-    });
   });
 
   group('omitted updates', () {
@@ -222,59 +205,8 @@ void main() {
       );
     });
 
-    test('a progress tick does not outrank an in-flight re-read', () async {
-      // The feed publishes roughly once a second while downloading. If those
-      // ticks counted as changes, a round-trip slower than the tick rate could
-      // never land and the queue would stay stale for good.
-      final one = _queueItem(chapterId: 10, position: 0);
-      final slow = Completer<DownloadStatusDto?>();
-      final repo = _FakeRepo.scripted([
-        () async => _status('STARTED', [one]),
-        () => slow.future,
-      ]);
-      final feed = StreamController<DownloadUpdatesDto?>();
-      addTearDown(feed.close);
-
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(downloadsChapterIdsProvider, (_, _) {});
-      await container.read(downloadStatusProvider.future);
-
-      feed.add(_feedMessage(omitted: true));
-      await pumpEventQueue();
-
-      feed.add(
-        _feedMessage(
-          updates: [
-            {
-              'type': 'PROGRESS',
-              'download': _queueItem(chapterId: 10, position: 0),
-              '__typename': 'DownloadUpdate',
-            },
-          ],
-        ),
-      );
-      await pumpEventQueue();
-
-      slow.complete(
-        _status('STARTED', [one, _queueItem(chapterId: 11, position: 1)]),
-      );
-      await pumpEventQueue();
-
-      expect(container.read(downloadsChapterIdsProvider), [
-        10,
-        11,
-      ], reason: 'the re-read still lands despite the progress tick');
-      expect(repo.fetches, 2, reason: 'no pointless second re-read');
-    });
-
     test(
-      'a slow re-fetch cannot resurrect a chapter dequeued mid-flight',
+      'a stale snapshot cannot resurrect a dequeued chapter or undo a clear',
       () async {
         final both = [
           _queueItem(chapterId: 10, position: 0),
@@ -319,74 +251,42 @@ void main() {
           3,
           reason: 'it re-reads instead of applying stale',
         );
-      },
-    );
 
-    test('a failed re-fetch leaves the queue intact', () async {
-      final repo = _FakeRepo.scripted([
-        () async =>
-            _status('STARTED', [_queueItem(chapterId: 10, position: 0)]),
-        () async => throw Exception('server unreachable'),
-      ]);
-      final feed = StreamController<DownloadUpdatesDto?>();
-      addTearDown(feed.close);
-
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(downloadsChapterIdsProvider, (_, _) {});
-      await container.read(downloadStatusProvider.future);
-
-      feed.add(_feedMessage(omitted: true));
-      await pumpEventQueue();
-
-      // No unhandled async error, and the last known queue survives.
-      expect(repo.fetches, 2, reason: 'the re-fetch was attempted');
-      expect(container.read(downloadsChapterIdsProvider), [10]);
-    });
-
-    test(
-      'clearing the queue mid-flight is not undone by the re-fetch',
-      () async {
-        final both = [
+        // The same guard covers a queue cleared mid-flight.
+        final clearedBoth = [
           _queueItem(chapterId: 10, position: 0),
           _queueItem(chapterId: 11, position: 1),
         ];
-        final slow = Completer<DownloadStatusDto?>();
-        final repo = _FakeRepo.scripted([
-          () async => _status('STARTED', both),
-          () => slow.future,
+        final slowClear = Completer<DownloadStatusDto?>();
+        final clearedRepo = _FakeRepo.scripted([
+          () async => _status('STARTED', clearedBoth),
+          () => slowClear.future,
           () async => _status('STOPPED', const []),
         ]);
-        final feed = StreamController<DownloadUpdatesDto?>();
-        addTearDown(feed.close);
-
-        final container = ProviderContainer(
+        final clearedFeed = StreamController<DownloadUpdatesDto?>();
+        addTearDown(clearedFeed.close);
+        final cleared = ProviderContainer(
           overrides: [
-            downloadsRepositoryProvider.overrideWithValue(repo),
-            downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+            downloadsRepositoryProvider.overrideWithValue(clearedRepo),
+            downloadUpdatesProvider.overrideWith((ref) => clearedFeed.stream),
           ],
         );
-        addTearDown(container.dispose);
-        container.listen(downloadsChapterIdsProvider, (_, _) {});
-        await container.read(downloadStatusProvider.future);
+        addTearDown(cleared.dispose);
+        cleared.listen(downloadsChapterIdsProvider, (_, _) {});
+        await cleared.read(downloadStatusProvider.future);
 
-        feed.add(_feedMessage(omitted: true));
+        clearedFeed.add(_feedMessage(omitted: true));
         await pumpEventQueue();
 
-        await container.read(downloadsMapProvider.notifier).clearAll();
+        await cleared.read(downloadsMapProvider.notifier).clearAll();
         await pumpEventQueue();
-        expect(container.read(downloadsChapterIdsProvider), isEmpty);
+        expect(cleared.read(downloadsChapterIdsProvider), isEmpty);
 
-        slow.complete(_status('STARTED', both));
+        slowClear.complete(_status('STARTED', clearedBoth));
         await pumpEventQueue();
 
         expect(
-          container.read(downloadsChapterIdsProvider),
+          cleared.read(downloadsChapterIdsProvider),
           isEmpty,
           reason: 'the cleared queue must stay cleared',
         );

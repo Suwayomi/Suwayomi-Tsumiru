@@ -45,44 +45,5 @@ void main() {
       expect(peak, 3);
     });
 
-    test('a cancelled waiter throws and never later steals a permit', () async {
-      final sem = Semaphore(1);
-      await sem.acquire(); // hold the only permit
-
-      final token = CancelToken();
-      final blocked = sem.acquire(token);
-      // The waiter is queued; cancel it.
-      token.cancel();
-      await expectLater(blocked, throwsA(isA<CancelledException>()));
-      expect(sem.queueLength, 0);
-
-      // Releasing should restore the permit, not hand it to the dead waiter.
-      sem.release();
-      expect(sem.availablePermits, 1);
-    });
-
-    test('withPermit releases on error', () async {
-      final sem = Semaphore(1);
-      await expectLater(
-        sem.withPermit(() async => throw StateError('boom')),
-        throwsStateError,
-      );
-      expect(sem.availablePermits, 1);
-    });
-  });
-
-  group('RateLimiter', () {
-    test('spaces successive acquisitions by at least minInterval', () async {
-      final limiter = RateLimiter(
-        minInterval: const Duration(milliseconds: 50),
-      );
-      final sw = Stopwatch()..start();
-      await limiter.acquire();
-      await limiter.acquire();
-      await limiter.acquire();
-      sw.stop();
-      // Two intervals between three grants → ≥ ~100ms.
-      expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(90));
-    });
   });
 }

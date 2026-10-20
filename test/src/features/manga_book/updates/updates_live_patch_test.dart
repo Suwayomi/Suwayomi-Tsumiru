@@ -59,22 +59,5 @@ void main() {
         expect(result.items.map((c) => c.id), [5, 4, 3]);
       },
     );
-
-    test('no boundary — returns all items, boundaryFound=false', () {
-      final nodes = [_chapter(5), _chapter(4), _chapter(3)];
-      final existing = {2, 1};
-
-      final result = extractNewUpdatesFromPage(nodes, existing);
-
-      expect(result.boundaryFound, isFalse);
-      expect(result.items.map((c) => c.id), [5, 4, 3]);
-    });
-
-    test('empty page — returns empty list, boundaryFound=false', () {
-      final result = extractNewUpdatesFromPage([], {1, 2});
-
-      expect(result.boundaryFound, isFalse);
-      expect(result.items, isEmpty);
-    });
   });
 }

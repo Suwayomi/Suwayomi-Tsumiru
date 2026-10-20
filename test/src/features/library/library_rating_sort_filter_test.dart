@@ -67,15 +67,12 @@ void main() {
     _manga(3), // unrated → 0
   ];
 
-  test('sort by rating ascending puts unrated first, highest last', () {
+  test('sort by rating: ascending unrated-first, descending highest-first', () {
     expect(_run(items, sort: MangaSort.rating, asc: true).map((m) => m.id), [
       3,
       2,
       1,
     ]);
-  });
-
-  test('sort by rating descending puts highest first', () {
     expect(_run(items, sort: MangaSort.rating, asc: false).map((m) => m.id), [
       1,
       2,

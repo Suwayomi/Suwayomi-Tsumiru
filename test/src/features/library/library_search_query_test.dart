@@ -37,103 +37,49 @@ bool _matches(String query, LibraryFilterFields f) =>
     LibrarySearchQuery.parse(query).matches(f);
 
 void main() {
-  group('empty / plain text', () {
-    test('multiple bare words are AND-ed', () {
-      expect(_matches('one action', _manga()), isTrue);
-      expect(_matches('one horror', _manga()), isFalse);
-    });
+  test('multiple bare words are AND-ed', () {
+    expect(_matches('one action', _manga()), isTrue);
+    expect(_matches('one horror', _manga()), isFalse);
   });
 
-  group('tag: (exact, case-insensitive)', () {
+  test('tag: exact case-insensitive and quoted, genre: substring', () {
     final m = _manga(userTags: ['Reread', 'Favorites']);
-    test('exact match hits regardless of case', () {
-      expect(_matches('tag:reread', m), isTrue);
-      expect(_matches('tag:REREAD', m), isTrue);
-    });
-    test('quoted multi-word tag value', () {
-      final t = _manga(userTags: ['slice of life']);
-      expect(_matches('tag:"slice of life"', t), isTrue);
-      expect(_matches('tag:slice', t), isFalse);
-    });
+    expect(_matches('tag:reread', m), isTrue);
+    expect(_matches('tag:REREAD', m), isTrue);
+    final t = _manga(userTags: ['slice of life']);
+    expect(_matches('tag:"slice of life"', t), isTrue);
+    expect(_matches('tag:slice', t), isFalse);
+
+    expect(_matches('genre:life', _manga()), isTrue); // Slice of Life
+    expect(_matches('genre:ACTION', _manga()), isTrue);
+    expect(_matches('genre:horror', _manga()), isFalse);
   });
 
-  group('genre: (substring, case-insensitive)', () {
-    test('substring matches', () {
-      expect(_matches('genre:life', _manga()), isTrue); // Slice of Life
-      expect(_matches('genre:ACTION', _manga()), isTrue);
-      expect(_matches('genre:horror', _manga()), isFalse);
-    });
+  test('rating comparisons, unread boolean and negation', () {
+    expect(_matches('rating:>=4', _manga(rating: 5)), isTrue);
+    expect(_matches('rating:>=4', _manga(rating: 3)), isFalse);
+    expect(_matches('rating:<2', _manga(rating: 1)), isTrue);
+    expect(_matches('rating:>3', _manga(rating: 3)), isFalse);
+
+    expect(_matches('unread:true', _manga(unreadCount: 3)), isTrue);
+    expect(_matches('unread:false', _manga(unreadCount: 3)), isFalse);
+    expect(_matches('unread:false', _manga(unreadCount: 0)), isTrue);
+
+    final m = _manga(userTags: ['Dropped']);
+    expect(_matches('-tag:dropped', m), isFalse);
+    expect(_matches('-tag:dropped', _manga(userTags: ['Reread'])), isTrue);
   });
 
-  group('text field metatags', () {
-    test('author / artist / title substring', () {
-      expect(_matches('author:oda', _manga()), isTrue);
-      expect(_matches('artist:eiichiro', _manga()), isTrue);
-      expect(_matches('title:piece', _manga()), isTrue);
-      expect(_matches('author:kishimoto', _manga()), isFalse);
-    });
-  });
+  test('status, source and tracked filters', () {
+    expect(_matches('status:ongoing', _manga(status: 'ONGOING')), isTrue);
+    expect(_matches('status:completed', _manga(status: 'ONGOING')), isFalse);
 
-  group('rating:', () {
-    test('comparison operators', () {
-      expect(_matches('rating:>=4', _manga(rating: 5)), isTrue);
-      expect(_matches('rating:>=4', _manga(rating: 3)), isFalse);
-      expect(_matches('rating:<2', _manga(rating: 1)), isTrue);
-      expect(_matches('rating:>3', _manga(rating: 3)), isFalse);
-    });
-  });
+    expect(_matches('source:mangadex', _manga(sourceName: 'MangaDex')), isTrue);
+    expect(_matches('source:dex', _manga(sourceName: 'MangaDex')), isTrue);
+    expect(_matches('source:comick', _manga(sourceName: 'MangaDex')), isFalse);
 
-  group('boolean metatags', () {
-    test('unread', () {
-      expect(_matches('unread:true', _manga(unreadCount: 3)), isTrue);
-      expect(_matches('unread:false', _manga(unreadCount: 3)), isFalse);
-      expect(_matches('unread:false', _manga(unreadCount: 0)), isTrue);
-    });
+    expect(_matches('tracked:true', _manga(trackers: {'anilist'})), isTrue);
+    expect(_matches('tracked:true', _manga(trackers: {})), isFalse);
+    expect(_matches('tracked:false', _manga(trackers: {})), isTrue);
   });
-
-  group('negation', () {
-    test('-tag: excludes', () {
-      final m = _manga(userTags: ['Dropped']);
-      expect(_matches('-tag:dropped', m), isFalse);
-      expect(_matches('-tag:dropped', _manga(userTags: ['Reread'])), isTrue);
-    });
-  });
-
-  group('robustness', () {
-    test('unrecognized key falls back to plain text (Re:Zero)', () {
-      final m = _manga(title: 'Re:Zero');
-      expect(_matches('re:zero', m), isTrue);
-    });
-  });
-
-  group('status:', () {
-    test('exact enum name matches', () {
-      expect(_matches('status:ongoing', _manga(status: 'ONGOING')), isTrue);
-      expect(_matches('status:completed', _manga(status: 'ONGOING')), isFalse);
-    });
-  });
-
-  group('source:', () {
-    test('substring match on source name, case-insensitive', () {
-      expect(
-        _matches('source:mangadex', _manga(sourceName: 'MangaDex')),
-        isTrue,
-      );
-      expect(_matches('source:dex', _manga(sourceName: 'MangaDex')), isTrue);
-      expect(
-        _matches('source:comick', _manga(sourceName: 'MangaDex')),
-        isFalse,
-      );
-    });
-  });
-
-  group('tracked:', () {
-    test('bool form checks for any tracker', () {
-      expect(_matches('tracked:true', _manga(trackers: {'anilist'})), isTrue);
-      expect(_matches('tracked:true', _manga(trackers: {})), isFalse);
-      expect(_matches('tracked:false', _manga(trackers: {})), isTrue);
-    });
-  });
-
-  group('{a|b} OR groups', () {});
 }

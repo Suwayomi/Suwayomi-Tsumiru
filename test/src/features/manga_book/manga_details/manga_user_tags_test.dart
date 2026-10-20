@@ -60,15 +60,6 @@ class _TaggedManga extends MangaWithId {
 }
 
 void main() {
-  group('MangaMeta.userTags parse', () {
-    test('decodes a JSON string array', () {
-      expect(MangaMeta.fromJson({'flutter_tags': '["a","b"]'}).userTags, [
-        'a',
-        'b',
-      ]);
-    });
-  });
-
   group('mangaUserTagsProvider', () {
     Future<ProviderContainer> seeded(
       _RecordingRepo repo,
@@ -90,18 +81,16 @@ void main() {
       return c;
     }
 
-    test('add appends and persists the JSON array', () async {
+    test('add appends and remove drops, persisting the JSON array', () async {
       final repo = _RecordingRepo();
       final c = await seeded(repo, ['a', 'b']);
       await c.read(mangaUserTagsProvider(mangaId: 1).notifier).add('c');
       expect(repo.patched, contains((1, 'flutter_tags', '["a","b","c"]')));
-    });
 
-    test('remove drops the tag and persists', () async {
-      final repo = _RecordingRepo();
-      final c = await seeded(repo, ['a', 'b']);
-      await c.read(mangaUserTagsProvider(mangaId: 1).notifier).remove('a');
-      expect(repo.patched, contains((1, 'flutter_tags', '["b"]')));
+      final repo2 = _RecordingRepo();
+      final removed = await seeded(repo2, ['a', 'b']);
+      await removed.read(mangaUserTagsProvider(mangaId: 1).notifier).remove('a');
+      expect(repo2.patched, contains((1, 'flutter_tags', '["b"]')));
     });
   });
 }

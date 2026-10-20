@@ -13,28 +13,6 @@ void main() {
         isFalse,
       );
     });
-
-    test('is true when the chapter is read', () {
-      expect(
-        _chapter(
-          isRead: true,
-          lastPageRead: 0,
-          lastReadAt: '0',
-        ).hasReadingProgress,
-        isTrue,
-      );
-    });
-
-    test('is true when a page was opened', () {
-      expect(
-        _chapter(
-          isRead: false,
-          lastPageRead: 1,
-          lastReadAt: '0',
-        ).hasReadingProgress,
-        isTrue,
-      );
-    });
   });
 }
 

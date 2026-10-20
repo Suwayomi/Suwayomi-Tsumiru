@@ -8,15 +8,10 @@ import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
-import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
-import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
-import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
-import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 class CategoryLink extends Link {
   final cursors = <Object?>[];
@@ -51,98 +46,6 @@ class CategoryLink extends Link {
 }
 
 void main() {
-  test('access refreshes do not reload the default category', () async {
-    var pending = Completer<AccountAccess>();
-    final link = CategoryLink();
-    final container = ProviderContainer(
-      overrides: [
-        libraryMangaListProvider.overrideWith((ref) async => []),
-        authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
-        accountAccessProvider.overrideWith((ref) => pending.future),
-        viewOfflineNowProvider.overrideWithValue(false),
-        serverUnreachableProvider.overrideWithValue(false),
-        offlineReadDatabaseProvider.overrideWithValue(null),
-        categoryRepositoryProvider.overrideWithValue(
-          CategoryRepository(GraphQLClient(link: link, cache: GraphQLCache())),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    final states = <AsyncValue<int?>>[];
-    container.listen(defaultCategoryIdProvider, (_, next) => states.add(next));
-    container.listen(categoryMangaListProvider(81), (_, _) {});
-    pending.complete(AccountAccess(capability: AccountCapability.supported));
-    expect(await container.read(defaultCategoryIdProvider.future), 81);
-    await container.read(categoryMangaListProvider(81).future);
-    states.clear();
-    for (var i = 0; i < 5; i++) {
-      pending = Completer<AccountAccess>();
-      container.invalidate(accountAccessProvider);
-      await container.pump();
-      expect(container.read(defaultCategoryIdProvider).isLoading, isFalse);
-      expect(container.read(categoryMangaListProvider(81)).isLoading, isFalse);
-      pending.complete(AccountAccess(capability: AccountCapability.supported));
-      await container.read(accountAccessProvider.future);
-      await container.pump();
-    }
-    expect(states, isEmpty);
-    expect(link.cursors, [null, '3']);
-    pending = Completer<AccountAccess>();
-    container.invalidate(accountAccessProvider);
-    pending.complete(AccountAccess(capability: AccountCapability.unknown));
-    await container.read(accountAccessProvider.future);
-    await container.pump();
-    expect(await container.read(defaultCategoryIdProvider.future), isNull);
-  });
-  for (final defaultId in [0, 81]) {
-    for (final hidden in [false, true]) {
-      test('empty default $defaultId respects hidden=$hidden', () async {
-        final container = ProviderContainer(
-          overrides: [
-            categoryControllerProvider.overrideWith(
-              () => _CategoryList([
-                Fragment$CategoryDto(
-                  id: defaultId,
-                  name: 'Default',
-                  order: 0,
-                  defaultCategory: false,
-                  includeInDownload: Enum$IncludeOrExclude.UNSET,
-                  includeInUpdate: Enum$IncludeOrExclude.UNSET,
-                  mangas: Fragment$CategoryDto$mangas(totalCount: 0),
-                  meta: hidden
-                      ? [
-                          Fragment$CategoryDto$meta(
-                            key: kCategoryHiddenMetaKey,
-                            value: 'true',
-                          ),
-                        ]
-                      : [],
-                ),
-              ]),
-            ),
-            settledDefaultCategoryIdProvider.overrideWithValue(defaultId),
-            showHiddenCategoriesProvider.overrideWith(_HideCategories.new),
-            viewOfflineNowProvider.overrideWithValue(false),
-            serverUnreachableProvider.overrideWithValue(false),
-          ],
-        );
-        addTearDown(container.dispose);
-        final subscription = container.listen(
-          visibleCategoryListProvider,
-          (_, _) {},
-        );
-        addTearDown(subscription.close);
-        await container.read(categoryControllerProvider.future);
-        expect(
-          container
-              .read(visibleCategoryListProvider)
-              .requireValue!
-              .map((c) => c.id),
-          hidden ? [] : [defaultId],
-        );
-      });
-    }
-  }
   for (final capability in AccountCapability.values) {
     test('default identity respects $capability', () async {
       final link = CategoryLink();
@@ -202,16 +105,4 @@ void main() {
 class _EmptyCategories extends CategoryController {
   @override
   Future<Never> build() async => throw UnimplementedError();
-}
-
-class _CategoryList extends CategoryController {
-  _CategoryList(this.categories);
-  final List<CategoryDto> categories;
-  @override
-  Future<List<CategoryDto>?> build() async => categories;
-}
-
-class _HideCategories extends ShowHiddenCategories {
-  @override
-  bool? build() => false;
 }

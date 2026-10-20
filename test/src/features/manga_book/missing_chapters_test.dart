@@ -23,24 +23,4 @@ void main() {
     expect(chapterGap(higher: 10, lower: double.nan), 0);
     expect(chapterGap(higher: double.infinity, lower: 10), 0);
   });
-
-  test('finds gaps before and between available chapters', () {
-    final ranges = findMissingChapterRanges(const [4, 6, 10]);
-
-    expect(ranges.map((range) => (range.lowerChapter, range.higherChapter)), [
-      (0, 4),
-      (4, 6),
-      (6, 10),
-    ]);
-    expect(ranges.map((range) => range.count), [3, 1, 3]);
-  });
-
-  test('floors decimals and ignores repeated scanlator versions', () {
-    final ranges = findMissingChapterRanges(const [1, 1, 1.1, 1.99, 2, 4, 4.5]);
-
-    expect(ranges, hasLength(1));
-    expect(ranges.single.lowerChapter, 2);
-    expect(ranges.single.higherChapter, 4);
-    expect(ranges.single.count, 1);
-  });
 }

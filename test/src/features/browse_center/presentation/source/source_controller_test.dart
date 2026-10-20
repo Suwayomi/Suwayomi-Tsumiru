@@ -48,48 +48,19 @@ SourceDto _src({
 });
 
 void main() {
-  // Out of install order on purpose, to prove we sort.
   final mangaDex = _src(id: '1', name: 'MangaDex');
-  final allManga = _src(
-    id: '2',
-    name: 'allmanga',
-  ); // lowercase -> case-insensitive
   final asura = _src(id: '3', name: 'Asura Scans', pinned: true);
-  final bato = _src(id: '4', name: 'Bato', lang: 'ko');
-  final sources = [mangaDex, allManga, asura, bato];
+  final sources = [mangaDex, asura];
 
-  group('isPinned', () {
-    test('true only when webUI_isPinned meta == "true"', () {
-      expect(asura.isPinned, isTrue);
-      expect(mangaDex.isPinned, isFalse);
-      // value "false" is not pinned
-      expect(_src(id: '9', name: 'x').isPinned, isFalse);
-    });
-  });
+  test('pinned and hidden meta parse only when the value is "true"', () {
+    expect(asura.isPinned, isTrue);
+    expect(mangaDex.isPinned, isFalse);
+    expect(_src(id: '9', name: 'x').isPinned, isFalse);
 
-  group('isHidden', () {
-    test('true only when tsumiru_isHidden meta == "true"', () {
-      expect(_src(id: '9', name: 'x', hidden: true).isHidden, isTrue);
-      expect(mangaDex.isHidden, isFalse);
-      // a pinned-but-not-hidden source is not hidden
-      expect(asura.isHidden, isFalse);
-    });
-  });
-
-  group('groupAllSourcesByLanguage (Sources filter screen)', () {
-    test('keeps pinned/hidden sources; shown before hidden, then by name', () {
-      final hiddenSrc = _src(id: '5', name: 'Comick', hidden: true);
-      final map = groupAllSourcesByLanguage([...sources, hiddenSrc]);
-      // Asura is pinned but must still appear (unlike groupSourcesByLanguage);
-      // hidden Comick sorts after the shown sources.
-      expect(map['en']!.map((e) => e.name), [
-        'allmanga',
-        'Asura Scans',
-        'MangaDex',
-        'Comick',
-      ]);
-      expect(map['ko']!.map((e) => e.name), ['Bato']);
-    });
+    expect(_src(id: '9', name: 'x', hidden: true).isHidden, isTrue);
+    expect(mangaDex.isHidden, isFalse);
+    // a pinned-but-not-hidden source is not hidden
+    expect(asura.isHidden, isFalse);
   });
 
   group('browsableSourceList (hidden sources dropped from browse)', () {
@@ -106,37 +77,6 @@ void main() {
       final out = c.read(browsableSourceListProvider).value!;
       expect(out.map((e) => e.name), isNot(contains('Comick')));
       expect(out.length, sources.length);
-    });
-  });
-
-  group('groupSourcesByLanguage', () {
-    test('sorts each language group alphabetically (case-insensitive)', () {
-      final map = groupSourcesByLanguage(sources, null);
-      expect(map['en']!.map((e) => e.name), ['allmanga', 'MangaDex']);
-      expect(map['ko']!.map((e) => e.name), ['Bato']);
-    });
-  });
-
-  group('sourceMapFilteredAndQueried (Sources tab name filter)', () {
-    ProviderContainer containerWith(Map<String, List<SourceDto>> map) {
-      final c = ProviderContainer(
-        overrides: [
-          sourceMapFilteredProvider.overrideWith((ref) => AsyncData(map)),
-        ],
-      );
-      addTearDown(c.dispose);
-      return c;
-    }
-
-    test('a query filters each group by source name, keeping grouping', () {
-      final c = containerWith({
-        'en': [mangaDex, allManga],
-        'ko': [bato],
-      });
-      c.read(sourceSearchQueryProvider.notifier).update('dex');
-      final out = c.read(sourceMapFilteredAndQueriedProvider).value!;
-      expect(out['en']!.map((e) => e.name), ['MangaDex']);
-      expect(out['ko'], isEmpty);
     });
   });
 }

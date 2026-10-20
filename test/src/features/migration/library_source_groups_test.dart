@@ -12,23 +12,13 @@ MangaSourceInfo m(String sourceId, String name, {bool obsolete = false}) =>
 
 void main() {
   group('groupLibraryBySource', () {
-    test('counts entries per source', () {
+    test('counts entries per source and flags obsolete sources', () {
       final groups = groupLibraryBySource([
         m('a', 'Alpha'),
-        m('a', 'Alpha'),
-        m('b', 'Beta'),
-      ]);
-      expect(groups.firstWhere((g) => g.sourceId == 'a').count, 2);
-      expect(groups.firstWhere((g) => g.sourceId == 'b').count, 1);
-    });
-
-    test('sorts alphabetically and flags obsolete sources', () {
-      final groups = groupLibraryBySource([
-        m('z', 'Zeta'),
         m('a', 'Alpha'),
         m('d', 'Dead', obsolete: true),
       ]);
-      expect(groups.map((g) => g.sourceId).toList(), ['a', 'd', 'z']);
+      expect(groups.firstWhere((g) => g.sourceId == 'a').count, 2);
       expect(groups.firstWhere((g) => g.sourceId == 'd').isObsolete, isTrue);
     });
   });

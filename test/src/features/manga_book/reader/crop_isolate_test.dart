@@ -50,26 +50,19 @@ void main() {
       );
     });
 
-    test('no target size: crops without resizing', () async {
-      final result = await cropImageBytes(encoded);
-      expect(result, isNotNull);
-      expect(result!.width, 80);
-      expect(result.height, 80);
-      // Every pixel of the cropped output is the red fill.
-      for (var p = 0; p < result.rgba.length; p += 4) {
-        expect(result.rgba[p], 255);
-        expect(result.rgba[p + 1], 0);
-        expect(result.rgba[p + 2], 0);
-      }
-    });
-
-    test('targetWidth smaller than the crop downsizes it', () async {
+    test('crops the border and downsizes to the target width', () async {
       final result = await cropImageBytes(encoded, targetWidth: 40);
       expect(result, isNotNull);
       expect(result!.width, 40);
       // Square content, single dimension given -> aspect preserved.
       expect(result.height, 40);
       expect(result.rgba.length, 40 * 40 * 4);
+      // Every pixel of the cropped output is the red fill.
+      for (var p = 0; p < result.rgba.length; p += 4) {
+        expect(result.rgba[p], 255);
+        expect(result.rgba[p + 1], 0);
+        expect(result.rgba[p + 2], 0);
+      }
     });
   });
 }

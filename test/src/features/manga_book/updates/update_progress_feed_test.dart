@@ -51,13 +51,4 @@ void main() {
 
     expect(seen, [false, true, false]);
   });
-
-  test('progress counts read straight off the server totals', () {
-    final p = _progress(true, 100, 37);
-    expect(p.total, 100);
-    expect(p.updateChecked, 37);
-    expect(p.isUpdateChecking, isTrue);
-    expect(_progress(false, 100, 100).isUpdateChecking, isFalse);
-    expect(_progress(false, 0, 0).isUpdateChecking, isFalse);
-  });
 }

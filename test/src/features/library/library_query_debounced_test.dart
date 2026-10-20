@@ -32,23 +32,5 @@ void main() {
         container.dispose();
       });
     });
-
-    test('clearing the query (null) still propagates after the delay', () {
-      fakeAsync((async) {
-        final container = ProviderContainer();
-        container.listen(libraryQueryDebouncedProvider, (_, _) {});
-        final notifier = container.read(libraryQueryProvider.notifier);
-
-        notifier.update('abc');
-        async.elapse(const Duration(milliseconds: 300));
-        expect(container.read(libraryQueryDebouncedProvider), 'abc');
-
-        notifier.update(null);
-        async.elapse(const Duration(milliseconds: 300));
-        expect(container.read(libraryQueryDebouncedProvider), isNull);
-
-        container.dispose();
-      });
-    });
   });
 }

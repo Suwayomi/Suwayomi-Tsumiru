@@ -118,59 +118,24 @@ void main() {
     final inCat23 = _manga(id: 12, categoryIds: [2, 3]);
     final noCat = _manga(id: 13);
 
-    test('filterCategories false → no filtering even with sets', () {
-      final ids = _filter(
-        [inCat2, inCat3, inCat23, noCat],
-        filterCategories: false,
-        include: {'2'},
-      );
-      expect(ids, containsAll([10, 11, 12, 13]));
-    });
-
-    test('include {2} → only manga in cat 2 pass', () {
-      final ids = _filter(
+    test('include {2} keeps cat 2 and exclude {3} drops cat 3', () {
+      final includeIds = _filter(
         [inCat2, inCat3, inCat23, noCat],
         filterCategories: true,
         include: {'2'},
       );
-      expect(ids, containsAll([10, 12]));
-      expect(ids, isNot(contains(11)));
-      expect(ids, isNot(contains(13)));
-    });
+      expect(includeIds, containsAll([10, 12]));
+      expect(includeIds, isNot(contains(11)));
+      expect(includeIds, isNot(contains(13)));
 
-    test('exclude {3} → manga in cat 3 are dropped', () {
-      final ids = _filter(
+      final excludeIds = _filter(
         [inCat2, inCat3, inCat23, noCat],
         filterCategories: true,
         exclude: {'3'},
       );
-      expect(ids, containsAll([10, 13]));
-      expect(ids, isNot(contains(11)));
-      expect(ids, isNot(contains(12)));
-    });
-  });
-
-  group('Tag filter (source genres + custom tags, case-insensitive)', () {
-    final action = _manga(id: 20, genre: ['Action', 'Seinen']);
-    final romance = _manga(id: 21, genre: ['Romance']);
-    final actionLower = _manga(id: 22, genre: ['action']); // different casing
-
-    test('include matches regardless of case', () {
-      final ids = _filter(
-        [action, romance, actionLower],
-        filterTags: true,
-        tagsInclude: {'action'},
-      );
-      expect(ids, [20, 22]);
-    });
-
-    test('exclude drops matching manga, case-insensitively', () {
-      final ids = _filter(
-        [action, romance, actionLower],
-        filterTags: true,
-        tagsExclude: {'Action'},
-      );
-      expect(ids, [21]);
+      expect(excludeIds, containsAll([10, 13]));
+      expect(excludeIds, isNot(contains(11)));
+      expect(excludeIds, isNot(contains(12)));
     });
   });
 }

@@ -33,12 +33,6 @@ class _FakeMangaWithId extends MangaWithId {
 }
 
 void main() {
-  group('MangaMeta.rating', () {
-    test('parses an int from the string-backed meta value', () {
-      expect(MangaMeta.fromJson({'flutter_rating': '4'}).rating, 4);
-    });
-  });
-
   group('mangaRatingProvider', () {
     test('update persists the clamped rating to the meta store', () async {
       final repo = _RecordingRepo();

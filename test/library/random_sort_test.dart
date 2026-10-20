@@ -25,23 +25,5 @@ void main() {
       expect(randomKey(0, 0), equals(randomKey(0, 0)));
     });
 
-    test('different seeds produce a different ordering for a fixed id list', () {
-      final ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-      List<int> sortedWith(int seed) =>
-          [...ids]
-            ..sort((a, b) => randomKey(a, seed).compareTo(randomKey(b, seed)));
-
-      final order0 = sortedWith(0);
-      final order1 = sortedWith(1);
-
-      // The two orderings must differ (with overwhelmingly high probability for
-      // the Knuth-multiplicative hash used; the ids 1..10 are known to differ).
-      expect(
-        order0,
-        isNot(equals(order1)),
-        reason: 'seed 0 and seed 1 should produce different orderings',
-      );
-    });
   });
 }

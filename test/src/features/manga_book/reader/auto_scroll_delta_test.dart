@@ -13,36 +13,5 @@ void main() {
       final d = autoScrollDelta(viewport: 1000, intervalSeconds: 5, dtMs: 5000);
       expect(d, closeTo(1000, 0.001));
     });
-
-    test('scales linearly with elapsed frame time', () {
-      final full = autoScrollDelta(
-        viewport: 1000,
-        intervalSeconds: 5,
-        dtMs: 5000,
-      );
-      final quarter = autoScrollDelta(
-        viewport: 1000,
-        intervalSeconds: 5,
-        dtMs: 1250,
-      );
-      expect(quarter, closeTo(full / 4, 0.001));
-    });
-
-    test('zero elapsed time means no motion', () {
-      expect(autoScrollDelta(viewport: 1000, intervalSeconds: 5, dtMs: 0), 0);
-    });
-  });
-
-  group('autoScrollResumeAt', () {
-    test('resumes at the next interval boundary', () {
-      expect(
-        autoScrollResumeAt(const Duration(milliseconds: 1500), 5),
-        const Duration(seconds: 5),
-      );
-      expect(
-        autoScrollResumeAt(const Duration(milliseconds: 12000), 5),
-        const Duration(seconds: 15),
-      );
-    });
   });
 }

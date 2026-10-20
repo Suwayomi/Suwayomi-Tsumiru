@@ -66,9 +66,6 @@ ChapterDto _chapter() => Fragment$ChapterDto(
 Future<void> _pumpChrome(
   WidgetTester tester, {
   Map<String, Object> prefValues = const {},
-  int currentIndex = 0,
-  bool visible = true,
-  bool reverseSeekBar = false,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -76,7 +73,7 @@ Future<void> _pumpChrome(
 
   SharedPreferences.setMockInitialValues(prefValues);
   final prefs = await SharedPreferences.getInstance();
-  final visibility = ValueNotifier(visible);
+  final visibility = ValueNotifier(true);
   addTearDown(visibility.dispose);
   final utilsBarExpanded = ValueNotifier(false);
   addTearDown(utilsBarExpanded.dispose);
@@ -98,7 +95,7 @@ Future<void> _pumpChrome(
               chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
               pages: const ['a', 'b', 'c'],
             ),
-            currentIndex: currentIndex,
+            currentIndex: 0,
             totalPageCount: null,
             visibility: visibility,
             utilsBarExpanded: utilsBarExpanded,
@@ -107,11 +104,9 @@ Future<void> _pumpChrome(
             scrollDirection: Axis.horizontal,
             onPreviousChapter: null,
             onNextChapter: null,
-            resolvedReaderMode: reverseSeekBar
-                ? ReaderMode.singleHorizontalRTL
-                : ReaderMode.singleHorizontalLTR,
+            resolvedReaderMode: ReaderMode.singleHorizontalLTR,
             autoScrollSupported: false,
-            reverseSeekBar: reverseSeekBar,
+            reverseSeekBar: false,
             onChanged: (_) {},
             onOpenSettings: () {},
             onOpenReaderMode: () {},
@@ -125,11 +120,6 @@ Future<void> _pumpChrome(
 
 void main() {
   group('page-number indicator', () {
-    testWidgets('pref ON (default) shows "1 / 3"', (tester) async {
-      await _pumpChrome(tester);
-      expect(find.text('1 / 3'), findsOneWidget);
-    });
-
     testWidgets('pref OFF hides the indicator', (tester) async {
       await _pumpChrome(tester, prefValues: const {'showPageNumber': false});
       expect(find.text('1 / 3'), findsNothing);

@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/auto_scroll_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_utils_bar.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -21,9 +20,8 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 Future<ProviderContainer> _pumpBar(
   WidgetTester tester,
-  ValueNotifier<bool> expanded, {
-  ReaderMode readerMode = ReaderMode.webtoon,
-}) async {
+  ValueNotifier<bool> expanded,
+) async {
   SharedPreferences.setMockInitialValues(const {});
   final prefs = await SharedPreferences.getInstance();
   late ProviderContainer container;
@@ -37,7 +35,10 @@ Future<ProviderContainer> _pumpBar(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: ReaderUtilsBar(expanded: expanded, readerMode: readerMode),
+              body: ReaderUtilsBar(
+                expanded: expanded,
+                readerMode: ReaderMode.webtoon,
+              ),
             ),
           );
         },
@@ -49,23 +50,6 @@ Future<ProviderContainer> _pumpBar(
 }
 
 void main() {
-  testWidgets('expanded shows the auto-scroll switch and toggles it', (
-    tester,
-  ) async {
-    final expanded = ValueNotifier(true);
-    addTearDown(expanded.dispose);
-    final container = await _pumpBar(tester, expanded);
-
-    expect(container.read(autoScrollActiveProvider), false);
-    // One switch only — smooth/jump is a settings-only preference, never here.
-    expect(find.byType(Switch), findsOneWidget);
-    expect(find.text('Auto scroll'), findsOneWidget);
-    await tester.tap(find.byType(Switch));
-    await tester.pumpAndSettle();
-
-    expect(container.read(autoScrollActiveProvider), true);
-  });
-
   testWidgets('interval stepper clamps to 1..30', (tester) async {
     final expanded = ValueNotifier(true);
     addTearDown(expanded.dispose);

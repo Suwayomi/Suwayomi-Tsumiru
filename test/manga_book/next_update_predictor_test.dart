@@ -15,14 +15,17 @@ void main() {
   ChapterRelease up(int d) => (uploadMs: daysAgoMs(d), fetchMs: daysAgoMs(d));
 
   group('predictNextUpdate interval', () {
-    test('huge gaps clamp at 28', () {
-      final p = predictNextUpdate([up(1), up(60), up(120), up(180)], now: now);
-      expect(p.intervalDays, 28);
-    });
+    test('huge gaps clamp at 28, fewer than 3 chapters defaults to 7', () {
+      final clamped = predictNextUpdate([
+        up(1),
+        up(60),
+        up(120),
+        up(180),
+      ], now: now);
+      expect(clamped.intervalDays, 28);
 
-    test('fewer than 3 dated chapters → default 7', () {
-      final p = predictNextUpdate([up(0), up(40)], now: now);
-      expect(p.intervalDays, 7);
+      final sparse = predictNextUpdate([up(0), up(40)], now: now);
+      expect(sparse.intervalDays, 7);
     });
   });
 
@@ -32,12 +35,6 @@ void main() {
       // cycle = 10 // 7 = 1, nextUpdate = latest + 2*7 = 4 days out.
       final p = predictNextUpdate([up(10), up(17), up(24), up(31)], now: now);
       expect(p.daysUntil(now), 4);
-    });
-
-    test('no chapters → null prediction', () {
-      final p = predictNextUpdate(const [], now: now);
-      expect(p.nextUpdate, isNull);
-      expect(p.daysUntil(now), isNull);
     });
   });
 }

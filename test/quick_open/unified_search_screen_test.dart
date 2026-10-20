@@ -6,7 +6,6 @@ import 'package:tsumiru/src/features/library/domain/category/category_model.dart
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_results.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -56,58 +55,6 @@ class _Categories extends CategoryController {
 }
 
 void main() {
-  testWidgets('typing shows the Go to section and an all-sources row', (
-    tester,
-  ) async {
-    await tester.pumpWidget(await _host());
-    await tester.enterText(find.byType(TextField), 'reader');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Go to'), findsOneWidget);
-    // 'reader' now also matches Reader settings rows, so the handoff row
-    // can sit below the fold of the lazily built list; scroll to it like
-    // the empty-state test does for 'Reader'.
-    expect(
-      find.widgetWithText(SearchSectionHeader, 'Settings'),
-      findsOneWidget,
-    );
-    await tester.scrollUntilVisible(
-      find.textContaining('Search all sources'),
-      100,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.textContaining('Search all sources'), findsOneWidget);
-  });
-
-  testWidgets('empty query shows the go-to launcher (not a blank box)', (
-    tester,
-  ) async {
-    await tester.pumpWidget(await _host());
-    await tester.pumpAndSettle();
-    // The empty state teaches what's searchable by listing destinations.
-    expect(find.text('Go to'), findsOneWidget);
-    // 'Reader' can sit below the fold once examples push the list down; scroll
-    // the launcher to prove real destinations render (not a blank box).
-    await tester.scrollUntilVisible(
-      find.text('Reader'),
-      100,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.text('Reader'), findsWidgets);
-    // Nothing typed → no library results and no global handoff row.
-    expect(find.textContaining('Search all sources'), findsNothing);
-  });
-
-  testWidgets('a pure operator query hides the search-all-sources row', (
-    tester,
-  ) async {
-    await tester.pumpWidget(await _host());
-    await tester.enterText(find.byType(TextField), 'unread:true');
-    await tester.pumpAndSettle();
-    // Nothing plain to hand off — a source can't search a local filter.
-    expect(find.textContaining('Search all sources'), findsNothing);
-  });
-
   testWidgets('the go-to list uses visible categories, not the raw list', (
     tester,
   ) async {

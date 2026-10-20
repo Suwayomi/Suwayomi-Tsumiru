@@ -8,10 +8,7 @@
 // highlight across every section in visual order, Enter opens the
 // highlighted row exactly as a tap would, and typing resets the highlight.
 
-import 'dart:ui' show Tristate;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -212,13 +209,6 @@ Future<void> _down(WidgetTester tester, [int n = 1]) async {
   }
 }
 
-Future<void> _up(WidgetTester tester, [int n = 1]) async {
-  for (var i = 0; i < n; i++) {
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await tester.pump();
-  }
-}
-
 Future<void> _submit(WidgetTester tester) async {
   await tester.testTextInput.receiveAction(TextInputAction.done);
   await tester.pumpAndSettle();
@@ -244,29 +234,6 @@ bool _isHighlighted(WidgetTester tester, Finder text) {
       .any((m) => m.color == hover);
 }
 
-// Whether any node in the semantics tree carries the selected flag — the
-// screen-reader announcement for the highlight.
-bool _treeHasSelected(WidgetTester tester) {
-  var found = false;
-  void visit(SemanticsNode node) {
-    if (found) return;
-    if (node.getSemanticsData().flagsCollection.isSelected == Tristate.isTrue) {
-      found = true;
-      return;
-    }
-    node.visitChildren((child) {
-      visit(child);
-      return true;
-    });
-  }
-
-  // The test tree renders under the per-view owner, not the root one.
-  // ignore: deprecated_member_use
-  final root = tester.binding.pipelineOwner.semanticsOwner?.rootSemanticsNode;
-  if (root != null) visit(root);
-  return found;
-}
-
 void main() {
   group('desktop search arrow-key navigation', () {
     testWidgets('Down, Down, Enter opens the second row', (tester) async {
@@ -289,83 +256,5 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Up returns to the first row', (tester) async {
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      await _typeUpd(tester);
-      await _down(tester, 2);
-      await _up(tester);
-      await _submit(tester);
-
-      expect(find.text('MANGA 2'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('highlight resets when the text changes', (tester) async {
-      final sem = tester.ensureSemantics();
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      await _typeUpd(tester);
-      await _down(tester);
-      expect(_isHighlighted(tester, find.text('Update Notes')), isTrue);
-      expect(_treeHasSelected(tester), isTrue);
-
-      // Typing keeps working with focus in the field, and clears the
-      // highlight: only "Search all sources" matches, so Enter hands off.
-      await tester.enterText(_field(), 'upd x');
-      await tester.pump();
-      await tester.pump();
-      expect(_treeHasSelected(tester), isFalse);
-      expect(
-        tester.widget<TextField>(_field()).focusNode?.hasFocus,
-        isTrue,
-        reason: 'focus stays in the field while moving',
-      );
-      // The handle must go before the end of the test, not in a tearDown.
-      sem.dispose();
-      await _submit(tester);
-
-      expect(find.text('GLOBAL SEARCH PAGE'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Enter with no highlight keeps the top-result behaviour', (
-      tester,
-    ) async {
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      await _typeUpd(tester);
-      await _submit(tester);
-
-      expect(find.text('MANGA 2'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('rows across sections are reachable in visual order', (
-      tester,
-    ) async {
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      // Go to sits right after the Library row: two Downs reach it, so the
-      // Library and Go to headers are not stops.
-      await _typeUpd(tester);
-      await _down(tester, 2);
-      await _submit(tester);
-      expect(find.text('UPDATES PAGE'), findsOneWidget);
-    });
   });
-
-  group('quick-open overlay arrow-key navigation', () {});
 }

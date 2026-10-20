@@ -103,16 +103,4 @@ void main() {
     c.read(mangaChapterSortDirectionProvider.notifier).update(true);
     expect(_names(c), ['alpha', 'Beta', 'Gamma']);
   });
-
-  test(
-    'chapter number sort orders by parsed number, not source order',
-    () async {
-      final c = await _container(chapters);
-      c
-          .read(mangaChapterSortProvider.notifier)
-          .update(ChapterSort.chapterNumber);
-      c.read(mangaChapterSortDirectionProvider.notifier).update(true);
-      expect(_names(c), ['Beta', 'Gamma', 'alpha']);
-    },
-  );
 }

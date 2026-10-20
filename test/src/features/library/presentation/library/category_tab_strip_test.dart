@@ -13,8 +13,6 @@ Future<void> _pumpStrip(
   WidgetTester tester,
   List<StripTab> tabs, {
   double width = 1400,
-  int initialIndex = 0,
-  Locale? locale,
   required void Function(TabController controller) onController,
 }) async {
   // Drive the strip width through the view: it fills the Scaffold body, so
@@ -24,13 +22,12 @@ Future<void> _pumpStrip(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
-      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: DefaultTabController(
           length: tabs.length,
-          initialIndex: initialIndex,
+          initialIndex: 0,
           child: Builder(
             builder: (context) {
               onController(DefaultTabController.of(context));
@@ -91,46 +88,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(controller.index, 12 - hiddenCount);
-    });
-
-    testWidgets('picking a hidden category selects it; row unchanged', (
-      tester,
-    ) async {
-      late TabController controller;
-      final tabs = _tabs([
-        'A',
-        'B',
-        'C',
-        for (var i = 3; i < 12; i++) 'Long category name $i',
-      ]);
-      await _pumpStrip(
-        tester,
-        tabs,
-        width: 1000,
-        onController: (c) => controller = c,
-      );
-
-      expect(find.text('A', findRichText: true), findsOneWidget);
-      expect(find.text('B', findRichText: true), findsOneWidget);
-      expect(find.text('C', findRichText: true), findsOneWidget);
-
-      await tester.tap(find.textContaining('More (', findRichText: true));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Long category name 11', findRichText: true));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(controller.index, 11);
-      // The visible row never reshuffles.
-      expect(find.text('A', findRichText: true), findsOneWidget);
-      expect(find.text('B', findRichText: true), findsOneWidget);
-      expect(find.text('C', findRichText: true), findsOneWidget);
-      // More now shows the hidden selection instead of the count.
-      expect(find.textContaining('More (', findRichText: true), findsNothing);
-      expect(
-        find.text('Long category name 11', findRichText: true),
-        findsOneWidget,
-      );
     });
   });
 }

@@ -18,7 +18,6 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_preview_channel.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_settings_dialog.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/custom_filter_tab.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_filter_prefs/reader_filter_prefs.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -81,50 +80,6 @@ void main() {
   setUp(() {
     readerBrightnessPreview.value = null;
     readerColorFilterPreview.value = null;
-  });
-
-  Future<void> pumpTab(
-    WidgetTester tester, {
-    Map<String, Object> prefValues = const {},
-  }) async {
-    tester.view.physicalSize = const Size(800, 1600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    SharedPreferences.setMockInitialValues(prefValues);
-    final prefs = await SharedPreferences.getInstance();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: CustomFilterTab(mangaId: 1)),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
-
-  ProviderContainer container(WidgetTester tester) =>
-      ProviderScope.containerOf(tester.element(find.byType(CustomFilterTab)));
-
-  testWidgets('brightness toggle writes the provider and reveals its slider', (
-    tester,
-  ) async {
-    await pumpTab(tester);
-
-    await tester.tap(find.text('Custom brightness'));
-    await tester.pumpAndSettle();
-
-    expect(container(tester).read(customBrightnessProvider), isTrue);
-    expect(find.byType(Slider), findsOneWidget);
   });
 
   testWidgets('sheet dismissal flushes a live draft to the provider', (

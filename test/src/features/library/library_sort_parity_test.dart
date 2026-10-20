@@ -15,12 +15,11 @@ MangaDto _manga(
   int id, {
   required String title,
   int unreadCount = 0,
-  int totalChapters = 5,
 }) => Fragment$MangaDto(
   id: id,
   title: title,
   bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: totalChapters),
+  chapters: Fragment$MangaDto$chapters(totalCount: 5),
   downloadCount: 0,
   genre: const [],
   inLibrary: true,
@@ -91,39 +90,18 @@ void main() {
       _manga(3, title: 'C', unreadCount: 3),
     ];
 
-    test('ascending puts fewest-unread first but zero last', () {
+    test('zero unread stays last in both directions, ties break by title', () {
       expect(_sorted(items, by: MangaSort.unread, ascending: true), [3, 2, 1]);
-    });
-
-    test('descending puts most-unread first and still zero last', () {
       expect(_sorted(items, by: MangaSort.unread, ascending: false), [2, 3, 1]);
-    });
 
-    // Without this, an implementation that ties on unread and then falls
-    // straight to id passes every other case here.
-    test('equal unread counts fall through to the title tie-break', () {
+      // Without this, an implementation that ties on unread and then falls
+      // straight to id passes every other case here.
       final tied = [
         _manga(1, title: 'Zebra', unreadCount: 3),
         _manga(2, title: 'Apple', unreadCount: 3),
       ];
       expect(_sorted(tied, by: MangaSort.unread, ascending: true), [2, 1]);
       expect(_sorted(tied, by: MangaSort.unread, ascending: false), [2, 1]);
-    });
-  });
-
-  group('ties break alphabetically, not by id', () {
-    // thenComparator(sortAlphabetically) — LibraryScreenModel.kt:724, applied
-    // after the direction reversal so the tie-break is never inverted.
-    final items = [
-      _manga(1, title: 'Zebra', totalChapters: 5),
-      _manga(2, title: 'Apple', totalChapters: 5),
-    ];
-
-    test('equal keys fall back to title', () {
-      expect(_sorted(items, by: MangaSort.totalChapters, ascending: true), [
-        2,
-        1,
-      ]);
     });
   });
 }

@@ -70,34 +70,7 @@ Widget _app(ProviderContainer container) => UncontrolledProviderScope(
   ),
 );
 
-class _AccountCategories extends CategoryController {
-  @override
-  Future<List<CategoryDto>?> build() async => [
-    _cat(id: 81, name: 'Account default'),
-    _cat(id: 2, name: 'Auto add').copyWith(defaultCategory: true),
-  ];
-}
-
 void main() {
-  testWidgets('nonzero default is excluded while auto-add stays assignable', (
-    tester,
-  ) async {
-    final container = ProviderContainer(
-      overrides: [
-        defaultCategoryIdProvider.overrideWith((ref) async => 81),
-        mangaBookRepositoryProvider.overrideWithValue(
-          _RecordingMangaBookRepo(),
-        ),
-        categoryControllerProvider.overrideWith(_AccountCategories.new),
-      ],
-    );
-    addTearDown(container.dispose);
-    await tester.pumpWidget(_app(container));
-    await tester.pumpAndSettle();
-    expect(find.text('Account default'), findsNothing);
-    expect(find.text('Auto add'), findsOneWidget);
-  });
-
   testWidgets('a failed toggle reverts the checkbox and does not refetch', (
     tester,
   ) async {

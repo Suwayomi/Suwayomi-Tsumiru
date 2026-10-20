@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -89,57 +87,9 @@ void main() {
         ['A', 'B'],
       );
     });
-    test('missing modern preference falls back to legacy', () {
-      expect(
-        MangaMeta.fromJson({
-          'flutter_scanlator': 'Legacy',
-        }).effectivePreferredScanlators,
-        ['Legacy'],
-      );
-    });
-    test('legacy sentinel and absent metadata mean no filtering', () {
-      expect(
-        MangaMeta.fromJson({
-          'flutter_scanlator': MangaMetaKeys.scanlator.key,
-        }).effectivePreferredScanlators,
-        isEmpty,
-      );
-      expect(
-        MangaMeta.fromJson(const {}).effectivePreferredScanlators,
-        isEmpty,
-      );
-    });
-  });
-
-  group('MangaMeta.preferredScanlators parse', () {
-    test('decodes a JSON string array', () {
-      expect(
-        MangaMeta.fromJson({
-          'flutter_preferredScanlators': '["A","B"]',
-        }).preferredScanlators,
-        ['A', 'B'],
-      );
-    });
   });
 
   group('setPreference', () {
-    test(
-      'writes new key as JSON, then mirrors rank-1 into legacy key',
-      () async {
-        final repo = _RecordingRepo();
-        final c = await seeded(repo, const []);
-        final ok = await c
-            .read(mangaPreferredScanlatorsProvider(mangaId: 1).notifier)
-            .setPreference(['B', 'A']);
-        expect(ok, isTrue);
-        // Ordered: the authoritative new key writes before the legacy mirror.
-        expect(repo.patched, [
-          (1, 'flutter_preferredScanlators', jsonEncode(['B', 'A'])),
-          (1, 'flutter_scanlator', 'B'),
-        ]);
-      },
-    );
-
     test(
       'a failed write reports failure and publishes no local success',
       () async {

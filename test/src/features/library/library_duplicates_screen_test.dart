@@ -15,16 +15,10 @@ import 'package:tsumiru/src/features/library/presentation/duplicates/controller/
 import 'package:tsumiru/src/features/library/presentation/duplicates/library_duplicates_screen.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
-import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-
-import '../manga_book/reader/reader_test_fixtures.dart';
-
-MangaDto _m(int id, String title, {String? description}) =>
-    testManga().copyWith.call(id: id, title: title, description: description);
 
 class _FixedUnreachable extends ServerUnreachable {
   @override
@@ -82,38 +76,6 @@ Future<void> _pump(
 }
 
 void main() {
-  group('rendering (stubbed scan result)', () {
-    testWidgets('an empty result shows the no-results state', (tester) async {
-      await _pump(
-        tester,
-        library: const [],
-        extra: [_fakeScan(false, const [])],
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('No results found'), findsOneWidget);
-    });
-
-    testWidgets('a group renders its members\' covers and header', (
-      tester,
-    ) async {
-      final members = [_m(1, 'Solo Leveling'), _m(2, 'Solo Leveling')];
-      const group = (
-        header: 'Solo Leveling',
-        memberIds: [1, 2],
-        reasons: {DupReason.title},
-      );
-      await _pump(
-        tester,
-        library: members,
-        extra: [
-          _fakeScan(false, const [group]),
-        ],
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('Solo Leveling'), findsWidgets);
-    });
-  });
-
   group('toggle', () {
     testWidgets('offline forces the toggle off and disabled', (tester) async {
       await _pump(

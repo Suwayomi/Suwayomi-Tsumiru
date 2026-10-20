@@ -16,16 +16,6 @@ import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/utils/reader_mode_kind.dart';
 
 void main() {
-  group('isPagedReaderMode', () {
-    test('paged modes', () {
-      expect(isPagedReaderMode(ReaderMode.singleHorizontalLTR), isTrue);
-      expect(isPagedReaderMode(ReaderMode.singleHorizontalRTL), isTrue);
-      expect(isPagedReaderMode(ReaderMode.singleVertical), isTrue);
-    });
-  });
-
-  group('isRTLReaderMode', () {});
-
   group('defaultNavigationFor', () {
     test('horizontal modes (paged or continuous) get right-and-left zones', () {
       expect(

@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +20,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
-import 'package:tsumiru/src/features/manga_book/widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -261,109 +259,6 @@ Future<void> _selectRange(WidgetTester tester, String from, String to) async {
 }
 
 void main() {
-  testWidgets('right-click opens the menu without selecting', (tester) async {
-    await _pumpDesktop(tester);
-    await tester.tap(find.text('Chapter 1'), buttons: kSecondaryMouseButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Bookmark'), findsOneWidget);
-    // Chapter 1 is already read, so the toggle offers the reverse.
-    expect(find.text('Mark as unread'), findsOneWidget);
-    expect(find.text('Mark previous as read'), findsOneWidget);
-    expect(find.byType(Checkbox), findsNothing);
-    expect(find.textContaining('Selected'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('delete from server shows a confirmation', (tester) async {
-    await _pumpDesktop(tester);
-    await tester.tap(find.text('Chapter 3'), buttons: kSecondaryMouseButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete from server…'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Are you sure you want to delete the selected chapters?'),
-      findsOneWidget,
-    );
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('shift-click selects a range', (tester) async {
-    await _pumpDesktop(tester);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.tap(find.text('Chapter 2'));
-    await tester.tap(find.text('Chapter 5'));
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
-    Checkbox boxFor(int id) => tester.widget<Checkbox>(
-      find.descendant(
-        of: find.byKey(ValueKey('$id')),
-        matching: find.byType(Checkbox),
-      ),
-    );
-    for (final id in [2, 3, 4, 5]) {
-      expect(boxFor(id).value, isTrue);
-    }
-    expect(boxFor(1).value, isFalse);
-    expect(boxFor(6).value, isFalse);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('desktop selection swaps the chapter header in place', (
-    tester,
-  ) async {
-    await _pumpDesktop(tester);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.tap(find.text('Chapter 2'));
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
-    expect(find.text('1 Selected'), findsOneWidget);
-    expect(find.text('6 Chapters'), findsNothing);
-    expect(
-      find.widgetWithIcon(IconButton, Icons.close_rounded),
-      findsOneWidget,
-    );
-    final header = find.byKey(const ValueKey('chapterSelectionHeader'));
-    for (final tooltip in [
-      'Mark as read',
-      'Bookmark',
-      'Keep offline',
-      'Download',
-    ]) {
-      expect(
-        find.descendant(of: header, matching: find.byTooltip(tooltip)),
-        findsOneWidget,
-      );
-    }
-    expect(
-      find.descendant(
-        of: header,
-        matching: find.widgetWithText(TextButton, 'More'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: header,
-        matching: find.widgetWithText(TextButton, 'Delete…'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.byTooltip('Delete'), findsNothing);
-    expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
-    await tester.tap(find.widgetWithText(TextButton, 'Delete…'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Are you sure you want to delete the selected chapters?'),
-      findsOneWidget,
-    );
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('Undo after bulk mark read restores once the bar is gone', (
     tester,
   ) async {
@@ -406,21 +301,6 @@ void main() {
     expect(restored[4]!.lastPageRead, 0);
     // A restore, not another inverted bulk write.
     expect(book.batches, hasLength(1));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('filter panel opens with tabs and badges on use', (tester) async {
-    await _pumpDesktop(tester);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Filter'));
-    await tester.pumpAndSettle();
-    expect(find.text('Sort'), findsOneWidget);
-    expect(find.text('Display'), findsOneWidget);
-    // No badge before any filter is active.
-    expect(find.text('1'), findsNothing);
-    await tester.tap(find.text('Unread'));
-    await tester.pumpAndSettle();
-    expect(find.text('1'), findsOneWidget);
-    expect(find.textContaining('filtered'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

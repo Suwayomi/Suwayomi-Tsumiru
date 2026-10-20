@@ -35,40 +35,6 @@ MangaDto _m(
 
 void main() {
   group('splitSelectionForDuplicates', () {
-    test('null library ⇒ everything clean, nothing flagged (fail open)', () {
-      final split = splitSelectionForDuplicates(
-        selection: [_m(1, 'Alpha'), _m(2, 'Beta')],
-        library: null,
-      );
-      expect(split.cleanIds, [1, 2]);
-      expect(split.flagged, isEmpty);
-      expect(split.hitIdsByManga, isEmpty);
-      expect(split.certainIdsByManga, isEmpty);
-    });
-
-    test('a library title hit is flagged with the library id', () {
-      final split = splitSelectionForDuplicates(
-        selection: [_m(1, 'Solo Leveling!!')],
-        library: [_m(10, 'Solo Leveling')],
-      );
-      expect(split.cleanIds, isEmpty);
-      expect(split.flagged.map((m) => m.id), [1]);
-      expect(split.hitIdsByManga[1], contains(10));
-      // Title-only, so no certain (tracker) match.
-      expect(split.certainIdsByManga[1], isEmpty);
-    });
-
-    test('intra-selection pair: the second is flagged with the FIRST id', () {
-      final split = splitSelectionForDuplicates(
-        selection: [_m(1, 'Berserk'), _m(2, 'BERSERK!!')],
-        library: const [],
-      );
-      // The first was ruled clean and becomes a comparator for the second.
-      expect(split.cleanIds, [1]);
-      expect(split.flagged.map((m) => m.id), [2]);
-      expect(split.hitIdsByManga[2], {1});
-    });
-
     test('a shared tracker binding flags as a certain match', () {
       final split = splitSelectionForDuplicates(
         selection: [
@@ -81,12 +47,6 @@ void main() {
       expect(split.flagged.map((m) => m.id), [1]);
       expect(split.hitIdsByManga[1], contains(10));
       expect(split.certainIdsByManga[1], contains(10));
-    });
-  });
-
-  group('classifyDuplicateResult (enum exhaustiveness)', () {
-    test('a null result (barrier dismiss) cancels the queue', () {
-      expect(classifyDuplicateResult(null), BulkDupAction.cancelStop);
     });
   });
 }

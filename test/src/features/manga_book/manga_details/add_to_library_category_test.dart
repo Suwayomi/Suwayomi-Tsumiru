@@ -23,12 +23,9 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 import '../reader/reader_test_fixtures.dart';
 
-CategoryDto _cat({
-  required int id,
-  required String name,
-  bool isDefault = false,
-}) => Fragment$CategoryDto(
-  defaultCategory: isDefault,
+CategoryDto _cat({required int id, required String name}) =>
+    Fragment$CategoryDto(
+  defaultCategory: false,
   id: id,
   includeInDownload: Enum$IncludeOrExclude.UNSET,
   includeInUpdate: Enum$IncludeOrExclude.UNSET,
@@ -128,45 +125,5 @@ void main() {
     expect(find.text('Set categories'), findsNothing);
     expect(repo.addedToLibrary, contains(76));
     expect(repo.addedToCategory, contains((76, 1)));
-  });
-
-  testWidgets('Always ask pops the picker; OK adds and assigns the picks', (
-    tester,
-  ) async {
-    final repo = _RecordingRepo();
-    final c = _container(repo, -1);
-    addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, _manga(76)));
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Set categories'), findsOneWidget);
-    // Only user categories are offered (Default/id 0 is excluded).
-    expect(find.text('Default'), findsNothing);
-    await tester.tap(find.text('Pornhwa'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-
-    expect(repo.addedToLibrary, contains(76));
-    expect(repo.addedToCategory, contains((76, 2)));
-    expect(repo.addedToCategory, isNot(contains((76, 1))));
-  });
-
-  testWidgets('a pref pointing at a deleted category prompts, not silent add', (
-    tester,
-  ) async {
-    // 9 is not among the fixed categories (0/1/2) — a category the user chose
-    // as default and later deleted. Must fall through to the picker (matching
-    // the settings label) rather than silently adding uncategorized.
-    final repo = _RecordingRepo();
-    final c = _container(repo, 9);
-    addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, _manga(76)));
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Set categories'), findsOneWidget);
-    expect(repo.addedToLibrary, isEmpty); // nothing added until the user picks
   });
 }

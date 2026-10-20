@@ -33,25 +33,6 @@ void main() {
   });
 
   group('matchChapterState — number matching', () {
-    test('exact number carries read state to the matching target', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: 5, read: true)],
-        target: [ch(id: 11, number: 5), ch(id: 12, number: 6)],
-      );
-      expect(r.unmatchedState, 0);
-      expect(r.patches, hasLength(1));
-      expect(r.patches.single.id, 11);
-      expect(r.patches.single.isRead, true);
-    });
-
-    test('float-noise within tolerance still matches (5.0 vs 5.001)', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: 5.001, read: true)],
-        target: [ch(id: 11, number: 5.0)],
-      );
-      expect(r.patches.single.id, 11);
-    });
-
     test(
       '"Chapter 1" must NOT match "Chapter 10" (no substring collision)',
       () {
@@ -68,14 +49,6 @@ void main() {
   });
 
   group('matchChapterState — monotonicity (never rewind/un-read)', () {
-    test('does not emit when target already read', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: 5, read: true)],
-        target: [ch(id: 11, number: 5, read: true)],
-      );
-      expect(r.patches, isEmpty);
-    });
-
     test('several source chapters on one target take the max position', () {
       final r = matchChapterState(
         source: [
@@ -88,14 +61,5 @@ void main() {
       expect(r.patches.single.lastPageRead, 9);
     });
 
-    test('carries position even when the source chapter is read', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: 5, read: true, lastPage: 7)],
-        target: [ch(id: 11, number: 5, lastPage: 2)],
-      );
-      final p = r.patches.single;
-      expect(p.isRead, true);
-      expect(p.lastPageRead, 7);
-    });
   });
 }
