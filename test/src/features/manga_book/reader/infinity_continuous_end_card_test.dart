@@ -142,10 +142,10 @@ Future<void> _pumpReaderOnLastChapter(
         mangaWithIdProvider(mangaId: 1).overrideWith(
           () => _FakeMangaWithId(_webtoonManga(ReaderMode.webtoon)),
         ),
-        chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
+        chapterProvider(chapterId: 2).overrideWithBuild((ref, _) => ch2),
         chapterProvider(
           chapterId: 3,
-        ).overrideWith((ref) => _chapter(id: 3, sourceOrder: 3)),
+        ).overrideWithBuild((ref, _) => _chapter(id: 3, sourceOrder: 3)),
         chapterPagesProvider(chapterId: 2).overrideWith((ref) => _pages(2, 1)),
         chapterPagesProvider(chapterId: 3).overrideWith((ref) => _pages(3, 1)),
         getNextAndPreviousChaptersProvider(

@@ -21,21 +21,43 @@ import '../../../domain/chapter_page/chapter_page_model.dart';
 part 'reader_controller.g.dart';
 
 @riverpod
-FutureOr<ChapterDto?> chapter(Ref ref, {required int chapterId}) =>
+class Chapter extends _$Chapter {
+  // Bumped on every build so an answer from a superseded read (an explicit
+  // refresh while the background fetch was still in flight) can't overwrite
+  // the value the user is now looking at.
+  int _buildId = 0;
+
+  @override
+  FutureOr<ChapterDto?> build({required int chapterId}) async {
+    final buildId = ++_buildId;
+    final db = ref.watch(offlineReadDatabaseProvider);
+    // Watched before the first await so a new endpoint or custom header
+    // rebuilds this provider and the refetch goes through the new repository.
+    final repository = ref.watch(mangaBookRepositoryProvider);
     // Offline: a downloaded chapter must still open when the server is
     // unreachable, so fall back to the on-device catalog row.
-    chapterMetaWithOfflineFallback(
-      fetch: () => ref
-          .watch(mangaBookRepositoryProvider)
-          .getChapter(chapterId: chapterId),
+    return chapterMetaWithOfflineFallback(
+      fetch: () => repository.getChapter(chapterId: chapterId),
       // Only read the native-only DB when offline is available (never on web).
-      db: ref.watch(offlineReadDatabaseProvider),
+      db: db,
       offlineEnabled: ref.watch(offlineActiveProvider),
       offlineFirst:
           ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       chapterId: chapterId,
+      // A complete device copy opens from the catalog instantly; the server row
+      // then refreshes it in the background, without a second network wait. A
+      // chapter not on the device keeps the network-first read unchanged.
+      deviceCopyOnDisk: db == null
+          ? null
+          : () => chapterCompleteOnDevice(db, chapterId),
+      onServerAnswer: (chapter) {
+        if (!ref.mounted || buildId != _buildId) return;
+        state = AsyncData(chapter);
+      },
     );
+  }
+}
 
 @riverpod
 Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {

@@ -82,7 +82,7 @@ Future<void> _pumpChrome(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
+        chapterProvider(chapterId: 1).overrideWithBuild((ref, _) => _chapter()),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
