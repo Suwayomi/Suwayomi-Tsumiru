@@ -137,7 +137,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
     // descendants read MediaQuery insets as 0 — see project_shell_nav_bottom_
     // inset). On tablet the shell already wraps everything in a SafeArea, so
     // the banner is below the status bar and must add no inset of its own.
-    final topInset = context.isTablet
+    final topInset = context.windowSizeClass >= WindowSizeClass.medium
         ? 0.0
         : View.of(context).viewPadding.top / View.of(context).devicePixelRatio;
 

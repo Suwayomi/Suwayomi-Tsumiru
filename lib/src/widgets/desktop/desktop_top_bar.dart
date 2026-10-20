@@ -32,13 +32,13 @@ const double kWindowButtonsWidth = 3 * 46;
 /// rows.
 const double kTopBarSearchMinWidth = 200;
 
-/// The merged bar shows wherever the desktop layout shows (width >= 600 with
-/// a shortestSide >= 600), on every platform: native desktop, web in a
-/// browser, and Android/iPad tablets. Phones and the in-between
-/// landscape-phone layout keep their existing bars. The single gate for the
-/// shells, [DesktopWindowScaffold], the slot wiring and the page AppBar
-/// suppression, so they cannot disagree.
-bool showsMergedTopBar(BuildContext context) => context.isDesktop;
+/// The merged bar shows wherever the desktop layout shows (medium and up),
+/// on every platform: native desktop, web in a browser, and Android/iPad
+/// tablets. Compact windows, landscape phones included, keep their existing
+/// bars. The single gate for the shells, [DesktopWindowScaffold], the slot
+/// wiring and the page AppBar suppression, so they cannot disagree.
+bool showsMergedTopBar(BuildContext context) =>
+    context.windowSizeClass >= WindowSizeClass.medium;
 
 /// The current route's matched location, or null outside a router (plain
 /// widget tests that pump the bar on its own).
@@ -98,7 +98,6 @@ _TopBarLayout _topBarLayout(
   final brandWidth = DesktopSidebar.widthFor(
     expanded: sidebarIsExpanded(context, preference),
     isMacOS: isMacOS,
-    windowWidth: width,
   );
   final stacked = ref.watch(topBarSlotRegistryProvider)[location];
   final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
@@ -643,10 +642,7 @@ class _BrandBlock extends ConsumerWidget {
         ref.read(sidebarExpandedProvider.notifier).update(!preference);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(
-        begin: DesktopSidebar.widthFor(
-          expanded: expanded,
-          windowWidth: MediaQuery.sizeOf(context).width,
-        ),
+        begin: DesktopSidebar.widthFor(expanded: expanded),
         end: width,
       ),
       duration: context.reduceMotion

@@ -37,7 +37,7 @@ class MoreScreen extends ConsumerWidget {
     final authType = ref.watch(authTypeKeyProvider);
     final account = ref.watch(currentAccountProvider);
     final showAccount = authType == AuthType.uiLogin;
-    final phone = !context.isTablet;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     // Phone searches from the app-bar entry (or the box under the title when
     // the persistent setting is on); tablet and desktop are unchanged.
     final persistentBox =
@@ -58,7 +58,7 @@ class MoreScreen extends ConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
-              title: context.isDesktop
+              title: context.windowSizeClass >= WindowSizeClass.medium
                   ? Align(
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(

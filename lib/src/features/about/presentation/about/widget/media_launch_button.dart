@@ -27,7 +27,7 @@ class MediaLaunchButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return url.isNotBlank
-        ? context.isSmallTabletOrLess
+        ? context.windowSizeClass == WindowSizeClass.compact
             ? IconButton(
                 tooltip: title,
                 onPressed: () => launchUrlInWeb(context, url, toast),

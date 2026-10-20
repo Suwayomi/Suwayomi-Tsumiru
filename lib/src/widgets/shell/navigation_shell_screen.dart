@@ -123,7 +123,7 @@ class NavigationShellScreen extends HookConsumerWidget {
 
     // Handle different navigation indices for tablet vs phone
     int getAdjustedIndex(int index) {
-      if (context.isTablet) {
+      if (context.windowSizeClass >= WindowSizeClass.medium) {
         // Tablet: Library(0), Updates(1), History(2), Browse(3), Downloads(4), More(5)
         return index;
       } else {
@@ -138,7 +138,7 @@ class NavigationShellScreen extends HookConsumerWidget {
     }
 
     int getReverseAdjustedIndex(int index) {
-      if (context.isTablet) {
+      if (context.windowSizeClass >= WindowSizeClass.medium) {
         return index;
       } else {
         // Convert back: if index > 2, subtract 1 to skip history
@@ -180,7 +180,7 @@ class NavigationShellScreen extends HookConsumerWidget {
         : child;
 
     final Widget scaffold;
-    if (context.isTablet) {
+    if (context.windowSizeClass >= WindowSizeClass.medium) {
       scaffold = Scaffold(
         // No bottom bar here, so the rail + content would draw under the system
         // navigation controls (and any landscape cutout). SafeArea keeps both

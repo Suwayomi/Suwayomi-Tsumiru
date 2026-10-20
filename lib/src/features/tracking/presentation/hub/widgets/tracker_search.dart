@@ -97,7 +97,7 @@ class TrackerSearch extends HookConsumerWidget {
 
           // Search field pre-filled with manga title (with tablet constraint & padding).
           SizedBox(
-            width: context.isLargeTablet
+            width: context.windowSizeClass >= WindowSizeClass.expanded
                 ? context.widthScale(scale: .5)
                 : null,
             child: Padding(

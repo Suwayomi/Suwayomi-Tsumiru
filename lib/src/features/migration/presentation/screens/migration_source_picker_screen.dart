@@ -138,7 +138,8 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                 ),
               ],
             ),
-            if (!hideInnerSearchOnDesktop || !context.isDesktop)
+            if (!hideInnerSearchOnDesktop ||
+                context.windowSizeClass == WindowSizeClass.compact)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: SearchField(

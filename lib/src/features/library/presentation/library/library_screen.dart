@@ -14,7 +14,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/enum.dart';
-import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -109,14 +108,14 @@ Widget _groupedBody({
     // always-visible themed scrollbar travels in the gutter the slivers keep
     // (see LibraryMangaSliver); the left inset stays as before. Phone/tablet
     // keep the symmetric inset.
-    padding: context.isDesktop
+    padding: context.windowSizeClass >= WindowSizeClass.medium
         ? const EdgeInsets.only(left: 8)
         : KEdgeInsets.h8.size,
     child: useTabs
         ? Builder(
             builder: (context) {
               final tabs = tabViews();
-              if (!context.isDesktop) {
+              if (context.windowSizeClass == WindowSizeClass.compact) {
                 // Tabs share the ambient controller here, so no scrollbars (else "attached to more than one ScrollPosition").
                 return ScrollConfiguration(
                   behavior: ScrollConfiguration.of(
@@ -222,7 +221,7 @@ Widget _desktopLibraryHeader({
 Widget _organizerButton() => Builder(
   builder: (context) => IconButton(
     onPressed: () {
-      if (context.isTablet) {
+      if (context.windowSizeClass >= WindowSizeClass.medium) {
         Scaffold.of(context).openEndDrawer();
       } else {
         showModalBottomSheet(
@@ -318,11 +317,11 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     // programmatically (tapping a tag → Search opens the library on that tag).
     // Phone searches from the app-bar entry instead, which applies to the
     // filter on submit.
-    final phone = !context.isTablet;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
-    final desktop = context.isDesktop;
+    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
     // Native desktop draws the toolbar in the shell bar instead of the body.
     final topBar = showsMergedTopBar(context);
     useEffect(() {
@@ -372,7 +371,8 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                           // SearchField no longer pads itself; keep the pre-refactor
                           // inset and large-tablet width cap here.
                           : SizedBox(
-                              width: context.isLargeTablet
+                              width: context.windowSizeClass >=
+                                      WindowSizeClass.expanded
                                   ? context.widthScale(scale: .5)
                                   : null,
                               child: Padding(
@@ -396,30 +396,6 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                       tooltip: context.l10n.searchTips,
                                       onPressed: () => showSearchTips(context),
                                     ),
-                                    if (context.isTablet && !context.isDesktop)
-                                      Consumer(
-                                        builder: (context, ref, child) =>
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.travel_explore_rounded,
-                                              ),
-                                              tooltip:
-                                                  context.l10n.globalSearch,
-                                              onPressed:
-                                                  ref
-                                                      .watch(
-                                                        libraryQueryProvider,
-                                                      )
-                                                      .isNotBlank
-                                                  ? () => openGlobalSearch(
-                                                      context,
-                                                      query: ref.read(
-                                                        libraryQueryProvider,
-                                                      ),
-                                                    )
-                                                  : null,
-                                            ),
-                                      ),
                                   ],
                                 ),
                               ),
@@ -613,13 +589,13 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         final showTabs = data!.length > 1 && _showTabBar(style, categoryTabsOn);
         // Desktop replaces the sliver app bar + TabBar with the toolbar row
         // and the tab strip, both pinned.
-        final desktop = context.isDesktop;
+        final desktop = context.windowSizeClass >= WindowSizeClass.medium;
         // Native desktop draws the toolbar in the shell bar instead of the
         // pinned header.
         final topBar = showsMergedTopBar(context);
         // Phone searches from the box under the title, applied to the filter
         // on submit; tablet keeps the live sticky bar.
-        final phone = !context.isTablet;
+        final phone = context.windowSizeClass == WindowSizeClass.compact;
 
         return DefaultTabController(
           // See the matching comment on the toggled-search variant above: keys
@@ -848,11 +824,11 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     // programmatically (tapping a tag → Search opens the library on that tag).
     // Phone searches from the app-bar entry instead, which applies to the
     // filter on submit.
-    final phone = !context.isTablet;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
-    final desktop = context.isDesktop;
+    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
     // Native desktop draws the toolbar in the shell bar instead of the body.
     final topBar = showsMergedTopBar(context);
     useEffect(() {
@@ -897,7 +873,8 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                         // SearchField no longer pads itself; keep the pre-refactor
                         // inset and large-tablet width cap here.
                         : SizedBox(
-                            width: context.isLargeTablet
+                            width: context.windowSizeClass >=
+                                    WindowSizeClass.expanded
                                 ? context.widthScale(scale: .5)
                                 : null,
                             child: Padding(
@@ -1078,13 +1055,13 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
     // Desktop replaces the sliver app bar + TabBar with the toolbar row
     // and the tab strip, both pinned.
-    final desktop = context.isDesktop;
+    final desktop = context.windowSizeClass >= WindowSizeClass.medium;
     // Native desktop draws the toolbar in the shell bar instead of the
     // pinned header.
     final topBar = showsMergedTopBar(context);
     // Phone searches from the box under the title, applied to the filter
     // on submit; tablet keeps the live sticky bar.
-    final phone = !context.isTablet;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
 
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
@@ -1501,12 +1478,6 @@ class _LibrarySearchBar extends ConsumerWidget {
           tooltip: context.l10n.searchTips,
           onPressed: () => showSearchTips(context),
         ),
-        if (context.isTablet && !context.isDesktop && query.isNotEmpty)
-          IconButton(
-            icon: const Icon(Icons.travel_explore_rounded),
-            tooltip: context.l10n.globalSearch,
-            onPressed: () => openGlobalSearch(context, query: query),
-          ),
       ],
       highlightDsl: true,
       hintBehavior: SearchFieldHintBehavior.forceHint,

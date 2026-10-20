@@ -239,7 +239,7 @@ class _MangaCoverDescriptiveListTileState
                     //   ),
                     // ],
                     if (widget.showBadges)
-                      context.isTablet
+                      context.windowSizeClass >= WindowSizeClass.medium
                           ? MangaChipsRow(
                               manga: widget.manga,
                               showCountBadges: widget.showCountBadges,

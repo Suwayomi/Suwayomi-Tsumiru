@@ -41,7 +41,7 @@ class DetailNavigationShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!context.isTablet) return child;
+    if (context.windowSizeClass == WindowSizeClass.compact) return child;
 
     final shell = ref.read(navigationShellStateProvider).shell;
     final selectedIndex = shell?.currentIndex ?? 0;

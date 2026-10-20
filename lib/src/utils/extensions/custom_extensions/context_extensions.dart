@@ -159,42 +159,6 @@ extension ContextExtensions on BuildContext {
   /// get the shortestSide from screen
   double get mediaQueryShortestSide => mediaQuerySize.shortestSide;
 
-  /// True if width be larger than 800
-  bool get showNavbar => (width > 800);
-
-  /// True if the width is less than 600p
-  bool get isPhoneOrLess => width <= 600;
-
-  /// True if the width is greater than 600p
-  bool get isPhoneOrWider => width >= 600;
-
-  /// True if the shortestSide is greater than 600p
-  bool get isPhone => isPhoneOrWider;
-
-  /// True if the width is less than 600p
-  bool get isSmallTabletOrLess => width <= 600;
-
-  /// True if the width is greater than 600p
-  bool get isSmallTabletOrWider => width >= 600;
-
-  /// True if the shortestSide is greater than 600p
-  bool get isSmallTablet => isSmallTabletOrWider;
-
-  /// True if the width is less than 720p
-  bool get isLargeTabletOrLess => width <= 720;
-
-  /// True if the width is greater than 720p
-  bool get isLargeTabletOrWider => width >= 720;
-
-  /// True if the shortestSide is greater than 720p
-  bool get isLargeTablet => isLargeTabletOrWider;
-
-  /// True if the current device is Tablet
-  bool get isTablet => isSmallTabletOrWider;
-
-  /// True if the width is less than 1200p
-  bool get isDesktopOrLess => width <= 1200;
-
   /// Material window size class for the current window
   /// (developer.android.com "Use window size classes").
   /// A window shorter than 600 on its shortest side stays compact even when
@@ -206,16 +170,6 @@ extension ContextExtensions on BuildContext {
     if (width < 1600) return WindowSizeClass.large;
     return WindowSizeClass.extraLarge;
   }
-
-  /// True if the window gets the desktop layout: width >= 600 with a
-  /// shortestSide >= 600, so a landscape phone keeps the in-between layout.
-  bool get isDesktopOrWider => windowSizeClass >= WindowSizeClass.medium;
-
-  /// Same as [isDesktopOrWider].
-  bool get isDesktop => isDesktopOrWider;
-
-  /// True for the full labelled sidebar layout (large and up).
-  bool get isWideDesktop => windowSizeClass >= WindowSizeClass.large;
 
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 

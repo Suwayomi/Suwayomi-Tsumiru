@@ -34,7 +34,7 @@ class DownloadsFab extends ConsumerWidget {
             : null,
         tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
         label: Text(context.l10n.resume),
-        isExtended: context.isTablet,
+        isExtended: context.windowSizeClass >= WindowSizeClass.medium,
         icon: const Icon(Icons.play_arrow_rounded),
       );
     } else {
@@ -48,7 +48,7 @@ class DownloadsFab extends ConsumerWidget {
             : null,
         tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
         label: Text(context.l10n.pause),
-        isExtended: context.isTablet,
+        isExtended: context.windowSizeClass >= WindowSizeClass.medium,
         icon: const Icon(Icons.pause_rounded),
       );
     }

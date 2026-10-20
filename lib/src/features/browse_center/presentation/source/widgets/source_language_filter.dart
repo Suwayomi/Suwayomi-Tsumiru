@@ -37,7 +37,9 @@ class SourceLanguageFilter extends HookConsumerWidget {
       title: Text(context.l10n.languages),
       content: SizedBox(
         height: context.heightScale(scale: .5),
-        width: context.widthScale(scale: context.isSmallTablet ? .5 : .8),
+        width: context.widthScale(
+          scale: context.windowSizeClass >= WindowSizeClass.medium ? .5 : .8,
+        ),
         child: ListView.builder(
           itemCount: languageCodes.value.length,
           itemBuilder: (context, index) {

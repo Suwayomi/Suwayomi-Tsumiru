@@ -279,7 +279,7 @@ class LibraryMangaSliver extends ConsumerWidget {
     // view's right edge; keep the gutter inside the sliver so covers and rows
     // end left of the thumb. Covers keep their size and spacing — only the
     // trailing inset changes. Phone/tablet lay out edge-to-edge as before.
-    if (!context.isDesktop) return sliver;
+    if (context.windowSizeClass == WindowSizeClass.compact) return sliver;
     return SliverPadding(
       padding: const EdgeInsets.only(right: _libraryScrollbarGutter),
       sliver: sliver,

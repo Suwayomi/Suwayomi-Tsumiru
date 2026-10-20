@@ -8,12 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/app_sizes.dart';
 import '../../../../constants/language_list.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
-import '../../../../widgets/search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'controller/source_controller.dart';
@@ -142,27 +140,12 @@ class SourceScreen extends HookConsumerWidget {
     }, refresh: refresh);
 
     // Phone searches from the Browse app-bar entry (or the box below when
-    // the persistent setting is on) and desktop from the Browse app-bar box;
-    // only tablet keeps the live field.
-    final phone = !context.isTablet;
+    // the persistent setting is on) and desktop from the Browse app-bar box.
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     return Column(
       children: [
-        if (!phone && !context.isDesktop)
-          SizedBox(
-            width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
-            child: Padding(
-              padding: KEdgeInsets.h16v4.size,
-              child: SearchField(
-                autofocus: false,
-                labelText: context.l10n.searchForSources,
-                initialText: query,
-                onChanged: (val) =>
-                    ref.read(sourceSearchQueryProvider.notifier).update(val),
-              ),
-            ),
-          ),
         if (persistentBox)
           const PhoneSearchEntry(origin: PhoneSearchOrigin.sources, box: true),
         Expanded(child: body),
