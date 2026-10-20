@@ -35,25 +35,16 @@ Widget? detailNavigationBackButton(BuildContext context) {
 }
 
 class DetailNavigationShellScreen extends ConsumerWidget {
-  const DetailNavigationShellScreen({
-    super.key,
-    required this.child,
-    this.highlightBranch = true,
-  });
+  const DetailNavigationShellScreen({super.key, required this.child});
 
   final Widget child;
-
-  /// Whether the sidebar marks a navigation branch as current. False for the
-  /// detail shell's own routes (series, migration, search), which belong to no
-  /// branch and would otherwise inherit whichever tab was last active.
-  final bool highlightBranch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!context.isTablet) return child;
 
     final shell = ref.read(navigationShellStateProvider).shell;
-    final selectedIndex = highlightBranch ? (shell?.currentIndex ?? 0) : null;
+    final selectedIndex = shell?.currentIndex ?? 0;
     void goToBranch(int index) {
       if (shell != null) {
         shell.goBranch(index, initialLocation: index == selectedIndex);
