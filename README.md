@@ -19,9 +19,9 @@
 <p align="center">A manga and webtoon reader for your Suwayomi server</p>
 
 <p align="center">
-  <img src="assets/screenshots/desktop.png" alt="Tsumiru library on desktop" height="420">
+  <img src="assets/screenshots/desktop.png" alt="Tsumiru library on desktop" height="380">
   &nbsp;
-  <img src="assets/screenshots/phone.png" alt="Tsumiru library on a phone" height="420">
+  <img src="assets/screenshots/phone.png" alt="Tsumiru library on a phone" height="380">
 </p>
 
 > *Tsumiru* (積みる) takes the 積, "pile up", from *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them. It swaps the "read" for *miru*, "to look".
