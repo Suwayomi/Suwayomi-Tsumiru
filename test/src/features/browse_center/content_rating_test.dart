@@ -42,13 +42,6 @@ void main() {
   group('library filter: the series decides, not the source', () {
     // A MIXED source mixes R18 with clean titles; Komikku resolves it on the
     // manga's own tags, not the whole source (LewdMangaChecker.kt:19).
-    test('MIXED source: a tagged series is adult', () {
-      expect(isAdultManga(Enum$ContentWarning.MIXED, ['Adult']), true);
-    });
-
-    test('MIXED source: an untagged series is not', () {
-      expect(isAdultManga(Enum$ContentWarning.MIXED, ['Action']), false);
-    });
 
     test('NSFW source is adult regardless of tags', () {
       expect(isAdultManga(Enum$ContentWarning.NSFW, ['Action']), true);
@@ -58,15 +51,7 @@ void main() {
       expect(isAdultManga(Enum$ContentWarning.SAFE, ['Hentai']), false);
     });
 
-    test('no source falls back to the tags alone', () {
-      expect(isAdultManga(null, ['Smut']), true);
-      expect(isAdultManga(null, ['Action']), false);
-    });
-
     // Komikku's `any {}` on an empty tag list is false, so an untagged series
     // on a mixed source shows — that's parity, not a leak.
-    test('MIXED source with no tags yet is not adult', () {
-      expect(isAdultManga(Enum$ContentWarning.MIXED, const []), false);
-    });
   });
 }

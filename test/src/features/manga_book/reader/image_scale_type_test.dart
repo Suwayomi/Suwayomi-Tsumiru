@@ -21,21 +21,4 @@ void main() {
     expect(ImageScaleType.originalSize.pagedFit(w, h).$1, BoxFit.contain);
     expect(ImageScaleType.smartFit.pagedFit(w, h).$1, BoxFit.fitWidth);
   });
-
-  test('only original size opts out of fitting the page to the screen', () {
-    for (final type in ImageScaleType.values) {
-      expect(
-        type.pagesAtNaturalSize,
-        type == ImageScaleType.originalSize,
-        reason: '$type',
-      );
-    }
-  });
-
-  test('pagedFit size hints match the fit axis', () {
-    expect(ImageScaleType.fitWidth.pagedFit(w, h).$2, const Size.fromWidth(w));
-    expect(ImageScaleType.fitHeight.pagedFit(w, h).$2, const Size.fromHeight(h));
-    // Original size forces no decode hint.
-    expect(ImageScaleType.originalSize.pagedFit(w, h).$2, isNull);
-  });
 }

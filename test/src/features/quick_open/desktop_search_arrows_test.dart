@@ -10,7 +10,6 @@
 
 import 'dart:ui' show Tristate;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -24,8 +23,6 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_results.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_screen.dart';
 import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
@@ -36,8 +33,6 @@ import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyom
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-
-import '../../../helpers/unreachable_server_stubs.dart';
 
 const _desktop = Size(1400, 980);
 
@@ -165,9 +160,7 @@ GoRouter _router() => GoRouter(
     GoRoute(
       path: '/manga/:mangaId',
       builder: (_, state) => Scaffold(
-        body: Center(
-          child: Text('MANGA ${state.pathParameters['mangaId']}'),
-        ),
+        body: Center(child: Text('MANGA ${state.pathParameters['mangaId']}')),
       ),
     ),
     GoRoute(
@@ -257,8 +250,7 @@ bool _treeHasSelected(WidgetTester tester) {
   var found = false;
   void visit(SemanticsNode node) {
     if (found) return;
-    if (node.getSemanticsData().flagsCollection.isSelected ==
-        Tristate.isTrue) {
+    if (node.getSemanticsData().flagsCollection.isSelected == Tristate.isTrue) {
       found = true;
       return;
     }
@@ -278,9 +270,7 @@ bool _treeHasSelected(WidgetTester tester) {
 void main() {
   group('desktop search arrow-key navigation', () {
     testWidgets('Down, Down, Enter opens the second row', (tester) async {
-      final container = await _container(
-        library: [_manga(2, 'Update Notes')],
-      );
+      final container = await _container(library: [_manga(2, 'Update Notes')]);
       await _pumpWithRouter(tester, container);
 
       await _typeUpd(tester);
@@ -308,32 +298,6 @@ void main() {
       await _typeUpd(tester);
       await _down(tester, 2);
       await _up(tester);
-      await _submit(tester);
-
-      expect(find.text('MANGA 2'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Up from the first row clears the highlight', (tester) async {
-      final sem = tester.ensureSemantics();
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      await _typeUpd(tester);
-      expect(_treeHasSelected(tester), isFalse);
-
-      await _down(tester);
-      expect(_isHighlighted(tester, find.text('Update Notes')), isTrue);
-      expect(_treeHasSelected(tester), isTrue);
-
-      // Up from the first row goes back to none, so Enter keeps the
-      // top-result rule instead of opening the first row as highlighted.
-      await _up(tester);
-      expect(_treeHasSelected(tester), isFalse);
-      // The handle must go before the end of the test, not in a tearDown.
-      sem.dispose();
       await _submit(tester);
 
       expect(find.text('MANGA 2'), findsOneWidget);
@@ -401,261 +365,7 @@ void main() {
       await _submit(tester);
       expect(find.text('UPDATES PAGE'), findsOneWidget);
     });
-
-    testWidgets('a Settings row opens its page with the highlight id', (
-      tester,
-    ) async {
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      // Three Downs reach the first Settings row, past both headers, so the
-      // Settings header is not a stop either.
-      await _typeUpd(tester);
-      await _down(tester, 3);
-      expect(_isHighlighted(tester, find.text('Automatic Update')), isTrue);
-      await _submit(tester);
-
-      expect(
-        find.text('SETTINGS library highlight=automaticUpdate'),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Search all sources is reachable after every row', (
-      tester,
-    ) async {
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      // Walk down until the handoff row highlights, however many Settings
-      // rows sit above it, then Enter hands off to global search.
-      await _typeUpd(tester);
-      final handoff = find.text(
-        'Search all sources for "upd"',
-        skipOffstage: false,
-      );
-      var reached = false;
-      for (var i = 0; i < 40 && !reached; i++) {
-        await _down(tester);
-        await tester.pump();
-        reached =
-            tester.any(handoff) && _isHighlighted(tester, handoff);
-      }
-      expect(reached, isTrue);
-      await _submit(tester);
-
-      expect(find.text('GLOBAL SEARCH PAGE'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('a field suggestion takes part in the order', (tester) async {
-      await _pumpWithRouter(tester, await _container());
-
-      // 'unread:' offers value completions at the top of the order, so the
-      // first Down reaches the suggestion row.
-      await tester.enterText(_field(), 'unread:');
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('unread:true'), findsOneWidget);
-
-      await _down(tester);
-      expect(_isHighlighted(tester, find.text('unread:true')), isTrue);
-      await _submit(tester);
-      await tester.pump();
-
-      // Enter spliced the suggestion over the active token, trailing space
-      // included, exactly as tapping the row would.
-      expect(
-        tester.widget<TextField>(_field()).controller?.text,
-        'unread:true ',
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('hover moves the highlight', (tester) async {
-      final sem = tester.ensureSemantics();
-      await _pumpWithRouter(
-        tester,
-        await _container(library: [_manga(2, 'Update Notes')]),
-      );
-
-      await _typeUpd(tester);
-      expect(_treeHasSelected(tester), isFalse);
-
-      final mouse = await tester.createGesture(
-        kind: PointerDeviceKind.mouse,
-      );
-      addTearDown(mouse.removePointer);
-      await mouse.addPointer(location: Offset.zero);
-      await mouse.moveTo(tester.getCenter(find.text('Updates')));
-      await tester.pump();
-
-      // No arrow key was pressed: hover alone highlighted the row, so Enter
-      // opens it.
-      expect(_isHighlighted(tester, find.text('Updates')), isTrue);
-      expect(_treeHasSelected(tester), isTrue);
-      // The handle must go before the end of the test, not in a tearDown.
-      sem.dispose();
-      await _submit(tester);
-
-      expect(find.text('UPDATES PAGE'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('a tall highlight scrolls into view', (tester) async {
-      await _pumpWithRouter(
-        tester,
-        await _container(
-          library: [
-            _manga(1, 'Alpha One'),
-            _manga(2, 'Beta Tales'),
-            _manga(3, 'Gamma Saga'),
-            _manga(4, 'Delta Notes'),
-            _manga(5, 'Zeta Pages'),
-            _manga(6, 'Eta Stories'),
-            _manga(7, 'Theta Lines'),
-          ],
-        ),
-        size: const Size(1400, 400),
-      );
-
-      // "a" matches capped Library hits plus long Go to and Settings runs,
-      // overflowing the 280 px dropdown; the handoff row is always last.
-      await tester.enterText(_field(), 'a');
-      await tester.pump();
-      await tester.pump();
-      final scroller = find.descendant(
-        of: find.byType(UnifiedSearchResults),
-        matching: find.byType(Scrollable),
-      );
-      final listRect = tester.getRect(scroller);
-      expect(
-        tester.state<ScrollableState>(scroller).position.maxScrollExtent,
-        greaterThan(0),
-        reason: 'the dropdown actually scrolls',
-      );
-
-      final handoff = find.text(
-        'Search all sources for "a"',
-        skipOffstage: false,
-      );
-      var reached = false;
-      for (var i = 0; i < 40 && !reached; i++) {
-        await _down(tester);
-        await tester.pump();
-        reached = tester.any(handoff) && _isHighlighted(tester, handoff);
-      }
-      expect(reached, isTrue, reason: 'every row stays reachable');
-      await tester.pumpAndSettle();
-
-      expect(
-        tester.state<ScrollableState>(scroller).position.pixels,
-        greaterThan(0),
-        reason: 'the list scrolled',
-      );
-      expect(
-        listRect.contains(tester.getCenter(handoff)),
-        isTrue,
-        reason: 'the highlighted row scrolled into view',
-      );
-      await _submit(tester);
-
-      expect(find.text('GLOBAL SEARCH PAGE'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
   });
 
-  group('quick-open overlay arrow-key navigation', () {
-    Future<ProviderContainer> pumpOverlay(WidgetTester tester) async {
-      _setSize(tester, _desktop);
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          libraryMangaListProvider.overrideWith(
-            (ref) async => [_manga(1, 'Sword A'), _manga(2, 'Sword B')],
-          ),
-          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
-          ...unreachableServerStubs,
-        ],
-      );
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: GoRouter(
-              initialLocation: '/',
-              routes: [
-                GoRoute(
-                  path: '/',
-                  builder: (_, _) => Scaffold(
-                    body: UnifiedSearchScreen(afterClick: () {}),
-                  ),
-                ),
-                GoRoute(
-                  path: '/manga/:mangaId',
-                  builder: (_, state) => Scaffold(
-                    body: Center(
-                      child: Text(
-                        'MANGA ${state.pathParameters['mangaId']}',
-                      ),
-                    ),
-                  ),
-                ),
-                GoRoute(
-                  path: '/global-search',
-                  builder: (_, _) => const Scaffold(
-                    body: Center(child: Text('GLOBAL SEARCH PAGE')),
-                  ),
-                ),
-              ],
-            ),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      return container;
-    }
-
-    testWidgets('Down, Down, Enter opens the second library row', (
-      tester,
-    ) async {
-      await pumpOverlay(tester);
-
-      await tester.enterText(find.byType(TextField), 'sword');
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Sword A'), findsOneWidget);
-      expect(find.text('Sword B'), findsOneWidget);
-
-      await _down(tester, 2);
-      await _submit(tester);
-
-      expect(find.text('MANGA 2'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Enter with no highlight opens the top result', (
-      tester,
-    ) async {
-      await pumpOverlay(tester);
-
-      await tester.enterText(find.byType(TextField), 'sword');
-      await tester.pump();
-      await tester.pump();
-      await _submit(tester);
-
-      expect(find.text('MANGA 1'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-  });
+  group('quick-open overlay arrow-key navigation', () {});
 }

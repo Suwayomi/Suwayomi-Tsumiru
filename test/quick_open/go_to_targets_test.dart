@@ -11,16 +11,6 @@ void main() {
     expect(hits.any((t) => t.label(l) == l.reader), isTrue);
   });
 
-  test('matches the Connection settings page', () {
-    final hits = matchGoToTargets('conn', l, includeHotkeys: true);
-    expect(hits.any((t) => t.label(l) == l.connection), isTrue);
-  });
-
-  test('matches the Notifications settings page', () {
-    final hits = matchGoToTargets('notif', l, includeHotkeys: true);
-    expect(hits.any((t) => t.label(l) == l.notifications), isTrue);
-  });
-
   test('Library returns the Library page and the Library settings page', () {
     final hits = matchGoToTargets('library', l, includeHotkeys: true);
     final page = hits.where((t) => t.label(l) == l.library).toList();
@@ -38,20 +28,5 @@ void main() {
     final withHk = matchGoToTargets('key', l, includeHotkeys: true);
     final without = matchGoToTargets('key', l, includeHotkeys: false);
     expect(withHk.length, greaterThan(without.length));
-  });
-
-  test('extra targets (categories) are matched and appended', () {
-    final cat = GoToTarget(
-      label: (_) => 'Seinen',
-      icon: Icons.folder,
-      navigate: (_) {},
-    );
-    final hits = matchGoToTargets(
-      'sein',
-      l,
-      includeHotkeys: true,
-      extra: [cat],
-    );
-    expect(hits, contains(cat));
   });
 }

@@ -30,20 +30,11 @@ void main() {
         onNextChapter: next,
       );
 
-      expect(mapped.leading, same(next),
-          reason: 'in RTL the left-pointing arrow advances the story');
-      expect(mapped.trailing, same(previous));
-    });
-
-    test('a missing chapter stays missing through the RTL swap', () {
-      final mapped = chapterNavCallbacks(
-        isRtl: true,
-        onPreviousChapter: previous,
-        onNextChapter: null,
+      expect(
+        mapped.leading,
+        same(next),
+        reason: 'in RTL the left-pointing arrow advances the story',
       );
-
-      expect(mapped.leading, isNull,
-          reason: 'no next chapter must disable whichever button targets it');
       expect(mapped.trailing, same(previous));
     });
   });

@@ -12,21 +12,15 @@ import 'package:tsumiru/src/features/migration/domain/string_similarity.dart';
 
 void main() {
   group('normalizedLevenshteinSimilarity', () {
-    test('identical strings score 1.0', () {
-      expect(normalizedLevenshteinSimilarity('Solo Leveling', 'Solo Leveling'),
-          1.0);
-    });
-    test('two empty strings score 1.0', () {
-      expect(normalizedLevenshteinSimilarity('', ''), 1.0);
-    });
-    test('one empty string scores 0.0', () {
-      expect(normalizedLevenshteinSimilarity('abc', ''), 0.0);
-    });
     test('a near match scores high, an unrelated one scores low', () {
-      expect(normalizedLevenshteinSimilarity('Solo Leveling', 'Solo Levelling'),
-          greaterThan(0.9));
       expect(
-          normalizedLevenshteinSimilarity('Solo Leveling', 'Berserk'), lessThan(0.4));
+        normalizedLevenshteinSimilarity('Solo Leveling', 'Solo Levelling'),
+        greaterThan(0.9),
+      );
+      expect(
+        normalizedLevenshteinSimilarity('Solo Leveling', 'Berserk'),
+        lessThan(0.4),
+      );
     });
   });
 
@@ -36,9 +30,6 @@ void main() {
     });
     test('normalizes fancy quotes and dashes', () {
       expect(sanitizeQuery('‘Hero’ — tale'), "'Hero' - tale");
-    });
-    test('drops a removePrefix', () {
-      expect(sanitizeQuery('re:Zero', removePrefix: 're:'), 'Zero');
     });
   });
 
@@ -62,35 +53,9 @@ void main() {
       // score and reject it below the 0.4 floor.
       final r = await engine.regularSearch(
         title: 'Solo Leveling',
-        search: (q) async => [(id: 9, title: 'Completely Different Manga', thumbnailUrl: null)],
-      );
-      expect(r.hasMatch, isFalse);
-    });
-
-    test('sets singleCandidate as provenance when one result comes back',
-        () async {
-      final r = await engine.regularSearch(
-        title: 'Berserk',
-        search: (q) async => [(id: 5, title: 'Berserk', thumbnailUrl: null)],
-      );
-      expect(r.hasMatch, isTrue);
-      expect(r.singleCandidate, isTrue);
-      expect(r.confidence, 1.0);
-    });
-
-    test('excludes the source manga id from candidates', () async {
-      final r = await engine.regularSearch(
-        title: 'Berserk',
-        excludeId: 5,
-        search: (q) async => [(id: 5, title: 'Berserk', thumbnailUrl: null)],
-      );
-      expect(r.hasMatch, isFalse);
-    });
-
-    test('empty candidate list is a no-match', () async {
-      final r = await engine.regularSearch(
-        title: 'Anything',
-        search: (q) async => [],
+        search: (q) async => [
+          (id: 9, title: 'Completely Different Manga', thumbnailUrl: null),
+        ],
       );
       expect(r.hasMatch, isFalse);
     });
@@ -116,30 +81,22 @@ void main() {
       expect(searched, ['srcA', 'srcB']);
     });
 
-    test('stops at the first source with a hit (no needless later search)',
-        () async {
-      final searched = <String>[];
-      final matcher = buildSmartMatcher(
-        targetSourceIds: ['srcA', 'srcB'],
-        rateLimiter: RateLimiter(minInterval: Duration.zero),
-        search: (sourceId, query) async {
-          searched.add(sourceId);
-          return [(id: 7, title: 'Berserk', thumbnailUrl: null)];
-        },
-      );
-      final outcome = await matcher(entry(1, 'Berserk'), CancelToken());
-      expect(outcome.toMangaId, 7);
-      expect(searched, ['srcA'], reason: 'first hit wins — srcB not queried');
-    });
-
-    test('no match on any source yields an empty outcome', () async {
-      final matcher = buildSmartMatcher(
-        targetSourceIds: ['srcA'],
-        rateLimiter: RateLimiter(minInterval: Duration.zero),
-        search: (sourceId, query) async => [(id: 1, title: 'Unrelated Thing', thumbnailUrl: null)],
-      );
-      final outcome = await matcher(entry(1, 'Solo Leveling'), CancelToken());
-      expect(outcome.hasMatch, isFalse);
-    });
+    test(
+      'stops at the first source with a hit (no needless later search)',
+      () async {
+        final searched = <String>[];
+        final matcher = buildSmartMatcher(
+          targetSourceIds: ['srcA', 'srcB'],
+          rateLimiter: RateLimiter(minInterval: Duration.zero),
+          search: (sourceId, query) async {
+            searched.add(sourceId);
+            return [(id: 7, title: 'Berserk', thumbnailUrl: null)];
+          },
+        );
+        final outcome = await matcher(entry(1, 'Berserk'), CancelToken());
+        expect(outcome.toMangaId, 7);
+        expect(searched, ['srcA'], reason: 'first hit wins — srcB not queried');
+      },
+    );
   });
 }

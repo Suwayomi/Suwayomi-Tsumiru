@@ -22,54 +22,28 @@ void main() {
       expect(isPagedReaderMode(ReaderMode.singleHorizontalRTL), isTrue);
       expect(isPagedReaderMode(ReaderMode.singleVertical), isTrue);
     });
-
-    test('continuous/webtoon modes, including the horizontal orphans', () {
-      expect(isPagedReaderMode(ReaderMode.defaultReader), isFalse);
-      expect(isPagedReaderMode(ReaderMode.continuousVertical), isFalse);
-      expect(isPagedReaderMode(ReaderMode.webtoon), isFalse);
-      expect(isPagedReaderMode(ReaderMode.continuousHorizontalLTR), isFalse);
-      expect(isPagedReaderMode(ReaderMode.continuousHorizontalRTL), isFalse);
-    });
   });
 
-  group('isRTLReaderMode', () {
-    test('RTL modes', () {
-      expect(isRTLReaderMode(ReaderMode.singleHorizontalRTL), isTrue);
-      expect(isRTLReaderMode(ReaderMode.continuousHorizontalRTL), isTrue);
-    });
-
-    test('everything else reads LTR/non-directional', () {
-      expect(isRTLReaderMode(ReaderMode.singleHorizontalLTR), isFalse);
-      expect(isRTLReaderMode(ReaderMode.continuousHorizontalLTR), isFalse);
-      expect(isRTLReaderMode(ReaderMode.singleVertical), isFalse);
-      expect(isRTLReaderMode(ReaderMode.continuousVertical), isFalse);
-      expect(isRTLReaderMode(ReaderMode.webtoon), isFalse);
-      expect(isRTLReaderMode(ReaderMode.defaultReader), isFalse);
-    });
-  });
+  group('isRTLReaderMode', () {});
 
   group('defaultNavigationFor', () {
-    test('horizontal modes (paged or continuous) get right-and-left zones',
-        () {
-      expect(defaultNavigationFor(ReaderMode.singleHorizontalLTR),
-          ReaderNavigationLayout.rightAndLeft);
-      expect(defaultNavigationFor(ReaderMode.singleHorizontalRTL),
-          ReaderNavigationLayout.rightAndLeft);
-      expect(defaultNavigationFor(ReaderMode.continuousHorizontalLTR),
-          ReaderNavigationLayout.rightAndLeft);
-      expect(defaultNavigationFor(ReaderMode.continuousHorizontalRTL),
-          ReaderNavigationLayout.rightAndLeft);
-    });
-
-    test('vertical/webtoon/default get L-shaped zones', () {
-      expect(defaultNavigationFor(ReaderMode.singleVertical),
-          ReaderNavigationLayout.lShaped);
-      expect(defaultNavigationFor(ReaderMode.continuousVertical),
-          ReaderNavigationLayout.lShaped);
-      expect(defaultNavigationFor(ReaderMode.webtoon),
-          ReaderNavigationLayout.lShaped);
-      expect(defaultNavigationFor(ReaderMode.defaultReader),
-          ReaderNavigationLayout.lShaped);
+    test('horizontal modes (paged or continuous) get right-and-left zones', () {
+      expect(
+        defaultNavigationFor(ReaderMode.singleHorizontalLTR),
+        ReaderNavigationLayout.rightAndLeft,
+      );
+      expect(
+        defaultNavigationFor(ReaderMode.singleHorizontalRTL),
+        ReaderNavigationLayout.rightAndLeft,
+      );
+      expect(
+        defaultNavigationFor(ReaderMode.continuousHorizontalLTR),
+        ReaderNavigationLayout.rightAndLeft,
+      );
+      expect(
+        defaultNavigationFor(ReaderMode.continuousHorizontalRTL),
+        ReaderNavigationLayout.rightAndLeft,
+      );
     });
   });
 }

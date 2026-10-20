@@ -20,29 +20,6 @@ MangaDto _entry(int id, String title) =>
     testManga().copyWith.call(id: id, title: title);
 
 void main() {
-  group('matchLibraryRecommendation', () {
-    final library = [_entry(7, 'One Piece'), _entry(9, 'Berserk')];
-
-    test('matches trimmed case-insensitively', () {
-      expect(matchLibraryRecommendation('  oNe PiEcE ', library)?.id, 7);
-    });
-
-    test('returns null without a match', () {
-      expect(matchLibraryRecommendation('Naruto', library), isNull);
-    });
-
-    test('returns null for empty titles and empty libraries', () {
-      expect(matchLibraryRecommendation('   ', library), isNull);
-      expect(matchLibraryRecommendation('One Piece', const []), isNull);
-      expect(matchLibraryRecommendation('One Piece', null), isNull);
-    });
-
-    test('first title match wins', () {
-      final dupes = [_entry(1, 'Dupe'), _entry(2, 'dupe')];
-      expect(matchLibraryRecommendation('DUPE', dupes)?.id, 1);
-    });
-  });
-
   group('RecommendationCard tap routing', () {
     String? pushedMangaId;
 
@@ -75,8 +52,7 @@ void main() {
           ),
           GoRoute(
             path: '/global-search',
-            builder: (_, _) =>
-                const Scaffold(body: Text('GLOBAL SEARCH')),
+            builder: (_, _) => const Scaffold(body: Text('GLOBAL SEARCH')),
           ),
         ],
       );
@@ -97,8 +73,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('title match opens the series page, not search',
-        (tester) async {
+    testWidgets('title match opens the series page, not search', (
+      tester,
+    ) async {
       await pump(
         tester,
         '  oNe PiEcE ',

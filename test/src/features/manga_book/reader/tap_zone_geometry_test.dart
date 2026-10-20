@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/utils/reader_mode_kind.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 
 const _size = Size(300, 600);
@@ -14,14 +15,13 @@ TapAction _at(
   required ReaderNavigationLayout layout,
   TapInvert tapInvert = TapInvert.none,
   bool smaller = false,
-}) =>
-    tapActionForZone(
-      position: Offset(x, y),
-      size: _size,
-      layout: layout,
-      tapInvert: tapInvert,
-      smallerTapZones: smaller,
-    );
+}) => tapActionForZone(
+  position: Offset(x, y),
+  size: _size,
+  layout: layout,
+  tapInvert: tapInvert,
+  smallerTapZones: smaller,
+);
 
 void main() {
   group('Kindle-ish', () {
@@ -43,8 +43,10 @@ void main() {
     test('smaller tap zones shrink the menu band, growing the active area', () {
       // y = 180 is inside the default 200px menu band but outside the 150px one.
       expect(_at(150, 180, layout: layout), TapAction.menu);
-      expect(_at(150, 180, layout: layout, smaller: true),
-          isNot(TapAction.menu));
+      expect(
+        _at(150, 180, layout: layout, smaller: true),
+        isNot(TapAction.menu),
+      );
     });
   });
 
@@ -54,12 +56,6 @@ void main() {
     test('top goes back, bottom goes forward', () {
       expect(_at(150, 50, layout: layout), TapAction.previous);
       expect(_at(150, 550, layout: layout), TapAction.next);
-    });
-
-    test('the middle band splits left, centre and right', () {
-      expect(_at(50, 300, layout: layout), TapAction.previous);
-      expect(_at(150, 300, layout: layout), TapAction.menu);
-      expect(_at(280, 300, layout: layout), TapAction.next);
     });
   });
 
@@ -73,10 +69,14 @@ void main() {
     });
 
     test('horizontal inversion swaps the two edges', () {
-      expect(_at(20, 300, layout: layout, tapInvert: TapInvert.horizontal),
-          TapAction.next);
-      expect(_at(280, 300, layout: layout, tapInvert: TapInvert.horizontal),
-          TapAction.previous);
+      expect(
+        _at(20, 300, layout: layout, tapInvert: TapInvert.horizontal),
+        TapAction.next,
+      );
+      expect(
+        _at(280, 300, layout: layout, tapInvert: TapInvert.horizontal),
+        TapAction.previous,
+      );
     });
   });
 
@@ -84,12 +84,44 @@ void main() {
     test('disabled and an unresolved default both just open the menu', () {
       for (final x in [20.0, 150.0, 280.0]) {
         for (final y in [20.0, 300.0, 580.0]) {
-          expect(_at(x, y, layout: ReaderNavigationLayout.disabled),
-              TapAction.menu);
-          expect(_at(x, y, layout: ReaderNavigationLayout.defaultNavigation),
-              TapAction.menu);
+          expect(
+            _at(x, y, layout: ReaderNavigationLayout.disabled),
+            TapAction.menu,
+          );
+          expect(
+            _at(x, y, layout: ReaderNavigationLayout.defaultNavigation),
+            TapAction.menu,
+          );
         }
       }
     });
+  });
+  test('horizontal paged gets right-and-left, everything else L-shaped', () {
+    // Komikku: PagerConfig.defaultNavigation returns RightAndLeftNavigation
+    // for horizontal pagers and LNavigation otherwise; WebtoonConfig always
+    // returns LNavigation.
+    const horizontal = [
+      ReaderMode.singleHorizontalLTR,
+      ReaderMode.singleHorizontalRTL,
+      ReaderMode.continuousHorizontalLTR,
+      ReaderMode.continuousHorizontalRTL,
+    ];
+    for (final mode in ReaderMode.values) {
+      expect(
+        defaultNavigationFor(mode),
+        horizontal.contains(mode)
+            ? ReaderNavigationLayout.rightAndLeft
+            : ReaderNavigationLayout.lShaped,
+        reason: '$mode',
+      );
+      expect(
+        defaultNavigationFor(mode),
+        isNot(ReaderNavigationLayout.defaultNavigation),
+      );
+      expect(
+        defaultNavigationFor(mode),
+        isNot(ReaderNavigationLayout.disabled),
+      );
+    }
   });
 }

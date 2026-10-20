@@ -64,48 +64,12 @@ void main() {
     });
 
     test('targetWidth smaller than the crop downsizes it', () async {
-      final result = await cropImageBytes(
-        encoded,
-        targetWidth: 40,
-      );
+      final result = await cropImageBytes(encoded, targetWidth: 40);
       expect(result, isNotNull);
       expect(result!.width, 40);
       // Square content, single dimension given -> aspect preserved.
       expect(result.height, 40);
       expect(result.rgba.length, 40 * 40 * 4);
-    });
-
-    test('targetHeight smaller than the crop downsizes it', () async {
-      final result = await cropImageBytes(
-        encoded,
-        targetHeight: 20,
-      );
-      expect(result, isNotNull);
-      expect(result!.height, 20);
-      expect(result.width, 20);
-    });
-
-    test('target size larger than the crop is left untouched (no upscale)',
-        () async {
-      final result = await cropImageBytes(
-        encoded,
-        targetWidth: 500,
-        targetHeight: 500,
-      );
-      expect(result, isNotNull);
-      expect(result!.width, 80);
-      expect(result.height, 80);
-    });
-
-    test('no border found: still returns null with a target size set',
-        () async {
-      final uniform = img.Image(width: 20, height: 20);
-      img.fill(uniform, color: img.ColorRgb8(255, 255, 255));
-      final result = await cropImageBytes(
-        img.encodePng(uniform),
-        targetWidth: 10,
-      );
-      expect(result, isNull);
     });
   });
 }

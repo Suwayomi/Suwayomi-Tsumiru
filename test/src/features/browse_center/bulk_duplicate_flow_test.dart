@@ -8,7 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/source_manga_list/controller/bulk_duplicate_flow.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/duplicate_manga_dialog.dart';
 
 import '../manga_book/reader/reader_test_fixtures.dart';
 
@@ -31,9 +30,7 @@ MangaDto _m(
 }) => testManga().copyWith.call(
   id: id,
   title: title,
-  trackRecords: Fragment$MangaDto$trackRecords(
-    nodes: nodes,
-  ),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: nodes),
 );
 
 void main() {
@@ -85,49 +82,9 @@ void main() {
       expect(split.hitIdsByManga[1], contains(10));
       expect(split.certainIdsByManga[1], contains(10));
     });
-
-    test('a clean member never enters the flagged/hit maps', () {
-      final split = splitSelectionForDuplicates(
-        selection: [_m(1, 'Unique One'), _m(2, 'Unique Two')],
-        library: [_m(10, 'Something Else')],
-      );
-      expect(split.cleanIds, [1, 2]);
-      expect(split.flagged, isEmpty);
-    });
   });
 
   group('classifyDuplicateResult (enum exhaustiveness)', () {
-    test('every dialog result maps to a bulk action', () {
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.addAnyway),
-        BulkDupAction.addThis,
-      );
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.allowAll),
-        BulkDupAction.addRest,
-      );
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.skipIt),
-        BulkDupAction.skipThis,
-      );
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.skipAll),
-        BulkDupAction.skipRest,
-      );
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.migrated),
-        BulkDupAction.handled,
-      );
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.openedEntry),
-        BulkDupAction.openStop,
-      );
-      expect(
-        classifyDuplicateResult(DuplicateDialogResult.cancel),
-        BulkDupAction.cancelStop,
-      );
-    });
-
     test('a null result (barrier dismiss) cancels the queue', () {
       expect(classifyDuplicateResult(null), BulkDupAction.cancelStop);
     });

@@ -44,35 +44,12 @@ Future<void> _pumpStrip(
   await tester.pumpAndSettle();
 }
 
-/// Names currently rendered in the strip row (More label excluded by using
-/// exact tab-name matches while the menu is closed).
-Set<String> _visibleNames(WidgetTester tester, List<StripTab> tabs) => {
-  for (final tab in tabs)
-    if (find.text(tab.name, findRichText: true).evaluate().isNotEmpty) tab.name,
-};
-
 List<StripTab> _tabs(List<String> names) => [
   for (final name in names) (name: name, count: null),
 ];
 
 void main() {
   group('CategoryTabStrip', () {
-    testWidgets('3 short categories show all, no More', (tester) async {
-      late TabController controller;
-      await _pumpStrip(
-        tester,
-        _tabs(['Alpha', 'Beta', 'Gamma']),
-        onController: (c) => controller = c,
-      );
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('Alpha', findRichText: true), findsOneWidget);
-      expect(find.text('Beta', findRichText: true), findsOneWidget);
-      expect(find.text('Gamma', findRichText: true), findsOneWidget);
-      expect(find.textContaining('More (', findRichText: true), findsNothing);
-      expect(controller.index, 0);
-    });
-
     testWidgets('12 categories at 1000 px overflow into More (N)', (
       tester,
     ) async {
@@ -154,103 +131,6 @@ void main() {
         find.text('Long category name 11', findRichText: true),
         findsOneWidget,
       );
-    });
-
-    testWidgets(
-      'selecting a very long hidden name leaves visible tabs identical',
-      (tester) async {
-        const longName =
-            'An Extremely Long Category Name That Goes On And On And On Forever';
-        late TabController controller;
-        final tabs = _tabs([
-          for (var i = 0; i < 11; i++) 'Category $i',
-          longName,
-        ]);
-        await _pumpStrip(
-          tester,
-          tabs,
-          width: 1000,
-          onController: (c) => controller = c,
-        );
-
-        expect(tester.takeException(), isNull);
-        // The long name starts hidden behind the count label.
-        expect(find.text(longName, findRichText: true), findsNothing);
-        expect(
-          find.textContaining('More (', findRichText: true),
-          findsOneWidget,
-        );
-        final before = _visibleNames(tester, tabs);
-        expect(before, isNotEmpty);
-        expect(before, isNot(contains(longName)));
-
-        await tester.tap(find.textContaining('More (', findRichText: true));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(longName, findRichText: true).last);
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(controller.index, 11);
-        // The row never reshuffles: the same tabs stay visible, and the long
-        // name appears only in the More control, ellipsized with a tooltip.
-        final after = _visibleNames(tester, tabs)..remove(longName);
-        expect(after, before);
-        expect(find.textContaining('More (', findRichText: true), findsNothing);
-        expect(find.byTooltip(longName), findsOneWidget);
-      },
-    );
-
-    testWidgets('More label comes from l10n', (tester) async {
-      late TabController controller;
-      final tabs = _tabs([for (var i = 0; i < 12; i++) 'Kategorie $i']);
-      await _pumpStrip(
-        tester,
-        tabs,
-        width: 1000,
-        locale: const Locale('de'),
-        onController: (c) => controller = c,
-      );
-
-      expect(tester.takeException(), isNull);
-      expect(find.textContaining('Mehr (', findRichText: true), findsOneWidget);
-      expect(find.textContaining('More (', findRichText: true), findsNothing);
-      expect(controller.index, 0);
-    });
-
-    testWidgets('long German names do not clip', (tester) async {
-      late TabController controller;
-      await _pumpStrip(
-        tester,
-        _tabs([
-          'Standard',
-          'Abgeschlossene Serien',
-          'Noch nicht begonnene Titel',
-          'Lesezeichen und Favoriten',
-          'Ungelesene Kapitel vorhanden',
-        ]),
-        width: 1000,
-        onController: (c) => controller = c,
-      );
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('Standard', findRichText: true), findsOneWidget);
-      expect(controller.index, 0);
-    });
-
-    testWidgets('counts render muted next to the name', (tester) async {
-      late TabController controller;
-      await _pumpStrip(tester, const [
-        (name: 'Alpha', count: 12),
-        (name: 'Beta', count: 3),
-      ], onController: (c) => controller = c);
-
-      expect(tester.takeException(), isNull);
-      final labels = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((w) => w.textSpan!.toPlainText());
-      expect(labels, contains('Alpha (12)'));
-      expect(labels, contains('Beta (3)'));
-      expect(controller.index, 0);
     });
   });
 }

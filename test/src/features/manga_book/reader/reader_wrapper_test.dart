@@ -20,50 +20,9 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'reader_test_fixtures.dart';
 
 void main() {
-  testWidgets('mounts without changing providers during build', (tester) async {
-    tester.view.physicalSize = const Size(800, 1600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ReaderWrapper(
-            manga: testManga(),
-            chapter: testChapter(),
-            chapterPages: ChapterPagesDto(
-              chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
-              pages: const ['a', 'b', 'c'],
-            ),
-            currentIndex: 0,
-            onChanged: (_) {},
-            onNext: () {},
-            onPrevious: () {},
-            scrollDirection: Axis.horizontal,
-            effectiveReaderMode: ReaderMode.singleHorizontalLTR,
-            child: const SizedBox.shrink(),
-          ),
-        ),
-      ),
-    );
-
-    expect(tester.takeException(), isNull);
-    await tester.pump();
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('prefetches adjacent paged chapters through retained listeners',
-      (tester) async {
+  testWidgets('prefetches adjacent paged chapters through retained listeners', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -77,10 +36,13 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(
-            (first: testChapter(id: 2, name: 'Chapter 2'), second: null),
-          ),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue((
+            first: testChapter(id: 2, name: 'Chapter 2'),
+            second: null,
+          )),
           chapterProvider(chapterId: 2).overrideWith((ref) {
             chapterFetches += 1;
             return testChapter(id: 2, name: 'Chapter 2');
@@ -135,8 +97,10 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

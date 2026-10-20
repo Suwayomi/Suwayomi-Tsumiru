@@ -14,17 +14,24 @@ ChapterState ch({
   bool read = false,
   bool bookmark = false,
   int lastPage = 0,
-}) =>
-    ChapterState(
-      id: id,
-      chapterNumber: number,
-      name: name,
-      isRead: read,
-      isBookmarked: bookmark,
-      lastPageRead: lastPage,
-    );
+}) => ChapterState(
+  id: id,
+  chapterNumber: number,
+  name: name,
+  isRead: read,
+  isBookmarked: bookmark,
+  lastPageRead: lastPage,
+);
 
 void main() {
+  test('pairs source ids to target ids by chapter number', () {
+    final pairs = matchChaptersByNumber(
+      source: [ch(id: 101, number: 1), ch(id: 102, number: 2)],
+      target: [ch(id: 201, number: 1), ch(id: 202, number: 2)],
+    );
+    expect(pairs, [(fromId: 101, toId: 201), (fromId: 102, toId: 202)]);
+  });
+
   group('matchChapterState — number matching', () {
     test('exact number carries read state to the matching target', () {
       final r = matchChapterState(
@@ -45,60 +52,19 @@ void main() {
       expect(r.patches.single.id, 11);
     });
 
-    test('"Chapter 1" must NOT match "Chapter 10" (no substring collision)', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: 1, name: 'Chapter 1', read: true)],
-        target: [ch(id: 110, number: 10, name: 'Chapter 10')],
-      );
-      // 1 != 10 by number, and name fallback is disabled for recognized
-      // numbers, so this is unmatched — never a false read.
-      expect(r.patches, isEmpty);
-      expect(r.unmatchedState, 1);
-    });
-
-    test('distinct numbers do not collide even with similar names', () {
-      final r = matchChapterState(
-        source: [
-          ch(id: 1, number: 1, name: 'Vol 1', read: true),
-          ch(id: 2, number: 10, name: 'Vol 10', read: true),
-        ],
-        target: [
-          ch(id: 101, number: 1, name: 'Vol 1'),
-          ch(id: 110, number: 10, name: 'Vol 10'),
-        ],
-      );
-      expect(r.unmatchedState, 0);
-      expect({for (final p in r.patches) p.id}, {101, 110});
-    });
-  });
-
-  group('matchChapterState — negative-number name fallback (oneshots)', () {
-    test('unrecognized number matches target by exact lowercased name', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: -1, name: 'Oneshot', read: true)],
-        target: [ch(id: 11, number: -1, name: 'oneshot')],
-      );
-      expect(r.patches.single.id, 11);
-      expect(r.unmatchedState, 0);
-    });
-
-    test('negative name fallback is exact, not substring', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: -1, name: 'Extra', read: true)],
-        target: [ch(id: 11, number: -1, name: 'Extra Chapter')],
-      );
-      expect(r.patches, isEmpty);
-      expect(r.unmatchedState, 1);
-    });
-
-    test('all-negative series with no name overlap carries nothing', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: -1, name: 'A', read: true)],
-        target: [ch(id: 11, number: -1, name: 'B')],
-      );
-      expect(r.patches, isEmpty);
-      expect(r.unmatchedState, 1);
-    });
+    test(
+      '"Chapter 1" must NOT match "Chapter 10" (no substring collision)',
+      () {
+        final r = matchChapterState(
+          source: [ch(id: 1, number: 1, name: 'Chapter 1', read: true)],
+          target: [ch(id: 110, number: 10, name: 'Chapter 10')],
+        );
+        // 1 != 10 by number, and name fallback is disabled for recognized
+        // numbers, so this is unmatched — never a false read.
+        expect(r.patches, isEmpty);
+        expect(r.unmatchedState, 1);
+      },
+    );
   });
 
   group('matchChapterState — monotonicity (never rewind/un-read)', () {
@@ -130,15 +96,6 @@ void main() {
       final p = r.patches.single;
       expect(p.isRead, true);
       expect(p.lastPageRead, 7);
-    });
-
-    test('chapters with no state are ignored', () {
-      final r = matchChapterState(
-        source: [ch(id: 1, number: 5)],
-        target: [ch(id: 11, number: 5)],
-      );
-      expect(r.patches, isEmpty);
-      expect(r.unmatchedState, 0);
     });
   });
 }

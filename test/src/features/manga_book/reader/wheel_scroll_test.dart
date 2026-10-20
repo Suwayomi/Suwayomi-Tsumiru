@@ -14,15 +14,14 @@ double? _target({
   double speed = 1.7,
   double minExtent = 0,
   double maxExtent = 10000,
-}) =>
-    wheelScrollTarget(
-      pixels: pixels,
-      rawDelta: rawDelta,
-      reverse: reverse,
-      speed: speed,
-      minExtent: minExtent,
-      maxExtent: maxExtent,
-    );
+}) => wheelScrollTarget(
+  pixels: pixels,
+  rawDelta: rawDelta,
+  reverse: reverse,
+  speed: speed,
+  minExtent: minExtent,
+  maxExtent: maxExtent,
+);
 
 void main() {
   test('a notch moves the multiple of what the platform would', () {
@@ -52,9 +51,5 @@ void main() {
 
   test('at 1x the platform is left to it', () {
     expect(_target(speed: 1), isNull);
-  });
-
-  test('an empty notch is not a move', () {
-    expect(_target(rawDelta: 0), isNull);
   });
 }

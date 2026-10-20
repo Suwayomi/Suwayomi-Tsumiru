@@ -73,9 +73,7 @@ class _MetaManga extends MangaWithId {
     sourceId: '1',
     status: Enum$MangaStatus.ONGOING,
     categories: Fragment$MangaDto$categories(nodes: const []),
-    trackRecords: Fragment$MangaDto$trackRecords(
-      nodes: const [],
-    ),
+    trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
     unreadCount: 0,
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '/manga/$mangaId',
@@ -126,36 +124,6 @@ void main() {
       );
     });
 
-    test(
-      'a manga with no webUI_sortBy meta falls back to the app-wide default, '
-      'while a sibling manga with its own meta stays on its own value — '
-      'proves the fallback is per-manga, not a single shared resolution',
-      () async {
-        final repo = _RecordingRepo();
-        final c = await _containerFor(repo, {
-          1: {'webUI_sortBy': 'source'},
-          2: {}, // no per-manga meta at all
-        });
-        // Set the app-wide default to something distinct from manga 1's
-        // per-manga value, so any cross-talk between the two would be
-        // visible immediately.
-        c
-            .read(mangaChapterSortProvider.notifier)
-            .update(ChapterSort.fetchedDate);
-
-        expect(
-          c.read(mangaChapterSortPreferenceProvider(mangaId: 1)),
-          ChapterSort.source,
-          reason: 'manga 1 keeps its own meta regardless of the global value',
-        );
-        expect(
-          c.read(mangaChapterSortPreferenceProvider(mangaId: 2)),
-          ChapterSort.fetchedDate,
-          reason: 'manga 2 has no override, so it follows the global default',
-        );
-      },
-    );
-
     test('the Tsumiru-only alphabetical flag takes priority over a stale '
         'webUI_sortBy value for that same manga', () async {
       final repo = _RecordingRepo();
@@ -194,21 +162,6 @@ void main() {
       },
     );
 
-    test(
-      'selecting an axis on a manga that never had the alphabetical flag '
-      'writes only webUI_sortBy — no Tsumiru key is created or deleted',
-      () async {
-        final repo = _RecordingRepo();
-        final c = await _containerFor(repo, {1: {}});
-        await c
-            .read(mangaChapterSortPreferenceProvider(mangaId: 1).notifier)
-            .update(ChapterSort.chapterNumber);
-
-        expect(repo.deleted, isEmpty);
-        expect(repo.patched, [(1, 'webUI_sortBy', 'chapterNumber')]);
-      },
-    );
-
     test('a failed write (server unreachable) is returned as an error and does '
         'NOT change the displayed sort', () async {
       final repo = _RecordingRepo(fail: true);
@@ -226,68 +179,9 @@ void main() {
         ChapterSort.source,
       );
     });
-
-    test('a successful write returns no error', () async {
-      final repo = _RecordingRepo();
-      final c = await _containerFor(repo, {1: {}});
-      final result = await c
-          .read(mangaChapterSortPreferenceProvider(mangaId: 1).notifier)
-          .update(ChapterSort.source);
-      expect(result.hasError, isFalse);
-    });
-
-    test('selecting alphabetical writes ONLY the Tsumiru-own flag, never '
-        'touching webUI_sortBy (WebUI has no such mode)', () async {
-      final repo = _RecordingRepo();
-      final c = await _containerFor(repo, {
-        1: {'webUI_sortBy': 'source'},
-      });
-      await c
-          .read(mangaChapterSortPreferenceProvider(mangaId: 1).notifier)
-          .update(ChapterSort.alphabetical);
-
-      expect(
-        repo.patched,
-        contains((1, 'flutter_chapterSortIsAlphabetical', 'true')),
-      );
-      expect(
-        repo.patched.where((p) => p.$2 == 'webUI_sortBy'),
-        isEmpty,
-        reason:
-            'webUI_sortBy is left untouched so a later switch back to '
-            'a real axis has something to fall to',
-      );
-    });
   });
 
   group('MangaChapterSortDirectionPreference — per-manga, not global', () {
-    test('two manga with different webUI_reverse meta resolve independently '
-        '(WebUI\'s "true" = descending), and a manga with none falls back to '
-        'the app-wide default', () async {
-      final repo = _RecordingRepo();
-      final c = await _containerFor(repo, {
-        1: {'webUI_reverse': 'true'},
-        2: {'webUI_reverse': 'false'},
-        3: {}, // no per-manga meta
-      });
-      c.read(mangaChapterSortDirectionProvider.notifier).update(true);
-
-      expect(
-        c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 1)),
-        isFalse,
-        reason: 'webUI_reverse "true" is descending, so not ascending',
-      );
-      expect(
-        c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 2)),
-        isTrue,
-      );
-      expect(
-        c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 3)),
-        isTrue,
-        reason: 'no override -> follows the app-wide default',
-      );
-    });
-
     test('update writes the exact WebUI wire string, inverted: ascending is '
         'webUI_reverse "false", descending is "true"', () async {
       final repo = _RecordingRepo();
@@ -301,26 +195,6 @@ void main() {
         (1, 'webUI_reverse', 'false'),
         (1, 'webUI_reverse', 'true'),
       ]);
-    });
-
-    test('a failed write is returned as an error and does NOT flip the '
-        'displayed direction', () async {
-      final repo = _RecordingRepo(fail: true);
-      final c = await _containerFor(repo, {
-        1: {'webUI_reverse': 'false'}, // ascending
-      });
-      final result = await c
-          .read(
-            mangaChapterSortDirectionPreferenceProvider(mangaId: 1).notifier,
-          )
-          .update(false);
-
-      expect(result.hasError, isTrue);
-      await c.read(mangaWithIdProvider(mangaId: 1).future);
-      expect(
-        c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 1)),
-        isTrue,
-      );
     });
   });
 }

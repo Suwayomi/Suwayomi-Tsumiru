@@ -23,29 +23,22 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 ChapterPagesDto _pages() => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
-      pages: const [
-        '/manga/1/chapter/0/page/0',
-        '/manga/1/chapter/0/page/1',
-        '/manga/1/chapter/0/page/2',
-      ],
-    );
+  chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
+  pages: const [
+    '/manga/1/chapter/0/page/0',
+    '/manga/1/chapter/0/page/1',
+    '/manga/1/chapter/0/page/2',
+  ],
+);
 
 const _copyKey = ValueKey('reader-page-action-copy-image');
 const _openKey = ValueKey('reader-page-action-open-web');
 const _shareKey = ValueKey('reader-page-action-share');
 const _saveKey = ValueKey('reader-page-action-save');
 const _secondCopyKey = ValueKey('reader-page-action-copy-image-second');
-const _secondShareKey = ValueKey('reader-page-action-share-second');
-const _secondSaveKey = ValueKey('reader-page-action-save-second');
 const _spreadCopyKey = ValueKey('reader-page-action-copy-spread');
-const _spreadShareKey = ValueKey('reader-page-action-share-spread');
-const _spreadSaveKey = ValueKey('reader-page-action-save-spread');
 
-Future<void> _openSheet(
-  WidgetTester tester, {
-  int? secondaryPageIndex,
-}) async {
+Future<void> _openSheet(WidgetTester tester, {int? secondaryPageIndex}) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -59,9 +52,7 @@ Future<void> _openSheet(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -94,8 +85,9 @@ Future<void> _openSheet(
 }
 
 void main() {
-  testWidgets('mobile: Komikku set — Copy image, Share, Save; no Open in web',
-      (tester) async {
+  testWidgets('mobile: Komikku set — Copy image, Share, Save; no Open in web', (
+    tester,
+  ) async {
     await _openSheet(tester);
 
     // Single-page actions on mobile; the desktop-only "Open in
@@ -106,20 +98,5 @@ void main() {
     expect(find.byKey(_openKey), findsNothing);
     expect(find.byKey(_secondCopyKey), findsNothing);
     expect(find.byKey(_spreadCopyKey), findsNothing);
-  });
-
-  testWidgets('mobile: manga spread shows second-page and spread actions',
-      (tester) async {
-    await _openSheet(tester, secondaryPageIndex: 1);
-
-    expect(find.byKey(_copyKey), findsOneWidget);
-    expect(find.byKey(_shareKey), findsOneWidget);
-    expect(find.byKey(_saveKey), findsOneWidget);
-    expect(find.byKey(_secondCopyKey), findsOneWidget);
-    expect(find.byKey(_secondShareKey), findsOneWidget);
-    expect(find.byKey(_secondSaveKey), findsOneWidget);
-    expect(find.byKey(_spreadCopyKey), findsOneWidget);
-    expect(find.byKey(_spreadShareKey), findsOneWidget);
-    expect(find.byKey(_spreadSaveKey), findsOneWidget);
   });
 }

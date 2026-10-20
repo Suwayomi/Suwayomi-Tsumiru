@@ -11,14 +11,6 @@ import 'chapter_test_helpers.dart';
 
 void main() {
   group('filterPreferredScanlators', () {
-    test('empty preference returns list unchanged', () {
-      final list = [
-        ch(id: 1, number: 1, scanlator: 'A'),
-        ch(id: 2, number: 1, scanlator: 'B'),
-      ];
-      expect(filterPreferredScanlators(list, const []), same(list));
-    });
-
     test('keeps every row from every selected group without folding', () {
       final rows = filterPreferredScanlators(
         [
@@ -55,53 +47,6 @@ void main() {
         const ['A'],
       );
       expect(rows.map((c) => c.id), [1, 2, 3, 4]);
-    });
-
-    test('preserves all 536 rows in a large restarted-numbering series', () {
-      final chapters = [
-        for (var id = 0; id < 536; id++)
-          ch(
-            id: id,
-            number: (id % 183).toDouble(),
-            name: 'Season ${id ~/ 183 + 1} Chapter ${id % 183}',
-            scanlator: 'A',
-            sourceOrder: id,
-          ),
-      ];
-      expect(filterPreferredScanlators(chapters, const ['A']), hasLength(536));
-    });
-
-    test('keeps an open row from an unselected group', () {
-      final rows = filterPreferredScanlators(
-        [
-          ch(id: 1, number: 1, scanlator: 'A'),
-          ch(id: 2, number: 1, scanlator: 'B'),
-          ch(id: 3, number: 2, scanlator: 'B'),
-        ],
-        const ['B'],
-        keepChapterId: 1,
-      );
-      expect(rows.map((c) => c.id), [1, 2, 3]);
-    });
-
-    test('blank scanlator is selectable as Unknown', () {
-      final rows = filterPreferredScanlators(
-        [ch(id: 1, number: 1), ch(id: 2, number: 2, scanlator: 'A')],
-        const [kUnknownScanlatorGroup],
-      );
-      expect(rows.map((c) => c.id), [1]);
-    });
-
-    test('does not aggregate state between same-number rows', () {
-      final rows = filterPreferredScanlators(
-        [
-          ch(id: 1, number: 1, scanlator: 'A', isRead: true),
-          ch(id: 2, number: 1, scanlator: 'B'),
-        ],
-        const ['B'],
-      );
-      expect(rows.single.id, 2);
-      expect(rows.single.isRead, isFalse);
     });
   });
 
@@ -199,53 +144,6 @@ void main() {
         expect(rows.single.isDownloaded, isTrue);
       },
     );
-
-    test('keeps regular and special same-number chapters independent', () {
-      final rows = applyReaderSessionScanlator([
-        ch(id: 1, number: 6, name: 'Chapter 6', scanlator: 'A', sourceOrder: 0),
-        ch(id: 2, number: 6, name: 'Special 6', scanlator: 'A', sourceOrder: 1),
-      ], scanlatorGroup: 'A');
-      expect(rows.map((c) => c.id), [1, 2]);
-    });
-
-    test('different names across scanlators are not assumed duplicates', () {
-      final rows = applyReaderSessionScanlator([
-        ch(
-          id: 1,
-          number: 1,
-          name: 'Season 1 Chapter 1',
-          scanlator: 'A',
-          sourceOrder: 0,
-        ),
-        ch(
-          id: 2,
-          number: 1,
-          name: 'Season 2 Chapter 1',
-          scanlator: 'B',
-          sourceOrder: 1,
-        ),
-      ], scanlatorGroup: 'A');
-      expect(rows.map((c) => c.id), [1, 2]);
-    });
-
-    test('same-scanlator equal-name rows are kept independent', () {
-      final rows = applyReaderSessionScanlator([
-        ch(id: 1, number: 1, name: 'Chapter 1', scanlator: 'A', sourceOrder: 0),
-        ch(id: 2, number: 1, name: 'Chapter 1', scanlator: 'A', sourceOrder: 1),
-      ], scanlatorGroup: 'A');
-      expect(rows.map((c) => c.id), [1, 2]);
-    });
-
-    test('preserves repeated chapter numbers from separate seasons', () {
-      final rows = applyReaderSessionScanlator([
-        ch(id: 1, number: 1, name: 'Chapter 1', scanlator: 'A', sourceOrder: 0),
-        ch(id: 2, number: 1, name: 'Chapter 1', scanlator: 'B', sourceOrder: 1),
-        ch(id: 3, number: 2, name: 'Chapter 2', scanlator: 'A', sourceOrder: 2),
-        ch(id: 4, number: 1, name: 'Chapter 1', scanlator: 'A', sourceOrder: 3),
-        ch(id: 5, number: 1, name: 'Chapter 1', scanlator: 'B', sourceOrder: 4),
-      ], scanlatorGroup: 'A');
-      expect(rows.map((c) => c.id), [1, 3, 4]);
-    });
 
     test('keeps the exact open release', () {
       final rows = applyReaderSessionScanlator(

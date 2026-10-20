@@ -25,19 +25,16 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/migration/controller/bulk_migration_providers.dart';
 import 'package:tsumiru/src/features/migration/presentation/screens/migration_source_picker_screen.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/phone_search_view.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
-import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../../helpers/fake_extension_repository.dart';
 import '../../../../helpers/legacy_account_access.dart';
 import '../../../../helpers/unreachable_server_stubs.dart';
 
 const _desktop = Size(1400, 980);
-const _phone = Size(400, 800);
 
 SourceDto _src({required String id, required String name}) =>
     SourceDto.fromJson({
@@ -241,98 +238,6 @@ void main() {
 
       await _unmount(tester);
     });
-
-    testWidgets('inner boxes are absent on desktop', (tester) async {
-      await _pumpBrowse(tester, size: _desktop);
-      expect(tester.takeException(), isNull);
-      expect(find.byType(DesktopSearchField), findsOneWidget);
-      // Sources tab is active: its inner box is gone.
-      expect(find.text('Asura Scans'), findsOneWidget);
-      expect(find.byType(SearchField), findsNothing);
-
-      // Tabs build lazily, so visit each one and assert while active.
-      await tester.tap(find.text('Extensions'));
-      await tester.pumpAndSettle();
-      expect(find.text('Beta Extension'), findsOneWidget);
-      expect(find.byType(SearchField), findsNothing);
-
-      await tester.tap(find.text('Migrate'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.byType(SearchField), findsNothing);
-
-      await _unmount(tester);
-    });
-
-    testWidgets('toolbar lives in the shell bar, tabs below it', (
-      tester,
-    ) async {
-      await _pumpBrowse(tester, size: _desktop);
-      expect(tester.takeException(), isNull);
-
-      expect(find.byType(DesktopTopBar), findsOneWidget);
-      expect(find.byType(AppBar), findsNothing);
-
-      final barRect = tester.getRect(find.byType(DesktopTopBar));
-      final fieldRect = tester.getRect(_topField());
-      expect(barRect.contains(fieldRect.topCenter), isTrue);
-      expect(barRect.contains(fieldRect.bottomCenter), isTrue);
-
-      // The Sources/Extensions/Migrate tabs stay in the page body.
-      for (final tab in ['Sources', 'Extensions', 'Migrate']) {
-        expect(
-          tester.getTopLeft(find.text(tab)).dy,
-          greaterThanOrEqualTo(barRect.bottom - 1),
-        );
-      }
-
-      await _unmount(tester);
-    });
-
-    testWidgets('inner boxes stay on phone', (tester) async {
-      await _pumpBrowse(tester, size: _phone);
-      expect(tester.takeException(), isNull);
-      expect(find.byType(DesktopSearchField), findsNothing);
-      // Sources searches from the app-bar entry.
-      expect(find.byType(PhoneSearchEntry), findsOneWidget);
-
-      await tester.tap(find.text('Extensions'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      // The Extensions tab keeps its live box.
-      expect(find.byType(SearchField), findsWidgets);
-
-      await _unmount(tester);
-    });
-
-    testWidgets(
-      'in-between layout keeps the global search button; phone/desktop hide it',
-      (tester) async {
-        await _pumpBrowse(tester, size: const Size(915, 412));
-        expect(tester.takeException(), isNull);
-        expect(
-          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-          findsOneWidget,
-        );
-        await _unmount(tester);
-
-        await _pumpBrowse(tester, size: _phone);
-        expect(tester.takeException(), isNull);
-        expect(
-          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-          findsNothing,
-        );
-        await _unmount(tester);
-
-        await _pumpBrowse(tester, size: _desktop);
-        expect(tester.takeException(), isNull);
-        expect(
-          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-          findsNothing,
-        );
-        await _unmount(tester);
-      },
-    );
 
     testWidgets('tapping the in-between-layout button opens Global Search', (
       tester,

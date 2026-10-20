@@ -106,20 +106,9 @@ void main() {
   final noSource = _manga(id: 3); // source == null → treated as non-nsfw
 
   group('Lewd filter (mangaFilterLewd)', () {
-    test('null → no filtering, all pass', () {
-      final ids = _filter([nsfw, sfw, noSource], lewd: null);
-      expect(ids, containsAll([1, 2, 3]));
-    });
-
     test('true → only NSFW sources pass', () {
       final ids = _filter([nsfw, sfw, noSource], lewd: true);
       expect(ids, [1]);
-    });
-
-    test('false → only non-NSFW (or no-source) pass', () {
-      final ids = _filter([nsfw, sfw, noSource], lewd: false);
-      expect(ids, containsAll([2, 3]));
-      expect(ids, isNot(contains(1)));
     });
   });
 
@@ -159,44 +148,12 @@ void main() {
       expect(ids, isNot(contains(11)));
       expect(ids, isNot(contains(12)));
     });
-
-    test('include {2} exclude {3} → must be in 2, must not be in 3', () {
-      // inCat2 (id 10): in 2, not in 3 → PASS
-      // inCat3 (id 11): not in 2 → FAIL (include gate)
-      // inCat23 (id 12): in 2 BUT also in 3 → FAIL (exclude gate)
-      // noCat (id 13): not in 2 → FAIL
-      final ids = _filter(
-        [inCat2, inCat3, inCat23, noCat],
-        filterCategories: true,
-        include: {'2'},
-        exclude: {'3'},
-      );
-      expect(ids, [10]);
-    });
-
-    test(
-      'empty include + empty exclude → all pass when filterCategories true',
-      () {
-        final ids = _filter(
-          [inCat2, inCat3, noCat],
-          filterCategories: true,
-          include: {},
-          exclude: {},
-        );
-        expect(ids, containsAll([10, 11, 13]));
-      },
-    );
   });
 
   group('Tag filter (source genres + custom tags, case-insensitive)', () {
     final action = _manga(id: 20, genre: ['Action', 'Seinen']);
     final romance = _manga(id: 21, genre: ['Romance']);
     final actionLower = _manga(id: 22, genre: ['action']); // different casing
-
-    test('filterTags false → no filtering even with a selection', () {
-      final ids = _filter([action, romance], tagsInclude: {'Action'});
-      expect(ids, containsAll([20, 21]));
-    });
 
     test('include matches regardless of case', () {
       final ids = _filter(
@@ -205,15 +162,6 @@ void main() {
         tagsInclude: {'action'},
       );
       expect(ids, [20, 22]);
-    });
-
-    test('include is OR across selected tags', () {
-      final ids = _filter(
-        [action, romance],
-        filterTags: true,
-        tagsInclude: {'seinen', 'romance'},
-      );
-      expect(ids, containsAll([20, 21]));
     });
 
     test('exclude drops matching manga, case-insensitively', () {

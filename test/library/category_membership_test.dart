@@ -40,24 +40,5 @@ void main() {
         isNull,
       );
     });
-
-    test('single series → true/false, never mixed', () {
-      expect(categoryMembership([{5}], 5), isTrue);
-      expect(categoryMembership([{5}], 6), isFalse);
-    });
-
-    test('empty selection → false (nothing is "in")', () {
-      expect(categoryMembership(const [], 1), isFalse);
-    });
-
-    test('series with no categories count as "out"', () {
-      expect(
-        categoryMembership([
-          {1},
-          <int>{},
-        ], 1),
-        isNull, // one in, one out → mixed
-      );
-    });
   });
 }

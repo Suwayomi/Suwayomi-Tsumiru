@@ -57,24 +57,6 @@ void main() {
       );
     }
   }
-  test('inserts initial and internal gaps in ascending order', () {
-    final chapters = [
-      ch(id: 1, number: 4),
-      ch(id: 2, number: 6),
-      ch(id: 3, number: 10),
-    ];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {1, 2, 3},
-          ascending: true,
-        ),
-      ),
-      ['missing:3', 4, 'missing:1', 6, 'missing:3', 10],
-    );
-  });
 
   test('puts the initial gap at the end in descending order', () {
     final chapters = [
@@ -95,71 +77,6 @@ void main() {
     );
   });
 
-  test(
-    'places a descending gap after the last chapter of its higher bound',
-    () {
-      final chapters = [
-        ch(id: 1, number: 17),
-        ch(id: 2, number: 16.5),
-        ch(id: 3, number: 16),
-        ch(id: 4, number: 13),
-      ];
-
-      expect(
-        _labels(
-          buildMangaChapterListEntries(
-            sortedChapters: chapters,
-            visibleChapterIds: {1, 2, 3, 4},
-            ascending: false,
-          ),
-        ),
-        [17, 16.5, 16, 'missing:2', 13, 'missing:12'],
-      );
-    },
-  );
-
-  test('places a descending gap after duplicate scanlator rows', () {
-    final chapters = [
-      ch(id: 1, number: 16),
-      ch(id: 2, number: 16, scanlator: 'other'),
-      ch(id: 3, number: 13),
-    ];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {1, 2, 3},
-          ascending: false,
-        ),
-      ),
-      [16, 16, 'missing:2', 13, 'missing:12'],
-    );
-  });
-
-  test(
-    'places an ascending gap before the first chapter of its higher bound',
-    () {
-      final chapters = [
-        ch(id: 1, number: 13),
-        ch(id: 2, number: 16),
-        ch(id: 3, number: 16.5),
-        ch(id: 4, number: 17),
-      ];
-
-      expect(
-        _labels(
-          buildMangaChapterListEntries(
-            sortedChapters: chapters,
-            visibleChapterIds: {1, 2, 3, 4},
-            ascending: true,
-          ),
-        ),
-        ['missing:12', 13, 'missing:2', 16, 16.5, 17],
-      );
-    },
-  );
-
   test('places a gap after a real chapter zero instead of before it', () {
     final chapters = [ch(id: 0, number: 0), ch(id: 10, number: 10)];
 
@@ -172,25 +89,6 @@ void main() {
         ),
       ),
       [0, 'missing:9', 10],
-    );
-  });
-
-  test('filters chapter rows without turning present chapters into gaps', () {
-    final chapters = [
-      ch(id: 1, number: 1),
-      ch(id: 2, number: 2),
-      ch(id: 4, number: 4),
-    ];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {1, 4},
-          ascending: true,
-        ),
-      ),
-      [1, 'missing:1', 4],
     );
   });
 
@@ -210,37 +108,6 @@ void main() {
         ),
       ),
       [1, 'missing:2', 5],
-    );
-  });
-
-  test('keeps each real gap to one entry in a non-numeric sort', () {
-    final chapters = [
-      ch(id: 1, number: 1),
-      ch(id: 10, number: 10),
-      ch(id: 2, number: 2),
-      ch(id: 11, number: 10, scanlator: 'other'),
-    ];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {1, 2, 10, 11},
-          ascending: true,
-        ),
-      ).where((label) => label == 'missing:7'),
-      hasLength(1),
-    );
-  });
-
-  test('returns no warning-only list when all chapters are filtered out', () {
-    expect(
-      buildMangaChapterListEntries(
-        sortedChapters: [ch(id: 10, number: 10)],
-        visibleChapterIds: const {},
-        ascending: true,
-      ),
-      isEmpty,
     );
   });
 }

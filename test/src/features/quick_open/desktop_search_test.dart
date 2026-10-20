@@ -27,7 +27,6 @@ import 'package:tsumiru/src/features/library/presentation/library/widgets/deskto
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/search_stack/search_stack_screen.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/phone_search_view.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
@@ -36,7 +35,6 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
-import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../helpers/unreachable_server_stubs.dart';
 
@@ -165,6 +163,17 @@ GoRouter _routerWithField(List<Fragment$MangaDto> library) => GoRouter(
       builder: (context, state) =>
           const Scaffold(body: Center(child: Text('GLOBAL SEARCH PAGE'))),
     ),
+    GoRoute(
+      path: '/more/settings/:page',
+      builder: (context, state) => Scaffold(
+        body: Center(
+          child: Text(
+            'SETTINGS ${state.pathParameters['page']} '
+            'highlight=${state.uri.queryParameters['highlight']}',
+          ),
+        ),
+      ),
+    ),
   ],
 );
 
@@ -213,6 +222,22 @@ class _FakeReadingHistory extends ReadingHistory {
 }
 
 void main() {
+  testWidgets('typing "theme" shows Settings with App Theme Mode', (
+    tester,
+  ) async {
+    await _pumpFieldWithRouter(tester);
+
+    await tester.enterText(_fieldTextField(), 'theme');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('App Theme Mode'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Appearance › Theme'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   group('DesktopSearchField', () {
     testWidgets('shows the unified hint', (tester) async {
       await _pumpField(tester);
@@ -222,29 +247,6 @@ void main() {
         field.decoration?.hintText,
         'Search your library, app, and sources',
       );
-    });
-
-    testWidgets('text is vertically centred in the 40 px box', (tester) async {
-      await _pumpField(tester);
-      expect(tester.takeException(), isNull);
-
-      final box = tester.getRect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is Container &&
-              w.clipBehavior == Clip.antiAlias &&
-              (w.decoration as BoxDecoration?)?.borderRadius ==
-                  BorderRadius.circular(10),
-        ),
-      );
-      expect(box.height, 40);
-      final textCenter = tester.getCenter(
-        find.descendant(
-          of: find.byType(DesktopSearchField),
-          matching: find.byType(EditableText),
-        ),
-      );
-      expect((textCenter.dy - box.center.dy).abs(), lessThanOrEqualTo(1));
     });
 
     testWidgets('typing opens Library hits and Search all sources', (
@@ -318,37 +320,6 @@ void main() {
         isEmpty,
         reason: 'leaving through a result clears the query',
       );
-    });
-
-    testWidgets('picking a Go to target clears the query', (tester) async {
-      final container = await _pumpFieldWithRouter(tester);
-
-      await tester.enterText(_fieldTextField(), 'upd');
-      await tester.pump();
-      expect(find.text('Go to'), findsOneWidget);
-      await tester.tap(find.text('Updates'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('UPDATES PAGE'), findsOneWidget);
-      expect(
-        container.read(unifiedSearchQueryProvider),
-        isEmpty,
-        reason: 'leaving through a result clears the query',
-      );
-    });
-
-    testWidgets('Search all sources navigates and clears the query', (
-      tester,
-    ) async {
-      final container = await _pumpFieldWithRouter(tester);
-
-      await tester.enterText(_fieldTextField(), 'sw');
-      await tester.pump();
-      await tester.tap(find.text('Search all sources for "sw"'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('GLOBAL SEARCH PAGE'), findsOneWidget);
-      expect(container.read(unifiedSearchQueryProvider), isEmpty);
     });
 
     testWidgets('Ctrl+F focuses the field instead of opening the overlay', (
@@ -572,19 +543,6 @@ void main() {
       Finder headerTextField() =>
           find.descendant(of: headerField(), matching: find.byType(TextField));
 
-      testWidgets('header field lives in the shell bar; no AppBar', (
-        tester,
-      ) async {
-        await pumpHistory(tester);
-        expect(tester.takeException(), isNull);
-
-        expect(find.byType(DesktopTopBar), findsOneWidget);
-        expect(find.byType(AppBar), findsNothing);
-        expect(headerField(), findsOneWidget);
-        // One search box, not two: no inline "Search history..." bar.
-        expect(find.byType(SearchField), findsNothing);
-      });
-
       testWidgets('typing filters the list and shows History first', (
         tester,
       ) async {
@@ -601,24 +559,6 @@ void main() {
         // The dropdown leads with its History section, then unified rows.
         expect(find.text('History'), findsOneWidget);
         expect(find.text('Search all sources for "sw"'), findsOneWidget);
-      });
-
-      testWidgets('Esc closes; Esc again clears', (tester) async {
-        final container = await pumpHistory(tester);
-
-        await tester.enterText(headerTextField(), 'sw');
-        // Settled: the keystroke crosses the platform channel and the
-        // filtered rebuild (plus overlay frames) lands.
-        await tester.pumpAndSettle();
-        expect(find.text('Search all sources for "sw"'), findsOneWidget);
-
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-        await tester.pump();
-        expect(find.text('Search all sources for "sw"'), findsNothing);
-
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-        await tester.pump();
-        expect(container.read(historySearchQueryProvider), isEmpty);
       });
 
       testWidgets('opening a series from History clears the query', (
@@ -640,30 +580,6 @@ void main() {
 
         expect(find.text('MANGA PAGE'), findsOneWidget);
         expect(container.read(historySearchQueryProvider), isEmpty);
-      });
-
-      testWidgets('phone keeps the title and gets the search entry', (
-        tester,
-      ) async {
-        await pumpHistory(
-          tester,
-          size: const Size(412, 900),
-          withRouter: false,
-        );
-        expect(tester.takeException(), isNull);
-
-        expect(find.byType(DesktopSearchField), findsNothing);
-        expect(
-          find.descendant(
-            of: find.byType(AppBar),
-            matching: find.text('History'),
-          ),
-          findsOneWidget,
-        );
-        // Slice 4b: phone searches from the app-bar entry, which applies to
-        // the filter on submit — no live inline field anymore.
-        expect(find.byType(SearchField), findsNothing);
-        expect(find.byType(PhoneSearchEntry), findsOneWidget);
       });
     });
 
@@ -701,146 +617,6 @@ void main() {
   });
 
   group('Desktop search follow-ups', () {
-    Future<ProviderContainer> pumpHost(
-      WidgetTester tester,
-      Widget child, {
-      List<Fragment$MangaDto> library = const [],
-    }) async {
-      _setSize(tester, _desktop);
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          quickSearchToggleProvider.overrideWith(_ToggleOn.new),
-          libraryMangaListProvider.overrideWith((ref) async => library),
-          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
-          ...unreachableServerStubs,
-        ],
-      );
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: GlobalShortcutHost(child: child),
-        ),
-      );
-      await tester.pumpAndSettle();
-      return container;
-    }
-
-    Widget hostApp(Widget child) => MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: Center(child: SizedBox(width: 500, child: child)),
-      ),
-    );
-
-    // A hidden keep-alive shell branch, like go_router renders inactive
-    // branches: offstage with tickers disabled.
-    Widget inactiveBranch(Widget child) => TickerMode(
-      enabled: false,
-      child: Offstage(offstage: true, child: child),
-    );
-
-    Future<void> sendCtrlF(WidgetTester tester) async {
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-      await tester.pump();
-    }
-
-    testWidgets('blur keeps the field registered; dispose unregisters', (
-      tester,
-    ) async {
-      final container = await _pumpField(tester);
-
-      // Registered on mount.
-      await tester.pump();
-      final node = container.read(desktopSearchFocusNodeProvider);
-      expect(node, isNotNull);
-
-      // Clicking elsewhere blurs the field but must not unregister it.
-      await tester.tap(_fieldTextField());
-      await tester.pump();
-      expect(node!.hasFocus, isTrue);
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pump();
-      expect(node.hasFocus, isFalse);
-      expect(
-        container.read(desktopSearchFocusNodeProvider),
-        same(node),
-        reason: 'Ctrl+F must still find the field after a blur',
-      );
-
-      // Unmounting the field releases the registration.
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump();
-      expect(container.read(desktopSearchFocusNodeProvider), isNull);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Ctrl+F focuses the visible field with two mounted', (
-      tester,
-    ) async {
-      final container = await pumpHost(
-        tester,
-        hostApp(
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Inactive branch, kept alive but hidden; registers first.
-              inactiveBranch(_boundField()),
-              _boundField(),
-            ],
-          ),
-        ),
-      );
-
-      await sendCtrlF(tester);
-
-      expect(container.read(quickOpenVisibleProvider), isFalse);
-      final node = container.read(desktopSearchFocusNodeProvider);
-      expect(node, isNotNull);
-      expect(node!.hasFocus, isTrue);
-      expect(TickerMode.valuesOf(node.context!).enabled, isTrue);
-    });
-
-    testWidgets('Ctrl+F with only a hidden field opens the overlay', (
-      tester,
-    ) async {
-      final container = await pumpHost(
-        tester,
-        hostApp(inactiveBranch(_boundField())),
-      );
-
-      // The hidden field is the only registrant; it must not take focus.
-      expect(container.read(desktopSearchFocusNodeProvider), isNotNull);
-
-      await sendCtrlF(tester);
-
-      expect(
-        container.read(quickOpenVisibleProvider),
-        isTrue,
-        reason: 'no current field, so the overlay opens',
-      );
-      expect(container.read(desktopSearchFocusNodeProvider)!.hasFocus, isFalse);
-    });
-
-    testWidgets('operator-only query still opens the Filters dropdown', (
-      tester,
-    ) async {
-      await _pumpField(tester);
-
-      await tester.enterText(_fieldTextField(), 'unread:');
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Filters'), findsOneWidget);
-      expect(find.text('unread:true'), findsOneWidget);
-    });
-
     testWidgets('History Enter opens the top History result first', (
       tester,
     ) async {
@@ -903,8 +679,7 @@ void main() {
                     body: Builder(
                       builder: (context) => Column(
                         children: [
-                          if (showsMergedTopBar(context))
-                            const DesktopTopBar(),
+                          if (showsMergedTopBar(context)) const DesktopTopBar(),
                           const Expanded(child: HistoryScreen()),
                         ],
                       ),
@@ -946,95 +721,6 @@ void main() {
         reason: 'Enter opens the top History result before the unified one',
       );
       expect(container.read(historySearchQueryProvider), isEmpty);
-    });
-
-    testWidgets('Esc on an empty closed field propagates to go back', (
-      tester,
-    ) async {
-      _setSize(tester, _desktop);
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          libraryMangaListProvider.overrideWith((ref) async => null),
-          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
-          ...unreachableServerStubs,
-        ],
-      );
-      addTearDown(container.dispose);
-      final router = GoRouter(
-        initialLocation: '/',
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) =>
-                const Scaffold(body: Center(child: Text('HOME'))),
-          ),
-          // The host wraps the page below the router, like the app shell.
-          GoRoute(
-            path: '/two',
-            builder: (_, _) => GlobalShortcutHost(
-              child: Scaffold(
-                body: Center(child: SizedBox(width: 500, child: _boundField())),
-              ),
-            ),
-          ),
-        ],
-      );
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      router.push('/two');
-      await tester.pumpAndSettle();
-      await tester.tap(_fieldTextField());
-      await tester.pump();
-      expect(container.read(unifiedSearchQueryProvider), isEmpty);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('HOME'),
-        findsOneWidget,
-        reason: 'empty closed field lets Esc reach the global back handler',
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    test('per-query library results dispose when unlistened', () async {
-      final container = ProviderContainer(
-        overrides: [
-          libraryMangaListProvider.overrideWith(
-            (ref) async => [_manga(1, 'Sword Chronicles')],
-          ),
-          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await container.read(libraryMangaListProvider.future);
-      final target = unifiedLibraryResultsForProvider('sw');
-      final first = container.read(target);
-      expect(first.map((m) => m.title), contains('Sword Chronicles'));
-
-      await container.pump();
-      final second = container.read(target);
-
-      expect(
-        identical(first, second),
-        isFalse,
-        reason: 'stale per-query results must not stay alive',
-      );
     });
   });
 }

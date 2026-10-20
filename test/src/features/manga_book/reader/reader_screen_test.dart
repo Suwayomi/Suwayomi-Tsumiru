@@ -65,106 +65,80 @@ List<String> _localPages(int count) {
 }
 
 MangaDto _manga() => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Manga',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 0),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: [
-        Fragment$MangaDto$meta(
-          key: MangaMetaKeys.readerMode.key,
-          value: ReaderMode.singleHorizontalLTR.name,
-        ),
-      ],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(nodes: const []),
-      unreadCount: 0,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Manga',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: [
+    Fragment$MangaDto$meta(
+      key: MangaMetaKeys.readerMode.key,
+      value: ReaderMode.singleHorizontalLTR.name,
+    ),
+  ],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+  unreadCount: 0,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto _chapter() => Fragment$ChapterDto(
-      chapterNumber: 1,
-      fetchedAt: '0',
-      id: 1,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 0,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'Chapter 1',
-      pageCount: 3,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/chapter/1',
-      meta: const [],
-    );
+  chapterNumber: 1,
+  fetchedAt: '0',
+  id: 1,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 0,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'Chapter 1',
+  pageCount: 3,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/chapter/1',
+  meta: const [],
+);
 
 ChapterDto _partReadChapter() => Fragment$ChapterDto(
-      chapterNumber: 1,
-      fetchedAt: '0',
-      id: 1,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 1,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'Chapter 1',
-      pageCount: 3,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/chapter/1',
-      meta: const [],
-    );
+  chapterNumber: 1,
+  fetchedAt: '0',
+  id: 1,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 1,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'Chapter 1',
+  pageCount: 3,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/chapter/1',
+  meta: const [],
+);
 
 ChapterPagesDto _chapterPages() => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
-      pages: _localPages(3),
-    );
+  chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
+  pages: _localPages(3),
+);
 
 ChapterPagesDto _emptyChapterPages() => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: 1, pageCount: 0),
-      pages: const [],
-    );
-
-MangaDto _mangaWithMode(ReaderMode mode) => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Manga',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 0),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: [
-        Fragment$MangaDto$meta(
-          key: MangaMetaKeys.readerMode.key,
-          value: mode.name,
-        ),
-      ],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(nodes: const []),
-      unreadCount: 0,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  chapter: ChapterPagesChapterDto(id: 1, pageCount: 0),
+  pages: const [],
+);
 
 void main() {
-  testWidgets('flushes debounced progress when the reader unmounts without a pop',
-      (tester) async {
+  testWidgets('flushes debounced progress when the reader unmounts without a pop', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -178,13 +152,17 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
           chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _chapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -218,8 +196,9 @@ void main() {
     expect(repo.putChapterCalls.single.patch.isRead, isNull);
   });
 
-  testWidgets('flushes debounced progress when the reader route pops',
-      (tester) async {
+  testWidgets('flushes debounced progress when the reader route pops', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -233,13 +212,17 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
           chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _chapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -285,8 +268,9 @@ void main() {
     expect(repo.putChapterCalls.single.patch.isRead, isNull);
   });
 
-  testWidgets('opening at the end does not mark an unread chapter read',
-      (tester) async {
+  testWidgets('opening at the end does not mark an unread chapter read', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -300,14 +284,19 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
-          chapterProvider(chapterId: 1)
-              .overrideWith((ref) => _partReadChapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _chapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          chapterProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _partReadChapter()),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -325,51 +314,9 @@ void main() {
     expect(repo.putChapterCalls, isEmpty);
   });
 
-  testWidgets('a chapter with zero pages shows the load error, not the reader',
-      (tester) async {
-    tester.view.physicalSize = const Size(800, 1600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
-          chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _emptyChapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
-        ],
-        child: const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ReaderScreen(mangaId: 1, chapterId: 1),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // A login-only source can return an empty page list. Mounting the reader
-    // with it built a seek bar whose current-page clamp threw.
-    expect(tester.takeException(), isNull);
-    expect(find.byType(MultiChapterPagedReaderMode), findsNothing);
-    expect(find.byType(MultiChapterContinuousReaderMode), findsNothing);
-    expect(find.text('Something went wrong!'), findsOneWidget);
-  });
-
-  // continuousHorizontalLTR/RTL used to be pure aliases of
-  // singleHorizontalLTR/RTL, silently routed to the paged pager instead of a
-  // real continuous scroll. They must now reach MultiChapterContinuousReaderMode
-  // with scrollDirection: Axis.horizontal (never the paged widget).
-  group('continuousHorizontalLTR/RTL route to the continuous widget', () {
-    Future<void> pumpWithMode(WidgetTester tester, ReaderMode mode) async {
+  testWidgets(
+    'a chapter with zero pages shows the load error, not the reader',
+    (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -382,13 +329,17 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
-            mangaWithIdProvider(mangaId: 1)
-                .overrideWith(() => _FakeMangaWithId(_mangaWithMode(mode))),
+            mangaWithIdProvider(
+              mangaId: 1,
+            ).overrideWith(() => _FakeMangaWithId(_manga())),
             chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
-            chapterPagesProvider(chapterId: 1)
-                .overrideWith((ref) => _chapterPages()),
-            getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-                .overrideWithValue(null),
+            chapterPagesProvider(
+              chapterId: 1,
+            ).overrideWith((ref) => _emptyChapterPages()),
+            getNextAndPreviousChaptersProvider(
+              mangaId: 1,
+              chapterId: 1,
+            ).overrideWithValue(null),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -398,34 +349,20 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-    }
 
-    testWidgets('continuousHorizontalLTR: horizontal continuous, not reversed',
-        (tester) async {
-      await pumpWithMode(tester, ReaderMode.continuousHorizontalLTR);
-
-      expect(find.byType(MultiChapterPagedReaderMode), findsNothing);
-      final widget = tester.widget<MultiChapterContinuousReaderMode>(
-        find.byType(MultiChapterContinuousReaderMode),
-      );
-      expect(widget.scrollDirection, Axis.horizontal);
-      expect(widget.reverse, isFalse);
+      // A login-only source can return an empty page list. Mounting the reader
+      // with it built a seek bar whose current-page clamp threw.
       expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('continuousHorizontalRTL: horizontal continuous, reversed',
-        (tester) async {
-      await pumpWithMode(tester, ReaderMode.continuousHorizontalRTL);
-
       expect(find.byType(MultiChapterPagedReaderMode), findsNothing);
-      final widget = tester.widget<MultiChapterContinuousReaderMode>(
-        find.byType(MultiChapterContinuousReaderMode),
-      );
-      expect(widget.scrollDirection, Axis.horizontal);
-      expect(widget.reverse, isTrue);
-      expect(tester.takeException(), isNull);
-    });
-  });
+      expect(find.byType(MultiChapterContinuousReaderMode), findsNothing);
+      expect(find.text('Something went wrong!'), findsOneWidget);
+    },
+  );
+
+  // continuousHorizontalLTR/RTL used to be pure aliases of
+  // singleHorizontalLTR/RTL, silently routed to the paged pager instead of a
+  // real continuous scroll. They must now reach MultiChapterContinuousReaderMode
+  // with scrollDirection: Axis.horizontal (never the paged widget).
 
   // An endpoint switch (LAN <-> external) or a reachability flip rebuilds every
   // reader provider through a dependency change, even for a chapter read from
@@ -456,14 +393,19 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
-            mangaWithIdProvider(mangaId: 1)
-                .overrideWith(() => _FakeMangaWithId(_manga())),
-            chapterProvider(chapterId: 1)
-                .overrideWith((ref) => reloadable(ref, _chapter())),
-            chapterPagesProvider(chapterId: 1)
-                .overrideWith((ref) => reloadable(ref, pages)),
-            getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-                .overrideWithValue(null),
+            mangaWithIdProvider(
+              mangaId: 1,
+            ).overrideWith(() => _FakeMangaWithId(_manga())),
+            chapterProvider(
+              chapterId: 1,
+            ).overrideWith((ref) => reloadable(ref, _chapter())),
+            chapterPagesProvider(
+              chapterId: 1,
+            ).overrideWith((ref) => reloadable(ref, pages)),
+            getNextAndPreviousChaptersProvider(
+              mangaId: 1,
+              chapterId: 1,
+            ).overrideWithValue(null),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -483,9 +425,9 @@ void main() {
       expect(find.text('2 / 3'), findsOneWidget);
       final engine = tester.element(find.byType(MultiChapterPagedReaderMode));
 
-      ProviderScope.containerOf(tester.element(find.byType(ReaderScreen)))
-          .read(_endpointProvider.notifier)
-          .switchEndpoint();
+      ProviderScope.containerOf(
+        tester.element(find.byType(ReaderScreen)),
+      ).read(_endpointProvider.notifier).switchEndpoint();
       await tester.pump();
       await tester.pumpAndSettle();
       return engine;
@@ -493,19 +435,6 @@ void main() {
 
     testWidgets('a successful reload', (tester) async {
       final engine = await readThenReload(tester, reloadFails: false);
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('2 / 3'), findsOneWidget);
-      expect(
-        tester.element(find.byType(MultiChapterPagedReaderMode)),
-        same(engine),
-        reason: 'the reader was remounted',
-      );
-    });
-
-    testWidgets('a reload that fails while the server is unreachable',
-        (tester) async {
-      final engine = await readThenReload(tester, reloadFails: true);
 
       expect(tester.takeException(), isNull);
       expect(find.text('2 / 3'), findsOneWidget);

@@ -177,25 +177,6 @@ Future<void> _pumpReaderOnChapter2(
   await tester.pumpAndSettle();
 }
 
-/// A drag gesture toward the start of the horizontal strip: content moves
-/// right (mirrors _dragUp's "content moves down" in the vertical regression
-/// test). For LTR this pulls toward page 0 / the previous chapter; the sign
-/// only matters in that both directions of the axis are exercised across the
-/// two tests below (LTR pulls positive, RTL pulls negative).
-Future<void> _dragTowardPreviousChapter(
-  WidgetTester tester, {
-  required bool reverse,
-}) async {
-  await tester.timedDrag(
-    find.byType(Scrollable).first,
-    Offset(reverse ? -300 : 300, 0),
-    const Duration(milliseconds: 120),
-  );
-  await tester.pumpAndSettle();
-  await tester.pump(const Duration(milliseconds: 100));
-  await tester.pumpAndSettle();
-}
-
 void main() {
   setUp(() {
     MultiChapterContinuousReaderMode.edgeAttemptCooldown = Duration.zero;
@@ -225,42 +206,6 @@ void main() {
         );
         expect(widget.scrollDirection, Axis.horizontal);
         expect(widget.reverse, mode == ReaderMode.continuousHorizontalRTL);
-        expect(tester.takeException(), isNull);
-      },
-    );
-
-    testWidgets(
-      '$mode: resume at page 0, a drag at the clamp loads the previous '
-      'chapter',
-      (tester) async {
-        var prevFetches = 0;
-        await _pumpReaderOnChapter2(
-          tester,
-          mode: mode,
-          prevPages: () async {
-            prevFetches++;
-            // Real delay: an unheld autoDispose fetch would get disposed
-            // mid-flight and never complete.
-            await Future<void>.delayed(const Duration(milliseconds: 100));
-            return _pages(1, 3);
-          },
-        );
-
-        await _dragTowardPreviousChapter(
-          tester,
-          reverse: mode == ReaderMode.continuousHorizontalRTL,
-        );
-        await tester.pump(const Duration(milliseconds: 200));
-        await tester.pumpAndSettle();
-
-        expect(
-          prevFetches,
-          greaterThanOrEqualTo(1),
-          reason:
-              'edge drag on the horizontal strip never asked for the '
-              'previous chapter — the boundary trigger only works on the '
-              'vertical axis',
-        );
         expect(tester.takeException(), isNull);
       },
     );

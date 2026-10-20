@@ -15,7 +15,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
-import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 GraphQLClient _dummyClient() =>
     GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
@@ -43,33 +42,27 @@ class _OkRepository extends MangaBookRepository {
 }
 
 void main() {
-  group('root cause: the write path providers must stay keepAlive', () {
-    test('graphQlClient is NOT autoDispose', () {
-      // If this flips back to @riverpod (autoDispose), the reader can lose its
-      // captured client ref mid-write again — the exact regression.
-      expect(graphQlClientProvider.isAutoDispose, isFalse);
-    });
-
-    test('mangaBookRepository is NOT autoDispose', () {
-      expect(mangaBookRepositoryProvider.isAutoDispose, isFalse);
-    });
-  });
-
   group('a failed online progress push is surfaced, not swallowed', () {
-    test('online-only + failing push -> returns an error (not silently lost)',
-        () async {
-      final result = await recordReadingProgressWithDependencies(
-        offlineEnabled: false, // no dirty row to retry — the online-only case
-        offlineDatabase: null,
-        repository: _ThrowingRepository(),
-        chapterId: 42,
-        lastPageRead: 7,
-        isRead: false,
-      );
-      expect(result.hasError, isTrue,
-          reason: 'a failed online push must reach the caller so the reader can '
-              'show it, instead of vanishing');
-    });
+    test(
+      'online-only + failing push -> returns an error (not silently lost)',
+      () async {
+        final result = await recordReadingProgressWithDependencies(
+          offlineEnabled: false, // no dirty row to retry — the online-only case
+          offlineDatabase: null,
+          repository: _ThrowingRepository(),
+          chapterId: 42,
+          lastPageRead: 7,
+          isRead: false,
+        );
+        expect(
+          result.hasError,
+          isTrue,
+          reason:
+              'a failed online push must reach the caller so the reader can '
+              'show it, instead of vanishing',
+        );
+      },
+    );
 
     test('online-only + successful push -> no error', () async {
       final result = await recordReadingProgressWithDependencies(

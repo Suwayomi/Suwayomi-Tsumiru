@@ -2,6 +2,8 @@
 // choice: an untouched viewer key falls back to the legacy global value, and
 // once a viewer is set it stops tracking the other.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +27,39 @@ void main() {
 
       expect(c.read(pagedPinchToZoomProvider), isFalse);
       expect(c.read(longStripPinchToZoomProvider), isFalse);
+
+      // No reader engine may read the pre-split global zoom prefs.
+      final legacyProviders = [
+        RegExp(r'(?<![A-Za-z])pinchToZoomProvider\b'),
+        RegExp(r'(?<![A-Za-z])doubleTapToZoomProvider\b'),
+        RegExp(r'(?<![A-Za-z])disableZoomOutProvider\b'),
+      ];
+      final readerModes = Directory(
+        'lib/src/features/manga_book/presentation/reader/widgets/reader_mode',
+      );
+      expect(
+        readerModes.existsSync(),
+        isTrue,
+        reason: 'reader_mode directory moved — update this test',
+      );
+      final offenders = <String>[];
+      for (final entity in readerModes.listSync(recursive: true)) {
+        if (entity is! File || !entity.path.endsWith('.dart')) continue;
+        final source = entity.readAsStringSync();
+        for (final provider in legacyProviders) {
+          final hit = provider.firstMatch(source);
+          if (hit != null) {
+            offenders.add('${entity.path} -> ${hit.group(0)}');
+          }
+        }
+      }
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'Use the paged*/longStrip* providers instead:\n'
+            '${offenders.join('\n')}',
+      );
     });
 
     test('double tap to zoom', () async {
@@ -65,7 +100,10 @@ void main() {
     c.read(pagedPinchToZoomProvider.notifier).update(false);
 
     expect(c.read(pagedPinchToZoomProvider), isFalse);
-    expect(c.read(longStripPinchToZoomProvider), isTrue,
-        reason: 'the two switches must stop moving together');
+    expect(
+      c.read(longStripPinchToZoomProvider),
+      isTrue,
+      reason: 'the two switches must stop moving together',
+    );
   });
 }

@@ -27,7 +27,9 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/r
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_chapter_gap_warning.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/multichapter_paged_reader_mode.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_display_window.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_spread_mapping.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/features/tracking/domain/tracking_settings_providers.dart';
@@ -142,6 +144,34 @@ ChapterDto _chapter({
 ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
   chapter: ChapterPagesChapterDto(id: id, pageCount: count),
   pages: _localPages(count, 'c$id'),
+);
+
+ReaderInputCallbacks _crossingCallbacks() => ReaderInputCallbacks(
+  onTap: () {},
+  onLongPressStart: (_) {},
+  onLongPressMoveUpdate: (_) {},
+  onLongPressEnd: () {},
+  onLongPressCancel: () {},
+  onNext: () {},
+  onPrevious: () {},
+  onNextBoundary: () => false,
+  onPreviousBoundary: () => false,
+  navigationLayout: ReaderNavigationLayout.disabled,
+  tapInvert: TapInvert.none,
+  smallerTapZones: false,
+);
+
+WindowChapter _windowChapter(int id, int pageCount) => WindowChapter(
+  chapterId: id,
+  chapterName: 'Chapter $id',
+  mapping: buildSpreadMapping(
+    pageCount: pageCount,
+    doublePages: false,
+    splitWide: false,
+    splitInvert: false,
+    isWide: (_) => false,
+  ),
+  pages: _localPages(pageCount, 'c$id'),
 );
 
 void main() {
@@ -598,6 +628,165 @@ void main() {
         reason: 'the reader was remounted',
       );
     });
+  });
+
+  testWidgets('paging crosses from chapter 1 into chapter 2 in one window', (
+    tester,
+  ) async {
+    // Both chapters already loaded, seamless (no transition between them).
+    final window = buildPagedDisplayWindow(
+      chapters: [_windowChapter(1, 3), _windowChapter(2, 3)],
+      forceTransition: false,
+    );
+    // items: c1:0 c1:1 c1:2 c2:0 c2:1 c2:2  (6 slots)
+    expect(window.length, 6);
+
+    final reported = <({int chapterId, int raw})>[];
+    final controller = PagedReaderController();
+
+    final viewport = ReaderInputScope(
+      callbacks: _crossingCallbacks(),
+      child: SizedBox(
+        width: 300,
+        height: 500,
+        child: PagedReaderViewport(
+          controller: controller,
+          window: window,
+          initialDisplayIndex: 0,
+          axis: Axis.horizontal,
+          reverse: false,
+          animateTransitions: false,
+          pageFit: BoxFit.contain,
+          pageSize: null,
+          pagesAtNaturalSize: false,
+          mouseScrollSpeed: 1.7,
+          centerMargin: CenterMarginType.none,
+          rotateWide: false,
+          rotateWideInvert: false,
+          reversePair: false,
+          cropBorders: false,
+          onPageWide: (_, _, _) {},
+          onChapterPageChanged: (chapterId, raw) =>
+              reported.add((chapterId: chapterId, raw: raw)),
+          transitionBuilder: (_) => const SizedBox.shrink(),
+          pinchEnabled: true,
+          doubleTapToZoom: true,
+          disableZoomIn: false,
+          disableZoomOut: false,
+          navigateToPan: true,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      Directionality(textDirection: TextDirection.ltr, child: viewport),
+    );
+    await tester.pump();
+
+    // Fling forward five times: c1:0 -> c1:1 -> c1:2 -> c2:0 -> c2:1 -> c2:2.
+    for (var i = 0; i < 5; i++) {
+      await tester.timedDrag(
+        find.byType(PagedReaderViewport),
+        const Offset(-90, 0),
+        const Duration(milliseconds: 80),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    // We must have crossed into chapter 2.
+    expect(
+      reported.any((e) => e.chapterId == 2),
+      isTrue,
+      reason: 'paging never crossed into chapter 2; reported=$reported',
+    );
+    // And landed on chapter 2's last page.
+    expect(reported.last, (chapterId: 2, raw: 2));
+  });
+
+  testWidgets('a chapter loading mid page-turn keeps the page you were on', (
+    tester,
+  ) async {
+    final reported = <({int chapterId, int raw})>[];
+    final controller = PagedReaderController();
+
+    Widget viewportWith(PagedDisplayWindow window) => ReaderInputScope(
+      callbacks: _crossingCallbacks(),
+      child: Center(
+        child: SizedBox(
+          width: 300,
+          height: 500,
+          child: PagedReaderViewport(
+            controller: controller,
+            window: window,
+            initialDisplayIndex: 0,
+            axis: Axis.horizontal,
+            reverse: false,
+            animateTransitions: true,
+            pageFit: BoxFit.contain,
+            pageSize: null,
+            pagesAtNaturalSize: false,
+            mouseScrollSpeed: 1.7,
+            centerMargin: CenterMarginType.none,
+            rotateWide: false,
+            rotateWideInvert: false,
+            reversePair: false,
+            cropBorders: false,
+            onPageWide: (_, _, _) {},
+            onChapterPageChanged: (chapterId, raw) =>
+                reported.add((chapterId: chapterId, raw: raw)),
+            transitionBuilder: (_) => const SizedBox.shrink(),
+            pinchEnabled: true,
+            doubleTapToZoom: true,
+            disableZoomIn: false,
+            disableZoomOut: false,
+            navigateToPan: true,
+          ),
+        ),
+      ),
+    );
+
+    // Reading chapter 2 alone; chapter 1 loads in behind us, which shifts every
+    // display index by a chapter.
+    final window1 = buildPagedDisplayWindow(
+      chapters: [_windowChapter(2, 3)],
+      forceTransition: false,
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: viewportWith(window1),
+      ),
+    );
+    await tester.pump();
+
+    // Turn a page and swap the window while that turn is still settling.
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-90, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pump(const Duration(milliseconds: 30));
+
+    reported.clear();
+    final window2 = buildPagedDisplayWindow(
+      chapters: [_windowChapter(1, 3), _windowChapter(2, 3)],
+      forceTransition: false,
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: viewportWith(window2),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The in-flight turn was aimed at the old window; committing it now would
+    // land on whatever chapter 1 page happens to share that index.
+    expect(reported.isNotEmpty, isTrue);
+    expect(
+      reported.last.chapterId,
+      2,
+      reason: 'landed outside the chapter being read; reported=$reported',
+    );
   });
 }
 

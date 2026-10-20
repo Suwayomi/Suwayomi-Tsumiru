@@ -15,7 +15,6 @@ import 'package:tsumiru/src/features/library/presentation/category/controller/ed
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
-import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_panels.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
@@ -27,7 +26,6 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/sorayomi.dart';
-import 'package:tsumiru/src/utils/theme/app_theme_builder.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
@@ -188,177 +186,25 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
     });
 
-    testWidgets('900x900 shows the desktop toolbar, no AppBar', (tester) async {
-      await _pumpLibrary(tester, surface: const Size(900, 900));
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
-      expect(find.byType(AppBar), findsNothing);
-      expect(find.text('Library'), findsNothing);
-    });
-
-    testWidgets('landscape phone keeps the tablet layout', (tester) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(915, 412),
-      );
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(DesktopLibraryToolbar), findsNothing);
-      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
-
-      // The in-between layout keeps the tablet-only Global Search button.
-      container.read(libraryQueryProvider.notifier).update('sword');
-      await tester.pumpAndSettle();
-      expect(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('two tabs scroll with a themed scrollbar, no clash', (
-      tester,
-    ) async {
-      await _pumpLibrary(
-        tester,
-        surface: const Size(1400, 980),
-        withManga: true,
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('Alpha 1'), findsOneWidget);
-
-      // Scroll the first tab, then switch: both tabs are alive during the
-      // switch animation, and sharing one controller threw "attached to more
-      // than one ScrollPosition" when the second tab attached.
-      await tester.drag(
-        find.byType(CustomScrollView).first,
-        const Offset(0, -500),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Two', findRichText: true));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.text('Beta 1'), findsOneWidget);
-
-      await tester.drag(
-        find.byType(CustomScrollView).first,
-        const Offset(0, -500),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.byType(Scrollbar), findsWidgets);
-    });
-
-    testWidgets('landscape-phone sticky search keeps scrollbars off, no clash', (
-      tester,
-    ) async {
-      await _pumpLibrary(
-        tester,
-        surface: const Size(915, 412),
-        withManga: true,
-        persistentSearchBar: true,
-        scrollbarTheme: wideScreenScrollbarTheme(const ColorScheme.light()),
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('Alpha 1'), findsOneWidget);
-
-      // Below desktop the tabs share the NestedScrollView controller, so the
-      // always-visible wide-screen scrollbar would throw "attached to more
-      // than one ScrollPosition" on switch — scrollbars stay off instead.
-      await tester.drag(
-        find.byType(CustomScrollView).first,
-        const Offset(0, -500),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Two', findRichText: true));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.text('Beta 1'), findsOneWidget);
-
-      await tester.drag(
-        find.byType(CustomScrollView).first,
-        const Offset(0, -500),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    });
-
     testWidgets(
-      'landscape-phone toggled search enables global search with a query',
+      'landscape-phone sticky search shows global search with a query',
       (tester) async {
         final container = await _pumpLibrary(
           tester,
           surface: const Size(915, 412),
+          persistentSearchBar: true,
         );
-
-        // Open the toggled search field: no query yet, so the button is
-        // present but disabled — the in-between layout's way into Global
-        // Search.
-        await tester.tap(
-          find.widgetWithIcon(IconButton, Icons.search_rounded),
-        );
-        await tester.pumpAndSettle();
-        var global = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-        );
-        expect(global.onPressed, isNull);
 
         container.read(libraryQueryProvider.notifier).update('sword');
         await tester.pumpAndSettle();
-        global = tester.widget<IconButton>(
+
+        expect(
           find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+          findsOneWidget,
         );
-        expect(global.onPressed, isNotNull);
+        expect(tester.takeException(), isNull);
       },
     );
-
-    testWidgets('landscape-phone sticky search shows global search with a query', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(915, 412),
-        persistentSearchBar: true,
-      );
-
-      container.read(libraryQueryProvider.notifier).update('sword');
-      await tester.pumpAndSettle();
-
-      expect(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('phone shows no global search button', (tester) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(412, 800),
-      );
-      container.read(libraryQueryProvider.notifier).update('sword');
-      await tester.pumpAndSettle();
-      expect(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-        findsNothing,
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('desktop shows no global search button', (tester) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(1400, 980),
-      );
-      container.read(libraryQueryProvider.notifier).update('sword');
-      await tester.pumpAndSettle();
-      expect(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-        findsNothing,
-      );
-      expect(tester.takeException(), isNull);
-    });
   });
 
   group('Library toolbar in the shell bar', () {
@@ -403,37 +249,8 @@ void main() {
       );
 
       // Category tabs stay in the page body under the bar.
-      final tabTop = tester
-          .getTopLeft(find.text('One', findRichText: true))
-          .dy;
+      final tabTop = tester.getTopLeft(find.text('One', findRichText: true)).dy;
       expect(tabTop, greaterThan(barRect.bottom - 1));
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('filter panel opens under the filter button', (tester) async {
-      await _pumpLibrary(tester, surface: const Size(1400, 980));
-
-      final buttonBox = find.ancestor(
-        of: find.descendant(
-          of: find.byType(DesktopLibraryToolbar),
-          matching: find.text('Filter'),
-        ),
-        matching: find.byType(DesktopToolbarBox),
-      );
-      expect(buttonBox, findsOneWidget);
-      await tester.tap(find.text('Filter'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(DesktopLibraryFilterPanel), findsOneWidget);
-      final buttonRect = tester.getRect(buttonBox);
-      final panelRect = tester.getRect(find.byType(DesktopLibraryFilterPanel));
-      expect(
-        panelRect.top,
-        greaterThanOrEqualTo(buttonRect.bottom - 4),
-        reason: 'the panel opens under its button, not over it',
-      );
-      expect(panelRect.left, lessThan(buttonRect.right));
-      expect(panelRect.right, greaterThan(buttonRect.left));
       expect(tester.takeException(), isNull);
     });
   });

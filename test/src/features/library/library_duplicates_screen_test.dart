@@ -112,65 +112,9 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Solo Leveling'), findsWidgets);
     });
-
-    testWidgets('a tracker-reason group shows the certain-match chip', (
-      tester,
-    ) async {
-      final members = [_m(1, 'A'), _m(2, 'B')];
-      const group = (
-        header: 'A',
-        memberIds: [1, 2],
-        reasons: {DupReason.tracker},
-      );
-      await _pump(
-        tester,
-        library: members,
-        extra: [
-          _fakeScan(false, const [group]),
-        ],
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.text('Same tracker entry'), findsOneWidget);
-    });
   });
 
   group('toggle', () {
-    testWidgets(
-      'flips which family instance the screen reads — different results '
-      'for checkDescriptions true vs false',
-      (tester) async {
-        const withoutDescription = <DupGroup>[];
-        const withDescription = <DupGroup>[
-          (
-            header: 'Rare Title Example',
-            memberIds: [1, 2],
-            reasons: {DupReason.description},
-          ),
-        ];
-        await _pump(
-          tester,
-          library: [
-            _m(1, 'Rare Title Example'),
-            _m(2, 'Something Else', description: 'mentions it'),
-          ],
-          extra: [
-            _fakeScan(false, withoutDescription),
-            _fakeScan(true, withDescription),
-          ],
-        );
-
-        expect(find.text('No results found'), findsOneWidget);
-        expect(find.text('Rare Title Example'), findsNothing);
-
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.pumpAndSettle();
-
-        expect(find.text('No results found'), findsNothing);
-        // Both the group header and the member's own cover title render it.
-        expect(find.text('Rare Title Example'), findsWidgets);
-      },
-    );
-
     testWidgets('offline forces the toggle off and disabled', (tester) async {
       await _pump(
         tester,

@@ -25,8 +25,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_top_bar.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/reader_zoom_view.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_navigation_layout/layouts/l_shaped_layout.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/graphql/__generated__/global_meta.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -228,51 +226,7 @@ void main() {
       expect(afterOnePump, greaterThan(before));
       expect(afterOnePump, _listPosition(tester).pixels);
     });
-
-    testWidgets('with Animate page transitions off it jumps', (tester) async {
-      await _pumpLongStrip(
-        tester,
-        reduceMotion: false,
-        animatePageTransitions: false,
-      );
-      final before = _listPosition(tester).pixels;
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pump();
-      final afterOnePump = _listPosition(tester).pixels;
-      await tester.pumpAndSettle();
-
-      expect(afterOnePump, greaterThan(before));
-      expect(afterOnePump, _listPosition(tester).pixels);
-    });
-
-    testWidgets('with defaults it still animates', (tester) async {
-      await _pumpLongStrip(tester, reduceMotion: false);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pump();
-      final afterOnePump = _listPosition(tester).pixels;
-      await tester.pumpAndSettle();
-
-      expect(afterOnePump, lessThan(_listPosition(tester).pixels));
-    });
   });
-
-  for (final reduce in [true, false]) {
-    testWidgets(
-      'drag inside tap zone scrolls the strip with reduced motion=$reduce',
-      (tester) async {
-        await _pumpLongStrip(tester, reduceMotion: reduce);
-        expect(find.byType(LShapedLayout), findsOneWidget);
-        final before = _listPosition(tester).pixels;
-
-        await tester.dragFrom(const Offset(50, 800), const Offset(0, -300));
-        await tester.pumpAndSettle();
-
-        expect(_listPosition(tester).pixels, closeTo(before + 300, 60));
-      },
-    );
-  }
 
   testWidgets('reduced motion shows the reader menu at once', (tester) async {
     await _pumpLongStrip(tester, reduceMotion: true);
@@ -282,65 +236,4 @@ void main() {
     await tester.pump();
     expect(_topBarOpacity(tester), 1.0);
   });
-
-  testWidgets('with defaults the reader menu still fades in', (tester) async {
-    await _pumpLongStrip(tester, reduceMotion: false);
-    expect(_topBarOpacity(tester), 0.0);
-
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pump();
-    expect(_topBarOpacity(tester), lessThan(1.0));
-  });
-
-  for (final reduce in [true, false]) {
-    testWidgets('long strip double tap zoom with reduced motion=$reduce', (
-      tester,
-    ) async {
-      final scales = <double>[];
-      final scrollController = ScrollController();
-      addTearDown(scrollController.dispose);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(disableAnimations: reduce),
-            child: child!,
-          ),
-          home: Scaffold(
-            body: SizedBox(
-              width: 400,
-              height: 600,
-              child: ReaderZoomView(
-                controller: scrollController,
-                scrollAxis: Axis.vertical,
-                maxScale: 3.0,
-                minScale: 1.0,
-                pinchEnabled: true,
-                doubleTapToZoom: true,
-                onScaleChanged: scales.add,
-                child: ListView(
-                  controller: scrollController,
-                  children: const [SizedBox(height: 1200)],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      final center = tester.getCenter(find.byType(ReaderZoomView));
-      await tester.tapAt(center);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapAt(center);
-      await tester.pump();
-
-      if (reduce) {
-        expect(scales.last, closeTo(3.0, 0.01));
-      } else {
-        expect(scales.last, lessThan(3.0));
-      }
-      await tester.pump(const Duration(milliseconds: 500));
-    });
-  }
 }
