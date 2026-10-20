@@ -182,7 +182,9 @@ Future<void> clearOfflineCatalog(WidgetRef ref) async {
   await CatchupStateStore(ref.read(sharedPreferencesProvider)).clearState();
   ref.invalidate(offlineActiveProvider);
   ref.invalidate(offlineReadDatabaseProvider);
-  await ref.read(notificationsControllerProvider).sync();
+  if (isAndroidNative) {
+    await ref.read(notificationsControllerProvider).sync();
+  }
 }
 
 Future<void> clearOfflineCatalogWithDependencies({

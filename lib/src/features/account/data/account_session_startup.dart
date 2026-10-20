@@ -211,10 +211,12 @@ class AccountSessionStartup {
   Future<void> _initialize(String catalogId) async {
     await recoverBulkMigrationsAtLaunch(container);
     if (!_current) return;
-    try {
-      await container.read(notificationsControllerProvider).sync();
-    } catch (error) {
-      if (_current) debugPrint('Notification startup failed: $error');
+    if (isAndroidNative) {
+      try {
+        await container.read(notificationsControllerProvider).sync();
+      } catch (error) {
+        if (_current) debugPrint('Notification startup failed: $error');
+      }
     }
     if (!_current || !_offlineActiveNow()) return;
     final runtime = container.read(offlineRuntimeStorageProvider.notifier);
@@ -354,7 +356,7 @@ class AccountSessionStartup {
   }
 
   void _syncNotifications() {
-    if (!_current) return;
+    if (!isAndroidNative || !_current) return;
     unawaited(
       Future<void>.sync(
         () => container.read(notificationsControllerProvider).sync(),
