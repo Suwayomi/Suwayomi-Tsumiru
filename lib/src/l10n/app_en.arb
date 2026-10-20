@@ -4111,6 +4111,7 @@
   "webInterfaceExplanation": "What your server shows when someone opens its address in a browser. This doesn't change this app.",
   "webInterfaceExplanationCurrent": "What your server shows when someone opens its address in a browser. This is the interface you're using now.",
   "webInterfaceUnsupported": "This server does not support web interface settings.",
+  "unsupportedPreference": "This setting is not supported by the app.",
   "webInterfaceFlavor": "Interface",
   "webInterfaceWebUI": "WebUI",
   "webInterfaceWebUIDescription": "Use the default WebUI",

@@ -131,6 +131,11 @@ ChapterPagesDto _chapterPages() => ChapterPagesDto(
       pages: _localPages(3),
     );
 
+ChapterPagesDto _emptyChapterPages() => ChapterPagesDto(
+      chapter: ChapterPagesChapterDto(id: 1, pageCount: 0),
+      pages: const [],
+    );
+
 MangaDto _mangaWithMode(ReaderMode mode) => Fragment$MangaDto(
       id: 1,
       title: 'Test Manga',
@@ -318,6 +323,45 @@ void main() {
     // resume position wiped just by navigating to it.
     expect(find.text('3 / 3'), findsOneWidget);
     expect(repo.putChapterCalls, isEmpty);
+  });
+
+  testWidgets('a chapter with zero pages shows the load error, not the reader',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
+          chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
+          chapterPagesProvider(chapterId: 1)
+              .overrideWith((ref) => _emptyChapterPages()),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ReaderScreen(mangaId: 1, chapterId: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A login-only source can return an empty page list. Mounting the reader
+    // with it built a seek bar whose current-page clamp threw.
+    expect(tester.takeException(), isNull);
+    expect(find.byType(MultiChapterPagedReaderMode), findsNothing);
+    expect(find.byType(MultiChapterContinuousReaderMode), findsNothing);
+    expect(find.text('Something went wrong!'), findsOneWidget);
   });
 
   // continuousHorizontalLTR/RTL used to be pure aliases of

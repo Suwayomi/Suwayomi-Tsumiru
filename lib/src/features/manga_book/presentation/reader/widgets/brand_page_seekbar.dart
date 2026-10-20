@@ -55,6 +55,9 @@ class BrandPageSeekBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A chapter whose page list failed to load has no page to show; the
+    // current-page label would call clamp(1, 0) and throw.
+    if (maxValue < 1) return const SizedBox.shrink();
     final cs = context.theme.colorScheme;
     final brand = BrandColors.of(context);
     final lastIndex = max(maxValue - 1, 1);
