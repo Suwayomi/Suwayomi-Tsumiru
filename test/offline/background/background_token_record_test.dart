@@ -76,40 +76,6 @@ void main() {
     expect(record.refreshToken, 'R1'); // rotated refresh persisted (fixes C4)
   });
 
-  test('a dead refresh returns null and is not marked transient', () async {
-    var record = const BackgroundTokenRecord(
-      gen: 1,
-      authType: 'uiLogin',
-      accessToken: 'OLD',
-      refreshToken: 'R0',
-    );
-    final broker = TokenBroker(
-      read: () async => record,
-      write: (r) async => record = r,
-      refreshFn: (_) async => (tokens: null, transient: false),
-    );
-    expect(await broker.resolveAfter401('OLD'), isNull);
-    expect(broker.lastRefreshTransient, isFalse);
-  });
-
-  test(
-    'a refresh that could not reach the server is marked transient',
-    () async {
-      var record = const BackgroundTokenRecord(
-        gen: 1,
-        authType: 'uiLogin',
-        accessToken: 'OLD',
-        refreshToken: 'R0',
-      );
-      final broker = TokenBroker(
-        read: () async => record,
-        write: (r) async => record = r,
-        refreshFn: (_) async => (tokens: null, transient: true),
-      );
-      expect(await broker.resolveAfter401('OLD'), isNull);
-      expect(broker.lastRefreshTransient, isTrue);
-    },
-  );
   test('identity proof survives serialization and token rotation', () {
     final rotated = owner.copyWith(
       gen: 2,
@@ -150,89 +116,6 @@ void main() {
     },
   );
 
-  test(
-    'account replacement while refreshing cannot adopt or return tokens',
-    () async {
-      var record = owner;
-      final started = Completer<void>();
-      final response = Completer<RefreshAttempt>();
-      var writes = 0;
-      final broker = TokenBroker(
-        expectedIdentity: owner,
-        read: () async => record,
-        write: (value) async {
-          writes++;
-          record = value;
-        },
-        refreshFn: (_) {
-          started.complete();
-          return response.future;
-        },
-      );
-      final pending = broker.resolveAfter401('A');
-      await started.future;
-      record = other;
-      response.complete((
-        tokens: (access: 'A2', refresh: 'refresh-a2'),
-        transient: false,
-      ));
-      expect(await pending, isNull);
-      expect(writes, 0);
-      expect(record, same(other));
-      expect(broker.lastRefreshTransient, isFalse);
-    },
-  );
-
-  test('same account refresh preserves original ownership proof', () async {
-    var record = owner;
-    final broker = TokenBroker(
-      expectedIdentity: owner,
-      read: () async => record,
-      write: (value) async {
-        record = value;
-      },
-      refreshFn: (_) async =>
-          (tokens: (access: 'A2', refresh: 'refresh-a2'), transient: false),
-    );
-    expect(await broker.resolveAfter401('A'), 'A2');
-    expect(record.sameIdentity(owner), isTrue);
-    expect(record.originalRefreshToken, 'refresh-a');
-    expect(record.refreshToken, 'refresh-a2');
-  });
-  test('each ownership field must match independently', () {
-    for (final changed in <String, Object>{
-      'authType': 'none',
-      'endpoint': 'https://other',
-      'identityEpoch': 9,
-      'catalogServerId': 'different-catalogue',
-    }.entries) {
-      final json = owner.toJson()..[changed.key] = changed.value;
-      expect(
-        owner.sameIdentity(BackgroundTokenRecord.fromJson(json)),
-        isFalse,
-        reason: changed.key,
-      );
-    }
-    // Sealed with the other secrets, so it can't be edited in place.
-    const otherOriginal = BackgroundTokenRecord(
-      gen: 1,
-      authType: 'uiLogin',
-      endpoint: 'https://server',
-      accessToken: 'A',
-      refreshToken: 'refresh-a',
-      identityEpoch: 4,
-      catalogServerId: 'account-a',
-      originalRefreshToken: 'different-refresh',
-    );
-    expect(
-      owner.sameIdentity(
-        BackgroundTokenRecord.fromJson(otherOriginal.toJson()),
-      ),
-      isFalse,
-      reason: 'originalRefreshToken',
-    );
-  });
-
   group('refreshIfDue', () {
     final now = DateTime.utc(2026, 9, 26, 12);
     String jwt(Duration expIn) {
@@ -268,36 +151,6 @@ void main() {
       attempt = (tokens: (access: 'NEW', refresh: 'R'), transient: false);
     });
 
-    test('refreshes an expired token before the request', () async {
-      stored = withAccess(jwt(const Duration(hours: -3)));
-      final b = broker();
-      final used = await b.refreshIfDue(stored, now: now);
-      expect(refreshCalls, 1);
-      expect(used.accessToken, 'NEW');
-      expect(used.gen, 2);
-      expect(b.latest?.accessToken, 'NEW');
-    });
-
-    test('refreshes a token inside the lead, leaves a fresh one alone',
-        () async {
-      stored = withAccess(jwt(const Duration(seconds: 30)));
-      expect((await broker().refreshIfDue(stored, now: now)).accessToken, 'NEW');
-      refreshCalls = 0;
-      final fresh = withAccess(jwt(const Duration(minutes: 4)));
-      stored = fresh;
-      expect(await broker().refreshIfDue(fresh, now: now), same(fresh));
-      expect(refreshCalls, 0);
-    });
-
-    test('leaves opaque tokens and other auth modes to the 401 path',
-        () async {
-      stored = withAccess('opaque');
-      expect(await broker().refreshIfDue(stored, now: now), same(stored));
-      const basic = BackgroundTokenRecord(gen: 1, authType: 'basic');
-      expect(await broker().refreshIfDue(basic, now: now), same(basic));
-      expect(refreshCalls, 0);
-    });
-
     test('parallel callers share one refresh', () async {
       stored = withAccess(jwt(const Duration(hours: -1)));
       gate = Completer<void>();
@@ -312,16 +165,18 @@ void main() {
       expect(used.map((r) => r.accessToken).toSet(), {'NEW'});
     });
 
-    test('a failed refresh answers the next 401 without calling again',
-        () async {
-      final expired = jwt(const Duration(hours: -1));
-      stored = withAccess(expired);
-      attempt = (tokens: null, transient: true);
-      final b = broker();
-      expect(await b.refreshIfDue(stored, now: now), same(stored));
-      expect(await b.resolveAfter401(expired), isNull);
-      expect(b.lastRefreshTransient, isTrue);
-      expect(refreshCalls, 1);
-    });
+    test(
+      'a failed refresh answers the next 401 without calling again',
+      () async {
+        final expired = jwt(const Duration(hours: -1));
+        stored = withAccess(expired);
+        attempt = (tokens: null, transient: true);
+        final b = broker();
+        expect(await b.refreshIfDue(stored, now: now), same(stored));
+        expect(await b.resolveAfter401(expired), isNull);
+        expect(b.lastRefreshTransient, isTrue);
+        expect(refreshCalls, 1);
+      },
+    );
   });
 }

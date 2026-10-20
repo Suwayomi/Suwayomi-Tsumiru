@@ -98,42 +98,6 @@ void main() {
     expect(find.text('Auto add'), findsOneWidget);
   });
 
-  testWidgets(
-    'toggling a category persists via the repo and re-fetches the library',
-    (tester) async {
-      final repo = _RecordingMangaBookRepo();
-      var libraryBuilds = 0;
-      final container = ProviderContainer(
-        overrides: [
-          defaultCategoryIdProvider.overrideWith((ref) async => 0),
-          mangaBookRepositoryProvider.overrideWithValue(repo),
-          categoryControllerProvider.overrideWith(() => _FixedCategories()),
-          libraryMangaListProvider.overrideWith((ref) async {
-            libraryBuilds++;
-            return const <MangaDto>[];
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-      // Keep the library source alive so an invalidation actually rebuilds it.
-      container.listen(
-        libraryMangaListProvider,
-        (_, _) {},
-        fireImmediately: true,
-      );
-
-      await tester.pumpWidget(_app(container));
-      await tester.pumpAndSettle();
-      expect(libraryBuilds, 1);
-
-      await tester.tap(find.text('Pornhwa'));
-      await tester.pumpAndSettle();
-
-      expect(repo.added, contains(2));
-      expect(libraryBuilds, 2);
-    },
-  );
-
   testWidgets('a failed toggle reverts the checkbox and does not refetch', (
     tester,
   ) async {

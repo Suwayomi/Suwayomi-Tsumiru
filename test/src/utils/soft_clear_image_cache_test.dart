@@ -31,36 +31,33 @@ void main() {
     await Future<void>.delayed(Duration.zero);
   }
 
-  test('clear keeps the newest entries down to the floor', () async {
-    final image = await _decodeOnePixel();
-    final perImage = image.height * image.width * 4;
-    final cache = SoftClearImageCache(floorBytes: perImage * 2)
-      ..maximumSizeBytes = perImage * 10;
-    for (var key = 0; key < 4; key++) {
-      await put(cache, key, image);
-    }
-    expect(cache.currentSize, 4);
+  test(
+    'clear keeps the newest entries down to the floor, or empties fully',
+    () async {
+      final image = await _decodeOnePixel();
+      final perImage = image.height * image.width * 4;
+      final cache = SoftClearImageCache(floorBytes: perImage * 2)
+        ..maximumSizeBytes = perImage * 10;
+      for (var key = 0; key < 4; key++) {
+        await put(cache, key, image);
+      }
+      expect(cache.currentSize, 4);
 
-    cache.clear();
+      cache.clear();
 
-    // Floor holds the two most recent; budget is restored for new decodes.
-    expect(cache.currentSize, 2);
-    expect(cache.containsKey(3), isTrue);
-    expect(cache.containsKey(2), isTrue);
-    expect(cache.maximumSizeBytes, perImage * 10);
-  });
+      // Floor holds the two most recent; budget is restored for new decodes.
+      expect(cache.currentSize, 2);
+      expect(cache.containsKey(3), isTrue);
+      expect(cache.containsKey(2), isTrue);
+      expect(cache.maximumSizeBytes, perImage * 10);
 
-  test('clear empties fully when the budget is at or below the floor',
-      () async {
-    final image = await _decodeOnePixel();
-    final perImage = image.height * image.width * 4;
-    final cache = SoftClearImageCache(floorBytes: perImage * 10)
-      ..maximumSizeBytes = perImage * 4;
-    await put(cache, 1, image);
-    expect(cache.currentSize, 1);
-
-    cache.clear();
-
-    expect(cache.currentSize, 0);
-  });
+      // At or below the floor the clear empties fully.
+      final tight = SoftClearImageCache(floorBytes: perImage * 10)
+        ..maximumSizeBytes = perImage * 4;
+      await put(tight, 1, image);
+      expect(tight.currentSize, 1);
+      tight.clear();
+      expect(tight.currentSize, 0);
+    },
+  );
 }

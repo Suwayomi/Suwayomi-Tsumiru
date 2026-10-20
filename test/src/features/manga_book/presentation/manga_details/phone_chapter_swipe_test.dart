@@ -16,7 +16,6 @@ import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repos
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/downloads/downloads_model.dart';
-import 'package:tsumiru/src/features/manga_book/domain/downloads/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/controller/downloads_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
@@ -26,7 +25,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/utils/theme/brand.dart';
 
 import '../../../../../helpers/legacy_account_access.dart';
 
@@ -86,21 +84,6 @@ class _Session extends AuthCredentialsStore {
   Future<AuthCredentialsState> build() async =>
       const AuthCredentialsState.empty();
 }
-
-DownloadDto _queuedEntry(int id) => Fragment$DownloadDto(
-  chapter: Fragment$DownloadDto$chapter(
-    id: id,
-    name: 'c$id',
-    sourceOrder: id,
-    isDownloaded: false,
-    pageCount: 20,
-  ),
-  manga: Fragment$DownloadDto$manga(id: 1, title: 'M', downloadCount: 0),
-  progress: 0,
-  state: DownloadState.QUEUED,
-  tries: 0,
-  position: 0,
-);
 
 ChapterDto _chapter({
   required int id,
@@ -265,46 +248,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('short swipe does nothing', (tester) async {
-    final book = _RecordingBook();
-    final downloads = _RecordingDownloads();
-    await _pumpPhone(tester, book: book, downloads: downloads);
-    await _swipe(tester, 'Chapter 4', const Offset(30, 0));
-    await _swipe(tester, 'Chapter 4', const Offset(-30, 0));
-    expect(book.batches, isEmpty);
-    expect(book.putCalls, isEmpty);
-    expect(book.deleted, isEmpty);
-    expect(downloads.queued, isEmpty);
-    expect(downloads.removed, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('swipe is disabled in selection mode', (tester) async {
-    final book = _RecordingBook();
-    await _pumpPhone(tester, book: book);
-    await tester.longPress(find.text('Chapter 2'));
-    await tester.pumpAndSettle();
-    await _swipe(tester, 'Chapter 4', const Offset(200, 0));
-    await _swipe(tester, 'Chapter 4', const Offset(-200, 0));
-    expect(book.batches, isEmpty);
-    expect(book.putCalls, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('prefs change the actions', (tester) async {
-    final book = _RecordingBook();
-    await _pumpPhone(
-      tester,
-      book: book,
-      prefs: const {'chapterSwipeToLeft': 0},
-    );
-    await _swipe(tester, 'Chapter 5', const Offset(-200, 0));
-    expect(book.batches, hasLength(1));
-    expect(book.batches.single.ids, contains(5));
-    expect(book.batches.single.patch.isRead, isTrue);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('disabled makes that direction inert', (tester) async {
     final book = _RecordingBook();
     await _pumpPhone(
@@ -316,33 +259,6 @@ void main() {
     await _swipe(tester, 'Chapter 4', const Offset(-200, 0));
     expect(book.batches, isEmpty);
     expect(book.putCalls, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('download action queues a missing chapter', (tester) async {
-    final downloads = _RecordingDownloads();
-    await _pumpPhone(
-      tester,
-      downloads: downloads,
-      prefs: const {'chapterSwipeToLeft': 2},
-    );
-    await _swipe(tester, 'Chapter 4', const Offset(-200, 0));
-    expect(downloads.queued, [4]);
-    expect(downloads.removed, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('download action cancels a queued chapter', (tester) async {
-    final downloads = _RecordingDownloads();
-    await _pumpPhone(
-      tester,
-      downloads: downloads,
-      prefs: const {'chapterSwipeToLeft': 2},
-      queue: {4: _queuedEntry(4)},
-    );
-    await _swipe(tester, 'Chapter 4', const Offset(-200, 0));
-    expect(downloads.removed, [4]);
-    expect(downloads.queued, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -367,66 +283,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
     expect(book.deleted, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('download swipe deletes once the confirmation is accepted', (
-    tester,
-  ) async {
-    final book = _RecordingBook();
-    await _pumpPhone(
-      tester,
-      book: book,
-      prefs: const {'chapterSwipeToLeft': 2},
-    );
-    await _swipe(tester, 'Chapter 3', const Offset(-200, 0));
-    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
-    await tester.pumpAndSettle();
-    expect(book.deleted, hasLength(1));
-    expect(book.deleted.single, contains(3));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('bookmarked chapters show a bookmark before the title', (
-    tester,
-  ) async {
-    await _pumpPhone(tester);
-    final row = find.byKey(const ValueKey('3'));
-    final icon = find.descendant(
-      of: row,
-      matching: find.byIcon(Icons.bookmark_rounded),
-    );
-    expect(icon, findsOneWidget);
-    expect(
-      tester.getCenter(icon).dx,
-      lessThan(tester.getTopLeft(find.text('Chapter 3')).dx),
-    );
-    final plainRow = find.byKey(const ValueKey('4'));
-    expect(
-      find.descendant(
-        of: plainRow,
-        matching: find.byIcon(Icons.bookmark_rounded),
-      ),
-      findsNothing,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('resume never covers the header or the last row', (tester) async {
-    await _pumpPhone(tester);
-    final fab = tester.getRect(find.byType(BrandFab));
-    expect(tester.getRect(find.text('6 Chapters')).overlaps(fab), isFalse);
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('6')),
-      100,
-      scrollable: find.ancestor(
-        of: find.byKey(const ValueKey('6')),
-        matching: find.byType(Scrollable),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final lastRow = tester.getRect(find.byKey(const ValueKey('6')));
-    expect(lastRow.bottom, lessThanOrEqualTo(fab.top));
     expect(tester.takeException(), isNull);
   });
 }

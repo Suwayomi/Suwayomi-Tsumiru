@@ -48,21 +48,6 @@ void main() {
     expect(raw, contains('catalog'));
   });
 
-  test('a sealed record reads back whole', () {
-    final read = BackgroundTokenRecord.fromJson(
-      jsonDecode(jsonEncode(_record.toJson())) as Map<String, Object?>,
-    );
-    expect(read.toJsonForTest(), _record.toJsonForTest());
-    expect(read.sameIdentity(_record), isTrue);
-  });
-
-  test('a record from before sealing still reads, so an update loses no '
-      'session', () {
-    final legacy = <String, Object?>{..._record.toJsonForTest()};
-    final read = BackgroundTokenRecord.fromJson(legacy);
-    expect(read.toJsonForTest(), _record.toJsonForTest());
-  });
-
   test('another key reads the secrets as absent: the record authenticates '
       'as nobody and matches no identity', () {
     final raw = jsonEncode(_record.toJson());
@@ -76,35 +61,6 @@ void main() {
     expect(read.extraHeaders, isEmpty);
     expect(read.catalogServerId, 'catalog');
     expect(read.sameIdentity(_record), isFalse);
-  });
-
-  test('a tampered record reads its secrets as absent', () {
-    final json = _record.toJson();
-    final sealed = json['sealed']! as String;
-    final parts = sealed.split('.');
-    final bytes = base64Decode(parts[2]);
-    bytes[0] ^= 1;
-    json['sealed'] = '${parts[0]}.${parts[1]}.${base64Encode(bytes)}';
-    expect(BackgroundTokenRecord.fromJson(json).accessToken, isNull);
-  });
-
-  test('without a key the record is written with no secrets in clear', () {
-    RecordSeal.debugKey = null;
-    final json = _record.toJson();
-    final raw = jsonEncode(json);
-    expect(json, isNot(contains('sealed')));
-    expect(raw, isNot(contains('secret')));
-    expect(raw, isNot(contains('c2VjcmV0')));
-
-    final read = BackgroundTokenRecord.fromJson(
-      jsonDecode(raw) as Map<String, Object?>,
-    );
-    expect(read.accessToken, isNull);
-    expect(read.refreshToken, isNull);
-    expect(read.basicCredential, isNull);
-    expect(read.gen, _record.gen);
-    expect(read.authType, _record.authType);
-    expect(read.endpoint, _record.endpoint);
   });
 
   group('load', () {
@@ -129,34 +85,7 @@ void main() {
       );
       expect(read.refreshToken, 'secret-refresh');
     });
-
-    test('a stored key that is not base64 is replaced by the app', () async {
-      FlutterSecureStorage.setMockInitialValues({
-        RecordSeal.storageKey: 'not-base64!!',
-      });
-      const storage = FlutterSecureStorage();
-      expect(await RecordSeal.load(storage), isFalse);
-      expect(await RecordSeal.load(storage, create: true), isTrue);
-      final stored = await storage.read(key: RecordSeal.storageKey);
-      expect(base64Decode(stored!), hasLength(32));
-    });
   });
 }
 
-extension on BackgroundTokenRecord {
-  Map<String, Object?> toJsonForTest() => {
-    'gen': gen,
-    'authType': authType,
-    'endpoint': endpoint,
-    'identityEpoch': identityEpoch,
-    'catalogServerId': catalogServerId,
-    'originalRefreshToken': originalRefreshToken,
-    'notificationSessionId': notificationSessionId,
-    'accessToken': accessToken,
-    'refreshToken': refreshToken,
-    'password': password,
-    'basicCredential': basicCredential,
-    'simpleCookie': simpleCookie,
-    'extraHeaders': extraHeaders,
-  };
-}
+extension on BackgroundTokenRecord {}

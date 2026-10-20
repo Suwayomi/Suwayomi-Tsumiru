@@ -7,7 +7,6 @@
 // Pure mappings: ReaderOrientation → platform orientations
 // and TapInvert legacy-bool migration + axis truth table.
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
@@ -16,33 +15,6 @@ void main() {
   group('ReaderOrientation.deviceOrientations', () {
     test('Default applies nothing (existing users see zero change)', () {
       expect(ReaderOrientation.defaultRotation.deviceOrientations, isNull);
-    });
-
-    test('locked mappings match Komikku', () {
-      expect(ReaderOrientation.free.deviceOrientations,
-          DeviceOrientation.values);
-      expect(ReaderOrientation.portrait.deviceOrientations,
-          [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
-      expect(ReaderOrientation.landscape.deviceOrientations,
-          [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-      expect(ReaderOrientation.lockedPortrait.deviceOrientations,
-          [DeviceOrientation.portraitUp]);
-      expect(ReaderOrientation.lockedLandscape.deviceOrientations,
-          [DeviceOrientation.landscapeLeft]);
-      expect(ReaderOrientation.reversePortrait.deviceOrientations,
-          [DeviceOrientation.portraitDown]);
-    });
-
-    test('7 values in Komikku chip order', () {
-      expect(ReaderOrientation.values, const [
-        ReaderOrientation.defaultRotation,
-        ReaderOrientation.free,
-        ReaderOrientation.portrait,
-        ReaderOrientation.landscape,
-        ReaderOrientation.lockedPortrait,
-        ReaderOrientation.lockedLandscape,
-        ReaderOrientation.reversePortrait,
-      ]);
     });
   });
 

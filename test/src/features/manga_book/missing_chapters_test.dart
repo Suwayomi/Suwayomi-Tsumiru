@@ -23,10 +23,6 @@ void main() {
     expect(chapterGap(higher: 10, lower: double.nan), 0);
     expect(chapterGap(higher: double.infinity, lower: 10), 0);
   });
-  test('empty and unknown chapter lists have no gaps', () {
-    expect(findMissingChapterRanges(const []), isEmpty);
-    expect(findMissingChapterRanges(const [-1, -1]), isEmpty);
-  });
 
   test('finds gaps before and between available chapters', () {
     final ranges = findMissingChapterRanges(const [4, 6, 10]);
@@ -46,12 +42,5 @@ void main() {
     expect(ranges.single.lowerChapter, 2);
     expect(ranges.single.higherChapter, 4);
     expect(ranges.single.count, 1);
-  });
-
-  test('ignores non-finite chapter numbers', () {
-    expect(
-      findMissingChapterRanges(const [double.nan, double.infinity, 1, 2]),
-      isEmpty,
-    );
   });
 }

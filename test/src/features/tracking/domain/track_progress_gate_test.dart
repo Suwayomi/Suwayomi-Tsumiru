@@ -9,8 +9,7 @@ import 'package:tsumiru/src/features/tracking/domain/track_progress_gate.dart';
 
 void main() {
   group('shouldTrackProgress', () {
-    // Baseline: all conditions met (auto path).
-    test('returns true when all conditions are met (auto path)', () {
+    test('auto path gates on enabledAfterReading, not manual mark-read', () {
       expect(
         shouldTrackProgress(
           isRead: true,
@@ -21,10 +20,64 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        shouldTrackProgress(
+          isRead: true,
+          enabledAfterReading: false,
+          enabledManualMarkRead: true,
+          manual: false,
+          trackRecordCount: 1,
+        ),
+        isFalse,
+      );
+      // The manual flag does not gate the auto path.
+      expect(
+        shouldTrackProgress(
+          isRead: true,
+          enabledAfterReading: true,
+          enabledManualMarkRead: false,
+          manual: false,
+          trackRecordCount: 1,
+        ),
+        isTrue,
+      );
     });
 
-    // isRead gate.
-    test('returns false when isRead is false', () {
+    test('manual path gates on enabledManualMarkRead, not after-reading', () {
+      expect(
+        shouldTrackProgress(
+          isRead: true,
+          enabledAfterReading: false,
+          enabledManualMarkRead: true,
+          manual: true,
+          trackRecordCount: 1,
+        ),
+        isTrue,
+      );
+      expect(
+        shouldTrackProgress(
+          isRead: true,
+          enabledAfterReading: true,
+          enabledManualMarkRead: false,
+          manual: true,
+          trackRecordCount: 1,
+        ),
+        isFalse,
+      );
+      // The after-reading flag does not gate the manual path.
+      expect(
+        shouldTrackProgress(
+          isRead: true,
+          enabledAfterReading: false,
+          enabledManualMarkRead: true,
+          manual: true,
+          trackRecordCount: 1,
+        ),
+        isTrue,
+      );
+    });
+
+    test('read and record gates apply to both paths', () {
       expect(
         shouldTrackProgress(
           isRead: false,
@@ -35,10 +88,6 @@ void main() {
         ),
         isFalse,
       );
-    });
-
-    // trackRecordCount gate.
-    test('returns false when trackRecordCount is 0', () {
       expect(
         shouldTrackProgress(
           isRead: true,
@@ -49,78 +98,25 @@ void main() {
         ),
         isFalse,
       );
-    });
-
-    // Auto path gated on enabledAfterReading.
-    test('returns false when auto path and enabledAfterReading is false', () {
       expect(
         shouldTrackProgress(
-          isRead: true,
-          enabledAfterReading: false,
-          enabledManualMarkRead: true,
-          manual: false,
-          trackRecordCount: 1,
-        ),
-        isFalse,
-      );
-    });
-
-    // Auto path is not gated on enabledManualMarkRead.
-    test('returns true for auto path even when enabledManualMarkRead is false',
-        () {
-      expect(
-        shouldTrackProgress(
-          isRead: true,
+          isRead: false,
           enabledAfterReading: true,
-          enabledManualMarkRead: false,
-          manual: false,
-          trackRecordCount: 1,
-        ),
-        isTrue,
-      );
-    });
-
-    // Manual path gated on enabledManualMarkRead.
-    test('returns true when manual path and enabledManualMarkRead is true', () {
-      expect(
-        shouldTrackProgress(
-          isRead: true,
-          enabledAfterReading: false,
           enabledManualMarkRead: true,
-          manual: true,
-          trackRecordCount: 1,
-        ),
-        isTrue,
-      );
-    });
-
-    test('returns false when manual path and enabledManualMarkRead is false',
-        () {
-      expect(
-        shouldTrackProgress(
-          isRead: true,
-          enabledAfterReading: true,
-          enabledManualMarkRead: false,
           manual: true,
           trackRecordCount: 1,
         ),
         isFalse,
       );
-    });
-
-    // Manual path is not gated on enabledAfterReading.
-    test(
-        'returns true for manual path even when enabledAfterReading is false',
-        () {
       expect(
         shouldTrackProgress(
           isRead: true,
-          enabledAfterReading: false,
+          enabledAfterReading: true,
           enabledManualMarkRead: true,
           manual: true,
-          trackRecordCount: 1,
+          trackRecordCount: 0,
         ),
-        isTrue,
+        isFalse,
       );
     });
   });

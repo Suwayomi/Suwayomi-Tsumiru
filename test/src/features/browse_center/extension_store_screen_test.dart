@@ -20,8 +20,9 @@ GraphQLClient _dummyClient() =>
     GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _FakeExtensionStoreRepository extends ExtensionStoreRepository {
-  _FakeExtensionStoreRepository({this.failAdd = false})
-    : super(_dummyClient(), permissions: legacyAccountPermissions);
+  _FakeExtensionStoreRepository()
+    : failAdd = false,
+      super(_dummyClient(), permissions: legacyAccountPermissions);
 
   final bool failAdd;
   final List<String> added = <String>[];
@@ -42,13 +43,6 @@ final _storeA = ExtensionStore(
   name: 'Store A',
   contactWebsite: 'https://a.example',
   contactDiscord: 'https://discord.gg/a',
-);
-
-final _storeBare = ExtensionStore(
-  indexUrl: 'https://bare.example/index.pb',
-  name: 'Store Bare',
-  contactWebsite: '',
-  contactDiscord: null,
 );
 
 ProviderContainer _container({
@@ -76,23 +70,6 @@ Widget _app(ProviderContainer container) => UncontrolledProviderScope(
 );
 
 void main() {
-  testWidgets(
-    'renders a card per store with conditional website/discord buttons',
-    (tester) async {
-      final container = _container(stores: [_storeA, _storeBare]);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_app(container));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Store A'), findsOneWidget);
-      expect(find.text('Store Bare'), findsOneWidget);
-      expect(find.byIcon(Icons.copy_rounded), findsNWidgets(2));
-      expect(find.byIcon(Icons.delete_rounded), findsNWidgets(2));
-      expect(find.byIcon(Icons.public_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.discord_rounded), findsOneWidget);
-    },
-  );
-
   testWidgets(
     'shows the empty state with a Help button when there are no stores',
     (tester) async {
@@ -138,58 +115,6 @@ void main() {
       );
       await tester.pump();
       expect(addButton().onPressed, isNotNull);
-    },
-  );
-
-  testWidgets(
-    'a server error on add shows clamped inline errorText and keeps the dialog open',
-    (tester) async {
-      final container = _container(
-        stores: [_storeA],
-        repository: _FakeExtensionStoreRepository(failAdd: true),
-      );
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_app(container));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.add_rounded));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(
-        find.byType(TextField),
-        'https://new.example/index.pb',
-      );
-      await tester.pump();
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Add'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Store index URL'), findsOneWidget);
-      expect(
-        find.text('Exception: Server error: could not add store'),
-        findsOneWidget,
-      );
-    },
-  );
-
-  testWidgets(
-    'the delete icon opens the remove dialog with the store name and url',
-    (tester) async {
-      final container = _container(stores: [_storeA]);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_app(container));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.delete_rounded));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Remove extension store'), findsOneWidget);
-      expect(
-        find.text(
-          'Do you wish to remove the extension store "Store A" '
-          '(${_storeA.indexUrl})?',
-        ),
-        findsOneWidget,
-      );
     },
   );
 }

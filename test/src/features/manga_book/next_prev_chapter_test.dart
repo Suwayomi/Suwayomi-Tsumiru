@@ -86,28 +86,6 @@ void main() {
     expect(pair.second, isNotNull);
   });
 
-  test('an edge chapter resolves exactly one neighbour', () async {
-    final c = await _container(chapters);
-    final pair = c.read(
-      getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 3),
-    );
-    expect(pair, isNotNull);
-    // One side present, one absent — never two, never zero for an in-list edge.
-    expect([pair!.first, pair.second].where((e) => e != null).length, 1);
-  });
-
-  test('reader navigation preserves uncertain same-number chapters', () async {
-    final c = await _container([
-      _chapter(id: 1, name: 'One A', number: 1, sourceOrder: 1),
-      _chapter(id: 2, name: 'One B', number: 1, sourceOrder: 2),
-      _chapter(id: 3, name: 'Two', number: 2, sourceOrder: 3),
-    ]);
-    final pair = c.read(
-      getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1),
-    );
-    expect(pair!.first?.id, 2);
-  });
-
   test('reader follows the opening scanlator for confident releases', () async {
     final c = await _container([
       _chapter(

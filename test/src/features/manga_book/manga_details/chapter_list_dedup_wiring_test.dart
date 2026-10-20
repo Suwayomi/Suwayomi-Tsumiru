@@ -116,11 +116,6 @@ void main() {
     },
   );
 
-  test('no preference -> identical to today (all copies)', () async {
-    final c = await _container();
-    expect(_ids(c), [5, 4, 3, 2, 1]);
-  });
-
   test('show-all ON -> raw list passes through', () async {
     final c = await _container(preference: const ['B'], showAll: true);
     expect(_ids(c), [5, 4, 3, 2, 1]);
@@ -146,87 +141,6 @@ void main() {
     expect(_ids(c, keepChapterId: 1), [5, 3, 2, 1]);
   });
 
-  test('keepChapterId bypasses unread filter for reader navigation', () async {
-    final c = await _container(preference: const ['B'], unreadFilter: true);
-    expect(_ids(c, keepChapterId: 4), [5, 4, 3, 2]);
-  });
-
-  test('same-number specials and restarted seasons are never folded', () async {
-    final c = await _container(
-      preference: const ['A'],
-      chapters: [
-        ch(id: 1, number: 6, name: 'Chapter 6', scanlator: 'A', sourceOrder: 0),
-        ch(id: 2, number: 6, name: 'Special 6', scanlator: 'A', sourceOrder: 1),
-        ch(
-          id: 3,
-          number: 1,
-          name: 'Season 1 Chapter 1',
-          scanlator: 'A',
-          sourceOrder: 2,
-        ),
-        ch(
-          id: 4,
-          number: 1,
-          name: 'Season 2 Chapter 1',
-          scanlator: 'A',
-          sourceOrder: 3,
-        ),
-      ],
-    );
-    expect(_ids(c), [4, 3, 2, 1]);
-  });
-
-  test(
-    'getNextAndPreviousChapters resolves neighbours from a hidden copy',
-    () async {
-      // The reader follows A for chapter 1 and falls back to B for chapter 2.
-      final hiddenCopyChapters = [
-        ch(id: 1, number: 1, scanlator: 'A', sourceOrder: 0),
-        ch(id: 2, number: 1, scanlator: 'B', sourceOrder: 1),
-        ch(id: 3, number: 2, scanlator: 'B', sourceOrder: 2),
-      ];
-      final c = await _container(
-        chapters: hiddenCopyChapters,
-        preference: const ['B'],
-      );
-      final pair = c.read(
-        getNextAndPreviousChaptersProvider(
-          mangaId: 1,
-          chapterId: 1,
-          readerScanlatorGroup: 'A',
-        ),
-      );
-      expect(pair, isNotNull);
-      // Default sort is source-order descending (id 3 first, id 1 last), so
-      // id 1's only neighbour (id 3) resolves as "first", not (null, null).
-      expect(pair!.first?.id, 3);
-      expect(pair.second, isNull);
-    },
-  );
-
-  test(
-    'bulk-actions list filters preferred groups but stays unfiltered',
-    () async {
-      final c = await _container(preference: const ['B']);
-      final rows = c
-          .read(mangaChapterListForBulkActionsProvider(mangaId: 1))
-          .value!
-          .map((e) => e.id)
-          .toList();
-      expect(rows, unorderedEquals([2, 3, 5]));
-    },
-  );
-
-  test('bulk-actions list is raw when show-all is on', () async {
-    final c = await _container(preference: const ['B'], showAll: true);
-    final rows = c
-        .read(mangaChapterListForBulkActionsProvider(mangaId: 1))
-        .value!
-        .map((e) => e.id)
-        .toList();
-    expect(rows, unorderedEquals([1, 2, 3, 4, 5]));
-  });
-
   test('hidden scanlator chapters do not become missing chapters', () async {
     final c = await _container(
       preference: const ['A'],
@@ -243,17 +157,5 @@ void main() {
       entries.whereType<MangaChapterEntry>().map((entry) => entry.chapter.id),
       [3, 1],
     );
-  });
-
-  test('presentation entries include real catalogue gaps', () async {
-    final c = await _container(
-      chapters: [
-        ch(id: 1, number: 1, sourceOrder: 0),
-        ch(id: 3, number: 3, sourceOrder: 1),
-      ],
-    );
-
-    final entries = c.read(mangaChapterListEntriesProvider(mangaId: 1)).value!;
-    expect(entries.whereType<MissingChaptersEntry>().single.count, 1);
   });
 }

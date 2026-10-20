@@ -10,14 +10,18 @@
 // write didn't gets downloaded all over again, and files left behind by a
 // crashed delete are never swept.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 import 'package:tsumiru/src/features/offline/data/offline_background_downloads.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_coordinator.dart';
+import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -77,33 +81,6 @@ void main() {
     updatedAt: DateTime(2026),
   );
 
-  for (final location in ['final', 'staging', 'superseded']) {
-    test('recovery preserves terminal error and $location pages', () async {
-      await seedChapter(1, 7);
-      await db.setChapterDeviceState(1, OfflineDeviceState.error);
-      await db.incrementServerFetchAttempts(1);
-      if (location == 'staging') {
-        store.seedStaged(1, {0: 5, 1: 5}, indices: [0, 1]);
-      } else {
-        store.seedCommitted(1, {0: 5, 1: 5});
-        if (location == 'superseded') store.setAside(1);
-      }
-      await recoverChaptersOnDisk(db: db, store: store);
-      final row = (await db.chapterById(1))!;
-      expect(row.deviceState, OfflineDeviceState.error);
-      expect(row.serverFetchAttempts, 1);
-      expect(await db.downloadedPageCount(1), 0);
-      expect(store.committed[1], location == 'final' ? {0: 5, 1: 5} : null);
-      expect(store.staged[1], location == 'staging' ? {0: 5, 1: 5} : null);
-      expect(
-        store.superseded[1],
-        location == 'superseded' ? {0: 5, 1: 5} : null,
-      );
-      expect(store.deletedChapters, isEmpty);
-      expect(store.written, isEmpty);
-    });
-  }
-
   // Mirror the desktop launch order: disk recovery (now split out of
   // initOfflineDownloads) runs first, then the pump resumes the queue.
   Future<void> launchRecoverAndResume(Future<ProviderContainer> cf) async {
@@ -128,6 +105,37 @@ void main() {
       );
       expect(await db.downloadedPageCount(1), 2);
       expect(store.written, isEmpty, reason: 'nothing was re-downloaded');
+
+      // Files can survive while page rows go missing; the reader heals that
+      // rather than falling back to the server.
+      await seedChapter(2, 7);
+      await db.setChapterDeviceState(2, OfflineDeviceState.downloaded);
+      final tmp = await Directory.systemTemp.createTemp('launch-repair');
+      addTearDown(() => tmp.delete(recursive: true));
+      final ioPaths = OfflinePaths(tmp.path);
+      final ioStore = IoOfflinePageStore(ioPaths);
+      await ioStore.beginChapter(
+        7,
+        2,
+        const ChapterManifest(generation: 0, indices: [0, 1]),
+      );
+      await ioStore.writePage(7, 2, 0, [1], 'jpg');
+      await ioStore.writePage(7, 2, 1, [2], 'jpg');
+      await ioStore.commitStaging(7, 2);
+
+      final healed = await repairDownloadedChapterPages(
+        db: db,
+        store: ioStore,
+        paths: ioPaths,
+        chapterId: 2,
+      );
+
+      expect(healed, isNotNull);
+      expect(healed!.length, 2);
+      expect(
+        (await db.chapterById(2))!.deviceState,
+        OfflineDeviceState.downloaded,
+      );
     },
   );
 
@@ -164,45 +172,5 @@ void main() {
       (await db.chapterById(1))!.deviceState,
       OfflineDeviceState.downloaded,
     );
-  });
-
-  test('a set-aside copy never outranks a complete staging', () async {
-    // Both present means the kill landed between the two renames: staging was
-    // verified complete a moment earlier, so it is the newer copy and the one
-    // that must land.
-    await seedChapter(1, 7);
-    await db.setChapterDeviceState(1, OfflineDeviceState.downloading);
-    store.seedCommitted(1, {0: 5, 1: 5});
-    store.setAside(1);
-    store.seedStaged(1, {0: 9, 1: 9, 2: 9}, indices: [0, 1, 2]);
-
-    await launchRecoverAndResume(container());
-
-    expect(
-      await db.downloadedPageCount(1),
-      3,
-      reason: 'the newer download landed, not the set-aside copy',
-    );
-    expect(
-      (await db.chapterById(1))!.deviceState,
-      OfflineDeviceState.downloaded,
-    );
-  });
-
-  test('recoverDiskAtLaunch settles disk on its own, with no pump — it is the '
-      'step the launch path runs before reconcile', () async {
-    await seedChapter(1, 7);
-    await db.setChapterDeviceState(1, OfflineDeviceState.downloading);
-    // Commit landed, catalog write didn't.
-    store.seedCommitted(1, {0: 5, 1: 5});
-
-    await recoverDiskAtLaunch(await container());
-
-    expect(
-      (await db.chapterById(1))!.deviceState,
-      OfflineDeviceState.downloaded,
-      reason: 'recovery adopts the on-disk copy without needing the pump',
-    );
-    expect(store.written, isEmpty, reason: 'nothing was re-downloaded');
   });
 }

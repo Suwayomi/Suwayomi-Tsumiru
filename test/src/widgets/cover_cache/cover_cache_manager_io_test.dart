@@ -37,31 +37,16 @@ List<int> _ftyp(String major, List<String> compatible) {
 
 void main() {
   group('isAvifHeader', () {
-    test('accepts the avif major brand', () {
+    test('accepts AVIF brands and rejects everything else', () {
+      // Accept: avif major, avis major, and avif as a compatible brand.
       expect(isAvifHeader(_ftyp('avif', ['mif1', 'miaf'])), isTrue);
-    });
-
-    test('accepts the avis major brand', () {
       expect(isAvifHeader(_ftyp('avis', ['avif', 'msf1'])), isTrue);
-    });
-
-    test('accepts avif listed as a compatible brand', () {
       expect(isAvifHeader(_ftyp('mif1', ['miaf', 'avif'])), isTrue);
-    });
 
-    test('rejects HEIC', () {
+      // Reject: HEIC and MP4, a short header, and JPEG.
       expect(isAvifHeader(_ftyp('heic', ['mif1', 'heic'])), isFalse);
-    });
-
-    test('rejects MP4', () {
       expect(isAvifHeader(_ftyp('isom', ['isom', 'mp41'])), isFalse);
-    });
-
-    test('rejects a header too short to hold a brand', () {
       expect(isAvifHeader(_ftyp('avif', const []).take(11).toList()), isFalse);
-    });
-
-    test('rejects JPEG', () {
       expect(
         isAvifHeader([
           0xff,

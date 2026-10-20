@@ -11,7 +11,7 @@ import 'package:tsumiru/src/utils/crash/copy_crash_log.dart';
 
 void main() {
   group('crashLogHeader', () {
-    test('renders the exact four-line preamble', () {
+    test('renders the four-line preamble and keeps unknown as unknown', () {
       expect(
         crashLogHeader(
           appVersion: '1.3.2',
@@ -24,16 +24,13 @@ void main() {
         'Platform: android 15\n'
         '---\n',
       );
-    });
-
-    test('keeps a literal unknown server version as unknown', () {
-      final header = crashLogHeader(
+      final unknown = crashLogHeader(
         appVersion: '1.3.2',
         buildNumber: '42',
         serverVersion: 'unknown',
         platform: 'web',
       );
-      expect(header, contains('\nServer: unknown\n'));
+      expect(unknown, contains('\nServer: unknown\n'));
     });
   });
 
@@ -81,15 +78,11 @@ void main() {
         out,
         '$header[2026-01-01] Exception: http://h/img?token=<redacted> x\n',
       );
-    });
 
-    test('with no header the result is exactly the redacted log', () {
-      final dir = Directory.systemTemp.createTempSync('crashlog-');
-      addTearDown(() => dir.deleteSync(recursive: true));
-      final path = '${dir.path}/crash.log';
-      File(path).writeAsStringSync('plain failure, no tokens\n');
-
-      expect(crashLogForClipboard(path), 'plain failure, no tokens\n');
+      // With no header the result is exactly the redacted log.
+      final plain = '${dir.path}/plain.log';
+      File(plain).writeAsStringSync('plain failure, no tokens\n');
+      expect(crashLogForClipboard(plain), 'plain failure, no tokens\n');
     });
   });
 }

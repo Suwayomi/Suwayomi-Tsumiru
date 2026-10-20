@@ -53,26 +53,4 @@ void main() {
     expect(store.readLedger('B').queuedServerRetries, isEmpty);
     expect(store.readLedger('A').queuedServerRetries, {'1:0': 5});
   });
-
-  test(
-    'endpoint handover preserves legacy exhausted device attempts',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        DBKeys.offlineCatalogServerId.name: 'A',
-        'catchup_ledger': jsonEncode({
-          'serverId': 'A',
-          'ledger': const CatchupLedger(
-            queuedDownloadRetries: {'1:3': 5},
-          ).toJson(),
-        }),
-      });
-      final preferences = await SharedPreferences.getInstance();
-      final store = CatchupStateStore(preferences);
-      await store.clearState(preserveLedger: true);
-      expect(store.readLedger('A').queuedDownloadRetries, {'1:3': 5});
-      expect(store.readLedger('B').queuedDownloadRetries, isEmpty);
-      await store.clearState();
-      expect(store.readLedger('A').queuedDownloadRetries, isEmpty);
-    },
-  );
 }

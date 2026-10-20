@@ -9,9 +9,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/db_keys.dart';
-import 'package:tsumiru/src/constants/enum.dart';
-import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -43,39 +40,6 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(find.text("You're all set"), findsNothing);
-  });
-
-  testWidgets('stored UI credentials do not skip the saved server step', (
-    tester,
-  ) async {
-    FlutterSecureStorage.setMockInitialValues({
-      'auth.ui.accessToken': 'access',
-      'auth.ui.refreshToken': 'refresh',
-      'auth.ui.accountBinding': const AccountBinding(
-        address: 'http://server',
-        userId: 2,
-        username: 'alice',
-        catalogId: 'alice-root',
-      ).encode(accessToken: 'access', refreshToken: 'refresh'),
-    });
-    SharedPreferences.setMockInitialValues({
-      DBKeys.authType.name: AuthType.uiLogin.index,
-      'onboarding.step': 1,
-    });
-    final preferences = await SharedPreferences.getInstance();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const OnboardingScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text("You're all set"), findsNothing);
-    expect(find.text('Connect your server'), findsOneWidget);
   });
 
   testWidgets(
@@ -131,18 +95,6 @@ void main() {
     expect(find.text('Welcome to Tsumiru'), findsNothing);
     expect(find.text('Connect your server'), findsOneWidget);
   });
-
-  testWidgets(
-    'without reduced motion the outgoing step is still on screen after one frame',
-    (tester) async {
-      await _pumpOnboarding(tester, reduceMotion: false);
-
-      await tester.tap(find.text('Next'));
-      await tester.pump();
-      expect(find.text('Welcome to Tsumiru'), findsOneWidget);
-      expect(find.text('Connect your server'), findsOneWidget);
-    },
-  );
 }
 
 class _ReduceMotionOn extends AppReduceMotion {

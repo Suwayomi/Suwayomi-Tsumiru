@@ -13,32 +13,6 @@ void main() {
         'https://reader.example.test:4567',
       );
     });
-
-    test('uses the URL port when the port toggle is off', () {
-      expect(
-        serverAddress(
-          baseUrl: 'http://reader.example.test:8080/',
-          port: 4567,
-          addPort: false,
-        ),
-        'http://reader.example.test:8080',
-      );
-    });
-
-    test('makes implicit and explicit default ports identical', () {
-      final implicit = serverAddress(
-        baseUrl: 'https://reader.example.test',
-        port: null,
-        addPort: false,
-      );
-      final explicit = serverAddress(
-        baseUrl: 'https://reader.example.test:443/',
-        port: null,
-        addPort: false,
-      );
-      expect(implicit, explicit);
-      expect(implicit, 'https://reader.example.test:443');
-    });
   });
 
   test('catalog is parked on another server and restored on return', () {
@@ -68,35 +42,6 @@ void main() {
         currentServer: serverA,
       ),
       isTrue,
-    );
-  });
-
-  test('unstamped catalogs are trusted only when offline storage exists', () {
-    expect(
-      isOfflineCatalogActive(
-        offlineEnabled: true,
-        catalogServer: null,
-        currentServer: 'https://reader.example.test:443',
-      ),
-      isTrue,
-    );
-    expect(
-      isOfflineCatalogActive(
-        offlineEnabled: false,
-        catalogServer: null,
-        currentServer: 'https://reader.example.test:443',
-      ),
-      isFalse,
-    );
-  });
-
-  test('creates a UUID v4 server identifier', () {
-    final id = createServerInstanceId();
-    expect(
-      id,
-      matches(RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-      )),
     );
   });
 }

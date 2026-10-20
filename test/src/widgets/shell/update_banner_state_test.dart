@@ -36,23 +36,33 @@ ProviderContainer _container({bool runningNow = false}) {
 
 void main() {
   group('UpdateOptimistic', () {
-    test('defaults to off', () {
+    test('defaults are off; arm() shows the banner immediately', () {
       final c = _container();
       expect(c.read(updateOptimisticProvider), isFalse);
-    });
-
-    test('arm() shows the banner immediately', () {
-      final c = _container();
       c.read(updateOptimisticProvider.notifier).arm();
       expect(c.read(updateOptimisticProvider), isTrue);
+
+      expect(c.read(updateBannerVisibleProvider), isFalse);
+      c.read(updateBannerVisibleProvider.notifier).set(true);
+      expect(c.read(updateBannerVisibleProvider), isTrue);
     });
 
-    test('hands back once a real run is seen to start then end', () async {
+    test('holds through pre-start idle and releases on the end edge', () async {
       final c = _container();
       // Resolve the seed read to "not running" before arming.
       await c.read(updateProgressSocketProvider.future);
       final notifier = c.read(updateOptimisticProvider.notifier);
+
+      // OnRealRunning before arm is a no-op.
+      notifier.onRealRunning(false);
+      expect(c.read(updateOptimisticProvider), isFalse);
+      notifier.onRealRunning(true);
+      expect(c.read(updateOptimisticProvider), isFalse);
+
       notifier.arm();
+      // Pre-start idle frames must not clear the optimistic hold.
+      notifier.onRealRunning(false);
+      expect(c.read(updateOptimisticProvider), isTrue);
 
       // Server confirms running, then finishes.
       notifier.onRealRunning(true);
@@ -86,28 +96,6 @@ void main() {
       },
     );
 
-    test(
-      'does not release on idle frames before the real run starts',
-      () async {
-        final c = _container();
-        await c.read(updateProgressSocketProvider.future);
-        final notifier = c.read(updateOptimisticProvider.notifier);
-        notifier.arm();
-
-        // Pre-start idle frames must NOT clear the optimistic hold.
-        notifier.onRealRunning(false);
-        expect(c.read(updateOptimisticProvider), isTrue);
-      },
-    );
-
-    test('onRealRunning before arm is a no-op', () {
-      final c = _container();
-      c.read(updateOptimisticProvider.notifier).onRealRunning(false);
-      expect(c.read(updateOptimisticProvider), isFalse);
-      c.read(updateOptimisticProvider.notifier).onRealRunning(true);
-      expect(c.read(updateOptimisticProvider), isFalse);
-    });
-
     test('safety timeout releases the hold after 12s if no run registers', () {
       fakeAsync((async) {
         final container = ProviderContainer(
@@ -125,16 +113,6 @@ void main() {
         async.elapse(const Duration(seconds: 12));
         expect(container.read(updateOptimisticProvider), isFalse);
       });
-    });
-  });
-
-  group('UpdateBannerVisible', () {
-    test('defaults to false and set() flips it', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      expect(container.read(updateBannerVisibleProvider), isFalse);
-      container.read(updateBannerVisibleProvider.notifier).set(true);
-      expect(container.read(updateBannerVisibleProvider), isTrue);
     });
   });
 }

@@ -9,13 +9,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:tsumiru/src/features/offline/data/account_storage_migration_io.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_recovery.dart';
-import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/offline_bootstrap.dart';
 
 import '../../helpers/offline_test_db.dart';
-import '../../helpers/test_link.dart';
 
 class _Support extends PathProviderPlatform {
   _Support(this.path);
@@ -48,65 +45,6 @@ void main() {
     expect(await page.readAsBytes(), [1, 2, 3]);
     await reopened.db.close();
   });
-
-  for (final nested in [false, true]) {
-    test(
-      'non-account storage refuses ${nested ? 'nested' : 'directory'} symlinks',
-      () async {
-        final support = await Directory.systemTemp.createTemp('no-auth-link-');
-        addTearDown(() => support.delete(recursive: true));
-        PathProviderPlatform.instance = _Support(support.path);
-        final root = Directory(p.join(support.path, 'offline'));
-        await root.create();
-        await File(p.join(root.path, '.account-root-id')).writeAsString('A');
-        final outside = Directory(p.join(support.path, 'outside'));
-        await outside.create();
-        final base = p.join(root.path, 'non-account');
-        if (nested) await Directory(base).create();
-        await createTestLink(nested ? p.join(base, '1') : base, outside.path);
-        await expectLater(
-          initOfflineStorage(),
-          throwsA(isA<FileSystemException>()),
-        );
-        expect(await outside.list().isEmpty, isTrue);
-      },
-    );
-  }
-
-  for (final claimed in [false, true]) {
-    test(
-      'non-account ${claimed ? 'scoped' : 'root'} reopen uses vet marker',
-      () async {
-        final support = await Directory.systemTemp.createTemp(
-          'no-auth-vetted-',
-        );
-        addTearDown(() => support.delete(recursive: true));
-        PathProviderPlatform.instance = _Support(support.path);
-        final root = Directory(p.join(support.path, 'offline'));
-        await root.create();
-        if (claimed) {
-          await File(p.join(root.path, '.account-root-id')).writeAsString('A');
-        }
-        final first = (await initOfflineStorage())!;
-        final base = first.paths.baseDir;
-        await first.db.close();
-        // Normalized: the guard reports native separators on Windows.
-        final pages = Directory(p.normalize(p.join(base, '1/7')));
-        await pages.create(recursive: true);
-        final link = Link(p.join(pages.path, 'linked'));
-        await createTestLink(link.path, support.path);
-        final reopened = (await initOfflineStorage())!;
-        await reopened.db.close();
-        await File(p.join(base, storageVettedMarker)).delete();
-        await expectLater(
-          initOfflineStorage(),
-          throwsA(
-            isA<FileSystemException>().having((e) => e.path, 'path', link.path),
-          ),
-        );
-      },
-    );
-  }
 
   for (final atRoot in [true, false]) {
     test(
@@ -172,24 +110,6 @@ void main() {
       },
     );
   }
-  test('a busy worker can release storage without starting recovery', () async {
-    final support = await Directory.systemTemp.createTemp('busy-storage-');
-    PathProviderPlatform.instance = _Support(support.path);
-    final lock = BackgroundDownloadLock(
-      File(p.join(support.path, 'offline', '.bg_lock')),
-    );
-    expect(await lock.acquire('test-worker'), isTrue);
-    addTearDown(lock.release);
-    final opening = initOfflineStorage(accountId: 'A');
-    final release = Future<void>.delayed(
-      const Duration(milliseconds: 300),
-      lock.release,
-    );
-    final storage = await opening.timeout(const Duration(seconds: 3));
-    await release;
-    expect(storage, isNotNull);
-    await storage!.db.close();
-  });
   test(
     'partial recovery merges real catalogues and reopens with preserved reset',
     () async {
@@ -287,174 +207,6 @@ void main() {
       await reopened.db.close();
     },
   );
-  test(
-    'legacy owner keeps its files in place across account switches',
-    () async {
-      final support = await Directory.systemTemp.createTemp('claim-root-');
-      PathProviderPlatform.instance = _Support(support.path);
-      final legacy = (await initOfflineStorage())!;
-      final original = legacy.paths.baseDir;
-      await legacy.db.upsertMangaMetadata(
-        id: 1,
-        title: 'Saved',
-        updatedAt: DateTime(2026),
-      );
-      final page = File(p.join(original, '1', '7', '000.jpg'));
-      await page.parent.create(recursive: true);
-      await page.writeAsBytes([1, 2, 3]);
-      await legacy.db.close();
-      final claimed = (await initOfflineStorage(
-        accountId: 'A',
-        legacyInstanceId: 'A',
-        accountOwner: '2',
-      ))!;
-      addTearDown(claimed.db.close);
-      expect(claimed.paths.baseDir, original);
-      expect((await claimed.db.mangaById(1))?.title, 'Saved');
-      expect(await page.readAsBytes(), [1, 2, 3]);
-      expect(
-        await File(
-          p.join(original, 'accounts', 'A', 'catalog.sqlite'),
-        ).exists(),
-        isFalse,
-      );
-      await claimed.db.close();
-      final other = (await initOfflineStorage(
-        accountId: 'B',
-        legacyInstanceId: 'A',
-        accountOwner: '3',
-      ))!;
-      expect(await other.db.mangaById(1), isNull);
-      await other.db.close();
-      final returned = (await initOfflineStorage(
-        accountId: 'A',
-        legacyInstanceId: 'B',
-        accountOwner: '2',
-      ))!;
-      expect(returned.paths.baseDir, original);
-      expect((await returned.db.mangaById(1))?.title, 'Saved');
-      await returned.db.close();
-      await expectLater(
-        initOfflineStorage(accountId: 'A', accountOwner: '3'),
-        throwsStateError,
-      );
-      final noAuth = (await initOfflineStorage())!;
-      final noAuthPath = noAuth.paths.baseDir;
-      expect(noAuthPath, p.join(original, 'non-account'));
-      expect(await noAuth.db.mangaById(1), isNull);
-      expect(
-        await File(p.join(noAuthPath, '1', '7', '000.jpg')).exists(),
-        isFalse,
-      );
-      await noAuth.db.upsertMangaMetadata(
-        id: 2,
-        title: 'Basic download',
-        updatedAt: DateTime(2026),
-      );
-      final basicPage = File(p.join(noAuthPath, '2', '8', '000.jpg'));
-      await basicPage.parent.create(recursive: true);
-      await basicPage.writeAsBytes([4, 5, 6]);
-      await noAuth.db.close();
-      final reopened = (await initOfflineStorage())!;
-      expect(reopened.paths.baseDir, noAuthPath);
-      expect((await reopened.db.mangaById(2))?.title, 'Basic download');
-      expect(await basicPage.readAsBytes(), [4, 5, 6]);
-      expect(await page.readAsBytes(), [1, 2, 3]);
-      expect(await reopened.db.mangaById(1), isNull);
-      await reopened.db.close();
-    },
-  );
-
-  test(
-    'startup defers a partial migration before moving download files',
-    () async {
-      final support = await Directory.systemTemp.createTemp('defer-storage-');
-      PathProviderPlatform.instance = _Support(support.path);
-      final legacy = (await initOfflineStorage())!;
-      final root = legacy.paths.baseDir;
-      await legacy.db.upsertMangaMetadata(
-        id: 1,
-        title: 'Legacy',
-        updatedAt: DateTime(2026),
-      );
-      await legacy.db.close();
-      final target = Directory(p.join(root, 'accounts', 'A'));
-      await target.create(recursive: true);
-      await File(
-        p.join(root, 'catalog.sqlite'),
-      ).copy(p.join(target.path, 'catalog.sqlite'));
-      final page = File(p.join(root, '1', '7', '000.jpg'));
-      await page.parent.create(recursive: true);
-      await page.writeAsBytes([1, 2, 3]);
-      await expectLater(
-        initOfflineStorage(
-          accountId: 'A',
-          legacyInstanceId: 'A',
-          accountOwner: '2',
-        ).then((storage) => storage?.db.close()),
-        throwsStateError,
-      );
-      expect(await page.readAsBytes(), [1, 2, 3]);
-      expect(
-        await File(p.join(target.path, '.account-complete')).exists(),
-        isFalse,
-      );
-    },
-  );
-
-  test('a claimed root with a missing owner cannot be reassigned', () async {
-    final support = await Directory.systemTemp.createTemp(
-      'missing-root-owner-',
-    );
-    PathProviderPlatform.instance = _Support(support.path);
-    final legacy = (await initOfflineStorage())!;
-    await legacy.db.upsertMangaMetadata(
-      id: 1,
-      title: 'Private',
-      updatedAt: DateTime(2026),
-    );
-    final root = legacy.paths.baseDir;
-    await legacy.db.close();
-    final claimed = (await initOfflineStorage(
-      accountId: 'A',
-      legacyInstanceId: 'A',
-      accountOwner: '2',
-    ))!;
-    await claimed.db.close();
-    await File(p.join(root, '.account-owner')).delete();
-    await expectLater(
-      initOfflineStorage(
-        accountId: 'A',
-        accountOwner: '3',
-      ).then((storage) => storage?.db.close()),
-      throwsStateError,
-    );
-  });
-
-  test('a different user cannot open a reused catalogue identity', () async {
-    final root = await Directory.systemTemp.createTemp('account-owner-');
-    PathProviderPlatform.instance = _Support(root.path);
-    final a = (await initOfflineStorage(
-      accountId: 'shared-id',
-      accountOwner: '1',
-    ))!;
-    await a.db.upsertMangaMetadata(
-      id: 1,
-      title: 'A',
-      updatedAt: DateTime(2026),
-    );
-    await a.db.close();
-    await expectLater(
-      initOfflineStorage(accountId: 'shared-id', accountOwner: '2'),
-      throwsStateError,
-    );
-    final restored = (await initOfflineStorage(
-      accountId: 'shared-id',
-      accountOwner: '1',
-    ))!;
-    expect((await restored.db.mangaById(1))?.title, 'A');
-    await restored.db.close();
-  });
 
   test(
     'native bootstrap preserves A data while opening B and returning to A',

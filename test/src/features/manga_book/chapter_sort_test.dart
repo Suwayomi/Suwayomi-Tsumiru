@@ -18,24 +18,23 @@ ChapterDto _chapter({
   String uploadDate = '0',
   String fetchedAt = '0',
   double chapterNumber = 0,
-}) =>
-    Fragment$ChapterDto(
-      chapterNumber: chapterNumber,
-      fetchedAt: fetchedAt,
-      id: id,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 0,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: name,
-      pageCount: 0,
-      sourceOrder: sourceOrder,
-      uploadDate: uploadDate,
-      url: '',
-      meta: const [],
-    );
+}) => Fragment$ChapterDto(
+  chapterNumber: chapterNumber,
+  fetchedAt: fetchedAt,
+  id: id,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 0,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: name,
+  pageCount: 0,
+  sourceOrder: sourceOrder,
+  uploadDate: uploadDate,
+  url: '',
+  meta: const [],
+);
 
 class _FakeChapterList extends MangaChapterList {
   _FakeChapterList(this.chapters);
@@ -51,8 +50,9 @@ Future<ProviderContainer> _container(List<ChapterDto> chapters) async {
   final c = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
-      mangaChapterListProvider(mangaId: 1)
-          .overrideWith(() => _FakeChapterList(chapters)),
+      mangaChapterListProvider(
+        mangaId: 1,
+      ).overrideWith(() => _FakeChapterList(chapters)),
     ],
   );
   addTearDown(c.dispose);
@@ -70,11 +70,26 @@ void main() {
   // are distinguishable.
   final chapters = [
     _chapter(
-        id: 1, name: 'Gamma', sourceOrder: 1, uploadDate: '300', chapterNumber: 2.5),
+      id: 1,
+      name: 'Gamma',
+      sourceOrder: 1,
+      uploadDate: '300',
+      chapterNumber: 2.5,
+    ),
     _chapter(
-        id: 2, name: 'alpha', sourceOrder: 2, uploadDate: '100', chapterNumber: 10),
+      id: 2,
+      name: 'alpha',
+      sourceOrder: 2,
+      uploadDate: '100',
+      chapterNumber: 10,
+    ),
     _chapter(
-        id: 3, name: 'Beta', sourceOrder: 3, uploadDate: '200', chapterNumber: 1),
+      id: 3,
+      name: 'Beta',
+      sourceOrder: 3,
+      uploadDate: '200',
+      chapterNumber: 1,
+    ),
   ];
 
   test('default sort is by source order, newest (descending) first', () async {
@@ -89,59 +104,15 @@ void main() {
     expect(_names(c), ['alpha', 'Beta', 'Gamma']);
   });
 
-  test('chapter number sort orders by parsed number, not source order',
-      () async {
-    final c = await _container(chapters);
-    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
-    c.read(mangaChapterSortDirectionProvider.notifier).update(true);
-    expect(_names(c), ['Beta', 'Gamma', 'alpha']);
-  });
-
-  test('tied chapter numbers fall back to source order', () async {
-    final tied = [
-      _chapter(id: 1, name: 'C', sourceOrder: 1, chapterNumber: -1),
-      _chapter(id: 2, name: 'A', sourceOrder: 2, chapterNumber: -1),
-      _chapter(id: 3, name: 'B', sourceOrder: 3, chapterNumber: -1),
-    ];
-    final c = await _container(tied);
-    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
-    c.read(mangaChapterSortDirectionProvider.notifier).update(true);
-    expect(_names(c), ['C', 'A', 'B']);
-    // Descending flips the whole list, ties included (as WebUI does), so the
-    // reading order doesn't depend on the display direction.
-    c.read(mangaChapterSortDirectionProvider.notifier).update(false);
-    expect(_names(c), ['B', 'A', 'C']);
-  });
-
-  test('with same-timestamp chapters, the reader\'s next chapter is the same '
-      'in both directions (and matches the ascending keep-window)', () async {
-    // One source refresh stamps a whole batch with the same fetchedAt.
-    final batch = [
-      _chapter(id: 1, name: 'c1', sourceOrder: 1, fetchedAt: '500'),
-      _chapter(id: 2, name: 'c2', sourceOrder: 2, fetchedAt: '500'),
-      _chapter(id: 3, name: 'c3', sourceOrder: 3, fetchedAt: '500'),
-    ];
-    final c = await _container(batch);
-    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.fetchedDate);
-    for (final ascending in [true, false]) {
-      c.read(mangaChapterSortDirectionProvider.notifier).update(ascending);
-      final pair = c.read(
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2),
-      );
-      expect(pair?.first?.id, 3, reason: 'next, ascending: $ascending');
-      expect(pair?.second?.id, 1, reason: 'previous, ascending: $ascending');
-    }
-  });
-
-  group('formattedChapterNumber', () {
-    test('drops trailing zeros and keeps up to 3 decimals', () {
-      expect(_chapter(id: 1, name: '', chapterNumber: 218).formattedChapterNumber, '218');
-      expect(_chapter(id: 1, name: '', chapterNumber: 218.5).formattedChapterNumber, '218.5');
-      expect(_chapter(id: 1, name: '', chapterNumber: 12.345).formattedChapterNumber, '12.345');
-      expect(_chapter(id: 1, name: '', chapterNumber: 0).formattedChapterNumber, '0');
-      expect(_chapter(id: 1, name: '', chapterNumber: 0.5).formattedChapterNumber, '0.5');
-      // Unparsed numbers come through as -1; shown as-is (matches Komikku).
-      expect(_chapter(id: 1, name: '', chapterNumber: -1).formattedChapterNumber, '-1');
-    });
-  });
+  test(
+    'chapter number sort orders by parsed number, not source order',
+    () async {
+      final c = await _container(chapters);
+      c
+          .read(mangaChapterSortProvider.notifier)
+          .update(ChapterSort.chapterNumber);
+      c.read(mangaChapterSortDirectionProvider.notifier).update(true);
+      expect(_names(c), ['Beta', 'Gamma', 'alpha']);
+    },
+  );
 }

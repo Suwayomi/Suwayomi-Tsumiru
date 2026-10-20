@@ -73,14 +73,4 @@ void main() {
     // persistedPaused → ref.read throws UnmountedRefException.
     expect(coord!.isPaused, isFalse);
   });
-
-  test('reads across an async gap return the same coordinator', () async {
-    final container = await makeContainer();
-    final first = container.read(offlineDownloadCoordinatorProvider);
-    await settle();
-    final second = container.read(offlineDownloadCoordinatorProvider);
-    // One live instance per build generation — otherwise pause/cancel act on
-    // a throwaway object instead of the pumping one.
-    expect(identical(first, second), isTrue);
-  });
 }

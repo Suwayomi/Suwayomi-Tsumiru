@@ -67,23 +67,21 @@ class _ReduceMotionOn extends AppReduceMotion {
 }
 
 void main() {
-  testWidgets('hidden while idle', (tester) async {
+  testWidgets('hidden while idle, appears after the 1000ms debounce', (
+    tester,
+  ) async {
     await _pump(tester, progress: Stream.value(_progress(isRunning: false)));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1000));
-
     expect(find.byType(UpdateProgressBanner), findsOneWidget);
     expect(find.textContaining('Updating library'), findsNothing);
-  });
 
-  testWidgets('appears after the 1000ms debounce once running', (tester) async {
+    // Running: not before the debounce, then the banner.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pump(tester, progress: Stream.value(_progress(isRunning: true)));
     await tester.pump();
-
-    // Before the debounce fires, the banner must not have appeared yet.
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.textContaining('Updating library'), findsNothing);
-
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Updating library…'), findsOneWidget);
   });
@@ -104,49 +102,20 @@ void main() {
     expect(find.text('Updating library…'), findsOneWidget);
   });
 
-  testWidgets(
-    'optimistic arm shows the banner immediately, before the debounce',
-    (tester) async {
-      // Server still reports idle — but the user just triggered an update. The
-      // banner must appear at once (bypassing the appear-debounce), so a pull
-      // doesn't feel dead for the ~1.5s before the server confirms it's running.
-      await _pump(tester, progress: Stream.value(_progress(isRunning: false)));
-      await tester.pump();
-      expect(find.textContaining('Updating library'), findsNothing);
-
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(UpdateProgressBanner)),
-      );
-      container.read(updateOptimisticProvider.notifier).arm();
-      await tester.pump(); // no debounce wait
-
-      expect(find.text('Updating library…'), findsOneWidget);
-
-      // Drain the arm's safety timeout so no timer outlives the test.
-      await tester.pump(const Duration(seconds: 13));
-    },
-  );
-
-  testWidgets(
-    'shows the running bar with indeterminate text until counts arrive',
-    (tester) async {
-      // Running, but no job counted yet (the run is still being set up): the
-      // bar must show "Updating library…", not a 0% or nothing.
-      await _pump(
-        tester,
-        progress: Stream.value(_progress(isRunning: true)),
-        progressFallback: Completer<Fragment$UpdateProgressDto?>().future,
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1000));
-
-      expect(find.text('Updating library…'), findsOneWidget);
-    },
-  );
-
-  testWidgets('shows the floor-rounded percent from the progress counts', (
+  testWidgets('shows the floor-rounded percent once counts arrive', (
     tester,
   ) async {
+    // Running, but no job counted yet: indeterminate text, never 0%.
+    await _pump(
+      tester,
+      progress: Stream.value(_progress(isRunning: true)),
+      progressFallback: Completer<Fragment$UpdateProgressDto?>().future,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1000));
+    expect(find.text('Updating library…'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pump(
       tester,
       progress: Stream.value(
@@ -156,11 +125,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1000));
     await tester.pump();
-
     expect(find.text('Updating library (37% · 37/100)'), findsOneWidget);
   });
 
-  testWidgets('hidden when the preference is off', (tester) async {
+  testWidgets('preference off hides it; optimistic arm and socket-error '
+      'fallback still show it', (tester) async {
     await _pump(
       tester,
       progress: Stream.value(_progress(isRunning: true, total: 2, finished: 1)),
@@ -168,25 +137,34 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1000));
-
     expect(find.textContaining('Updating library'), findsNothing);
-  });
 
-  testWidgets('visibility falls back to the one-shot progress query when the '
-      'progress socket errors', (tester) async {
+    // Optimistic arm: server still idle, but the banner appears at once.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(tester, progress: Stream.value(_progress(isRunning: false)));
+    await tester.pump();
+    expect(find.textContaining('Updating library'), findsNothing);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(UpdateProgressBanner)),
+    );
+    container.read(updateOptimisticProvider.notifier).arm();
+    await tester.pump();
+    expect(find.text('Updating library…'), findsOneWidget);
+    // Drain the arm's safety timeout so no timer outlives the test.
+    await tester.pump(const Duration(seconds: 13));
+
+    // Socket error: visibility falls back to the one-shot progress query.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pump(
       tester,
       progress: Stream<Fragment$UpdateProgressDto?>.error(Exception('ws down')),
       progressFallback: Future.value(_progress(isRunning: true)),
     );
     await tester.pump();
-    // The error->invalidate round trip only lands on the frame the first
-    // (stale "not running") debounce timer fires, which then starts a
-    // second full 1000ms debounce for the freshly-discovered "running"
-    // state — so settling takes ~2000ms here, not one debounce window.
+    // The error->invalidate round trip lands on the first (stale "not
+    // running") debounce frame, which starts a second 1000ms debounce.
     await tester.pump(const Duration(milliseconds: 1000));
     await tester.pump(const Duration(milliseconds: 1100));
-
     expect(find.text('Updating library…'), findsOneWidget);
   });
 }

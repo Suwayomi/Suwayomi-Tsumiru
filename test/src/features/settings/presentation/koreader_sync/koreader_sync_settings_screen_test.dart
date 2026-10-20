@@ -184,19 +184,16 @@ void main() {
     );
   });
 
-  testWidgets('a failed connect keeps the dialog open and saves nothing', (
-    tester,
-  ) async {
-    final link = KoSyncLink(connectSucceeds: false);
-    await pumpScreen(tester, link);
+  testWidgets('connect success and failure', (tester) async {
+    // A failed connect keeps the dialog open and saves nothing.
+    final failing = KoSyncLink(connectSucceeds: false);
+    await pumpScreen(tester, failing);
     await openConnectDialog(tester);
-
     expect(find.text('Connect to KOReader Sync server'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).at(1), 'tsumiru');
     await tester.enterText(find.byType(TextFormField).at(2), 'secret');
     await tester.tap(find.text('Connect'));
     await tester.pumpAndSettle();
-
     expect(find.text('Connect to KOReader Sync server'), findsOneWidget);
     expect(find.text('tsumiru'), findsOneWidget);
     expect(
@@ -206,22 +203,18 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(link.operations, ['KoSyncStatus', 'ConnectKoSyncAccount']);
-  });
+    expect(failing.operations, ['KoSyncStatus', 'ConnectKoSyncAccount']);
 
-  testWidgets('a successful connect shows the connected status', (
-    tester,
-  ) async {
-    final link = KoSyncLink();
-    await pumpScreen(tester, link);
+    // A successful connect shows the connected status.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final succeeding = KoSyncLink();
+    await pumpScreen(tester, succeeding);
     await openConnectDialog(tester);
-
     await tester.enterText(find.byType(TextFormField).at(0), 'http://example');
     await tester.enterText(find.byType(TextFormField).at(1), 'tsumiru');
     await tester.enterText(find.byType(TextFormField).at(2), 'secret');
     await tester.tap(find.text('Connect'));
     await tester.pumpAndSettle();
-
     expect(find.text('Connect to KOReader Sync server'), findsNothing);
     expect(find.text('Connected as tsumiru to http://example'), findsOneWidget);
   });

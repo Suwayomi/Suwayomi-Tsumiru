@@ -55,7 +55,8 @@ void main() {
     expect(selected, DownloadPreset.values);
   });
 
-  testWidgets('dismissal does not select a preset', (tester) async {
+  testWidgets('dismissal, disabled state and confirmation', (tester) async {
+    // Dismissal selects nothing.
     final selected = <DownloadPreset>[];
     await pumpMenu(tester, onSelected: selected.add);
     await tester.tap(find.byIcon(Icons.cloud_download_outlined));
@@ -64,39 +65,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(selected, isEmpty);
     expect(find.byType(PopupMenuItem<DownloadPreset>), findsNothing);
-  });
 
-  testWidgets('disabled or absent callback prevents opening', (tester) async {
-    final selected = <DownloadPreset>[];
+    // A disabled menu or missing callback never opens.
+    await tester.pumpWidget(const SizedBox.shrink());
     await pumpMenu(tester, enabled: false, onSelected: selected.add);
     await tester.tap(find.byIcon(Icons.cloud_download_outlined));
     await tester.pumpAndSettle();
     expect(find.byType(PopupMenuItem<DownloadPreset>), findsNothing);
     expect(selected, isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
     await pumpMenu(tester);
     await tester.tap(find.byIcon(Icons.cloud_download_outlined));
     await tester.pumpAndSettle();
     expect(find.byType(PopupMenuItem<DownloadPreset>), findsNothing);
-  });
 
-  testWidgets(
-    'confirmation shows preset description and cancellation is false',
-    (tester) async {
-      await pumpMenu(tester, onSelected: (_) {});
-      final context = tester.element(find.byType(DownloadPresetsMenu));
-      const description = 'Download next 5 chapters for each selected series.';
-      final result = confirmBulkDownload(
-        context,
-        summary: '3 series',
-        toDevice: false,
-        downloadDescription: description,
-      );
-      await tester.pumpAndSettle();
-      expect(find.text(description), findsOneWidget);
-      expect(find.textContaining('Every chapter'), findsNothing);
-      await tester.tap(find.text(AppLocalizations.of(context)!.cancel));
-      await tester.pumpAndSettle();
-      expect(await result, isFalse);
-    },
-  );
+    // The confirmation shows the preset description; cancelling is false.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpMenu(tester, onSelected: (_) {});
+    final context = tester.element(find.byType(DownloadPresetsMenu));
+    const description = 'Download next 5 chapters for each selected series.';
+    final result = confirmBulkDownload(
+      context,
+      summary: '3 series',
+      toDevice: false,
+      downloadDescription: description,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(description), findsOneWidget);
+    expect(find.textContaining('Every chapter'), findsNothing);
+    await tester.tap(find.text(AppLocalizations.of(context)!.cancel));
+    await tester.pumpAndSettle();
+    expect(await result, isFalse);
+  });
 }

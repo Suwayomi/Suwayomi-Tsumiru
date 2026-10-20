@@ -12,7 +12,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 void main() {
   group('showUpdateProgressBannerProvider', () {
-    test('defaults to on', () async {
+    test('defaults to on and update persists the flag', () async {
       SharedPreferences.setMockInitialValues(const {});
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(
@@ -21,15 +21,6 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(showUpdateProgressBannerProvider), isTrue);
-    });
-
-    test('update persists the flag', () async {
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      );
-      addTearDown(container.dispose);
 
       container.read(showUpdateProgressBannerProvider.notifier).update(false);
       expect(container.read(showUpdateProgressBannerProvider), isFalse);

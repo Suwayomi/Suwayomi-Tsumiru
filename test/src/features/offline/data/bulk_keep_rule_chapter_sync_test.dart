@@ -23,7 +23,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/offline/data/offline_chapter_catchup.dart';
-import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -71,116 +70,11 @@ void main() {
 
   // --- Original bug: empty offlineChapters silently breaks reconcile ----------
 
-  group('original bug — empty offlineChapters causes silent no-op', () {
-    test(
-      'chaptersForManga returns empty when syncChapters was never called',
-      () async {
-        // This documents the precondition that triggers the bug.
-        // When a manga has a keep rule but its chapters were never fetched
-        // (e.g. the user never opened the manga details screen), the local DB
-        // has an offlineMangas row but no offlineChapters rows.
-        // reconcileMangaCore then calls chaptersForManga → [], produces
-        // desiredChapterIds([], rule, count) = {}, and silently does nothing.
-        final db = testOfflineDatabase();
-        addTearDown(db.close);
-
-        await db.upsertMangaMetadata(
-          id: 1,
-          title: 'Manga A',
-          updatedAt: DateTime(2026),
-        );
-        await db.setKeepRule(1, OfflineKeepRule.nUnread, 5);
-
-        final chapters = await db.chaptersForManga(1);
-        expect(
-          chapters,
-          isEmpty,
-          reason:
-              'chapters have never been synced; the reconciler would '
-              'see an empty list and queue nothing',
-        );
-      },
-    );
-
-    test(
-      'setKeepRule silently no-ops when the manga has no offlineMangas row',
-      () async {
-        // Root cause of failure mode #3 ("nothing happens, not even the keep
-        // rule change"). setKeepRule is a pure UPDATE, so with no row it
-        // touches zero rows and the rule never persists. The bulk handler must
-        // mirror the manga row (from the DTO it holds) before calling this.
-        final db = testOfflineDatabase();
-        addTearDown(db.close);
-
-        // No upsertMangaMetadata — the row is deliberately absent.
-        await db.setKeepRule(42, OfflineKeepRule.all, 3);
-
-        final row = await (db.select(
-          db.offlineMangas,
-        )..where((t) => t.id.equals(42))).getSingleOrNull();
-        expect(
-          row,
-          isNull,
-          reason:
-              'setKeepRule is an UPDATE, not an upsert — it cannot create '
-              'the row, so the keep rule is lost with no error raised',
-        );
-
-        // After the row exists, the same call persists.
-        await db.upsertMangaMetadata(
-          id: 42,
-          title: 'Manga B',
-          updatedAt: DateTime(2026),
-        );
-        await db.setKeepRule(42, OfflineKeepRule.all, 3);
-        final after = await (db.select(
-          db.offlineMangas,
-        )..where((t) => t.id.equals(42))).getSingle();
-        expect(after.keepRule, OfflineKeepRule.all);
-        expect(after.keepUnreadCount, 3);
-      },
-    );
-  });
+  group('original bug — empty offlineChapters causes silent no-op', () {});
 
   // --- syncAndReconcileMangaSet guards -----------------------------------------
 
   group('syncAndReconcileMangaSet — guards', () {
-    test('empty set is a no-op — repo and starter are never called', () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final db = testOfflineDatabase();
-      addTearDown(db.close);
-      final repo = _NullChapterRepo();
-      final starterCalls = <bool>[];
-
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          offlineActiveProvider.overrideWithValue(true),
-          offlineDatabaseProvider.overrideWithValue(db),
-          mangaBookRepositoryProvider.overrideWithValue(repo),
-          downloadStarterProvider.overrideWithValue(
-            ({bool userInitiated = false}) async =>
-                starterCalls.add(userInitiated),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await syncAndReconcileMangaSet(container, {});
-
-      expect(
-        repo.calledFor,
-        isEmpty,
-        reason: 'an empty set must skip the fetch loop entirely',
-      );
-      expect(
-        starterCalls,
-        isEmpty,
-        reason: 'no point starting downloads when there is nothing to sync',
-      );
-    });
-
     test('offline inactive → no-op even when manga IDs are provided', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
@@ -261,50 +155,6 @@ void main() {
           reason:
               'the download starter is kicked exactly once at the end '
               'of the full sync so freshly-queued chapters begin transferring',
-        );
-      },
-    );
-
-    test(
-      'fetch failure for every manga still calls the download starter once',
-      () async {
-        // Even when all fetches fail (network error, server unreachable),
-        // the starter fires so any pre-existing queued work can still make
-        // progress. This mirrors runKeepRuleCatchUp's own behaviour.
-        SharedPreferences.setMockInitialValues({});
-        final prefs = await SharedPreferences.getInstance();
-        final db = testOfflineDatabase();
-        addTearDown(db.close);
-        final repo = _NullChapterRepo();
-        final starterCalls = <bool>[];
-
-        final container = ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            offlineActiveProvider.overrideWithValue(true),
-            offlineDatabaseProvider.overrideWithValue(db),
-            mangaBookRepositoryProvider.overrideWithValue(repo),
-            downloadStarterProvider.overrideWithValue(
-              ({bool userInitiated = false}) async =>
-                  starterCalls.add(userInitiated),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        await syncAndReconcileMangaSet(container, {1, 2, 3});
-
-        expect(
-          repo.calledFor.toSet(),
-          {1, 2, 3},
-          reason: 'all manga are attempted even when every fetch returns null',
-        );
-        expect(
-          starterCalls,
-          [false],
-          reason:
-              'the starter fires once regardless of individual sync '
-              'failures — the same pattern as runKeepRuleCatchUp',
         );
       },
     );

@@ -11,21 +11,13 @@ void main() {
   group('coverReadFraction', () {
     test('reports the read fraction', () {
       expect(coverReadFraction(totalChapters: 10, unreadCount: 3), 0.7);
-    });
-
-    test('fully read is 1.0', () {
       expect(coverReadFraction(totalChapters: 8, unreadCount: 0), 1.0);
     });
 
-    test('nothing read yet -> null (no bar)', () {
+    test('nothing read, no chapters or more unread than total -> null', () {
       expect(coverReadFraction(totalChapters: 10, unreadCount: 10), isNull);
-    });
-
-    test('no chapters -> null', () {
       expect(coverReadFraction(totalChapters: 0, unreadCount: 0), isNull);
-    });
-
-    test('unread greater than total clamps instead of going negative', () {
+      // Clamps instead of going negative.
       expect(coverReadFraction(totalChapters: 5, unreadCount: 9), isNull);
     });
   });

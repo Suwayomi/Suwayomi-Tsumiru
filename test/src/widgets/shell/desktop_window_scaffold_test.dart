@@ -171,59 +171,62 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
-Finder _inStrip(Finder finder) => find.descendant(
-  of: find.byType(DesktopTitleBar),
-  matching: finder,
-);
+Finder _inStrip(Finder finder) =>
+    find.descendant(of: find.byType(DesktopTitleBar), matching: finder);
 
 void main() {
   setUp(() => debugDesktopPlatformOverride = true);
   tearDown(() => debugDesktopPlatformOverride = null);
 
-  testWidgets('route outside the shells keeps the strip at 1400x900', (
-    tester,
-  ) async {
-    final container = await _container();
+  testWidgets('routes outside the shells keep the strip', (tester) async {
+    // A plain route keeps the strip with its window controls and drag area.
+    var container = await _container();
     addTearDown(container.dispose);
     await _pump(tester, container, const Text('plain page'));
-
     expect(find.byType(DesktopTitleBar), findsOneWidget);
     expect(find.byType(DesktopTopBar), findsNothing);
     expect(_inStrip(find.byType(DragToMoveArea)), findsOneWidget);
     expect(_inStrip(find.byType(WindowCaptionButton)), findsNWidgets(3));
     expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('onboarding keeps the strip at 1400x900', (tester) async {
+    // A narrow window keeps it too.
+    await tester.pumpWidget(const SizedBox.shrink());
+    container = await _container();
+    addTearDown(container.dispose);
+    await _pump(
+      tester,
+      container,
+      const Text('plain page'),
+      size: const Size(412, 900),
+    );
+    expect(find.byType(DesktopTitleBar), findsOneWidget);
+    expect(find.text('plain page'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // So does onboarding.
+    await tester.pumpWidget(const SizedBox.shrink());
     FlutterSecureStorage.setMockInitialValues({});
-    final container = await _container();
+    container = await _container();
     addTearDown(container.dispose);
     await _pump(tester, container, const OnboardingScreen());
-
     expect(find.text('Next'), findsOneWidget);
     expect(find.byType(DesktopTitleBar), findsOneWidget);
     expect(_inStrip(find.byType(WindowCaptionButton)), findsNWidgets(3));
     expect(find.byType(DesktopTopBar), findsNothing);
     expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('reader keeps the strip at 1400x900', (tester) async {
-    final container = await _container();
+    // And the reader.
+    await tester.pumpWidget(const SizedBox.shrink());
+    container = await _container();
     addTearDown(container.dispose);
-    await _pump(
-      tester,
-      container,
-      ReaderScreen(mangaId: 1, chapterId: 1),
-    );
-
+    await _pump(tester, container, ReaderScreen(mangaId: 1, chapterId: 1));
     // Wide window -> spread view on the first spread: indicator reads 2 / 3.
     expect(find.text('2 / 3'), findsOneWidget);
     expect(find.byType(DesktopTitleBar), findsOneWidget);
     expect(_inStrip(find.byType(DragToMoveArea)), findsOneWidget);
     expect(_inStrip(find.byType(WindowCaptionButton)), findsNWidgets(3));
     expect(find.byType(DesktopTopBar), findsNothing);
-    // Flush the reader's debounced progress timer before teardown, like the
-    // reader's own tests do — otherwise it outlives the widget tree.
+    // Flush the reader's debounced progress timer before teardown.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 3));
     expect(tester.takeException(), isNull);
@@ -247,9 +250,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('non-desktop platform draws no strip', (tester) async {
+  testWidgets('phones and hosted web draw no strip', (tester) async {
     debugDesktopPlatformOverride = false;
-    final container = await _container();
+    var container = await _container();
     addTearDown(container.dispose);
     await _pump(tester, container, const Text('plain page'));
 
@@ -257,40 +260,21 @@ void main() {
     expect(find.byType(DesktopTopBar), findsNothing);
     expect(find.text('plain page'), findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('web shell shows the merged bar and never a strip', (
-    tester,
-  ) async {
-    debugDesktopPlatformOverride = false;
-    final container = await _container();
+    // Hosted web shows the merged bar instead, and no window chrome.
+    await tester.pumpWidget(const SizedBox.shrink());
+    container = await _container();
     addTearDown(container.dispose);
     await _pump(
       tester,
       container,
       const DetailNavigationShellScreen(child: Text('detail page')),
     );
-
     expect(find.byType(DesktopTopBar), findsOneWidget);
     expect(find.byType(DesktopTitleBar), findsNothing);
     expect(find.byType(DragToMoveArea), findsNothing);
     expect(find.byType(WindowCaptionButton), findsNothing);
     expect(find.text('detail page'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('narrow window keeps the strip', (tester) async {
-    final container = await _container();
-    addTearDown(container.dispose);
-    await _pump(
-      tester,
-      container,
-      const Text('plain page'),
-      size: const Size(412, 900),
-    );
-
-    expect(find.byType(DesktopTitleBar), findsOneWidget);
-    expect(find.text('plain page'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

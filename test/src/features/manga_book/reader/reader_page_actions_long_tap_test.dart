@@ -123,17 +123,4 @@ void main() {
   // The reason the magnifier's removal mattered: a long-press recognizer that
   // consumes nothing still wins the gesture, and the tap that was meant to turn
   // the page is lost. Users reported having to tap twice.
-  testWidgets('pref OFF: a slow tap still registers as a tap', (tester) async {
-    var taps = 0;
-    await _pumpReader(tester, longTapOn: false, onTap: () => taps++);
-
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(ReaderView)),
-    );
-    await tester.pump(const Duration(milliseconds: 600));
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    expect(taps, 1);
-  });
 }

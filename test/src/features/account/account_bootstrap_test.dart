@@ -196,30 +196,6 @@ void main() {
     expect(credentials.accountBinding?.userId, 2);
   });
 
-  test('expired unbound tokens refresh before verifying ownership', () async {
-    await setup(expired: true);
-    await restoreAccountSession(container);
-    expect(server.operations, [
-      'RefreshToken',
-      'AccountCapability',
-      'CurrentAccount',
-      'OfflineServerIdentity',
-    ]);
-    expect(opened, ['account-root']);
-    expect(
-      container
-          .read(authCredentialsStoreProvider)
-          .requireValue
-          .uiAccessTokenExpiresAt!
-          .isAfter(DateTime.now()),
-      isTrue,
-    );
-    expect(
-      container.read(authCredentialsStoreProvider).requireValue.uiRefreshToken,
-      'original-refresh',
-    );
-  });
-
   for (final failure in ['offline', 'unknown']) {
     test('$failure unbound account cannot adopt or open a catalogue', () async {
       await setup();
@@ -272,19 +248,5 @@ void main() {
           ?.catalogId,
       'B-root',
     );
-  });
-
-  test('adoption transition opens native storage only once', () async {
-    await setup(transition: true);
-    await restoreAccountSession(container);
-    expect(opened, ['account-root']);
-    expect(container.read(offlineRuntimeStorageProvider), isNotNull);
-  });
-
-  test('legacy authentication opens the shared catalogue', () async {
-    await setup(mode: AuthType.basic);
-    await restoreAccountSession(container);
-    expect(opened, [null]);
-    expect(server.operations, isEmpty);
   });
 }

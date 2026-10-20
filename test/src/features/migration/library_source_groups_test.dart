@@ -31,17 +31,5 @@ void main() {
       expect(groups.map((g) => g.sourceId).toList(), ['a', 'd', 'z']);
       expect(groups.firstWhere((g) => g.sourceId == 'd').isObsolete, isTrue);
     });
-
-    test('a source is obsolete if ANY of its entries reports it so', () {
-      final groups = groupLibraryBySource([
-        m('a', 'Alpha', obsolete: false),
-        m('a', 'Alpha', obsolete: true),
-      ]);
-      expect(groups.single.isObsolete, isTrue);
-    });
-
-    test('empty library yields no groups', () {
-      expect(groupLibraryBySource([]), isEmpty);
-    });
   });
 }

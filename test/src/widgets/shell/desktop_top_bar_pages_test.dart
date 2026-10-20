@@ -126,56 +126,43 @@ Future<void> _pumpPage(WidgetTester tester, Widget page) async {
   await tester.pumpAndSettle();
 }
 
-Finder _inBar(Finder finder) => find.descendant(
-  of: find.byType(DesktopTopBar),
-  matching: finder,
-);
+Finder _inBar(Finder finder) =>
+    find.descendant(of: find.byType(DesktopTopBar), matching: finder);
 
 void main() {
   group('converted pages draw their toolbar in the shell bar', () {
-    testWidgets('More: search field in the bar, no AppBar', (tester) async {
+    testWidgets('converted pages draw their toolbar, never an AppBar', (
+      tester,
+    ) async {
+      // Search pages put the field in the bar.
       await _pumpPage(tester, const MoreScreen());
       expect(tester.takeException(), isNull);
-
       expect(find.byType(DesktopTopBar), findsOneWidget);
       expect(find.byType(AppBar), findsNothing);
-      expect(
-        _inBar(find.byType(DesktopSearchField)),
-        findsOneWidget,
-      );
+      expect(_inBar(find.byType(DesktopSearchField)), findsOneWidget);
       final barRect = tester.getRect(find.byType(DesktopTopBar));
-      final fieldRect = tester.getRect(
-        _inBar(find.byType(DesktopSearchField)),
-      );
+      final fieldRect = tester.getRect(_inBar(find.byType(DesktopSearchField)));
       expect(barRect.contains(fieldRect.topCenter), isTrue);
       expect(barRect.contains(fieldRect.bottomCenter), isTrue);
-    });
 
-    testWidgets('History: search field in the bar, no AppBar', (tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
       await _pumpPage(tester, const HistoryScreen());
       expect(tester.takeException(), isNull);
-
       expect(find.byType(DesktopTopBar), findsOneWidget);
       expect(find.byType(AppBar), findsNothing);
-      expect(
-        _inBar(find.byType(DesktopSearchField)),
-        findsOneWidget,
-      );
-    });
+      expect(_inBar(find.byType(DesktopSearchField)), findsOneWidget);
 
-    testWidgets('Settings home: title in the bar, no AppBar', (tester) async {
+      // Title pages put the title in the bar.
+      await tester.pumpWidget(const SizedBox.shrink());
       await _pumpPage(tester, const SettingsScreen());
       expect(tester.takeException(), isNull);
-
       expect(find.byType(DesktopTopBar), findsOneWidget);
       expect(find.byType(AppBar), findsNothing);
       expect(_inBar(find.text('Settings')), findsOneWidget);
-    });
 
-    testWidgets('About: title in the bar, no AppBar', (tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
       await _pumpPage(tester, const AboutScreen());
       expect(tester.takeException(), isNull);
-
       expect(find.byType(DesktopTopBar), findsOneWidget);
       expect(find.byType(AppBar), findsNothing);
       expect(_inBar(find.text('About')), findsOneWidget);
@@ -205,10 +192,7 @@ void main() {
       expect(find.byType(AppBar), findsNothing);
       expect(_inBar(find.text('Src')), findsNothing);
       expect(_inBar(find.text('1')), findsOneWidget);
-      expect(
-        _inBar(find.byIcon(Icons.close)),
-        findsOneWidget,
-      );
+      expect(_inBar(find.byIcon(Icons.close)), findsOneWidget);
     });
   });
 }

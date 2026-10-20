@@ -151,47 +151,19 @@ Future<void> _resize(WidgetTester tester, double width) async {
 }
 
 void main() {
-  testWidgets('resizing across 600 px replaces no routes', (tester) async {
-    await _pumpRouter(tester);
-    expect(tester.takeException(), isNull);
-
-    final shell = find.byType(NavigationShellScreen).evaluate().single;
-    final route = ModalRoute.of(shell);
-
-    // Down through the breakpoint: phone layout, same shell and route.
-    await _resize(tester, 599);
-    expect(
-      tester.takeException(),
-      isNull,
-      reason: 'crossing below 600 must not throw',
-    );
-    final below = find.byType(NavigationShellScreen).evaluate();
-    expect(below, hasLength(1), reason: 'no exiting shell copy may stack up');
-    expect(identical(below.single, shell), isTrue);
-    expect(ModalRoute.of(below.single), same(route));
-
-    // Back up: desktop layout, still the same shell and route.
-    await _resize(tester, 600);
-    expect(
-      tester.takeException(),
-      isNull,
-      reason: 'crossing back to 600 must not throw',
-    );
-    final above = find.byType(NavigationShellScreen).evaluate();
-    expect(above, hasLength(1));
-    expect(identical(above.single, shell), isTrue);
-    expect(ModalRoute.of(above.single), same(route));
-  });
-
   testWidgets('rapid flips across 600 px settle without stacking shells', (
     tester,
   ) async {
     await _pumpRouter(tester);
     expect(tester.takeException(), isNull);
 
+    final shell = find.byType(NavigationShellScreen).evaluate().single;
+    final route = ModalRoute.of(shell);
+
     // Pointer jitter around the breakpoint during a slow drag: every flip
     // lands inside the previous transition. Each step is one frame, so a
-    // wedged Navigator update hangs here instead of passing.
+    // wedged Navigator update hangs here instead of passing. Both crossings
+    // (down and back up) must keep the same shell and route.
     for (final w in [599.0, 600.0, 599.0, 600.0, 599.0, 600.0]) {
       tester.view.physicalSize = Size(w, 900);
       await tester.pump();
@@ -201,15 +173,17 @@ void main() {
         isNull,
         reason: 'flip to $w must not throw',
       );
+      final shells = find.byType(NavigationShellScreen).evaluate();
+      expect(shells, hasLength(1), reason: 'at width $w');
+      expect(identical(shells.single, shell), isTrue);
+      expect(ModalRoute.of(shells.single), same(route));
     }
     await tester.pump(const Duration(milliseconds: 500));
     expect(tester.takeException(), isNull);
     expect(find.byType(NavigationShellScreen), findsOneWidget);
   });
 
-  testWidgets('resizing across 1200 px keeps the single shell', (
-    tester,
-  ) async {
+  testWidgets('resizing across 1200 px keeps the single shell', (tester) async {
     await _pumpRouter(tester);
     expect(tester.takeException(), isNull);
 

@@ -91,86 +91,43 @@ Future<void> _expectPageAppearsInstantly(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('neither flag leaves motion on', (tester) async {
-    final probe = _Probe();
-    await tester.pumpWidget(_app(probe));
-
-    expect(probe.reduceMotion, isFalse);
-    expect(probe.theme!.splashFactory, isNot(NoSplash.splashFactory));
-
+  testWidgets('the OS flag and the app flag each turn motion off', (
+    tester,
+  ) async {
+    // Neither flag leaves motion on.
+    final control = _Probe();
+    await tester.pumpWidget(_app(control));
+    expect(control.reduceMotion, isFalse);
+    expect(control.theme!.splashFactory, isNot(NoSplash.splashFactory));
     await _pushNext(tester);
     expect(
       _hasTransitionAbove(tester, find.byKey(_nextKey)),
       isTrue,
       reason: 'control: the default route transition is present',
     );
-  });
 
-  testWidgets('OS flag turns motion off and pages appear on the first frame', (
-    tester,
-  ) async {
+    // OS flag.
+    await tester.pumpWidget(const SizedBox.shrink());
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-    final probe = _Probe();
-    await tester.pumpWidget(_app(probe));
+    final osProbe = _Probe();
+    await tester.pumpWidget(_app(osProbe));
+    _expectReduced(osProbe);
+    await _expectPageAppearsInstantly(tester);
 
-    _expectReduced(probe);
+    // App flag alone.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final appProbe = _Probe();
+    await tester.pumpWidget(
+      _app(
+        appProbe,
+        overrides: [appReduceMotionProvider.overrideWith(_ReduceMotionOn.new)],
+      ),
+    );
+    _expectReduced(appProbe);
     await _expectPageAppearsInstantly(tester);
   });
-
-  testWidgets(
-    'app flag alone turns motion off and pages appear on the first frame',
-    (tester) async {
-      final probe = _Probe();
-      await tester.pumpWidget(
-        _app(
-          probe,
-          overrides: [
-            appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
-          ],
-        ),
-      );
-
-      _expectReduced(probe);
-      await _expectPageAppearsInstantly(tester);
-    },
-  );
-
-  testWidgets(
-    'app flag hides a closing page at once and shows the page underneath',
-    (tester) async {
-      final probe = _Probe();
-      await tester.pumpWidget(
-        _app(
-          probe,
-          overrides: [
-            appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
-          ],
-        ),
-      );
-
-      await _pushNext(tester);
-      await _popNext(tester, probe);
-
-      expect(find.byKey(_nextKey), findsNothing);
-      expect(find.byKey(_nextKey, skipOffstage: false), findsOneWidget);
-      expect(find.text('open'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'without reduced motion the closing page is still painted on the first pop frame',
-    (tester) async {
-      final probe = _Probe();
-      await tester.pumpWidget(_app(probe));
-
-      await _pushNext(tester);
-      await _popNext(tester, probe);
-
-      expect(find.byKey(_nextKey), findsOneWidget);
-    },
-  );
 
   testWidgets('set(true) at runtime turns reduced motion on below the scope', (
     tester,
@@ -187,56 +144,52 @@ void main() {
     _expectReduced(probe);
   });
 
-  testWidgets(
-    'reader route transition wraps the page in a closing-page hider when reduced',
-    (tester) async {
-      final probe = _Probe();
-      await tester.pumpWidget(
-        _app(
-          probe,
-          overrides: [
-            appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
-          ],
-        ),
-      );
+  testWidgets('route transitions follow reduced motion', (tester) async {
+    // A closing page is hidden at once when reduced.
+    final reducedProbe = _Probe();
+    await tester.pumpWidget(
+      _app(
+        reducedProbe,
+        overrides: [appReduceMotionProvider.overrideWith(_ReduceMotionOn.new)],
+      ),
+    );
+    await _pushNext(tester);
+    await _popNext(tester, reducedProbe);
+    expect(find.byKey(_nextKey), findsNothing);
+    expect(find.byKey(_nextKey, skipOffstage: false), findsOneWidget);
+    expect(find.text('open'), findsOneWidget);
 
-      const route = ReaderRoute(mangaId: 1, chapterId: 1, transVertical: false);
-      const page = SizedBox(key: ValueKey('page'));
-      const animation = AlwaysStoppedAnimation<double>(0);
-
-      final result = route.transitionsBuilder(
-        probe.context!,
-        animation,
-        animation,
-        page,
-      );
-      expect(
-        result,
-        isA<ReducedRouteTransition>().having(
-          (w) => w.child,
-          'child',
-          same(page),
-        ),
-      );
-    },
-  );
-
-  testWidgets('reader route transition still slides when motion is on', (
-    tester,
-  ) async {
-    final probe = _Probe();
-    await tester.pumpWidget(_app(probe));
-
+    // The reader route wraps in the closing-page hider when reduced.
     const route = ReaderRoute(mangaId: 1, chapterId: 1, transVertical: false);
     const page = SizedBox(key: ValueKey('page'));
     const animation = AlwaysStoppedAnimation<double>(0);
-
-    final result = route.transitionsBuilder(
-      probe.context!,
+    final reduced = route.transitionsBuilder(
+      reducedProbe.context!,
       animation,
       animation,
       page,
     );
-    expect(identical(result, page), isFalse);
+    expect(
+      reduced,
+      isA<ReducedRouteTransition>().having((w) => w.child, 'child', same(page)),
+    );
+
+    // Without reduced motion the closing page is still painted on the first
+    // pop frame.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final motionProbe = _Probe();
+    await tester.pumpWidget(_app(motionProbe));
+    await _pushNext(tester);
+    await _popNext(tester, motionProbe);
+    expect(find.byKey(_nextKey), findsOneWidget);
+
+    // And the reader still slides when motion is on.
+    final sliding = route.transitionsBuilder(
+      motionProbe.context!,
+      animation,
+      animation,
+      page,
+    );
+    expect(identical(sliding, page), isFalse);
   });
 }

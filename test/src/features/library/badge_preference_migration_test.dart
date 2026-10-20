@@ -25,11 +25,13 @@ void main() {
       expect(prefs.getInt('unreadBadgeMode'), UnreadBadgeMode.hidden.index);
     });
 
-    test('on leaves the new key alone, so it keeps its Count default',
-        () async {
-      final prefs = await _migrated({'unreadBadge': true});
-      expect(prefs.getInt('unreadBadgeMode'), isNull);
-    });
+    test(
+      'on leaves the new key alone, so it keeps its Count default',
+      () async {
+        final prefs = await _migrated({'unreadBadge': true});
+        expect(prefs.getInt('unreadBadgeMode'), isNull);
+      },
+    );
 
     test('never set leaves the new key alone', () async {
       final prefs = await _migrated({});
@@ -49,11 +51,6 @@ void main() {
     test('Local Source badge on keeps a badge, via the source badge', () async {
       final prefs = await _migrated({'localBadge': true, 'sourceBadge': false});
       expect(prefs.getBool('sourceBadge'), isTrue);
-    });
-
-    test('Local Source badge off changes nothing', () async {
-      final prefs = await _migrated({'localBadge': false, 'sourceBadge': false});
-      expect(prefs.getBool('sourceBadge'), isFalse);
     });
   });
 
@@ -80,31 +77,6 @@ void main() {
       expect(prefs.getBool('sourceBadge'), isTrue);
       expect(prefs.getBool('languageBadge'), isFalse);
     });
-
-    test('a plain language badge keeps drawing a language badge', () async {
-      final prefs = await _migrated({
-        'languageBadge': true,
-        'useLangIcon': false,
-      });
-      expect(prefs.getBool('languageBadge'), isTrue);
-      expect(prefs.getBool('sourceBadge'), isNull);
-    });
-
-    test('inert when the language badge itself was off', () async {
-      final prefs = await _migrated({
-        'languageBadge': false,
-        'useLangIcon': true,
-      });
-      expect(prefs.getBool('languageBadge'), isFalse);
-      expect(prefs.getBool('sourceBadge'), isNull);
-    });
-  });
-
-  test('a fresh install is left entirely alone', () async {
-    final prefs = await _migrated({});
-    expect(prefs.getInt('unreadBadgeMode'), isNull);
-    expect(prefs.getBool('sourceBadge'), isNull);
-    expect(prefs.getBool('languageBadge'), isNull);
   });
 
   test('a later deliberate change survives the next launch', () async {

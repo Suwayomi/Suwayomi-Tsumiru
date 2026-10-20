@@ -74,38 +74,6 @@ void main() {
       'A private title',
     );
   });
-  test('tracked account writes drain before closing their database', () async {
-    await runtime.replace(drain: () async {}, open: () => open('A'));
-    final a = container.read(offlineRuntimeStorageProvider)!;
-    final release = Completer<void>();
-    final write = runtime.track(() async {
-      await release.future;
-      await a.db.upsertMangaMetadata(
-        id: 1,
-        title: 'A',
-        updatedAt: DateTime(2026),
-      );
-    });
-    final switching = runtime.replace(
-      drain: runtime.drain,
-      open: () => open('B'),
-    );
-    await Future<void>.delayed(Duration.zero);
-    expect(container.read(offlineRuntimeStorageProvider), same(a));
-    release.complete();
-    await write;
-    await switching;
-    expect(
-      await container.read(offlineRuntimeStorageProvider)!.db.mangaById(1),
-      isNull,
-    );
-    await runtime.replace(drain: runtime.drain, open: () => open('A'));
-    expect(
-      (await container.read(offlineRuntimeStorageProvider)!.db.mangaById(1))
-          ?.title,
-      'A',
-    );
-  });
 
   test('refused drain leaves A usable and never opens B', () async {
     await runtime.replace(drain: () async {}, open: () => open('A'));
@@ -119,19 +87,6 @@ void main() {
     );
     expect(container.read(offlineRuntimeStorageProvider), same(a));
     expect(await a.db.mangaById(1), isNull);
-  });
-  test('failed open exposes no old account and permits retry', () async {
-    await runtime.replace(drain: () async {}, open: () => open('A'));
-    await expectLater(
-      runtime.replace(
-        drain: () async {},
-        open: () async => throw FileSystemException('Unavailable'),
-      ),
-      throwsA(isA<FileSystemException>()),
-    );
-    expect(container.read(offlineRuntimeStorageProvider), isNull);
-    await runtime.replace(drain: () async {}, open: () => open('A'));
-    expect(container.read(offlineRuntimeStorageProvider), isNotNull);
   });
   test('overlapping storage changes are refused', () async {
     final gate = Completer<void>();

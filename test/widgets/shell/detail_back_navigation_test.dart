@@ -231,114 +231,85 @@ void main() {
     );
   }
 
-  testWidgets('back from recommends returns to the series', (tester) async {
+  testWidgets('every back path returns to the right page', (tester) async {
     final router = await _pump(tester, const Size(412, 915));
     await _openSeriesFromLibrary(tester);
 
+    // In-app back from recommends returns to the series.
     router.push(const RecommendsRoute(mangaId: 1).location);
     await tester.pumpAndSettle();
     expect(find.byType(RecommendsScreen), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
-
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-
     expect(find.byType(MangaDetailsScreen), findsOneWidget);
-    expect(find.byType(RecommendsScreen), findsNothing);
     expect(find.text('LIBRARY'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('back from global search returns to the series', (tester) async {
-    final router = await _pump(tester, const Size(412, 915));
-    await _openSeriesFromLibrary(tester);
-
+    // In-app back from global search returns to the series.
     router.push(const GlobalSearchRoute().location);
     await tester.pumpAndSettle();
     expect(find.byType(GlobalSearchScreen), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
-
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-
     expect(find.byType(MangaDetailsScreen), findsOneWidget);
-    expect(find.byType(GlobalSearchScreen), findsNothing);
     expect(find.text('LIBRARY'), findsNothing);
+
+    // Esc clears a phone selection even while an app bar action has focus.
+    await tester.longPress(find.text('Chapter 2'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MultiChaptersActionsBottomAppBar), findsOneWidget);
+    final phoneSelectAll = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byIcon(Icons.select_all_rounded),
+    );
+    final phoneNode = Focus.of(tester.element(phoneSelectAll));
+    phoneNode.requestFocus();
+    await tester.pump();
+    expect(phoneNode.hasPrimaryFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
+    expect(find.byType(MangaDetailsScreen), findsOneWidget);
+
+    // System back returns to the library.
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'flutter/navigation',
+      const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('LIBRARY'), findsOneWidget);
+    expect(find.byType(MangaDetailsScreen), findsNothing);
+
+    // At desktop width, Esc clears a selection even while a header button has
+    // focus, then Esc again leaves the series.
+    tester.view.physicalSize = const Size(1400, 900);
+    await tester.pumpAndSettle();
+    await _openSeriesFromLibrary(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Chapter 2'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(Checkbox), findsWidgets);
+    final headerSelectAll = find.descendant(
+      of: find.byKey(const ValueKey('chapterSelectionHeader')),
+      matching: find.byIcon(Icons.select_all_rounded),
+    );
+    final headerNode = Focus.of(tester.element(headerSelectAll));
+    headerNode.requestFocus();
+    await tester.pump();
+    expect(headerNode.hasPrimaryFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(Checkbox), findsNothing);
+    expect(find.byType(MangaDetailsScreen), findsOneWidget);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('LIBRARY'), findsOneWidget);
+    expect(find.byType(MangaDetailsScreen), findsNothing);
     expect(tester.takeException(), isNull);
   });
-
-  testWidgets(
-    'Esc on a series opened from the library returns to the library',
-    (tester) async {
-      await _pump(tester, const Size(412, 915));
-      await _openSeriesFromLibrary(tester);
-
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pump();
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-
-      expect(find.text('LIBRARY'), findsOneWidget);
-      expect(find.byType(MangaDetailsScreen), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'Esc clears a desktop selection even while a header button has focus',
-    (tester) async {
-      await _pump(tester, const Size(1400, 900));
-      await _openSeriesFromLibrary(tester);
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-      await tester.tap(find.text('Chapter 2'));
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-      await tester.pumpAndSettle();
-      expect(find.byType(Checkbox), findsWidgets);
-
-      final selectAll = find.descendant(
-        of: find.byKey(const ValueKey('chapterSelectionHeader')),
-        matching: find.byIcon(Icons.select_all_rounded),
-      );
-      final node = Focus.of(tester.element(selectAll));
-      node.requestFocus();
-      await tester.pump();
-      expect(node.hasPrimaryFocus, isTrue);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-      expect(find.byType(Checkbox), findsNothing);
-      expect(find.byType(MangaDetailsScreen), findsOneWidget);
-      expect(find.text('LIBRARY'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'Esc clears a phone selection even while an app bar action has focus',
-    (tester) async {
-      await _pump(tester, const Size(412, 915));
-      await _openSeriesFromLibrary(tester);
-      await tester.longPress(find.text('Chapter 2'));
-      await tester.pumpAndSettle();
-      expect(find.byType(MultiChaptersActionsBottomAppBar), findsOneWidget);
-
-      final selectAll = find.descendant(
-        of: find.byType(AppBar),
-        matching: find.byIcon(Icons.select_all_rounded),
-      );
-      final node = Focus.of(tester.element(selectAll));
-      node.requestFocus();
-      await tester.pump();
-      expect(node.hasPrimaryFocus, isTrue);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pumpAndSettle();
-      expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
-      expect(find.byType(MangaDetailsScreen), findsOneWidget);
-      expect(find.text('LIBRARY'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
 
   testWidgets('a deep link straight to a series shows no back button', (
     tester,
@@ -347,25 +318,6 @@ void main() {
     expect(find.byType(MangaDetailsScreen), findsOneWidget);
     expect(find.byType(BackButton), findsNothing);
   });
-
-  testWidgets(
-    'system back on a series opened from the library returns to the library',
-    (tester) async {
-      await _pump(tester, const Size(412, 915));
-      await _openSeriesFromLibrary(tester);
-
-      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
-        'flutter/navigation',
-        const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
-        (_) {},
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('LIBRARY'), findsOneWidget);
-      expect(find.byType(MangaDetailsScreen), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
 
   testWidgets('leaving a series opened from a category refreshes the library', (
     tester,

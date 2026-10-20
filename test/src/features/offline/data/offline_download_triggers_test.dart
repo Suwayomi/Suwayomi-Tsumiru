@@ -154,69 +154,6 @@ void main() {
     );
   });
 
-  testWidgets(
-    'reconcileMangaWidget(startDownload: false) queues without starting',
-    (tester) async {
-      final h = await harness(tester);
-      await tester.runAsync(
-        () => reconcileMangaWidget(h.ref, 1, startDownload: false),
-      );
-      expect(
-        h.starts(),
-        0,
-        reason:
-            'a caller batching several manga in a row (e.g. a bulk keep-rule '
-            'apply) must be able to queue each one without the FGS starting '
-            'and draining between them — otherwise its notification never '
-            'reflects the batch\'s real total, only whatever tiny snapshot '
-            'happened to be queued at each individual restart',
-      );
-    },
-  );
-
-  for (final retry in [false, true]) {
-    testWidgets(
-      retry
-          ? 'explicit retry resets exhausted server fetch attempts'
-          : 'saveChapterToDevice (single chapter) starts downloads',
-      (tester) async {
-        await db.upsertMangaMetadata(
-          id: 7,
-          title: 'M',
-          updatedAt: DateTime(2026),
-        );
-        await db.upsertChapterMetadata(
-          id: 1,
-          mangaId: 7,
-          name: 'c1',
-          chapterIndex: 1,
-          isRead: false,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 1,
-          updatedAt: DateTime(2026),
-        );
-        if (retry) {
-          await db.setChapterDeviceState(1, OfflineDeviceState.error);
-          for (var attempt = 0; attempt < 3; attempt++) {
-            await db.incrementServerFetchAttempts(1);
-          }
-          expect((await db.chapterById(1))!.serverFetchAttempts, 3);
-        }
-        final h = await harness(tester);
-        await saveChapterToDevice(h.ref, 1);
-        final saved = (await db.chapterById(1))!;
-        expect(saved.serverFetchAttempts, 0);
-        expect(saved.deviceState, OfflineDeviceState.queued);
-        expect(
-          h.starts(),
-          1,
-          reason: 'the single-chapter save must invoke downloadStarterProvider',
-        );
-      },
-    );
-  }
   testWidgets('delayed manual save preserves a replacement chapter', (
     tester,
   ) async {

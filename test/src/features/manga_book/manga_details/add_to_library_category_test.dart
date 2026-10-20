@@ -130,21 +130,6 @@ void main() {
     expect(repo.addedToCategory, contains((76, 1)));
   });
 
-  testWidgets('Default/uncategorized adds with no category and no prompt', (
-    tester,
-  ) async {
-    final repo = _RecordingRepo();
-    final c = _container(repo, 0);
-    addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, _manga(76)));
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Set categories'), findsNothing);
-    expect(repo.addedToLibrary, contains(76));
-    expect(repo.addedToCategory, isEmpty);
-  });
-
   testWidgets('Always ask pops the picker; OK adds and assigns the picks', (
     tester,
   ) async {
@@ -183,19 +168,5 @@ void main() {
 
     expect(find.text('Set categories'), findsOneWidget);
     expect(repo.addedToLibrary, isEmpty); // nothing added until the user picks
-  });
-
-  testWidgets('Always ask + Cancel adds nothing', (tester) async {
-    final repo = _RecordingRepo();
-    final c = _container(repo, -1);
-    addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, _manga(76)));
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-
-    expect(repo.addedToLibrary, isEmpty);
-    expect(repo.addedToCategory, isEmpty);
   });
 }

@@ -18,7 +18,6 @@ import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_brand.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_title_bar.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
-import 'package:tsumiru/src/widgets/shell/animated_nav_icon.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
@@ -86,6 +85,69 @@ Future<void> _pumpFrame(
   await tester.pumpAndSettle();
 }
 
+Future<void> pumpRoute(
+  WidgetTester tester,
+  Size size, {
+  double slotMinWidth = 500,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+  _mockWindowManager();
+  SharedPreferences.setMockInitialValues(const {});
+  final prefs = await SharedPreferences.getInstance();
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        // The bar lives in the shells, inside the Navigator (under its
+        // Overlay, which the tooltips need) — mirror that here.
+        path: '/',
+        builder: (context, state) => Scaffold(
+          body: Column(
+            children: [
+              const DesktopTopBar(),
+              Expanded(
+                child: Row(
+                  children: [
+                    BigScreenNavigationBar(
+                      selectedIndex: 0,
+                      onDestinationSelected: (_) {},
+                    ),
+                    Expanded(
+                      child: TopBarSlot(
+                        minWidth: slotMinWidth,
+                        content: const SizedBox(
+                          height: 40,
+                          child: Center(child: Text('Toolbar')),
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [..._overrides(prefs)],
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
+}
+
 void main() {
   test('breakpoint is built from the actual part widths', () {
     // Brand block + gap + slot + gap + window buttons + gap.
@@ -100,438 +162,252 @@ void main() {
     );
   });
 
-  testWidgets('1400x900 draws one 64 px bar above the sidebar', (tester) async {
+  testWidgets('merged bar layout across native, web and tablets', (
+    tester,
+  ) async {
+    addTearDown(() {
+      debugDesktopPlatformOverride = null;
+      debugAndroidOverride = null;
+    });
+
+    // Native desktop: one bar above the sidebar, window chrome, drag area.
     SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
+    var prefs = await SharedPreferences.getInstance();
     await _pumpFrame(tester, prefs);
-
     expect(find.byType(DesktopTopBar), findsOneWidget);
-    expect(tester.getSize(find.byType(DesktopTopBar)).height, 64);
     expect(find.byType(DesktopTitleBar), findsNothing);
-
     final barRect = tester.getRect(find.byType(DesktopTopBar));
     final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
     expect(sidebarRect.top, barRect.bottom);
-    expect(sidebarRect.width, 208);
-
     expect(find.byType(WindowCaptionButton), findsNWidgets(3));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('collapsed brand block matches the 60 px sidebar', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pumpFrame(tester, prefs);
-
-    expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
-    final logo = find.descendant(
-      of: find.byType(DesktopTopBar),
-      matching: find.byType(TsumiruLogo),
-    );
-    expect(logo, findsOneWidget);
-    final logoRect = tester.getRect(logo);
-    final barRect = tester.getRect(find.byType(DesktopTopBar));
-    expect(logoRect.left, greaterThanOrEqualTo(barRect.left));
-    expect(logoRect.right, lessThanOrEqualTo(barRect.left + 60));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a DragToMoveArea covers the bar behind the controls', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pumpFrame(tester, prefs);
-
     expect(
       tester.getRect(find.byType(DragToMoveArea)),
       tester.getRect(find.byType(DesktopTopBar)),
     );
 
-    // Tapping the logo still reaches the control above the drag area.
+    // The brand row's logo collapses and expands the sidebar.
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    expect(find.byType(TsumiruLogo), findsOneWidget);
     await tester.tap(find.byType(TsumiruLogo));
     await tester.pumpAndSettle();
-    expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.expandedWidth,
+    );
     expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('phone size draws no top bar', (tester) async {
+    // A stored collapsed preference keeps the brand block inside the rail.
+    await tester.pumpWidget(const SizedBox.shrink());
+    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
+    prefs = await SharedPreferences.getInstance();
+    await _pumpFrame(tester, prefs);
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.collapsedWidth,
+    );
+    final logo = find.descendant(
+      of: find.byType(DesktopTopBar),
+      matching: find.byType(TsumiruLogo),
+    );
+    expect(logo, findsOneWidget);
+    final collapsedBar = tester.getRect(find.byType(DesktopTopBar));
+    final logoRect = tester.getRect(logo);
+    expect(logoRect.left, greaterThanOrEqualTo(collapsedBar.left));
+    expect(
+      logoRect.right,
+      lessThanOrEqualTo(collapsedBar.left + DesktopSidebar.collapsedWidth),
+    );
+    expect(tester.takeException(), isNull);
+
+    // Hosted web: the same bar, never window chrome.
+    await tester.pumpWidget(const SizedBox.shrink());
+    debugDesktopPlatformOverride = false;
     SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
+    await _pumpFrame(tester, prefs);
+    expect(find.byType(DesktopTopBar), findsOneWidget);
+    expect(find.byType(DesktopTitleBar), findsNothing);
+    expect(find.byType(DragToMoveArea), findsNothing);
+    expect(find.byType(WindowCaptionButton), findsNothing);
+    expect(find.byType(TsumiruLogo), findsOneWidget);
+    expect(find.text('Tsumiru'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    final webBar = tester.getRect(find.byType(DesktopTopBar));
+    final webSidebar = tester.getRect(find.byType(DesktopSidebar));
+    expect(webSidebar.top, webBar.bottom);
+
+    // Collapse: logo-only block; expand again by tapping the logo.
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.collapsedWidth,
+    );
+    expect(find.text('Tsumiru'), findsNothing);
+    await tester.tap(find.byType(TsumiruLogo));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.expandedWidth,
+    );
+    expect(find.text('Tsumiru'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // Android tablet at the same desktop width draws the same bar.
+    await tester.pumpWidget(const SizedBox.shrink());
+    debugAndroidOverride = true;
+    SharedPreferences.setMockInitialValues(const {});
+    prefs = await SharedPreferences.getInstance();
+    await _pumpFrame(tester, prefs, size: const Size(1200, 900));
+    expect(find.byType(DesktopTopBar), findsOneWidget);
+    expect(find.byType(DesktopTitleBar), findsNothing);
+    expect(find.byType(DragToMoveArea), findsNothing);
+    expect(find.byType(WindowCaptionButton), findsNothing);
+    expect(find.byType(TsumiruLogo), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // Phone: no bar at all.
+    await tester.pumpWidget(const SizedBox.shrink());
+    debugAndroidOverride = null;
+    debugDesktopPlatformOverride = null;
+    SharedPreferences.setMockInitialValues(const {});
+    prefs = await SharedPreferences.getInstance();
     await _pumpFrame(tester, prefs, size: const Size(412, 900));
-
     expect(find.byType(DesktopTopBar), findsNothing);
+    expect(find.byType(DesktopTitleBar), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  group('web and tablets', () {
-    // kIsWeb is a compile-time constant tests cannot flip, so the suite
-    // simulates web (and Android tablets, which are equally non-native) with
-    // the desktop-platform override off at a desktop-layout size.
-    setUp(() => debugDesktopPlatformOverride = false);
-    tearDown(() {
+  testWidgets('two-row fallback and macOS rail', (tester) async {
+    addTearDown(() {
+      debugMacOSOverride = null;
       debugDesktopPlatformOverride = null;
-      debugAndroidOverride = null;
     });
 
-    testWidgets('web 1400x900 draws the bar with no window chrome', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      await _pumpFrame(tester, prefs);
-
-      expect(find.byType(DesktopTopBar), findsOneWidget);
-      expect(tester.getSize(find.byType(DesktopTopBar)).height, 64);
-      expect(find.byType(DesktopTitleBar), findsNothing);
-      expect(find.byType(DragToMoveArea), findsNothing);
-      expect(find.byType(WindowCaptionButton), findsNothing);
-
-      // Brand block: logo, name and the collapse chevron.
-      expect(find.byType(TsumiruLogo), findsOneWidget);
-      expect(find.text('Tsumiru'), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
-
-      // The sidebar sits under the bar, expanded at this width.
-      final barRect = tester.getRect(find.byType(DesktopTopBar));
-      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
-      expect(sidebarRect.top, barRect.bottom);
-      expect(sidebarRect.width, 208);
-
-      // Collapse: logo-only block; expand again by tapping the logo.
-      await tester.tap(find.byIcon(Icons.chevron_left));
-      await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
-      expect(find.text('Tsumiru'), findsNothing);
-      expect(find.byType(DragToMoveArea), findsNothing);
-      expect(find.byType(WindowCaptionButton), findsNothing);
-
-      await tester.tap(find.byType(TsumiruLogo));
-      await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
-      expect(find.text('Tsumiru'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('android tablet 1200x900 draws the same bar', (tester) async {
-      debugAndroidOverride = true;
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      await _pumpFrame(tester, prefs, size: const Size(1200, 900));
-
-      expect(find.byType(DesktopTopBar), findsOneWidget);
-      expect(find.byType(DesktopTitleBar), findsNothing);
-      expect(find.byType(DragToMoveArea), findsNothing);
-      expect(find.byType(WindowCaptionButton), findsNothing);
-      expect(find.byType(TsumiruLogo), findsOneWidget);
-      expect(find.text('Tsumiru'), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
-
-      final barRect = tester.getRect(find.byType(DesktopTopBar));
-      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
-      expect(sidebarRect.top, barRect.bottom);
-      expect(sidebarRect.width, 208);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('phone 412x900 is unchanged', (tester) async {
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      await _pumpFrame(tester, prefs, size: const Size(412, 900));
-
-      expect(find.byType(DesktopTopBar), findsNothing);
-      expect(find.byType(DesktopTitleBar), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  Future<void> pumpRoute(
-    WidgetTester tester,
-    Size size, {
-    double slotMinWidth = 500,
-  }) async {
-    tester.view.physicalSize = size;
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    _mockWindowManager();
+    // Below the breakpoint the title bar and toolbar stack; the sidebar
+    // starts under the toolbar row, auto-collapsed.
     SharedPreferences.setMockInitialValues(const {});
+    var prefs = await SharedPreferences.getInstance();
+    await pumpRoute(tester, const Size(600, 900));
+    final titleBar = find.byType(DesktopTitleBar);
+    expect(titleBar, findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Toolbar')).dy,
+      greaterThan(tester.getRect(titleBar).bottom - 1),
+    );
+    final stackedBar = tester.getRect(find.byType(DesktopTopBar));
+    final stackedSidebar = tester.getRect(find.byType(DesktopSidebar));
+    expect(stackedSidebar.top, stackedBar.bottom);
+    expect(stackedSidebar.width, DesktopSidebar.collapsedWidth);
+    expect(tester.takeException(), isNull);
+
+    // Above the breakpoint the bar merges into one row.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpRoute(tester, const Size(1400, 900));
+    expect(find.byType(DesktopTitleBar), findsNothing);
+    expect(find.byType(DesktopTopBar), findsOneWidget);
+    final mergedBar = tester.getRect(find.byType(DesktopTopBar));
+    final toolbar = tester.getRect(find.text('Toolbar'));
+    expect(mergedBar.contains(toolbar.topCenter), isTrue);
+    expect(mergedBar.contains(toolbar.bottomCenter), isTrue);
+    expect(tester.takeException(), isNull);
+
+    // macOS falls back with no window buttons, and keeps its 80 px rail.
+    await tester.pumpWidget(const SizedBox.shrink());
+    debugMacOSOverride = true;
+    await pumpRoute(tester, const Size(700, 900), slotMinWidth: 700);
+    final macTitleBar = find.byType(DesktopTitleBar);
+    expect(macTitleBar, findsOneWidget);
+    expect(
+      find.descendant(of: macTitleBar, matching: find.byType(TsumiruLogo)),
+      findsOneWidget,
+    );
+    expect(find.byType(WindowCaptionButton), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('Toolbar')).dy,
+      greaterThan(tester.getRect(macTitleBar).bottom - 1),
+    );
+    expect(tester.takeException(), isNull);
+
+    // The macOS expanded brand row leads the sidebar with logo, name and
+    // collapse chevron, and the bar keeps only the inset.
+    await tester.pumpWidget(const SizedBox.shrink());
+    SharedPreferences.setMockInitialValues(const {});
+    prefs = await SharedPreferences.getInstance();
+    await _pumpFrame(tester, prefs);
+    final sidebar = find.byType(DesktopSidebar);
+    final bar = find.byType(DesktopTopBar);
+    expect(tester.getSize(sidebar).width, DesktopSidebar.expandedWidth);
+    expect(
+      find.descendant(of: bar, matching: find.byType(TsumiruLogo)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: bar, matching: find.byIcon(Icons.chevron_left)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: sidebar, matching: find.byType(TsumiruLogo)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sidebar, matching: find.text('Tsumiru')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sidebar, matching: find.byIcon(Icons.chevron_left)),
+      findsOneWidget,
+    );
+    expect(find.byType(DesktopBrandRow), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // Collapsed, the logo alone is the sidebar's first item; tapping it
+    // expands.
+    await tester.pumpWidget(const SizedBox.shrink());
+    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
+    prefs = await SharedPreferences.getInstance();
+    await _pumpFrame(tester, prefs);
+    final collapsedSidebar = find.byType(DesktopSidebar);
+    final button = find.byType(DesktopBrandExpandButton);
+    expect(button, findsOneWidget);
+    expect(
+      find.descendant(of: collapsedSidebar, matching: find.byType(TsumiruLogo)),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(collapsedSidebar).width,
+      DesktopSidebar.expandedWidth,
+    );
+    expect(find.byType(DesktopBrandRow), findsOneWidget);
+    expect(find.text('Tsumiru'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('auto-collapse below the breakpoint keeps the preference', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': true});
     final prefs = await SharedPreferences.getInstance();
-    final router = GoRouter(
-      initialLocation: '/',
-      routes: [
-        GoRoute(
-          // The bar lives in the shells, inside the Navigator (under its
-          // Overlay, which the tooltips need) — mirror that here.
-          path: '/',
-          builder: (context, state) => Scaffold(
-            body: Column(
-              children: [
-                const DesktopTopBar(),
-                Expanded(
-                  child: Row(
-                    children: [
-                      BigScreenNavigationBar(
-                        selectedIndex: 0,
-                        onDestinationSelected: (_) {},
-                      ),
-                      Expanded(
-                        child: TopBarSlot(
-                          minWidth: slotMinWidth,
-                          content: const SizedBox(
-                            height: 40,
-                            child: Center(child: Text('Toolbar')),
-                          ),
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+    await _pumpFrame(tester, prefs, size: const Size(900, 900));
+
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.collapsedWidth,
     );
-    addTearDown(router.dispose);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [..._overrides(prefs)],
-        child: MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-        ),
-      ),
+    expect(prefs.getBool('sidebarExpanded'), isTrue);
+
+    // Back at full width the saved preference applies again, still unchanged.
+    tester.view.physicalSize = const Size(1400, 900);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.expandedWidth,
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
-  }
-
-  group('macOS', () {
-    setUp(() => debugMacOSOverride = true);
-    tearDown(() => debugMacOSOverride = null);
-
-    testWidgets('expanded: the brand row leads the sidebar, the bar keeps '
-        'only the inset', (tester) async {
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      await _pumpFrame(tester, prefs);
-
-      final sidebar = find.byType(DesktopSidebar);
-      final bar = find.byType(DesktopTopBar);
-      expect(tester.getSize(sidebar).width, 208);
-      expect(find.byType(WindowCaptionButton), findsNothing);
-
-      // The bar draws neither the logo nor a chevron on macOS.
-      expect(
-        find.descendant(of: bar, matching: find.byType(TsumiruLogo)),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: bar, matching: find.byIcon(Icons.chevron_left)),
-        findsNothing,
-      );
-
-      // The sidebar's first row carries the logo, the name and the collapse
-      // chevron.
-      final logo = find.descendant(
-        of: sidebar,
-        matching: find.byType(TsumiruLogo),
-      );
-      expect(logo, findsOneWidget);
-      expect(tester.getSize(logo), const Size(28, 28));
-      expect(
-        find.descendant(of: sidebar, matching: find.text('Tsumiru')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: sidebar, matching: find.byIcon(Icons.chevron_left)),
-        findsOneWidget,
-      );
-
-      // 40 px tall, with an 8 px gap before the first nav row.
-      final brand = tester.getRect(find.byType(DesktopBrandRow));
-      expect(brand.height, 40);
-      final navRows = find.descendant(
-        of: sidebar,
-        matching: find.byWidgetPredicate(
-          (w) => w is Container && w.constraints?.maxHeight == 40,
-        ),
-      );
-      expect(navRows, findsNWidgets(6));
-      expect(tester.getRect(navRows.first).top, brand.bottom + 8);
-
-      // The logo sits over the nav rows' icon column.
-      final firstIcon = tester.getRect(
-        find
-            .descendant(of: sidebar, matching: find.byType(AnimatedNavIcon))
-            .first,
-      );
-      expect(tester.getRect(logo).left, firstIcon.left);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('collapsed sidebar is 80 px and expands from the logo at its '
-        'top', (tester) async {
-      SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-      final prefs = await SharedPreferences.getInstance();
-      await _pumpFrame(tester, prefs);
-
-      final sidebar = find.byType(DesktopSidebar);
-      final bar = find.byType(DesktopTopBar);
-      expect(tester.getSize(sidebar).width, 80);
-      expect(find.byType(WindowCaptionButton), findsNothing);
-      expect(
-        find.descendant(of: bar, matching: find.byType(TsumiruLogo)),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: bar, matching: find.byIcon(Icons.chevron_left)),
-        findsNothing,
-      );
-
-      // The logo alone is the sidebar's first item, centred in its column.
-      final button = find.byType(DesktopBrandExpandButton);
-      expect(button, findsOneWidget);
-      expect(
-        find.descendant(of: sidebar, matching: find.byType(TsumiruLogo)),
-        findsOneWidget,
-      );
-      expect(
-        find.byIcon(Icons.chevron_right),
-        findsNothing,
-        reason: 'the old floating expand button is gone',
-      );
-
-      final firstRow = tester.getRect(
-        find
-            .descendant(
-              of: sidebar,
-              matching: find.byWidgetPredicate(
-                (w) => w is Container && w.constraints?.maxHeight == 44,
-              ),
-            )
-            .first,
-      );
-      // Centred over the nav rows' icon column, above the first row.
-      final firstIcon = find
-          .descendant(of: sidebar, matching: find.byType(AnimatedNavIcon))
-          .first;
-      expect(tester.getCenter(button).dx, tester.getCenter(firstIcon).dx);
-      expect(tester.getRect(button).bottom, lessThan(firstRow.top));
-
-      // Tap the logo to expand.
-      await tester.tap(button);
-      await tester.pumpAndSettle();
-      expect(tester.getSize(sidebar).width, 208);
-      expect(find.byType(DesktopBrandRow), findsOneWidget);
-      expect(find.text('Tsumiru'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('two-row fallback keeps the inset and drops the buttons', (
-      tester,
-    ) async {
-      // 80 + 10 + 700 + 10 = 800 on macOS, so 700 px falls back.
-      await pumpRoute(tester, const Size(700, 900), slotMinWidth: 700);
-
-      final titleBar = find.byType(DesktopTitleBar);
-      expect(titleBar, findsOneWidget);
-      expect(tester.getSize(titleBar).height, 40);
-      expect(
-        find.descendant(of: titleBar, matching: find.byType(TsumiruLogo)),
-        findsOneWidget,
-      );
-      // The title bar's logo is the only one: the sidebar's brand row shows
-      // only with the merged one-row bar.
-      expect(find.byType(TsumiruLogo), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byType(DesktopSidebar),
-          matching: find.byType(DesktopBrandRow),
-        ),
-        findsNothing,
-      );
-      expect(find.byType(WindowCaptionButton), findsNothing);
-      expect(
-        tester.getTopLeft(find.text('Toolbar')).dy,
-        greaterThan(tester.getRect(titleBar).bottom - 1),
-      );
-      // Auto-collapsed below 1200 px; macOS keeps the 80 px column.
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 80);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('two-row fallback', () {
-    testWidgets('below the breakpoint the title bar and toolbar stack', (
-      tester,
-    ) async {
-      // 208 + 10 + 500 + 10 + 138 + 10 = 886, so 600 px falls back.
-      await pumpRoute(tester, const Size(600, 900));
-
-      final titleBar = find.byType(DesktopTitleBar);
-      expect(titleBar, findsOneWidget);
-      expect(tester.getSize(titleBar).height, 40);
-      expect(
-        tester.getTopLeft(find.text('Toolbar')).dy,
-        greaterThan(tester.getRect(titleBar).bottom - 1),
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('above the breakpoint the bar merges into one row', (
-      tester,
-    ) async {
-      await pumpRoute(tester, const Size(1400, 900));
-
-      expect(find.byType(DesktopTitleBar), findsNothing);
-      expect(find.byType(DesktopTopBar), findsOneWidget);
-      final barRect = tester.getRect(find.byType(DesktopTopBar));
-      final toolbarRect = tester.getRect(find.text('Toolbar'));
-      expect(barRect.contains(toolbarRect.topCenter), isTrue);
-      expect(barRect.contains(toolbarRect.bottomCenter), isTrue);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('the sidebar starts under the toolbar row, collapsed', (
-      tester,
-    ) async {
-      await pumpRoute(tester, const Size(600, 900));
-
-      expect(find.byType(DesktopTitleBar), findsOneWidget);
-      final barRect = tester.getRect(find.byType(DesktopTopBar));
-      // 40 px title bar plus the 64 px toolbar row.
-      expect(barRect.height, 104);
-      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
-      expect(sidebarRect.top, barRect.bottom);
-      // Below 1200 px the sidebar auto-collapses (default preference is
-      // expanded).
-      expect(sidebarRect.width, 60);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('auto-collapse below 1200 px', () {
-    testWidgets('900 px collapses without touching the saved preference', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues(const {'sidebarExpanded': true});
-      final prefs = await SharedPreferences.getInstance();
-      await _pumpFrame(tester, prefs, size: const Size(900, 900));
-
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
-      expect(prefs.getBool('sidebarExpanded'), isTrue);
-
-      // Back at 1400 the saved preference applies again, still unchanged.
-      tester.view.physicalSize = const Size(1400, 900);
-      await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
-      expect(prefs.getBool('sidebarExpanded'), isTrue);
-      expect(tester.takeException(), isNull);
-    });
+    expect(prefs.getBool('sidebarExpanded'), isTrue);
+    expect(tester.takeException(), isNull);
   });
 }

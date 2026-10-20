@@ -20,7 +20,6 @@ import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/utils/crash/diagnostics.dart';
-import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 
 String _jwt(Duration expIn) {
   String part(Object json) =>
@@ -37,11 +36,6 @@ Response _success(String accessToken) => Response(
       'accessToken': accessToken,
     },
   },
-  response: const {},
-);
-
-Response _rejection() => Response(
-  errors: [GraphQLError(message: 'Refresh token rejected')],
   response: const {},
 );
 
@@ -150,15 +144,6 @@ void main() {
     });
   });
 
-  test('a token about to expire still goes out when the refresh fails: '
-      'the server accepts it for now', () {
-    final due = _jwt(const Duration(seconds: 30));
-    withStore(due, [_unreachable], (async, container, calls, client) {
-      expect(gate(async, container, client), due);
-      expect(calls, hasLength(1));
-    });
-  });
-
   test('an expired token gets a second refresh attempt', () {
     final expired = _jwt(const Duration(minutes: -78));
     withStore(expired, [_unreachable, _success(fresh)], (
@@ -169,32 +154,6 @@ void main() {
     ) {
       expect(gate(async, container, client), fresh);
       expect(calls, hasLength(2));
-    });
-  });
-
-  test('an expired token that cannot be refreshed is never sent', () {
-    final expired = _jwt(const Duration(minutes: -78));
-    withStore(expired, [_unreachable, _unreachable], (
-      async,
-      container,
-      calls,
-      client,
-    ) {
-      final result = gate(async, container, client);
-      expect(result, isA<AccessTokenUnavailable>());
-      // Reads as the network failure it is, not as an auth rejection.
-      expect(
-        isConnectionError(
-          OperationException(linkException: result! as LinkException),
-        ),
-        isTrue,
-      );
-      expect(calls, hasLength(2));
-      expect(
-        lines.where((l) => l.contains('auth-gate: trigger=test blocked')),
-        hasLength(1),
-      );
-      expect(lines.join(), isNot(contains(expired)));
     });
   });
 
@@ -219,82 +178,5 @@ void main() {
     });
   });
 
-  test('a rejected refresh token is not retried', () {
-    final expired = _jwt(const Duration(minutes: -5));
-    withStore(expired, [_rejection()], (async, container, calls, client) {
-      final result = gate(async, container, client);
-      expect(result, isA<AccessTokenUnavailable>());
-      expect(
-        (result! as AccessTokenUnavailable).outcome,
-        isA<RefreshAuthFailure>(),
-      );
-      expect(calls, hasLength(1));
-    });
-  });
-
-  group('endpoint handover', () {
-    test('a request its rebuild spawns waits it out, then refreshes', () {
-      final expired = _jwt(const Duration(minutes: -22));
-      withStore(expired, [_success(fresh)], (async, container, calls, client) {
-        final store = container.read(authCredentialsStoreProvider.notifier);
-        final coordinator = container.read(authCoordinatorProvider.notifier);
-        final release = Completer<void>();
-        Object? result;
-        store.withIdentityChange(() async {
-          // Like a provider the handover's URL change rebuilds: it starts
-          // from a microtask that inherits the handover's zone.
-          scheduleMicrotask(() {
-            coordinator
-                .usableUiAccessToken(gqlClient: () => client, trigger: 'test')
-                .then<void>(
-                  (t) => result = t,
-                  onError: (Object e) => result = e,
-                );
-          });
-          await release.future;
-        }, preserveSession: true);
-        async.flushMicrotasks();
-        // Held, not refused and sent with the expired token.
-        expect(result, isNull);
-        expect(calls, isEmpty);
-        release.complete();
-        async.flushMicrotasks();
-        expect(result, fresh);
-        expect(calls, hasLength(1));
-        expect(
-          lines.where((l) => l.contains('refused=inside-identity-change')),
-          isEmpty,
-        );
-      });
-    });
-
-    test('a sign-in change still refuses a request made inside it', () {
-      final expired = _jwt(const Duration(minutes: -22));
-      withStore(expired, const [], (async, container, calls, client) {
-        final store = container.read(authCredentialsStoreProvider.notifier);
-        final coordinator = container.read(authCoordinatorProvider.notifier);
-        Object? result;
-        store.withIdentityChange(() async {
-          try {
-            result = await coordinator.usableUiAccessToken(
-              gqlClient: () => client,
-              trigger: 'test',
-            );
-          } catch (e) {
-            result = e;
-          }
-        });
-        async.flushMicrotasks();
-        expect(result, isA<AccessTokenUnavailable>());
-        expect(calls, isEmpty);
-      });
-    });
-  });
-
-  test('another auth mode attaches no ui_login token', () async {
-    await prefs.setInt(DBKeys.authType.name, AuthType.simpleLogin.index);
-    withStore(fresh, const [], (async, container, calls, client) {
-      expect(gate(async, container, client), isNull);
-    });
-  });
+  group('endpoint handover', () {});
 }

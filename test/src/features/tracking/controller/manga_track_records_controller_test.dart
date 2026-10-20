@@ -19,24 +19,22 @@ void main() {
   );
 
   group('mangaTrackRecordsProvider', () {
-    test('defaults to empty list when repository returns null', () async {
-      final container = ProviderContainer(
+    test('defaults to empty and passes records through', () async {
+      final emptyContainer = ProviderContainer(
         overrides: [
           trackerRepositoryProvider.overrideWith(
             (ref) => _StubTrackerRepository(fakeClient, records: null),
           ),
         ],
       );
-      addTearDown(container.dispose);
-
-      final result = await container.read(
-        mangaTrackRecordsProvider(mangaId: 42).future,
+      addTearDown(emptyContainer.dispose);
+      expect(
+        await emptyContainer.read(
+          mangaTrackRecordsProvider(mangaId: 42).future,
+        ),
+        isEmpty,
       );
 
-      expect(result, isEmpty);
-    });
-
-    test('returns list from repository when records exist', () async {
       final fakeRecord = Fragment$TrackRecordDto(
         id: 1,
         trackerId: 1,
@@ -52,7 +50,6 @@ void main() {
         finishDate: '',
         private: false,
       );
-
       final container = ProviderContainer(
         overrides: [
           trackerRepositoryProvider.overrideWith(
@@ -61,11 +58,9 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-
       final result = await container.read(
         mangaTrackRecordsProvider(mangaId: 42).future,
       );
-
       expect(result, hasLength(1));
       expect(result.first.id, 1);
       expect(result.first.title, 'Test Manga');
@@ -83,6 +78,5 @@ class _StubTrackerRepository extends TrackerRepository {
   @override
   Future<List<Fragment$TrackRecordDto>?> getMangaTrackRecords(
     int mangaId,
-  ) async =>
-      records;
+  ) async => records;
 }

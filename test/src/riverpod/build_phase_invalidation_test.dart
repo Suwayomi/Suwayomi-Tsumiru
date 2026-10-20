@@ -43,15 +43,16 @@ class _RefreshOnMount extends HookConsumerWidget {
 }
 
 void main() {
-  testWidgets('invalidating during build throws', (tester) async {
+  testWidgets('invalidation during build throws; deferred is clean', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const ProviderScope(child: _RefreshOnMount(defer: false)),
     );
     final e = tester.takeException();
     expect('$e', contains('called during build'));
-  });
 
-  testWidgets('microtask-deferred invalidation is clean', (tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(
       const ProviderScope(child: _RefreshOnMount(defer: true)),
     );

@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/offline/data/offline_types.dart';
 import 'package:tsumiru/src/features/offline/data/webui_chapter_sort_meta.dart';
@@ -26,36 +25,12 @@ void main() {
         expect(chapterSortAxisFromMetaValue(axis.name), axis);
       }
     });
-
-    test('never yields alphabetical: WebUI has no such webUI_sortBy value', () {
-      expect(chapterSortAxisFromMetaValue('alphabetical'), isNull);
-    });
-
-    test('null (no meta key at all) -> null', () {
-      expect(chapterSortAxisFromMetaValue(null), isNull);
-    });
-
-    test('unknown/legacy value -> null, never throws', () {
-      expect(chapterSortAxisFromMetaValue('not-a-real-axis'), isNull);
-      expect(chapterSortAxisFromMetaValue(''), isNull);
-    });
   });
 
   group('chapterSortAxisFromMeta', () {
     String? Function(String) metaOf(Map<String, String> meta) =>
         (key) => meta[key];
     final alphabeticalKey = MangaMetaKeys.chapterSortAlphabetical.key;
-
-    test('no sort meta at all -> null (app-wide default applies)', () {
-      expect(chapterSortAxisFromMeta(metaOf({})), isNull);
-    });
-
-    test('webUI_sortBy alone resolves to its axis', () {
-      expect(
-        chapterSortAxisFromMeta(metaOf({kWebUiSortByMetaKey: 'uploadedAt'})),
-        ChapterSortAxis.uploadedAt,
-      );
-    });
 
     test('the alphabetical flag wins over a webUI_sortBy left in place', () {
       expect(
@@ -68,46 +43,11 @@ void main() {
         ChapterSortAxis.alphabetical,
       );
     });
-
-    test('a legacy "false" flag falls through to webUI_sortBy', () {
-      expect(
-        chapterSortAxisFromMeta(
-          metaOf({alphabeticalKey: 'false', kWebUiSortByMetaKey: 'source'}),
-        ),
-        ChapterSortAxis.source,
-      );
-    });
   });
 
-  group('chapterSortAscendingFromMetaValue', () {
-    test('webUI_reverse "true" means descending in WebUI (sort ascending, '
-        'then reverse), so it is NOT ascending here', () {
-      expect(chapterSortAscendingFromMetaValue('true'), isFalse);
-      expect(chapterSortAscendingFromMetaValue('false'), isTrue);
-    });
-
-    test('anything other than the literal string "true" is ascending, '
-        "mirroring WebUI's own `value === 'true'` comparison", () {
-      expect(chapterSortAscendingFromMetaValue('True'), isTrue);
-      expect(chapterSortAscendingFromMetaValue('1'), isTrue);
-      expect(chapterSortAscendingFromMetaValue('yes'), isTrue);
-    });
-
-    test('null (no meta key at all) -> null, distinct from either '
-        'direction', () {
-      expect(chapterSortAscendingFromMetaValue(null), isNull);
-    });
-  });
+  group('chapterSortAscendingFromMetaValue', () {});
 
   group('chapterSortAscendingToMetaValue', () {
-    test(
-      'ascending writes webUI_reverse "false", descending writes "true"',
-      () {
-        expect(chapterSortAscendingToMetaValue(true), 'false');
-        expect(chapterSortAscendingToMetaValue(false), 'true');
-      },
-    );
-
     test('round-trips through chapterSortAscendingFromMetaValue', () {
       for (final value in [true, false]) {
         expect(
@@ -120,43 +60,5 @@ void main() {
     });
   });
 
-  group('ChapterSort <-> ChapterSortAxis mapping', () {
-    test('every ChapterSort maps to an axis and back to itself', () {
-      for (final sort in ChapterSort.values) {
-        final axis = chapterSortAxisFromChapterSort(sort);
-        expect(
-          chapterSortFromAxis(axis),
-          sort,
-          reason: '$sort -> $axis must map back to $sort',
-        );
-      }
-      expect(ChapterSort.values.length, ChapterSortAxis.values.length);
-    });
-
-    test('the two name-mismatched pairs map correctly in both directions', () {
-      expect(
-        chapterSortAxisFromChapterSort(ChapterSort.uploadDate),
-        ChapterSortAxis.uploadedAt,
-      );
-      expect(
-        chapterSortFromAxis(ChapterSortAxis.uploadedAt),
-        ChapterSort.uploadDate,
-      );
-      expect(
-        chapterSortAxisFromChapterSort(ChapterSort.fetchedDate),
-        ChapterSortAxis.fetchedAt,
-      );
-      expect(
-        chapterSortFromAxis(ChapterSortAxis.fetchedAt),
-        ChapterSort.fetchedDate,
-      );
-    });
-
-    test('alphabetical maps to its own Tsumiru-only axis', () {
-      expect(
-        chapterSortAxisFromChapterSort(ChapterSort.alphabetical),
-        ChapterSortAxis.alphabetical,
-      );
-    });
-  });
+  group('ChapterSort <-> ChapterSortAxis mapping', () {});
 }

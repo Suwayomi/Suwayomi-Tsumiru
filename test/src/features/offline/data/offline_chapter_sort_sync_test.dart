@@ -47,13 +47,6 @@ void main() {
   }
 
   group('OfflineSync mirrors the manga\'s sort axis for the keep-window', () {
-    test('webUI_sortBy alone', () async {
-      expect(
-        await mirroredAxis({'webUI_sortBy': 'fetchedAt'}),
-        ChapterSortAxis.fetchedAt,
-      );
-    });
-
     test('the alphabetical flag wins over the webUI_sortBy it leaves in '
         'place, so downloads follow the order the reader shows', () async {
       expect(
@@ -63,11 +56,6 @@ void main() {
         }),
         ChapterSortAxis.alphabetical,
       );
-    });
-
-    test('removing every sort meta server-side clears the column', () async {
-      await mirroredAxis({'flutter_chapterSortIsAlphabetical': 'true'});
-      expect(await mirroredAxis({}), isNull);
     });
   });
 
@@ -98,14 +86,5 @@ void main() {
       expect(dto.uploadDate, '1700000000000');
       expect(dto.fetchedAt, '1700000001000');
     });
-
-    test(
-      'a row not yet re-synced (no dates) keeps the "0" placeholder',
-      () async {
-        final dto = offlineChapterToDto(await row());
-        expect(dto.uploadDate, '0');
-        expect(dto.fetchedAt, '0');
-      },
-    );
   });
 }

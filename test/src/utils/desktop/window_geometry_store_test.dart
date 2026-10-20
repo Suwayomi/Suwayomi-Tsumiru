@@ -8,22 +8,20 @@ import 'package:tsumiru/src/utils/desktop/window_geometry_store.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('empty prefs load to a null-size, non-maximized geometry', () async {
+  test('loads defaults from empty or corrupt prefs without throwing', () async {
     SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final g = loadWindowGeometry(prefs);
+    var prefs = await SharedPreferences.getInstance();
+    var g = loadWindowGeometry(prefs);
     expect(g.size, isNull);
     expect(g.maximized, isFalse);
-  });
 
-  test('wrong-typed stored keys degrade to defaults, not a throw', () async {
     SharedPreferences.setMockInitialValues({
       'window.width': 'corrupt',
       'window.height': true,
       'window.maximized': 1.5,
     });
-    final prefs = await SharedPreferences.getInstance();
-    final g = loadWindowGeometry(prefs);
+    prefs = await SharedPreferences.getInstance();
+    g = loadWindowGeometry(prefs);
     expect(g.size, isNull);
     expect(g.maximized, isFalse);
   });
@@ -32,7 +30,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     await saveWindowGeometry(
-        prefs, const WindowGeometry(size: Size(1024, 768), maximized: true));
+      prefs,
+      const WindowGeometry(size: Size(1024, 768), maximized: true),
+    );
     final g = loadWindowGeometry(prefs);
     expect(g.size, const Size(1024, 768));
     expect(g.maximized, isTrue);

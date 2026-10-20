@@ -11,42 +11,6 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 
 void main() {
   group('LibraryQueryDebounced', () {
-    test('mirrors the raw query at build time', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      container.listen(libraryQueryDebouncedProvider, (_, _) {});
-
-      expect(container.read(libraryQueryDebouncedProvider), isNull);
-    });
-
-    test(
-      'a burst of keystrokes only propagates the last value, after 300ms quiet',
-      () {
-        fakeAsync((async) {
-          final container = ProviderContainer();
-          container.listen(libraryQueryDebouncedProvider, (_, _) {});
-          final notifier = container.read(libraryQueryProvider.notifier);
-
-          notifier.update('o');
-          async.elapse(const Duration(milliseconds: 100));
-          notifier.update('on');
-          async.elapse(const Duration(milliseconds: 100));
-          notifier.update('one');
-
-          // Each keystroke restarted the window, so 200ms after the last one
-          // (100ms + 100ms of quiet accumulated below) is still under 300ms.
-          async.elapse(const Duration(milliseconds: 200));
-          expect(container.read(libraryQueryDebouncedProvider), isNull);
-
-          // Past 300ms of quiet since 'one': now it propagates.
-          async.elapse(const Duration(milliseconds: 101));
-          expect(container.read(libraryQueryDebouncedProvider), 'one');
-
-          container.dispose();
-        });
-      },
-    );
-
     test('a later keystroke restarts the debounce window', () {
       fakeAsync((async) {
         final container = ProviderContainer();

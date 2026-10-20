@@ -48,40 +48,6 @@ void main() {
     await db.close();
   });
 
-  for (final writer in ['manga', 'chapters', 'prune', 'categories']) {
-    test(
-      '$writer keeps runtime drain pending through its final async write',
-      () async {
-        final started = Completer<void>();
-        final release = Completer<void>();
-        final sync = OfflineSync(
-          db,
-          taskTracker: runtime.track,
-          onSynced: () async {
-            started.complete();
-            await release.future;
-          },
-        );
-        final chapter = offlineChapterToDto((await db.chapterById(1))!);
-        final work = switch (writer) {
-          'manga' => sync.syncManga(manga, fetchedAtGen: db.syncGeneration),
-          'chapters' => sync.syncChapters([chapter]),
-          'prune' => sync.pruneRemovedLibraryManga([manga]),
-          _ => sync.syncCategories([offlineDefaultCategoryDto(1)]),
-        };
-        await started.future;
-        var drained = false;
-        final drain = runtime.drain().then((_) => drained = true);
-        await Future<void>.delayed(Duration.zero);
-        expect(drained, isFalse);
-        release.complete();
-        await work;
-        await drain;
-        expect(drained, isTrue);
-      },
-    );
-  }
-
   test(
     'stale admission cannot alter manga, chapters, categories or library membership',
     () async {

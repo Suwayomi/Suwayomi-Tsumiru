@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/about/data/hosted_web_update.dart';
 
 void main() {
-  test('hosting requires web and matching normalised origin and base path', () {
+  test('hosting detection and release-tag reload', () {
     bool hosted(
       String base,
       String? server, {
@@ -14,6 +14,7 @@ void main() {
       serverUrl: server,
       revision: revision,
     );
+    // Hosting requires web and matching normalised origin and base path.
     expect(hosted('https://example.com/', 'https://example.com'), isTrue);
     expect(
       hosted(
@@ -49,9 +50,8 @@ void main() {
     );
     expect(hosted('invalid', 'invalid'), isFalse);
     expect(hosted('https://example.com/', null), isFalse);
-  });
 
-  test('only a different Tsumiru release tag requires reloading', () {
+    // Only a different Tsumiru release tag requires reloading.
     expect(installedTsumiruDiffers('v1.5.0', '1.5.0'), isFalse);
     expect(installedTsumiruDiffers('v1.5.1', '1.5.0'), isTrue);
     expect(

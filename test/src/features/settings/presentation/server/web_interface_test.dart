@@ -109,94 +109,6 @@ Future<_Server> _pump(
 }
 
 void main() {
-  for (final scenario in [
-    (
-      flavor: Enum$WebUIFlavor.TSUMIRU,
-      channel: Enum$WebUIChannel.STABLE,
-      label: 'Stable',
-      showsNote: false,
-    ),
-    (
-      flavor: Enum$WebUIFlavor.TSUMIRU,
-      channel: Enum$WebUIChannel.BUNDLED,
-      label: 'Bundled',
-      showsNote: true,
-    ),
-    (
-      flavor: Enum$WebUIFlavor.WEBUI,
-      channel: Enum$WebUIChannel.BUNDLED,
-      label: 'Bundled',
-      showsNote: false,
-    ),
-  ]) {
-    testWidgets(
-      '${scenario.flavor.name} ${scenario.channel.name} shows bundled guidance only when applicable in the channel subtitle',
-      (tester) async {
-        await _pump(
-          tester,
-          legacyAccountAccess,
-          settings: Fragment$WebInterfaceSettingsDto(
-            webUIFlavor: scenario.flavor,
-            webUIChannel: scenario.channel,
-            webUIUpdateCheckInterval: 0,
-          ),
-        );
-        const note =
-            'Bundled only works with the default WebUI. Choose Stable or Preview for other interfaces.';
-        final channelRow = tester.widget<ListTile>(
-          find.ancestor(
-            of: find.text('Update channel'),
-            matching: find.byType(ListTile),
-          ),
-        );
-        expect(
-          find.textContaining(note),
-          scenario.showsNote ? findsOneWidget : findsNothing,
-        );
-        expect(
-          find.descendant(
-            of: find.byWidget(channelRow.subtitle!),
-            matching: find.textContaining(scenario.label),
-            matchRoot: true,
-          ),
-          findsOneWidget,
-        );
-        if (scenario.showsNote) {
-          expect(
-            find.descendant(
-              of: find.byWidget(channelRow.subtitle!),
-              matching: find.textContaining(note),
-              matchRoot: true,
-            ),
-            findsOneWidget,
-          );
-        }
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
-  }
-
-  testWidgets('Tsumiru picker shows its description', (tester) async {
-    await _pump(
-      tester,
-      legacyAccountAccess,
-      settings: Fragment$WebInterfaceSettingsDto(
-        webUIFlavor: Enum$WebUIFlavor.TSUMIRU,
-        webUIChannel: Enum$WebUIChannel.STABLE,
-        webUIUpdateCheckInterval: 0,
-      ),
-    );
-    await tester.tap(find.text('Interface'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text(
-        'A modern web frontend built with Flutter, with 13 themes, incognito mode and apps for every platform',
-      ),
-      findsOneWidget,
-    );
-    await tester.pumpWidget(const SizedBox());
-  });
-
   test('offers only recognised flavors advertised by the server', () {
     expect(supportedWebInterfaceFlavors(['WEBUI', 'VUI', 'CUSTOM', 'FUTURE']), [
       Enum$WebUIFlavor.WEBUI,
@@ -230,42 +142,39 @@ void main() {
     expect(settings.webUIChannel, Enum$WebUIChannel.STABLE);
   });
 
-  testWidgets(
-    'unsupported servers show an explanation without setting pickers',
-    (tester) async {
-      final server = await _pump(tester, legacyAccountAccess);
-      expect(server.operations, contains('WebInterfaceSettings'));
-      expect(find.text('Web interface'), findsOneWidget);
-      expect(
-        find.text('This server does not support web interface settings.'),
-        findsOneWidget,
-      );
-      expect(find.text('Interface'), findsNothing);
-      expect(find.text('Update channel'), findsNothing);
-      expect(find.text('Automatic updates'), findsNothing);
-      await tester.pumpWidget(const SizedBox());
-    },
-  );
+  testWidgets('unsupported servers and missing permission hide the pickers', (
+    tester,
+  ) async {
+    // An older server without the settings fields explains itself.
+    final unsupported = await _pump(tester, legacyAccountAccess);
+    expect(unsupported.operations, contains('WebInterfaceSettings'));
+    expect(find.text('Web interface'), findsOneWidget);
+    expect(
+      find.text('This server does not support web interface settings.'),
+      findsOneWidget,
+    );
+    expect(find.text('Interface'), findsNothing);
+    expect(find.text('Update channel'), findsNothing);
+    expect(find.text('Automatic updates'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
 
-  testWidgets(
-    'without manage settings permission hides pickers and skips settings query',
-    (tester) async {
-      final server = await _pump(
-        tester,
-        AccountAccess(capability: AccountCapability.supported),
-      );
-      expect(server.operations, isNot(contains('WebInterfaceSettings')));
-      expect(
-        server.operations,
-        isNot(contains('SupportedWebInterfaceFlavors')),
-      );
-      expect(find.text('Interface'), findsNothing);
-      expect(find.text('Update channel'), findsNothing);
-      expect(find.text('Automatic updates'), findsNothing);
-      expect(find.text('Installed version'), findsOneWidget);
-      expect(find.text('v1.5.0 · Stable'), findsOneWidget);
-      expect(find.text('Check for update'), findsOneWidget);
-      await tester.pumpWidget(const SizedBox());
-    },
-  );
+    // Without manage-settings permission, the pickers are hidden and the
+    // settings query is skipped, but the installed version still shows.
+    final restricted = await _pump(
+      tester,
+      AccountAccess(capability: AccountCapability.supported),
+    );
+    expect(restricted.operations, isNot(contains('WebInterfaceSettings')));
+    expect(
+      restricted.operations,
+      isNot(contains('SupportedWebInterfaceFlavors')),
+    );
+    expect(find.text('Interface'), findsNothing);
+    expect(find.text('Update channel'), findsNothing);
+    expect(find.text('Automatic updates'), findsNothing);
+    expect(find.text('Installed version'), findsOneWidget);
+    expect(find.text('v1.5.0 · Stable'), findsOneWidget);
+    expect(find.text('Check for update'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

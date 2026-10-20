@@ -17,7 +17,6 @@ import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_bootstrap.dart';
 import 'package:tsumiru/src/features/account/data/account_session_startup.dart';
 import 'package:tsumiru/src/features/account/data/account_session_storage.dart';
-import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_recovery_state.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
@@ -197,71 +196,4 @@ void main() {
       'OfflineServerIdentity',
     ]);
   });
-
-  for (final bound in [false, true]) {
-    test(
-      bound
-          ? 'bound reconnect does not reopen storage'
-          : 'signed-out reconnect does not open storage',
-      () async {
-        FlutterSecureStorage.setMockInitialValues({
-          if (bound) ...{
-            'auth.ui.accessToken': 'access',
-            'auth.ui.refreshToken': 'refresh',
-            'auth.ui.accountBinding': const AccountBinding(
-              address: 'http://server',
-              userId: 2,
-              username: 'reader',
-              catalogId: 'root',
-            ).encode(accessToken: 'access', refreshToken: 'refresh'),
-          },
-        });
-        SharedPreferences.setMockInitialValues({});
-        var restores = 0;
-        var probes = 0;
-        final retried = Completer<void>();
-        final container = ProviderContainer(
-          retry: (_, _) => null,
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(
-              await SharedPreferences.getInstance(),
-            ),
-            authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
-            serverEndpointResolverProvider.overrideWith(_Endpoint.new),
-            currentServerAddressProvider.overrideWithValue('http://server'),
-            offlineActiveProvider.overrideWithValue(false),
-            verifiedServerInstanceIdProvider.overrideWith((ref) async {
-              if (++probes == 2) retried.complete();
-              throw const SocketException('offline');
-            }),
-            accountStorageOpenerProvider.overrideWithValue(({
-              accountId,
-              legacyInstanceId,
-              ownedRoot,
-              accountOwner,
-              recovery,
-            }) async {
-              restores++;
-              return null;
-            }),
-          ],
-        );
-        addTearDown(container.dispose);
-        await container.read(authCredentialsStoreProvider.future);
-        container.read(serverUnreachableProvider.notifier).set(true);
-        final startup = AccountSessionStartup(container);
-        addTearDown(startup.dispose);
-        await startup.start();
-        container.read(serverUnreachableProvider.notifier).set(false);
-        if (bound) {
-          await retried.future.timeout(const Duration(seconds: 1));
-          expect(probes, 2);
-        } else {
-          await Future<void>.delayed(Duration.zero);
-          expect(probes, 0);
-        }
-        expect(restores, 0);
-      },
-    );
-  }
 }

@@ -17,7 +17,7 @@ void main() {
   const redirectUrl = 'tsumiru://tracker-oauth';
 
   group('buildTrackerAuthUrl', () {
-    test('starts with the authUrl', () {
+    test('starts with the authUrl and carries the state JSON', () {
       final result = buildTrackerAuthUrl(
         authUrl: authUrl,
         trackerId: trackerId,
@@ -25,25 +25,7 @@ void main() {
         redirectUrl: redirectUrl,
       );
       expect(result, startsWith(authUrl));
-    });
-
-    test('contains &state= followed by URL-encoded JSON', () {
-      final result = buildTrackerAuthUrl(
-        authUrl: authUrl,
-        trackerId: trackerId,
-        trackerName: trackerName,
-        redirectUrl: redirectUrl,
-      );
       expect(result, contains('&state='));
-    });
-
-    test('decoded state has correct fields', () {
-      final result = buildTrackerAuthUrl(
-        authUrl: authUrl,
-        trackerId: trackerId,
-        trackerName: trackerName,
-        redirectUrl: redirectUrl,
-      );
       final stateEncoded = Uri.parse(result).queryParameters['state']!;
       final stateDecoded =
           jsonDecode(Uri.decodeComponent(stateEncoded)) as Map<String, dynamic>;
@@ -59,31 +41,44 @@ void main() {
       return Uri.parse('tsumiru://tracker-oauth?code=xyz&state=$encoded');
     }
 
-    test('returns correct int trackerId from valid callback', () {
-      final uri = makeUri(
-          {'redirectUrl': redirectUrl, 'trackerId': 1, 'trackerName': 'MAL'});
-      expect(parseTrackerIdFromCallback(uri), equals(1));
+    test('reads the tracker id, including a string form', () {
+      expect(
+        parseTrackerIdFromCallback(
+          makeUri({
+            'redirectUrl': redirectUrl,
+            'trackerId': 1,
+            'trackerName': 'MAL',
+          }),
+        ),
+        equals(1),
+      );
+      expect(
+        parseTrackerIdFromCallback(
+          makeUri({'trackerId': '42', 'trackerName': 'MAL'}),
+        ),
+        equals(42),
+      );
     });
 
-    test('returns null when state param is absent', () {
-      final uri = Uri.parse('tsumiru://tracker-oauth?code=xyz');
-      expect(parseTrackerIdFromCallback(uri), isNull);
-    });
-
-    test('returns null for malformed JSON in state', () {
-      final uri = Uri.parse(
-          'tsumiru://tracker-oauth?state=${Uri.encodeComponent('not-json')}');
-      expect(parseTrackerIdFromCallback(uri), isNull);
-    });
-
-    test('returns null when trackerId is missing from state', () {
-      final uri = makeUri({'redirectUrl': redirectUrl});
-      expect(parseTrackerIdFromCallback(uri), isNull);
-    });
-
-    test('accepts trackerId as a string (int.tryParse)', () {
-      final uri = makeUri({'trackerId': '42', 'trackerName': 'MAL'});
-      expect(parseTrackerIdFromCallback(uri), equals(42));
+    test('returns null for a missing, malformed or id-less state', () {
+      expect(
+        parseTrackerIdFromCallback(
+          Uri.parse('tsumiru://tracker-oauth?code=xyz'),
+        ),
+        isNull,
+      );
+      expect(
+        parseTrackerIdFromCallback(
+          Uri.parse(
+            'tsumiru://tracker-oauth?state=${Uri.encodeComponent('not-json')}',
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        parseTrackerIdFromCallback(makeUri({'redirectUrl': redirectUrl})),
+        isNull,
+      );
     });
   });
 }

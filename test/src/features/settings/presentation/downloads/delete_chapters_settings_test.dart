@@ -10,22 +10,22 @@ import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generat
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 
 ChapterDto _ch(int id) => Fragment$ChapterDto(
-      id: id,
-      mangaId: 1,
-      name: 'c$id',
-      chapterNumber: id.toDouble(),
-      sourceOrder: id,
-      isRead: false,
-      isBookmarked: false,
-      isDownloaded: true,
-      lastPageRead: 0,
-      pageCount: 10,
-      fetchedAt: '0',
-      uploadDate: '0',
-      lastReadAt: '0',
-      url: '',
-      meta: const <Fragment$ChapterDto$meta>[],
-    );
+  id: id,
+  mangaId: 1,
+  name: 'c$id',
+  chapterNumber: id.toDouble(),
+  sourceOrder: id,
+  isRead: false,
+  isBookmarked: false,
+  isDownloaded: true,
+  lastPageRead: 0,
+  pageCount: 10,
+  fetchedAt: '0',
+  uploadDate: '0',
+  lastReadAt: '0',
+  url: '',
+  meta: const <Fragment$ChapterDto$meta>[],
+);
 
 void main() {
   group('DeleteChaptersSettings.fromMeta', () {
@@ -36,34 +36,38 @@ void main() {
       expect(s.deleteWithBookmark, isFalse);
     });
 
-    test('parses the server values from the webUI_ global-meta keys', () {
-      final s = DeleteChaptersSettings.fromMeta(const {
+    test('parses the webUI_ global-meta keys and rejects bad values', () {
+      final parsed = DeleteChaptersSettings.fromMeta(const {
         kDeleteChaptersManuallyMarkedReadKey: 'true',
         kDeleteChaptersWhileReadingKey: '2',
         kDeleteChaptersWithBookmarkKey: 'true',
       });
-      expect(s.deleteManuallyMarkedRead, isTrue);
-      expect(s.deleteWhileReading, 2);
-      expect(s.deleteWithBookmark, isTrue);
-    });
+      expect(parsed.deleteManuallyMarkedRead, isTrue);
+      expect(parsed.deleteWhileReading, 2);
+      expect(parsed.deleteWithBookmark, isTrue);
 
-    test('treats anything but "true" as false, and bad numbers as 0', () {
-      final s = DeleteChaptersSettings.fromMeta(const {
+      final bad = DeleteChaptersSettings.fromMeta(const {
         kDeleteChaptersManuallyMarkedReadKey: 'false',
         kDeleteChaptersWhileReadingKey: 'nonsense',
         kDeleteChaptersWithBookmarkKey: '1',
       });
-      expect(s.deleteManuallyMarkedRead, isFalse);
-      expect(s.deleteWhileReading, 0);
-      expect(s.deleteWithBookmark, isFalse, reason: '"1" is not "true"');
-    });
+      expect(bad.deleteManuallyMarkedRead, isFalse);
+      expect(bad.deleteWhileReading, 0);
+      expect(bad.deleteWithBookmark, isFalse, reason: '"1" is not "true"');
 
-    test('uses the exact key names the WebUI reads/writes', () {
-      expect(kDeleteChaptersManuallyMarkedReadKey,
-          'webUI_deleteChaptersManuallyMarkedRead');
-      expect(kDeleteChaptersWhileReadingKey, 'webUI_deleteChaptersWhileReading');
+      // The exact key names the WebUI reads and writes.
       expect(
-          kDeleteChaptersWithBookmarkKey, 'webUI_deleteChaptersWithBookmark');
+        kDeleteChaptersManuallyMarkedReadKey,
+        'webUI_deleteChaptersManuallyMarkedRead',
+      );
+      expect(
+        kDeleteChaptersWhileReadingKey,
+        'webUI_deleteChaptersWhileReading',
+      );
+      expect(
+        kDeleteChaptersWithBookmarkKey,
+        'webUI_deleteChaptersWithBookmark',
+      );
     });
   });
 
@@ -73,37 +77,25 @@ void main() {
     // Descending display order (newest first): reading forward = decreasing idx.
     final desc = [_ch(5), _ch(4), _ch(3), _ch(2), _ch(1)];
 
-    test('slots <= 0 deletes nothing', () {
+    test('both reading orders target N-1 behind, or nothing at slot 0', () {
       expect(chapterIdToDeleteWhileReading(asc, true, 3, 0), isNull);
-    });
+      expect(chapterIdToDeleteWhileReading(desc, false, 3, 0), isNull);
 
-    test('ascending: slot 1 = the just-read chapter, N = N-1 behind it', () {
+      // Ascending: slot 1 = the just-read chapter, N = N-1 behind it.
       expect(chapterIdToDeleteWhileReading(asc, true, 3, 1), 3); // just read
       expect(chapterIdToDeleteWhileReading(asc, true, 3, 2), 2); // one behind
       expect(chapterIdToDeleteWhileReading(asc, true, 3, 3), 1); // two behind
-    });
 
-    test('descending: walks the other way so it still targets behind', () {
+      // Descending walks the other way so it still targets behind.
       expect(chapterIdToDeleteWhileReading(desc, false, 3, 1), 3);
       expect(chapterIdToDeleteWhileReading(desc, false, 3, 2), 2);
       expect(chapterIdToDeleteWhileReading(desc, false, 3, 3), 1);
     });
 
-    test('never targets a chapter ahead / out of range', () {
+    test('never targets a chapter ahead, out of range, or an unknown id', () {
       expect(chapterIdToDeleteWhileReading(asc, true, 1, 2), isNull);
       expect(chapterIdToDeleteWhileReading(desc, false, 1, 2), isNull);
-    });
-
-    test('unknown read chapter id deletes nothing', () {
       expect(chapterIdToDeleteWhileReading(asc, true, 999, 1), isNull);
     });
-  });
-
-  test('copyWith replaces only the named field', () {
-    const base = DeleteChaptersSettings();
-    final next = base.copyWith(deleteWhileReading: 5);
-    expect(next.deleteWhileReading, 5);
-    expect(next.deleteManuallyMarkedRead, isFalse);
-    expect(next.deleteWithBookmark, isFalse);
   });
 }

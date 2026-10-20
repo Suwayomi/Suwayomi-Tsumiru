@@ -24,8 +24,8 @@ void main() {
     );
   }
 
-  for (final name in vectors.keys) {
-    testWidgets('$name paints through select and deselect', (tester) async {
+  testWidgets('every vector paints through selection', (tester) async {
+    for (final name in vectors.keys) {
       await tester.pumpWidget(host(name, selected: false));
 
       await tester.pumpWidget(host(name, selected: true));
@@ -37,12 +37,11 @@ void main() {
       for (var i = 0; i < 12; i++) {
         await tester.pump(const Duration(milliseconds: 50));
       }
-    });
 
-    testWidgets('$name mounts already-selected at the settled frame',
-        (tester) async {
+      // A fresh mount already-selected starts at the settled frame.
+      await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(host(name, selected: true));
-      expect(tester.hasRunningAnimations, isFalse);
-    });
-  }
+      expect(tester.hasRunningAnimations, isFalse, reason: name);
+    }
+  });
 }

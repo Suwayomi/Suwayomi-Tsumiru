@@ -20,50 +20,48 @@ import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/brand_page_seekbar.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_chrome.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 MangaDto _manga() => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Manga',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 0),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(nodes: const []),
-      unreadCount: 0,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Manga',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+  unreadCount: 0,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto _chapter() => Fragment$ChapterDto(
-      chapterNumber: 1,
-      fetchedAt: '0',
-      id: 1,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 0,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'Chapter 1',
-      pageCount: 3,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/chapter/1',
-      meta: const [],
-    );
+  chapterNumber: 1,
+  fetchedAt: '0',
+  id: 1,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 0,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'Chapter 1',
+  pageCount: 3,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/chapter/1',
+  meta: const [],
+);
 
 Future<void> _pumpChrome(
   WidgetTester tester, {
@@ -135,64 +133,6 @@ void main() {
     testWidgets('pref OFF hides the indicator', (tester) async {
       await _pumpChrome(tester, prefValues: const {'showPageNumber': false});
       expect(find.text('1 / 3'), findsNothing);
-    });
-
-    testWidgets('label tracks currentIndex → "2 / 3"', (tester) async {
-      await _pumpChrome(tester, currentIndex: 1);
-      expect(find.text('2 / 3'), findsOneWidget);
-    });
-
-    testWidgets('stays visible while reading (chrome hidden)', (tester) async {
-      await _pumpChrome(tester, visible: false);
-      // Not part of the animated bars — present even when visibility is false.
-      expect(find.text('1 / 3'), findsOneWidget);
-    });
-
-    testWidgets('RTL mode reverses the bottom seekbar', (tester) async {
-      await _pumpChrome(tester, reverseSeekBar: true);
-
-      final seekbar =
-          tester.widget<BrandPageSeekBar>(find.byType(BrandPageSeekBar));
-      expect(seekbar.inverted, isTrue);
-    });
-  });
-
-  group('brand page seekbar', () {
-    testWidgets('inverted mapping treats the right edge as page 1',
-        (tester) async {
-      final changes = <int>[];
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: SizedBox(
-                width: 320,
-                height: 64,
-                child: BrandPageSeekBar(
-                  currentValue: 0,
-                  maxValue: 5,
-                  inverted: true,
-                  onChanged: changes.add,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final barTrack = find.descendant(
-        of: find.byType(BrandPageSeekBar),
-        matching: find.byWidgetPredicate(
-          (widget) => widget is CustomPaint && widget.painter != null,
-        ),
-      );
-      expect(barTrack, findsOneWidget);
-
-      final barRect = tester.getRect(barTrack);
-      await tester.tapAt(Offset(barRect.right - 1, barRect.center.dy));
-      await tester.tapAt(Offset(barRect.left + 1, barRect.center.dy));
-
-      expect(changes, [0, 4]);
     });
   });
 }

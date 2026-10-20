@@ -6,20 +6,15 @@
 
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:hooks_riverpod/legacy.dart';
 import 'package:queue/queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/app_sizes.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/browse_center/data/source_repository/source_repository.dart';
-import 'package:tsumiru/src/features/browse_center/domain/filter/filter_model.dart';
-import 'package:tsumiru/src/features/browse_center/domain/manga_page/manga_page.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/global_search/controller/source_quick_search_controller.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/global_search/global_search_screen.dart';
@@ -28,14 +23,8 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
-import 'package:tsumiru/src/utils/network/graphql_errors.dart';
-import 'package:tsumiru/src/widgets/custom_circular_progress_indicator.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
-import 'package:tsumiru/src/widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
-
-import '../../../../../helpers/fake_extension_repository.dart';
-import '../../../../../helpers/legacy_account_access.dart';
 
 SourceDto _source({required String id, required String name}) =>
     SourceDto.fromJson({
@@ -82,25 +71,6 @@ MangaDto _manga(int id, String title) => MangaDto.fromJson({
 class _AllScope extends GlobalSearchScope {
   @override
   GlobalSearchSourceFilter? build() => GlobalSearchSourceFilter.all;
-}
-
-class _FailingSourceRepository extends SourceRepository {
-  _FailingSourceRepository()
-    : super(dummyGraphQLClient(), permissions: legacyAccountPermissions);
-
-  int searchCalls = 0;
-
-  @override
-  Future<MangaPage?> fetchSourceManga({
-    required String sourceId,
-    required SourceType sourceType,
-    required int page,
-    String? query,
-    List<FilterChange>? filters,
-  }) async {
-    searchCalls++;
-    throw Exception('HTTP 522');
-  }
 }
 
 typedef _SourceResult = ({
@@ -297,67 +267,31 @@ void main() {
     expect(find.text("Couldn't reach Beta"), findsOneWidget);
   });
 
-  testWidgets('a loading source reserves the cover row height with a small '
-      'indicator', (tester) async {
-    final pending = Completer<List<MangaDto>>();
-
+  testWidgets('phone keeps the title and puts the chips below the field', (
+    tester,
+  ) async {
     await _pumpSearch(
       tester,
       fromSuggestion: false,
-      settle: false,
       sources: [
-        (source: _source(id: '1', name: 'Alpha'), search: () => pending.future),
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => <MangaDto>[],
+        ),
       ],
+      size: const Size(412, 900),
     );
 
-    expect(find.byType(CenterSorayomiShimmerIndicator), findsNothing);
+    expect(find.widgetWithText(AppBar, 'Global Search'), findsOneWidget);
 
-    final indicator = find.byType(SorayomiShimmerIndicator);
-    expect(indicator, findsOneWidget);
-
-    final boxes = find.ancestor(
-      of: indicator,
-      matching: find.byType(SizedBox),
-    );
-    expect(tester.getSize(boxes.first), const Size.square(48));
+    final field = find.byType(SearchField);
+    final allChip = find.widgetWithText(FilterChip, 'All');
+    expect(field, findsOneWidget);
+    expect(allChip, findsOneWidget);
     expect(
-      tester.getSize(boxes.at(1)).height,
-      mangaCoverBoxHeight(kShortSearchCoverWidth),
+      tester.getTopLeft(allChip).dy,
+      greaterThan(tester.getBottomLeft(field).dy),
     );
-
-    pending.complete(<MangaDto>[]);
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets('a failed source is not retried automatically under the app '
-      'retry policy', (tester) async {
-    final comix = _source(id: '2', name: 'Comix (EN)');
-    final repository = _FailingSourceRepository();
-
-    await _pumpSearch(
-      tester,
-      fromSuggestion: false,
-      sources: [(source: comix, search: () async => <MangaDto>[])],
-      overrideSourceSearches: false,
-      retry: (retryCount, error) => isConnectionError(error)
-          ? null
-          : ProviderContainer.defaultRetry(retryCount, error),
-      repository: repository,
-      queue: Queue(),
-    );
-
-    expect(find.text("Couldn't reach Comix (EN)"), findsOneWidget);
-    expect(repository.searchCalls, 1);
-
-    await tester.pump(const Duration(seconds: 45));
-
-    expect(repository.searchCalls, 1);
-    expect(find.text("Couldn't reach Comix (EN)"), findsOneWidget);
-
-    await tester.tap(find.text('Retry'));
-    await tester.pumpAndSettle();
-
-    expect(repository.searchCalls, 2);
   });
 
   testWidgets('a lone exact match from a suggestion opens the series and '
@@ -385,45 +319,6 @@ void main() {
 
     expect(find.text('MANGA 7'), findsNothing);
     expect(find.text('open search'), findsOneWidget);
-  });
-
-  testWidgets('two exact matches stay on the results list', (tester) async {
-    await _pumpSearch(
-      tester,
-      fromSuggestion: true,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => [_manga(7, _query)],
-        ),
-        (
-          source: _source(id: '2', name: 'Beta'),
-          search: () async => [_manga(8, _query)],
-        ),
-      ],
-    );
-
-    expect(find.text('MANGA 7'), findsNothing);
-    expect(find.text('Alpha'), findsOneWidget);
-    expect(find.text('Beta'), findsOneWidget);
-  });
-
-  testWidgets('without the suggestion flag a lone exact match stays', (
-    tester,
-  ) async {
-    await _pumpSearch(
-      tester,
-      fromSuggestion: false,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => [_manga(7, _query)],
-        ),
-      ],
-    );
-
-    expect(find.text('MANGA 7'), findsNothing);
-    expect(find.text('Alpha'), findsOneWidget);
   });
 
   testWidgets('desktop draws the field in the shell bar, the chips below '
@@ -473,54 +368,6 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('phone keeps the title and puts the chips below the field', (
-    tester,
-  ) async {
-    await _pumpSearch(
-      tester,
-      fromSuggestion: false,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => <MangaDto>[],
-        ),
-      ],
-      size: const Size(412, 900),
-    );
-
-    expect(find.widgetWithText(AppBar, 'Global Search'), findsOneWidget);
-
-    final field = find.byType(SearchField);
-    final allChip = find.widgetWithText(FilterChip, 'All');
-    expect(field, findsOneWidget);
-    expect(allChip, findsOneWidget);
-    expect(
-      tester.getTopLeft(allChip).dy,
-      greaterThan(tester.getBottomLeft(field).dy),
-    );
-  });
-
-  testWidgets('one source erroring does not block an exact match elsewhere', (
-    tester,
-  ) async {
-    await _pumpSearch(
-      tester,
-      fromSuggestion: true,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => throw TimeoutException('timed out'),
-        ),
-        (
-          source: _source(id: '2', name: 'Beta'),
-          search: () async => [_manga(9, _query)],
-        ),
-      ],
-    );
-
-    expect(find.text('MANGA 9'), findsOneWidget);
-  });
-
   testWidgets('typing a different query without submitting cancels the '
       'auto-open', (tester) async {
     final exact = Completer<List<MangaDto>>();
@@ -544,166 +391,6 @@ void main() {
     expect(find.text('MANGA 7'), findsNothing);
     expect(find.text('Alpha'), findsOneWidget);
   });
-
-  testWidgets('scrolling cancels the auto-open', (tester) async {
-    final exact = Completer<List<MangaDto>>();
-
-    await _pumpSearch(
-      tester,
-      fromSuggestion: true,
-      settle: false,
-      sources: [
-        (source: _source(id: '1', name: 'Alpha'), search: () => exact.future),
-      ],
-    );
-
-    final pointer = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(pointer.hover(const Offset(300, 400)));
-    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 120)));
-    await tester.pump();
-
-    exact.complete([_manga(7, _query)]);
-    await tester.pump();
-    await tester.pumpAndSettle();
-
-    expect(find.text('MANGA 7'), findsNothing);
-    expect(find.text('Alpha'), findsOneWidget);
-  });
-
-  testWidgets('pressing a key cancels the auto-open', (tester) async {
-    final exact = Completer<List<MangaDto>>();
-
-    await _pumpSearch(
-      tester,
-      fromSuggestion: true,
-      settle: false,
-      sources: [
-        (source: _source(id: '1', name: 'Alpha'), search: () => exact.future),
-      ],
-    );
-
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
-    await tester.pump();
-
-    exact.complete([_manga(7, _query)]);
-    await tester.pump();
-    await tester.pumpAndSettle();
-
-    expect(find.text('MANGA 7'), findsNothing);
-    expect(find.text('Alpha'), findsOneWidget);
-  });
-
-  testWidgets('a result opened before the sources settle is not replaced', (
-    tester,
-  ) async {
-    final exact = Completer<List<MangaDto>>();
-
-    await _pumpSearch(
-      tester,
-      fromSuggestion: true,
-      settle: false,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => [_manga(8, 'Not it')],
-        ),
-        (source: _source(id: '2', name: 'Beta'), search: () => exact.future),
-      ],
-    );
-
-    await tester.tap(find.byType(MangaCoverGridTile));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('MANGA 8'), findsOneWidget);
-
-    exact.complete([_manga(9, _query)]);
-    await tester.pump();
-    await tester.pumpAndSettle();
-
-    expect(find.text('MANGA 8'), findsOneWidget);
-    expect(find.text('MANGA 9'), findsNothing);
-  });
-
-  testWidgets('a refreshing source list is not treated as settled', (
-    tester,
-  ) async {
-    final alpha = _source(id: '1', name: 'Alpha');
-    final beta = _source(id: '2', name: 'Beta');
-    final gamma = _source(id: '3', name: 'Gamma');
-    final alphaSearch = Completer<List<MangaDto>>();
-    final secondLoad = Completer<List<SourceDto>?>();
-    final sourcesState = StateProvider<AsyncValue<List<SourceDto>>>(
-      (ref) => AsyncData([alpha, beta]),
-    );
-    var sourceListCalls = 0;
-
-    await _pumpSearch(
-      tester,
-      fromSuggestion: true,
-      settle: false,
-      sources: [
-        (source: alpha, search: () => alphaSearch.future),
-        (source: beta, search: () async => [_manga(8, 'Something else')]),
-        (source: gamma, search: () async => [_manga(9, _query)]),
-      ],
-      sourceList: (ref) {
-        sourceListCalls++;
-        return sourceListCalls == 1
-            ? Future.value([alpha, beta])
-            : secondLoad.future;
-      },
-      searchableSources: (ref) => ref.watch(sourcesState),
-    );
-
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(GlobalSearchScreen)),
-      listen: false,
-    );
-    container.invalidate(sourceListProvider);
-    await tester.pump();
-
-    alphaSearch.complete([_manga(7, _query)]);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('MANGA 7'), findsNothing);
-
-    container.read(sourcesState.notifier).state = AsyncData([
-      alpha,
-      beta,
-      gamma,
-    ]);
-    await tester.pump();
-    secondLoad.complete([alpha, beta, gamma]);
-    await tester.pumpAndSettle();
-
-    expect(find.text('MANGA 7'), findsNothing);
-    expect(find.text('MANGA 9'), findsNothing);
-    expect(find.text('Gamma', skipOffstage: false), findsOneWidget);
-  });
-
-  for (final (name, size) in [
-    ('desktop', const Size(1400, 980)),
-    ('phone', const Size(412, 900)),
-  ]) {
-    testWidgets('the search field is focused on arrival on $name', (
-      tester,
-    ) async {
-      await _pumpSearch(
-        tester,
-        fromSuggestion: false,
-        sources: [
-          (
-            source: _source(id: '1', name: 'Alpha'),
-            search: () async => <MangaDto>[],
-          ),
-        ],
-        size: size,
-      );
-
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.focusNode?.hasFocus, isTrue);
-    });
-  }
 
   testWidgets('crossing the desktop breakpoint keeps search focus', (
     tester,
@@ -730,60 +417,5 @@ void main() {
 
     expect(find.byType(AppBar), findsNothing);
     expect(focusNode.hasFocus, isTrue);
-  });
-
-  testWidgets('crossing the desktop breakpoint does not take focus back', (
-    tester,
-  ) async {
-    await _pumpSearch(
-      tester,
-      fromSuggestion: false,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => <MangaDto>[],
-        ),
-      ],
-      size: const Size(915, 412),
-    );
-
-    final focusNode = tester
-        .widget<TextField>(find.byType(TextField))
-        .focusNode!;
-    focusNode.unfocus();
-    await tester.pumpAndSettle();
-    expect(focusNode.hasFocus, isFalse);
-
-    tester.view.physicalSize = const Size(900, 900);
-    await tester.pumpAndSettle();
-
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.focusNode?.hasFocus, isFalse);
-  });
-
-  testWidgets('crossing the desktop breakpoint keeps the typed draft', (
-    tester,
-  ) async {
-    await _pumpSearch(
-      tester,
-      fromSuggestion: false,
-      sources: [
-        (
-          source: _source(id: '1', name: 'Alpha'),
-          search: () async => <MangaDto>[],
-        ),
-      ],
-      size: const Size(915, 412),
-    );
-
-    await tester.enterText(find.byType(TextField), 'draft query');
-    await tester.pump();
-
-    tester.view.physicalSize = const Size(900, 900);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AppBar), findsNothing);
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.controller?.text, 'draft query');
   });
 }

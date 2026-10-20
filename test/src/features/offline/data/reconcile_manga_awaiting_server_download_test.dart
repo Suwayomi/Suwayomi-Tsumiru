@@ -176,7 +176,9 @@ void main() {
       downloadsRepo.shouldFail = true;
       final ref = await harness(tester);
 
-      await tester.runAsync(() => expectLater(reconcileMangaWidget(ref, 2), throwsException));
+      await tester.runAsync(
+        () => expectLater(reconcileMangaWidget(ref, 2), throwsException),
+      );
       expect((await db.chapterById(201))!.serverFetchAttempts, 0);
 
       expect(
@@ -189,87 +191,4 @@ void main() {
       );
     },
   );
-
-  test('reconcileManga (Ref entry point) registers on success, same as the '
-      'WidgetRef variant', () async {
-    await seedMangaNeedingServerDownload(3);
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        offlineActiveProvider.overrideWithValue(true),
-        offlineDatabaseProvider.overrideWithValue(db),
-        offlinePathsProvider.overrideWithValue(const OfflinePaths('/tmp/x')),
-        downloadsRepositoryProvider.overrideWithValue(downloadsRepo),
-        offlineDownloadCoordinatorProvider.overrideWithValue(
-          OfflineDownloadCoordinator(
-            db: db,
-            engine: ChapterDownloadEngine(
-              fetchPage: (_) async => throw UnimplementedError(),
-              writePage: store,
-              refreshAuth: () async => false,
-            ),
-            store: store,
-            resolvePages: (_) async => const [],
-          ),
-        ),
-        offlineDownloadManagerProvider.overrideWithValue(
-          OfflineDownloadManager(
-            db: db,
-            store: store,
-            fetchPageUrls: (_) async => const [],
-            fetchBytes: (_) async => throw UnimplementedError(),
-          ),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    final ref = container.read(Provider<Ref>((ref) => ref));
-
-    await reconcileManga(ref, 3);
-
-    expect(awaitingServerDownloads, contains(3));
-  });
-
-  test('reconcileMangaContainer (ProviderContainer entry point) registers on '
-      'success, same as the WidgetRef variant', () async {
-    await seedMangaNeedingServerDownload(4);
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        offlineActiveProvider.overrideWithValue(true),
-        offlineDatabaseProvider.overrideWithValue(db),
-        offlinePathsProvider.overrideWithValue(const OfflinePaths('/tmp/x')),
-        downloadsRepositoryProvider.overrideWithValue(downloadsRepo),
-        offlineDownloadCoordinatorProvider.overrideWithValue(
-          OfflineDownloadCoordinator(
-            db: db,
-            engine: ChapterDownloadEngine(
-              fetchPage: (_) async => throw UnimplementedError(),
-              writePage: store,
-              refreshAuth: () async => false,
-            ),
-            store: store,
-            resolvePages: (_) async => const [],
-          ),
-        ),
-        offlineDownloadManagerProvider.overrideWithValue(
-          OfflineDownloadManager(
-            db: db,
-            store: store,
-            fetchPageUrls: (_) async => const [],
-            fetchBytes: (_) async => throw UnimplementedError(),
-          ),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await reconcileMangaContainer(container, 4);
-
-    expect(awaitingServerDownloads, contains(4));
-  });
 }

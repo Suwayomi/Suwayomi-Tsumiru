@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
@@ -45,178 +46,176 @@ void main() {
   ).map((e) => e.id).toList();
 
   group('matchSettingsEntries', () {
-    test('matches on title', () {
+    test('matches title, subtitle, case, empty, cap and hidden entries', () {
       final entries = [
         _entry('a', 'App Theme Mode'),
         _entry('b', 'Clear Cache'),
+        _entry('c', 'Show recommendations', subtitle: 'Similar titles row'),
       ];
       expect(idsOf(entries, 'theme'), ['a']);
-    });
-
-    test('matches on subtitle', () {
-      final entries = [
-        _entry('a', 'Show recommendations', subtitle: 'Similar titles row'),
-        _entry('b', 'Clear Cache'),
-      ];
-      expect(idsOf(entries, 'similar'), ['a']);
-    });
-
-    test('is case-insensitive', () {
-      final entries = [_entry('a', 'App Theme Mode')];
+      expect(idsOf(entries, 'similar'), ['c']);
       expect(idsOf(entries, 'THEME'), ['a']);
       expect(idsOf(entries, '  theme  '), ['a']);
-    });
-
-    test('empty query matches nothing', () {
-      final entries = [_entry('a', 'App Theme Mode')];
       expect(idsOf(entries, ''), isEmpty);
       expect(idsOf(entries, '   '), isEmpty);
-    });
 
-    test('caps at 10 in registry order', () {
-      final entries = [for (var i = 0; i < 12; i++) _entry('e$i', 'Theme $i')];
-      final out = matchSettingsEntries(
-        entries: entries,
+      final twelve = [for (var i = 0; i < 12; i++) _entry('e$i', 'Theme $i')];
+      final capped = matchSettingsEntries(
+        entries: twelve,
         l: l,
         query: 'theme',
         isVisible: (_) => true,
       );
-      expect(out, hasLength(10));
-      expect(out.map((e) => e.id), [for (var i = 0; i < 10; i++) 'e$i']);
-    });
+      expect(capped, hasLength(10));
+      expect(capped.map((e) => e.id), [for (var i = 0; i < 10; i++) 'e$i']);
 
-    test('excludes hidden entries', () {
-      final entries = [
+      final hidden = [
         _entry('shown', 'Quick Search'),
         _entry('hidden', 'Quick Search Pro'),
       ];
-      expect(idsOf(entries, 'quick search', shown: (id) => id == 'shown'), [
+      expect(idsOf(hidden, 'quick search', shown: (id) => id == 'shown'), [
         'shown',
       ]);
     });
   });
 
-  group('real entry visibility', () {
-    late WidgetRef refOf;
-    late BuildContext ctxOf;
-
-    Future<void> pumpScope(
-      WidgetTester tester,
-      ProviderContainer container,
-    ) async {
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: Consumer(
-            builder: (context, ref, _) {
-              refOf = ref;
-              ctxOf = context;
-              return const SizedBox.shrink();
-            },
-          ),
-        ),
+  group('page searches', () {
+    test('return their rows with breadcrumbs and tab indexes', () {
+      List<SettingsSearchEntry> hitsOf(String query) => matchSettingsEntries(
+        entries: allSettingsSearchEntries,
+        l: l,
+        query: query,
+        isVisible: (_) => true,
       );
-      await tester.pump();
-    }
 
-    Future<ProviderContainer> containerWithMocks() async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
-      );
-      addTearDown(container.dispose);
-      return container;
-    }
-
-    SettingsSearchEntry entryById(String id) =>
-        allSettingsSearchEntries.singleWhere((e) => e.id == id);
-
-    testWidgets('Quick Search mirrors the keyboard runtime', (tester) async {
-      final container = await containerWithMocks();
-      await pumpScope(tester, container);
-      expect(entryById('quickSearch').visible(refOf, ctxOf), isKeyboardRuntime);
-    });
-
-    testWidgets('retry delay hidden while auto-refresh is off', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          autoRefreshOnTimeoutProvider.overrideWith(_AutoRefreshOff.new),
-        ],
-      );
-      addTearDown(container.dispose);
-      await pumpScope(tester, container);
-      expect(entryById('autoRefreshRetryDelay').visible(refOf, ctxOf), isFalse);
-      expect(entryById('autoRefreshOnTimeout').visible(refOf, ctxOf), isTrue);
-    });
-
-    testWidgets('retry delay shown while auto-refresh is on', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          autoRefreshOnTimeoutProvider.overrideWith(_AutoRefreshOn.new),
-        ],
-      );
-      addTearDown(container.dispose);
-      await pumpScope(tester, container);
-      expect(entryById('autoRefreshRetryDelay').visible(refOf, ctxOf), isTrue);
-    });
-
-    testWidgets('socks host hidden while SOCKS is off', (tester) async {
-      Future<void> pumpSocks(WidgetTester tester, bool on) async {
-        SharedPreferences.setMockInitialValues({});
-        final sp = await SharedPreferences.getInstance();
-        final container = ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sp),
-            settingsProvider.overrideWith(() => _SocksSettings(on)),
-          ],
-        );
-        addTearDown(container.dispose);
-        await container.read(settingsProvider.future);
-        await pumpScope(tester, container);
+      final zoom = hitsOf('zoom');
+      expect(zoom.map((e) => e.id).toList(), [
+        'disableZoomIn',
+        'pagedDoubleTapToZoom',
+        'pagedPinchToZoom',
+        'pagedDisableZoomOut',
+        'longStripDoubleTapToZoom',
+        'longStripPinchToZoom',
+        'longStripDisableZoomOut',
+      ]);
+      final paged = '${l.reader} › ${l.readerGroupPagerViewer}';
+      final strip = '${l.reader} › ${l.readerGroupWebtoonViewer}';
+      for (final hit in zoom.take(4)) {
+        expect(hit.breadcrumb(l), paged, reason: hit.id);
+      }
+      for (final hit in zoom.skip(4)) {
+        expect(hit.breadcrumb(l), strip, reason: hit.id);
       }
 
-      await pumpSocks(tester, false);
-      expect(entryById('socksHost').visible(refOf, ctxOf), isFalse);
-      expect(entryById('enableSocksProxy').visible(refOf, ctxOf), isTrue);
-      await tester.pumpAndSettle();
-    });
+      final socks = hitsOf('socks');
+      expect(socks.map((e) => e.id).toList(), [
+        'enableSocksProxy',
+        'socksVersion',
+        'socksHost',
+        'socksPort',
+        'socksUserName',
+        'socksPassword',
+      ]);
+      for (final hit in socks) {
+        expect(
+          hit.breadcrumb(l),
+          '${l.server} › ${l.socksProxy}',
+          reason: hit.id,
+        );
+      }
 
-    testWidgets('socks host shown while SOCKS is on', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          settingsProvider.overrideWith(() => _SocksSettings(true)),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(settingsProvider.future);
-      await pumpScope(tester, container);
-      expect(entryById('socksHost').visible(refOf, ctxOf), isTrue);
-      await tester.pumpAndSettle();
+      final bookmarked = hitsOf('bookmarked');
+      expect(bookmarked.map((e) => e.id).toList(), [
+        'serverDeleteWithBookmark',
+        'deviceDeleteWithBookmark',
+      ]);
+      expect(bookmarked.map((e) => e.breadcrumb(l)).toList(), [
+        '${l.downloads} › ${l.downloadsServerTab}',
+        '${l.downloads} › ${l.downloadsOnDeviceTab}',
+      ]);
+      expect(bookmarked.map((e) => e.tabIndex).toList(), [0, 1]);
     });
+  });
 
-    testWidgets('sync now hidden until host and key are set', (tester) async {
-      Future<bool> syncNowVisible(SyncYomiSettings settings) async {
+  group('real entry visibility', () {
+    testWidgets('follows runtime settings and loaded state', (tester) async {
+      late WidgetRef refOf;
+      late BuildContext ctxOf;
+
+      Future<void> pumpScope(ProviderContainer container) async {
+        // Unmount any previous tree first: updating an existing scope in
+        // place reuses its container, so a reused notifier re-runs
+        // initialize().
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: Consumer(
+              builder: (context, ref, _) {
+                refOf = ref;
+                ctxOf = context;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      Future<ProviderContainer> containerWith(List<Override> overrides) async {
         SharedPreferences.setMockInitialValues({});
         final sp = await SharedPreferences.getInstance();
         final container = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sp),
-            syncYomiSettingsProvider.overrideWith((ref) async => settings),
+            ...overrides,
           ],
         );
         addTearDown(container.dispose);
+        return container;
+      }
+
+      SettingsSearchEntry entryById(String id) =>
+          allSettingsSearchEntries.singleWhere((e) => e.id == id);
+
+      // Quick Search mirrors the keyboard runtime.
+      await pumpScope(await containerWith([]));
+      expect(entryById('quickSearch').visible(refOf, ctxOf), isKeyboardRuntime);
+
+      // Retry delay follows auto-refresh.
+      await pumpScope(
+        await containerWith([
+          autoRefreshOnTimeoutProvider.overrideWith(_AutoRefreshOff.new),
+        ]),
+      );
+      expect(entryById('autoRefreshRetryDelay').visible(refOf, ctxOf), isFalse);
+      expect(entryById('autoRefreshOnTimeout').visible(refOf, ctxOf), isTrue);
+      await pumpScope(
+        await containerWith([
+          autoRefreshOnTimeoutProvider.overrideWith(_AutoRefreshOn.new),
+        ]),
+      );
+      expect(entryById('autoRefreshRetryDelay').visible(refOf, ctxOf), isTrue);
+
+      // SOCKS host follows SOCKS, both ways.
+      for (final on in [false, true]) {
+        final container = await containerWith([
+          settingsProvider.overrideWith(() => _SocksSettings(on)),
+        ]);
+        await container.read(settingsProvider.future);
+        await pumpScope(container);
+        expect(entryById('socksHost').visible(refOf, ctxOf), on);
+        expect(entryById('enableSocksProxy').visible(refOf, ctxOf), isTrue);
+        await tester.pumpAndSettle();
+      }
+
+      // Sync now waits for a host and key; its data row does not.
+      Future<bool> syncNowVisible(SyncYomiSettings settings) async {
+        final container = await containerWith([
+          syncYomiSettingsProvider.overrideWith((ref) async => settings),
+        ]);
         await container.read(syncYomiSettingsProvider.future);
-        await pumpScope(tester, container);
+        await pumpScope(container);
         return entryById('syncYomiSyncNow').visible(refOf, ctxOf);
       }
 
@@ -245,21 +244,9 @@ void main() {
       expect(await syncNowVisible(unconfigured), isFalse);
       expect(await syncNowVisible(configured), isTrue);
       expect(entryById('syncYomiSyncData').visible(refOf, ctxOf), isTrue);
-    });
 
-    testWidgets('browse server rows hidden while settings are not loaded', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          ...unreachableServerStubs,
-        ],
-      );
-      addTearDown(container.dispose);
-      await pumpScope(tester, container);
+      // Server-gated rows stay hidden while settings are not loaded.
+      await pumpScope(await containerWith([...unreachableServerStubs]));
       expect(entryById('showNsfw').visible(refOf, ctxOf), isTrue);
       for (final id in [
         'parallelSourceRequests',
@@ -268,76 +255,36 @@ void main() {
       ]) {
         expect(entryById(id).visible(refOf, ctxOf), isFalse, reason: id);
       }
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('library entries hidden while settings are not loaded', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          ...unreachableServerStubs,
-        ],
-      );
-      addTearDown(container.dispose);
-      await pumpScope(tester, container);
       for (final entry in librarySettingsSearchEntries) {
         expect(entry.visible(refOf, ctxOf), isFalse, reason: entry.id);
       }
+      for (final id in [
+        'downloadLocation',
+        'saveAsCbz',
+        'serverDeleteManuallyMarkedRead',
+        'serverDeleteWhileReading',
+        'serverDeleteWithBookmark',
+        'autoDownloadNewChapters',
+        'chapterDownloadLimit',
+        'excludeEntryWithUnreadChapters',
+        'autoDownloadCategories',
+        'backupLocation',
+        'backupTime',
+        'backupInterval',
+        'backupCleanup',
+      ]) {
+        expect(entryById(id).visible(refOf, ctxOf), isFalse, reason: id);
+      }
+      expect(entryById('createBackup').visible(refOf, ctxOf), isTrue);
+      expect(entryById('restoreBackup').visible(refOf, ctxOf), isTrue);
       await tester.pumpAndSettle();
-    });
 
-    testWidgets(
-      'server downloads and automatic backup rows hidden while settings are not loaded',
-      (tester) async {
-        SharedPreferences.setMockInitialValues({});
-        final sp = await SharedPreferences.getInstance();
-        final container = ProviderContainer(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sp),
-            ...unreachableServerStubs,
-          ],
-        );
-        addTearDown(container.dispose);
-        await pumpScope(tester, container);
-        for (final id in [
-          'downloadLocation',
-          'saveAsCbz',
-          'serverDeleteManuallyMarkedRead',
-          'serverDeleteWhileReading',
-          'serverDeleteWithBookmark',
-          'autoDownloadNewChapters',
-          'chapterDownloadLimit',
-          'excludeEntryWithUnreadChapters',
-          'autoDownloadCategories',
-          'backupLocation',
-          'backupTime',
-          'backupInterval',
-          'backupCleanup',
-        ]) {
-          expect(entryById(id).visible(refOf, ctxOf), isFalse, reason: id);
-        }
-        expect(entryById('createBackup').visible(refOf, ctxOf), isTrue);
-        expect(entryById('restoreBackup').visible(refOf, ctxOf), isTrue);
-        await tester.pumpAndSettle();
-      },
-    );
-
-    testWidgets('server-gated rows shown once settings load', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          settingsProvider.overrideWith(() => _SocksSettings(true)),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(settingsProvider.future);
-      await pumpScope(tester, container);
+      // And appear once settings load.
+      final loaded = await containerWith([
+        settingsProvider.overrideWith(() => _SocksSettings(true)),
+      ]);
+      await loaded.read(settingsProvider.future);
+      await pumpScope(loaded);
       for (final id in [
         'parallelSourceRequests',
         'categories',
@@ -364,16 +311,14 @@ void main() {
       expect(spans[1].text, 'Theme');
       expect(spans[1].style, match);
       expect(spans[2].text, ' Mode');
-    });
 
-    test('plain span when the match is subtitle-only', () {
-      final spans = settingsTitleSpans(
+      final plain = settingsTitleSpans(
         title: 'Clear Cache',
         query: 'image',
         match: match,
       );
-      expect(spans, hasLength(1));
-      expect(spans.single.text, 'Clear Cache');
+      expect(plain, hasLength(1));
+      expect(plain.single.text, 'Clear Cache');
     });
   });
 }

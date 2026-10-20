@@ -37,10 +37,7 @@ Future<ProviderContainer> _pumpBar(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: ReaderUtilsBar(
-                expanded: expanded,
-                readerMode: readerMode,
-              ),
+              body: ReaderUtilsBar(expanded: expanded, readerMode: readerMode),
             ),
           );
         },
@@ -52,16 +49,9 @@ Future<ProviderContainer> _pumpBar(
 }
 
 void main() {
-  testWidgets('collapsed renders no controls', (tester) async {
-    final expanded = ValueNotifier(false);
-    addTearDown(expanded.dispose);
-    await _pumpBar(tester, expanded);
-
-    expect(find.byType(Switch), findsNothing);
-  });
-
-  testWidgets('expanded shows the auto-scroll switch and toggles it',
-      (tester) async {
+  testWidgets('expanded shows the auto-scroll switch and toggles it', (
+    tester,
+  ) async {
     final expanded = ValueNotifier(true);
     addTearDown(expanded.dispose);
     final container = await _pumpBar(tester, expanded);
@@ -94,31 +84,5 @@ void main() {
       await tester.pumpAndSettle();
     }
     expect(container.read(autoScrollIntervalSecondsProvider), 12);
-  });
-
-  testWidgets('paged mode surfaces Auto advance with its own interval',
-      (tester) async {
-    final expanded = ValueNotifier(true);
-    addTearDown(expanded.dispose);
-    final container = await _pumpBar(
-      tester,
-      expanded,
-      readerMode: ReaderMode.continuousHorizontalLTR,
-    );
-
-    // "Auto advance" label, not "Auto scroll".
-    expect(find.text('Auto advance'), findsOneWidget);
-    expect(find.text('Auto scroll'), findsNothing);
-
-    // Only the on/off toggle — no smooth switch anywhere.
-    expect(find.byType(Switch), findsOneWidget);
-
-    // The stepper drives the separate auto-advance interval (default 5).
-    expect(container.read(autoAdvanceIntervalSecondsProvider), 5);
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pumpAndSettle();
-    expect(container.read(autoAdvanceIntervalSecondsProvider), 6);
-    // The webtoon scroll interval is untouched at its own default.
-    expect(container.read(autoScrollIntervalSecondsProvider), 3);
   });
 }

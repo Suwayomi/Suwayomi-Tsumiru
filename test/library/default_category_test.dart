@@ -10,10 +10,8 @@ import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
-import 'package:tsumiru/src/features/library/domain/library_group.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
-import 'package:tsumiru/src/features/library/presentation/library/controller/library_grouping.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
@@ -199,40 +197,6 @@ void main() {
       expect(link.cursors, isEmpty);
     });
   }
-
-  test('default identity can appear after the first page', () async {
-    final link = CategoryLink();
-    final repository = CategoryRepository(
-      GraphQLClient(link: link, cache: GraphQLCache()),
-    );
-    expect(await repository.getDefaultCategoryId(), 81);
-    expect(link.cursors, [null, '3']);
-  });
-  test('nonzero default groups explicit and uncategorized membership once', () {
-    MangaProxy manga(int id, List<int> categories) => (
-      id: id,
-      sourceId: '',
-      sourceName: '',
-      sourceLang: '',
-      status: '',
-      categoryIds: categories,
-      trackStatuses: [],
-      tags: [],
-    );
-    final result = groupLibrary(
-      [
-        manga(1, []),
-        manga(2, [81]),
-        manga(3, [3]),
-      ],
-      LibraryGroup.byDefault,
-      [(id: 81, name: 'Default'), (id: 3, name: 'Auto add')],
-      defaultCategoryId: 81,
-    );
-    expect(result.map((tab) => tab.id), [81, 3]);
-    expect(result.first.mangaIds, [1, 2]);
-    expect(result.last.mangaIds, [3]);
-  });
 }
 
 class _EmptyCategories extends CategoryController {

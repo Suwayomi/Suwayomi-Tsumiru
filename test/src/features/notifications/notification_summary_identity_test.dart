@@ -30,10 +30,34 @@ class RecordingPlugin implements FlutterLocalNotificationsPlugin {
 
 void main() {
   test(
-    'summary and cold-launch payloads retain their originating session',
+    'summary and update-error payloads retain their originating session',
     () async {
-      final plugin = RecordingPlugin();
-      final service = LocalNotificationService(plugin);
+      const configA = NotificationWorkerConfig(
+        serverId: 's',
+        endpoint: NotificationEndpoint(baseUrl: 'https://s'),
+        newChaptersEnabled: true,
+        includedCategoryIds: {},
+        excludedCategoryIds: {},
+        hideContent: true,
+        identityEpoch: 4,
+        catalogServerId: 'a',
+        sessionFingerprint: 'session-a',
+      );
+      const configB = NotificationWorkerConfig(
+        serverId: 's',
+        endpoint: NotificationEndpoint(baseUrl: 'https://s'),
+        newChaptersEnabled: true,
+        includedCategoryIds: {},
+        excludedCategoryIds: {},
+        hideContent: true,
+        identityEpoch: 5,
+        catalogServerId: 'b',
+        sessionFingerprint: 'session-b',
+      );
+
+      // The summary and its cold-launch payload.
+      var plugin = RecordingPlugin();
+      var service = LocalNotificationService(plugin);
       await service.showNewChapters(
         summaryTitle: 'New',
         summaryText: 'Chapters',
@@ -52,78 +76,32 @@ void main() {
       for (final payload in [summary, cold!]) {
         expect(payload.requiresSession, isTrue);
         expect(payload.mangaId, isNull);
-        expect(
-          payload.matchesConfig(
-            const NotificationWorkerConfig(
-              serverId: 's',
-              endpoint: NotificationEndpoint(baseUrl: 'https://s'),
-              newChaptersEnabled: true,
-              includedCategoryIds: {},
-              excludedCategoryIds: {},
-              hideContent: true,
-              identityEpoch: 4,
-              catalogServerId: 'a',
-              sessionFingerprint: 'session-a',
-            ),
-          ),
-          isTrue,
-        );
-        expect(
-          payload.matchesConfig(
-            const NotificationWorkerConfig(
-              serverId: 's',
-              endpoint: NotificationEndpoint(baseUrl: 'https://s'),
-              newChaptersEnabled: true,
-              includedCategoryIds: {},
-              excludedCategoryIds: {},
-              hideContent: true,
-              identityEpoch: 5,
-              catalogServerId: 'b',
-              sessionFingerprint: 'session-b',
-            ),
-          ),
-          isFalse,
-        );
+        expect(payload.matchesConfig(configA), isTrue);
+        expect(payload.matchesConfig(configB), isFalse);
+      }
+
+      // The update-error payload and its cold-launch payload.
+      plugin = RecordingPlugin();
+      service = LocalNotificationService(plugin);
+      await service.showLibraryUpdateError(
+        'Library update errors',
+        'One update failed',
+        identityEpoch: 4,
+        catalogServerId: 'a',
+        sessionFingerprint: 'session-a',
+      );
+      final decoded = NotificationPayload.decode(plugin.payload);
+      final errorCold = await service.launchPayload();
+      for (final payload in [decoded, errorCold!]) {
+        expect(payload.isUpdateErrors, isTrue);
+        expect(payload.requiresSession, isTrue);
+        expect(payload.identityEpoch, 4);
+        expect(payload.catalogServerId, 'a');
+        expect(payload.sessionFingerprint, 'session-a');
+        expect(payload.matchesConfig(configB), isFalse);
       }
     },
   );
-
-  test('update error taps retain their originating session', () async {
-    final plugin = RecordingPlugin();
-    final service = LocalNotificationService(plugin);
-    await service.showLibraryUpdateError(
-      'Library update errors',
-      'One update failed',
-      identityEpoch: 4,
-      catalogServerId: 'a',
-      sessionFingerprint: 'session-a',
-    );
-    final decoded = NotificationPayload.decode(plugin.payload);
-    final cold = await service.launchPayload();
-    for (final payload in [decoded, cold!]) {
-      expect(payload.isUpdateErrors, isTrue);
-      expect(payload.requiresSession, isTrue);
-      expect(payload.identityEpoch, 4);
-      expect(payload.catalogServerId, 'a');
-      expect(payload.sessionFingerprint, 'session-a');
-      expect(
-        payload.matchesConfig(
-          const NotificationWorkerConfig(
-            serverId: 's',
-            endpoint: NotificationEndpoint(baseUrl: 'https://s'),
-            newChaptersEnabled: true,
-            includedCategoryIds: {},
-            excludedCategoryIds: {},
-            hideContent: true,
-            identityEpoch: 5,
-            catalogServerId: 'b',
-            sessionFingerprint: 'session-b',
-          ),
-        ),
-        isFalse,
-      );
-    }
-  });
 
   test(
     'legacy chapter summaries require proof while generic notices do not',

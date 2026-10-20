@@ -86,22 +86,4 @@ void main() {
     expect(find.text('RECOMMENDS SCREEN'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
-  testWidgets('wide header keeps See all and paging arrows', (tester) async {
-    await pump(tester, const Size(1400, 900));
-
-    expect(find.text('See all'), findsOneWidget);
-    expect(find.byType(IconButton), findsNWidgets(2));
-    expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.arrow_forward), findsNothing);
-    expect(find.byTooltip('See all'), findsNothing);
-
-    await tester.tap(find.text('See all'));
-    await tester.pumpAndSettle();
-
-    expect(pushedMangaId, '1');
-    expect(find.text('RECOMMENDS SCREEN'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 }

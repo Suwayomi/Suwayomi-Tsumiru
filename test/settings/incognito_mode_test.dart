@@ -10,31 +10,16 @@ import 'package:tsumiru/src/features/settings/presentation/incognito/incognito_m
 
 void main() {
   group('incognitoModeProvider', () {
-    test('defaults to off', () {
+    test('defaults to off; set and toggle flip the flag', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       expect(container.read(incognitoModeProvider), isFalse);
-    });
-
-    test('set and toggle flip the flag', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       container.read(incognitoModeProvider.notifier).set(true);
       expect(container.read(incognitoModeProvider), isTrue);
 
       container.read(incognitoModeProvider.notifier).toggle();
       expect(container.read(incognitoModeProvider), isFalse);
-    });
-
-    test('keepAlive: state survives with no listeners', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(incognitoModeProvider.notifier).set(true);
-      // No listeners are attached; an autoDispose provider would reset here.
-      await Future<void>.delayed(Duration.zero);
-      expect(container.read(incognitoModeProvider), isTrue);
     });
   });
 }

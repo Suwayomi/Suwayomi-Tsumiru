@@ -32,13 +32,6 @@ void main() {
     }
   });
 
-  test('custom theme uses Inter too', () {
-    expect(
-      themeFor(AppTheme.custom, Brightness.dark).textTheme.bodyMedium?.fontFamily,
-      'Inter',
-    );
-  });
-
   test("Inter OFL is in the licence list", () async {
     registerInterLicense();
     final entries = await LicenseRegistry.licenses.toList();

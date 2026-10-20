@@ -65,26 +65,23 @@ Future<void> _pump(WidgetTester tester, DownloadDto download) async {
 }
 
 void main() {
-  testWidgets('queued row shows the queued label, no progress bar, no retry', (
+  testWidgets('each row state renders its label, progress and menu action', (
     tester,
   ) async {
-    await _pump(tester, _download(state: DownloadState.QUEUED));
-
-    final l10n = AppLocalizations.of(
+    AppLocalizations l10nFor() => AppLocalizations.of(
       tester.element(find.byType(DownloadProgressListTile)),
     )!;
+
+    await _pump(tester, _download(state: DownloadState.QUEUED));
+    var l10n = l10nFor();
     expect(find.text(l10n.queued), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
-
     await tester.tap(find.byType(PopupMenuButton));
     await tester.pumpAndSettle();
     expect(find.text(l10n.retry), findsNothing);
     expect(find.text(l10n.cancel), findsOneWidget);
-  });
 
-  testWidgets('downloading row shows page progress and a progress bar', (
-    tester,
-  ) async {
+    await tester.pumpWidget(const SizedBox());
     await _pump(
       tester,
       _download(
@@ -93,29 +90,18 @@ void main() {
         pageCount: 25,
       ),
     );
-
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(DownloadProgressListTile)),
-    )!;
+    l10n = l10nFor();
     expect(find.textContaining('24/25'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-
     await tester.tap(find.byType(PopupMenuButton));
     await tester.pumpAndSettle();
     expect(find.text(l10n.retry), findsNothing);
-  });
 
-  testWidgets('error row shows the error label, no progress bar, and retry', (
-    tester,
-  ) async {
+    await tester.pumpWidget(const SizedBox());
     await _pump(tester, _download(state: DownloadState.ERROR, tries: 3));
-
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(DownloadProgressListTile)),
-    )!;
+    l10n = l10nFor();
     expect(find.textContaining('Error'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
-
     await tester.tap(find.byType(PopupMenuButton));
     await tester.pumpAndSettle();
     expect(find.text(l10n.retry), findsOneWidget);

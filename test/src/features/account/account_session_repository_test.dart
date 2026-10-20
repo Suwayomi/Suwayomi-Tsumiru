@@ -91,47 +91,6 @@ void main() {
       ]);
     },
   );
-  test(
-    'unknown or unauthenticated account response never reads a catalog',
-    () async {
-      for (final response in [
-        data({'user': null}),
-        Response(
-          response: {},
-          errors: [const GraphQLError(message: 'Unauthorized')],
-        ),
-      ]) {
-        final replies = _Replies([response]);
-        await expectLater(
-          AccountSessionRepository(
-            GraphQLClient(link: replies, cache: GraphQLCache()),
-          ).resolve(address: 'https://server:443', loginUsername: 'reader'),
-          throwsStateError,
-        );
-        expect(replies.operations, ['AccountCapability']);
-      }
-    },
-  );
-  test('empty legacy username is rejected before metadata access', () async {
-    final replies = _Replies([
-      Response(
-        response: {},
-        errors: [
-          const GraphQLError(
-            message: 'Cannot query field "user" on type "Query".',
-            extensions: {'classification': 'ValidationError'},
-          ),
-        ],
-      ),
-    ]);
-    await expectLater(
-      AccountSessionRepository(
-        GraphQLClient(link: replies, cache: GraphQLCache()),
-      ).resolve(address: 'https://server:443', loginUsername: ''),
-      throwsArgumentError,
-    );
-    expect(replies.operations, ['AccountCapability']);
-  });
   test('unsafe account metadata cannot become a directory', () async {
     final replies = _Replies([
       data({

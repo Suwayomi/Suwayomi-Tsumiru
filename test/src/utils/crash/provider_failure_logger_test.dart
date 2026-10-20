@@ -49,18 +49,20 @@ void main() {
     sub.close();
   }
 
-  test('logs the provider name, the error and its stack trace', () async {
-    await fail(_failing);
-    expect(lines, hasLength(1));
-    expect(lines.single, contains('provider-failed: failingProvider'));
-    expect(lines.single, contains('StateError: Bad state: boom'));
-    expect(lines.single, contains('provider_failure_logger_test.dart'));
-  });
+  test(
+    'logs the provider name, family argument, error and stack trace',
+    () async {
+      await fail(_failing);
+      expect(lines, hasLength(1));
+      expect(lines.single, contains('provider-failed: failingProvider'));
+      expect(lines.single, contains('StateError: Bad state: boom'));
+      expect(lines.single, contains('provider_failure_logger_test.dart'));
 
-  test('includes the family argument', () async {
-    await fail(_failingFamily(7));
-    expect(lines.single, contains('provider-failed: failingFamily(7)'));
-  });
+      lines.clear();
+      await fail(_failingFamily(7));
+      expect(lines.single, contains('provider-failed: failingFamily(7)'));
+    },
+  );
 
   test('logs each provider/error pair once per session', () async {
     await fail(_failing);

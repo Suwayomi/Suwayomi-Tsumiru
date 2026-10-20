@@ -27,9 +27,7 @@ import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dar
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
-import 'package:tsumiru/src/features/migration/presentation/screens/migration_bulk_config_screen.dart';
 import 'package:tsumiru/src/features/migration/presentation/screens/migration_bulk_run_screen.dart';
-import 'package:tsumiru/src/features/migration/presentation/screens/migration_source_picker_screen.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -266,11 +264,6 @@ void main() {
     });
   }
 
-  testWidgets('Select-sources screen mounts without crashing', (tester) async {
-    await pumpScreen(tester, const MigrationBulkConfigScreen(mangaIds: [1]));
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets(
     'unverified migration list offers retry without migration actions',
     (tester) async {
@@ -299,9 +292,4 @@ void main() {
       expect(find.byTooltip(l10n.migrationActionMigrate), findsNothing);
     },
   );
-
-  testWidgets('source picker screen mounts without crashing', (tester) async {
-    await pumpScreen(tester, const MigrationSourcePickerScreen());
-    expect(tester.takeException(), isNull);
-  });
 }

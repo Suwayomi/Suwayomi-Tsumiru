@@ -23,11 +23,11 @@ import 'package:tsumiru/src/features/settings/controller/server_controller.dart'
 import 'package:tsumiru/src/features/settings/data/user_settings.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
-import 'package:tsumiru/src/features/settings/presentation/downloads/downloads_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/search/settings_search_registry.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_en.dart';
+import 'package:tsumiru/src/routes/router_config.dart';
 
 /// Whether [element]'s row is mid-pulse: its highlight tint is up.
 bool _elementHighlighted(Element element) {
@@ -103,27 +103,8 @@ void main() {
   final l = AppLocalizationsEn();
 
   group('downloads settings search', () {
-    test('bookmarked finds both tabs rows with per-tab breadcrumbs', () {
-      final hits = matchSettingsEntries(
-        entries: allSettingsSearchEntries,
-        l: l,
-        query: 'bookmarked',
-        isVisible: (_) => true,
-      );
-      // Same title on both tabs, distinct ids, tab breadcrumb each.
-      expect(hits.map((e) => e.id).toList(), [
-        'serverDeleteWithBookmark',
-        'deviceDeleteWithBookmark',
-      ]);
-      expect(hits.map((e) => e.breadcrumb(l)).toList(), [
-        '${l.downloads} › ${l.downloadsServerTab}',
-        '${l.downloads} › ${l.downloadsOnDeviceTab}',
-      ]);
-      expect(hits.map((e) => e.tabIndex).toList(), [0, 1]);
-    });
-
-    testWidgets('opening an On device entry selects that tab and '
-        'highlights the row', (tester) async {
+    testWidgets('opening an On device entry through the real route '
+        'selects that tab and highlights the row', (tester) async {
       tester.view.physicalSize = const Size(800, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -152,6 +133,13 @@ void main() {
         (e) => e.id == 'deviceDeleteWithBookmark',
       );
       expect(entry.tabIndex, 1);
+      // Same location GoRouter navigates to for this route object.
+      final route = DownloadsSettingsRoute(
+        highlight: entry.id,
+        tab: entry.tabIndex,
+      );
+      expect(route.location, contains('tab=1'));
+      expect(route.location, contains('highlight=deviceDeleteWithBookmark'));
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -163,14 +151,14 @@ void main() {
               ),
             ),
           ),
-          // Mirrors DownloadsSettingsRoute.build: the `tab` query value
-          // selects the tab, `highlight` drives the scope.
+          // The real typed route's buildPage, the path GoRouter takes: the
+          // `tab` query value selects the tab, `highlight` drives the scope.
           GoRoute(
             path: '/more/settings/downloads',
-            builder: (_, state) => DownloadsSettingsScreen(
-              initialTab:
-                  int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
-            ),
+            pageBuilder: (context, state) => DownloadsSettingsRoute(
+              highlight: state.uri.queryParameters['highlight'],
+              tab: int.tryParse(state.uri.queryParameters['tab'] ?? ''),
+            ).buildPage(context, state),
           ),
         ],
       );

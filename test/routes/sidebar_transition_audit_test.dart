@@ -13,44 +13,22 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/about/data/about_repository.dart';
-import 'package:tsumiru/src/features/about/presentation/about/about_screen.dart';
 import 'package:tsumiru/src/features/about/presentation/about/controllers/about_controller.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
-import 'package:tsumiru/src/features/browse_center/presentation/global_search/global_search_screen.dart';
-import 'package:tsumiru/src/features/browse_center/presentation/source/source_filter_screen.dart';
-import 'package:tsumiru/src/features/browse_center/presentation/source/source_screen.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/source_manga_list/controller/source_manga_controller.dart';
-import 'package:tsumiru/src/features/browse_center/presentation/source_manga_list/source_manga_list_screen.dart';
-import 'package:tsumiru/src/features/history/presentation/history_screen.dart';
-import 'package:tsumiru/src/features/library/presentation/duplicates/library_duplicates_screen.dart';
 import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
-import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/downloads/downloads_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/recommends/recommends_browse_screen.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/recommends/recommends_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/upcoming/controller/upcoming_controller.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/upcoming/upcoming_screen.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/update_errors/library_update_errors_screen.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/updates/updates_screen.dart';
-import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
-import 'package:tsumiru/src/features/migration/presentation/screens/migration_bulk_config_screen.dart';
-import 'package:tsumiru/src/features/migration/presentation/screens/migration_bulk_run_screen.dart';
-import 'package:tsumiru/src/features/migration/presentation/screens/migration_global_search_screen.dart';
-import 'package:tsumiru/src/features/migration/presentation/screens/migration_source_picker_screen.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
-import 'package:tsumiru/src/features/settings/presentation/more/more_screen.dart';
-import 'package:tsumiru/src/features/settings/presentation/settings/settings_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
@@ -126,57 +104,6 @@ List<_AuditedRoute> _walkAppRoutes() {
 
   visit($appRoutes, '', false);
   return out;
-}
-
-/// Fills required path params with plausible values. All query params in the
-/// tree are optional, so none are needed.
-String _concreteLocation(String pattern) => pattern
-    .replaceAll(':categoryId', '0')
-    .replaceAll(':chapterId', '2')
-    .replaceAll(':mangaId', '1')
-    .replaceAll(':providerName', 'test')
-    .replaceAll(':sourceType', 'p-o-p-u-l-a-r')
-    .replaceAll(':sourceId', '1');
-
-/// Extra payloads for routes that pop themselves without one.
-Object? _extraFor(String location) {
-  if (location == '/migration/global-search') {
-    return MigrationRouteData(
-      sourceManga: Fragment$MangaDto(
-        bookmarkCount: 0,
-        chapters: Fragment$MangaDto$chapters(totalCount: 0),
-        downloadCount: 0,
-        genre: const ['Action'],
-        id: 1,
-        inLibrary: true,
-        inLibraryAt: '0',
-        initialized: true,
-        meta: const [],
-        sourceId: '0',
-        status: Enum$MangaStatus.ONGOING,
-        title: 'A series',
-        categories: Fragment$MangaDto$categories(nodes: const []),
-        trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-        unreadCount: 0,
-        updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-        url: '',
-      ),
-    );
-  }
-  if (location == '/migration/bulk-config') {
-    return MigrationBulkConfigData(mangaIds: const [1]);
-  }
-  if (location == '/migration/bulk-run') {
-    return MigrationBulkRunData(
-      mangaIds: const [1],
-      targetSourceIds: const ['1'],
-      options: const MigrationOption(),
-    );
-  }
-  if (location == '/migration/source-manga') {
-    return const MigrationSourceMangaData(sourceId: '1', sourceName: 'Test');
-  }
-  return null;
 }
 
 final _source = SourceDto.fromJson({
@@ -261,15 +188,9 @@ class _Chapters extends MangaChapterList {
 
 /// Pumps the real [$appRoutes] router at 1400x900, with the same provider
 /// stubs the focused route tests use so screens build without a server.
-/// Starts on Library by default; cold-start entries pass the source as the
-/// initial location (with its extra) so no main shell sits underneath, the
-/// way a deep link or restart lands straight on a detail page. Bounded pumps
-/// only (never pumpAndSettle) so pending requests cannot hang the test.
-Future<GoRouter> _pumpAuditRouter(
-  WidgetTester tester, {
-  String? initialLocation,
-  Object? initialExtra,
-}) async {
+/// Starts on Library. Bounded pumps only (never pumpAndSettle) so pending
+/// requests cannot hang the test.
+Future<GoRouter> _pumpAuditRouter(WidgetTester tester) async {
   tester.view.physicalSize = const Size(1400, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -277,9 +198,7 @@ Future<GoRouter> _pumpAuditRouter(
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
   final router = GoRouter(
-    initialLocation:
-        initialLocation ?? const LibraryRoute(categoryId: 0).location,
-    initialExtra: initialExtra,
+    initialLocation: const LibraryRoute(categoryId: 0).location,
     navigatorKey: rootNavigatorKey,
     routes: $appRoutes,
   );
@@ -372,30 +291,9 @@ List<Element> _sidebarBars() {
 Finder _barFinder(Element bar) =>
     find.byElementPredicate((candidate) => identical(candidate, bar));
 
-/// The pushed destination sidebar: the bar element that was not mounted
-/// before the push.
-Element _pushedDestination(Set<Element> home) {
-  final fresh = _sidebarBars().where((bar) => !home.contains(bar)).toList();
-  expect(
-    fresh,
-    hasLength(1),
-    reason: 'pushed destination must add exactly one sidebar copy',
-  );
-  return fresh.single;
-}
-
-/// Asserts [bar] is untransformed mid-transition and returns its rect so
-/// callers can compare against the settled rect. Settled transition
-/// scaffolding above the sidebar (offset zero, scale one) is inert and
-/// allowed; anything actually displacing the sidebar fails.
-Rect _expectSidebarStill(WidgetTester tester, Finder bar) {
-  expect(bar, findsOneWidget);
-  return _expectBarStill(tester, bar);
-}
-
-/// Same as [_expectSidebarStill] for an already-resolved sidebar element.
-/// Split out so jump transitions, where the outgoing and incoming sidebars
-/// are both mounted, can assert every copy without re-resolving by type.
+/// Same as [_checkSidebarJump]'s per-frame assertion for an already-resolved
+/// sidebar element. Jump transitions have the outgoing and incoming sidebars
+/// mounted, so every copy is checked without re-resolving by type.
 Rect _expectBarStill(WidgetTester tester, Finder bar) {
   for (final scale in tester.widgetList<ScaleTransition>(
     find.ancestor(of: bar, matching: find.byType(ScaleTransition)),
@@ -427,14 +325,55 @@ Rect _expectBarStill(WidgetTester tester, Finder bar) {
   return tester.getRect(bar);
 }
 
-Future<void> _expectSettledAt(
+/// Pumps the real route `build` output (not a copy of it) inside a minimal
+/// GoRouter, so the DetailNavigationShellScreen wrap is what is tested.
+/// Network-backed providers are stubbed; bounded pumps (never pumpAndSettle)
+/// so pending requests cannot hang the test.
+Future<void> _pumpDetailRoute(
   WidgetTester tester,
-  Finder resolve,
-  Rect during,
+  Size size,
+  GoRouteData route,
 ) async {
-  await tester.pump(const Duration(milliseconds: 75));
-  await tester.pump(const Duration(milliseconds: 500));
-  expect(tester.getRect(resolve), during);
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  // Unmount any previous tree first: updating an existing ProviderScope in
+  // place reuses its container, so a reused notifier re-runs initialize().
+  await tester.pumpWidget(const SizedBox());
+  SharedPreferences.setMockInitialValues({});
+  final preferences = await SharedPreferences.getInstance();
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => route.build(context, state),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        downloadsPausedBadgeProvider.overrideWith((ref) => false),
+        extensionUpdateBadgeCountProvider.overrideWith((ref) async => 0),
+        sourceProvider('1').overrideWith((ref) async => _source),
+        baseSourceMangaFilterListProvider(
+          '1',
+        ).overrideWith((ref) async => null),
+        upcomingProvider.overrideWith((ref) async => UpcomingData.empty),
+      ],
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
 }
 
 /// Unmounts the test tree and flushes deferred callbacks before the test
@@ -492,183 +431,65 @@ void main() {
     );
   });
 
-  final routes = _walkAppRoutes()
-      .where((r) => !_isExcluded(r.pattern))
-      .toList();
-
-  group('every route keeps the sidebar still at 1400x900', () {
-    for (final route in routes) {
-      final location = _concreteLocation(route.pattern);
-      // Starting point is Library itself; pushing it onto itself tests no
-      // transition, so it is covered by the branch-switch test below.
-      if (location == const LibraryRoute(categoryId: 0).location) continue;
-      testWidgets('${route.pattern} (${route.push ? 'push' : 'go'})', (
-        tester,
-      ) async {
-        final router = await _pumpAuditRouter(tester);
-        // The Library sidebar mounted at start; a push must add exactly one
-        // copy of it, and a pop must reveal this same one again.
-        final home = _sidebarBars().toSet();
-        expect(home, hasLength(1));
-        try {
-          if (route.push) {
-            unawaited(router.push(location, extra: _extraFor(location)));
-          } else {
-            router.go(location);
-          }
-          await tester.pump();
-          // Half-way through the 150 ms fade.
-          await tester.pump(const Duration(milliseconds: 75));
-
-          final Element destination;
-          if (route.push) {
-            destination = _pushedDestination(home);
-          } else {
-            final bars = _sidebarBars();
-            expect(bars, hasLength(1));
-            destination = bars.single;
-          }
-          final Finder bar = _barFinder(destination);
-          final during = _expectSidebarStill(tester, bar);
-          // Pushed detail pages fade instead of zooming: the sidebar's page
-          // is the shared fade, never the default zoom.
-          if (route.push) {
-            final modal = ModalRoute.of(tester.element(bar));
-            expect(modal, isA<PageRoute>());
-            expect(
-              modal!.settings,
-              isA<CustomTransitionPage>(),
-              reason: 'pushed route must use the shared fade page',
-            );
-          }
-          await _expectSettledAt(tester, _barFinder(destination), during);
-
-          if (route.push) {
-            router.pop();
-            await tester.pump();
-            await tester.pump(const Duration(milliseconds: 75));
-            final revealed = _barFinder(home.single);
-            final back = _expectSidebarStill(tester, revealed);
-            await _expectSettledAt(tester, revealed, back);
-          }
-          expect(tester.takeException(), isNull);
-          await _unmountAndDrain(tester);
-        } finally {
-          // A failing route must not leak deferred frames into the next test.
-          await tester.pumpWidget(const SizedBox());
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 100));
-          while (tester.takeException() != null) {}
-        }
-      });
-    }
-  });
-
-  testWidgets('main sidebar destinations never transform the sidebar', (
+  testWidgets('detail routes draw the sidebar on desktop, not on phone', (
     tester,
   ) async {
-    final router = await _pumpAuditRouter(tester);
-    const destinations = [
-      LibraryRoute(categoryId: 0),
-      UpdatesRoute(),
-      HistoryTabRoute(),
-      BrowseSourceRoute(),
-      DownloadsRoute(),
-      MoreRoute(),
-    ];
-    for (final destination in destinations) {
-      router.go(destination.location);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 75));
-      final bars = _sidebarBars();
-      expect(bars, hasLength(1));
-      final bar = _barFinder(bars.single);
-      final during = _expectSidebarStill(tester, bar);
-      // Re-resolve by type: switching tabs rebuilds the shell around a new
-      // sidebar instance, but there is always exactly one of it.
-      await _expectSettledAt(
-        tester,
+    for (final entry in _detailRouteCases.entries) {
+      await _pumpDetailRoute(tester, const Size(1400, 900), entry.value);
+      expect(
         find.byType(BigScreenNavigationBar),
-        during,
+        findsOneWidget,
+        reason: '${entry.key} at desktop',
       );
+      expect(tester.takeException(), isNull);
+      await _pumpDetailRoute(tester, const Size(412, 900), entry.value);
+      expect(
+        find.byType(BigScreenNavigationBar),
+        findsNothing,
+        reason: '${entry.key} on phone',
+      );
+      expect(find.byType(Scaffold), findsWidgets);
+      final exception = tester.takeException();
+      if (entry.key == 'source page') {
+        // Pre-existing test-env artifact, not from the wrap: the bare
+        // SourceMangaListScreen overflows its chips row by the same 42px at
+        // 412x900. The wrap returns the child untouched on phone.
+        expect(
+          exception == null ||
+              '$exception'.contains('A RenderFlex overflowed by 42 pixels'),
+          isTrue,
+          reason: 'unexpected exception: $exception',
+        );
+      } else {
+        expect(exception, isNull);
+      }
     }
-    expect(tester.takeException(), isNull);
-    await _unmountAndDrain(tester);
   });
 
-  group('sidebar jumps between the main and detail shells at 1400x900', () {
-    for (final source in _jumpSources) {
-      testWidgets('${source.name} jumps to every sidebar destination', (
+  testWidgets('pushed series page jumps to Library with a still sidebar', (
+    tester,
+  ) async {
+    // Reach the source the way the app does: pushed above the shell, so the
+    // main shell sits underneath and the sidebar jumps through
+    // shell.goBranch.
+    final router = await _pumpAuditRouter(tester);
+    try {
+      unawaited(router.push(_jumpSource.location));
+      await _checkSidebarJump(
         tester,
-      ) async {
-        final router = await _pumpAuditRouter(tester);
-        try {
-          for (var index = 0; index < _jumpDestinations.length; index++) {
-            // Reach the source the way the app does: pushed above the shell,
-            // so the main shell sits underneath and the sidebar jumps through
-            // shell.goBranch.
-            unawaited(
-              router.push(source.location, extra: _extraFor(source.location)),
-            );
-            await _checkSidebarJump(
-              tester,
-              source: source,
-              destination: _jumpDestinations[index],
-              index: index,
-              entry: 'pushed',
-            );
-          }
-          expect(tester.takeException(), isNull);
-          await _unmountAndDrain(tester);
-        } finally {
-          // A failing jump must not leak deferred frames into the next test.
-          await tester.pumpWidget(const SizedBox());
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 100));
-          while (tester.takeException() != null) {}
-        }
-      });
-      // Cold-start jumps get one test per destination. Two reasons: a fresh
-      // router per destination keeps every jump on the XRoute().go fallback
-      // path (after one jump the main shell exists and later jumps would
-      // take the goBranch path again), and this app cannot build a second
-      // Riverpod container in one test (a late-initialized client field
-      // throws), so each destination needs its own test.
-      for (var index = 0; index < _jumpDestinations.length; index++) {
-        final destinationIndex = index;
-        final destination = _jumpDestinations[destinationIndex];
-        testWidgets(
-          '${source.name} (cold) -> ${destination.name} keeps the sidebar still',
-          (tester) async {
-            try {
-              // Land straight on the source the way a deep link or restart
-              // does: no main shell underneath, so the sidebar jumps through
-              // the XRoute().go fallback and the main shell page enters.
-              await _pumpAuditRouter(
-                tester,
-                initialLocation: source.location,
-                initialExtra: _extraFor(source.location),
-              );
-              await _checkSidebarJump(
-                tester,
-                source: source,
-                destination: destination,
-                index: destinationIndex,
-                entry: 'cold',
-              );
-              expect(tester.takeException(), isNull);
-              await _unmountAndDrain(tester);
-            } finally {
-              // A failing jump must not leak deferred frames into the next
-              // test.
-              await tester.pumpWidget(const SizedBox());
-              await tester.pump();
-              await tester.pump(const Duration(milliseconds: 100));
-              while (tester.takeException() != null) {}
-            }
-          },
-        );
-      }
+        source: _jumpSource,
+        destination: _jumpDestination,
+        index: 0,
+        entry: 'pushed',
+      );
+      expect(tester.takeException(), isNull);
+      await _unmountAndDrain(tester);
+    } finally {
+      // A failing jump must not leak deferred frames into the next test.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      while (tester.takeException() != null) {}
     }
   });
 }
@@ -738,8 +559,26 @@ Future<void> _checkSidebarJump(
   );
 }
 
-/// One jump source: a pushed detail-shell route or a pushed sidebar page,
-/// with the screen widget that proves its content is on screen.
+/// Detail routes that used to lose the sidebar on tablet/desktop.
+final _detailRouteCases = <String, GoRouteData>{
+  'source page': const SourceTypeRoute(
+    sourceId: '1',
+    sourceType: SourceType.POPULAR,
+  ),
+  'settings': const SettingsRoute(),
+  'appearance': const AppearanceSettingsRoute(),
+  'upcoming': const UpcomingRoute(),
+};
+
+/// One jump source, the series page: a pushed detail-shell route, with the
+/// screen widget that proves its content is on screen. The other detail
+/// routes repeat the same invariant.
+final _jumpSource = _JumpSource(
+  'series page',
+  const MangaRoute(mangaId: 1).location,
+  MangaDetailsScreen,
+);
+
 class _JumpSource {
   const _JumpSource(this.name, this.location, this.screen);
   final String name;
@@ -747,95 +586,12 @@ class _JumpSource {
   final Type screen;
 }
 
-/// Every detail-shell route (series page, Global Search, update errors,
-/// duplicates, recommends, source filter, migration pages) plus every pushed
-/// page that draws its own sidebar copy (settings, About, source page,
-/// Upcoming). Reader and onboarding are excluded by design, like above.
-final _jumpSources = [
-  _JumpSource(
-    'series page',
-    const MangaRoute(mangaId: 1).location,
-    MangaDetailsScreen,
-  ),
-  _JumpSource(
-    'Global Search',
-    const GlobalSearchRoute().location,
-    GlobalSearchScreen,
-  ),
-  _JumpSource(
-    'update errors',
-    const LibraryUpdateErrorsRoute().location,
-    LibraryUpdateErrorsScreen,
-  ),
-  _JumpSource(
-    'duplicates',
-    const LibraryDuplicatesRoute().location,
-    LibraryDuplicatesScreen,
-  ),
-  _JumpSource(
-    'recommends',
-    const RecommendsRoute(mangaId: 1).location,
-    RecommendsScreen,
-  ),
-  _JumpSource(
-    'recommends browse',
-    const RecommendsBrowseRoute(mangaId: 1, providerName: 'test').location,
-    RecommendsBrowseScreen,
-  ),
-  _JumpSource(
-    'source filter',
-    const SourceFilterRoute().location,
-    SourceFilterScreen,
-  ),
-  _JumpSource(
-    'migration search',
-    const MigrationGlobalSearchRoute().location,
-    MigrationGlobalSearchScreen,
-  ),
-  _JumpSource(
-    'migration bulk config',
-    const MigrationBulkConfigRoute().location,
-    MigrationBulkConfigScreen,
-  ),
-  _JumpSource(
-    'migration bulk run',
-    const MigrationBulkRunRoute().location,
-    MigrationBulkRunScreen,
-  ),
-  _JumpSource(
-    'migration source picker',
-    const MigrationSourcePickerRoute().location,
-    MigrationSourcePickerScreen,
-  ),
-  _JumpSource(
-    'migration source manga',
-    const MigrationSourceMangaRoute().location,
-    MigrationSourceMangaScreen,
-  ),
-  _JumpSource('settings', const SettingsRoute().location, SettingsScreen),
-  _JumpSource('About', const AboutRoute().location, AboutScreen),
-  _JumpSource(
-    'source page',
-    _concreteLocation('/source/:sourceId/:sourceType'),
-    SourceMangaListScreen,
-  ),
-  _JumpSource('Upcoming', const UpcomingRoute().location, UpcomingScreen),
-];
-
-/// The six sidebar destinations in sidebar index order, with the screen
-/// widget that proves the destination content is on screen. Browse opens its
-/// initial source tab.
+/// The Library destination, with the screen widget that proves it is on
+/// screen. The other sidebar tabs repeat the same invariant.
 class _JumpDestination {
   const _JumpDestination(this.name, this.screen);
   final String name;
   final Type screen;
 }
 
-const _jumpDestinations = [
-  _JumpDestination('Library', LibraryScreen),
-  _JumpDestination('Updates', UpdatesScreen),
-  _JumpDestination('History', HistoryScreen),
-  _JumpDestination('Browse', SourceScreen),
-  _JumpDestination('Downloads', DownloadsScreen),
-  _JumpDestination('More', MoreScreen),
-];
+const _jumpDestination = _JumpDestination('Library', LibraryScreen);

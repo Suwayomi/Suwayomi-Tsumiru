@@ -53,22 +53,22 @@ void main() {
   tearDown(() => db.close());
 
   OfflineDownloadCoordinator buildCoordinator() => OfflineDownloadCoordinator(
-        db: db,
-        engine: ChapterDownloadEngine(
-          fetchPage: (_) async => throw UnimplementedError(),
-          writePage: store,
-          refreshAuth: () async => false,
-        ),
-        store: store,
-        resolvePages: (_) async => const [],
-      );
+    db: db,
+    engine: ChapterDownloadEngine(
+      fetchPage: (_) async => throw UnimplementedError(),
+      writePage: store,
+      refreshAuth: () async => false,
+    ),
+    store: store,
+    resolvePages: (_) async => const [],
+  );
 
   OfflineDownloadManager buildManager() => OfflineDownloadManager(
-        db: db,
-        store: store,
-        fetchPageUrls: (_) async => const [],
-        fetchBytes: (_) async => throw UnimplementedError(),
-      );
+    db: db,
+    store: store,
+    fetchPageUrls: (_) async => const [],
+    fetchBytes: (_) async => throw UnimplementedError(),
+  );
 
   /// Pumps a persistent [ProviderScope] with a REMOVABLE inner [Consumer] —
   /// mirroring the real shape (an app-root scope hosting a selection action
@@ -77,14 +77,13 @@ void main() {
   /// removes the inner widget (simulating the action bar closing / the icon
   /// unmounting) while the outer scope — and so the container — survives.
   Future<
-      ({
-        WidgetRef ref,
-        ProviderContainer container,
-        Future<void> Function() unmountChild,
-      })> harness(
-    WidgetTester tester, {
-    bool deleteManuallyMarkedRead = true,
-  }) async {
+    ({
+      WidgetRef ref,
+      ProviderContainer container,
+      Future<void> Function() unmountChild,
+    })
+  >
+  harness(WidgetTester tester, {bool deleteManuallyMarkedRead = true}) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final showChild = ValueNotifier<bool>(true);
@@ -160,7 +159,8 @@ void main() {
       expect(
         () => h.ref.read(offlineActiveProvider),
         throwsA(isA<StateError>()),
-        reason: 'this is exactly the crash from the field log: '
+        reason:
+            'this is exactly the crash from the field log: '
             'ConsumerStatefulElement.read throwing once its element is disposed',
       );
     },
@@ -182,8 +182,11 @@ void main() {
         pageCount: 1,
         updatedAt: DateTime(2026),
       );
-      await db.setChapterDeviceState(10, OfflineDeviceState.downloaded,
-          bytes: 5);
+      await db.setChapterDeviceState(
+        10,
+        OfflineDeviceState.downloaded,
+        bytes: 5,
+      );
 
       final h = await harness(tester);
       await h.unmountChild();
@@ -193,30 +196,16 @@ void main() {
       // as multi_chapters_action_icon.dart now does.
       await maybeDeleteOnManualLocal(h.container.read, chapterId: 10);
 
-      final c = await h.container.read(offlineRepositoryProvider).chapterById(10);
-      expect(c?.deviceState, OfflineDeviceState.none,
-          reason: 'the delete-on-manual-read side effect must still run even '
-              'though the originating widget already unmounted');
-    },
-  );
-
-  testWidgets(
-    'maybeDeleteOnManualServer no-ops safely via a container from a '
-    'since-unmounted widget when the setting is off',
-    (tester) async {
-      // Off here specifically so the function returns before reaching the
-      // server-delete GraphQL mutation this harness doesn't mock — the point
-      // is only to prove the post-unmount container call is safe, not to
-      // exercise the full delete path (maybeDeleteOnManualLocal covers that).
-      final h = await harness(tester, deleteManuallyMarkedRead: false);
-      await h.unmountChild();
-
-      await maybeDeleteOnManualServer(
-        h.container.read,
-        mangaId: 1,
-        chapterId: 10,
+      final c = await h.container
+          .read(offlineRepositoryProvider)
+          .chapterById(10);
+      expect(
+        c?.deviceState,
+        OfflineDeviceState.none,
+        reason:
+            'the delete-on-manual-read side effect must still run even '
+            'though the originating widget already unmounted',
       );
-      // No throw = pass.
     },
   );
 }

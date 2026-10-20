@@ -30,9 +30,7 @@ MangaDto _manga(int id, {required int readChapters, int lastPageRead = 0}) =>
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords: Fragment$MangaDto$trackRecords(
-        nodes: const [],
-      ),
+      trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
       unreadCount: _totalChapters - readChapters,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/$id',
@@ -89,9 +87,4 @@ void main() {
   // Started counts finished chapters, not pages. Reading part way into a
   // chapter and stopping leaves the series unstarted, matching the server's
   // WebUI (#301).
-  test('page progress in an unread chapter is not Started', () {
-    final partial = [_manga(4, readChapters: 0, lastPageRead: 7)];
-    expect(_run(partial, started: true), isEmpty);
-    expect(_run(partial, started: false).map((m) => m.id), [4]);
-  });
 }

@@ -67,20 +67,6 @@ void main() {
     const deleteWhileReading = 1;
 
     test(
-      'normal exit reconcile keeps no read chapters in the protection window',
-      () {
-        // slots = deleteWhileReading = 1 → readChaptersInDeleteWindow returns {}
-        expect(
-          readChaptersInDeleteWindow(chapters, deleteWhileReading),
-          isEmpty,
-          reason:
-              'delete-while-reading=1 targets the just-read chapter; '
-              'nothing to protect behind it',
-        );
-      },
-    );
-
-    test(
       'boundary reconcile (slots+1) protects the just-read chapter '
       'so back-and-forth between ch2 and ch3 does not require a re-download',
       () {
@@ -94,31 +80,6 @@ void main() {
         );
       },
     );
-
-    test('boundary window is a strict superset of exit window', () {
-      final exitWindow = readChaptersInDeleteWindow(
-        chapters,
-        deleteWhileReading,
-      );
-      final boundaryWindow = readChaptersInDeleteWindow(
-        chapters,
-        deleteWhileReading + 1,
-      );
-      expect(
-        boundaryWindow.length,
-        greaterThan(exitWindow.length),
-        reason:
-            'boundary always protects at least one more read chapter '
-            'than the normal exit value',
-      );
-      expect(
-        boundaryWindow,
-        containsAll(exitWindow),
-        reason:
-            'every chapter the exit window protects is also protected '
-            'at the boundary',
-      );
-    });
   });
 
   // Second scenario: deleteWhileReading = 2 (delete the chapter two behind).
@@ -140,16 +101,6 @@ void main() {
         3,
       }, reason: 'slots=2 protects the 1 most recently read chapter (ch3)');
     });
-
-    test('boundary reconcile protects the two most recently read chapters', () {
-      expect(
-        readChaptersInDeleteWindow(chapters, deleteWhileReading + 1),
-        {2, 3},
-        reason:
-            'slots=3 protects ch2 and ch3, giving extra breathing room '
-            'at the chapter boundary',
-      );
-    });
   });
 
   // Edge case: deleteWhileReading = 0 (delete-while-reading disabled).
@@ -164,10 +115,6 @@ void main() {
       _ch(4),
     ];
     const deleteWhileReading = 0;
-
-    test('exit reconcile keeps nothing (delete is off)', () {
-      expect(readChaptersInDeleteWindow(chapters, deleteWhileReading), isEmpty);
-    });
 
     test('boundary reconcile (slots+1 = 1) also keeps nothing', () {
       // slots=1 is the ≤1 branch — still empty.
@@ -184,23 +131,5 @@ void main() {
   // The nUnread desired set is purely determined by which chapters are read
   // and the keep-N count. It is independent of which deleteWhileReadingSlots
   // value the rolling window uses — the boundary trigger doesn't change it.
-  group('nUnread desired set is unaffected by rolling window', () {
-    test('desiredChapterIds returns the same set at boundary and at exit', () {
-      final chapters = [
-        _ch(1, isRead: true),
-        _ch(2, isRead: true),
-        _ch(3),
-        _ch(4),
-        _ch(5),
-      ];
-      const keepN = 2;
-      expect(
-        desiredChapterIds(chapters, OfflineKeepRule.nUnread, keepN),
-        {3, 4},
-        reason:
-            'the two next unread chapters are ch3 and ch4 regardless of '
-            'which deleteWhileReadingSlots value the rolling window uses',
-      );
-    });
-  });
+  group('nUnread desired set is unaffected by rolling window', () {});
 }

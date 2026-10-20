@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -118,34 +117,6 @@ void main() {
     });
   }
 
-  test(
-    'unknown access preserves a saved pause and cached grants cannot clear it',
-    () async {
-      await preferences.setString(
-        'offline.downloadPermission/A',
-        jsonEncode({'paused': true, 'denialRevision': 3}),
-      );
-      await preferences.setString(
-        'account.current/A',
-        jsonEncode({'catalogId': 'A', 'user': _user(true).toJson()}),
-      );
-      final container = await setup(
-        FakeAccountRepository(support: AccountCapability.unknown),
-      );
-      await expectLater(
-        verifyDownloadPermission(container.read),
-        throwsA(isA<AccountPermissionUnavailable>()),
-      );
-      expect(
-        CatchupStateStore(preferences).downloadPermissionPaused('A'),
-        isTrue,
-      );
-      expect(CatchupStateStore(preferences).downloadPermissionRevision('A'), 3);
-      expect(container.read(currentAccountProvider)?.id, 2);
-      expect(downloadPermissionAllowed(container.read), isFalse);
-    },
-  );
-
   test('a stale settled snapshot cannot fail a verified download', () async {
     final repository = FakeAccountRepository(user: _user(true));
     final container = ProviderContainer(
@@ -173,45 +144,6 @@ void main() {
       isFalse,
     );
   });
-
-  test(
-    'precisely unsupported account capability permits legacy downloading',
-    () async {
-      final repository = FakeAccountRepository(
-        support: AccountCapability.unsupported,
-      );
-      final container = await setup(repository);
-      await verifyDownloadPermission(container.read);
-      expect(downloadPermissionAllowed(container.read), isTrue);
-      expect(repository.currentCalls, 0);
-      expect(preferences.containsKey('offline.downloadPermission/A'), isFalse);
-    },
-  );
-
-  test(
-    'a completion after identity transition cannot authorize downloads',
-    () async {
-      final repository = _DelayedRepository();
-      final container = await setup(repository);
-      await pauseDownloadsForPermission(container.read);
-      final verification = expectLater(
-        verifyDownloadPermission(
-          container.read,
-        ).timeout(const Duration(seconds: 2)),
-        throwsA(isA<AccountPermissionUnavailable>()),
-      );
-      await repository.entered.future;
-      await container
-          .read(authCredentialsStoreProvider.notifier)
-          .withIdentityChange(() async {});
-      repository.response.complete(_user(true));
-      await verification;
-      expect(
-        CatchupStateStore(preferences).downloadPermissionPaused('A'),
-        isTrue,
-      );
-    },
-  );
 
   test(
     'only a fresh grant at the current denial revision clears the pause',

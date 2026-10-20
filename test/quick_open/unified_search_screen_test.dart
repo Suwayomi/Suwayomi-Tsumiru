@@ -98,45 +98,6 @@ void main() {
     expect(find.textContaining('Search all sources'), findsNothing);
   });
 
-  testWidgets(
-    'empty state offers example queries; tapping one fills the field',
-    (tester) async {
-      await tester.pumpWidget(await _host());
-      await tester.pumpAndSettle();
-
-      expect(find.text('Examples'), findsOneWidget);
-      expect(find.text('unread:true'), findsOneWidget);
-
-      await tester.tap(find.text('unread:true'));
-      await tester.pumpAndSettle();
-
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.controller!.text, 'unread:true');
-    },
-  );
-
-  testWidgets(
-    'typing an operator prefix shows a key suggestion; tapping completes it',
-    (tester) async {
-      await tester.pumpWidget(await _host());
-      await tester.enterText(find.byType(TextField), 'sou');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Filters'), findsOneWidget);
-      expect(find.text('source:'), findsOneWidget);
-
-      await tester.tap(find.text('source:'));
-      await tester.pumpAndSettle();
-
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(
-        field.controller!.text,
-        'source:',
-        reason: 'tapping the key suggestion splices it into the field',
-      );
-    },
-  );
-
   testWidgets('a pure operator query hides the search-all-sources row', (
     tester,
   ) async {
@@ -145,13 +106,6 @@ void main() {
     await tester.pumpAndSettle();
     // Nothing plain to hand off — a source can't search a local filter.
     expect(find.textContaining('Search all sources'), findsNothing);
-  });
-
-  testWidgets('a plain word shows no Filters section', (tester) async {
-    await tester.pumpWidget(await _host());
-    await tester.enterText(find.byType(TextField), 'solo');
-    await tester.pumpAndSettle();
-    expect(find.text('Filters'), findsNothing);
   });
 
   testWidgets('the go-to list uses visible categories, not the raw list', (

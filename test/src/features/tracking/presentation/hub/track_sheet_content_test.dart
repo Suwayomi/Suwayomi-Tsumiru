@@ -45,120 +45,77 @@ Fragment$TrackRecordDto _fakeRecord({int trackerId = 1}) =>
     );
 
 void main() {
-  testWidgets(
-    'TrackSheetContent shows "Add tracking" for a logged-in tracker with no record',
-    (tester) async {
-      final tracker = _fakeTracker();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(mangaId: 1)
-                .overrideWith((ref) async => []),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: TrackSheetContent(mangaId: 1)),
-          ),
+  Future<void> pumpSheet(
+    WidgetTester tester, {
+    required Fragment$TrackerDto tracker,
+    required List<Fragment$TrackRecordDto> records,
+  }) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trackersProvider.overrideWith((ref) async => [tracker]),
+          mangaTrackRecordsProvider(
+            mangaId: 1,
+          ).overrideWith((ref) async => records),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: TrackSheetContent(mangaId: 1)),
         ),
-      );
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+  }
 
-      // Let both futures resolve.
-      await tester.pump();
-      await tester.pump();
+  testWidgets('logged-in and logged-out cards', (tester) async {
+    // A logged-in tracker with no record offers Add tracking.
+    await pumpSheet(tester, tracker: _fakeTracker(), records: []);
+    expect(find.text('Add tracking'), findsOneWidget);
 
-      expect(find.text('Add tracking'), findsOneWidget);
-    },
-  );
+    // A logged-out tracker with no record asks for a login.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpSheet(
+      tester,
+      tracker: _fakeTracker(isLoggedIn: false),
+      records: [],
+    );
+    expect(find.text('Log in to a tracker'), findsOneWidget);
 
-  testWidgets(
-    'TrackSheetContent shows empty-state when no tracker is logged in',
-    (tester) async {
-      final tracker = _fakeTracker(isLoggedIn: false);
+    // A logged-out tracker with a bound record shows it read-only and offers
+    // login to edit, not the generic empty state.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpSheet(
+      tester,
+      tracker: _fakeTracker(isLoggedIn: false),
+      records: [_fakeRecord()],
+    );
+    expect(find.text('My Bound Manga'), findsOneWidget);
+    expect(find.text('Log in to edit'), findsOneWidget);
+    expect(find.text('Log in to a tracker'), findsNothing);
+  });
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(mangaId: 1)
-                .overrideWith((ref) async => []),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: TrackSheetContent(mangaId: 1)),
+  testWidgets('error state shows the message and a retry', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trackersProvider.overrideWith(
+            (ref) async => throw Exception('network error'),
           ),
+          mangaTrackRecordsProvider(mangaId: 1).overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: TrackSheetContent(mangaId: 1)),
         ),
-      );
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
 
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Log in to a tracker'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'TrackSheetContent shows "Log in to edit" card for a logged-out tracker with a bound record',
-    (tester) async {
-      final tracker = _fakeTracker(isLoggedIn: false);
-      final record = _fakeRecord();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(mangaId: 1)
-                .overrideWith((ref) async => [record]),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: TrackSheetContent(mangaId: 1)),
-          ),
-        ),
-      );
-
-      await tester.pump();
-      await tester.pump();
-
-      // The bound title is shown read-only.
-      expect(find.text('My Bound Manga'), findsOneWidget);
-      // The login prompt button is present.
-      expect(find.text('Log in to edit'), findsOneWidget);
-      // The generic empty-state is NOT shown because there is a bound record.
-      expect(find.text('Log in to a tracker'), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'TrackSheetContent shows error state when trackersProvider errors',
-    (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            trackersProvider.overrideWith(
-              (ref) async => throw Exception('network error'),
-            ),
-            mangaTrackRecordsProvider(mangaId: 1)
-                .overrideWith((ref) async => []),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: TrackSheetContent(mangaId: 1)),
-          ),
-        ),
-      );
-
-      await tester.pump();
-      await tester.pump();
-
-      // The error message and retry button are rendered.
-      expect(find.text('Exception: network error'), findsOneWidget);
-      expect(find.text('Refresh'), findsOneWidget);
-    },
-  );
+    expect(find.text('Exception: network error'), findsOneWidget);
+    expect(find.text('Refresh'), findsOneWidget);
+  });
 }

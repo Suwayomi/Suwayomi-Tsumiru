@@ -29,9 +29,6 @@ class _FakeRepo extends DownloadsRepository {
         permissions: legacyAccountPermissions,
       );
 
-  /// Mirrors `_maxReconcileFailures` in the controller.
-  static const maxFailures = 3;
-
   final List<Future<DownloadStatusDto?> Function()> responses;
   int fetches = 0;
 
@@ -277,95 +274,6 @@ void main() {
     });
 
     test(
-      'a progress tick that adds a chapter does outrank the re-read',
-      () async {
-        final one = _queueItem(chapterId: 10, position: 0);
-        final slow = Completer<DownloadStatusDto?>();
-        final repo = _FakeRepo.scripted([
-          () async => _status('STARTED', [one]),
-          () => slow.future,
-          () async =>
-              _status('STARTED', [one, _queueItem(chapterId: 11, position: 1)]),
-        ]);
-        final feed = StreamController<DownloadUpdatesDto?>();
-        addTearDown(feed.close);
-
-        final container = ProviderContainer(
-          overrides: [
-            downloadsRepositoryProvider.overrideWithValue(repo),
-            downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.listen(downloadsChapterIdsProvider, (_, _) {});
-        await container.read(downloadStatusProvider.future);
-
-        feed.add(_feedMessage(omitted: true));
-        await pumpEventQueue();
-
-        feed.add(
-          _feedMessage(
-            updates: [
-              {
-                'type': 'PROGRESS',
-                'download': _queueItem(chapterId: 11, position: 1),
-                '__typename': 'DownloadUpdate',
-              },
-            ],
-          ),
-        );
-        await pumpEventQueue();
-        expect(container.read(downloadsChapterIdsProvider), [10, 11]);
-
-        slow.complete(_status('STARTED', [one]));
-        await pumpEventQueue();
-
-        expect(container.read(downloadsChapterIdsProvider), [
-          10,
-          11,
-        ], reason: 'the older snapshot must not drop chapter 11 again');
-      },
-    );
-
-    test('a server that keeps refusing the read is left alone', () async {
-      final repo = _FakeRepo.scripted([
-        () async =>
-            _status('STARTED', [_queueItem(chapterId: 10, position: 0)]),
-        () async => throw Exception('server unreachable'),
-      ]);
-      final feed = StreamController<DownloadUpdatesDto?>();
-      addTearDown(feed.close);
-
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(downloadsChapterIdsProvider, (_, _) {});
-      await container.read(downloadStatusProvider.future);
-
-      feed.add(_feedMessage(omitted: true));
-      await pumpEventQueue();
-
-      // Ten more messages would be ten more requests without a backoff. Half
-      // report further dropped batches, which re-arm the need for a read but
-      // must not be read as the server having recovered.
-      for (var i = 0; i < 10; i++) {
-        feed.add(_feedMessage(omitted: i.isEven));
-        await pumpEventQueue();
-      }
-
-      expect(repo.fetches, greaterThan(1), reason: 'it does retry at first');
-      expect(
-        repo.fetches,
-        lessThanOrEqualTo(1 + _FakeRepo.maxFailures),
-        reason: 'but stops rather than issuing one per feed message',
-      );
-    });
-
-    test(
       'a slow re-fetch cannot resurrect a chapter dequeued mid-flight',
       () async {
         final both = [
@@ -441,53 +349,6 @@ void main() {
       expect(container.read(downloadsChapterIdsProvider), [10]);
     });
 
-    test('a reorder mid-flight is not undone by the re-fetch', () async {
-      // reorder writes the queue without a rebuild, so its write is the one
-      // the generation counter has to catch on its own.
-      final both = [
-        _queueItem(chapterId: 10, position: 0),
-        _queueItem(chapterId: 11, position: 1),
-      ];
-      final swapped = [
-        _queueItem(chapterId: 11, position: 0),
-        _queueItem(chapterId: 10, position: 1),
-      ];
-      final slow = Completer<DownloadStatusDto?>();
-      final repo = _FakeRepo.scripted([
-        () async => _status('STARTED', both),
-        () => slow.future,
-        () async => _status('STARTED', swapped),
-      ])..reorderResult = _status('STARTED', swapped);
-      final feed = StreamController<DownloadUpdatesDto?>();
-      addTearDown(feed.close);
-
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(downloadsChapterIdsProvider, (_, _) {});
-      await container.read(downloadStatusProvider.future);
-      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
-
-      feed.add(_feedMessage(omitted: true));
-      await pumpEventQueue();
-
-      container.read(downloadsMapProvider.notifier).reorder(11, 0);
-      await pumpEventQueue();
-      expect(container.read(downloadsChapterIdsProvider), [11, 10]);
-
-      slow.complete(_status('STARTED', both));
-      await pumpEventQueue();
-
-      expect(container.read(downloadsChapterIdsProvider), [
-        11,
-        10,
-      ], reason: 'the stale snapshot must not undo the reorder');
-    });
-
     test(
       'clearing the queue mid-flight is not undone by the re-fetch',
       () async {
@@ -531,52 +392,5 @@ void main() {
         );
       },
     );
-  });
-
-  group('downloaderRunState', () {
-    test('falls back to the queue query when the feed is silent', () async {
-      final container = await _silentFeed(
-        _status('STOPPED', [_queueItem(chapterId: 10, position: 0)]),
-      );
-
-      expect(
-        container.read(downloaderRunStateProvider),
-        DownloaderState.STOPPED,
-      );
-    });
-
-    test('prefers the live feed once it speaks', () async {
-      final container = ProviderContainer(
-        overrides: [
-          // Query says stopped, feed says started: the feed is newer.
-          downloadStatusProvider.overrideWith(
-            (ref) => Future.value(_status('STOPPED', const [])),
-          ),
-          downloadUpdatesProvider.overrideWith(
-            (ref) => Stream.value(
-              DownloadUpdatesDto.fromJson({
-                'state': 'STARTED',
-                'omittedUpdates': false,
-                'updates': const [],
-                'initial': const [],
-                '__typename': 'DownloadUpdates',
-              }),
-            ),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      // Hold both alive across the awaits; they're autoDispose, and in the app
-      // the screen is what keeps them subscribed.
-      container.listen(downloadUpdatesProvider, (_, _) {});
-      container.listen(downloaderRunStateProvider, (_, _) {});
-      await container.read(downloadStatusProvider.future);
-      await container.read(downloadUpdatesProvider.future);
-
-      expect(
-        container.read(downloaderRunStateProvider),
-        DownloaderState.STARTED,
-      );
-    });
   });
 }

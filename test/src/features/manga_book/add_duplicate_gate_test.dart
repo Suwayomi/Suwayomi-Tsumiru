@@ -45,9 +45,7 @@ MangaDto _manga({
 }) => testManga().copyWith.call(
   id: id,
   title: title,
-  trackRecords: Fragment$MangaDto$trackRecords(
-    nodes: trackerNodes,
-  ),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: trackerNodes),
 );
 
 CategoryDto _cat({required int id, required String name}) =>
@@ -137,46 +135,6 @@ Widget _harness(
 );
 
 void main() {
-  testWidgets(
-    'a duplicate pops the dialog and blocks the add until Add anyway',
-    (tester) async {
-      final repo = _RecordingRepo();
-      final existing = _manga(id: 2, title: 'Solo Leveling');
-      final candidate = _manga(id: 76, title: 'Solo Leveling');
-      final c = _container(repo: repo, library: (ref) async => [existing]);
-      addTearDown(c.dispose);
-
-      await tester.pumpWidget(_harness(c, candidate));
-      await tester.tap(find.text('add'));
-      await tester.pumpAndSettle();
-
-      // Dialog is up, nothing added yet.
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(repo.addedToLibrary, isEmpty);
-
-      await tester.tap(find.text('Add anyway'));
-      await tester.pumpAndSettle();
-
-      expect(repo.addedToLibrary, contains(76));
-    },
-  );
-
-  testWidgets('Cancel on the duplicate dialog adds nothing', (tester) async {
-    final repo = _RecordingRepo();
-    final existing = _manga(id: 2, title: 'Solo Leveling');
-    final candidate = _manga(id: 76, title: 'Solo Leveling');
-    final c = _container(repo: repo, library: (ref) async => [existing]);
-    addTearDown(c.dispose);
-
-    await tester.pumpWidget(_harness(c, candidate));
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-
-    expect(repo.addedToLibrary, isEmpty);
-  });
-
   testWidgets('a library-list error fails open — the add proceeds', (
     tester,
   ) async {

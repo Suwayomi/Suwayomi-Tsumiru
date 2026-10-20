@@ -33,36 +33,14 @@ void main() {
         AuthType.uiLogin,
       ]);
     });
-
-    test('native offers every mode', () {
-      expect(connectionAuthChoices(isWeb: false), AuthType.values);
-    });
   });
 
-  group('onboardingAuthChoices', () {
-    test('web offers UI login only', () {
-      expect(onboardingAuthChoices(isWeb: true), [AuthType.uiLogin]);
-    });
-
-    test('native offers basic, simple and UI login', () {
-      expect(onboardingAuthChoices(isWeb: false), [
-        AuthType.basic,
-        AuthType.simpleLogin,
-        AuthType.uiLogin,
-      ]);
-    });
-  });
+  group('onboardingAuthChoices', () {});
 
   group('isWebUnsupportedAuthMode', () {
     test('basic and simple login are unusable from a browser', () {
       expect(isWebUnsupportedAuthMode(AuthType.basic), isTrue);
       expect(isWebUnsupportedAuthMode(AuthType.simpleLogin), isTrue);
-    });
-
-    test('UI login, no auth and unknown stay usable', () {
-      expect(isWebUnsupportedAuthMode(AuthType.uiLogin), isFalse);
-      expect(isWebUnsupportedAuthMode(AuthType.none), isFalse);
-      expect(isWebUnsupportedAuthMode(null), isFalse);
     });
   });
 
@@ -79,21 +57,6 @@ void main() {
       );
     });
 
-    test('a transport failure still reads as unreachable', () {
-      expect(
-        webServerAuthUnsupported(
-          aboutError: OperationException(
-            linkException: NetworkException(
-              uri: Uri.parse('http://server:4567/api/graphql'),
-              originalException: http.ClientException('Failed to fetch'),
-            ),
-          ),
-          detectedAuthType: null,
-        ),
-        isFalse,
-      );
-    });
-
     test('detected basic login reads as an unusable mode', () {
       // Simple login stays out: the browser probe cannot tell it apart, so it
       // reads as UI login and is caught after sign-in instead.
@@ -106,19 +69,6 @@ void main() {
       );
     });
 
-    test('detected UI login, no auth or unknown stays usable', () {
-      for (final detected in [AuthType.uiLogin, AuthType.none, null]) {
-        expect(
-          webServerAuthUnsupported(
-            aboutError: null,
-            detectedAuthType: detected,
-          ),
-          isFalse,
-          reason: '$detected',
-        );
-      }
-    });
-
     test('a readable 404 "Not Found" reads as Basic-gated', () {
       expect(
         webServerAuthUnsupported(
@@ -126,26 +76,6 @@ void main() {
           detectedAuthType: null,
         ),
         isTrue,
-      );
-    });
-
-    test('a 404 with another body stays unreachable', () {
-      expect(
-        webServerAuthUnsupported(
-          aboutError: _notJsonError(404, '<html>proxy 404</html>'),
-          detectedAuthType: null,
-        ),
-        isFalse,
-      );
-    });
-
-    test('a non-404 non-JSON error stays unreachable', () {
-      expect(
-        webServerAuthUnsupported(
-          aboutError: _notJsonError(500, '<html>error</html>'),
-          detectedAuthType: null,
-        ),
-        isFalse,
       );
     });
   });

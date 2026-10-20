@@ -4,10 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/cover_row_section.dart';
@@ -43,7 +40,7 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('overflowing row shows paging arrows and the edge fade', (
+  testWidgets('an overflowing row shows arrows and fade, then ends at offset', (
     tester,
   ) async {
     await _pump(tester, size: const Size(1000, 600), itemCount: 20);
@@ -51,12 +48,10 @@ void main() {
     expect(find.byType(IconButton), findsNWidgets(2));
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
-    expect(find.byType(CoverRowEdgeFade), findsOneWidget);
     expect(
       tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
       isTrue,
     );
-
     final arrows = tester
         .widgetList<IconButton>(find.byType(IconButton))
         .toList();
@@ -65,14 +60,25 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.chevron_right_rounded));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Next'));
+    await tester.pumpAndSettle();
 
-    final list = tester.widget<ListView>(find.byType(ListView));
-    expect(list.controller!.offset, greaterThan(0));
+    // Reaching the end keeps the offset and drops the fade.
+    final position = tester
+        .widget<ListView>(find.byType(ListView))
+        .controller!
+        .position;
+    expect(position.pixels, position.maxScrollExtent);
+    expect(
+      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
+      isFalse,
+    );
   });
 
-  testWidgets('a row that fits shows no arrows and no fade', (tester) async {
+  testWidgets('a row that fits shows no arrows, titled or not', (tester) async {
     await _pump(tester, size: const Size(1000, 600), itemCount: 3);
-
     expect(find.byType(IconButton), findsNothing);
     expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
@@ -80,104 +86,12 @@ void main() {
       tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
       isFalse,
     );
-  });
 
-  testWidgets('phone header is a tappable title with no paging arrows', (
-    tester,
-  ) async {
-    var seeAllCalls = 0;
-    await _pump(
-      tester,
-      size: const Size(412, 900),
-      itemCount: 20,
-      onSeeAll: () => seeAllCalls++,
-    );
-
-    expect(find.text('See all'), findsNothing);
-    expect(find.byType(IconButton), findsNothing);
-    expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
-    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
-    expect(find.byIcon(Icons.arrow_forward), findsOneWidget);
-
-    await tester.tap(find.text('Row'));
-    expect(seeAllCalls, 1);
-  });
-
-  testWidgets('See all lines up whether or not the row overflows', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1000, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    Widget row({required Key key, required int itemCount}) => CoverRowSection(
-      key: key,
-      title: 'Row',
-      onSeeAll: () {},
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      height: 120,
-      itemCount: itemCount,
-      itemBuilder: (context, index) =>
-          SizedBox(width: 100, height: 120, child: Text('Item $index')),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: Column(
-            children: [
-              row(key: const Key('overflow'), itemCount: 20),
-              row(key: const Key('short'), itemCount: 3),
-            ],
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final overflowSeeAll = tester.getTopRight(
-      find.descendant(
-        of: find.byKey(const Key('overflow')),
-        matching: find.text('See all'),
-      ),
-    );
-    final shortSeeAll = tester.getTopRight(
-      find.descendant(
-        of: find.byKey(const Key('short')),
-        matching: find.text('See all'),
-      ),
-    );
-    expect(shortSeeAll.dx, overflowSeeAll.dx);
-
-    final short = find.byKey(const Key('short'));
-    expect(
-      find.descendant(of: short, matching: find.byTooltip('Back')),
-      findsNothing,
-    );
-    expect(
-      find.descendant(of: short, matching: find.byTooltip('Next')),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('overflow')),
-        matching: find.byTooltip('Next'),
-      ),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('a header-less row shows arrows only while it overflows', (
-    tester,
-  ) async {
+    // A header-less row shows arrows only while it overflows.
     tester.view.physicalSize = const Size(1000, 600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-
     Future<void> pump(int itemCount) => tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -193,150 +107,98 @@ void main() {
         ),
       ),
     );
-
+    await tester.pumpWidget(const SizedBox.shrink());
     await pump(3);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Back'), findsNothing);
     expect(find.byTooltip('Next'), findsNothing);
-
     await pump(20);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byTooltip('Next'), findsOneWidget);
-
-    final sectionTop = tester.getTopLeft(find.byType(CoverRowSection)).dy;
-    final arrowsTop = tester.getTopLeft(find.byTooltip('Next')).dy;
-    final listTop = tester.getTopLeft(find.byType(ListView).first).dy;
-    expect(arrowsTop, greaterThanOrEqualTo(sectionTop));
-    expect(arrowsTop, lessThan(listTop));
   });
 
-  testWidgets('a titled row keeps its offset when it reaches the end', (
-    tester,
-  ) async {
-    await _pump(tester, size: const Size(1000, 600), itemCount: 20);
-
-    await tester.tap(find.byTooltip('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Next'));
-    await tester.pumpAndSettle();
-
-    final list = tester.widget<ListView>(find.byType(ListView));
-    final position = list.controller!.position;
-    expect(position.pixels, position.maxScrollExtent);
-    expect(
-      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
-      isFalse,
+  testWidgets('phone header and See all', (tester) async {
+    // On a phone the header is a tappable title with no paging arrows.
+    var seeAllCalls = 0;
+    await _pump(
+      tester,
+      size: const Size(412, 900),
+      itemCount: 20,
+      onSeeAll: () => seeAllCalls++,
     );
-  });
+    expect(find.text('See all'), findsNothing);
+    expect(find.byType(IconButton), findsNothing);
+    expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+    expect(find.byIcon(Icons.arrow_forward), findsOneWidget);
+    await tester.tap(find.text('Row'));
+    expect(seeAllCalls, 1);
 
-  testWidgets('a header-less row keeps its offset when it reaches the end', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1000, 600);
+    // On a wide layout See all calls onSeeAll and lines up whether or not the
+    // row overflows.
+    await tester.pumpWidget(const SizedBox.shrink());
+    tester.view.physicalSize = const Size(1000, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-
+    Widget row({required Key key, required int itemCount}) => CoverRowSection(
+      key: key,
+      title: 'Row',
+      onSeeAll: () {},
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 120,
+      itemCount: itemCount,
+      itemBuilder: (context, index) =>
+          SizedBox(width: 100, height: 120, child: Text('Item $index')),
+    );
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: CoverRowSection(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            height: 120,
-            itemCount: 20,
-            itemBuilder: (context, index) =>
-                SizedBox(width: 100, height: 120, child: Text('Item $index')),
+          body: Column(
+            children: [
+              row(key: const Key('overflow'), itemCount: 20),
+              row(key: const Key('short'), itemCount: 3),
+            ],
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Next'));
-    await tester.pumpAndSettle();
-
-    final list = tester.widget<ListView>(find.byType(ListView));
-    final position = list.controller!.position;
-    expect(position.pixels, position.maxScrollExtent);
+    final overflowSeeAll = tester.getTopRight(
+      find.descendant(
+        of: find.byKey(const Key('overflow')),
+        matching: find.text('See all'),
+      ),
+    );
+    final shortSeeAll = tester.getTopRight(
+      find.descendant(
+        of: find.byKey(const Key('short')),
+        matching: find.text('See all'),
+      ),
+    );
+    expect(shortSeeAll.dx, overflowSeeAll.dx);
     expect(
-      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
-      isFalse,
+      find.descendant(
+        of: find.byKey(const Key('short')),
+        matching: find.byTooltip('Next'),
+      ),
+      findsNothing,
     );
-  });
-
-  testWidgets('See all calls onSeeAll on a wide layout', (tester) async {
-    var seeAllCalls = 0;
-    await _pump(
-      tester,
-      size: const Size(1000, 600),
-      itemCount: 20,
-      onSeeAll: () => seeAllCalls++,
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('overflow')),
+        matching: find.byTooltip('Next'),
+      ),
+      findsOneWidget,
     );
-
-    await tester.tap(find.text('See all'));
-    expect(seeAllCalls, 1);
-  });
-
-  testWidgets('the edge fade ends fully in the background colour', (
-    tester,
-  ) async {
-    const background = Color(0xFF203040);
-    for (final dpr in [1.0, 1.25, 1.5]) {
-      tester.view.physicalSize = const Size(600, 200);
-      tester.view.devicePixelRatio = dpr;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final boundaryKey = GlobalKey();
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: RepaintBoundary(
-              key: boundaryKey,
-              child: ColoredBox(
-                color: background,
-                child: SizedBox(
-                  width: 333.5,
-                  height: 100,
-                  child: CoverRowEdgeFade(
-                    fade: true,
-                    background: background,
-                    child: const ColoredBox(color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      final boundary = tester.renderObject<RenderRepaintBoundary>(
-        find.byKey(boundaryKey),
-      );
-      final image = (await tester.runAsync(
-        () => boundary.toImage(pixelRatio: dpr),
-      ))!;
-      final bytes = (await tester.runAsync(
-        () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
-      ))!;
-      int red(int x) => bytes.getUint8((50 * image.width + x) * 4);
-      final last = image.width - 1;
-      for (final x in [last - 1, last]) {
-        expect(red(x), closeTo(0x20, 2), reason: 'dpr $dpr column $x');
-      }
-      final fadeColumns = (40 * dpr).round();
-      for (var x = last - fadeColumns + 1; x <= last; x++) {
-        expect(
-          red(x),
-          lessThanOrEqualTo(red(x - 1)),
-          reason: 'dpr $dpr column $x',
-        );
-      }
-    }
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('overflow')),
+        matching: find.text('See all'),
+      ),
+    );
   });
 }

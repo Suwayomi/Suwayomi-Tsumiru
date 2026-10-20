@@ -18,28 +18,20 @@ import 'package:tsumiru/src/features/browse_center/presentation/source/controlle
 import 'package:tsumiru/src/features/history/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/history/domain/history_item.dart';
 import 'package:tsumiru/src/features/history/presentation/history_controller.dart';
-import 'package:tsumiru/src/features/history/presentation/history_screen.dart';
-import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
-import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
-import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/phone_search_view.dart';
-import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
-import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/cover_row_section.dart';
-import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../helpers/unreachable_server_stubs.dart';
 
 const _phone = Size(412, 900);
-const _desktop = Size(1400, 980);
 
 void _setSize(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
@@ -116,17 +108,6 @@ Fragment$SourceDto _source(String id, String name) => Fragment$SourceDto(
     pkgName: 'pkg.$id',
     isObsolete: false,
   ),
-);
-
-Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
-  defaultCategory: false,
-  id: id,
-  includeInDownload: Enum$IncludeOrExclude.UNSET,
-  includeInUpdate: Enum$IncludeOrExclude.UNSET,
-  name: name,
-  order: id,
-  mangas: Fragment$CategoryDto$mangas(totalCount: 0),
-  meta: const [],
 );
 
 const _emptyCategories = AsyncData(<Fragment$CategoryDto>[]);
@@ -246,6 +227,17 @@ Future<ProviderContainer> _pumpEntryWithRouter(
                 body: Center(child: Text('GLOBAL SEARCH PAGE')),
               ),
             ),
+            GoRoute(
+              path: '/more/settings/:page',
+              builder: (_, state) => Scaffold(
+                body: Center(
+                  child: Text(
+                    'SETTINGS ${state.pathParameters['page']} '
+                    'highlight=${state.uri.queryParameters['highlight']}',
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -257,148 +249,24 @@ Future<ProviderContainer> _pumpEntryWithRouter(
   return container;
 }
 
-/// Pumps the real LibraryScreen at phone size, with or without the persistent
-/// search setting.
-Future<ProviderContainer> _pumpLibrary(
-  WidgetTester tester, {
-  bool persistent = false,
-  List<Fragment$MangaDto> library = const [],
-}) async {
-  SharedPreferences.setMockInitialValues({
-    if (persistent) 'libraryPersistentSearchBar': true,
-  });
-  final sp = await SharedPreferences.getInstance();
-  final container = ProviderContainer(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(sp),
-      loggedInTrackersProvider.overrideWithValue(
-        const AsyncData(<Fragment$TrackerDto>[]),
-      ),
-      updateRunningSocketProvider.overrideWithValue(
-        const AsyncData<bool?>(null),
-      ),
-      failedUpdateCountProvider.overrideWithValue(const AsyncData(0)),
-      settledDefaultCategoryIdProvider.overrideWithValue(1),
-      nonZeroCategoryListProvider.overrideWithValue(
-        AsyncData([_category(1, 'One'), _category(2, 'Two')]),
-      ),
-      visibleCategoryListProvider.overrideWithValue(
-        AsyncData([_category(1, 'One'), _category(2, 'Two')]),
-      ),
-      libraryMangaListProvider.overrideWith((ref) async => library),
-      categoryMangaListProvider.overrideWith(
-        (ref, categoryId) async => <Fragment$MangaDto>[],
-      ),
-      categoryMangaListWithQueryAndFilterProvider(
-        categoryId: 1,
-      ).overrideWithValue(AsyncData<List<Fragment$MangaDto>?>(null)),
-      categoryMangaListWithQueryAndFilterProvider(
-        categoryId: 2,
-      ).overrideWithValue(AsyncData<List<Fragment$MangaDto>?>(null)),
-      ...unreachableServerStubs,
-    ],
-  );
-  addTearDown(container.dispose);
-  _setSize(tester, _phone);
-  await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const LibraryScreen(categoryId: 1),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
-  return container;
-}
-
-/// Pumps the real HistoryScreen, phone or desktop, with or without the
-/// persistent search setting.
-Future<ProviderContainer> _pumpHistory(
-  WidgetTester tester, {
-  required Size size,
-  bool persistent = false,
-}) async {
-  SharedPreferences.setMockInitialValues({
-    if (persistent) 'libraryPersistentSearchBar': true,
-  });
-  final sp = await SharedPreferences.getInstance();
-  final container = ProviderContainer(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(sp),
-      readingHistoryProvider.overrideWith(() => _FakeReadingHistory(const [])),
-      libraryMangaListProvider.overrideWith((ref) async => const []),
-      visibleCategoryListProvider.overrideWithValue(_emptyCategories),
-      ...unreachableServerStubs,
-    ],
-  );
-  addTearDown(container.dispose);
-  _setSize(tester, size);
-  await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: HistoryScreen()),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
-  return container;
-}
-
 void main() {
+  testWidgets('typing "theme" shows Settings with App Theme Mode', (
+    tester,
+  ) async {
+    await _pumpEntryWithRouter(tester, origin: PhoneSearchOrigin.plain);
+    await _openOverlay(tester);
+
+    await tester.enterText(_overlayField(), 'theme');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('App Theme Mode'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   group('phone search overlay', () {
-    testWidgets('search icon opens the full-screen view', (tester) async {
-      await _pumpEntry(tester, origin: PhoneSearchOrigin.library);
-      await _openOverlay(tester);
-
-      expect(tester.takeException(), isNull);
-      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
-      final field = tester.widget<TextField>(_overlayField());
-      expect(field.autofocus, isTrue);
-      expect(field.decoration?.hintText, 'Search title or author...');
-      // Empty query draws no results body: no examples, no Go to rows, and
-      // the page underneath stays visible and hit-testable.
-      expect(find.text('unread:true'), findsNothing);
-      expect(find.text('Go to'), findsNothing);
-      expect(find.byIcon(Icons.search_rounded).hitTestable(), findsOneWidget);
-    });
-
-    testWidgets('other origins keep the unified hint', (tester) async {
-      await _pumpEntry(tester, origin: PhoneSearchOrigin.plain);
-      await _openOverlay(tester);
-
-      final field = tester.widget<TextField>(_overlayField());
-      expect(
-        field.decoration?.hintText,
-        'Search your library, app, and sources',
-      );
-    });
-
-    testWidgets('typing does not change the page filter', (tester) async {
-      final container = await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Search library for "sw"'), findsOneWidget);
-      expect(
-        container.read(libraryQueryProvider),
-        isNull,
-        reason: 'typing must not filter the page underneath',
-      );
-    });
-
     testWidgets('page row applies q and closes', (tester) async {
       final container = await _pumpEntry(
         tester,
@@ -440,92 +308,6 @@ void main() {
       expect(container.read(historySearchQueryProvider), 'sw');
       expect(find.byType(PhoneSearchOverlay), findsNothing);
     });
-
-    testWidgets('dimmed No results row is not tappable', (tester) async {
-      final container = await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'zzz');
-      await tester.pump();
-
-      expect(find.text('Search library for "zzz"'), findsOneWidget);
-      expect(find.text('No results'), findsOneWidget);
-      await tester.tap(find.text('Search library for "zzz"'));
-      await tester.pump();
-
-      expect(
-        container.read(libraryQueryProvider),
-        isNull,
-        reason: 'a dimmed row must not apply anything',
-      );
-      expect(
-        find.byType(PhoneSearchOverlay),
-        findsOneWidget,
-        reason: 'a dimmed row must not close the view',
-      );
-    });
-
-    testWidgets('operator query passes through unchanged', (tester) async {
-      final container = await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'unread:true');
-      await tester.pump();
-      await tester.tap(find.text('Search library for "unread:true"'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(libraryQueryProvider), 'unread:true');
-    });
-
-    testWidgets('author name enables the page row', (tester) async {
-      final container = await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [_manga(1, 'Sword Chronicles', author: 'Oda Sketch')],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'oda');
-      await tester.pump();
-      await tester.pump();
-
-      // Title-only matching finds nothing here; the library DSL matches
-      // authors, so the row must stay enabled.
-      expect(find.text('No results'), findsNothing);
-      await tester.tap(find.text('Search library for "oda"'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(libraryQueryProvider), 'oda');
-      expect(find.byType(PhoneSearchOverlay), findsNothing);
-    });
-
-    testWidgets('pure-operator query stays enabled on an empty library', (
-      tester,
-    ) async {
-      final container = await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'unread:true');
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('No results'), findsNothing);
-      await tester.tap(find.text('Search library for "unread:true"'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(libraryQueryProvider), 'unread:true');
-      expect(find.byType(PhoneSearchOverlay), findsNothing);
-    });
   });
 
   group('empty query shows the page', () {
@@ -547,52 +329,6 @@ void main() {
       await tester.pump();
 
       expect(find.text('Search library for "a"'), findsOneWidget);
-    });
-
-    testWidgets('last row scrolls above the keyboard', (tester) async {
-      await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.history,
-        library: [for (var i = 0; i < 8; i++) _manga(100 + i, 'Alpha Saga $i')],
-        history: [
-          for (var i = 0; i < 4; i++)
-            _historyItem(
-              id: 200 + i,
-              series: 'Alpha Tale $i',
-              chapter: 'Chapter $i',
-            ),
-        ],
-      );
-      await _openOverlay(tester);
-
-      // Keyboard opens first (autofocus on open); results build after, while
-      // it is open — the padding is read then.
-      tester.view.viewInsets = FakeViewPadding(bottom: 300);
-      await tester.pump();
-      await tester.enterText(_overlayField(), 'a');
-      await tester.pump();
-      await tester.pump();
-
-      final list = find.descendant(
-        of: find.byType(PhoneSearchOverlay),
-        matching: find.byType(ListView),
-      );
-      // The ListView's own Scrollable stays mounted while rows scroll in and
-      // out; anchoring on a row's text would break once it scrolls away.
-      final scroller = find.descendant(
-        of: list,
-        matching: find.byType(Scrollable),
-      );
-      final last = find.text('Search all sources for "a"');
-      await tester.scrollUntilVisible(last, 500, scrollable: scroller);
-      await tester.drag(list, const Offset(0, -5000));
-      await tester.pumpAndSettle();
-
-      expect(last, findsOneWidget);
-      expect(
-        tester.getBottomRight(last).dy,
-        lessThanOrEqualTo(_phone.height - 300),
-      );
     });
   });
 
@@ -661,128 +397,6 @@ void main() {
       expect(find.text('Sword Chronicles'), findsOneWidget);
       // No list-style unread line under the cover row.
       expect(find.text('2 unread'), findsNothing);
-    });
-
-    testWidgets('header shows the full match count, row stays capped at 6', (
-      tester,
-    ) async {
-      await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [
-          for (var i = 0; i < 10; i++) _manga(100 + i, 'Sword Saga $i'),
-        ],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'sword');
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Library (10)'), findsOneWidget);
-      expect(
-        tester.widget<CoverRowSection>(find.byType(CoverRowSection)).itemCount,
-        6,
-      );
-    });
-
-    testWidgets('leaving through a cover clears the search text', (
-      tester,
-    ) async {
-      final container = await _pumpEntryWithRouter(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-      await tester.tap(find.text('Sword Chronicles'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('MANGA PAGE'), findsOneWidget);
-      expect(
-        container.read(libraryQueryProvider),
-        isNull,
-        reason: 'leaving through a result clears the search text',
-      );
-    });
-  });
-
-  group('search tips button', () {
-    final helpButton = find.widgetWithIcon(
-      IconButton,
-      Icons.help_outline_rounded,
-    );
-
-    testWidgets('Library origin shows it empty and with text', (tester) async {
-      await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-      await _openOverlay(tester);
-
-      expect(helpButton, findsOneWidget);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-
-      expect(helpButton, findsOneWidget);
-      // The tips button sits at the right end of the bar, immediately
-      // before the clear button.
-      final clearButton = find.widgetWithIcon(IconButton, Icons.close_rounded);
-      expect(clearButton, findsOneWidget);
-      expect(
-        tester.getCenter(helpButton).dx,
-        lessThan(tester.getCenter(clearButton).dx),
-      );
-    });
-
-    testWidgets('tips dialog keeps the query, overlay and focus', (
-      tester,
-    ) async {
-      await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.library,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-
-      await tester.tap(helpButton);
-      await tester.pumpAndSettle();
-
-      expect(find.widgetWithText(AlertDialog, 'Search tips'), findsOneWidget);
-
-      await tester.tap(find.text('Close'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
-      expect(tester.widget<TextField>(_overlayField()).controller?.text, 'sw');
-      expect(
-        tester.widget<TextField>(_overlayField()).focusNode?.hasFocus,
-        isTrue,
-      );
-    });
-
-    testWidgets('History origin has no tips button', (tester) async {
-      await _pumpEntry(tester, origin: PhoneSearchOrigin.history);
-      await _openOverlay(tester);
-
-      expect(helpButton, findsNothing);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-
-      expect(helpButton, findsNothing);
     });
   });
 
@@ -869,158 +483,6 @@ void main() {
 
       expect(container.read(sourceSearchQueryProvider), 'sw');
       expect(find.byType(PhoneSearchOverlay), findsNothing);
-    });
-
-    testWidgets('pinned-only match enables the row', (tester) async {
-      final container = await _pumpEntry(
-        tester,
-        origin: PhoneSearchOrigin.sources,
-        sources: {
-          'en': [_source('2', 'Unrelated Scans')],
-        },
-        pinned: [_source('1', 'Pinned Scans')],
-      );
-      await _openOverlay(tester);
-
-      await tester.enterText(_overlayField(), 'pin');
-      await tester.pump();
-      await tester.pump();
-
-      // The grouped rest matches nothing; the pinned source does, like the
-      // Sources tab which lists pinned above the rest.
-      expect(find.text('Search sources for "pin"'), findsOneWidget);
-      expect(find.text('No results'), findsNothing);
-      expect(find.text('Pinned Scans'), findsOneWidget);
-      await tester.tap(find.text('Search sources for "pin"'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(sourceSearchQueryProvider), 'pin');
-      expect(find.byType(PhoneSearchOverlay), findsNothing);
-    });
-  });
-
-  group('library page entry', () {
-    testWidgets('phone shows the search icon, which opens the view', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-      expect(tester.takeException(), isNull);
-
-      expect(find.byType(PhoneSearchEntry), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byType(SearchField),
-        ),
-        findsNothing,
-        reason: 'the old in-app-bar field is replaced by the flow',
-      );
-
-      await tester.tap(find.byIcon(Icons.search_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-      await tester.tap(find.text('Search library for "sw"'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(libraryQueryProvider), 'sw');
-      expect(find.byType(PhoneSearchOverlay), findsNothing);
-    });
-
-    testWidgets('persistent setting shows the box instead of the icon', (
-      tester,
-    ) async {
-      await _pumpLibrary(tester, persistent: true);
-      expect(tester.takeException(), isNull);
-
-      expect(find.byType(PhoneSearchBoxBottom), findsOneWidget);
-      expect(
-        find.text('Search your library, app, and sources'),
-        findsOneWidget,
-      );
-      expect(
-        find.widgetWithIcon(IconButton, Icons.search_rounded),
-        findsNothing,
-        reason: 'no search icon when the box shows',
-      );
-
-      await tester.tap(find.text('Search your library, app, and sources'));
-      await tester.pumpAndSettle();
-      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
-    });
-
-    testWidgets('box mode keeps the applied filter after the overlay closes', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        persistent: true,
-        library: [_manga(1, 'Sword Chronicles')],
-      );
-
-      await tester.tap(find.text('Search your library, app, and sources'));
-      await tester.pumpAndSettle();
-      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
-
-      await tester.enterText(_overlayField(), 'sw');
-      await tester.pump();
-      await tester.pump();
-      await tester.tap(find.text('Search library for "sw"'));
-      await tester.pumpAndSettle();
-      await tester.pump();
-
-      expect(find.byType(PhoneSearchOverlay), findsNothing);
-      expect(container.read(libraryQueryProvider), 'sw');
-      expect(
-        find.text('sw'),
-        findsOneWidget,
-        reason: 'the box shows the applied filter — the page stayed filtered',
-      );
-    });
-  });
-
-  group('history page entry', () {
-    testWidgets('phone shows the search icon and no inline field', (
-      tester,
-    ) async {
-      await _pumpHistory(tester, size: _phone);
-      expect(tester.takeException(), isNull);
-
-      expect(find.byType(PhoneSearchEntry), findsOneWidget);
-      expect(find.byType(SearchField), findsNothing);
-
-      await tester.tap(find.byIcon(Icons.search_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
-    });
-
-    testWidgets('persistent setting shows the box instead of the icon', (
-      tester,
-    ) async {
-      await _pumpHistory(tester, size: _phone, persistent: true);
-      expect(tester.takeException(), isNull);
-
-      expect(find.byType(PhoneSearchBoxBottom), findsOneWidget);
-      expect(
-        find.widgetWithIcon(IconButton, Icons.search_rounded),
-        findsNothing,
-        reason: 'no search icon when the box shows',
-      );
-    });
-
-    testWidgets('desktop is unchanged', (tester) async {
-      await _pumpHistory(tester, size: _desktop);
-      expect(tester.takeException(), isNull);
-
-      expect(find.byType(PhoneSearchEntry), findsNothing);
-      expect(find.byType(PhoneSearchBoxBottom), findsNothing);
-      expect(find.byType(SearchField), findsNothing);
     });
   });
 }

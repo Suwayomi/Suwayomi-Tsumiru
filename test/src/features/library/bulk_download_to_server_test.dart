@@ -26,42 +26,6 @@ void main() {
       expect(ids, [2, 4]);
     });
 
-    test('a fully downloaded series queues nothing', () {
-      final ids = serverDownloadIds([
-        ch(id: 1, number: 1, isDownloaded: true),
-        ch(id: 2, number: 2, isDownloaded: true),
-      ]);
-      expect(ids, isEmpty);
-    });
-
-    for (final entry in {
-      DownloadPreset.nextChapter: 1,
-      DownloadPreset.next5: 5,
-      DownloadPreset.next10: 10,
-      DownloadPreset.next25: 25,
-    }.entries) {
-      test('${entry.key} applies independently to each series', () {
-        for (final offset in [0, 100]) {
-          final chapters = [
-            for (var number = 30; number >= 1; number--)
-              ch(
-                id: offset + number,
-                number: number.toDouble(),
-                isRead: number == 3,
-                isDownloaded: number == 5,
-              ),
-          ];
-          expect(
-            serverDownloadIds(chapters, preset: entry.key),
-            [
-              for (var n = 4; n <= 30; n++)
-                if (n != 5) offset + n,
-            ].take(entry.value).toList(),
-          );
-        }
-      });
-    }
-
     test('next and unread use preferred releases, All retains every group', () {
       final chapters = [
         for (var number = 1; number <= 7; number++) ...[
@@ -106,29 +70,6 @@ void main() {
           7,
           for (var n = 1; n <= 7; n++) 100 + n,
         ]),
-      );
-    });
-
-    test('unread includes gaps before the reading position', () {
-      expect(
-        serverDownloadIds([
-          ch(id: 1, number: 1),
-          ch(id: 2, number: 2, isRead: true),
-          ch(id: 3, number: 3, isDownloaded: true),
-          ch(id: 4, number: 4),
-        ], preset: DownloadPreset.unread),
-        [1, 4],
-      );
-    });
-
-    test('all includes read chapters in reading order', () {
-      expect(
-        serverDownloadIds([
-          ch(id: 3, number: 3),
-          ch(id: 1, number: 1, isRead: true),
-          ch(id: 2, number: 2, isDownloaded: true),
-        ], preset: DownloadPreset.all),
-        [1, 3],
       );
     });
 

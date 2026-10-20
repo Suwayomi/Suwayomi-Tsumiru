@@ -27,26 +27,20 @@ void main() {
   final downloads = _tab(Icons.download_outlined);
   final library = _tab(Icons.collections_bookmark_outlined);
 
-  test('Browse carries the count of extensions with updates', () {
+  test('Browse carries the extension update count, and only Browse', () {
     final badged = badgedNavIcon(_marker, browse, false, 3);
     expect(badged, isA<Badge>());
     expect(((badged as Badge).label as Text).data, '3');
-  });
-
-  test('no updates means no badge', () {
     expect(badgedNavIcon(_marker, browse, false, 0), same(_marker));
-  });
-
-  test('the extension count never lands on another tab', () {
     expect(badgedNavIcon(_marker, library, false, 5), same(_marker));
-    // Downloads shows its own paused dot, and it must stay a dot — a count of
-    // extension updates on the Downloads tab would be actively misleading.
-    final pausedDownloads = badgedNavIcon(_marker, downloads, true, 5);
-    expect((pausedDownloads as Badge).label, isNull);
   });
 
-  test('Downloads badges only while paused', () {
+  test('Downloads badges only while paused, and never with a count', () {
     expect(badgedNavIcon(_marker, downloads, true, 0), isA<Badge>());
     expect(badgedNavIcon(_marker, downloads, false, 0), same(_marker));
+    // The paused dot stays a dot: an extension count on the Downloads tab
+    // would be misleading.
+    final pausedDownloads = badgedNavIcon(_marker, downloads, true, 5);
+    expect((pausedDownloads as Badge).label, isNull);
   });
 }

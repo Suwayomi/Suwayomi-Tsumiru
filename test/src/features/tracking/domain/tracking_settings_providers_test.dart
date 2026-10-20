@@ -12,22 +12,19 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 void main() {
-  test('updateProgressAfterReading defaults to true', () async {
-    SharedPreferences.setMockInitialValues({});
-    final sp = await SharedPreferences.getInstance();
-    final c = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)]);
-    addTearDown(c.dispose);
-    expect(c.read(updateProgressAfterReadingProvider).ifNull(), isTrue);
-  });
+  test(
+    'updateProgressAfterReading defaults to true and persists false',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
+      final c = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
+      );
+      addTearDown(c.dispose);
+      expect(c.read(updateProgressAfterReadingProvider).ifNull(), isTrue);
 
-  test('updateProgressAfterReading persists false', () async {
-    SharedPreferences.setMockInitialValues({});
-    final sp = await SharedPreferences.getInstance();
-    final c = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)]);
-    addTearDown(c.dispose);
-    c.read(updateProgressAfterReadingProvider.notifier).update(false);
-    expect(c.read(updateProgressAfterReadingProvider).ifNull(), isFalse);
-  });
+      c.read(updateProgressAfterReadingProvider.notifier).update(false);
+      expect(c.read(updateProgressAfterReadingProvider).ifNull(), isFalse);
+    },
+  );
 }

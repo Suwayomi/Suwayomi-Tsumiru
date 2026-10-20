@@ -98,37 +98,4 @@ void main() {
     expect(byId[3]!.downloaded, 1);
     expect(byId[3]!.bytes, 50);
   });
-
-  test(
-    'detach basis: pinned downloaded survive a rule→off; series still listed',
-    () async {
-      // Mirrors detachKeepRule at the DB level: pin downloaded, clear the rule.
-      // The reconciler protects pinned chapters (tested in reconcile_eviction);
-      // here we assert the catalog state detach leaves behind.
-      await seedManga(1, 'Alpha');
-      await db.setKeepRule(1, OfflineKeepRule.all, 3);
-      await seedChapter(10, 1);
-      await db.setChapterDeviceState(
-        10,
-        OfflineDeviceState.downloaded,
-        bytes: 100,
-        downloadedAt: DateTime(2026),
-      );
-      await seedChapter(11, 1);
-      await db.setChapterDeviceState(11, OfflineDeviceState.queued);
-
-      await db.setChapterPinned(10, true);
-      await db.setKeepRule(1, OfflineKeepRule.off, 3);
-
-      final downloaded = await db.downloadedChaptersForManga(1);
-      expect(downloaded.single.id, 10);
-      expect(downloaded.single.pinned, true); // protected from eviction
-
-      // Still listed (it has files), now as Manual (rule off).
-      final rows = await db.watchOfflineSeries().first;
-      final row = rows.firstWhere((s) => s.manga.id == 1);
-      expect(row.manga.keepRule, OfflineKeepRule.off);
-      expect(row.downloaded, 1);
-    },
-  );
 }

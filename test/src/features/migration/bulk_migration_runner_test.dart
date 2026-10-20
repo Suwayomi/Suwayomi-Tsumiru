@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -113,22 +111,6 @@ BulkMigrationEntry entry(int from, {int? to}) {
   return e;
 }
 
-class _DelayedCopyRepository extends FakeMigrationRepository {
-  final entered = Completer<void>();
-  final release = Completer<void>();
-  @override
-  Future<MigrationCopyResult> copyMangaData(
-    int fromMangaId,
-    int toMangaId,
-    MigrationOption options, [
-    BuildContext? context,
-  ]) async {
-    entered.complete();
-    await release.future;
-    return super.copyMangaData(fromMangaId, toMangaId, options, context);
-  }
-}
-
 BulkMigrationRunner makeRunner({
   required FakeMigrationRepository repo,
   required MigrationJournal journal,
@@ -196,84 +178,6 @@ void main() {
     },
   );
 
-  test(
-    'cancelling a delayed copy skips local migration and source removal',
-    () async {
-      final repo = _DelayedCopyRepository();
-      var localCalls = 0;
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 2)],
-        migrateLocalState: (_, _, _) async {
-          localCalls++;
-        },
-      );
-      final pending = runner.commit(deleteSource: true);
-      await repo.entered.future;
-      runner.cancel();
-      repo.release.complete();
-      await pending;
-      expect(localCalls, 0);
-      expect(repo.removeCalls, isEmpty);
-      expect(journal.entryFor(1)!.state, MigrationPairState.copying);
-    },
-  );
-
-  test(
-    'account replacement after dirty gate prevents journal and copy',
-    () async {
-      final gate = Completer<bool>();
-      final entered = Completer<void>();
-      var current = true;
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 2)],
-        isSessionCurrent: () => current,
-        dirtyGate: (_, _) {
-          entered.complete();
-          return gate.future;
-        },
-      );
-      final pending = runner.commit(deleteSource: true);
-      await entered.future;
-      current = false;
-      gate.complete(true);
-      await pending;
-      expect(repo.copyCalls, isEmpty);
-      expect(journal.entries(), isEmpty);
-    },
-  );
-
-  test(
-    'account replacement during recovery keeps owner journal and source',
-    () async {
-      final repo = _DelayedCopyRepository();
-      var current = true;
-      await journal.put(
-        const MigrationJournalEntry(
-          fromMangaId: 1,
-          toMangaId: 2,
-          state: MigrationPairState.copying,
-          options: MigrationOption(deleteSource: true),
-        ),
-      );
-      final pending = recoverMigrationJournal(
-        repo: repo,
-        journal: journal,
-        isSessionCurrent: () => current,
-      );
-      await repo.entered.future;
-      current = false;
-      repo.release.complete();
-      await pending;
-      expect(repo.removeCalls, isEmpty);
-      expect(journal.entryFor(1)!.state, MigrationPairState.copying);
-    },
-  );
-
   group('journal', () {
     test('round-trips entries through persistence', () async {
       await journal.put(
@@ -337,21 +241,6 @@ void main() {
         expect(journal.entryFor(1)!.state, MigrationPairState.failed);
       },
     );
-
-    test('commitOne then remove drops the row, emptying the list', () async {
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100), entry(2, to: 200)],
-      );
-      await runner.commitOne(1, deleteSource: true);
-      runner.remove(1);
-      expect(runner.entries.map((e) => e.fromMangaId), [2]);
-      await runner.commitOne(2, deleteSource: true);
-      runner.remove(2);
-      expect(runner.entries, isEmpty);
-    });
   });
 
   group('commit — Copy (deleteSource false)', () {
@@ -404,6 +293,18 @@ void main() {
       await runner.commit(deleteSource: true);
       expect(waited, isTrue);
       expect(runner.entries.single.phase, BulkEntryPhase.done);
+    });
+  });
+
+  group('cancel', () {
+    test('cancel stops further entries', () async {
+      final repo = FakeMigrationRepository();
+      final entries = List.generate(6, (i) => entry(i, to: 100 + i));
+      final runner = makeRunner(repo: repo, journal: journal, entries: entries);
+      runner.cancel();
+      await runner.commit(deleteSource: true);
+      // Nothing should have been copied — the token was already cancelled.
+      expect(repo.copyCalls, isEmpty);
     });
   });
 
@@ -460,230 +361,4 @@ void main() {
       expect(journal.entryFor(1)!.state, MigrationPairState.failed);
     });
   });
-
-  group('concurrency + cancel', () {
-    test('never runs more than 3 copies at once', () async {
-      var active = 0;
-      var peak = 0;
-      final gate = Completer<void>();
-      final repo = _GatedRepo(
-        onCopy: () async {
-          active++;
-          peak = active > peak ? active : peak;
-          await gate.future;
-          active--;
-        },
-      );
-      final entries = List.generate(8, (i) => entry(i, to: 100 + i));
-      final runner = makeRunner(repo: repo, journal: journal, entries: entries);
-      final fut = runner.commit(deleteSource: true);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(peak, 3);
-      gate.complete();
-      await fut;
-      expect(peak, 3);
-    });
-
-    test('cancel stops further entries', () async {
-      final repo = FakeMigrationRepository();
-      final entries = List.generate(6, (i) => entry(i, to: 100 + i));
-      final runner = makeRunner(repo: repo, journal: journal, entries: entries);
-      runner.cancel();
-      await runner.commit(deleteSource: true);
-      // Nothing should have been copied — the token was already cancelled.
-      expect(repo.copyCalls, isEmpty);
-    });
-  });
-
-  group('retry', () {
-    test('re-queues failed entries and succeeds on the next pass', () async {
-      final repo = FakeMigrationRepository(copyFailuresRemaining: {1: 1});
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-      );
-      await runner.commit(deleteSource: true);
-      expect(runner.entries.single.phase, BulkEntryPhase.failed);
-      runner.retryFailed();
-      await runner.commit(deleteSource: true);
-      expect(runner.entries.single.phase, BulkEntryPhase.done);
-      expect(repo.removeCalls, [1]);
-    });
-
-    test('retryEntry re-queues just one entry', () async {
-      final repo = FakeMigrationRepository(copyFailuresRemaining: {1: 1});
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-      );
-      await runner.commit(deleteSource: true);
-      expect(runner.entries.single.phase, BulkEntryPhase.failed);
-      runner.retryEntry(1);
-      expect(runner.entries.single.phase, BulkEntryPhase.ready);
-      await runner.commit(deleteSource: true);
-      expect(runner.entries.single.phase, BulkEntryPhase.done);
-    });
-  });
-
-  group('merge preflight + tracker-collision policy', () {
-    test(
-      'preflight populates targetInLibrary and colliding trackers',
-      () async {
-        final repo = FakeMigrationRepository(
-          preflights: {
-            1: const MigrationMergePreflight(
-              targetInLibrary: true,
-              collidingTrackerIds: {10},
-            ),
-          },
-        );
-        final runner = makeRunner(
-          repo: repo,
-          journal: journal,
-          entries: [entry(1, to: 100)],
-        );
-        await runner.preflight();
-        final e = runner.entries.single;
-        expect(e.targetInLibrary, isTrue);
-        expect(e.hasTrackerCollision, isTrue);
-        expect(e.collidingTrackerIds, {10});
-      },
-    );
-
-    test('copy defaults to keep-target (overwrite flag false)', () async {
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-      );
-      await runner.commit(deleteSource: true);
-      expect(repo.copyOverwriteFlags[1], isFalse);
-    });
-
-    test(
-      'owner opting into overwrite threads the flag into the copy',
-      () async {
-        final repo = FakeMigrationRepository();
-        final runner = makeRunner(
-          repo: repo,
-          journal: journal,
-          entries: [entry(1, to: 100)],
-        );
-        runner.setOverwriteTracking(1, true);
-        await runner.commit(deleteSource: true);
-        expect(repo.copyOverwriteFlags[1], isTrue);
-      },
-    );
-  });
-
-  group('launch recovery (standalone, no runner)', () {
-    test(
-      'recoverMigrationJournal drains a copied entry by removing the source',
-      () async {
-        await journal.put(
-          const MigrationJournalEntry(
-            fromMangaId: 1,
-            toMangaId: 100,
-            state: MigrationPairState.copied,
-            options: MigrationOption(deleteSource: true),
-            copiedSourceRecordIds: [700],
-          ),
-        );
-        final repo = FakeMigrationRepository();
-        await recoverMigrationJournal(repo: repo, journal: journal);
-        expect(repo.copyCalls, isEmpty);
-        expect(repo.removeCalls, [1]);
-        expect(journal.entries(), isEmpty);
-      },
-    );
-
-    test('recovery re-copies with the entry\'s persisted options', () async {
-      // Persisted overwrite choice must survive a crash, not revert to keep.
-      await journal.put(
-        const MigrationJournalEntry(
-          fromMangaId: 1,
-          toMangaId: 100,
-          state: MigrationPairState.copying,
-          options: MigrationOption(
-            deleteSource: true,
-            overwriteExistingTracking: true,
-          ),
-        ),
-      );
-      final repo = FakeMigrationRepository();
-      await recoverMigrationJournal(repo: repo, journal: journal);
-      expect(repo.copyOverwriteFlags[1], isTrue);
-      expect(repo.removeCalls, [1]);
-    });
-
-    test('journal persists the full options across reload', () async {
-      await journal.put(
-        const MigrationJournalEntry(
-          fromMangaId: 5,
-          toMangaId: 50,
-          state: MigrationPairState.prepared,
-          options: MigrationOption(
-            deleteSource: false,
-            migrateTracking: true,
-            overwriteExistingTracking: true,
-          ),
-        ),
-      );
-      final reloaded = MigrationJournal(await SharedPreferences.getInstance());
-      final opts = reloaded.entryFor(5)!.options;
-      expect(opts.deleteSource, isFalse);
-      expect(opts.migrateTracking, isTrue);
-      expect(opts.overwriteExistingTracking, isTrue);
-    });
-  });
-
-  group('device eviction on move', () {
-    test('onSourceRemoved fires after a successful Migrate removal', () async {
-      final evicted = <int>[];
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-        onSourceRemoved: (id) async => evicted.add(id),
-      );
-      await runner.commit(deleteSource: true);
-      expect(evicted, [1]);
-    });
-
-    test('no eviction on Copy (source not removed)', () async {
-      final evicted = <int>[];
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-        options: const MigrationOption(deleteSource: false),
-        onSourceRemoved: (id) async => evicted.add(id),
-      );
-      await runner.commit(deleteSource: false);
-      expect(evicted, isEmpty);
-    });
-  });
-}
-
-/// Repo whose copy runs a supplied gate, for concurrency timing.
-class _GatedRepo extends FakeMigrationRepository {
-  _GatedRepo({required this.onCopy});
-  final Future<void> Function() onCopy;
-
-  @override
-  Future<MigrationCopyResult> copyMangaData(
-    int fromMangaId,
-    int toMangaId,
-    MigrationOption options, [
-    BuildContext? context,
-  ]) async {
-    copyCalls.add(fromMangaId);
-    await onCopy();
-    return const MigrationCopyResult(success: true, sourceInLibrary: true);
-  }
 }

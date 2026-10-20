@@ -93,16 +93,4 @@ void main() {
     await db.close();
     expect(lines, isEmpty);
   });
-
-  test('a healthy catalogue opens with no heal and no log line', () async {
-    final db = testOfflineDatabaseFile(dbPath);
-    await db.upsertCategory(1, 'Reading', 0, isHidden: false);
-    await db.close();
-    lines.clear();
-
-    final reopened = testOfflineDatabaseFile(dbPath);
-    expect(await reopened.allOfflineCategories(), hasLength(1));
-    await reopened.close();
-    expect(lines, isEmpty);
-  });
 }

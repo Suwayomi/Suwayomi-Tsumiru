@@ -22,13 +22,22 @@ void main() {
         writeCrashLog(path, 'line $i with some padding to add a few bytes\n');
       }
 
-      expect(File(path).lengthSync(), lessThanOrEqualTo(256 * 1024),
-          reason: 'the log must stay bounded');
+      expect(
+        File(path).lengthSync(),
+        lessThanOrEqualTo(256 * 1024),
+        reason: 'the log must stay bounded',
+      );
       final content = File(path).readAsStringSync();
-      expect(content, contains('line 11999'),
-          reason: 'the newest entry must survive the trim');
-      expect(content, isNot(contains('line 0 with')),
-          reason: 'the oldest entries must be dropped');
+      expect(
+        content,
+        contains('line 11999'),
+        reason: 'the newest entry must survive the trim',
+      );
+      expect(
+        content,
+        isNot(contains('line 0 with')),
+        reason: 'the oldest entries must be dropped',
+      );
       // Trim starts on a line boundary — no half entry at the top.
       expect(content.startsWith('line '), isTrue);
     });
@@ -56,7 +65,7 @@ void main() {
       expect(content, isNot(contains('OLD entry 0 ')));
     });
 
-    test('clear deletes the log file', () {
+    test('clear deletes the log file, and a null path is a no-op', () {
       final dir = Directory.systemTemp.createTempSync('crashlog-');
       addTearDown(() => dir.deleteSync(recursive: true));
       final path = '${dir.path}/crash.log';
@@ -67,9 +76,7 @@ void main() {
       expect(File(path).existsSync(), isFalse);
       // Reading a cleared log is null, not a crash.
       expect(readCrashLog(path), isNull);
-    });
 
-    test('a null path is a no-op everywhere', () {
       expect(() => writeCrashLog(null, 'x'), returnsNormally);
       expect(() => clearCrashLog(null), returnsNormally);
       expect(readCrashLog(null), isNull);

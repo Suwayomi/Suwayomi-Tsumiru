@@ -93,7 +93,7 @@ Future<File> _prefetch(CacheManager cache, WidgetRef ref, String url) {
 
 void main() {
   testWidgets(
-    'paged prefetch is reused by rendering and offline sharing only for its account',
+    'prefetch and rendering share stable account keys, and never cross accounts',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
@@ -166,78 +166,77 @@ void main() {
       auth.adopt('account-a', 'token-a-new');
       expect(await _prefetch(cache, readerRef, page), same(prefetched));
       await tester.pumpWidget(const SizedBox.shrink());
+
+      // The widget's raw request and the prefetch share stable account keys.
+      {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final auth = _Session();
+        final cache = _Cache();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            authCredentialsStoreProvider.overrideWith(() => auth),
+            authTypeKeyProvider.overrideWith(_UiLogin.new),
+            credentialsProvider.overrideWith(_Basic.new),
+            coverCacheManagerProvider.overrideWithValue(cache),
+          ],
+        );
+        addTearDown(container.dispose);
+        addTearDown(cache.stream.close);
+        await container.read(authCredentialsStoreProvider.future);
+        auth.adopt('account-a', 'token-a');
+        late String requestKey;
+        late String requestUrl;
+        late CachedNetworkImageProvider prefetch;
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              home: Consumer(
+                builder: (context, ref, _) {
+                  ref.watch(authCredentialsStoreProvider);
+                  final request = serverImageRequest(ref, '/manga/1/thumbnail');
+                  requestKey = request.cacheKey;
+                  requestUrl = request.fetchUrl;
+                  prefetch =
+                      serverPageImageProvider(ref, '/manga/1/thumbnail')
+                          as CachedNetworkImageProvider;
+                  return const ServerImage(imageUrl: '/manga/1/thumbnail');
+                },
+              ),
+            ),
+          ),
+        );
+        final first = requestKey;
+        expect(
+          tester
+              .widget<CachedNetworkImage>(find.byType(CachedNetworkImage))
+              .cacheKey,
+          first,
+        );
+        expect(prefetch.cacheKey, first);
+        expect(prefetch.url, requestUrl);
+        expect(Uri.parse(requestUrl).scheme, 'http');
+        expect(requestUrl, isNot(contains('tsumiru-image:')));
+        auth.adopt('account-a', 'token-rotated');
+        await tester.pump();
+        expect(requestKey, first);
+        auth.adopt('account-b', 'token-b');
+        await tester.pump();
+        expect(requestKey, isNot(first));
+        expect(
+          tester
+              .widget<CachedNetworkImage>(find.byType(CachedNetworkImage))
+              .cacheKey,
+          requestKey,
+        );
+        expect(prefetch.cacheKey, requestKey);
+        auth.adopt('account-a', 'token-return');
+        await tester.pump();
+        expect(requestKey, first);
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
     },
   );
-
-  testWidgets('widget raw request and prefetch share stable account keys', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final auth = _Session();
-    final cache = _Cache();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        authCredentialsStoreProvider.overrideWith(() => auth),
-        authTypeKeyProvider.overrideWith(_UiLogin.new),
-        credentialsProvider.overrideWith(_Basic.new),
-        coverCacheManagerProvider.overrideWithValue(cache),
-      ],
-    );
-    addTearDown(container.dispose);
-    addTearDown(cache.stream.close);
-    await container.read(authCredentialsStoreProvider.future);
-    auth.adopt('account-a', 'token-a');
-    late String requestKey;
-    late String requestUrl;
-    late CachedNetworkImageProvider prefetch;
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          home: Consumer(
-            builder: (context, ref, _) {
-              ref.watch(authCredentialsStoreProvider);
-              final request = serverImageRequest(ref, '/manga/1/thumbnail');
-              requestKey = request.cacheKey;
-              requestUrl = request.fetchUrl;
-              prefetch =
-                  serverPageImageProvider(ref, '/manga/1/thumbnail')
-                      as CachedNetworkImageProvider;
-              return const ServerImage(imageUrl: '/manga/1/thumbnail');
-            },
-          ),
-        ),
-      ),
-    );
-    final first = requestKey;
-    expect(
-      tester
-          .widget<CachedNetworkImage>(find.byType(CachedNetworkImage))
-          .cacheKey,
-      first,
-    );
-    expect(prefetch.cacheKey, first);
-    expect(prefetch.url, requestUrl);
-    expect(Uri.parse(requestUrl).scheme, 'http');
-    expect(requestUrl, isNot(contains('tsumiru-image:')));
-    auth.adopt('account-a', 'token-rotated');
-    await tester.pump();
-    expect(requestKey, first);
-    auth.adopt('account-b', 'token-b');
-    await tester.pump();
-    expect(requestKey, isNot(first));
-    expect(
-      tester
-          .widget<CachedNetworkImage>(find.byType(CachedNetworkImage))
-          .cacheKey,
-      requestKey,
-    );
-    expect(prefetch.cacheKey, requestKey);
-    auth.adopt('account-a', 'token-return');
-    await tester.pump();
-    expect(requestKey, first);
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
 }
