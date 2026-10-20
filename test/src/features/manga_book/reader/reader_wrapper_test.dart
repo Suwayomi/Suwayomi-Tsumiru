@@ -42,7 +42,7 @@ void main() {
             first: testChapter(id: 2, name: 'Chapter 2'),
             second: null,
           )),
-          chapterProvider(chapterId: 2).overrideWith((ref) {
+          chapterProvider(chapterId: 2).overrideWithBuild((ref, _) {
             chapterFetches += 1;
             return testChapter(id: 2, name: 'Chapter 2');
           }),

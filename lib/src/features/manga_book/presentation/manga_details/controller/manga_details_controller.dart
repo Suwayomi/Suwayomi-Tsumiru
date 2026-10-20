@@ -35,8 +35,13 @@ part 'manga_details_controller.g.dart';
 
 @riverpod
 class MangaWithId extends _$MangaWithId {
+  // Bumped on every build so an answer from a superseded read can't overwrite
+  // a newer server row (e.g. one fetched by an explicit refresh).
+  int _buildId = 0;
+
   @override
   Future<MangaDto?> build({required int mangaId}) async {
+    final buildId = ++_buildId;
     final sessionCurrent = watchAuthSession(ref);
     bool current() => ref.mounted && sessionCurrent();
     if (!current()) return null;
@@ -48,20 +53,41 @@ class MangaWithId extends _$MangaWithId {
     // Mirror only genuine server responses — fallback DTOs already carry the
     // unread correction and must not round-trip back as server counts.
     var fromServer = false;
+    final offlineDb = ref.watch(offlineReadDatabaseProvider);
     final manga = await mangaWithOfflineFallback(
       fetch: () async {
         final r = await ref
-            .watch(mangaBookRepositoryProvider)
+            .read(mangaBookRepositoryProvider)
             .getManga(mangaId: mangaId);
         fromServer = true;
         return r;
       },
-      db: ref.watch(offlineReadDatabaseProvider),
+      db: offlineDb,
       offlineEnabled: ref.watch(offlineActiveProvider),
       offlineFirst:
           ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       mangaId: mangaId,
+      // A series with a complete chapter on this device (the reader's opened
+      // chapter) renders from the catalog at once; the server row refreshes it
+      // in the background. Browsed series keep the network-first read.
+      deviceCopyOnDisk: offlineDb == null
+          ? null
+          : () async {
+              final chapters = await offlineDb.chaptersForManga(mangaId);
+              return chapters.any(
+                (c) => c.deviceState == OfflineDeviceState.downloaded,
+              );
+            },
+      onServerAnswer: (server) {
+        if (!current() || buildId != _buildId) return;
+        state = AsyncData(server);
+        if (server.inLibrary) {
+          unawaited(
+            sync?.syncManga(server, fetchedAtGen: fetchGen) ?? Future.value(),
+          );
+        }
+      },
     );
     // Keep this cached like its sibling MangaChapterList so revisiting details
     // doesn't refetch. Guarded: keepAlive on a disposed ref throws.

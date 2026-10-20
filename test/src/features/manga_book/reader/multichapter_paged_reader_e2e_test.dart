@@ -189,8 +189,8 @@ void main() {
             mangaWithIdProvider(
               mangaId: 1,
             ).overrideWith(() => _FakeMangaWithId(_manga())),
-            chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
-            chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
+            chapterProvider(chapterId: 1).overrideWithBuild((ref, _) => ch1),
+            chapterProvider(chapterId: 2).overrideWithBuild((ref, _) => ch2),
             chapterPagesProvider(
               chapterId: 1,
             ).overrideWith((ref) => _pages(1, 3)),
@@ -290,7 +290,7 @@ void main() {
           mangaWithIdProvider(
             mangaId: 1,
           ).overrideWith(() => _FakeMangaWithId(_manga())),
-          chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
+          chapterProvider(chapterId: 1).overrideWithBuild((ref, _) => ch1),
           chapterPagesProvider(
             chapterId: 1,
           ).overrideWith((ref) => _pages(1, 3)),

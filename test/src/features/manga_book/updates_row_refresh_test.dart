@@ -99,7 +99,7 @@ void main() {
             // Mirrors the real provider, which reads its repository off `ref`
             // after an async gap — that read is what throws once the provider
             // has been disposed out from under the fetch.
-            chapterProvider(chapterId: 1).overrideWith((ref) async {
+            chapterProvider(chapterId: 1).overrideWithBuild((ref, _) async {
               await Future<void>.delayed(Duration.zero);
               ref.watch(_watchedAfterAsyncGap);
               return _fresh(id: 1, isRead: true);

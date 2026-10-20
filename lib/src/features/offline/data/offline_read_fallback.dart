@@ -43,6 +43,36 @@ Future<T> _boundedFetch<T>(
   return fetch().timeout(fetchTimeout);
 }
 
+/// Starts [fetch] without waiting for it and hands a non-null answer to
+/// [onAnswer]. Used after a complete device copy has already opened from the
+/// catalog: a slow or failed refresh changes nothing on screen, and a fresh
+/// server row replaces the catalog row when it lands (stale-while-revalidate).
+void _refreshInBackground<T extends Object>({
+  required Future<T?> Function() fetch,
+  required void Function(T value) onAnswer,
+}) {
+  unawaited(() async {
+    try {
+      final value = await fetch();
+      if (value != null) onAnswer(value);
+    } catch (_) {
+      // Best-effort: the device copy is already open.
+    }
+  }());
+}
+
+/// Whether the catalog holds a complete copy of [chapterId] on this device: the
+/// row is marked downloaded and its page rows exist. The same test
+/// [OfflineRepository.localChapterPages] applies before serving page paths, so
+/// chapter metadata and pages agree on what "on the device" means.
+Future<bool> chapterCompleteOnDevice(OfflineDatabase db, int chapterId) async {
+  final c = await db.chapterById(chapterId);
+  if (c == null || c.deviceState != OfflineDeviceState.downloaded) {
+    return false;
+  }
+  return (await db.downloadedPageCount(chapterId)) > 0;
+}
+
 /// Network-first read with on-device catalog fallback. Tries [fetch]; if it
 /// throws and offline is available with catalog data, returns the catalog
 /// mapped to the server DTO type. Otherwise rethrows the original error.
@@ -163,6 +193,11 @@ Future<MangaDto?> mangaWithOfflineFallback({
   required int mangaId,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
+  // True when this series has a complete copy on the device (the reader's
+  // opened chapter is downloaded). With [onServerAnswer], the catalog row is
+  // served at once and refreshed from the server in the background.
+  Future<bool> Function()? deviceCopyOnDisk,
+  void Function(MangaDto value)? onServerAnswer,
   void Function()? onCatalogServe,
 }) async {
   Future<MangaDto?> serveCatalog() async {
@@ -182,14 +217,28 @@ Future<MangaDto?> mangaWithOfflineFallback({
   Future<bool> canServe() async =>
       db != null && await db.mangaById(mangaId) != null;
 
-  if (offlineEnabled && offlineFirst && db != null) {
-    final served = await serveCatalog();
-    if (served != null) {
-      onCatalogServe?.call();
-      return served;
+  if (offlineEnabled && db != null) {
+    final inCatalog = await db.mangaById(mangaId) != null;
+    // A complete device copy opens straight from the catalog; the offline pin
+    // skips the refresh too, since the user asked to stay off the network.
+    final deviceFirst =
+        inCatalog &&
+        !offlineFirst &&
+        onServerAnswer != null &&
+        deviceCopyOnDisk != null &&
+        await deviceCopyOnDisk();
+    if (inCatalog && (offlineFirst || deviceFirst)) {
+      final served = await serveCatalog();
+      if (served != null) {
+        onCatalogServe?.call();
+        if (deviceFirst) {
+          _refreshInBackground(fetch: fetch, onAnswer: onServerAnswer);
+        }
+        return served;
+      }
     }
-    // Not in the catalog (e.g. a browse result) — fall through to the network.
   }
+  // Not in the catalog (e.g. a browse result) — fall through to the network.
   try {
     return await _boundedFetch(fetch, canServe, fetchTimeout);
   } catch (e) {
@@ -210,16 +259,32 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
   required int chapterId,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
+  // True when this chapter is complete on the device. With [onServerAnswer],
+  // the catalog row is served at once and refreshed from the server in the
+  // background (stale-while-revalidate).
+  Future<bool> Function()? deviceCopyOnDisk,
+  void Function(ChapterDto value)? onServerAnswer,
   void Function()? onCatalogServe,
 }) async {
   Future<bool> canServe() async =>
       db != null && await db.chapterById(chapterId) != null;
 
-  if (offlineEnabled && offlineFirst && db != null) {
+  if (offlineEnabled && db != null) {
     final c = await db.chapterById(chapterId);
-    if (c != null) {
-      onCatalogServe?.call();
-      return offlineChapterToDto(c);
+    final deviceFirst =
+        !offlineFirst &&
+        c != null &&
+        onServerAnswer != null &&
+        deviceCopyOnDisk != null &&
+        await deviceCopyOnDisk();
+    if (offlineFirst || deviceFirst) {
+      if (c != null) {
+        onCatalogServe?.call();
+        if (deviceFirst) {
+          _refreshInBackground(fetch: fetch, onAnswer: onServerAnswer);
+        }
+        return offlineChapterToDto(c);
+      }
     }
   }
   try {

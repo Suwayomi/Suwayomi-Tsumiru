@@ -160,8 +160,8 @@ Future<void> _pumpReaderOnChapter2(
         mangaWithIdProvider(
           mangaId: 1,
         ).overrideWith(() => _FakeMangaWithId(_webtoonManga())),
-        chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
-        chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
+        chapterProvider(chapterId: 1).overrideWithBuild((ref, _) => ch1),
+        chapterProvider(chapterId: 2).overrideWithBuild((ref, _) => ch2),
         chapterPagesProvider(chapterId: 1).overrideWith((ref) => prevPages()),
         chapterPagesProvider(chapterId: 2).overrideWith((ref) => _pages(2, 3)),
         if (coldOpenPair)
