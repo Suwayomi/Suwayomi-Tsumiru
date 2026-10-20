@@ -18,6 +18,16 @@
 
 <p align="center">A manga and webtoon reader for your Suwayomi server</p>
 
+<p align="center">
+  <a href="https://tsumiru.app"><img src="flatpak/screenshots/02-series.png" alt="A series page in Tsumiru on desktop" width="800"/></a>
+</p>
+
+<p align="center">
+  <img src="./.github/readme-images/phone-library.png" alt="The library on Android" width="250"/>
+  <img src="./.github/readme-images/phone-series.png" alt="A series page on Android" width="250"/>
+  <img src="./.github/readme-images/phone-downloads.png" alt="Chapters saved on an Android phone" width="250"/>
+</p>
+
 > *Tsumiru* (積みる) takes the 積, "pile up", from *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them. It swaps the "read" for *miru*, "to look".
 
 ## What it is
