@@ -30,13 +30,15 @@ class DesktopWindowScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mergedBarVisible = ref.watch(mergedTopBarRegistryProvider) > 0;
-    if (showsMergedTopBar(context) && mergedBarVisible) return child;
     if (!isDesktopPlatform) return child;
-
+    final mergedBarVisible = ref.watch(mergedTopBarRegistryProvider) > 0;
+    // Keep [child] at a fixed position. It is the app's Router, and remounting
+    // it makes go_router re-parse its serialized route info, which drops any
+    // non-JSON `extra` (the migration screens) and pops those pages on resize.
+    final showTitleBar = !(showsMergedTopBar(context) && mergedBarVisible);
     return Column(
       children: [
-        const DesktopTitleBar(),
+        showTitleBar ? const DesktopTitleBar() : const SizedBox.shrink(),
         Expanded(child: child),
       ],
     );
