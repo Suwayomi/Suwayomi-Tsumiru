@@ -8,7 +8,12 @@
 /// Where a wheel notch should land the reader, given [speed] as a multiple of
 /// what the platform would do on its own.
 ///
-/// Returns null when the position wouldn't move. [reverse] mirrors what
+/// [pendingTarget] is where a glide already in flight is headed. Notches that
+/// arrive mid-glide stack onto it rather than onto the pixel the animation has
+/// reached, so a burst travels their combined distance instead of losing the
+/// tail of each one.
+///
+/// Returns null when the reader wouldn't move. [reverse] mirrors what
 /// `Scrollable` does with a reversed axis (`scrollable.dart` negates the delta
 /// there); getting it wrong makes the two cancel instead of compounding.
 double? wheelScrollTarget({
@@ -18,10 +23,12 @@ double? wheelScrollTarget({
   required double speed,
   required double minExtent,
   required double maxExtent,
+  double? pendingTarget,
 }) {
   final applied = reverse ? -rawDelta : rawDelta;
-  if (applied == 0 || speed == 1) return null;
-  final target =
-      (pixels + applied * speed).clamp(minExtent, maxExtent).toDouble();
+  if (applied == 0 || speed == 0) return null;
+  final target = ((pendingTarget ?? pixels) + applied * speed)
+      .clamp(minExtent, maxExtent)
+      .toDouble();
   return target == pixels ? null : target;
 }
