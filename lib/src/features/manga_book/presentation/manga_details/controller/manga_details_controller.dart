@@ -54,11 +54,12 @@ class MangaWithId extends _$MangaWithId {
     // unread correction and must not round-trip back as server counts.
     var fromServer = false;
     final offlineDb = ref.watch(offlineReadDatabaseProvider);
+    // Watched before the first await so a new endpoint or custom header
+    // rebuilds this provider and the refetch goes through the new repository.
+    final repository = ref.watch(mangaBookRepositoryProvider);
     final manga = await mangaWithOfflineFallback(
       fetch: () async {
-        final r = await ref
-            .read(mangaBookRepositoryProvider)
-            .getManga(mangaId: mangaId);
+        final r = await repository.getManga(mangaId: mangaId);
         fromServer = true;
         return r;
       },

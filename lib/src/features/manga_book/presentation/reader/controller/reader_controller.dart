@@ -31,12 +31,13 @@ class Chapter extends _$Chapter {
   FutureOr<ChapterDto?> build({required int chapterId}) async {
     final buildId = ++_buildId;
     final db = ref.watch(offlineReadDatabaseProvider);
+    // Watched before the first await so a new endpoint or custom header
+    // rebuilds this provider and the refetch goes through the new repository.
+    final repository = ref.watch(mangaBookRepositoryProvider);
     // Offline: a downloaded chapter must still open when the server is
     // unreachable, so fall back to the on-device catalog row.
     return chapterMetaWithOfflineFallback(
-      fetch: () => ref
-          .read(mangaBookRepositoryProvider)
-          .getChapter(chapterId: chapterId),
+      fetch: () => repository.getChapter(chapterId: chapterId),
       // Only read the native-only DB when offline is available (never on web).
       db: db,
       offlineEnabled: ref.watch(offlineActiveProvider),

@@ -45,13 +45,20 @@ class _ThrowingMangaBookRepo implements MangaBookRepository {
 class _HangingMangaBookRepo extends Fake implements MangaBookRepository {
   final mangaAnswer = Completer<MangaDto?>();
   final chapterAnswer = Completer<ChapterDto?>();
+  int mangaCalls = 0;
+  int chapterCalls = 0;
 
   @override
-  Future<MangaDto?> getManga({required int mangaId}) => mangaAnswer.future;
+  Future<MangaDto?> getManga({required int mangaId}) {
+    mangaCalls++;
+    return mangaAnswer.future;
+  }
 
   @override
-  Future<ChapterDto?> getChapter({required int chapterId}) =>
-      chapterAnswer.future;
+  Future<ChapterDto?> getChapter({required int chapterId}) {
+    chapterCalls++;
+    return chapterAnswer.future;
+  }
 }
 
 class _Session extends AuthCredentialsStore {
@@ -200,7 +207,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 
     fakeAsync((async) {
-      final repo = _HangingMangaBookRepo();
+      var repo = _HangingMangaBookRepo();
       final c = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
@@ -212,7 +219,7 @@ void main() {
           offlineActiveProvider.overrideWithValue(true),
           offlineSyncProvider.overrideWithValue(null),
           authCredentialsStoreProvider.overrideWith(_Session.new),
-          mangaBookRepositoryProvider.overrideWithValue(repo),
+          mangaBookRepositoryProvider.overrideWith((ref) => repo),
         ],
       );
       addTearDown(c.dispose);
@@ -249,6 +256,18 @@ void main() {
         c.read(mangaWithIdProvider(mangaId: 1)).value?.title,
         'FreshManga',
       );
+
+      // A new endpoint or custom header rebuilds the repository. The reader's
+      // providers must refetch through the new one rather than hold the old
+      // answer (and its connection errors) until something else changes.
+      repo = _HangingMangaBookRepo();
+      c.invalidate(mangaBookRepositoryProvider);
+      // The scheduled rebuild and the catalog reads land well inside the 15 s
+      // fallback cap.
+      async.elapse(const Duration(seconds: 1));
+
+      expect(repo.chapterCalls, 1);
+      expect(repo.mangaCalls, 1);
     });
   });
 }
