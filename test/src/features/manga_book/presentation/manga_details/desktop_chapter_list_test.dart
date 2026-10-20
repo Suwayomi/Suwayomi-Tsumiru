@@ -21,6 +21,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/big_screen_manga_details.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/chapter_list_tile.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/small_screen_manga_details.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -253,6 +254,9 @@ Future<void> _pumpDesktop(
   await tester.pumpAndSettle();
 }
 
+bool _oneLineRows(WidgetTester tester) =>
+    tester.widget<ChapterListTile>(find.byType(ChapterListTile).first).desktop;
+
 Future<void> _selectRange(WidgetTester tester, String from, String to) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
   await tester.tap(find.text(from));
@@ -262,7 +266,7 @@ Future<void> _selectRange(WidgetTester tester, String from, String to) async {
 }
 
 void main() {
-  testWidgets('Series page switches to two columns at 840', (tester) async {
+  testWidgets('Series page follows the window size classes', (tester) async {
     await _pumpDesktop(tester, size: const Size(839, 900));
     expect(find.byType(SmallScreenMangaDetails), findsOneWidget);
     expect(find.byType(BigScreenMangaDetails), findsNothing);
@@ -273,6 +277,14 @@ void main() {
     expect(find.byType(BigScreenMangaDetails), findsOneWidget);
     expect(find.byType(SmallScreenMangaDetails), findsNothing);
     expect(find.byType(BrandFab), findsNothing);
+
+    tester.view.physicalSize = const Size(1199, 900);
+    await tester.pumpAndSettle();
+    expect(_oneLineRows(tester), isFalse);
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pumpAndSettle();
+    expect(_oneLineRows(tester), isTrue);
   });
 
   testWidgets('Undo after bulk mark read restores once the bar is gone', (
