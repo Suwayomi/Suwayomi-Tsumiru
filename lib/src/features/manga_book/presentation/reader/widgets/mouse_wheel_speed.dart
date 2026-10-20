@@ -4,9 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:flutter/scheduler.dart';
 
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../utils/wheel_scroll.dart';
@@ -22,6 +25,10 @@ import '../utils/wheel_scroll.dart';
 /// pointer signal resolver from a sibling painted on top means ours is the
 /// first registration of the hit test and the Scrollable's own jump is dropped
 /// (`pointer_signal_resolver.dart`: the first registered callback wins).
+///
+/// Wheel events only move a target. A ticker follows it with exponential
+/// smoothing, so a hi-res wheel sending an event every 15ms extends one motion
+/// instead of restarting it.
 class MouseWheelSpeed extends StatefulWidget {
   const MouseWheelSpeed({
     super.key,
@@ -45,32 +52,72 @@ class MouseWheelSpeed extends StatefulWidget {
   State<MouseWheelSpeed> createState() => _MouseWheelSpeedState();
 }
 
-class _MouseWheelSpeedState extends State<MouseWheelSpeed> {
-  static const _glideDuration = Duration(milliseconds: 150);
+class _MouseWheelSpeedState extends State<MouseWheelSpeed>
+    with TickerProviderStateMixin {
+  /// Time constant of the follow: each frame closes this much of the remaining
+  /// distance, so a single notch settles in roughly 150 to 200ms.
+  static const _tau = 0.06;
+  static const _settleDistance = 0.5;
 
-  /// Where the running glide is headed. A notch arriving before it lands
-  /// extends this instead of closing the gap the animation still has to cover.
+  /// Where the running follow is headed. A notch arriving before it lands
+  /// extends this instead of closing the gap that is still left.
   double? _pendingTarget;
   ScrollPosition? _pendingOn;
-  int _glide = 0;
+  Ticker? _ticker;
+  Duration _lastTick = Duration.zero;
+
+  /// Ticker's first frame reports zero elapsed; count it as one frame so the
+  /// first wheel event is not held back.
+  bool _primed = false;
+
+  /// True while our own `jumpTo` is dispatching notifications, so the
+  /// external-scroll listener doesn't mistake the follow for a takeover.
+  bool _applying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_tick);
+  }
+
+  @override
+  void dispose() {
+    _ticker?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // The listener must be the first hit in the tree for the resolver to give
-    // it the event: a Stack tests its last child first, so it sits above the
-    // strip without taking any pointer events from it.
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        widget.child,
-        Positioned.fill(
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerSignal: _onPointerSignal,
+    // Anything that scrolls the strip without going through the follower (drag,
+    // fling, auto scroll, keyboard) stops it, so the two never fight.
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScrollNotification,
+      // The listener must be the first hit in the tree for the resolver to give
+      // it the event: a Stack tests its last child first, so it sits above the
+      // strip without taking any pointer events from it.
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          widget.child,
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerSignal: _onPointerSignal,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (_applying || _pendingTarget == null || _pendingOn == null) return false;
+    final owned = _pendingOn!.context.notificationContext;
+    if (notification is ScrollStartNotification &&
+        notification.context == owned) {
+      _stopFollower();
+    }
+    return false;
   }
 
   void _onPointerSignal(PointerSignalEvent event) {
@@ -88,6 +135,7 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed> {
     event.respond(allowPlatformDefault: false);
 
     if (_pendingOn != position) {
+      _ticker?.stop();
       _pendingTarget = null;
       _pendingOn = position;
     }
@@ -103,19 +151,15 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed> {
       maxExtent: position.maxScrollExtent,
     );
     if (target == null) {
-      // A notch can cancel an in-flight glide exactly; stop where it is now.
-      if (_pendingTarget != null) {
-        _pendingTarget = null;
-        _glide++;
-        position.jumpTo(position.pixels);
-      }
+      // A notch can cancel the follow exactly, or push against an end.
+      _stopFollower();
       return;
     }
     _pendingTarget = target;
 
     if (!mounted) return;
     if (context.reduceMotion) {
-      _pendingTarget = null;
+      _stopFollower();
       position.jumpTo(target);
       return;
     }
@@ -133,15 +177,63 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed> {
       ).dispatch(notificationContext);
     }
 
-    final glide = ++_glide;
-    position
-        .animateTo(
-          target,
-          duration: _glideDuration,
-          curve: Curves.decelerate,
-        )
-        .whenComplete(() {
-          if (glide == _glide) _pendingTarget = null;
-        });
+    if (_ticker!.isTicking) return;
+    _lastTick = Duration.zero;
+    _primed = false;
+    _ticker!.start();
+  }
+
+  void _tick(Duration elapsed) {
+    final position = _pendingOn;
+    if (position == null ||
+        _pendingTarget == null ||
+        !position.hasPixels ||
+        !identical(widget.positionOf(), position)) {
+      _stopFollower();
+      return;
+    }
+
+    final dt = _primed
+        ? math.min(
+            (elapsed - _lastTick).inMicroseconds /
+                Duration.microsecondsPerSecond,
+            0.1,
+          )
+        : 1 / 60;
+    _primed = true;
+    _lastTick = elapsed;
+
+    // Chapter loads can grow the extents while the follow is running.
+    final target = _pendingTarget!
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    _pendingTarget = target;
+
+    final pixels = position.pixels;
+    if ((target - pixels).abs() <= _settleDistance) {
+      _apply(position, target);
+      _stopFollower();
+      return;
+    }
+    _apply(position, pixels + (target - pixels) * (1 - math.exp(-dt / _tau)));
+  }
+
+  /// Moves in whole jumps. Each jump reports start, update and end for that
+  /// frame, which keeps progress and boundary listeners seeing ordinary
+  /// scrolling; the flag keeps those same reports from stopping the follow.
+  void _apply(ScrollPosition position, double pixels) {
+    if (position.pixels == pixels) return;
+    _applying = true;
+    try {
+      position.jumpTo(pixels);
+    } finally {
+      _applying = false;
+    }
+  }
+
+  void _stopFollower() {
+    _ticker?.stop();
+    _pendingTarget = null;
+    _pendingOn = null;
   }
 }
