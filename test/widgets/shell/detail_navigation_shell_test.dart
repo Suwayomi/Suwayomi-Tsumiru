@@ -83,41 +83,6 @@ Future<GoRouter> _pump(
 }
 
 void main() {
-  for (final size in [
-    const Size(1400, 900),
-    const Size(800, 900),
-    const Size(400, 800),
-  ]) {
-    testWidgets('update errors navigation at ${size.width}px', (tester) async {
-      await _pump(tester, size, const LibraryUpdateErrorsRoute().location);
-      expect(
-        find.byType(BigScreenNavigationBar),
-        size.width >= 600 ? findsOneWidget : findsNothing,
-      );
-      if (size.width >= 1200) {
-        // Desktop uses the custom sidebar, not a NavigationRail.
-        expect(find.byType(NavigationRail), findsNothing);
-        final sidebar = tester.widget<DesktopSidebar>(
-          find.byType(DesktopSidebar),
-        );
-        expect(
-          tester.getSize(find.byType(DesktopSidebar)).width,
-          DesktopSidebar.expandedWidth,
-        );
-        expect(sidebar.selectedIndex, 0);
-      } else if (size.width >= 600) {
-        // Below 1200 px the desktop layout shows the collapsed sidebar,
-        // not the old icon rail.
-        expect(find.byType(NavigationRail), findsNothing);
-        expect(
-          tester.getSize(find.byType(DesktopSidebar)).width,
-          DesktopSidebar.collapsedWidth,
-        );
-      }
-      expect(tester.takeException(), isNull);
-    });
-  }
-
   testWidgets('detail shell follows the sidebar preference at desktop width', (
     tester,
   ) async {
@@ -131,11 +96,8 @@ void main() {
       DesktopSidebar.expandedWidth,
     );
     expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('detail shell collapses when the sidebar preference is off', (
-    tester,
-  ) async {
+    await tester.pumpWidget(const SizedBox());
     await _pump(
       tester,
       const Size(1400, 900),

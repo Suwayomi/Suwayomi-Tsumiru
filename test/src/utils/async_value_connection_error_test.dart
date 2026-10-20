@@ -111,15 +111,36 @@ void main() {
   });
 
   testWidgets(
-    'an ordinary error still shows the generic error, not that view',
+    'an ordinary error keeps the generic error and its escape hatches',
     (tester) async {
       await tester.pumpWidget(
         _host(AsyncError<int>('boom', StackTrace.current)),
       );
       await tester.pumpAndSettle();
-
       expect(find.byType(ServerUnreachableView), findsNothing);
       expect(find.text('boom'), findsOneWidget);
+      expect(find.text('View offline'), findsNothing);
+
+      // The pin is a bypass, never a mask: the error stays on screen.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        _host(
+          AsyncError<int>('boom', StackTrace.current),
+          escapeHatch: true,
+          catalogAvailable: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('boom'), findsOneWidget);
+      expect(find.text('View offline'), findsOneWidget);
+
+      // Without a catalog there is nothing to view offline.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        _host(AsyncError<int>('boom', StackTrace.current), escapeHatch: true),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('View offline'), findsNothing);
     },
   );
 
@@ -152,79 +173,30 @@ void main() {
     expect(find.text('View offline'), findsOneWidget);
   });
 
-  // The error must stay on screen; the pin is a bypass, never a mask.
-  testWidgets(
-    'a generic error offers View offline when the screen honors the pin '
-    'and a catalog exists',
-    (tester) async {
-      await tester.pumpWidget(
-        _host(
-          AsyncError<int>('boom', StackTrace.current),
-          escapeHatch: true,
-          catalogAvailable: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('boom'), findsOneWidget);
-      expect(find.text('View offline'), findsOneWidget);
-    },
-  );
-
-  testWidgets('no View offline on a generic error without a catalog', (
+  testWidgets('a web 404 "Not Found" shows auth guidance, other 404s do not', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _host(AsyncError<int>('boom', StackTrace.current), escapeHatch: true),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('View offline'), findsNothing);
-  });
-
-  testWidgets(
-    'a web 404 "Not Found" with a saved basic login shows the unconfirmed guidance',
-    (tester) async {
+    // Basic and no-auth saved logins both get the unconfirmed guidance.
+    for (final auth in [AuthType.basic, AuthType.none]) {
+      await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(
         _host(
           AsyncError<int>(_notJsonError(404, 'Not Found'), StackTrace.current),
-          extraOverrides: await _webOverrides(
-            isWeb: true,
-            savedAuthType: AuthType.basic,
-          ),
+          extraOverrides: await _webOverrides(isWeb: true, savedAuthType: auth),
         ),
       );
       await tester.pumpAndSettle();
-
-      expect(find.byType(ServerUnreachableView), findsOneWidget);
-      expect(find.text(_unconfirmedMessage), findsOneWidget);
-      expect(find.text(_unsupportedMessage), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'a web 404 "Not Found" with a saved no-auth login shows the unconfirmed guidance',
-    (tester) async {
-      await tester.pumpWidget(
-        _host(
-          AsyncError<int>(_notJsonError(404, 'Not Found'), StackTrace.current),
-          extraOverrides: await _webOverrides(
-            isWeb: true,
-            savedAuthType: AuthType.none,
-          ),
-        ),
+      expect(
+        find.byType(ServerUnreachableView),
+        findsOneWidget,
+        reason: '$auth',
       );
-      await tester.pumpAndSettle();
+      expect(find.text(_unconfirmedMessage), findsOneWidget, reason: '$auth');
+      expect(find.text(_unsupportedMessage), findsNothing, reason: '$auth');
+    }
 
-      expect(find.byType(ServerUnreachableView), findsOneWidget);
-      expect(find.text(_unconfirmedMessage), findsOneWidget);
-      expect(find.text(_unsupportedMessage), findsNothing);
-    },
-  );
-
-  testWidgets('a web 404 with another body keeps the generic error', (
-    tester,
-  ) async {
+    // A different 404 body keeps the generic error.
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(
       _host(
         AsyncError<int>(
@@ -238,17 +210,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
     expect(find.byType(ServerUnreachableView), findsNothing);
     expect(
       find.text('Server returned a non-JSON response (HTTP 404)'),
       findsOneWidget,
     );
-  });
 
-  testWidgets('a native 404 "Not Found" keeps the generic error', (
-    tester,
-  ) async {
+    // Native is never given the web guidance.
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(
       _host(
         AsyncError<int>(_notJsonError(404, 'Not Found'), StackTrace.current),
@@ -259,7 +228,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
     expect(find.byType(ServerUnreachableView), findsNothing);
     expect(
       find.text('Server returned a non-JSON response (HTTP 404)'),

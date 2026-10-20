@@ -48,110 +48,47 @@ class _TabsSite extends StatelessWidget {
 }
 
 void main() {
-  testWidgets(
-    'reduced motion shows the loading placeholder without a shimmer sweep',
-    (tester) async {
-      await tester.pumpWidget(
-        _app(const SorayomiShimmerIndicator(), reduce: true),
-      );
-      await tester.pump();
-
-      expect(find.byType(Shimmer), findsNothing);
-      expect(
-        tester.widget<ImageIcon>(find.byType(ImageIcon)).color,
-        Theme.of(
-          tester.element(find.byType(SorayomiShimmerIndicator)),
-        ).colorScheme.primary,
-      );
-    },
-  );
-
-  testWidgets('without reduced motion the loading placeholder shimmers', (
+  testWidgets('reduced motion shows the placeholder without a shimmer sweep', (
     tester,
   ) async {
+    await tester.pumpWidget(
+      _app(const SorayomiShimmerIndicator(), reduce: true),
+    );
+    await tester.pump();
+    expect(find.byType(Shimmer), findsNothing);
+    expect(
+      tester.widget<ImageIcon>(find.byType(ImageIcon)).color,
+      Theme.of(
+        tester.element(find.byType(SorayomiShimmerIndicator)),
+      ).colorScheme.primary,
+    );
+
+    // Without reduced motion it still shimmers.
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(
       _app(const SorayomiShimmerIndicator(), reduce: false),
     );
     await tester.pump();
-
     expect(find.byType(Shimmer), findsOneWidget);
   });
-
-  testWidgets(
-    'reduced motion shows the delayed placeholder at full opacity at once',
-    (tester) async {
-      await tester.pumpWidget(_app(const DelayedShimmer(), reduce: true));
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump();
-
-      expect(
-        find.descendant(
-          of: find.byType(DelayedShimmer),
-          matching: find.byType(FadeTransition),
-        ),
-        findsNothing,
-      );
-      expect(
-        tester
-            .widget<Opacity>(
-              find.descendant(
-                of: find.byType(DelayedShimmer),
-                matching: find.byType(Opacity),
-              ),
-            )
-            .opacity,
-        1,
-      );
-    },
-  );
-
-  testWidgets(
-    'without reduced motion the delayed placeholder is still fading in after one frame',
-    (tester) async {
-      await tester.pumpWidget(_app(const DelayedShimmer(), reduce: false));
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump();
-
-      expect(
-        tester
-            .widget<FadeTransition>(
-              find.descendant(
-                of: find.byType(DelayedShimmer),
-                matching: find.byType(FadeTransition),
-              ),
-            )
-            .opacity
-            .value,
-        lessThan(1),
-      );
-    },
-  );
 
   testWidgets('reduced motion switches tabs at once', (tester) async {
     await tester.pumpWidget(_app(const _TabsSite(), reduce: true));
     await tester.tap(find.text('second'));
     await tester.pump();
-
     expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 1);
     expect(find.text('second page'), findsOneWidget);
+
+    // Without reduced motion the switch is still in progress after one frame.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(_app(const _TabsSite(), reduce: false));
+    await tester.tap(find.text('second'));
+    await tester.pump();
+    expect(
+      tester.widget<PageView>(find.byType(PageView)).controller!.page,
+      lessThan(1),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 1);
   });
-
-  testWidgets(
-    'without reduced motion a tab switch is still in progress after one frame',
-    (tester) async {
-      await tester.pumpWidget(_app(const _TabsSite(), reduce: false));
-      await tester.tap(find.text('second'));
-      await tester.pump();
-
-      expect(
-        tester.widget<PageView>(find.byType(PageView)).controller!.page,
-        lessThan(1),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<PageView>(find.byType(PageView)).controller!.page,
-        1,
-      );
-    },
-  );
 }

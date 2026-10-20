@@ -27,7 +27,9 @@ CategoryDto _cat(int id, String name, Enum$IncludeOrExclude includeInUpdate) =>
 /// Pumps a throwaway widget so we get a real BuildContext with the app's
 /// localizations, then evaluates [libraryUpdateCategoriesSummary] against it.
 Future<String> _summaryFor(
-    WidgetTester tester, List<CategoryDto> categories) async {
+  WidgetTester tester,
+  List<CategoryDto> categories,
+) async {
   late String result;
   await tester.pumpWidget(
     MaterialApp(
@@ -47,34 +49,33 @@ Future<String> _summaryFor(
 
 void main() {
   group('libraryUpdateCategoriesSummary', () {
-    testWidgets('reports "All categories" when nothing is set', (tester) async {
-      final summary = await _summaryFor(tester, [
-        _cat(1, 'Action', Enum$IncludeOrExclude.UNSET),
-        _cat(2, 'Comedy', Enum$IncludeOrExclude.UNSET),
-      ]);
-      expect(summary, 'All categories');
-    });
-
-    testWidgets('reports "All categories" for an empty list', (tester) async {
-      final summary = await _summaryFor(tester, const []);
-      expect(summary, 'All categories');
-    });
-
-    testWidgets('lists included and excluded categories', (tester) async {
-      final summary = await _summaryFor(tester, [
-        _cat(1, 'Action', Enum$IncludeOrExclude.INCLUDE),
-        _cat(2, 'Comedy', Enum$IncludeOrExclude.EXCLUDE),
-        _cat(3, 'Drama', Enum$IncludeOrExclude.UNSET),
-      ]);
-      expect(summary, 'Included: Action · Excluded: Comedy');
-    });
-
-    testWidgets('only included when nothing is excluded', (tester) async {
-      final summary = await _summaryFor(tester, [
-        _cat(1, 'Action', Enum$IncludeOrExclude.INCLUDE),
-        _cat(2, 'Comedy', Enum$IncludeOrExclude.INCLUDE),
-      ]);
-      expect(summary, 'Included: Action, Comedy');
+    testWidgets('summarises the update categories', (tester) async {
+      expect(
+        await _summaryFor(tester, [
+          _cat(1, 'Action', Enum$IncludeOrExclude.UNSET),
+          _cat(2, 'Comedy', Enum$IncludeOrExclude.UNSET),
+        ]),
+        'All categories',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(await _summaryFor(tester, const []), 'All categories');
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(
+        await _summaryFor(tester, [
+          _cat(1, 'Action', Enum$IncludeOrExclude.INCLUDE),
+          _cat(2, 'Comedy', Enum$IncludeOrExclude.EXCLUDE),
+          _cat(3, 'Drama', Enum$IncludeOrExclude.UNSET),
+        ]),
+        'Included: Action · Excluded: Comedy',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(
+        await _summaryFor(tester, [
+          _cat(1, 'Action', Enum$IncludeOrExclude.INCLUDE),
+          _cat(2, 'Comedy', Enum$IncludeOrExclude.INCLUDE),
+        ]),
+        'Included: Action, Comedy',
+      );
     });
   });
 }

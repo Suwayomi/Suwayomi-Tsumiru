@@ -13,34 +13,34 @@ HistoryItemDto _item({
   bool isRead = false,
   int unreadCount = 3,
   bool inLibrary = true,
-}) =>
-    Fragment$HistoryChapterDto(
-      id: 1,
-      chapterNumber: 1,
-      fetchedAt: '0',
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: isRead,
-      lastPageRead: isRead ? 10 : 4,
-      lastReadAt: '1700000000',
-      mangaId: 7,
-      name: 'Chapter 1',
-      pageCount: 10,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/c/1',
-      meta: const [],
-      manga: Fragment$HistoryChapterDto$manga(
-        id: 7,
-        inLibrary: inLibrary,
-        title: 'Series',
-        unreadCount: unreadCount,
-      ),
-    );
+}) => Fragment$HistoryChapterDto(
+  id: 1,
+  chapterNumber: 1,
+  fetchedAt: '0',
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: isRead,
+  lastPageRead: isRead ? 10 : 4,
+  lastReadAt: '1700000000',
+  mangaId: 7,
+  name: 'Chapter 1',
+  pageCount: 10,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/c/1',
+  meta: const [],
+  manga: Fragment$HistoryChapterDto$manga(
+    id: 7,
+    inLibrary: inLibrary,
+    title: 'Series',
+    unreadCount: unreadCount,
+  ),
+);
 
 void main() {
   group('historyItemMatchesFilter', () {
-    test('no filter keeps everything', () {
+    test('each filter and their both-way cases', () {
+      // No filter keeps everything.
       expect(historyItemMatchesFilter(_item(), kNoHistoryFilter), isTrue);
       expect(
         historyItemMatchesFilter(
@@ -49,42 +49,51 @@ void main() {
         ),
         isTrue,
       );
-    });
 
-    test('unfinished series keys off remaining unread chapters', () {
-      const unfinished =
-          (unfinishedSeries: true, unread: null, inLibrary: null);
-      expect(historyItemMatchesFilter(_item(unreadCount: 3), unfinished), isTrue);
+      // Unfinished series keys off remaining unread chapters.
+      const unfinished = (
+        unfinishedSeries: true,
+        unread: null,
+        inLibrary: null,
+      );
+      expect(
+        historyItemMatchesFilter(_item(unreadCount: 3), unfinished),
+        isTrue,
+      );
       expect(
         historyItemMatchesFilter(_item(unreadCount: 0), unfinished),
         isFalse,
       );
-
       const finished = (unfinishedSeries: false, unread: null, inLibrary: null);
       expect(historyItemMatchesFilter(_item(unreadCount: 0), finished), isTrue);
-      expect(historyItemMatchesFilter(_item(unreadCount: 3), finished), isFalse);
-    });
+      expect(
+        historyItemMatchesFilter(_item(unreadCount: 3), finished),
+        isFalse,
+      );
 
-    test('unread keys off the chapter itself, not the series', () {
+      // Unread keys off the chapter itself, not the series.
       const unread = (unfinishedSeries: null, unread: true, inLibrary: null);
       expect(historyItemMatchesFilter(_item(isRead: false), unread), isTrue);
       expect(historyItemMatchesFilter(_item(isRead: true), unread), isFalse);
-
       const read = (unfinishedSeries: null, unread: false, inLibrary: null);
       expect(historyItemMatchesFilter(_item(isRead: true), read), isTrue);
       expect(historyItemMatchesFilter(_item(isRead: false), read), isFalse);
-    });
 
-    test('library membership filters both ways', () {
+      // Library membership filters both ways.
       const inLibrary = (unfinishedSeries: null, unread: null, inLibrary: true);
-      expect(historyItemMatchesFilter(_item(inLibrary: true), inLibrary), isTrue);
+      expect(
+        historyItemMatchesFilter(_item(inLibrary: true), inLibrary),
+        isTrue,
+      );
       expect(
         historyItemMatchesFilter(_item(inLibrary: false), inLibrary),
         isFalse,
       );
-
-      const notInLibrary =
-          (unfinishedSeries: null, unread: null, inLibrary: false);
+      const notInLibrary = (
+        unfinishedSeries: null,
+        unread: null,
+        inLibrary: false,
+      );
       expect(
         historyItemMatchesFilter(_item(inLibrary: false), notInLibrary),
         isTrue,

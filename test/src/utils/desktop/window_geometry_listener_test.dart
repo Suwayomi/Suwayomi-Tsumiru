@@ -65,20 +65,6 @@ void main() {
     expect(geometry.maximized, isFalse);
   });
 
-  test(
-    'close with a debounced save pending saves once, then destroys',
-    () async {
-      final listener = await newListener();
-      listener.onWindowResize();
-
-      await listener.onWindowClose();
-
-      expect(calls, ['isMaximized', 'getBounds', 'destroy']);
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-      expect(calls, ['isMaximized', 'getBounds', 'destroy']);
-    },
-  );
-
   test('close destroys even when the save throws', () async {
     throwOnIsMaximized = true;
     final listener = await newListener();

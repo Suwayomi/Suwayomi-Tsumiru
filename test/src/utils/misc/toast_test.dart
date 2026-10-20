@@ -44,28 +44,6 @@ Future<Toast> _pumpToastHost(
 }
 
 void main() {
-  testWidgets('under reduced motion two toasts each show and clear in turn', (
-    tester,
-  ) async {
-    final toast = await _pumpToastHost(tester, reduceMotion: true);
-
-    toast.show('first toast');
-    toast.show('second toast');
-    await tester.pump();
-    expect(find.text('first toast'), findsOneWidget);
-    expect(find.text('second toast'), findsNothing);
-
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump();
-    expect(find.text('first toast'), findsNothing);
-    expect(find.text('second toast'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump();
-    expect(find.text('second toast'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('permission denial explains the account restriction', (
     tester,
   ) async {

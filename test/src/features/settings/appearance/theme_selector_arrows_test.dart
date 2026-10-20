@@ -56,26 +56,20 @@ Future<void> _pumpSelector(
 }
 
 void main() {
-  testWidgets('a 412px row starts on the left arrow disabled', (tester) async {
+  testWidgets('arrows enable and scroll the row', (tester) async {
+    // A narrow row starts with the left arrow disabled.
     await _pumpSelector(tester, size: const Size(412, 800));
-
     final previous = _arrow(Icons.chevron_left_rounded);
     final next = _arrow(Icons.chevron_right_rounded);
     expect(previous, findsOneWidget);
     expect(next, findsOneWidget);
     expect(tester.widget<IconButton>(previous).onPressed, isNull);
     expect(tester.widget<IconButton>(next).onPressed, isNotNull);
-  });
 
-  testWidgets('the right arrow scrolls the row and re-enables the left one', (
-    tester,
-  ) async {
-    await _pumpSelector(tester, size: const Size(412, 800));
-
-    await tester.tap(_arrow(Icons.chevron_right_rounded));
+    // The right arrow scrolls and re-enables the left one.
+    await tester.tap(next);
     await tester.pumpAndSettle();
-
-    final position = tester
+    var position = tester
         .state<ScrollableState>(find.byType(Scrollable))
         .position;
     expect(position.pixels, greaterThan(0));
@@ -83,23 +77,18 @@ void main() {
       tester.widget<IconButton>(_arrow(Icons.chevron_left_rounded)).onPressed,
       isNotNull,
     );
-  });
 
-  testWidgets('reduced motion scrolls the row at once', (tester) async {
+    // Reduced motion scrolls at once.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pumpSelector(tester, size: const Size(412, 800), reduceMotion: true);
-
     await tester.tap(_arrow(Icons.chevron_right_rounded));
     await tester.pump();
-
-    final position = tester
-        .state<ScrollableState>(find.byType(Scrollable))
-        .position;
+    position = tester.state<ScrollableState>(find.byType(Scrollable)).position;
     expect(position.pixels, greaterThan(0));
-  });
 
-  testWidgets('a row with nothing to scroll shows no arrows', (tester) async {
+    // A row with nothing to scroll shows no arrows.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pumpSelector(tester, size: const Size(3000, 800));
-
     expect(_arrow(Icons.chevron_left_rounded), findsNothing);
     expect(_arrow(Icons.chevron_right_rounded), findsNothing);
   });

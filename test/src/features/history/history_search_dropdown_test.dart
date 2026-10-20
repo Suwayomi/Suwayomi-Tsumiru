@@ -85,9 +85,7 @@ Future<ProviderContainer> _container(List<HistoryItemDto> items) async {
       sharedPreferencesProvider.overrideWithValue(sp),
       readingHistoryProvider.overrideWith(() => _StubReadingHistory(items)),
       libraryMangaListProvider.overrideWith((ref) async => []),
-      visibleCategoryListProvider.overrideWithValue(
-        const AsyncData([]),
-      ),
+      visibleCategoryListProvider.overrideWithValue(const AsyncData([])),
       ...unreachableServerStubs,
     ],
   );
@@ -120,9 +118,7 @@ GoRouter _router() => GoRouter(
     GoRoute(
       path: '/manga/:mangaId',
       builder: (_, state) => Scaffold(
-        body: Center(
-          child: Text('MANGA ${state.pathParameters['mangaId']}'),
-        ),
+        body: Center(child: Text('MANGA ${state.pathParameters['mangaId']}')),
       ),
     ),
   ],
@@ -206,8 +202,7 @@ bool _treeHasSelected(WidgetTester tester) {
   var found = false;
   void visit(SemanticsNode node) {
     if (found) return;
-    if (node.getSemanticsData().flagsCollection.isSelected ==
-        Tristate.isTrue) {
+    if (node.getSemanticsData().flagsCollection.isSelected == Tristate.isTrue) {
       found = true;
       return;
     }
@@ -226,7 +221,7 @@ bool _treeHasSelected(WidgetTester tester) {
 
 void main() {
   group('history dropdown arrow-key navigation', () {
-    testWidgets('Down highlights the first History row, Enter opens it', (
+    testWidgets('Down walks History rows then unified rows, Enter opens', (
       tester,
     ) async {
       final sem = tester.ensureSemantics();
@@ -251,48 +246,20 @@ void main() {
       expect(_dropRow('Upd Two'), findsOneWidget);
       expect(_treeHasSelected(tester), isFalse);
 
+      // The first Down lands on the first History row.
       await _down(tester);
       expect(_isHighlighted(tester, _dropRow('Upd One')), isTrue);
       expect(_treeHasSelected(tester), isTrue);
-      // The handle must go before the end of the test, not in a tearDown.
-      sem.dispose();
-      await _submit(tester);
 
-      expect(find.text('MANGA 7'), findsOneWidget);
-      expect(
-        container.read(historySearchQueryProvider),
-        isEmpty,
-        reason: 'leaving through a result clears the query',
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Down past the History rows reaches the unified rows', (
-      tester,
-    ) async {
-      final container = await _container([
-        _historyItem(
-          id: 1,
-          mangaId: 7,
-          seriesTitle: 'Upd One',
-          chapter: 'Chapter 1',
-        ),
-        _historyItem(
-          id: 2,
-          mangaId: 8,
-          seriesTitle: 'Upd Two',
-          chapter: 'Chapter 2',
-        ),
-      ]);
-      await _pumpHistory(tester, container);
-
-      // Two History rows sit before the unified rows: the third Down lands
-      // on the Go to row, so the History header is not a stop.
-      await _typeUpd(tester);
-      await _down(tester, 2);
+      // The second lands on the second History row.
+      await _down(tester);
       expect(_isHighlighted(tester, _dropRow('Upd Two')), isTrue);
+
+      // The third reaches the unified rows; the History header is not a stop.
       await _down(tester);
       expect(_isHighlighted(tester, find.text('Updates')), isTrue);
+      // The handle must go before the end of the test, not in a tearDown.
+      sem.dispose();
       await _submit(tester);
 
       expect(find.text('UPDATES PAGE'), findsOneWidget);

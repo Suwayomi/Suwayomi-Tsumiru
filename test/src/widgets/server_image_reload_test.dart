@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/widgets/server_image.dart';
 
 void main() {
-  test('account switch during eviction cannot refresh or remount', () async {
+  test('an account switch aborts a reload, and a same-session reload tolerates '
+      'missing entries', () async {
+    // A switch during eviction cannot refresh or remount.
     var current = true;
     var refreshes = 0;
     final evicted = <String>[];
     final released = Completer<void>();
-    final pending = reloadServerImage(
+    var pending = reloadServerImage(
       cacheKeys: ['base', 'fetch'],
       isCurrentSession: () => current,
       evict: (key) async {
@@ -26,29 +28,26 @@ void main() {
     expect(await pending, isFalse);
     expect(evicted, ['base']);
     expect(refreshes, 0);
-  });
 
-  test('account switch during refresh cannot remount', () async {
-    var current = true;
+    // A switch during refresh cannot remount.
+    current = true;
     final started = Completer<void>();
-    final released = Completer<void>();
-    final pending = reloadServerImage(
+    final releasedAgain = Completer<void>();
+    pending = reloadServerImage(
       cacheKeys: ['base'],
       isCurrentSession: () => current,
       evict: (_) async {},
       refresh: () async {
         started.complete();
-        await released.future;
+        await releasedAgain.future;
       },
     );
     await started.future;
     current = false;
-    released.complete();
+    releasedAgain.complete();
     expect(await pending, isFalse);
-  });
 
-  test('same-session reload tolerates missing cache entries', () async {
-    var refreshes = 0;
+    // A same-session reload survives missing cache entries.
     expect(
       await reloadServerImage(
         cacheKeys: ['base'],

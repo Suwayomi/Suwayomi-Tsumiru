@@ -37,54 +37,50 @@ Widget captureLabel(String text, void Function(Color?) onColor) {
 }
 
 void main() {
-  testWidgets('BrandButton enabled has gradient and glow', (tester) async {
-    Color? labelColor;
+  testWidgets('BrandButton states: enabled, disabled and loading', (
+    tester,
+  ) async {
+    Color? enabledLabel;
     await pumpButton(
       tester,
       BrandButton(
         onPressed: () {},
-        label: captureLabel('Enabled', (c) => labelColor = c),
+        label: captureLabel('Enabled', (c) => enabledLabel = c),
       ),
     );
-    final decoration = decorationOf<BrandButton>(tester);
-    expect(decoration.gradient, isNotNull);
-    expect(decoration.boxShadow, isNotNull);
-    expect(decoration.boxShadow, isNotEmpty);
-    expect(labelColor, isNotNull);
-  });
+    final enabled = decorationOf<BrandButton>(tester);
+    expect(enabled.gradient, isNotNull);
+    expect(enabled.boxShadow, isNotNull);
+    expect(enabled.boxShadow, isNotEmpty);
+    expect(enabledLabel, isNotNull);
 
-  testWidgets('BrandButton disabled drops gradient and glow', (tester) async {
-    Color? labelColor;
+    Color? disabledLabel;
     await pumpButton(
       tester,
       BrandButton(
         onPressed: null,
-        label: captureLabel('Disabled', (c) => labelColor = c),
+        label: captureLabel('Disabled', (c) => disabledLabel = c),
       ),
     );
-    final theme = testTheme();
-    final cs = theme.colorScheme;
-    final decoration = decorationOf<BrandButton>(tester);
-    expect(decoration.gradient, isNull);
-    expect(decoration.color, cs.onSurface.withValues(alpha: 0.12));
-    expect(decoration.boxShadow == null || decoration.boxShadow!.isEmpty, true);
-    expect(labelColor, cs.onSurface.withValues(alpha: 0.38));
-  });
+    final cs = testTheme().colorScheme;
+    final disabled = decorationOf<BrandButton>(tester);
+    expect(disabled.gradient, isNull);
+    expect(disabled.color, cs.onSurface.withValues(alpha: 0.12));
+    expect(disabled.boxShadow == null || disabled.boxShadow!.isEmpty, true);
+    expect(disabledLabel, cs.onSurface.withValues(alpha: 0.38));
 
-  testWidgets('BrandButton loading keeps gradient and glow', (tester) async {
     await pumpButton(
       tester,
       const BrandButton(onPressed: null, loading: true, label: Text('Busy')),
     );
-    final decoration = decorationOf<BrandButton>(tester);
-    expect(decoration.gradient, isNotNull);
-    expect(decoration.boxShadow, isNotNull);
-    expect(decoration.boxShadow, isNotEmpty);
+    final loading = decorationOf<BrandButton>(tester);
+    expect(loading.gradient, isNotNull);
+    expect(loading.boxShadow, isNotNull);
+    expect(loading.boxShadow, isNotEmpty);
   });
 
-  testWidgets('BrandGlassButton disabled dims label only', (tester) async {
-    final theme = testTheme();
-    final cs = theme.colorScheme;
+  testWidgets('BrandGlassButton disabled dims the label only', (tester) async {
+    final cs = testTheme().colorScheme;
 
     Color? disabledLabel;
     await pumpButton(

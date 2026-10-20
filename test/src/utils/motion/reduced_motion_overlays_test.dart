@@ -22,9 +22,8 @@ Widget _app(Widget Function(BuildContext context) body) => ProviderScope(
 );
 
 void main() {
-  testWidgets('back-to-back snackbars under reduced motion show in turn', (
-    tester,
-  ) async {
+  testWidgets('overlay routes complete under reduced motion', (tester) async {
+    // Back-to-back snackbars show in turn.
     await tester.pumpWidget(
       _app(
         (context) => TextButton(
@@ -49,89 +48,76 @@ void main() {
         ),
       ),
     );
-
     await tester.tap(find.text('show'));
     await tester.pump();
     expect(find.text('first'), findsOneWidget);
-
     for (var step = 0; step < 12; step++) {
       await tester.pump(const Duration(milliseconds: 50));
       expect(tester.takeException(), isNull);
     }
     expect(find.text('second'), findsOneWidget);
-
     for (var step = 0; step < 30; step++) {
       await tester.pump(const Duration(milliseconds: 50));
       expect(tester.takeException(), isNull);
     }
     expect(find.text('first'), findsNothing);
     expect(find.text('second'), findsNothing);
+
+    // A dialog opens and closes with no leftover route.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      _app(
+        (context) => TextButton(
+          onPressed: () => showDialog<void>(
+            context: context,
+            animationStyle: context.motionStyle,
+            builder: (dialogContext) => AlertDialog(
+              content: const Text('dialog body'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('close dialog'),
+                ),
+              ],
+            ),
+          ),
+          child: const Text('dialog'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('dialog'));
+    await tester.pump();
+    expect(find.text('dialog body'), findsOneWidget);
+    await tester.tap(find.text('close dialog'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('dialog body'), findsNothing);
+    expect(_navigatorKey.currentState!.canPop(), isFalse);
+
+    // A bottom sheet opens and closes with no leftover route.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      _app(
+        (context) => TextButton(
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            sheetAnimationStyle: context.motionStyle,
+            builder: (sheetContext) => TextButton(
+              onPressed: () => Navigator.of(sheetContext).pop(),
+              child: const Text('close sheet'),
+            ),
+          ),
+          child: const Text('sheet'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('sheet'));
+    await tester.pump();
+    expect(find.text('close sheet'), findsOneWidget);
+    await tester.tap(find.text('close sheet'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('close sheet'), findsNothing);
+    expect(_navigatorKey.currentState!.canPop(), isFalse);
   });
-
-  testWidgets(
-    'a reduced-motion dialog opens and closes with no leftover route',
-    (tester) async {
-      await tester.pumpWidget(
-        _app(
-          (context) => TextButton(
-            onPressed: () => showDialog<void>(
-              context: context,
-              animationStyle: context.motionStyle,
-              builder: (dialogContext) => AlertDialog(
-                content: const Text('dialog body'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                    child: const Text('close dialog'),
-                  ),
-                ],
-              ),
-            ),
-            child: const Text('dialog'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('dialog'));
-      await tester.pump();
-      expect(find.text('dialog body'), findsOneWidget);
-
-      await tester.tap(find.text('close dialog'));
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-      expect(find.text('dialog body'), findsNothing);
-      expect(_navigatorKey.currentState!.canPop(), isFalse);
-    },
-  );
-
-  testWidgets(
-    'a reduced-motion bottom sheet opens and closes with no leftover route',
-    (tester) async {
-      await tester.pumpWidget(
-        _app(
-          (context) => TextButton(
-            onPressed: () => showModalBottomSheet<void>(
-              context: context,
-              sheetAnimationStyle: context.motionStyle,
-              builder: (sheetContext) => TextButton(
-                onPressed: () => Navigator.of(sheetContext).pop(),
-                child: const Text('close sheet'),
-              ),
-            ),
-            child: const Text('sheet'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('sheet'));
-      await tester.pump();
-      expect(find.text('close sheet'), findsOneWidget);
-
-      await tester.tap(find.text('close sheet'));
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-      expect(find.text('close sheet'), findsNothing);
-      expect(_navigatorKey.currentState!.canPop(), isFalse);
-    },
-  );
 }

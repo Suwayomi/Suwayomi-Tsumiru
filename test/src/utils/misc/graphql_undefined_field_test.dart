@@ -19,8 +19,8 @@ void main() {
         reason: message,
       );
     }
-  });
-  test('a nested validation path still names its field and type', () {
+
+    // A nested validation path still names its field and type.
     expect(
       isUndefinedFieldError(
         _error(
@@ -31,28 +31,8 @@ void main() {
       ),
       isTrue,
     );
-  });
-  test('a different type does not match', () {
-    expect(
-      isUndefinedFieldError(
-        _error('Cannot query field "user" on type "UserType".'),
-        type: 'Query',
-        field: 'user',
-      ),
-      isFalse,
-    );
-  });
-  test('a different field does not match when a field is given', () {
-    expect(
-      isUndefinedFieldError(
-        _error('Cannot query field "username" on type "Query".'),
-        type: 'Query',
-        field: 'user',
-      ),
-      isFalse,
-    );
-  });
-  test('any field matches when no field is given', () {
+
+    // Any field matches when no field is given.
     expect(
       isUndefinedFieldError(
         _error("Cannot query field 'syncYomiEnabled' on type 'SettingsType'."),
@@ -60,21 +40,8 @@ void main() {
       ),
       isTrue,
     );
-  });
-  test('a contradicting classification does not match', () {
-    expect(
-      isUndefinedFieldError(
-        _error(
-          "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined",
-          extensions: {'classification': 'DataFetchingException'},
-        ),
-        type: 'Query',
-        field: 'user',
-      ),
-      isFalse,
-    );
-  });
-  test('empty extensions match', () {
+
+    // Empty extensions match.
     expect(
       isUndefinedFieldError(
         _error(
@@ -86,8 +53,27 @@ void main() {
       ),
       isTrue,
     );
-  });
-  test('onlyUndefinedFieldErrors is false for an empty error list', () {
+
+    // A different type or field does not match.
+    expect(
+      isUndefinedFieldError(
+        _error('Cannot query field "user" on type "UserType".'),
+        type: 'Query',
+        field: 'user',
+      ),
+      isFalse,
+    );
+    expect(
+      isUndefinedFieldError(
+        _error('Cannot query field "username" on type "Query".'),
+        type: 'Query',
+        field: 'user',
+      ),
+      isFalse,
+    );
+
+    // onlyUndefinedFieldErrors requires at least one error, and all of them
+    // undefined-field errors.
     expect(
       onlyUndefinedFieldErrors(
         OperationException(graphqlErrors: const []),
@@ -96,8 +82,6 @@ void main() {
       ),
       isFalse,
     );
-  });
-  test('onlyUndefinedFieldErrors is false for a mix of errors', () {
     expect(
       onlyUndefinedFieldErrors(
         OperationException(
@@ -112,6 +96,21 @@ void main() {
       isFalse,
     );
   });
+
+  test('a contradicting classification does not match', () {
+    expect(
+      isUndefinedFieldError(
+        _error(
+          "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined",
+          extensions: {'classification': 'DataFetchingException'},
+        ),
+        type: 'Query',
+        field: 'user',
+      ),
+      isFalse,
+    );
+  });
+
   test('onlyUndefinedFieldErrors unwraps OperationMessageException', () {
     expect(
       onlyUndefinedFieldErrors(

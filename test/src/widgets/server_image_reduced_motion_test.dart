@@ -115,8 +115,7 @@ void main() {
     tester,
   ) async {
     await _pumpImage(tester, await _loadedPage(tester), reduce: true);
-
-    final fade = tester.widget<FadeTransition>(
+    var fade = tester.widget<FadeTransition>(
       find
           .descendant(
             of: find.byType(ServerImage),
@@ -125,22 +124,19 @@ void main() {
           .first,
     );
     expect(fade.opacity.value, 1);
+
+    // Without reduced motion the page is still fading in after one frame.
+    await tester.pumpWidget(const SizedBox.shrink());
+    PaintingBinding.instance.imageCache.clear();
+    await _pumpImage(tester, await _loadedPage(tester), reduce: false);
+    fade = tester.widget<FadeTransition>(
+      find
+          .descendant(
+            of: find.byType(ServerImage),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    );
+    expect(fade.opacity.value, lessThan(1));
   });
-
-  testWidgets(
-    'without reduced motion a loaded page is still fading in after one frame',
-    (tester) async {
-      await _pumpImage(tester, await _loadedPage(tester), reduce: false);
-
-      final fade = tester.widget<FadeTransition>(
-        find
-            .descendant(
-              of: find.byType(ServerImage),
-              matching: find.byType(FadeTransition),
-            )
-            .first,
-      );
-      expect(fade.opacity.value, lessThan(1));
-    },
-  );
 }

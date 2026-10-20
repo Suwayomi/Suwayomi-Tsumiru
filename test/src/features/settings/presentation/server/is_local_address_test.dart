@@ -3,49 +3,42 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/credent
 
 void main() {
   group('isLocalAddress', () {
-    test('localhost', () {
-      expect(isLocalAddress('http://localhost'), isTrue);
-      expect(isLocalAddress('http://localhost:4567'), isTrue);
-      expect(isLocalAddress('http://LOCALHOST:4567/api'), isTrue);
+    test('private and loopback ranges are local', () {
+      for (final url in [
+        'http://localhost',
+        'http://localhost:4567',
+        'http://LOCALHOST:4567/api',
+        'http://127.0.0.1',
+        'http://127.0.0.1:8080/api/graphql',
+        'http://127.255.255.255',
+        'http://192.168.0.10:4568',
+        'http://192.168.0.1',
+        'http://10.0.0.1',
+        'http://10.255.255.255',
+        'http://172.16.0.1',
+        'http://172.20.50.50',
+        'http://172.31.255.255',
+      ]) {
+        expect(isLocalAddress(url), isTrue, reason: url);
+      }
     });
 
-    test('127.x.x.x loopback', () {
-      expect(isLocalAddress('http://127.0.0.1'), isTrue);
-      expect(isLocalAddress('http://127.0.0.1:8080/api/graphql'), isTrue);
-      expect(isLocalAddress('http://127.255.255.255'), isTrue);
-    });
-
-    test('192.168.x.x', () {
-      expect(isLocalAddress('http://192.168.0.10:4568'), isTrue);
-      expect(isLocalAddress('http://192.168.0.1'), isTrue);
-    });
-
-    test('10.x.x.x', () {
-      expect(isLocalAddress('http://10.0.0.1'), isTrue);
-      expect(isLocalAddress('http://10.255.255.255'), isTrue);
-    });
-
-    test('172.16-31.x.x', () {
-      expect(isLocalAddress('http://172.16.0.1'), isTrue);
-      expect(isLocalAddress('http://172.20.50.50'), isTrue);
-      expect(isLocalAddress('http://172.31.255.255'), isTrue);
-      // 172.15 and 172.32 are NOT in the private range
-      expect(isLocalAddress('http://172.15.0.1'), isFalse);
-      expect(isLocalAddress('http://172.32.0.1'), isFalse);
-    });
-
-    test('public addresses are not local', () {
-      expect(isLocalAddress('http://manga.example.com'), isFalse);
-      expect(isLocalAddress('https://example.com'), isFalse);
-      expect(isLocalAddress('http://8.8.8.8'), isFalse);
-      expect(isLocalAddress('http://1.1.1.1'), isFalse);
-    });
-
-    test('malformed inputs', () {
-      expect(isLocalAddress(''), isFalse);
-      expect(isLocalAddress('not a url'), isFalse);
-      expect(isLocalAddress('http://'), isFalse);
-      expect(isLocalAddress('http://999.999.999.999'), isFalse);
+    test('public and malformed addresses are not local', () {
+      for (final url in [
+        // 172.15 and 172.32 are outside the private range.
+        'http://172.15.0.1',
+        'http://172.32.0.1',
+        'http://manga.example.com',
+        'https://example.com',
+        'http://8.8.8.8',
+        'http://1.1.1.1',
+        '',
+        'not a url',
+        'http://',
+        'http://999.999.999.999',
+      ]) {
+        expect(isLocalAddress(url), isFalse, reason: url);
+      }
     });
   });
 }

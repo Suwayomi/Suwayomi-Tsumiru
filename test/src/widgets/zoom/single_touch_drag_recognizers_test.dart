@@ -38,35 +38,35 @@ Future<void> _pumpWithSingleTouchRecognizer(
           width: _viewportWidth,
           height: _viewportHeight,
           child: RawGestureDetector(
-              key: _testKey,
-              behavior: HitTestBehavior.translucent,
-              gestures: <Type, GestureRecognizerFactory>{
-                SingleTouchHorizontalDragGestureRecognizer:
-                    GestureRecognizerFactoryWithHandlers<
-                        SingleTouchHorizontalDragGestureRecognizer>(
-                  () => SingleTouchHorizontalDragGestureRecognizer(
-                    isZoomedIn: isZoomedIn,
+            key: _testKey,
+            behavior: HitTestBehavior.translucent,
+            gestures: <Type, GestureRecognizerFactory>{
+              SingleTouchHorizontalDragGestureRecognizer:
+                  GestureRecognizerFactoryWithHandlers<
+                    SingleTouchHorizontalDragGestureRecognizer
+                  >(
+                    () => SingleTouchHorizontalDragGestureRecognizer(
+                      isZoomedIn: isZoomedIn,
+                    ),
+                    (recognizer) {
+                      recognizer.onEnd = onHorizontalDragEnd;
+                    },
                   ),
-                  (recognizer) {
-                    recognizer.onEnd = onHorizontalDragEnd;
-                  },
-                ),
-                // A scale recognizer is included to keep the gesture
-                // arena from eagerly accepting our drag recognizer on the
-                // first pointer down. In the real reader, ZoomView's
-                // scale recognizer plays this role.
-                ScaleGestureRecognizer:
-                    GestureRecognizerFactoryWithHandlers<
-                        ScaleGestureRecognizer>(
-                  () => ScaleGestureRecognizer(),
-                  (recognizer) {
-                    // No-op handlers; just need it in the arena.
-                    recognizer.onStart = (_) {};
-                    recognizer.onUpdate = (_) {};
-                    recognizer.onEnd = (_) {};
-                  },
-                ),
-              },
+              // A scale recognizer is included to keep the gesture
+              // arena from eagerly accepting our drag recognizer on the
+              // first pointer down. In the real reader, ZoomView's
+              // scale recognizer plays this role.
+              ScaleGestureRecognizer:
+                  GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
+                    () => ScaleGestureRecognizer(),
+                    (recognizer) {
+                      // No-op handlers; just need it in the arena.
+                      recognizer.onStart = (_) {};
+                      recognizer.onUpdate = (_) {};
+                      recognizer.onEnd = (_) {};
+                    },
+                  ),
+            },
             child: const SizedBox.expand(
               child: ColoredBox(color: Colors.transparent),
             ),
@@ -79,41 +79,34 @@ Future<void> _pumpWithSingleTouchRecognizer(
 
 void main() {
   group('SingleTouchHorizontalDragGestureRecognizer', () {
-    testWidgets(
-        'single-finger horizontal drag DOES trigger the end callback',
-        (tester) async {
+    testWidgets('single-finger horizontal drag fires the end callback', (
+      tester,
+    ) async {
       var endCount = 0;
       await _pumpWithSingleTouchRecognizer(
         tester,
         onHorizontalDragEnd: (_) => endCount++,
       );
-
-      await tester.drag(
-        find.byKey(_testKey),
-        const Offset(200, 0),
-      );
+      await tester.drag(find.byKey(_testKey), const Offset(200, 0));
       await tester.pumpAndSettle();
-
-      expect(endCount, 1,
-          reason: 'single-finger drag should fire the end callback');
+      expect(
+        endCount,
+        1,
+        reason: 'single-finger drag should fire the end callback',
+      );
     });
 
-    testWidgets(
-        'two-finger drag does NOT trigger the end callback (this is the '
-        'whole point of the subclass)', (tester) async {
+    testWidgets('multi-touch and zoomed-in drags are rejected', (tester) async {
       var endCount = 0;
       await _pumpWithSingleTouchRecognizer(
         tester,
         onHorizontalDragEnd: (_) => endCount++,
       );
 
-      // Manually simulate two fingers landing then dragging horizontally.
+      // Two fingers never fire it.
       const center = Offset(_viewportWidth / 2, _viewportHeight / 2);
-      final g1 =
-          await tester.startGesture(center + const Offset(-30, 0));
-      final g2 =
-          await tester.startGesture(center + const Offset(30, 0));
-      // Move them apart horizontally over several frames.
+      var g1 = await tester.startGesture(center + const Offset(-30, 0));
+      var g2 = await tester.startGesture(center + const Offset(30, 0));
       for (var i = 0; i < 10; i++) {
         await g1.moveBy(const Offset(-10, 0));
         await g2.moveBy(const Offset(10, 0));
@@ -122,95 +115,31 @@ void main() {
       await g1.up();
       await g2.up();
       await tester.pumpAndSettle();
+      expect(endCount, 0, reason: 'two-finger gesture must not be claimed');
 
-      expect(endCount, 0,
-          reason: 'two-finger gesture must NOT be claimed by the '
-              'single-touch drag recognizer — that lets ZoomView win.');
-    });
-
-    testWidgets(
-        'after a multi-touch gesture, a fresh single-finger drag still works',
-        (tester) async {
-      var endCount = 0;
-      await _pumpWithSingleTouchRecognizer(
-        tester,
-        onHorizontalDragEnd: (_) => endCount++,
-      );
-
-      // First: a two-finger gesture that should be ignored.
-      const center = Offset(_viewportWidth / 2, _viewportHeight / 2);
-      final g1 =
-          await tester.startGesture(center + const Offset(-30, 0));
-      final g2 =
-          await tester.startGesture(center + const Offset(30, 0));
-      for (var i = 0; i < 5; i++) {
-        await g1.moveBy(const Offset(-10, 0));
-        await g2.moveBy(const Offset(10, 0));
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      await g1.up();
-      await g2.up();
+      // A fresh single-finger drag still works after multi-touch.
+      await tester.drag(find.byKey(_testKey), const Offset(200, 0));
       await tester.pumpAndSettle();
+      expect(endCount, 1, reason: 'recognizer must not be left broken');
 
-      expect(endCount, 0, reason: 'multi-touch should not have fired');
-
-      // Now: a single-finger drag should still work.
-      await tester.drag(
-        find.byKey(_testKey),
-        const Offset(200, 0),
-      );
-      await tester.pumpAndSettle();
-
-      expect(endCount, 1,
-          reason: 'a fresh single-finger drag must still fire — the '
-              'recognizer must not be left in a broken state');
-    });
-
-    testWidgets(
-        'a single-finger drag is rejected while isZoomedIn() returns true',
-        (tester) async {
-      var endCount = 0;
-      await _pumpWithSingleTouchRecognizer(
-        tester,
-        onHorizontalDragEnd: (_) => endCount++,
-        isZoomedIn: () => true,
-      );
-
-      await tester.drag(
-        find.byKey(_testKey),
-        const Offset(200, 0),
-      );
-      await tester.pumpAndSettle();
-
-      expect(endCount, 0,
-          reason: 'while zoomed in, a single-finger drag means "pan around '
-              'the zoomed page" and must be left for ZoomView — the '
-              'recognizer must reject the pointer outright rather than '
-              'racing ZoomView for it');
-    });
-
-    testWidgets(
-        'a single-finger drag fires again once isZoomedIn() returns false',
-        (tester) async {
-      var endCount = 0;
+      // While zoomed in, a single-finger drag is left for ZoomView.
       var zoomed = true;
+      await tester.pumpWidget(const SizedBox.shrink());
+      endCount = 0;
       await _pumpWithSingleTouchRecognizer(
         tester,
         onHorizontalDragEnd: (_) => endCount++,
         isZoomedIn: () => zoomed,
       );
-
       await tester.drag(find.byKey(_testKey), const Offset(200, 0));
       await tester.pumpAndSettle();
       expect(endCount, 0, reason: 'rejected while zoomed in');
 
+      // Once zoomed back out it fires again (queried fresh each pointer-down).
       zoomed = false;
       await tester.drag(find.byKey(_testKey), const Offset(200, 0));
       await tester.pumpAndSettle();
-      expect(endCount, 1,
-          reason: 'must resume claiming single-finger drags once the '
-              'reader zooms back out to 1x — isZoomedIn is queried fresh '
-              'on every pointer-down, not cached');
+      expect(endCount, 1);
     });
   });
 }

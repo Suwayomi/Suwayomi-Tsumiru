@@ -64,9 +64,6 @@ void main() {
       expect(FilterState.any.value, isNull);
       expect(FilterState.included.value, isTrue);
       expect(FilterState.excluded.value, isFalse);
-    });
-
-    test('round-trips every state', () {
       for (final state in FilterState.values) {
         expect(FilterState.fromValue(state.value), state);
       }
@@ -74,20 +71,21 @@ void main() {
   });
 
   group('TriStateFilterTile', () {
-    testWidgets('names all three states instead of cycling one glyph',
-        (tester) async {
+    /// Which pill reads as selected.
+    Set<String> selectedLabels(WidgetTester tester) => {
+      for (final chip in tester.widgetList<FilterChip>(find.byType(FilterChip)))
+        if (chip.selected) ((chip.label as Text).data)!,
+    };
+
+    testWidgets('names all three states, with a contextual header', (
+      tester,
+    ) async {
       await _pump(tester);
       expect(find.text('Download Status'), findsOneWidget);
       expect(find.text('Any'), findsOneWidget);
       expect(find.text('Included'), findsOneWidget);
       expect(find.text('Excluded'), findsOneWidget);
       expect(find.byType(FilterChip), findsNWidgets(3));
-    });
-
-    testWidgets('a contextual header replaces the generic title',
-        (tester) async {
-      // The heading names the AXIS ("Read Status"), not a repeated value.
-      await _pump(tester);
       expect(find.byType(OrganizerHeading), findsOneWidget);
       expect(
         tester
@@ -100,10 +98,8 @@ void main() {
             .data,
         'Download Status',
       );
-    });
 
-    testWidgets('custom included/excluded labels override the generic ones',
-        (tester) async {
+      // Custom labels replace the generic ones.
       await _pump(
         tester,
         includedLabel: 'Downloaded',
@@ -116,59 +112,44 @@ void main() {
       expect(find.text('Excluded'), findsNothing);
     });
 
-    testWidgets('tapping a custom-labelled pill still writes the right value',
-        (tester) async {
-      final changes = await _pump(
+    testWidgets('exactly one pill is selected and taps write their state', (
+      tester,
+    ) async {
+      for (final initial in <bool?>[null, true, false]) {
+        await _pump(tester, initial: initial);
+        expect(selectedLabels(tester), hasLength(1));
+      }
+
+      // Each pill writes its own state, one tap, no cycling.
+      final changes = await _pump(tester, initial: null);
+      await tester.tap(find.text('Excluded'));
+      await tester.pump();
+      expect(changes, [false]);
+      await tester.tap(find.text('Included'));
+      await tester.pump();
+      expect(changes, [false, true]);
+      await tester.tap(find.text('Any'));
+      await tester.pump();
+      expect(changes, [false, true, null]);
+
+      // Re-tapping the active pill is idempotent.
+      await _pump(tester, initial: true);
+      await tester.tap(find.text('Included'));
+      await tester.pump();
+      expect(selectedLabels(tester), {'Included'});
+
+      // Custom-labelled pills still write the right value.
+      final custom = await _pump(
         tester,
         includedLabel: 'Downloaded',
         excludedLabel: 'Not Downloaded',
       );
       await tester.tap(find.text('Downloaded'));
       await tester.pump();
-      expect(changes, [true]);
-
+      expect(custom, [true]);
       await tester.tap(find.text('Not Downloaded'));
       await tester.pump();
-      expect(changes, [true, false]);
-    });
-
-    /// Which pill reads as selected.
-    Set<String> selectedLabels(WidgetTester tester) => {
-      for (final chip in tester.widgetList<FilterChip>(find.byType(FilterChip)))
-        if (chip.selected) ((chip.label as Text).data)!,
-    };
-
-    testWidgets('exactly one pill is ever selected', (tester) async {
-      for (final initial in <bool?>[null, true, false]) {
-        await _pump(tester, initial: initial);
-        expect(selectedLabels(tester), hasLength(1));
-      }
-    });
-
-    testWidgets('each pill writes its own state, with no cycling',
-        (tester) async {
-      // The whole point over the old tri-state checkbox: picking a state is one
-      // tap on that state, not N taps through a hidden order.
-      final changes = await _pump(tester, initial: null);
-      await tester.tap(find.text('Excluded'));
-      await tester.pump();
-      expect(changes, [false]);
-
-      await tester.tap(find.text('Included'));
-      await tester.pump();
-      expect(changes, [false, true]);
-
-      await tester.tap(find.text('Any'));
-      await tester.pump();
-      expect(changes, [false, true, null]);
-    });
-
-    testWidgets('re-tapping the active pill is idempotent', (tester) async {
-      final changes = await _pump(tester, initial: true);
-      await tester.tap(find.text('Included'));
-      await tester.pump();
-      expect(changes, [true]);
-      expect(selectedLabels(tester), {'Included'});
+      expect(custom, [true, false]);
     });
   });
 }

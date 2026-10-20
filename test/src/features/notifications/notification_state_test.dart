@@ -59,25 +59,19 @@ void main() {
   });
 
   group('category scope', () {
-    final mangaCats = {
-      10: {1},
-      20: {2},
-      30: {1, 2},
-    };
-
-    test('no include/exclude -> null (all series)', () {
+    test('filters series by include/exclude, with exclude winning', () {
+      final mangaCats = {
+        10: {1},
+        20: {2},
+        30: {1, 2},
+      };
+      // No include/exclude -> null (all series).
       expect(config().allowedMangaIds(mangaCats), isNull);
-    });
-
-    test('include list keeps only series in those categories', () {
+      // Include keeps only series in those categories.
       expect(config(include: {1}).allowedMangaIds(mangaCats), {10, 30});
-    });
-
-    test('exclude drops series in excluded categories', () {
+      // Exclude drops series in excluded categories.
       expect(config(exclude: {2}).allowedMangaIds(mangaCats), {10});
-    });
-
-    test('exclude wins over include', () {
+      // Exclude wins over include.
       expect(config(include: {1}, exclude: {2}).allowedMangaIds(mangaCats), {
         10,
       });

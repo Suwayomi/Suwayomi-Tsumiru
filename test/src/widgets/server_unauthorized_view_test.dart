@@ -65,30 +65,20 @@ void main() {
     await _unmount(tester);
   });
 
-  testWidgets('web with a saved basic login explains the mode instead', (
+  testWidgets('web guidance explains unsupported sign-in modes', (
     tester,
   ) async {
-    await _pump(tester, isWeb: true, savedAuthType: AuthType.basic);
+    // Basic and Simple login explain the mode instead of the raw message.
+    for (final auth in [AuthType.basic, AuthType.simpleLogin]) {
+      await _pump(tester, isWeb: true, savedAuthType: auth);
+      expect(find.text(_unsupportedMessage), findsOneWidget, reason: '$auth');
+      expect(find.text('Unauthorized'), findsNothing, reason: '$auth');
+      expect(find.text('Connection settings'), findsOneWidget, reason: '$auth');
+      await _unmount(tester);
+    }
 
-    expect(find.text(_unsupportedMessage), findsOneWidget);
-    expect(find.text('Unauthorized'), findsNothing);
-    expect(find.text('Connection settings'), findsOneWidget);
-    await _unmount(tester);
-  });
-
-  testWidgets('web with a saved simple login explains the mode instead', (
-    tester,
-  ) async {
-    await _pump(tester, isWeb: true, savedAuthType: AuthType.simpleLogin);
-
-    expect(find.text(_unsupportedMessage), findsOneWidget);
-    expect(find.text('Unauthorized'), findsNothing);
-    await _unmount(tester);
-  });
-
-  testWidgets('web with UI login keeps the server message', (tester) async {
+    // UI login keeps the server message.
     await _pump(tester, isWeb: true, savedAuthType: AuthType.uiLogin);
-
     expect(find.text('Unauthorized'), findsOneWidget);
     expect(find.text(_unsupportedMessage), findsNothing);
     await _unmount(tester);

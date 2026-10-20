@@ -6,40 +6,36 @@ void main() {
     const external = 'https://suwayomi.example.com';
     const lan = 'http://192.168.1.100:4567';
 
-    test('uses the external URL when no LAN URL is configured', () async {
-      final selected = await selectServerUrl(
-        externalUrl: external,
-        lanUrl: null,
-        isReachable: (_) async => throw StateError('should not probe'),
+    test('prefers a reachable LAN URL, else the external URL', () async {
+      expect(
+        await selectServerUrl(
+          externalUrl: external,
+          lanUrl: null,
+          isReachable: (_) async => throw StateError('should not probe'),
+        ),
+        external,
       );
-
-      expect(selected, external);
+      expect(
+        await selectServerUrl(
+          externalUrl: external,
+          lanUrl: lan,
+          isReachable: (url) async => url == lan,
+        ),
+        lan,
+      );
     });
 
-    test('prefers a reachable LAN URL', () async {
-      final selected = await selectServerUrl(
-        externalUrl: external,
-        lanUrl: lan,
-        isReachable: (url) async => url == lan,
-      );
-
-      expect(selected, lan);
-    });
-
-    test(
-      'falls back to the external URL when the LAN URL is unavailable',
-      () async {
-        final selected = await selectServerUrl(
+    test('falls back to the external URL when the LAN URL is unavailable, '
+        'normalising it before probing', () async {
+      expect(
+        await selectServerUrl(
           externalUrl: external,
           lanUrl: lan,
           isReachable: (_) async => false,
-        );
+        ),
+        external,
+      );
 
-        expect(selected, external);
-      },
-    );
-
-    test('normalises a LAN URL before probing it', () async {
       var probed = '';
       await selectServerUrl(
         externalUrl: external,
@@ -49,7 +45,6 @@ void main() {
           return false;
         },
       );
-
       expect(probed, lan);
     });
   });

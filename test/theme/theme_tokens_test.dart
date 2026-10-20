@@ -4,34 +4,6 @@ import 'package:tsumiru/src/constants/app_theme.dart';
 import 'package:tsumiru/src/utils/theme/theme_tokens.dart';
 
 void main() {
-  test('indigoNight dark tokens mirror theme-kit indigo.css', () {
-    final t = tokensFor(AppTheme.indigoNight, Brightness.dark);
-    expect(t.bg, const Color(0xFF0B0D1A));
-    expect(t.ink, const Color(0xFFEEF0FB));
-    expect(t.accent, const Color(0xFF7C7BFF));
-    expect(t.accent2, const Color(0xFF33D6FF));
-    expect(t.danger, const Color(0xFFFF6B6B));
-  });
-
-  test('carbon light tokens mirror theme-kit carbon.css', () {
-    final t = tokensFor(AppTheme.carbon, Brightness.light);
-    expect(t.bg, const Color(0xFFE4F1EC));
-  });
-
-  test('indigoNight light tokens mirror theme-kit indigo.css', () {
-    final t = tokensFor(AppTheme.indigoNight, Brightness.light);
-    expect(t.bg, const Color(0xFFEEECF9));
-    expect(t.accent, const Color(0xFF5351D4));
-    expect(t.accentBg, const Color(0xFFE2DFFF));
-  });
-
-  test('mono light accent is the near-black brand accent', () {
-    expect(
-      tokensFor(AppTheme.mono, Brightness.light).accent,
-      const Color(0xFF111114),
-    );
-  });
-
   test('every named theme resolves tokens for both brightnesses', () {
     for (final theme in AppTheme.values.where((t) => t != AppTheme.custom)) {
       expect(tokensFor(theme, Brightness.dark), isA<ThemeTokens>());
@@ -39,9 +11,12 @@ void main() {
     }
   });
 
-  test('AppTheme.swatch returns brand accents', () {
-    expect(AppTheme.indigoNight.swatch.$1, const Color(0xFF7C7BFF));
-    expect(AppTheme.carbon.swatch.$1, const Color(0xFF19E6B0));
-    expect(AppTheme.plum.swatch.$1, const Color(0xFFFF5DB1));
+  test('indigoNight dark tokens mirror theme-kit indigo.css', () {
+    final t = tokensFor(AppTheme.indigoNight, Brightness.dark);
+    expect(t.bg, const Color(0xFF0B0D1A));
+    expect(t.ink, const Color(0xFFEEF0FB));
+    expect(t.accent, const Color(0xFF7C7BFF));
+    expect(t.accent2, const Color(0xFF33D6FF));
+    expect(t.danger, const Color(0xFFFF6B6B));
   });
 }

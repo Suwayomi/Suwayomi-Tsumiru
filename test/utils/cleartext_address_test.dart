@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/utils/network/cleartext_address.dart';
 
 void main() {
-  test('plain HTTP to an internet host sends credentials in clear', () {
+  test('plain HTTP to an internet host is flagged; HTTPS never is', () {
     for (final url in [
       'http://suwayomi.example.net',
       'http://suwayomi.example.net:4567/',
@@ -19,13 +19,10 @@ void main() {
     ]) {
       expect(sendsCredentialsInClear(url), isTrue, reason: url);
     }
-  });
-
-  test('HTTPS is never flagged', () {
     expect(sendsCredentialsInClear('https://suwayomi.example.net'), isFalse);
   });
 
-  test('plain HTTP on a private or local network is not flagged', () {
+  test('private or local addresses and malformed input are not flagged', () {
     for (final url in [
       'http://192.168.1.100:4567',
       'http://10.0.0.5',
@@ -45,9 +42,6 @@ void main() {
     ]) {
       expect(sendsCredentialsInClear(url), isFalse, reason: url);
     }
-  });
-
-  test('an empty or unparseable address is not flagged', () {
     expect(sendsCredentialsInClear(''), isFalse);
     expect(sendsCredentialsInClear('not a url'), isFalse);
     expect(sendsCredentialsInClear('http://'), isFalse);

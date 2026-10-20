@@ -15,56 +15,26 @@ void main() {
     documents = loadGraphQLDocuments();
   });
 
-  test('inline Boolean with a default is reported', () {
-    const source = '''
-query InlineCase(\$x: Boolean = false) {
+  test('inline Boolean defaults follow the directive rule', () {
+    List<String> violationsOf(String variable) {
+      final source =
+          '''
+query InlineCase(\$x: $variable) {
   thing {
     name @include(if: \$x)
   }
 }
 ''';
-    final entry = operationFromSource(source);
-    final violations = directiveVariableViolations(
-      entry,
-      fragmentsFromSource(source),
-    );
-    expect(violations, hasLength(1));
-    expect(violations.single, contains('InlineCase'));
-    expect(violations.single, contains(r'$x'));
-  });
+      final entry = operationFromSource(source);
+      return directiveVariableViolations(entry, fragmentsFromSource(source));
+    }
 
-  test('inline Boolean defaulting to true for @include is accepted', () {
-    const source = '''
-query InlineCase(\$x: Boolean = true) {
-  thing {
-    name @include(if: \$x)
-  }
-}
-''';
-    final entry = operationFromSource(source);
-    final violations = directiveVariableViolations(
-      entry,
-      fragmentsFromSource(source),
-    );
-    expect(violations, isEmpty);
-  });
-
-  test('inline nullable Boolean with no default is reported', () {
-    const source = '''
-query InlineCase(\$x: Boolean) {
-  thing {
-    name @include(if: \$x)
-  }
-}
-''';
-    final entry = operationFromSource(source);
-    final violations = directiveVariableViolations(
-      entry,
-      fragmentsFromSource(source),
-    );
-    expect(violations, hasLength(1));
-    expect(violations.single, contains('InlineCase'));
-    expect(violations.single, contains(r'$x'));
+    // A server default of false contradicts include's default of true.
+    expect(violationsOf('Boolean = false'), hasLength(1));
+    // No default is nullable, which @include does not accept.
+    expect(violationsOf('Boolean'), hasLength(1));
+    // Matching the directive's default is the accepted form.
+    expect(violationsOf('Boolean = true'), isEmpty);
   });
 
   test('all operations satisfy the directive variable rule', () {

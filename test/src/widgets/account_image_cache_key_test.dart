@@ -26,24 +26,46 @@ AuthCredentialsState _credentials(String account, String token) =>
 
 void main() {
   const url = 'http://server/api/v1/manga/1/thumbnail';
-  test(
-    'same URL separates accounts and returns to stable A key after restart',
-    () {
-      final store = _Store();
-      String key(String account, AuthCredentialsStore owner) =>
-          accountImageCacheKey(
-            url,
-            authType: AuthType.uiLogin,
-            store: owner,
-            credentials: _credentials(account, 'token'),
-          );
-      expect(key('a', store), isNot(key('b', store)));
-      expect(key('a', store), key('a', _Store()));
-    },
-  );
+
+  test('separates accounts, including unbound and changing sessions', () {
+    final store = _Store();
+    String key(String account, AuthCredentialsStore owner) =>
+        accountImageCacheKey(
+          url,
+          authType: AuthType.uiLogin,
+          store: owner,
+          credentials: _credentials(account, 'token'),
+        );
+    expect(key('a', store), isNot(key('b', store)));
+    // The stable A key returns after a restart.
+    expect(key('a', store), key('a', _Store()));
+
+    String sessionKey(AuthCredentialsState? credentials) =>
+        accountImageCacheKey(
+          url,
+          authType: AuthType.uiLogin,
+          store: store,
+          credentials: credentials,
+        );
+    final bound = sessionKey(_credentials('a', 'secret'));
+    final unbound = sessionKey(null);
+    store.epoch++;
+    expect(sessionKey(null), isNot(unbound));
+    store.changing = true;
+    expect(sessionKey(_credentials('a', 'secret')), isNot(bound));
+    expect(
+      accountImageCacheKey(
+        url,
+        authType: AuthType.uiLogin,
+        store: _Store(),
+        credentials: null,
+      ),
+      isNot(unbound),
+    );
+  });
 
   test(
-    'token rotation does not change the account cache key or include credentials',
+    'rotation does not change the key, which never includes credentials',
     () {
       final store = _Store();
       final first = accountImageCacheKey(
@@ -70,50 +92,21 @@ void main() {
       );
       expect(first, isNot(contains('secret')));
       expect(first, isNot(contains('token=')));
+
+      // Legacy auth preserves existing URL keys.
+      for (final mode in AuthType.values.where(
+        (mode) => mode != AuthType.uiLogin,
+      )) {
+        expect(
+          accountImageCacheKey(
+            url,
+            authType: mode,
+            store: _Store(),
+            credentials: null,
+          ),
+          url,
+        );
+      }
     },
   );
-
-  test(
-    'unbound and changing sessions cannot reuse account or previous session keys',
-    () {
-      final store = _Store();
-      String key(AuthCredentialsState? credentials) => accountImageCacheKey(
-        url,
-        authType: AuthType.uiLogin,
-        store: store,
-        credentials: credentials,
-      );
-      final bound = key(_credentials('a', 'secret'));
-      final unbound = key(null);
-      store.epoch++;
-      expect(key(null), isNot(unbound));
-      store.changing = true;
-      expect(key(_credentials('a', 'secret')), isNot(bound));
-      expect(
-        accountImageCacheKey(
-          url,
-          authType: AuthType.uiLogin,
-          store: _Store(),
-          credentials: null,
-        ),
-        isNot(unbound),
-      );
-    },
-  );
-
-  test('legacy auth preserves existing URL keys', () {
-    for (final mode in AuthType.values.where(
-      (mode) => mode != AuthType.uiLogin,
-    )) {
-      expect(
-        accountImageCacheKey(
-          url,
-          authType: mode,
-          store: _Store(),
-          credentials: null,
-        ),
-        url,
-      );
-    }
-  });
 }

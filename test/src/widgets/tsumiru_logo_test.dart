@@ -102,98 +102,94 @@ Future<void> _pumpInFullWidthBox(
 }
 
 void main() {
-  for (final (name, theme, brightness) in const [
-    ('Indigo Night', AppTheme.indigoNight, Brightness.dark),
-    ('Royal', AppTheme.royal, Brightness.dark),
-    ('Royal light', AppTheme.royal, Brightness.light),
-    ('Catppuccin light', AppTheme.catppuccin, Brightness.light),
-  ]) {
-    testWidgets('$name logo is centred in a full-width box', (tester) async {
+  testWidgets('the logo keeps its size and stays centred in a full-width box', (
+    tester,
+  ) async {
+    for (final (name, theme, brightness) in const [
+      ('Indigo Night', AppTheme.indigoNight, Brightness.dark),
+      ('Royal', AppTheme.royal, Brightness.dark),
+      ('Royal light', AppTheme.royal, Brightness.light),
+      ('Catppuccin light', AppTheme.catppuccin, Brightness.light),
+    ]) {
+      await tester.pumpWidget(const SizedBox.shrink());
       await _pumpInFullWidthBox(
         tester,
         const TsumiruLogo(size: 48),
         theme: theme,
         brightness: brightness,
       );
-
       final box = tester.getRect(find.byType(ListView));
       final images = find.byType(Image);
-      expect(images, findsWidgets);
+      expect(images, findsWidgets, reason: name);
       for (var i = 0; i < images.evaluate().length; i++) {
         expect(
           tester.getCenter(images.at(i)).dx,
           moreOrLessEquals(box.center.dx),
+          reason: name,
         );
       }
-    });
 
-    testWidgets('$name logo is size x size under loose constraints', (
-      tester,
-    ) async {
+      await tester.pumpWidget(const SizedBox.shrink());
       await _pump(
         tester,
         const TsumiruLogo(size: 48),
         theme: theme,
         brightness: brightness,
       );
+      expect(
+        tester.getSize(find.byType(TsumiruLogo)),
+        const Size(48, 48),
+        reason: name,
+      );
+    }
+  });
 
-      expect(tester.getSize(find.byType(TsumiruLogo)), const Size(48, 48));
-    });
-  }
-
-  testWidgets('Indigo Night dark draws the original artwork', (tester) async {
+  testWidgets('each theme draws its own artwork', (tester) async {
+    // Indigo Night dark draws the original artwork.
     await _pump(
       tester,
       const TsumiruLogo(size: 48),
       theme: AppTheme.indigoNight,
       brightness: Brightness.dark,
     );
-
     expect(_image(_darkIcon), findsOneWidget);
     expect(find.byType(ShaderMask), findsNothing);
     expect(_image(_shadow), findsNothing);
-  });
 
-  testWidgets('Royal dark tints the shadow and keeps the foreground', (
-    tester,
-  ) async {
+    // Royal dark tints the shadow and keeps the foreground.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pump(
       tester,
       const TsumiruLogo(size: 48),
       theme: AppTheme.royal,
       brightness: Brightness.dark,
     );
-
     expect(find.byType(ShaderMask), findsOneWidget);
     expect(_image(_shadow), findsOneWidget);
     expect(_image(_foreground), findsOneWidget);
     expect(_image(_darkIcon), findsNothing);
-  });
 
-  testWidgets('Indigo Night light draws the original artwork', (tester) async {
+    // Indigo Night light draws the original light artwork.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pump(
       tester,
       const TsumiruLogo(size: 48),
       theme: AppTheme.indigoNight,
       brightness: Brightness.light,
     );
-
     expect(_image(_onLight), findsOneWidget);
     expect(find.byType(ShaderMask), findsNothing);
     expect(_image(_onLightShadow), findsNothing);
     expect(_image(_onLightForeground), findsNothing);
-  });
 
-  testWidgets('Catppuccin light tints the shadow with its dark accent pair', (
-    tester,
-  ) async {
+    // Catppuccin light tints the shadow with its dark accent pair.
+    await tester.pumpWidget(const SizedBox.shrink());
     await _pump(
       tester,
       const TsumiruLogo(size: 48),
       theme: AppTheme.catppuccin,
       brightness: Brightness.light,
     );
-
     expect(
       find.byWidgetPredicate(
         (w) => w is ShaderMask && w.blendMode == BlendMode.modulate,
@@ -203,7 +199,6 @@ void main() {
     expect(_image(_onLightShadow), findsOneWidget);
     expect(_image(_onLightForeground), findsOneWidget);
     expect(_image(_onLight), findsNothing);
-
     final dark = schemeFor(AppTheme.catppuccin, Brightness.dark, _seed);
     final expected = [dark.primary, dark.secondary]
       ..sort((a, b) => b.computeLuminance().compareTo(a.computeLuminance()));
@@ -211,7 +206,8 @@ void main() {
     expect(expected.first, isNot(expected.last));
   });
 
-  testWidgets('the top bar brand block uses TsumiruLogo', (tester) async {
+  testWidgets('the shell and pages use TsumiruLogo', (tester) async {
+    // The top bar brand block, exactly once (the sidebar has no header).
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -224,9 +220,11 @@ void main() {
         });
     addTearDown(
       () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+          .setMockMethodCallHandler(
+            const MethodChannel('window_manager'),
+            null,
+          ),
     );
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -259,9 +257,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
-    // The sidebar lost its header to the merged bar: the logo lives in the
-    // brand block, exactly once.
     expect(find.byType(TsumiruLogo), findsOneWidget);
     expect(
       find.descendant(
@@ -270,9 +265,9 @@ void main() {
       ),
       findsOneWidget,
     );
-  });
 
-  testWidgets('the About screen uses TsumiruLogo', (tester) async {
+    // The About screen.
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -296,14 +291,10 @@ void main() {
       ),
     );
     await tester.pump();
-
     expect(find.byType(TsumiruLogo), findsOneWidget);
-  });
 
-  testWidgets('the More screen uses TsumiruLogo', (tester) async {
-    // Externally-owned container: at the default 800x600 surface More mounts
-    // the desktop search box, whose deferred focus-node unregister must flush
-    // while the container is still alive (see account_screen_test).
+    // The More screen.
+    await tester.pumpWidget(const SizedBox.shrink());
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(await _prefs()),
@@ -327,7 +318,6 @@ void main() {
       ),
     );
     await tester.pump();
-
     expect(find.byType(TsumiruLogo), findsOneWidget);
   });
 }

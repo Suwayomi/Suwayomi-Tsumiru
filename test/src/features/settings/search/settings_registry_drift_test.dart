@@ -229,313 +229,294 @@ void _expectIdsMatchRegistry(
 
 void main() {
   group('settings registry drift guard', () {
-    testWidgets('General entries match GeneralScreen targets', (tester) async {
-      await _pumpScreen(tester, await _container(), const GeneralScreen());
-      _expectIdsMatchRegistry(tester, generalSettingsSearchEntries);
-    });
+    testWidgets('every screen matches its registry entries', (tester) async {
+      // Long pages build their rows lazily; a tall surface mounts them all.
+      tester.view.physicalSize = const Size(800, 10000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      addTearDown(() {
+        debugAndroidOverride = null;
+      });
 
-    testWidgets('Appearance entries match AppearanceScreen targets', (
-      tester,
-    ) async {
-      await _pumpScreen(
-        tester,
+      Future<void> pumpAndCheck(
+        ProviderContainer container,
+        Widget screen,
+        List<SettingsSearchEntry> registered,
+      ) async {
+        await _pumpScreen(tester, container, screen);
+        _expectIdsMatchRegistry(tester, registered);
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+
+      await pumpAndCheck(
+        await _container(),
+        const GeneralScreen(),
+        generalSettingsSearchEntries,
+      );
+
+      await pumpAndCheck(
         await _container(
           extra: [appThemeKeyProvider.overrideWith(_CustomTheme.new)],
         ),
         const AppearanceScreen(),
+        appearanceSettingsSearchEntries,
       );
-      _expectIdsMatchRegistry(tester, appearanceSettingsSearchEntries);
-    });
 
-    testWidgets('Library entries match LibrarySettingsScreen targets', (
-      tester,
-    ) async {
       final dummyLink = HttpLink('http://localhost/');
       final dummyClient = GraphQLClient(link: dummyLink, cache: GraphQLCache());
-      final container = await _container(
-        extra: [
-          settingsProvider.overrideWith(_FixedSettings.new),
-          personalSettingsProvider.overrideWith(
-            (ref) async => _serverSettings(),
-          ),
-          personalSettingsStateProvider.overrideWithValue(
-            PersonalSettingsState.ready,
-          ),
-          settledAccountAccessProvider.overrideWithValue(
-            AccountAccess(capability: AccountCapability.unsupported),
-          ),
-          categoryControllerProvider.overrideWith(_EmptyCategories.new),
-          settledDefaultCategoryIdProvider.overrideWithValue(0),
-          librarySettingsRepositoryProvider.overrideWithValue(
-            LibrarySettingsRepository(
-              dummyClient,
-              routing: UserSettingsRouting(
-                account: AccountRepository(dummyClient),
-                access: () =>
-                    AccountAccess(capability: AccountCapability.unsupported),
-                settings: () async => _serverSettings(),
-                updated: () {},
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            settingsProvider.overrideWith(_FixedSettings.new),
+            personalSettingsProvider.overrideWith(
+              (ref) async => _serverSettings(),
+            ),
+            personalSettingsStateProvider.overrideWithValue(
+              PersonalSettingsState.ready,
+            ),
+            settledAccountAccessProvider.overrideWithValue(
+              AccountAccess(capability: AccountCapability.unsupported),
+            ),
+            categoryControllerProvider.overrideWith(_EmptyCategories.new),
+            settledDefaultCategoryIdProvider.overrideWithValue(0),
+            librarySettingsRepositoryProvider.overrideWithValue(
+              LibrarySettingsRepository(
+                dummyClient,
+                routing: UserSettingsRouting(
+                  account: AccountRepository(dummyClient),
+                  access: () =>
+                      AccountAccess(capability: AccountCapability.unsupported),
+                  settings: () async => _serverSettings(),
+                  updated: () {},
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        const LibrarySettingsScreen(),
+        librarySettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const LibrarySettingsScreen());
-      _expectIdsMatchRegistry(tester, librarySettingsSearchEntries);
-    });
 
-    testWidgets('Reader entries match ReaderSettingsScreen targets', (
-      tester,
-    ) async {
-      // Android-only rows (keep-screen-on, ignore-safe-area, Navigation)
-      // never render on the desktop test VM without this.
+      // Android-only rows only render with the override.
       debugAndroidOverride = true;
-      addTearDown(() => debugAndroidOverride = null);
-      // The Reader page is long and its rows build lazily, so pump it on a
-      // tall surface: every target must be mounted to be counted.
-      tester.view.physicalSize = const Size(800, 10000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      final container = await _container();
-      // Every gate satisfied: force-horizontal off, fullscreen on, flash
-      // on, split on, rotate on, volume keys on. Keyboard runtime is
-      // inherent to the Linux test VM, so the mouse-speed row renders.
-      container.read(forceHorizontalSeekbarProvider.notifier).update(false);
-      container.read(readerFullscreenProvider.notifier).update(true);
-      container.read(flashOnPageChangeProvider.notifier).update(true);
-      container.read(dualPageSplitPagedProvider.notifier).update(true);
-      container.read(rotateWidePagesProvider.notifier).update(true);
-      container.read(volumeTapProvider.notifier).update(true);
-      await _pumpScreen(tester, container, const ReaderSettingsScreen());
-      _expectIdsMatchRegistry(tester, readerSettingsSearchEntries);
-    });
-
-    testWidgets('Browse entries match BrowseSettingsScreen targets', (
-      tester,
-    ) async {
-      final container = await _container(
-        extra: [
-          settingsProvider.overrideWith(_FixedSettings.new),
-          settledAccountAccessProvider.overrideWithValue(
-            AccountAccess(capability: AccountCapability.unsupported),
-          ),
-          // The live store list retries its fetch (a pending timer the
-          // test binding rejects); the count only feeds the row's subtitle.
-          extensionStoreListProvider.overrideWith((ref) async => null),
-        ],
+      final readerContainer = await _container();
+      // Every gate satisfied: force-horizontal off, fullscreen on, flash on,
+      // split on, rotate on, volume keys on. Keyboard runtime is inherent to
+      // the Linux test VM, so the mouse-speed row renders.
+      readerContainer
+          .read(forceHorizontalSeekbarProvider.notifier)
+          .update(false);
+      readerContainer.read(readerFullscreenProvider.notifier).update(true);
+      readerContainer.read(flashOnPageChangeProvider.notifier).update(true);
+      readerContainer.read(dualPageSplitPagedProvider.notifier).update(true);
+      readerContainer.read(rotateWidePagesProvider.notifier).update(true);
+      readerContainer.read(volumeTapProvider.notifier).update(true);
+      await pumpAndCheck(
+        readerContainer,
+        const ReaderSettingsScreen(),
+        readerSettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const BrowseSettingsScreen());
-      _expectIdsMatchRegistry(tester, browseSettingsSearchEntries);
-    });
+      debugAndroidOverride = null;
 
-    testWidgets('Notifications entries match NotificationsSettingsScreen '
-        'targets', (tester) async {
-      final container = await _container();
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            settingsProvider.overrideWith(_FixedSettings.new),
+            settledAccountAccessProvider.overrideWithValue(
+              AccountAccess(capability: AccountCapability.unsupported),
+            ),
+            // The live store list retries its fetch (a pending timer the
+            // test binding rejects); the count only feeds the subtitle.
+            extensionStoreListProvider.overrideWith((ref) async => null),
+          ],
+        ),
+        const BrowseSettingsScreen(),
+        browseSettingsSearchEntries,
+      );
+
+      final notificationsContainer = await _container();
       // Every gate satisfied: new-chapter notifications on, so the five
       // nested rows render.
-      container
+      notificationsContainer
           .read(notificationsNewChaptersEnabledProvider.notifier)
           .update(true);
-      await _pumpScreen(tester, container, const NotificationsSettingsScreen());
-      _expectIdsMatchRegistry(tester, notificationsSettingsSearchEntries);
-    });
-
-    testWidgets('Backup entries match BackupScreen targets', (tester) async {
-      final container = await _container(
-        extra: [
-          settingsProvider.overrideWith(_FixedSettings.new),
-          settledAccountAccessProvider.overrideWithValue(
-            AccountAccess(capability: AccountCapability.unsupported),
-          ),
-        ],
+      await pumpAndCheck(
+        notificationsContainer,
+        const NotificationsSettingsScreen(),
+        notificationsSettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const BackupScreen());
-      _expectIdsMatchRegistry(tester, backupSettingsSearchEntries);
-    });
 
-    // The background-catchup rows only render on native Android
-    // (isAndroidNative), which is false on the test VM — so they can have
-    // registry entries without mounted targets here. Everything else must
-    // match in both directions.
-    final androidOnlyDownloadsIds = {
-      'backgroundCatchup',
-      'backgroundCheckInterval',
-      'backgroundFetchFiles',
-    };
-
-    List<SettingsSearchEntry> testableDownloadsEntries() =>
-        downloadsSettingsSearchEntries
-            .where(
-              (e) => e.tabIndex == 1 && !androidOnlyDownloadsIds.contains(e.id),
-            )
-            .toList();
-
-    Future<ProviderContainer> downloadsContainer() async {
-      final container = await _container(
-        extra: [
-          settingsProvider.overrideWith(_FixedSettings.new),
-          personalSettingsProvider.overrideWith(
-            (ref) async => _serverSettings(),
-          ),
-          personalSettingsStateProvider.overrideWithValue(
-            PersonalSettingsState.ready,
-          ),
-          settledAccountAccessProvider.overrideWithValue(
-            AccountAccess(capability: AccountCapability.unsupported),
-          ),
-          categoryControllerProvider.overrideWith(_EmptyCategories.new),
-          // The live controller fetches global metas with retry (a pending
-          // timer the test binding rejects); the rows only read its value.
-          deleteChaptersSettingsControllerProvider.overrideWith(
-            _FixedDeleteChapters.new,
-          ),
-          offlineEnabledProvider.overrideWithValue(true),
-          offlineUsageBytesProvider.overrideWith((ref) async => 0),
-        ],
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            settingsProvider.overrideWith(_FixedSettings.new),
+            settledAccountAccessProvider.overrideWithValue(
+              AccountAccess(capability: AccountCapability.unsupported),
+            ),
+          ],
+        ),
+        const BackupScreen(),
+        backupSettingsSearchEntries,
       );
-      // Mounts the keep-window switch under the on-device delete section.
-      container.read(localDeleteWhileReadingProvider.notifier).update(2);
-      return container;
-    }
 
-    // TabBarView only mounts the current tab, so each test sees exactly
-    // its own tab's targets — opened once per tab to prove each tab's ids
-    // exist on the tab its entries open.
-    testWidgets('Downloads Server-tab entries match their targets', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 10000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      await _pumpScreen(
-        tester,
+      // The background-catchup rows only render on native Android
+      // (isAndroidNative), so they can have registry entries without mounted
+      // targets here. Everything else must match in both directions.
+      final androidOnlyDownloadsIds = {
+        'backgroundCatchup',
+        'backgroundCheckInterval',
+        'backgroundFetchFiles',
+      };
+
+      List<SettingsSearchEntry> testableDownloadsEntries() =>
+          downloadsSettingsSearchEntries
+              .where(
+                (e) =>
+                    e.tabIndex == 1 && !androidOnlyDownloadsIds.contains(e.id),
+              )
+              .toList();
+
+      Future<ProviderContainer> downloadsContainer() async {
+        final container = await _container(
+          extra: [
+            settingsProvider.overrideWith(_FixedSettings.new),
+            personalSettingsProvider.overrideWith(
+              (ref) async => _serverSettings(),
+            ),
+            personalSettingsStateProvider.overrideWithValue(
+              PersonalSettingsState.ready,
+            ),
+            settledAccountAccessProvider.overrideWithValue(
+              AccountAccess(capability: AccountCapability.unsupported),
+            ),
+            categoryControllerProvider.overrideWith(_EmptyCategories.new),
+            // The live controller fetches global metas with retry (a pending
+            // timer the test binding rejects); the rows only read its value.
+            deleteChaptersSettingsControllerProvider.overrideWith(
+              _FixedDeleteChapters.new,
+            ),
+            offlineEnabledProvider.overrideWithValue(true),
+            offlineUsageBytesProvider.overrideWith((ref) async => 0),
+          ],
+        );
+        // Mounts the keep-window switch under the on-device delete section.
+        container.read(localDeleteWhileReadingProvider.notifier).update(2);
+        return container;
+      }
+
+      // TabBarView only mounts the current tab, so each tab is opened once
+      // to prove its ids exist on the tab its entries open.
+      await pumpAndCheck(
         await downloadsContainer(),
         const DownloadsSettingsScreen(initialTab: 0),
-      );
-      _expectIdsMatchRegistry(
-        tester,
         downloadsSettingsSearchEntries.where((e) => e.tabIndex == 0).toList(),
       );
-    });
-
-    testWidgets('Downloads On-device-tab entries match their targets', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 10000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      await _pumpScreen(
-        tester,
+      await pumpAndCheck(
         await downloadsContainer(),
         const DownloadsSettingsScreen(initialTab: 1),
+        testableDownloadsEntries(),
       );
-      _expectIdsMatchRegistry(tester, testableDownloadsEntries());
-    });
 
-    testWidgets('Server entries match ServerScreen targets', (tester) async {
-      // Long page: every target must be mounted to be counted.
-      tester.view.physicalSize = const Size(800, 10000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      final container = await _container(
-        extra: [
-          settingsProvider.overrideWith(_SocksFlareOnSettings.new),
-          // Authenticated + MANAGE_SETTINGS, like a logged-out legacy
-          // server: the web rows and Check for update all render.
-          settledAccountAccessProvider.overrideWithValue(
-            AccountAccess(capability: AccountCapability.unsupported),
-          ),
-          webInterfaceSettingsProvider.overrideWith(
-            (ref) async => Fragment$WebInterfaceSettingsDto(
-              webUIFlavor: Enum$WebUIFlavor.WEBUI,
-              webUIChannel: Enum$WebUIChannel.STABLE,
-              webUIUpdateCheckInterval: 12,
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            settingsProvider.overrideWith(_SocksFlareOnSettings.new),
+            // Authenticated + MANAGE_SETTINGS, like a logged-out legacy
+            // server: the web rows and Check for update all render.
+            settledAccountAccessProvider.overrideWithValue(
+              AccountAccess(capability: AccountCapability.unsupported),
             ),
-          ),
-          webInterfaceFlavorsProvider.overrideWith(
-            (ref) async => const [Enum$WebUIFlavor.WEBUI, Enum$WebUIFlavor.VUI],
-          ),
-          installedWebInterfaceProvider.overrideWith((ref) async => null),
-        ],
+            webInterfaceSettingsProvider.overrideWith(
+              (ref) async => Fragment$WebInterfaceSettingsDto(
+                webUIFlavor: Enum$WebUIFlavor.WEBUI,
+                webUIChannel: Enum$WebUIChannel.STABLE,
+                webUIUpdateCheckInterval: 12,
+              ),
+            ),
+            webInterfaceFlavorsProvider.overrideWith(
+              (ref) async => const [
+                Enum$WebUIFlavor.WEBUI,
+                Enum$WebUIFlavor.VUI,
+              ],
+            ),
+            installedWebInterfaceProvider.overrideWith((ref) async => null),
+          ],
+        ),
+        const ServerScreen(),
+        serverSettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const ServerScreen());
-      _expectIdsMatchRegistry(tester, serverSettingsSearchEntries);
-    });
 
-    testWidgets('Connection entries match ConnectionScreen targets', (
-      tester,
-    ) async {
       SharedPreferences.setMockInitialValues({
         DBKeys.serverLanUrl.name: 'http://192.168.1.100:4567',
       });
-      final sp = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
+      final connectionContainer = ProviderContainer(
         overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
           serverEndpointResolverProvider.overrideWith(_FixedEndpoint.new),
         ],
       );
-      await _pumpScreen(tester, container, const ConnectionScreen());
-      _expectIdsMatchRegistry(tester, connectionSettingsSearchEntries);
-    });
+      await pumpAndCheck(
+        connectionContainer,
+        const ConnectionScreen(),
+        connectionSettingsSearchEntries,
+      );
 
-    testWidgets('SyncYomi entries match SyncYomiSettingsScreen targets', (
-      tester,
-    ) async {
-      final container = await _container(
-        extra: [
-          syncYomiSettingsProvider.overrideWith(
-            (ref) async => const SyncYomiSettings(
-              enabled: true,
-              host: 'https://sync.example',
-              apiKey: 'key',
-              interval: 'PT1H',
-              dataManga: true,
-              dataChapters: true,
-              dataCategories: true,
-              dataHistory: true,
-              dataTracking: true,
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            syncYomiSettingsProvider.overrideWith(
+              (ref) async => const SyncYomiSettings(
+                enabled: true,
+                host: 'https://sync.example',
+                apiKey: 'key',
+                interval: 'PT1H',
+                dataManga: true,
+                dataChapters: true,
+                dataCategories: true,
+                dataHistory: true,
+                dataTracking: true,
+              ),
             ),
-          ),
-          lastSyncStatusProvider.overrideWith((ref) async => null),
-        ],
+            lastSyncStatusProvider.overrideWith((ref) async => null),
+          ],
+        ),
+        const SyncYomiSettingsScreen(),
+        syncYomiSettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const SyncYomiSettingsScreen());
-      _expectIdsMatchRegistry(tester, syncYomiSettingsSearchEntries);
-    });
 
-    testWidgets('KOReader entries match KoreaderSyncSettingsScreen targets', (
-      tester,
-    ) async {
-      final container = await _container(
-        extra: [
-          koreaderSyncSettingsProvider.overrideWith(
-            (ref) async => (
-              strategyForward: Enum$KoreaderSyncConflictStrategy.PROMPT,
-              strategyBackward: Enum$KoreaderSyncConflictStrategy.PROMPT,
-              checksumMethod: Enum$KoreaderSyncChecksumMethod.BINARY,
-              percentageTolerance: 0.05,
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            koreaderSyncSettingsProvider.overrideWith(
+              (ref) async => (
+                strategyForward: Enum$KoreaderSyncConflictStrategy.PROMPT,
+                strategyBackward: Enum$KoreaderSyncConflictStrategy.PROMPT,
+                checksumMethod: Enum$KoreaderSyncChecksumMethod.BINARY,
+                percentageTolerance: 0.05,
+              ),
             ),
-          ),
-          koSyncStatusProvider.overrideWith(
-            (ref) async => const KoSyncStatus(isLoggedIn: false),
-          ),
-        ],
+            koSyncStatusProvider.overrideWith(
+              (ref) async => const KoSyncStatus(isLoggedIn: false),
+            ),
+          ],
+        ),
+        const KoreaderSyncSettingsScreen(),
+        koreaderSyncSettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const KoreaderSyncSettingsScreen());
-      _expectIdsMatchRegistry(tester, koreaderSyncSettingsSearchEntries);
-    });
 
-    testWidgets('Tracking entries match TrackingSettingsScreen targets', (
-      tester,
-    ) async {
-      final container = await _container(
-        extra: [
-          trackersProvider.overrideWith((ref) async => <Fragment$TrackerDto>[]),
-        ],
+      await pumpAndCheck(
+        await _container(
+          extra: [
+            trackersProvider.overrideWith(
+              (ref) async => <Fragment$TrackerDto>[],
+            ),
+          ],
+        ),
+        const TrackingSettingsScreen(),
+        trackingSettingsSearchEntries,
       );
-      await _pumpScreen(tester, container, const TrackingSettingsScreen());
-      _expectIdsMatchRegistry(tester, trackingSettingsSearchEntries);
     });
   });
 }

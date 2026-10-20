@@ -8,44 +8,29 @@ void main() {
   const fallback = Size(1280, 720);
   const min = Size(800, 600);
 
-  test('falls back when nothing saved', () {
+  test('restores a saved size and falls back when nothing is saved', () {
     expect(resolveRestoreSize(null, fallback: fallback, min: min), fallback);
-  });
-
-  test('restores a saved size', () {
-    final g = WindowGeometry(size: const Size(1000, 700));
     expect(
-      resolveRestoreSize(g, fallback: fallback, min: min),
+      resolveRestoreSize(
+        WindowGeometry(size: const Size(1000, 700)),
+        fallback: fallback,
+        min: min,
+      ),
       const Size(1000, 700),
     );
   });
 
   test('clamps a too-small saved size up to the minimum', () {
-    final g = WindowGeometry(size: const Size(300, 200));
-    expect(resolveRestoreSize(g, fallback: fallback, min: min), min);
-  });
-
-  test('does not persist size while maximized', () {
-    expect(shouldPersistSize(isMaximized: true), isFalse);
-    expect(shouldPersistSize(isMaximized: false), isTrue);
-  });
-
-  test('clampToMin raises each axis independently', () {
-    expect(clampToMin(const Size(300, 900), min), const Size(800, 900));
-  });
-
-  test('minimum window fits the two-row desktop layout', () {
-    // Pinned: the desktop layout needs width >= 600 with a shortestSide >=
-    // 600, and linux/my_application.cc mirrors this floor natively.
-    expect(kMinWindowSize, const Size(600, 600));
     expect(
       resolveRestoreSize(
-        const WindowGeometry(size: Size(300, 400)),
+        WindowGeometry(size: const Size(300, 200)),
         fallback: fallback,
-        min: kMinWindowSize,
+        min: min,
       ),
-      kMinWindowSize,
+      min,
     );
+    // Each axis is raised independently.
+    expect(clampToMin(const Size(300, 900), min), const Size(800, 900));
   });
 
   test(
@@ -70,4 +55,18 @@ void main() {
       }
     },
   );
+
+  test('minimum window fits the two-row desktop layout', () {
+    // Pinned: the desktop layout needs width >= 600 with a shortestSide >=
+    // 600, and linux/my_application.cc mirrors this floor natively.
+    expect(kMinWindowSize, const Size(600, 600));
+    expect(
+      resolveRestoreSize(
+        const WindowGeometry(size: Size(300, 400)),
+        fallback: fallback,
+        min: kMinWindowSize,
+      ),
+      kMinWindowSize,
+    );
+  });
 }

@@ -28,13 +28,13 @@ class _ServerUrl extends ServerUrl {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  for (final url in [
-    'localhost:4567',
-    'example.test',
-    '/server',
-    'http:relative',
-  ]) {
-    test('invalid server URL does not break the image cache: $url', () async {
+  test('invalid server URLs do not break the image cache', () async {
+    for (final url in [
+      'localhost:4567',
+      'example.test',
+      '/server',
+      'http:relative',
+    ]) {
       SharedPreferences.setMockInitialValues({
         DBKeys.serverUrl.name: url,
         DBKeys.serverPortToggle.name: false,
@@ -49,27 +49,24 @@ void main() {
       addTearDown(container.dispose);
       final manager = container.read(coverCacheManagerProvider);
       final bytes = Uint8List.fromList([1, 2, 3]);
-      await manager.putFile('cached-cover', bytes);
+      await manager.putFile('cached-cover-$url', bytes);
       expect(
-        await (await manager.getSingleFile('cached-cover')).readAsBytes(),
+        await (await manager.getSingleFile('cached-cover-$url')).readAsBytes(),
         bytes,
+        reason: url,
       );
-    });
-  }
+    }
 
-  test(
-    'invalid image URL fails as a request, not an origin StateError',
-    () async {
-      final manager = createCoverCacheManager(
-        serverOrigin: 'http://localhost:4567',
-      );
-      addTearDown(manager.dispose);
-      await expectLater(
-        manager.getSingleFile('localhost:4567/thumbnail'),
-        throwsA(isA<http.ClientException>()),
-      );
-    },
-  );
+    // An invalid image URL fails as a request, not an origin StateError.
+    final manager = createCoverCacheManager(
+      serverOrigin: 'http://localhost:4567',
+    );
+    addTearDown(manager.dispose);
+    await expectLater(
+      manager.getSingleFile('localhost:4567/thumbnail'),
+      throwsA(isA<http.ClientException>()),
+    );
+  });
 
   test(
     'endpoint replacement has a new memory cache shared by pages and covers',
@@ -103,30 +100,14 @@ void main() {
       expect(replacement, isNot(same(first)));
       expect(await replacement.getFileFromCache('cached-cover'), isNull);
       expect(container.read(serverPageCacheManagerProvider), same(replacement));
-    },
-  );
 
-  test(
-    'a load pending when the cover cache is replaced still completes',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        DBKeys.serverPortToggle.name: false,
-      });
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(
-            await SharedPreferences.getInstance(),
-          ),
-          serverUrlProvider.overrideWith(_ServerUrl.new),
-        ],
-      );
-      addTearDown(container.dispose);
-      final first = container.read(coverCacheManagerProvider);
-      final pending = first.getSingleFile(_pngDataUrl);
+      // A load pending when the cache is replaced still completes.
+      final second = container.read(coverCacheManagerProvider);
+      final pending = second.getSingleFile(_pngDataUrl);
       (container.read(serverUrlProvider.notifier) as _ServerUrl).select(
-        'https://example.test',
+        'https://example.org',
       );
-      expect(container.read(coverCacheManagerProvider), isNot(same(first)));
+      expect(container.read(coverCacheManagerProvider), isNot(same(second)));
       expect(await (await pending).readAsBytes(), _pngBytes);
     },
   );

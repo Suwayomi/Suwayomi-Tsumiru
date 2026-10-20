@@ -14,17 +14,36 @@ void main() {
   group('detectNewChapters', () {
     test('groups fresh chapters by manga and advances the watermark', () {
       final r = detectNewChapters(
-        candidates: [
-          ch(1, 10, 1, 100),
-          ch(2, 10, 2, 110),
-          ch(3, 20, 5, 120),
-        ],
+        candidates: [ch(1, 10, 1, 100), ch(2, 10, 2, 110), ch(3, 20, 5, 120)],
         watermark: const NewChapterWatermark(fetchedAt: 0),
       );
       expect(r.groups.length, 2);
       expect(r.watermark.fetchedAt, 120);
       final manga10 = r.groups.firstWhere((g) => g.mangaId == 10);
       expect(manga10.chapters.map((c) => c.id), [1, 2]);
+
+      // Per-series chapters are ordered by chapter number, not fetch order.
+      final ordered = detectNewChapters(
+        candidates: [ch(1, 10, 3, 100), ch(2, 10, 1, 130), ch(3, 10, 2, 120)],
+        watermark: const NewChapterWatermark(),
+      );
+      expect(ordered.groups.single.chapters.map((c) => c.chapterNumber), [
+        1,
+        2,
+        3,
+      ]);
+
+      // The default overlap is 5 minutes in seconds, the unit of fetchedAt.
+      expect(kDefaultOverlapSeconds, 300);
+
+      // The watermark round-trips through json.
+      const wm = NewChapterWatermark(
+        fetchedAt: 42,
+        recent: {1: 40, 2: 41, 3: 42},
+      );
+      final back = NewChapterWatermark.fromJson(wm.toJson());
+      expect(back.fetchedAt, 42);
+      expect(back.recent, {1: 40, 2: 41, 3: 42});
     });
 
     test('an already-notified chapter in the overlap window is not re-sent', () {
@@ -50,14 +69,6 @@ void main() {
       expect(r.watermark.recent.containsKey(5), isTrue);
     });
 
-    test('per-series chapters are ordered by chapter number, not fetch order', () {
-      final r = detectNewChapters(
-        candidates: [ch(1, 10, 3, 100), ch(2, 10, 1, 130), ch(3, 10, 2, 120)],
-        watermark: const NewChapterWatermark(),
-      );
-      expect(r.groups.single.chapters.map((c) => c.chapterNumber), [1, 2, 3]);
-    });
-
     test('category scope filters which series notify', () {
       final r = detectNewChapters(
         candidates: [ch(1, 10, 1, 100), ch(2, 20, 1, 110)],
@@ -69,13 +80,7 @@ void main() {
       expect(r.watermark.fetchedAt, 110);
     });
 
-    test('default overlap is 5 minutes in seconds, the unit of fetchedAt', () {
-      // Suwayomi stores fetchedAt as epoch seconds; a millisecond-sized
-      // overlap (300000) would re-scan ~3.5 days of unread chapters.
-      expect(kDefaultOverlapSeconds, 300);
-    });
-
-    test('the pass right after a seed does not notify the existing backlog', () {
+    test('the seed pass skips the backlog and keeps fresh chapters', () {
       // Reinstall scenario: fresh cursor, backlog of unread chapters fetched
       // within the overlap window below the server's max.
       const max = 1700000000;
@@ -92,69 +97,56 @@ void main() {
         watermark: seed,
       );
       expect(r.groups.map((g) => g.mangaId), [40]);
-    });
 
-    test('a chapter fetched after the seed max stays fresh', () {
-      const max = 1700000000;
-      final seed = seedNewChapterWatermark(
+      // A chapter fetched after the seed max stays fresh.
+      final fresh = seedNewChapterWatermark(
         maxFetched: max,
         window: [ch(1, 10, 1, max), ch(2, 20, 1, max + 5)],
       );
-      expect(seed.fetchedAt, max);
-      expect(seed.recent.keys, [1]);
-    });
+      expect(fresh.fetchedAt, max);
+      expect(fresh.recent.keys, [1]);
 
-    test('no candidates keeps the watermark and notifies nothing', () {
-      final r = detectNewChapters(
+      // No candidates keeps the watermark and notifies nothing.
+      final empty = detectNewChapters(
         candidates: const [],
         watermark: const NewChapterWatermark(fetchedAt: 500, recent: {9: 500}),
       );
-      expect(r.groups, isEmpty);
-      expect(r.watermark.fetchedAt, 500);
-    });
-
-    test('watermark round-trips through json', () {
-      const wm = NewChapterWatermark(fetchedAt: 42, recent: {1: 40, 2: 41, 3: 42});
-      final back = NewChapterWatermark.fromJson(wm.toJson());
-      expect(back.fetchedAt, 42);
-      expect(back.recent, {1: 40, 2: 41, 3: 42});
+      expect(empty.groups, isEmpty);
+      expect(empty.watermark.fetchedAt, 500);
     });
   });
 
   group('newChaptersLabel (Komikku parity)', () {
-    test('no parseable numbers -> generic count', () {
+    test('formats generic, single and multiple chapter labels', () {
+      // No parseable numbers -> generic count.
       expect(newChaptersLabel([-1, -1], 2), isA<GenericNewChapters>());
       expect((newChaptersLabel([-1, -1], 2) as GenericNewChapters).count, 2);
-    });
 
-    test('single number, no unparsed remainder -> Chapter X', () {
-      final l = newChaptersLabel([12], 1) as SingleNewChapter;
-      expect(l.number, '12');
-      expect(l.more, 0);
-    });
+      // Single number, no unparsed remainder.
+      final single = newChaptersLabel([12], 1) as SingleNewChapter;
+      expect(single.number, '12');
+      expect(single.more, 0);
 
-    test('single number with unparsed extras -> Chapter X and N more', () {
-      final l = newChaptersLabel([2.5, -1, -1], 3) as SingleNewChapter;
-      expect(l.number, '2.5');
-      expect(l.more, 2);
-    });
+      // Single number with unparsed extras.
+      final partial = newChaptersLabel([2.5, -1, -1], 3) as SingleNewChapter;
+      expect(partial.number, '2.5');
+      expect(partial.more, 2);
 
-    test('a few numbers -> Chapters a, b, c', () {
-      final l = newChaptersLabel([3, 1, 2], 3) as MultipleNewChapters;
-      expect(l.numbers, ['1', '2', '3']);
-      expect(l.more, 0);
-    });
+      // A few numbers sort ascending.
+      final few = newChaptersLabel([3, 1, 2], 3) as MultipleNewChapters;
+      expect(few.numbers, ['1', '2', '3']);
+      expect(few.more, 0);
 
-    test('more than the cap -> first 5 and N more', () {
-      final l = newChaptersLabel([1, 2, 3, 4, 5, 6, 7], 7) as MultipleNewChapters;
-      expect(l.numbers, ['1', '2', '3', '4', '5']);
-      expect(l.more, 2);
-    });
+      // More than the cap -> first 5 and N more.
+      final many =
+          newChaptersLabel([1, 2, 3, 4, 5, 6, 7], 7) as MultipleNewChapters;
+      expect(many.numbers, ['1', '2', '3', '4', '5']);
+      expect(many.more, 2);
 
-    test('duplicate numbers collapse', () {
-      final l = newChaptersLabel([1, 1, 1], 3) as SingleNewChapter;
-      expect(l.number, '1');
-      expect(l.more, 2); // total 3 - 1 distinct
+      // Duplicate numbers collapse.
+      final duplicate = newChaptersLabel([1, 1, 1], 3) as SingleNewChapter;
+      expect(duplicate.number, '1');
+      expect(duplicate.more, 2); // total 3 - 1 distinct
     });
   });
 }

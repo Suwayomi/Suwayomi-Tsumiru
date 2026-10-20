@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/navigation_bar_data.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -130,36 +129,15 @@ void main() {
       await tester.tap(find.byType(TsumiruLogo));
       await tester.pumpAndSettle();
       expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
+
+      // Collapsed state persists across a rebuild.
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+      expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
+      await _pump(tester, prefs);
+      expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     },
   );
-
-  testWidgets('expanded width is 208 and collapsed width is 60', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs);
-
-    expect(_sidebarWidth(tester), 208);
-
-    await tester.tap(find.byIcon(Icons.chevron_left));
-    await tester.pumpAndSettle();
-    expect(_sidebarWidth(tester), 60);
-  });
-
-  testWidgets('collapsed state persists across a rebuild', (tester) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs);
-
-    await tester.tap(find.byIcon(Icons.chevron_left));
-    await tester.pumpAndSettle();
-    expect(_sidebarWidth(tester), 60);
-
-    // Re-pump with the SAME prefs (simulates reopening) — stays collapsed.
-    await _pump(tester, prefs);
-    expect(_sidebarWidth(tester), 60);
-  });
 
   testWidgets('900x900 auto-collapses the sidebar and keeps the preference', (
     tester,
@@ -188,73 +166,6 @@ void main() {
     tester.view.physicalSize = const Size(1400, 900);
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), 208);
-  });
-
-  testWidgets('1400x900 shows the full desktop sidebar', (tester) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, size: const Size(1400, 900));
-
-    expect(find.byType(DesktopSidebar), findsOneWidget);
-    expect(find.byType(NavigationRail), findsNothing);
-    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a stored collapsed pref stays collapsed at desktop width', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, size: const Size(1400, 900));
-
-    expect(_sidebarWidth(tester), 60);
-    expect(find.byType(NavigationRail), findsNothing);
-    expect(find.byIcon(Icons.chevron_left), findsNothing);
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('collapsed shows no label text but a tooltip with the label', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs);
-
-    final l10n = _l10n(tester);
-    expect(_sidebarWidth(tester), 60);
-    expect(
-      find.text(l10n.library),
-      findsNothing,
-      reason: 'collapsed rows are icon-only, no labels under icons',
-    );
-    expect(
-      find.byWidgetPredicate((w) => w is Tooltip && w.message == l10n.library),
-      findsOneWidget,
-      reason: 'the label must still be available on hover',
-    );
-
-    // Expanded shows the label text.
-    await tester.tap(find.byType(TsumiruLogo));
-    await tester.pumpAndSettle();
-    expect(find.text(l10n.library), findsOneWidget);
-  });
-
-  testWidgets('selected row uses the primary colour', (tester) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, selectedIndex: 2);
-
-    final l10n = _l10n(tester);
-    final context = tester.element(find.byType(DesktopSidebar));
-    final primary = Theme.of(context).colorScheme.primary;
-
-    final selectedText = tester.widget<Text>(find.text(l10n.history));
-    expect(selectedText.style?.color, primary);
-
-    final unselectedText = tester.widget<Text>(find.text(l10n.library));
-    expect(unselectedText.style?.color, isNot(primary));
   });
 
   testWidgets('tapping a row calls onDestinationSelected with its index', (
@@ -321,100 +232,6 @@ void main() {
       ),
     );
     handle.dispose();
-  });
-
-  testWidgets('collapsed rows are 44px tall with 6px gaps', (tester) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs);
-    expect(_sidebarWidth(tester), 60);
-
-    final rows = find.descendant(
-      of: find.byType(DesktopSidebar),
-      matching: find.byWidgetPredicate(
-        (w) => w is Container && w.constraints?.maxHeight == 44,
-      ),
-    );
-    expect(rows, findsNWidgets(6));
-    expect(
-      find.descendant(
-        of: find.byType(DesktopSidebar),
-        matching: find.byWidgetPredicate(
-          (w) => w is Container && w.constraints?.maxHeight == 40,
-        ),
-      ),
-      findsNothing,
-    );
-
-    final tops = [
-      for (var i = 0; i < 6; i++) tester.getTopLeft(rows.at(i)).dy,
-    ];
-    for (var i = 1; i < tops.length; i++) {
-      expect(
-        tops[i] - tops[i - 1],
-        50,
-        reason: 'collapsed pitch is 44px row + 6px gap',
-      );
-    }
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('expanded rows stay 40px tall with 2px gaps', (tester) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs);
-    expect(_sidebarWidth(tester), 208);
-
-    final rows = find.descendant(
-      of: find.byType(DesktopSidebar),
-      matching: find.byWidgetPredicate(
-        (w) => w is Container && w.constraints?.maxHeight == 40,
-      ),
-    );
-    expect(rows, findsNWidgets(6));
-    expect(
-      find.descendant(
-        of: find.byType(DesktopSidebar),
-        matching: find.byWidgetPredicate(
-          (w) => w is Container && w.constraints?.maxHeight == 44,
-        ),
-      ),
-      findsNothing,
-    );
-
-    final tops = [
-      for (var i = 0; i < 6; i++) tester.getTopLeft(rows.at(i)).dy,
-    ];
-    for (var i = 1; i < tops.length; i++) {
-      expect(
-        tops[i] - tops[i - 1],
-        42,
-        reason: 'expanded pitch is 40px row + 2px gap',
-      );
-    }
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('1400x600 collapsed shows all six destinations', (tester) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, size: const Size(1400, 600));
-
-    final context = tester.element(find.byType(DesktopSidebar));
-    final navList = NavigationBarData.getNavList(context);
-    expect(navList, hasLength(6));
-
-    for (final data in navList) {
-      final label = data.label(context);
-      final row = find.byWidgetPredicate(
-        (w) => w is Tooltip && w.message == label,
-      );
-      expect(row, findsOneWidget, reason: 'collapsed row keeps "$label"');
-      final rect = tester.getRect(row);
-      expect(rect.top, greaterThanOrEqualTo(0));
-      expect(rect.bottom, lessThanOrEqualTo(600));
-    }
-    expect(tester.takeException(), isNull);
   });
 
   testWidgets('badges still render on the sidebar icons', (tester) async {

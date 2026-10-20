@@ -9,28 +9,22 @@ import 'package:tsumiru/src/utils/misc/language_flag.dart';
 
 void main() {
   group('languageFlagEmoji', () {
-    test('maps plain ISO-639 codes', () {
+    test('maps languages and regions, normalizing input', () {
       expect(languageFlagEmoji('es'), '🇪🇸');
       expect(languageFlagEmoji('en'), '🇺🇸');
       expect(languageFlagEmoji('ja'), '🇯🇵');
       expect(languageFlagEmoji('ko'), '🇰🇷');
       expect(languageFlagEmoji('zh'), '🇨🇳');
-    });
-
-    test('region variants win over the base language', () {
+      // Region variants win over the base language.
       expect(languageFlagEmoji('pt-BR'), '🇧🇷');
       expect(languageFlagEmoji('pt'), '🇵🇹');
       expect(languageFlagEmoji('zh-Hant'), '🇹🇼');
       expect(languageFlagEmoji('en-GB'), '🇬🇧');
-    });
-
-    test('normalizes case and underscore separators', () {
+      // Unknown regions fall back to the base language.
+      expect(languageFlagEmoji('de-AT'), '🇩🇪');
+      // Case and underscore separators are normalized.
       expect(languageFlagEmoji('PT_br'), '🇧🇷');
       expect(languageFlagEmoji('  FR  '), '🇫🇷');
-    });
-
-    test('falls back to the base language for unknown regions', () {
-      expect(languageFlagEmoji('de-AT'), '🇩🇪');
     });
 
     test('returns null when there is no sensible flag', () {

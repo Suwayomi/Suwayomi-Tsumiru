@@ -72,12 +72,13 @@ Future<ProviderContainer> _container() async {
 
 void main() {
   test(
-    'switching host clears credentials; same-host edits keep them',
+    'a host or port switch clears credentials; same-host edits keep them',
     () async {
       final c = await _container();
       // Keep providers alive across updates (real watchers would in the app).
       c.listen(serverUrlProvider, (_, _) {}, fireImmediately: true);
       c.listen(credentialsProvider, (_, _) {}, fireImmediately: true);
+      c.listen(serverPortProvider, (_, _) {}, fireImmediately: true);
       final store = c.read(authCredentialsStoreProvider.notifier);
       final serverUrl = c.read(serverUrlProvider.notifier);
 
@@ -99,22 +100,17 @@ void main() {
       state = await c.read(authCredentialsStoreProvider.future);
       expect(state.simpleLoginCookie, isNull);
       expect(await c.read(credentialsProvider.future), isNull);
+
+      // Changing the server port also clears them.
+      final port = c.read(serverPortProvider.notifier);
+      await port.update(4567);
+      await store.saveSimpleLoginCookie('JSESSIONID=pw');
+      await port.update(4568);
+      await Future<void>.delayed(Duration.zero);
+      state = await c.read(authCredentialsStoreProvider.future);
+      expect(state.simpleLoginCookie, isNull);
     },
   );
-
-  test('changing the server port clears credentials too', () async {
-    final c = await _container();
-    c.listen(serverPortProvider, (_, _) {}, fireImmediately: true);
-    final store = c.read(authCredentialsStoreProvider.notifier);
-    final port = c.read(serverPortProvider.notifier);
-
-    await port.update(4567);
-    await store.saveSimpleLoginCookie('JSESSIONID=pw');
-    await port.update(4568); // effective endpoint changed
-    await Future<void>.delayed(Duration.zero);
-    final state = await c.read(authCredentialsStoreProvider.future);
-    expect(state.simpleLoginCookie, isNull);
-  });
 
   test('a delayed token write with a stale epoch is discarded', () async {
     final c = await _container();
@@ -130,20 +126,5 @@ void main() {
 
     final state = await c.read(authCredentialsStoreProvider.future);
     expect(state.uiAccessToken, isNull);
-  });
-
-  test('different port counts as a different host', () async {
-    final c = await _container();
-    // Keep serverUrlProvider alive across updates (a real watcher would in the app).
-    c.listen(serverUrlProvider, (_, _) {}, fireImmediately: true);
-    final store = c.read(authCredentialsStoreProvider.notifier);
-    final serverUrl = c.read(serverUrlProvider.notifier);
-
-    await serverUrl.update('http://host.local:4567');
-    await store.saveSimpleLoginCookie('JSESSIONID=pw');
-    await serverUrl.update('http://host.local:4568');
-    await Future<void>.delayed(Duration.zero);
-    final state = await c.read(authCredentialsStoreProvider.future);
-    expect(state.simpleLoginCookie, isNull);
   });
 }

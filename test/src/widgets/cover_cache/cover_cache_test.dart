@@ -211,12 +211,9 @@ void main() {
   });
 
   group('isCoverImagePath', () {
-    test('routes covers and source icons to the durable cache', () {
+    test('routes covers and source icons to the durable cache, not pages', () {
       expect(isCoverImagePath('/api/v1/manga/12/thumbnail'), isTrue);
       expect(isCoverImagePath('/api/v1/extension/icon/foo.apk'), isTrue);
-    });
-
-    test('leaves chapter pages on the default cache', () {
       expect(isCoverImagePath('/api/v1/manga/12/chapter/3/page/0'), isFalse);
     });
   });
@@ -242,8 +239,9 @@ void main() {
     });
 
     test(
-      'downloads missing library covers under the un-tokened cache key',
+      'downloads missing covers only, under the un-tokened cache key',
       () async {
+        // Missing covers download under the un-tokened key.
         await container
             .read(offlineCoverWarmerProvider.notifier)
             .warmLibraryCovers([
@@ -254,27 +252,27 @@ void main() {
           'http://server.test/api/v1/manga/1/thumbnail',
           'http://server.test/api/v1/manga/2/thumbnail',
         });
+
+        // Covers already in the cache are skipped.
+        cache.downloads.clear();
+        cache.cachedKeys.add('http://server.test/api/v1/manga/1/thumbnail');
+        await container
+            .read(offlineCoverWarmerProvider.notifier)
+            .warmLibraryCovers([
+              _manga(1, thumbnailUrl: '/api/v1/manga/1/thumbnail'),
+              _manga(2, thumbnailUrl: '/api/v1/manga/2/thumbnail'),
+            ]);
+        expect(cache.downloads.map((d) => d.key).toList(), [
+          'http://server.test/api/v1/manga/2/thumbnail',
+        ]);
+
+        // Manga with no thumbnail are ignored.
+        cache.downloads.clear();
+        await container
+            .read(offlineCoverWarmerProvider.notifier)
+            .warmLibraryCovers([_manga(1, thumbnailUrl: null)]);
+        expect(cache.downloads, isEmpty);
       },
     );
-
-    test('skips covers already in the cache', () async {
-      cache.cachedKeys.add('http://server.test/api/v1/manga/1/thumbnail');
-      await container
-          .read(offlineCoverWarmerProvider.notifier)
-          .warmLibraryCovers([
-            _manga(1, thumbnailUrl: '/api/v1/manga/1/thumbnail'),
-            _manga(2, thumbnailUrl: '/api/v1/manga/2/thumbnail'),
-          ]);
-      expect(cache.downloads.map((d) => d.key).toList(), [
-        'http://server.test/api/v1/manga/2/thumbnail',
-      ]);
-    });
-
-    test('ignores manga with no thumbnail', () async {
-      await container
-          .read(offlineCoverWarmerProvider.notifier)
-          .warmLibraryCovers([_manga(1, thumbnailUrl: null)]);
-      expect(cache.downloads, isEmpty);
-    });
   });
 }

@@ -132,7 +132,7 @@ void main() {
     expect(link.operations, isEmpty);
   });
   test(
-    'reader cannot change shared interval, location or archive format',
+    'shared writes are denied without permission, allowed with it',
     () async {
       final library = LibrarySettingsRepository(client, routing: routing);
       final downloads = DownloadsSettingsRepository(client, routing: routing);
@@ -149,61 +149,74 @@ void main() {
         throwsA(isA<AccountPermissionDenied>()),
       );
       expect(link.operations, isEmpty);
+
+      // An explicit MANAGE_SETTINGS grant permits the same calls.
+      access = AccountAccess(
+        capability: AccountCapability.supported,
+        user: Fragment$AccountDto(
+          id: 2,
+          username: 'manager',
+          permissions: [Enum$UserPermission.MANAGE_SETTINGS],
+          roles: [Enum$UserRole.USER],
+        ),
+      );
+      await LibrarySettingsRepository(
+        client,
+        routing: routing,
+      ).updateGlobalUpdateInterval(1);
+      await DownloadsSettingsRepository(
+        client,
+        routing: routing,
+      ).updateDownloadsLocation('/new');
+      expect(link.operations, [
+        'UpdateGlobalUpdateInterval',
+        'UpdateDownloadsLocation',
+      ]);
     },
   );
-  test('explicit MANAGE_SETTINGS grant permits shared changes', () async {
-    access = AccountAccess(
-      capability: AccountCapability.supported,
-      user: Fragment$AccountDto(
-        id: 2,
-        username: 'manager',
-        permissions: [Enum$UserPermission.MANAGE_SETTINGS],
-        roles: [Enum$UserRole.USER],
-      ),
-    );
-    await LibrarySettingsRepository(
-      client,
-      routing: routing,
-    ).updateGlobalUpdateInterval(1);
-    await DownloadsSettingsRepository(
-      client,
-      routing: routing,
-    ).updateDownloadsLocation('/new');
-    expect(link.operations, [
-      'UpdateGlobalUpdateInterval',
-      'UpdateDownloadsLocation',
-    ]);
-  });
-  test('legacy personal reads do not query account-only fields', () async {
-    access = AccountAccess(capability: AccountCapability.unsupported);
-    final container = ProviderContainer(
-      overrides: [
-        accountAccessProvider.overrideWith((ref) async => access),
-        accountRepositoryProvider.overrideWithValue(AccountRepository(client)),
-        settingsProvider.overrideWith(FixedSettings.new),
-      ],
-    );
-    addTearDown(container.dispose);
-    expect(
-      (await container.read(personalSettingsProvider.future))!.excludeCompleted,
-      isFalse,
-    );
-    expect(link.operations, isEmpty);
-  });
-  test('personal provider overlays user values on global settings', () async {
-    final container = ProviderContainer(
-      overrides: [
-        accountAccessProvider.overrideWith((ref) async => access),
-        accountRepositoryProvider.overrideWithValue(AccountRepository(client)),
-        settingsProvider.overrideWith(FixedSettings.new),
-      ],
-    );
-    addTearDown(container.dispose);
-    final settings = await container.read(personalSettingsProvider.future);
-    expect(settings!.excludeCompleted, isTrue);
-    expect(settings.globalUpdateInterval, 12);
-    expect(link.operations, ['AccountSettings']);
-  });
+
+  test(
+    'personal values overlay global settings; legacy reads skip account fields',
+    () async {
+      // Legacy personal reads never query account-only fields.
+      access = AccountAccess(capability: AccountCapability.unsupported);
+      var container = ProviderContainer(
+        overrides: [
+          accountAccessProvider.overrideWith((ref) async => access),
+          accountRepositoryProvider.overrideWithValue(
+            AccountRepository(client),
+          ),
+          settingsProvider.overrideWith(FixedSettings.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(
+        (await container.read(
+          personalSettingsProvider.future,
+        ))!.excludeCompleted,
+        isFalse,
+      );
+      expect(link.operations, isEmpty);
+
+      // A supported account overlays its user values on the global settings.
+      access = AccountAccess(capability: AccountCapability.supported);
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          accountAccessProvider.overrideWith((ref) async => access),
+          accountRepositoryProvider.overrideWithValue(
+            AccountRepository(client),
+          ),
+          settingsProvider.overrideWith(FixedSettings.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      final settings = await container.read(personalSettingsProvider.future);
+      expect(settings!.excludeCompleted, isTrue);
+      expect(settings.globalUpdateInterval, 12);
+      expect(link.operations, ['AccountSettings']);
+    },
+  );
 
   group('personalSettingsState', () {
     final supported = AccountAccess(capability: AccountCapability.supported);
@@ -222,59 +235,61 @@ void main() {
       personal: personal,
     );
 
-    test('an account check in flight is loading, not unavailable', () {
-      expect(
-        state(unknown, checking, const AsyncLoading()),
-        PersonalSettingsState.loading,
-      );
-    });
+    test(
+      'loading, ready and unavailable follow the account and load',
+      () async {
+        // An account check in flight is loading, not unavailable.
+        expect(
+          state(unknown, checking, const AsyncLoading()),
+          PersonalSettingsState.loading,
+        );
+        // A first load in flight is loading too.
+        expect(
+          state(supported, checked, const AsyncLoading()),
+          PersonalSettingsState.loading,
+        );
 
-    test('a first load in flight is loading, not unavailable', () {
-      expect(
-        state(supported, checked, const AsyncLoading()),
-        PersonalSettingsState.loading,
-      );
-    });
+        // A reload keeps the settings it already has editable.
+        var pending = Future<Fragment$SettingsDto?>.value(serverSettings());
+        final personal = FutureProvider<Fragment$SettingsDto?>(
+          (ref) => pending,
+        );
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        container.listen(personal, (_, _) {});
+        await container.read(personal.future);
+        pending = Completer<Fragment$SettingsDto?>().future;
+        container.invalidate(personal);
+        final reloading = container.read(personal);
+        expect(reloading.isLoading, isTrue);
+        expect(reloading.value, isNotNull);
+        expect(
+          state(supported, checked, reloading),
+          PersonalSettingsState.ready,
+        );
 
-    test('a reload keeps the settings it already has editable', () async {
-      // Riverpod flags a refresh as loading while keeping the previous value;
-      // counting that as a failure flashed the "could not be verified" message.
-      var pending = Future<Fragment$SettingsDto?>.value(serverSettings());
-      final personal = FutureProvider<Fragment$SettingsDto?>((ref) => pending);
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      container.listen(personal, (_, _) {});
-      await container.read(personal.future);
-      pending = Completer<Fragment$SettingsDto?>().future;
-      container.invalidate(personal);
-      final reloading = container.read(personal);
-      expect(reloading.isLoading, isTrue);
-      expect(reloading.value, isNotNull);
-      expect(state(supported, checked, reloading), PersonalSettingsState.ready);
-    });
+        // Loaded settings are ready.
+        expect(state(supported, checked, loaded), PersonalSettingsState.ready);
 
-    test('loaded settings are ready', () {
-      expect(state(supported, checked, loaded), PersonalSettingsState.ready);
-    });
-
-    test('a settled unknown account or a failed load is unavailable', () {
-      expect(
-        state(unknown, AsyncValue.data(unknown), loaded),
-        PersonalSettingsState.unavailable,
-      );
-      expect(
-        state(
-          supported,
-          checked,
-          AsyncValue.error(StateError('offline'), StackTrace.empty),
-        ),
-        PersonalSettingsState.unavailable,
-      );
-      expect(
-        state(supported, checked, const AsyncValue.data(null)),
-        PersonalSettingsState.unavailable,
-      );
-    });
+        // A settled unknown account or a failed load is unavailable.
+        expect(
+          state(unknown, AsyncValue.data(unknown), loaded),
+          PersonalSettingsState.unavailable,
+        );
+        expect(
+          state(
+            supported,
+            checked,
+            AsyncValue.error(StateError('offline'), StackTrace.empty),
+          ),
+          PersonalSettingsState.unavailable,
+        );
+        expect(
+          state(supported, checked, const AsyncValue.data(null)),
+          PersonalSettingsState.unavailable,
+        );
+      },
+    );
   });
 }
 

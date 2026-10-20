@@ -10,87 +10,127 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/reader_keyboard_shortcuts.dart';
 
 void main() {
-  test('vertical mode maps arrow up/down to viewport scroll intents', () {
+  test('vertical bindings map scroll, page skims and chapter jumps', () {
     final manager = readerShortcutManager(Axis.vertical);
-    expect(manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowDown)],
-        isA<ViewportScrollForwardIntent>());
-    expect(manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowUp)],
-        isA<ViewportScrollBackwardIntent>());
-    expect(manager.shortcuts[const SingleActivator(LogicalKeyboardKey.pageDown)],
-        isA<ViewportScrollForwardIntent>());
-    expect(manager.shortcuts[const SingleActivator(LogicalKeyboardKey.pageUp)],
-        isA<ViewportScrollBackwardIntent>());
-  });
-
-  test('vertical mode: left/right skim pages, comma/period change chapter',
-      () {
-    final m = readerShortcutManager(Axis.vertical);
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
-        isA<PreviousScrollIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
-        isA<NextScrollIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.comma)],
-        isA<PreviousChapterIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
-        isA<NextChapterIntent>());
-  });
-
-  test('vertical mode with auto-scroll support maps space to toggle and +/-',
-      () {
-    final m = readerShortcutManager(Axis.vertical, autoScrollSupported: true);
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
-        isA<AutoScrollToggleIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.equal)],
-        isA<AutoScrollFasterIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.minus)],
-        isA<AutoScrollSlowerIntent>());
-  });
-
-  test('vertical mode WITHOUT auto-scroll support keeps space as page-advance',
-      () {
-    // The engine isn't mounted (e.g. continuous-vertical), so space must stay
-    // page navigation instead of going dead.
-    final m = readerShortcutManager(Axis.vertical);
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
-        isA<NextScrollIntent>());
     expect(
-        m.shortcuts[const SingleActivator(LogicalKeyboardKey.space,
-            shift: true)],
-        isA<PreviousScrollIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.equal)],
-        isNull);
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowDown)],
+      isA<ViewportScrollForwardIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowUp)],
+      isA<ViewportScrollBackwardIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.pageDown)],
+      isA<ViewportScrollForwardIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.pageUp)],
+      isA<ViewportScrollBackwardIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
+      isA<PreviousScrollIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
+      isA<NextScrollIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.comma)],
+      isA<PreviousChapterIntent>(),
+    );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
+      isA<NextChapterIntent>(),
+    );
   });
 
-  test('horizontal (paged) mode keeps space as next-page', () {
-    final m = readerShortcutManager(Axis.horizontal);
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
-        isA<NextScrollIntent>());
+  test('auto-scroll support maps space to toggle and +/- to speed', () {
+    final withAuto = readerShortcutManager(
+      Axis.vertical,
+      autoScrollSupported: true,
+    );
+    expect(
+      withAuto.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
+      isA<AutoScrollToggleIntent>(),
+    );
+    expect(
+      withAuto.shortcuts[const SingleActivator(LogicalKeyboardKey.equal)],
+      isA<AutoScrollFasterIntent>(),
+    );
+    expect(
+      withAuto.shortcuts[const SingleActivator(LogicalKeyboardKey.minus)],
+      isA<AutoScrollSlowerIntent>(),
+    );
+
+    // Without the engine mounted, space stays page navigation.
+    final without = readerShortcutManager(Axis.vertical);
+    expect(
+      without.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
+      isA<NextScrollIntent>(),
+    );
+    expect(
+      without.shortcuts[const SingleActivator(
+        LogicalKeyboardKey.space,
+        shift: true,
+      )],
+      isA<PreviousScrollIntent>(),
+    );
+    expect(
+      without.shortcuts[const SingleActivator(LogicalKeyboardKey.equal)],
+      isNull,
+    );
+
+    // Horizontal (paged) mode keeps space as next-page.
+    final horizontal = readerShortcutManager(Axis.horizontal);
+    expect(
+      horizontal.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
+      isA<NextScrollIntent>(),
+    );
   });
 
-  test('RTL flips left/right: left advances, right goes back', () {
-    final m = readerShortcutManager(Axis.horizontal, isRtl: true);
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
-        isA<NextScrollIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
-        isA<PreviousScrollIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.keyA)],
-        isA<NextScrollIntent>());
-    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.keyD)],
-        isA<PreviousScrollIntent>());
-  });
+  test('RTL flips left/right only', () {
+    final rtl = readerShortcutManager(Axis.horizontal, isRtl: true);
+    expect(
+      rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
+      isA<NextScrollIntent>(),
+    );
+    expect(
+      rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
+      isA<PreviousScrollIntent>(),
+    );
+    expect(
+      rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.keyA)],
+      isA<NextScrollIntent>(),
+    );
+    expect(
+      rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.keyD)],
+      isA<PreviousScrollIntent>(),
+    );
 
-  test('LTR keeps left=previous/right=next; RTL leaves up/down alone', () {
+    // LTR keeps left=previous/right=next.
     final ltr = readerShortcutManager(Axis.horizontal, isRtl: false);
-    expect(ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
-        isA<PreviousScrollIntent>());
-    expect(ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
-        isA<NextScrollIntent>());
+    expect(
+      ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
+      isA<PreviousScrollIntent>(),
+    );
+    expect(
+      ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
+      isA<NextScrollIntent>(),
+    );
 
-    // The RTL flip must only touch left/right, never vertical scroll.
-    final rtl = readerShortcutManager(Axis.vertical, isRtl: true);
-    expect(rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowUp)],
-        isA<ViewportScrollBackwardIntent>());
-    expect(rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowDown)],
-        isA<ViewportScrollForwardIntent>());
+    // And RTL never touches vertical scroll.
+    final verticalRtl = readerShortcutManager(Axis.vertical, isRtl: true);
+    expect(
+      verticalRtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowUp)],
+      isA<ViewportScrollBackwardIntent>(),
+    );
+    expect(
+      verticalRtl.shortcuts[const SingleActivator(
+        LogicalKeyboardKey.arrowDown,
+      )],
+      isA<ViewportScrollForwardIntent>(),
+    );
   });
 }

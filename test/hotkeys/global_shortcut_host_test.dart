@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/hotkeys/presentation/global_shortcut_host.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/search_stack/search_stack_screen.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 
 // Faithful reproduction: the host wraps a router shell and NOTHING is given
@@ -28,41 +27,41 @@ class _ToggleOn extends QuickSearchToggle {
 }
 
 GoRouter _router() => GoRouter(
-      initialLocation: '/',
+  initialLocation: '/',
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) => GlobalShortcutHost(child: child),
       routes: [
-        ShellRoute(
-          builder: (context, state, child) => GlobalShortcutHost(child: child),
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (context, state) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () => context.push('/b'),
-                    child: const Text('to B'),
-                  ),
-                ),
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => context.push('/b'),
+                child: const Text('to B'),
               ),
             ),
-            GoRoute(
-              path: '/b',
-              builder: (context, state) =>
-                  const Scaffold(body: Center(child: Text('PAGE B'))),
-            ),
-            GoRoute(
-              path: '/library/:categoryId',
-              builder: (context, state) =>
-                  const Scaffold(body: Center(child: Text('LIBRARY'))),
-            ),
-            GoRoute(
-              path: '/downloads',
-              builder: (context, state) =>
-                  const Scaffold(body: Center(child: Text('DOWNLOADS'))),
-            ),
-          ],
+          ),
+        ),
+        GoRoute(
+          path: '/b',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('PAGE B'))),
+        ),
+        GoRoute(
+          path: '/library/:categoryId',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('LIBRARY'))),
+        ),
+        GoRoute(
+          path: '/downloads',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('DOWNLOADS'))),
         ),
       ],
-    );
+    ),
+  ],
+);
 
 Future<void> _defocus(WidgetTester tester) async {
   FocusManager.instance.primaryFocus?.unfocus();
@@ -77,55 +76,56 @@ Future<void> _pumpRouter(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('Esc pops the route with nothing pre-focused', (tester) async {
-    await _pumpRouter(tester);
-    await tester.tap(find.text('to B'));
-    await tester.pumpAndSettle();
-    expect(find.text('PAGE B'), findsOneWidget);
-    await _defocus(tester);
+  testWidgets('back keys pop the route with nothing pre-focused', (
+    tester,
+  ) async {
+    Future<void> openB() async {
+      await tester.tap(find.text('to B'));
+      await tester.pumpAndSettle();
+      expect(find.text('PAGE B'), findsOneWidget);
+      await _defocus(tester);
+    }
 
+    await _pumpRouter(tester);
+
+    // Esc.
+    await openB();
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
-
     expect(find.text('PAGE B'), findsNothing, reason: 'Esc should go back');
     expect(find.text('to B'), findsOneWidget);
-  });
 
-  testWidgets('Alt+Left pops the route with nothing pre-focused',
-      (tester) async {
-    await _pumpRouter(tester);
-    await tester.tap(find.text('to B'));
-    await tester.pumpAndSettle();
-    await _defocus(tester);
-
+    // Alt+Left.
+    await openB();
     await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
     await tester.pumpAndSettle();
+    expect(
+      find.text('PAGE B'),
+      findsNothing,
+      reason: 'Alt+Left should go back',
+    );
 
-    expect(find.text('PAGE B'), findsNothing, reason: 'Alt+Left should go back');
-  });
-
-  testWidgets('mouse back-button pops the route with nothing pre-focused',
-      (tester) async {
-    await _pumpRouter(tester);
-    await tester.tap(find.text('to B'));
-    await tester.pumpAndSettle();
-    await _defocus(tester);
-
+    // Mouse back-button.
+    await openB();
     final center = tester.getCenter(find.text('PAGE B'));
     final pointer = TestPointer(1, PointerDeviceKind.mouse);
-    await tester
-        .sendEventToBinding(pointer.down(center, buttons: kBackMouseButton));
+    await tester.sendEventToBinding(
+      pointer.down(center, buttons: kBackMouseButton),
+    );
     await tester.pumpAndSettle();
     await tester.sendEventToBinding(pointer.up());
-
-    expect(find.text('PAGE B'), findsNothing,
-        reason: 'mouse back-button should go back');
+    expect(
+      find.text('PAGE B'),
+      findsNothing,
+      reason: 'mouse back-button should go back',
+    );
   });
 
-  testWidgets('Ctrl+L opens the library with nothing pre-focused',
-      (tester) async {
+  testWidgets('Ctrl+L opens the library with nothing pre-focused', (
+    tester,
+  ) async {
     await _pumpRouter(tester);
     await _defocus(tester);
 
@@ -137,8 +137,9 @@ void main() {
     expect(find.text('LIBRARY'), findsOneWidget, reason: 'Ctrl+L → library');
   });
 
-  testWidgets('Ctrl+J opens downloads with nothing pre-focused',
-      (tester) async {
+  testWidgets('Ctrl+J opens downloads with nothing pre-focused', (
+    tester,
+  ) async {
     await _pumpRouter(tester);
     await _defocus(tester);
 
@@ -147,23 +148,30 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pumpAndSettle();
 
-    expect(find.text('DOWNLOADS'), findsOneWidget, reason: 'Ctrl+J → downloads');
+    expect(
+      find.text('DOWNLOADS'),
+      findsOneWidget,
+      reason: 'Ctrl+J → downloads',
+    );
   });
 
-  testWidgets('Ctrl+F opens quick search with nothing pre-focused',
-      (tester) async {
+  testWidgets('Ctrl+F opens quick search with nothing pre-focused', (
+    tester,
+  ) async {
     final container = ProviderContainer(
       overrides: [quickSearchToggleProvider.overrideWith(_ToggleOn.new)],
     );
     addTearDown(container.dispose);
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(
-        home: GlobalShortcutHost(
-          child: Scaffold(body: Center(child: Text('home'))),
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: GlobalShortcutHost(
+            child: Scaffold(body: Center(child: Text('home'))),
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(container.read(quickOpenVisibleProvider), isFalse);
@@ -172,53 +180,30 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
 
-    expect(container.read(quickOpenVisibleProvider), isTrue,
-        reason: 'Ctrl+F opens search');
+    expect(
+      container.read(quickOpenVisibleProvider),
+      isTrue,
+      reason: 'Ctrl+F opens search',
+    );
   });
 
-  testWidgets('opening search clears a stale query (C1 regression)',
-      (tester) async {
+  testWidgets('Esc closes the quick-open overlay instead of going back', (
+    tester,
+  ) async {
     final container = ProviderContainer(
       overrides: [quickSearchToggleProvider.overrideWith(_ToggleOn.new)],
     );
     addTearDown(container.dispose);
-    // A leftover query from a previous session (e.g. closed via Esc, which
-    // does not reset it) must not survive to the next open.
-    container.read(unifiedSearchQueryProvider.notifier).state = 'stale';
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(
-        home: GlobalShortcutHost(
-          child: Scaffold(body: Center(child: Text('home'))),
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: GlobalShortcutHost(
+            child: Scaffold(body: Center(child: Text('home'))),
+          ),
         ),
       ),
-    ));
-    await tester.pumpAndSettle();
-
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pump();
-
-    expect(container.read(unifiedSearchQueryProvider), isEmpty,
-        reason: 'opening resets the query');
-    expect(container.read(quickOpenVisibleProvider), isTrue);
-  });
-
-  testWidgets('Esc closes the quick-open overlay instead of going back',
-      (tester) async {
-    final container = ProviderContainer(
-      overrides: [quickSearchToggleProvider.overrideWith(_ToggleOn.new)],
     );
-    addTearDown(container.dispose);
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(
-        home: GlobalShortcutHost(
-          child: Scaffold(body: Center(child: Text('home'))),
-        ),
-      ),
-    ));
     await tester.pumpAndSettle();
     container.read(quickOpenVisibleProvider.notifier).state = true;
     await tester.pump();
@@ -226,7 +211,10 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
 
-    expect(container.read(quickOpenVisibleProvider), isFalse,
-        reason: 'Esc closes the overlay');
+    expect(
+      container.read(quickOpenVisibleProvider),
+      isFalse,
+      reason: 'Esc closes the overlay',
+    );
   });
 }

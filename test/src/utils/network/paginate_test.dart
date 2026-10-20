@@ -26,23 +26,28 @@ void main() {
     return (fetch: fetch, cursors: cursors);
   }
 
-  test('a single complete page returns its nodes', () async {
-    final p = pager([
+  test('concatenates pages in cursor order and checks the total', () async {
+    final single = pager([
       (nodes: [1, 2, 3], hasNextPage: false, endCursor: null, totalCount: 3),
     ]);
-    expect(await collectAllPages<int>(p.fetch), [1, 2, 3]);
-    expect(p.cursors, [null]); // one call, no cursor
-  });
+    expect(await collectAllPages<int>(single.fetch), [1, 2, 3]);
+    expect(single.cursors, [null]); // one call, no cursor
 
-  test('multiple pages concatenate in order, threading the cursor', () async {
-    final p = pager([
+    final many = pager([
       (nodes: [1, 2], hasNextPage: true, endCursor: 20, totalCount: 5),
       (nodes: [3, 4], hasNextPage: true, endCursor: 40, totalCount: 5),
       (nodes: [5], hasNextPage: false, endCursor: null, totalCount: 5),
     ]);
-    expect(await collectAllPages<int>(p.fetch), [1, 2, 3, 4, 5]);
+    expect(await collectAllPages<int>(many.fetch), [1, 2, 3, 4, 5]);
     // First call unanchored, then each follows the previous endCursor.
-    expect(p.cursors, [null, 20, 40]);
+    expect(many.cursors, [null, 20, 40]);
+
+    // An assembled count that matches totalCount passes.
+    final counted = pager([
+      (nodes: [1, 2, 3], hasNextPage: true, endCursor: 30, totalCount: 4),
+      (nodes: [4], hasNextPage: false, endCursor: null, totalCount: 4),
+    ]);
+    expect(await collectAllPages<int>(counted.fetch), [1, 2, 3, 4]);
   });
 
   test('a failed page (null) aborts to null — never a partial list', () async {
@@ -53,24 +58,19 @@ void main() {
     expect(await collectAllPages<int>(p.fetch), isNull);
   });
 
-  test(
-    'a truncated response (fewer nodes than totalCount) returns null',
-    () async {
-      // Server claims 5 but stops advertising more after 3 — exactly the partial
-      // fetch that must not reach the prune.
-      final p = pager([
-        (nodes: [1, 2, 3], hasNextPage: false, endCursor: null, totalCount: 5),
-      ]);
-      expect(await collectAllPages<int>(p.fetch), isNull);
-    },
-  );
+  test('a truncated response returns null, never a short list', () async {
+    // Server claims 5 but stops advertising more after 3.
+    final truncated = pager([
+      (nodes: [1, 2, 3], hasNextPage: false, endCursor: null, totalCount: 5),
+    ]);
+    expect(await collectAllPages<int>(truncated.fetch), isNull);
 
-  test('hasNextPage true but a null cursor stops, and the count mismatch makes '
-      'it null rather than a short list', () async {
-    final p = pager([
+    // hasNextPage true but a null cursor stops, and the count mismatch makes
+    // it null rather than a short list.
+    final nullCursor = pager([
       (nodes: [1, 2], hasNextPage: true, endCursor: null, totalCount: 5),
     ]);
-    expect(await collectAllPages<int>(p.fetch), isNull);
+    expect(await collectAllPages<int>(nullCursor.fetch), isNull);
   });
 
   test('an empty but complete library (totalCount 0) returns an empty list, '
@@ -80,15 +80,4 @@ void main() {
     ]);
     expect(await collectAllPages<int>(p.fetch), isEmpty);
   });
-
-  test(
-    'paginated result whose assembled count matches totalCount passes',
-    () async {
-      final p = pager([
-        (nodes: [1, 2, 3], hasNextPage: true, endCursor: 30, totalCount: 4),
-        (nodes: [4], hasNextPage: false, endCursor: null, totalCount: 4),
-      ]);
-      expect(await collectAllPages<int>(p.fetch), [1, 2, 3, 4]);
-    },
-  );
 }

@@ -169,10 +169,12 @@ void main() {
       ),
     );
   });
-  for (final stage in ['seed', 'page', 'cover']) {
-    test(
-      'late A $stage cannot publish or overwrite B delivery state',
-      () async {
+  test(
+    'late runs and account changes cannot publish across sessions',
+    () async {
+      // A run that stalls at each stage, then the account switches to B: its
+      // late work must neither publish nor overwrite B's delivery state.
+      for (final stage in ['seed', 'page', 'cover']) {
         final store = await setupA(seed: stage == 'seed');
         final client = _Client(stage);
         final notifier = _Notifier();
@@ -186,20 +188,22 @@ void main() {
         await client.started.future;
         await switchToB();
         client.release.complete();
-        expect(await run, isTrue);
+        expect(await run, isTrue, reason: stage);
         final current = await NotificationStateStore.open();
-        expect(notifier.titles, isEmpty);
+        expect(notifier.titles, isEmpty, reason: stage);
         expect(
           current.readWatermark(_config('B').sessionFingerprint!).fetchedAt,
           999,
+          reason: stage,
         );
-        expect(current.readOutbox()!.matchesConfig(_config('B')), isTrue);
-      },
-    );
-  }
-  test(
-    'account configuration waits for an admitted publication to finish',
-    () async {
+        expect(
+          current.readOutbox()!.matchesConfig(_config('B')),
+          isTrue,
+          reason: stage,
+        );
+      }
+
+      // An account configuration waits for an admitted publication to finish.
       final store = await setupA();
       final notifier = _Notifier()..release = Completer<void>();
       final run = runNewChapters(

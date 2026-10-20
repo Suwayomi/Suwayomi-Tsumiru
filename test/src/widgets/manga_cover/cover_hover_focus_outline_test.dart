@@ -19,34 +19,34 @@ import 'package:tsumiru/src/widgets/manga_cover/list/manga_cover_descriptive_lis
 import 'package:tsumiru/src/widgets/manga_cover/list/manga_cover_list_tile.dart';
 
 Fragment$MangaDto _manga(int id) => Fragment$MangaDto(
-      id: id,
-      title: 'Test Manga $id',
-      thumbnailUrl: null,
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 4),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      source: Fragment$MangaDto$source(
-        id: '1',
-        name: 'Test Source',
-        displayName: 'Test Source',
-        lang: 'en',
-        iconUrl: '/icon.png',
-        contentWarning: Enum$ContentWarning.SAFE,
-        $extension: Fragment$MangaDto$source$extension(isObsolete: false),
-      ),
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-      unreadCount: 2,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/$id',
-    );
+  id: id,
+  title: 'Test Manga $id',
+  thumbnailUrl: null,
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 4),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  source: Fragment$MangaDto$source(
+    id: '1',
+    name: 'Test Source',
+    displayName: 'Test Source',
+    lang: 'en',
+    iconUrl: '/icon.png',
+    contentWarning: Enum$ContentWarning.SAFE,
+    $extension: Fragment$MangaDto$source$extension(isObsolete: false),
+  ),
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+  unreadCount: 2,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/$id',
+);
 
 Future<void> _pump(WidgetTester tester, Widget child) async {
   SharedPreferences.setMockInitialValues({});
@@ -84,192 +84,184 @@ Border? _thumbnailBorder(WidgetTester tester) {
 Color _primary(WidgetTester tester, Finder scope) =>
     Theme.of(tester.element(scope)).colorScheme.primary;
 
+TestGesture? _mouse;
+
+Future<TestGesture> _ensureMouse(WidgetTester tester) async {
+  if (_mouse == null) {
+    _mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await _mouse!.addPointer(location: Offset.zero);
+    addTearDown(_mouse!.removePointer);
+  }
+  return _mouse!;
+}
+
 Future<void> _hoverCenter(WidgetTester tester, Finder finder) async {
-  final gesture =
-      await tester.createGesture(kind: PointerDeviceKind.mouse, pointer: 1);
-  addTearDown(gesture.removePointer);
-  await gesture.addPointer(location: Offset.zero);
-  await gesture.moveTo(tester.getCenter(finder));
+  final mouse = await _ensureMouse(tester);
+  await mouse.moveTo(tester.getCenter(finder));
+  await tester.pump();
+}
+
+/// Moves the mouse off the cover so the next phase starts unhovered.
+Future<void> _parkMouse(WidgetTester tester) async {
+  final mouse = await _ensureMouse(tester);
+  await mouse.moveTo(const Offset(790, 590));
   await tester.pump();
 }
 
 void main() {
-  group('grid cover outline', () {
-    testWidgets('hover shows a primary 2px border', (tester) async {
-      await _pump(
-        tester,
-        SizedBox(
-          width: 160,
-          child: MangaCoverGridTile(
-            manga: _manga(1),
-            showBadges: false,
-            onPressed: () {},
-          ),
-        ),
-      );
-      expect(_cardSide(tester), BorderSide.none);
-
-      await _hoverCenter(tester, find.byType(MangaCoverGridTile));
-      final side = _cardSide(tester);
-      expect(side.color, _primary(tester, find.byType(Card)));
-      expect(side.width, 2);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('keyboard focus shows the border, pointer tap does not',
-        (tester) async {
-      var pressed = 0;
-      await _pump(
-        tester,
-        SizedBox(
-          width: 160,
-          child: MangaCoverGridTile(
-            manga: _manga(1),
-            showBadges: false,
-            onPressed: () => pressed++,
-          ),
-        ),
-      );
-      final focusNode =
-          tester.widget<InkResponse>(find.byType(InkResponse)).focusNode!;
-
-      await tester.tap(find.byType(MangaCoverGridTile));
-      await tester.pump();
-      expect(focusNode.hasFocus, isTrue);
-      expect(_cardSide(tester), BorderSide.none);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
-      await tester.pump();
-      final side = _cardSide(tester);
-      expect(side.color, _primary(tester, find.byType(Card)));
-      expect(side.width, 2);
-      expect(pressed, 1);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('a selected cover has a 3px border', (tester) async {
-      await _pump(
-        tester,
-        SizedBox(
-          width: 160,
-          child: MangaCoverGridTile(
-            manga: _manga(1),
-            showBadges: false,
-            selected: true,
-            onPressed: () {},
-          ),
-        ),
-      );
-      final side = _cardSide(tester);
-      expect(side.color, _primary(tester, find.byType(Card)));
-      expect(side.width, 3);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('list row outline', () {
-    testWidgets('hover outlines the thumbnail at 2px', (tester) async {
-      await _pump(
-        tester,
-        MangaCoverListTile(
+  testWidgets('grid and list outline states', (tester) async {
+    _mouse = null;
+    // Grid: hover outlines the card in the primary colour.
+    await _pump(
+      tester,
+      SizedBox(
+        width: 160,
+        child: MangaCoverGridTile(
           manga: _manga(1),
           showBadges: false,
           onPressed: () {},
         ),
-      );
-      expect(_thumbnailBorder(tester), isNull);
+      ),
+    );
+    expect(_cardSide(tester), BorderSide.none);
+    await _hoverCenter(tester, find.byType(MangaCoverGridTile));
+    expect(_cardSide(tester).color, _primary(tester, find.byType(Card)));
+    expect(tester.takeException(), isNull);
 
-      await _hoverCenter(tester, find.byType(MangaCoverListTile));
-      final border = _thumbnailBorder(tester);
-      expect(border?.top.color, _primary(tester, find.byType(Row).first));
-      expect(border?.top.width, 2);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('keyboard focus outlines the thumbnail, tap does not',
-        (tester) async {
-      await _pump(
-        tester,
-        MangaCoverListTile(
+    // Grid: keyboard focus shows the border; a pointer tap does not.
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    var pressed = 0;
+    await _pump(
+      tester,
+      SizedBox(
+        width: 160,
+        child: MangaCoverGridTile(
           manga: _manga(1),
           showBadges: false,
-          onPressed: () {},
+          onPressed: () => pressed++,
         ),
-      );
-      final focusNode =
-          tester.widget<InkWell>(find.byType(InkWell).first).focusNode!;
+      ),
+    );
+    final gridFocus = tester
+        .widget<InkResponse>(find.byType(InkResponse))
+        .focusNode!;
+    await tester.tap(find.byType(MangaCoverGridTile));
+    await tester.pump();
+    expect(gridFocus.hasFocus, isTrue);
+    expect(_cardSide(tester), BorderSide.none);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.pump();
+    expect(_cardSide(tester).color, _primary(tester, find.byType(Card)));
+    expect(pressed, 1);
+    expect(tester.takeException(), isNull);
 
-      await tester.tap(find.byType(MangaCoverListTile));
-      await tester.pump();
-      expect(focusNode.hasFocus, isTrue);
-      expect(_thumbnailBorder(tester), isNull);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
-      await tester.pump();
-      expect(_thumbnailBorder(tester)?.top.width, 2);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('a selected row outlines the thumbnail at 3px', (tester) async {
-      await _pump(
-        tester,
-        MangaCoverListTile(
+    // Grid: a selected cover outlines the card.
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      SizedBox(
+        width: 160,
+        child: MangaCoverGridTile(
           manga: _manga(1),
           showBadges: false,
           selected: true,
           onPressed: () {},
         ),
-      );
-      final border = _thumbnailBorder(tester);
-      expect(
-        border?.top.color,
-        _primary(tester, find.byType(MangaCoverListTile)),
-      );
-      expect(border?.top.width, 3);
-      expect(tester.takeException(), isNull);
-    });
+      ),
+    );
+    expect(_cardSide(tester).color, _primary(tester, find.byType(Card)));
+    expect(tester.takeException(), isNull);
+
+    // List: hover outlines the thumbnail in the primary colour.
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      MangaCoverListTile(manga: _manga(1), showBadges: false, onPressed: () {}),
+    );
+    expect(_thumbnailBorder(tester), isNull);
+    await _hoverCenter(tester, find.byType(MangaCoverListTile));
+    expect(
+      _thumbnailBorder(tester)?.top.color,
+      _primary(tester, find.byType(Row).first),
+    );
+    expect(tester.takeException(), isNull);
+
+    // List: keyboard focus outlines the thumbnail; tap does not.
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      MangaCoverListTile(manga: _manga(1), showBadges: false, onPressed: () {}),
+    );
+    final listFocus = tester
+        .widget<InkWell>(find.byType(InkWell).first)
+        .focusNode!;
+    await tester.tap(find.byType(MangaCoverListTile));
+    await tester.pump();
+    expect(listFocus.hasFocus, isTrue);
+    expect(_thumbnailBorder(tester), isNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.pump();
+    expect(_thumbnailBorder(tester), isNotNull);
+    expect(tester.takeException(), isNull);
+
+    // List: a selected row outlines the thumbnail.
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      MangaCoverListTile(
+        manga: _manga(1),
+        showBadges: false,
+        selected: true,
+        onPressed: () {},
+      ),
+    );
+    expect(
+      _thumbnailBorder(tester)?.top.color,
+      _primary(tester, find.byType(MangaCoverListTile)),
+    );
+    expect(tester.takeException(), isNull);
+
+    // Descriptive row: hover outlines the cover, selection too.
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      MangaCoverDescriptiveListTile(
+        manga: _manga(1),
+        showBadges: false,
+        onPressed: () {},
+      ),
+    );
+    expect(_cardSide(tester), BorderSide.none);
+    await _hoverCenter(tester, find.byType(MangaCoverDescriptiveListTile));
+    expect(_cardSide(tester).color, _primary(tester, find.byType(Card)));
+    expect(tester.takeException(), isNull);
+
+    await _parkMouse(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pump(
+      tester,
+      MangaCoverDescriptiveListTile(
+        manga: _manga(1),
+        showBadges: false,
+        selected: true,
+        onPressed: () {},
+      ),
+    );
+    expect(
+      _cardSide(tester).color,
+      _primary(tester, find.byType(MangaCoverDescriptiveListTile)),
+    );
+    expect(tester.takeException(), isNull);
   });
 
-  group('descriptive row outline', () {
-    testWidgets('row hover outlines the cover, selection uses 3px',
-        (tester) async {
-      await _pump(
-        tester,
-        MangaCoverDescriptiveListTile(
-          manga: _manga(1),
-          showBadges: false,
-          onPressed: () {},
-        ),
-      );
-      expect(_cardSide(tester), BorderSide.none);
-
-      await _hoverCenter(tester, find.byType(MangaCoverDescriptiveListTile));
-      expect(_cardSide(tester).width, 2);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('selection reaches the embedded cover', (tester) async {
-      await _pump(
-        tester,
-        MangaCoverDescriptiveListTile(
-          manga: _manga(1),
-          showBadges: false,
-          selected: true,
-          onPressed: () {},
-        ),
-      );
-      final side = _cardSide(tester);
-      expect(
-        side.color,
-        _primary(tester, find.byType(MangaCoverDescriptiveListTile)),
-      );
-      expect(side.width, 3);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('keyboard activation and traversal', () {
-    testWidgets('Enter opens the focused cover', (tester) async {
+  testWidgets('Enter and Space activate the focused cover', (tester) async {
+    for (final key in [LogicalKeyboardKey.enter, LogicalKeyboardKey.space]) {
       var pressed = 0;
       await _pump(
         tester,
@@ -287,67 +279,41 @@ void main() {
           .focusNode!
           .requestFocus();
       await tester.pump();
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyEvent(key);
       await tester.pump();
-      expect(pressed, 1);
+      expect(pressed, 1, reason: '$key');
       expect(tester.takeException(), isNull);
-    });
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
 
-    testWidgets('Space activates the focused cover', (tester) async {
-      var pressed = 0;
-      await _pump(
-        tester,
-        SizedBox(
-          width: 160,
-          child: MangaCoverGridTile(
-            manga: _manga(1),
-            showBadges: false,
-            onPressed: () => pressed++,
-          ),
-        ),
-      );
-      tester
-          .widget<InkResponse>(find.byType(InkResponse))
-          .focusNode!
-          .requestFocus();
-      await tester.pump();
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.space);
-      await tester.pump();
-      expect(pressed, 1);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('arrow keys move focus across the row', (tester) async {
-      await _pump(
-        tester,
-        Row(
-          children: [
-            for (final id in [1, 2])
-              SizedBox(
-                width: 150,
-                child: MangaCoverGridTile(
-                  manga: _manga(id),
-                  showBadges: false,
-                  onPressed: () {},
-                ),
+  testWidgets('arrow keys move focus across the row', (tester) async {
+    await _pump(
+      tester,
+      Row(
+        children: [
+          for (final id in [1, 2])
+            SizedBox(
+              width: 150,
+              child: MangaCoverGridTile(
+                manga: _manga(id),
+                showBadges: false,
+                onPressed: () {},
               ),
-          ],
-        ),
-      );
-      final nodes = tester
-          .widgetList<InkResponse>(find.byType(InkResponse))
-          .map((w) => w.focusNode!)
-          .toList();
-      nodes.first.requestFocus();
-      await tester.pump();
-      expect(nodes.first.hasFocus, isTrue);
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await tester.pump();
-      expect(nodes.last.hasFocus, isTrue);
-      expect(tester.takeException(), isNull);
-    });
+            ),
+        ],
+      ),
+    );
+    final nodes = tester
+        .widgetList<InkResponse>(find.byType(InkResponse))
+        .map((w) => w.focusNode!)
+        .toList();
+    nodes.first.requestFocus();
+    await tester.pump();
+    expect(nodes.first.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(nodes.last.hasFocus, isTrue);
+    expect(tester.takeException(), isNull);
   });
 }

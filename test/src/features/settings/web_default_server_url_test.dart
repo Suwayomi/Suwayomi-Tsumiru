@@ -9,21 +9,18 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/client/
 
 void main() {
   group('webDefaultServerUrl', () {
-    test('root hosting: base "/" gives the bare origin', () {
+    test('root, sub-path, deep link and bare origins resolve to the base', () {
+      // Root hosting: base "/" gives the bare origin.
       expect(
         webDefaultServerUrl('http://127.0.0.1:4600/'),
         'http://127.0.0.1:4600',
       );
-    });
-
-    test('sub-path hosting: base "/tsumiru/" keeps the sub-path', () {
+      // Sub-path hosting keeps the sub-path.
       expect(
         webDefaultServerUrl('http://127.0.0.1:4600/tsumiru/'),
         'http://127.0.0.1:4600/tsumiru',
       );
-    });
-
-    test('deep link: the route never leaks into the URL', () {
+      // A deep link's route never leaks into the URL.
       final page = Uri.parse('http://127.0.0.1:4600/tsumiru/library');
       final base = page.resolve('/tsumiru/');
       expect(base, isNot(page));
@@ -31,12 +28,15 @@ void main() {
         webDefaultServerUrl(base.toString()),
         'http://127.0.0.1:4600/tsumiru',
       );
-    });
-
-    test('base without a trailing slash is kept as-is', () {
+      // A base without a trailing slash is kept as-is.
       expect(
         webDefaultServerUrl('http://127.0.0.1:4600/tsumiru'),
         'http://127.0.0.1:4600/tsumiru',
+      );
+      // A bare origin stays untouched.
+      expect(
+        webDefaultServerUrl('http://127.0.0.1:4600'),
+        'http://127.0.0.1:4600',
       );
     });
 
@@ -44,13 +44,6 @@ void main() {
       expect(
         webDefaultServerUrl('https://example.com:8443/reader/'),
         'https://example.com:8443/reader',
-      );
-    });
-
-    test('bare origin without a path stays untouched', () {
-      expect(
-        webDefaultServerUrl('http://127.0.0.1:4600'),
-        'http://127.0.0.1:4600',
       );
     });
   });

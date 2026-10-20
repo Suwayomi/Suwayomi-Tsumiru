@@ -8,7 +8,8 @@ import 'package:tsumiru/src/features/offline/data/background/background_token_re
 
 void main() {
   group('isGraphqlAuthError', () {
-    test('detects an in-band 401 via extensions.http.status', () {
+    test('recognises every auth-error form and nothing else', () {
+      // In-band 401 via extensions.http.status.
       expect(
         isGraphqlAuthError([
           {
@@ -20,18 +21,14 @@ void main() {
         ]),
         isTrue,
       );
-    });
-
-    test('detects an "unauthorized" message with no extensions', () {
+      // An "unauthorized" message with no extensions.
       expect(
         isGraphqlAuthError([
           {'message': 'Unauthorized'},
         ]),
         isTrue,
       );
-    });
-
-    test('a non-auth error is not treated as auth', () {
+      // A non-auth error is not treated as auth.
       expect(
         isGraphqlAuthError([
           {
@@ -43,9 +40,6 @@ void main() {
         ]),
         isFalse,
       );
-    });
-
-    test('null / empty is not auth', () {
       expect(isGraphqlAuthError(null), isFalse);
       expect(isGraphqlAuthError(const []), isFalse);
     });
@@ -78,7 +72,8 @@ void main() {
       var queryPosts = 0;
       final mock = MockClient((req) async {
         queryPosts++;
-        final auth = req.headers['Authorization'] ?? req.headers['authorization'];
+        final auth =
+            req.headers['Authorization'] ?? req.headers['authorization'];
         if (auth == 'Bearer fresh') {
           return http.Response(
             jsonEncode({
@@ -122,7 +117,11 @@ void main() {
       final page = await client.fetchNewChaptersPage(fetchedAtGte: '0');
 
       expect(page, isNotNull, reason: 'the retry after refresh should succeed');
-      expect(refreshCalls, 1, reason: 'the in-band 401 must trigger one refresh');
+      expect(
+        refreshCalls,
+        1,
+        reason: 'the in-band 401 must trigger one refresh',
+      );
       expect(queryPosts, 2, reason: 'one failing call + one retry');
       expect(client.currentRecord().accessToken, 'fresh');
     },

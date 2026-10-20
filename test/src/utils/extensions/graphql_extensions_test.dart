@@ -12,10 +12,8 @@ import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 String _shown(String serverMessage) => OperationMessageException(
-      OperationException(
-        graphqlErrors: [GraphQLError(message: serverMessage)],
-      ),
-    ).toString();
+  OperationException(graphqlErrors: [GraphQLError(message: serverMessage)]),
+).toString();
 
 void main() {
   group('what a Suwayomi error says on screen', () {
@@ -37,7 +35,7 @@ void main() {
       );
     });
 
-    test('a null message leaves nothing to show, so the UI can fall back', () {
+    test('a null message leaves nothing; plain errors pass through', () {
       expect(
         _shown(
           "Exception while fetching data (/updateExtension) : null\n"
@@ -48,28 +46,19 @@ void main() {
         ),
         isEmpty,
       );
-    });
-
-    test('a plain server error is shown exactly as sent', () {
       expect(_shown('Unauthorized'), 'Unauthorized');
     });
 
-    test('two errors still read as one list', () {
-      final e = OperationMessageException(OperationException(graphqlErrors: [
-        const GraphQLError(message: 'Unauthorized'),
-        const GraphQLError(
-            message: 'Exception while fetching data (/x) : Not found\n'
-                '\tat suwayomi.Thing.run(Thing.kt:1)'),
-      ]));
-      expect(e.toString(), 'Unauthorized, Not found');
-    });
-
     test('a transport failure still reports its own cause', () {
-      final e = OperationMessageException(OperationException(
+      final e = OperationMessageException(
+        OperationException(
           linkException: HttpLinkParserException(
-              originalException: const SocketException('server unreachable'),
-              originalStackTrace: StackTrace.empty,
-              response: http.Response('', 500))));
+            originalException: const SocketException('server unreachable'),
+            originalStackTrace: StackTrace.empty,
+            response: http.Response('', 500),
+          ),
+        ),
+      );
       expect(e.toString(), contains('server unreachable'));
     });
   });

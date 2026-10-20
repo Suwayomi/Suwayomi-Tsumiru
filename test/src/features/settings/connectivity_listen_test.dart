@@ -16,41 +16,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 
 void main() {
-  test('a connectivity stream failure never reaches the zone', () async {
-    final controller = StreamController<List<ConnectivityResult>>();
-    final zoneErrors = <Object>[];
+  test(
+    'a connectivity stream failure never crashes and the stream survives',
+    () async {
+      final controller = StreamController<List<ConnectivityResult>>();
+      final zoneErrors = <Object>[];
+      var changes = 0;
+      late StreamSubscription<List<ConnectivityResult>> sub;
 
-    await runZonedGuarded(() async {
-      final sub = listenToConnectivity(controller.stream, () {});
-      controller.addError(
-        const SocketException('no system bus'),
+      await runZonedGuarded(() async {
+        sub = listenToConnectivity(controller.stream, () => changes++);
+        controller.addError(const SocketException('no system bus'));
+        await pumpEventQueue();
+        // Later connectivity changes still arrive.
+        controller.add([ConnectivityResult.wifi]);
+        await pumpEventQueue();
+        await sub.cancel();
+      }, (error, _) => zoneErrors.add(error));
+
+      expect(
+        zoneErrors,
+        isEmpty,
+        reason:
+            'an unreachable NetworkManager must not become a fatal startup '
+            'error the way it did under Flatpak in v1.2.0',
       );
-      await pumpEventQueue();
-      await sub.cancel();
-    }, (error, _) => zoneErrors.add(error));
-
-    expect(
-      zoneErrors,
-      isEmpty,
-      reason:
-          'an unreachable NetworkManager must not become a fatal startup '
-          'error the way it did under Flatpak in v1.2.0',
-    );
-  });
-
-  test('a failure does not stop later connectivity changes', () async {
-    final controller = StreamController<List<ConnectivityResult>>();
-    var changes = 0;
-
-    final sub = listenToConnectivity(controller.stream, () => changes++);
-    controller.addError(const SocketException('no system bus'));
-    await pumpEventQueue();
-    controller.add([ConnectivityResult.wifi]);
-    await pumpEventQueue();
-    await sub.cancel();
-
-    expect(changes, 1, reason: 'the subscription must survive an error');
-  });
+      expect(changes, 1, reason: 'the subscription must survive an error');
+    },
+  );
 }
 
 class SocketException implements Exception {

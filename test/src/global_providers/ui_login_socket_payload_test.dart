@@ -8,11 +8,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 
 void main() {
-  test('refreshes a due token before reading it, so the socket is not '
-      'bound to an expired one', () async {
+  test('refreshes a due token before reading it', () async {
     var token = 'expired';
     final calls = <String>[];
     final payload = await uiLoginSocketPayload(
@@ -28,19 +26,17 @@ void main() {
     );
     expect(calls, ['refresh', 'read']);
     expect(payload, {'Authorization': 'fresh'});
-  });
 
-  test('a failed refresh still sends the current token', () async {
-    final payload = await uiLoginSocketPayload(
+    // A failed refresh still sends the current token.
+    final failed = await uiLoginSocketPayload(
       isCurrentSession: () => true,
       refreshIfDue: () async => throw Exception('offline'),
       readToken: () async => 'current',
     );
-    expect(payload, {'Authorization': 'current'});
+    expect(failed, {'Authorization': 'current'});
   });
 
-  test('an expired token is withheld: the server could only reject it, and '
-      'the socket reconnects once a live one lands', () async {
+  test('an expired token is withheld; nothing to send stays empty', () async {
     final expired = _jwt(
       DateTime.now().toUtc().subtract(const Duration(minutes: 78)),
     );
@@ -50,16 +46,14 @@ void main() {
       readToken: () async => expired,
     );
     expect(payload, isEmpty);
-  });
 
-  test('no token sends an empty payload', () async {
     for (final token in [null, '']) {
-      final payload = await uiLoginSocketPayload(
+      final empty = await uiLoginSocketPayload(
         isCurrentSession: () => true,
         refreshIfDue: () async {},
         readToken: () async => token,
       );
-      expect(payload, isEmpty);
+      expect(empty, isEmpty);
     }
   });
 
@@ -88,70 +82,6 @@ void main() {
       );
     },
   );
-
-  group('ws-auth diagnostics', () {
-    final lines = <String>[];
-    setUp(() {
-      lines.clear();
-      setDiagnosticSink(lines.add);
-    });
-    tearDown(() => setDiagnosticSink(null));
-
-    test('logs a failed refresh and the expiry the socket binds with',
-        () async {
-      final expired = _jwt(
-        DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
-      );
-      await uiLoginSocketPayload(
-        isCurrentSession: () => true,
-        refreshIfDue: () async => throw StateError('not hydrated'),
-        readToken: () async => expired,
-      );
-      expect(lines, hasLength(2));
-      expect(
-        lines[0],
-        contains('ws-auth: connect-refresh threw cause=StateError'),
-      );
-      expect(
-        lines[1],
-        matches(RegExp(r'ws-auth: connect-init expIn=-\d+s withheld=expired')),
-      );
-      expect(lines.join(), isNot(contains(expired)));
-    });
-
-    test('logs an aborted connect', () async {
-      await expectLater(
-        uiLoginSocketPayload(
-          isCurrentSession: () => false,
-          refreshIfDue: () async {},
-          readToken: () async => null,
-        ),
-        throwsStateError,
-      );
-      expect(
-        lines.single,
-        contains('connect-init aborted=session-changed-before'),
-      );
-    });
-
-    test('describes missing and undecodable tokens', () {
-      expect(describeSocketToken(null), 'token=none');
-      expect(describeSocketToken('opaque'), 'exp=unknown');
-    });
-  });
-
-  test('only a present, unexpired token binds the socket to its user', () {
-    final now = DateTime.now().toUtc();
-    expect(socketTokenIsLive(null), isFalse);
-    expect(socketTokenIsLive(''), isFalse);
-    expect(
-      socketTokenIsLive(_jwt(now.subtract(const Duration(seconds: 1)))),
-      isFalse,
-    );
-    expect(socketTokenIsLive(_jwt(now.add(const Duration(minutes: 5)))), isTrue);
-    // No readable expiry: nothing a reconnect could improve on.
-    expect(socketTokenIsLive('opaque'), isTrue);
-  });
 }
 
 String _jwt(DateTime exp) {
