@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -20,10 +21,14 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/big_screen_manga_details.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/chapter_list_tile.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/small_screen_manga_details.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
+import 'package:tsumiru/src/utils/theme/brand.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 ChapterDto _chapter({
@@ -86,6 +91,14 @@ final _manga = MangaDto.fromJson({
   'inLibrary': true,
   'inLibraryAt': '0',
   'initialized': true,
+  // Reading progress, so the header offers Resume rather than Start.
+  'lastReadChapter': {
+    'id': 2,
+    'isRead': false,
+    'lastPageRead': 4,
+    'lastReadAt': '1',
+    '__typename': 'ChapterType',
+  },
   'meta': [],
   'sourceId': '0',
   'status': 'ONGOING',
@@ -174,6 +187,24 @@ class _FakeToast implements Toast {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Mirrors the desktop shell: the sidebar takes layout width from the page
+/// (60 px collapsed, 208 px expanded) without changing the window size class.
+class _ShellInset extends StatelessWidget {
+  const _ShellInset({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final inset = width >= 1200 ? 208.0 : (width >= 840 ? 60.0 : 0.0);
+    return Padding(
+      padding: EdgeInsets.only(left: inset),
+      child: child,
+    );
+  }
+}
+
 Widget _app(
   SharedPreferences preferences, {
   List<Override> overrides = const [],
@@ -208,7 +239,9 @@ Widget _app(
           builder: (context) => Column(
             children: [
               if (showsMergedTopBar(context)) const DesktopTopBar(),
-              const Expanded(child: MangaDetailsScreen(mangaId: 1)),
+              const Expanded(
+                child: _ShellInset(child: MangaDetailsScreen(mangaId: 1)),
+              ),
             ],
           ),
         ),
@@ -250,6 +283,29 @@ Future<void> _pumpDesktop(
   await tester.pumpAndSettle();
 }
 
+bool _oneLineRows(WidgetTester tester) =>
+    tester.widget<ChapterListTile>(find.byType(ChapterListTile).first).desktop;
+
+/// A present label can still be ellipsised, so check the laid-out text.
+void _expectFullLabel(WidgetTester tester, String label) {
+  final finder = find.text(label);
+  expect(finder, findsOneWidget);
+  final paragraph = tester.renderObject<RenderParagraph>(finder);
+  expect(
+    paragraph.didExceedMaxLines,
+    isFalse,
+    reason: '"$label" is ellipsised',
+  );
+  final painter = TextPainter(
+    text: TextSpan(text: label, style: (paragraph.text as TextSpan).style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(tester.element(finder)),
+    maxLines: 1,
+  )..layout();
+  expect(paragraph.size.width, greaterThanOrEqualTo(painter.width));
+  painter.dispose();
+}
+
 Future<void> _selectRange(WidgetTester tester, String from, String to) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
   await tester.tap(find.text(from));
@@ -259,6 +315,100 @@ Future<void> _selectRange(WidgetTester tester, String from, String to) async {
 }
 
 void main() {
+  testWidgets('Series page follows the window size classes', (tester) async {
+    await _pumpDesktop(tester, size: const Size(839, 900));
+    expect(find.byType(SmallScreenMangaDetails), findsOneWidget);
+    expect(find.byType(BigScreenMangaDetails), findsNothing);
+    expect(find.byType(BrandFab), findsOneWidget);
+
+    // The phone body has no bar of its own at this width, so the merged bar
+    // carries the page's toolbar: filter and the overflow menu (Migrate).
+    final topBar = find.byType(DesktopTopBar);
+    expect(topBar, findsOneWidget);
+    expect(
+      find.descendant(
+        of: topBar,
+        matching: find.byIcon(Icons.filter_list_rounded),
+      ),
+      findsOneWidget,
+    );
+    final overflow = find.descendant(
+      of: topBar,
+      matching: find.byIcon(Icons.more_vert_rounded),
+    );
+    expect(overflow, findsOneWidget);
+    await tester.tap(overflow);
+    await tester.pumpAndSettle();
+    expect(find.text('Migrate'), findsOneWidget);
+    await tester.tapAt(const Offset(1, 1));
+    await tester.pumpAndSettle();
+
+    // Long-press starts a selection; the bar swaps to the selection toolbar.
+    await tester.scrollUntilVisible(
+      find.text('Chapter 2'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(SmallScreenMangaDetails),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.longPress(find.text('Chapter 2'));
+    await tester.pumpAndSettle();
+    final selectAll = find.descendant(
+      of: topBar,
+      matching: find.byIcon(Icons.select_all_rounded),
+    );
+    expect(selectAll, findsOneWidget);
+    await tester.tap(selectAll);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: topBar, matching: find.text('6 Selected')),
+      findsOneWidget,
+    );
+    // Close the selection so the two-column checks below start clean.
+    await tester.tap(
+      find.descendant(of: topBar, matching: find.byIcon(Icons.close_rounded)),
+    );
+    await tester.pumpAndSettle();
+    expect(selectAll, findsNothing);
+
+    tester.view.physicalSize = const Size(840, 900);
+    await tester.pumpAndSettle();
+    expect(find.byType(BigScreenMangaDetails), findsOneWidget);
+    expect(find.byType(SmallScreenMangaDetails), findsNothing);
+    expect(find.byType(BrandFab), findsNothing);
+    // The info column beside the cover is too narrow for both pills, so they
+    // move to their own full-width row and keep their labels.
+    expect(
+      find.byKey(const ValueKey('series-header-stacked-controls')),
+      findsOneWidget,
+    );
+    _expectFullLabel(tester, 'Resume');
+    _expectFullLabel(tester, 'In library');
+
+    tester.view.physicalSize = const Size(1199, 900);
+    await tester.pumpAndSettle();
+    expect(_oneLineRows(tester), isFalse);
+    expect(
+      find.byKey(const ValueKey('series-header-stacked-controls')),
+      findsNothing,
+    );
+    _expectFullLabel(tester, 'Resume');
+    _expectFullLabel(tester, 'In library');
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pumpAndSettle();
+    expect(_oneLineRows(tester), isTrue);
+    expect(
+      find.byKey(const ValueKey('series-header-stacked-controls')),
+      findsOneWidget,
+    );
+    _expectFullLabel(tester, 'Resume');
+    _expectFullLabel(tester, 'In library');
+  });
+
   testWidgets('Undo after bulk mark read restores once the bar is gone', (
     tester,
   ) async {

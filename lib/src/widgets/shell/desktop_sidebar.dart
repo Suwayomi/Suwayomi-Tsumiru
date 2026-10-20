@@ -19,13 +19,14 @@ import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
 
-/// Whether the sidebar shows expanded rows at this window width: below 1200
-/// px it shows collapsed whatever the user chose, and returns to their choice
-/// at 1200 and above. The saved preference itself never changes.
+/// Whether the sidebar shows expanded rows at this window size class:
+/// below [WindowSizeClass.large] it shows collapsed whatever the user chose,
+/// and returns to their choice at large and above. The saved preference
+/// itself never changes.
 bool sidebarIsExpanded(BuildContext context, bool preference) =>
-    preference && MediaQuery.sizeOf(context).width >= 1200;
+    preference && context.windowSizeClass >= WindowSizeClass.large;
 
-/// Wide-desktop-only navigation sidebar (shown when [BuildContext.isDesktop]).
+/// Wide-desktop-only navigation sidebar (shown when [usesDesktopShell]).
 ///
 /// Expanded (208 px): 40 px rows with icon + label and 2 px gaps. Collapsed
 /// (60 px, 80 px on macOS so the traffic lights fit above the column): 44 px
@@ -59,12 +60,8 @@ class DesktopSidebar extends ConsumerWidget {
   /// The sidebar's width for this state. [expanded] is the effective state
   /// ([sidebarIsExpanded]), not the raw preference. [isMacOS] defaults to the
   /// test-overridable platform check.
-  static double widthFor({
-    required bool expanded,
-    bool? isMacOS,
-    required double windowWidth,
-  }) {
-    if (expanded && windowWidth >= 1200) return expandedWidth;
+  static double widthFor({required bool expanded, bool? isMacOS}) {
+    if (expanded) return expandedWidth;
     return (isMacOS ?? isMacOSRuntime) ? macCollapsedWidth : collapsedWidth;
   }
 
@@ -84,7 +81,6 @@ class DesktopSidebar extends ConsumerWidget {
     // the two-row fallback (narrow window, sidebar forced collapsed) the title
     // bar already carries the logo, so the sidebar starts with the nav rows.
     final showBrandRow = isMacOS && desktopTopBarShowsMergedRow(context, ref);
-    final windowWidth = MediaQuery.sizeOf(context).width;
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
     void collapse() =>
         ref.read(sidebarExpandedProvider.notifier).update(false);
@@ -172,16 +168,8 @@ class DesktopSidebar extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) => TweenAnimationBuilder<double>(
         tween: Tween<double>(
-          begin: widthFor(
-            expanded: expanded,
-            isMacOS: isMacOS,
-            windowWidth: windowWidth,
-          ),
-          end: widthFor(
-            expanded: expanded,
-            isMacOS: isMacOS,
-            windowWidth: windowWidth,
-          ),
+          begin: widthFor(expanded: expanded, isMacOS: isMacOS),
+          end: widthFor(expanded: expanded, isMacOS: isMacOS),
         ),
         duration: context.reduceMotion
             ? Duration.zero

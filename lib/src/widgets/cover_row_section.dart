@@ -160,7 +160,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
   Widget _header(BuildContext context) {
     final heading = _heading(context);
     final showArrows = _canBack || _canForward;
-    if (context.isTablet) {
+    if (context.windowSizeClass >= WindowSizeClass.medium) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
         child: Row(
@@ -272,7 +272,8 @@ class _CoverRowSectionState extends State<CoverRowSection> {
       children: [
         if (widget.title != null)
           _header(context)
-        else if (context.isTablet && (_canBack || _canForward))
+        else if (context.windowSizeClass >= WindowSizeClass.medium &&
+            (_canBack || _canForward))
           _headerlessArrows(context),
         Padding(
           key: const ValueKey('cover-row-body'),

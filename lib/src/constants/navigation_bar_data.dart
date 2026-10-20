@@ -92,7 +92,9 @@ class NavigationBarData {
 
   // Dynamic navigation list based on context
   static List<NavigationBarData> getNavList(BuildContext context) {
-    return context.isTablet ? tabletNavList : phoneNavList;
+    return context.windowSizeClass >= WindowSizeClass.medium
+        ? tabletNavList
+        : phoneNavList;
   }
 
   // Legacy navList for backward compatibility - defaults to phone layout

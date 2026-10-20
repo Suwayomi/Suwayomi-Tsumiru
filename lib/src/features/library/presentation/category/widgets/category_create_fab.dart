@@ -42,7 +42,9 @@ class CategoryCreateFab extends HookConsumerWidget {
                 animationStyle: context.motionStyle,
               );
             },
-      isExtended: context.isTablet && !isLoading.value,
+      isExtended:
+          context.windowSizeClass >= WindowSizeClass.medium &&
+          !isLoading.value,
       label: Text(context.l10n.addCategory),
       icon: isLoading.value
           ? MiniCircularProgressIndicator(color: context.iconColor)

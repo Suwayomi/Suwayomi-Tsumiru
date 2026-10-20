@@ -144,7 +144,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
-                  width: context.isLargeTablet
+                  width: context.windowSizeClass >= WindowSizeClass.expanded
                       ? context.widthScale(scale: .5)
                       : null,
                   child: Padding(
@@ -232,7 +232,8 @@ class SourceMangaListScreen extends HookConsumerWidget {
                 ? Builder(
                     builder: (context) => FloatingActionButton.extended(
                       icon: Icon(Icons.filter_alt_rounded),
-                      onPressed: () => context.isTablet
+                      onPressed: () => context.windowSizeClass >=
+                              WindowSizeClass.medium
                           ? Scaffold.of(context).openEndDrawer()
                           : showModalBottomSheet(
                               context: context,

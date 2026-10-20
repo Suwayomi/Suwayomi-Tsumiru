@@ -110,7 +110,7 @@ class Sorayomi extends HookConsumerWidget {
       builder: (context, child) {
         final toastWrapped = FToastBuilder()(context, child);
         return ScrollbarTheme(
-          data: context.isTablet
+          data: context.windowSizeClass >= WindowSizeClass.medium
               ? wideScreenScrollbarTheme(Theme.of(context).colorScheme)
               : const ScrollbarThemeData(),
           child: ReduceMotionScope(
@@ -238,7 +238,9 @@ class AppScrollBehavior extends MaterialScrollBehavior {
     ) {
       if (!physics.allowUserScrolling) return child;
     }
-    if (!context.isTablet) return super.buildScrollbar(context, child, details);
+    if (context.windowSizeClass == WindowSizeClass.compact) {
+      return super.buildScrollbar(context, child, details);
+    }
     return Scrollbar(controller: details.controller, child: child);
   }
 

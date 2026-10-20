@@ -30,20 +30,6 @@ import 'missing_chapters_tile.dart';
 import 'recommends_row.dart';
 import 'series_info_column.dart';
 
-/// Width at which the chapter column switches to one-line desktop rows.
-const _wideChapterColumn = 488.0;
-
-/// Width below which the column returns to two-line rows. The gap between the
-/// two thresholds keeps a column sitting on the breakpoint from flapping.
-const _narrowChapterColumn = 472.0;
-
-/// Row style for a column [width], keeping [wide] while inside the band.
-bool _wideRowsForWidth(bool? wide, double width) {
-  if (width >= _wideChapterColumn) return true;
-  if (width < _narrowChapterColumn) return false;
-  return wide ?? false;
-}
-
 /// Re-anchors the list on the chapter that was at the top when the row style
 /// changes. The two rows have different heights, so the pixel offset no longer
 /// points at the same chapter.
@@ -79,12 +65,15 @@ class BigScreenMangaDetails extends HookConsumerWidget {
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final desktop = context.isWideDesktop;
+    final desktop = context.windowSizeClass >= WindowSizeClass.expanded;
+    // One rule for the chapter column: the large class gets one-line rows and
+    // labelled buttons, everything below keeps the two-line phone rows.
+    final wide = context.windowSizeClass >= WindowSizeClass.large;
     final selection = useValueListenable(selectedChapters);
     final selecting = selection.isNotEmpty;
     final anchor = useState<int?>(null);
-    // Survives column rebuilds; the first width seen picks the initial style.
-    final wideColumn = useRef<bool?>(null);
+    // Last row style built, so a switch can re-anchor the list.
+    final previousWide = useRef<bool?>(null);
     // Row index to land on when the list remounts for a row-style switch.
     final restoreIndex = useRef<int?>(null);
     final itemPositionsListener = useMemoized(ItemPositionsListener.create);
@@ -180,13 +169,26 @@ class BigScreenMangaDetails extends HookConsumerWidget {
     final chapterEntries = chapterList.value;
     final chapterCount =
         chapterEntries?.whereType<MangaChapterEntry>().length ?? 0;
+    final lastWide = previousWide.value;
+    if (lastWide != null && lastWide != wide) {
+      // The list remounts below at the new row height, so hand it the chapter
+      // that was at the top instead of a pixel offset.
+      restoreIndex.value = _topChapterIndex(itemPositionsListener);
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => restoreIndex.value = null,
+      );
+    }
+    previousWide.value = wide;
     return RefreshIndicator(
       onRefresh: () => onRefresh(true),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: desktop ? 55 : 1,
+            // Large keeps the chapter column at roughly the 488 px that used
+            // to select one-line rows; the 55/45 split leaves it too narrow at
+            // 1200 with the expanded sidebar.
+            flex: wide ? 50 : (desktop ? 55 : 1),
             child: SeriesInfoColumn(
               key: ValueKey(mangaId),
               expansion: expansion,
@@ -213,177 +215,155 @@ class BigScreenMangaDetails extends HookConsumerWidget {
           ),
           const VerticalDivider(width: 0),
           Expanded(
-            flex: desktop ? 45 : 1,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // One-line rows follow the chapter column's own width, so a
-                // tablet split still gets them when the column has room.
-                final previousWide = wideColumn.value;
-                final wide = _wideRowsForWidth(
-                  previousWide,
-                  constraints.maxWidth,
-                );
-                if (previousWide != null && previousWide != wide) {
-                  // The list remounts below at the new row height, so hand it
-                  // the chapter that was at the top instead of a pixel offset.
-                  restoreIndex.value = _topChapterIndex(itemPositionsListener);
-                  WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => restoreIndex.value = null,
-                  );
-                }
-                wideColumn.value = wide;
-                return chapterList.showUiWhenData(context, (data) {
-                  if (data.isNotBlank) {
-                    final ordered = [
-                      for (final e in chapterEntries!)
-                        if (e is MangaChapterEntry) e.chapter,
-                    ];
-                    final orderedIds = [for (final c in ordered) c.id];
-                    final bulk =
-                        ref
-                            .watch(
-                              mangaChapterListForBulkActionsProvider(
-                                mangaId: mangaId,
-                              ),
-                            )
-                            .value ??
-                        ordered;
-
-                    void selectRange(int fromId, int toId) {
-                      final from = orderedIds.indexOf(fromId);
-                      final to = orderedIds.indexOf(toId);
-                      if (from < 0 || to < 0) return;
-                      final lo = from < to ? from : to;
-                      final hi = from < to ? to : from;
-                      selectedChapters.value = {
-                        for (var i = lo; i <= hi; i++)
-                          ordered[i].id: ordered[i],
-                      };
-                    }
-
-                    void onRowTap(ChapterDto chapter, bool shift) {
-                      if (!selecting && !shift) {
-                        ReaderRoute(
-                          mangaId: manga.id,
-                          chapterId: chapter.id,
-                          showReaderLayoutAnimation: true,
-                        ).push(context);
-                        return;
-                      }
-                      final anchorId = anchor.value;
-                      if (shift && anchorId != null && anchorId != chapter.id) {
-                        selectRange(anchorId, chapter.id);
-                        return;
-                      }
-                      toggleSelect(chapter);
-                      anchor.value = chapter.id;
-                    }
-
-                    return Column(
-                      children: [
-                        selecting
-                            ? _ChapterSelectionHeader(
-                                selected: selection.values.toList(),
-                                ordered: ordered,
-                                bulk: bulk,
-                                anchorId: anchor.value,
-                                desktop: wide,
-                                seriesUrl: manga.realUrl,
-                                moreButtonKey: moreButtonKey,
-                                onClear: () {
-                                  selectedChapters.value = {};
-                                  anchor.value = null;
-                                },
-                                onSelectAll: () => selectedChapters.value = {
-                                  for (final c in ordered) c.id: c,
-                                },
-                                refresh: barRefresh,
-                                onSelect: (next, anchorId) {
-                                  selectedChapters.value = next;
-                                  anchor.value = anchorId;
-                                },
-                              )
-                            : _ChapterHeader(
-                                totalCount: totalCount == 0
-                                    ? chapterCount
-                                    : totalCount,
-                                unreadCount: unreadCount,
-                                onDeviceBytes: onDeviceBytes,
-                                filterCount: filterCount,
-                                desktop: wide,
-                                filterButtonKey: filterButtonKey,
-                                filterFocus: filterFocus,
-                                onRefresh: () => onRefresh(true),
-                                onFilter: openFilterPanel,
-                              ),
-                        Expanded(
-                          child: ScrollablePositionedList.builder(
-                            key: ValueKey(wide),
-                            initialScrollIndex: restoreIndex.value ?? 0,
-                            itemPositionsListener: itemPositionsListener,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              if (chapterEntries.length == index) {
-                                return wide
-                                    ? const SizedBox(height: 16)
-                                    : const ListTile();
-                              }
-                              final entry = chapterEntries[index];
-                              return switch (entry) {
-                                MangaChapterEntry() => ChapterListTile(
-                                  key: ValueKey('${entry.chapter.id}'),
-                                  manga: manga,
-                                  chapter: entry.chapter,
-                                  updateData: () => onListRefresh(false),
-                                  isSelected: selection.containsKey(
-                                    entry.chapter.id,
-                                  ),
-                                  canTapSelect: selecting,
-                                  toggleSelect: toggleSelect,
-                                  desktop: wide,
-                                  selectionMode: selecting,
-                                  isCurrent: entry.chapter.id == currentId,
-                                  onRowTap: (shift) =>
-                                      onRowTap(entry.chapter, shift),
-                                  onSecondaryTapAt: (pos) => openMenu(
-                                    menuAnchorForPoint(context, pos),
-                                    entry.chapter,
-                                    ordered,
-                                    bulk,
-                                    () {},
-                                  ),
-                                  onOpenMenu: (rect, refocus) => openMenu(
-                                    rect,
-                                    entry.chapter,
-                                    ordered,
-                                    bulk,
-                                    refocus,
-                                  ),
-                                ),
-                                MissingChaptersEntry() =>
-                                  MissingChaptersListTile(
-                                    key: ValueKey('missing-${entry.id}'),
-                                    count: entry.count,
-                                  ),
-                              };
-                            },
-                            itemCount: chapterEntries.length + 1,
+            flex: wide ? 50 : (desktop ? 45 : 1),
+            child: chapterList.showUiWhenData(context, (data) {
+              if (data.isNotBlank) {
+                final ordered = [
+                  for (final e in chapterEntries!)
+                    if (e is MangaChapterEntry) e.chapter,
+                ];
+                final orderedIds = [for (final c in ordered) c.id];
+                final bulk =
+                    ref
+                        .watch(
+                          mangaChapterListForBulkActionsProvider(
+                            mangaId: mangaId,
                           ),
-                        ),
-                      ],
-                    );
-                  } else {
-                    return Emoticons(
-                      title: context.l10n.noChaptersFound,
-                      button: TextButton(
-                        onPressed: () => onListRefresh(true),
-                        child: Text(context.l10n.refresh),
-                      ),
-                    );
+                        )
+                        .value ??
+                    ordered;
+
+                void selectRange(int fromId, int toId) {
+                  final from = orderedIds.indexOf(fromId);
+                  final to = orderedIds.indexOf(toId);
+                  if (from < 0 || to < 0) return;
+                  final lo = from < to ? from : to;
+                  final hi = from < to ? to : from;
+                  selectedChapters.value = {
+                    for (var i = lo; i <= hi; i++) ordered[i].id: ordered[i],
+                  };
+                }
+
+                void onRowTap(ChapterDto chapter, bool shift) {
+                  if (!selecting && !shift) {
+                    ReaderRoute(
+                      mangaId: manga.id,
+                      chapterId: chapter.id,
+                      showReaderLayoutAnimation: true,
+                    ).push(context);
+                    return;
                   }
-                }, refresh: () => onRefresh(false));
-              },
-            ),
+                  final anchorId = anchor.value;
+                  if (shift && anchorId != null && anchorId != chapter.id) {
+                    selectRange(anchorId, chapter.id);
+                    return;
+                  }
+                  toggleSelect(chapter);
+                  anchor.value = chapter.id;
+                }
+
+                return Column(
+                  children: [
+                    selecting
+                        ? _ChapterSelectionHeader(
+                            selected: selection.values.toList(),
+                            ordered: ordered,
+                            bulk: bulk,
+                            anchorId: anchor.value,
+                            desktop: wide,
+                            seriesUrl: manga.realUrl,
+                            moreButtonKey: moreButtonKey,
+                            onClear: () {
+                              selectedChapters.value = {};
+                              anchor.value = null;
+                            },
+                            onSelectAll: () => selectedChapters.value = {
+                              for (final c in ordered) c.id: c,
+                            },
+                            refresh: barRefresh,
+                            onSelect: (next, anchorId) {
+                              selectedChapters.value = next;
+                              anchor.value = anchorId;
+                            },
+                          )
+                        : _ChapterHeader(
+                            totalCount: totalCount == 0
+                                ? chapterCount
+                                : totalCount,
+                            unreadCount: unreadCount,
+                            onDeviceBytes: onDeviceBytes,
+                            filterCount: filterCount,
+                            desktop: wide,
+                            filterButtonKey: filterButtonKey,
+                            filterFocus: filterFocus,
+                            onRefresh: () => onRefresh(true),
+                            onFilter: openFilterPanel,
+                          ),
+                    Expanded(
+                      child: ScrollablePositionedList.builder(
+                        key: ValueKey(wide),
+                        initialScrollIndex: restoreIndex.value ?? 0,
+                        itemPositionsListener: itemPositionsListener,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          if (chapterEntries.length == index) {
+                            return wide
+                                ? const SizedBox(height: 16)
+                                : const ListTile();
+                          }
+                          final entry = chapterEntries[index];
+                          return switch (entry) {
+                            MangaChapterEntry() => ChapterListTile(
+                              key: ValueKey('${entry.chapter.id}'),
+                              manga: manga,
+                              chapter: entry.chapter,
+                              updateData: () => onListRefresh(false),
+                              isSelected: selection.containsKey(
+                                entry.chapter.id,
+                              ),
+                              canTapSelect: selecting,
+                              toggleSelect: toggleSelect,
+                              desktop: wide,
+                              selectionMode: selecting,
+                              isCurrent: entry.chapter.id == currentId,
+                              onRowTap: (shift) =>
+                                  onRowTap(entry.chapter, shift),
+                              onSecondaryTapAt: (pos) => openMenu(
+                                menuAnchorForPoint(context, pos),
+                                entry.chapter,
+                                ordered,
+                                bulk,
+                                () {},
+                              ),
+                              onOpenMenu: (rect, refocus) => openMenu(
+                                rect,
+                                entry.chapter,
+                                ordered,
+                                bulk,
+                                refocus,
+                              ),
+                            ),
+                            MissingChaptersEntry() => MissingChaptersListTile(
+                              key: ValueKey('missing-${entry.id}'),
+                              count: entry.count,
+                            ),
+                          };
+                        },
+                        itemCount: chapterEntries.length + 1,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Emoticons(
+                  title: context.l10n.noChaptersFound,
+                  button: TextButton(
+                    onPressed: () => onListRefresh(true),
+                    child: Text(context.l10n.refresh),
+                  ),
+                );
+              }
+            }, refresh: () => onRefresh(false)),
           ),
         ],
       ),
@@ -614,10 +594,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
           for (final action in overflowed)
             PopupMenuItem(
               onTap: action.onTap,
-              child: ChapterMenuRow(
-                icon: action.icon,
-                label: action.label,
-              ),
+              child: ChapterMenuRow(icon: action.icon, label: action.label),
             ),
           if (overflowed.isNotEmpty) const PopupMenuDivider(),
           PopupMenuItem(
@@ -691,12 +668,8 @@ class _ChapterSelectionHeader extends ConsumerWidget {
           if (browserChapter != null) const PopupMenuDivider(),
           if (browserChapter != null)
             PopupMenuItem(
-              onTap: () => openChapterInBrowser(
-                context,
-                ref,
-                browserChapter,
-                seriesUrl,
-              ),
+              onTap: () =>
+                  openChapterInBrowser(context, ref, browserChapter, seriesUrl),
               child: ChapterMenuRow(
                 icon: Icons.public_rounded,
                 label: context.l10n.openInBrowser,

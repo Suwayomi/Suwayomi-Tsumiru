@@ -49,7 +49,9 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
     final searchBox = Align(
       alignment: Alignment.centerRight,
       child: SizedBox(
-        width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
+        width: context.windowSizeClass >= WindowSizeClass.expanded
+            ? context.widthScale(scale: .5)
+            : null,
         child: Padding(
           padding: KEdgeInsets.h16v4.size,
           child: SearchField(

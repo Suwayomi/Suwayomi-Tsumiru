@@ -61,7 +61,7 @@ class DownloadsScreen extends HookConsumerWidget {
     );
     useListenable(tabController);
     final onDeviceTab = tabController.index == 1;
-    final phone = !context.isTablet;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     // Phone searches from the app-bar entry (or the box under the title when
     // the persistent setting is on); tablet and desktop are unchanged.
     final persistentBox =
@@ -123,7 +123,7 @@ class DownloadsScreen extends HookConsumerWidget {
           : AppBar(
               // Desktop replaces the title with the unified search box (the
               // sidebar already names the page); phone and tablet keep it.
-              title: context.isDesktop
+              title: context.usesDesktopShell
                   ? Align(
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(

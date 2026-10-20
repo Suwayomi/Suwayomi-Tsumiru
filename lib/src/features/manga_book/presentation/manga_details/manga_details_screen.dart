@@ -69,6 +69,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final selecting = selectedChapters.value.isNotEmpty;
     final offline = ref.watch(serverUnreachableProvider);
+    // The series page switches from the phone layout to the two-column one at
+    // Material's expanded class (840), all in one step.
+    final twoColumn = context.windowSizeClass >= WindowSizeClass.expanded;
 
     // Esc belongs to the selection, not the global Back hotkey, whatever holds
     // focus on this page (list, selection header, app bar). Focusing the page
@@ -219,291 +222,296 @@ class MangaDetailsScreen extends HookConsumerWidget {
       child: manga.showUiWhenData(
         context,
         (data) {
+          // The phone AppBar's toolbars, shared with the merged desktop bar so
+          // both show the same controls. Medium windows keep the phone body but
+          // suppress the AppBar, so the bar must carry these instead.
+          final selectionActions = [
+            IconButton(
+              onPressed: () {
+                final chapterList = [...?filteredChapterList.value];
+                selectedChapters.value = ({
+                  for (ChapterDto i in chapterList) i.id: i,
+                });
+              },
+              icon: const Icon(Icons.select_all_rounded),
+            ),
+            IconButton(
+              onPressed: () {
+                final chapterList = [...?filteredChapterList.value];
+                selectedChapters.value = ({
+                  for (ChapterDto i in chapterList)
+                    if (!selectedChapters.value.containsKey(i.id)) i.id: i,
+                });
+              },
+              icon: const Icon(Icons.flip_to_back_rounded),
+            ),
+            MultiSelectPopupButton(
+              filteredChapterList: filteredChapterList,
+              selectedChapters: selectedChapters,
+            ),
+          ];
+          final pageActions = [
+            if (!twoColumn && data != null)
+              IconButton(
+                tooltip: context.l10n.webView,
+                icon: const Icon(Icons.public_rounded),
+                onPressed: () =>
+                    MangaDescription.openInBrowser(context, ref, data),
+              ),
+            if (!twoColumn)
+              IconButton(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: KBorderRadius.rT16.radius,
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    builder: (_) => MangaChapterOrganizer(mangaId: mangaId),
+                    sheetAnimationStyle: context.motionStyle,
+                  );
+                },
+                icon: const Icon(Icons.filter_list_rounded),
+              ),
+            if (!twoColumn)
+              PopupMenuButton(
+                shape: RoundedRectangleBorder(
+                  borderRadius: KBorderRadius.r16.radius,
+                ),
+                icon: const Icon(Icons.more_vert_rounded),
+                itemBuilder: (context) => [
+                  if (ref.watch(showRecommendationsProvider).ifNull(true) &&
+                      ref.watch(recommendsInOverflowProvider).ifNull(false))
+                    PopupMenuItem(
+                      onTap: () => RecommendsRoute(
+                        mangaId: mangaId,
+                        mangaTitle: data?.title,
+                      ).push(context),
+                      child: Text(context.l10n.seeRecommendations),
+                    ),
+                  PopupMenuItem(
+                    onTap: () => Future.microtask(() {
+                      if (!context.mounted) return null;
+                      return showDialog(
+                        context: context,
+                        builder: (context) =>
+                            EditMangaCategoryDialog(mangaId: mangaId),
+                        animationStyle: context.motionStyle,
+                      );
+                    }),
+                    child: Text(context.l10n.editCategory),
+                  ),
+                  PopupMenuItem(
+                    onTap: () => startMigration(context, mangaId, data),
+                    child: Text(context.l10n.migrate),
+                  ),
+                  PopupMenuItem(
+                    onTap: () => refresh(true),
+                    child: Text(context.l10n.refresh),
+                  ),
+                  if (data?.realUrl != null)
+                    PopupMenuItem(
+                      onTap: () => openInBrowser(data!.realUrl!),
+                      child: Text(context.l10n.openSourceInBrowser),
+                    ),
+                  PopupMenuItem(
+                    onTap: openOnServer,
+                    child: Text(context.l10n.openOnServer),
+                  ),
+                ],
+                popUpAnimationStyle: context.motionStyle,
+              ),
+          ];
           final scaffold = FocusScope(
-          node: pageScope,
-          onKeyEvent: (node, event) {
-            if (event is KeyDownEvent &&
-                event.logicalKey == LogicalKeyboardKey.escape &&
-                selectedChapters.value.isNotEmpty) {
-              selectedChapters.value = {};
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          child: Scaffold(
-            extendBodyBehindAppBar:
-                !context.isTablet && selectedChapters.value.isEmpty && !offline,
-            // Tablet/desktop selection lives in the chapter-column header;
-            // only phones get the selection app bar.
-            appBar: topBar
-                ? null
-                : selectedChapters.value.isNotEmpty && !context.isTablet
-                ? AppBar(
-                    leading: IconButton(
-                      onPressed: () => selectedChapters.value = ({}),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                    title: Text(
-                      context.l10n.numSelected(selectedChapters.value.length),
-                    ),
-                    actions: [
-                      IconButton(
-                        onPressed: () {
-                          final chapterList = [...?filteredChapterList.value];
-                          selectedChapters.value = ({
-                            for (ChapterDto i in chapterList) i.id: i,
-                          });
-                        },
-                        icon: const Icon(Icons.select_all_rounded),
+            node: pageScope,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.escape &&
+                  selectedChapters.value.isNotEmpty) {
+                selectedChapters.value = {};
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Scaffold(
+              extendBodyBehindAppBar:
+                  !twoColumn && selectedChapters.value.isEmpty && !offline,
+              // Tablet/desktop selection lives in the chapter-column header;
+              // only phones get the selection app bar.
+              appBar: topBar
+                  ? null
+                  : selectedChapters.value.isNotEmpty && !twoColumn
+                  ? AppBar(
+                      leading: IconButton(
+                        onPressed: () => selectedChapters.value = ({}),
+                        icon: const Icon(Icons.close_rounded),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          final chapterList = [...?filteredChapterList.value];
-                          selectedChapters.value = ({
-                            for (ChapterDto i in chapterList)
-                              if (!selectedChapters.value.containsKey(i.id))
-                                i.id: i,
-                          });
-                        },
-                        icon: const Icon(Icons.flip_to_back_rounded),
+                      title: Text(
+                        context.l10n.numSelected(selectedChapters.value.length),
                       ),
-                      MultiSelectPopupButton(
-                        filteredChapterList: filteredChapterList,
-                        selectedChapters: selectedChapters,
-                      ),
-                    ],
-                  )
-                : PreferredSize(
-                    preferredSize: const Size.fromHeight(kToolbarHeight),
-                    child: ValueListenableBuilder<double>(
-                      valueListenable: scrollPx,
-                      builder: (context, px, _) {
-                        final t = (px / 160).clamp(0.0, 1.0);
-                        return AppBar(
-                          leading: detailNavigationBackButton(context),
-                          backgroundColor: context.isTablet
-                              ? surface
-                              : Color.lerp(Colors.transparent, surface, t),
-                          elevation: 0,
-                          scrolledUnderElevation: 0,
-                          // Scrim under the icons while the bar is transparent
-                          // (hero showing); fades out as the bar turns opaque.
-                          flexibleSpace: context.isTablet || t >= 1
-                              ? null
-                              : DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black.withValues(
-                                          alpha: 0.45 * (1 - t),
-                                        ),
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                          // Tablets show the title beside the cover, so a
-                          // second one in the bar would duplicate it.
-                          title: context.isWideDesktop
-                              ? SeriesAppBarTitle(
-                                  title: data?.title ?? context.l10n.manga,
-                                )
-                              : context.isTablet
-                              ? null
-                              : Opacity(
-                                  opacity: t,
-                                  child: Text(
-                                    data?.title ?? context.l10n.manga,
-                                  ),
-                                ),
-                          actions: [
-                            if (!context.isTablet && data != null)
-                              IconButton(
-                                tooltip: context.l10n.webView,
-                                icon: const Icon(Icons.public_rounded),
-                                onPressed: () => MangaDescription.openInBrowser(
-                                  context,
-                                  ref,
-                                  data,
-                                ),
-                              ),
-                            if (!context.isTablet)
-                              IconButton(
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: KBorderRadius.rT16.radius,
-                                    ),
-                                    clipBehavior: Clip.hardEdge,
-                                    builder: (_) =>
-                                        MangaChapterOrganizer(mangaId: mangaId),
-                                    sheetAnimationStyle: context.motionStyle,
-                                  );
-                                },
-                                icon: const Icon(Icons.filter_list_rounded),
-                              ),
-                            if (!context.isTablet)
-                              PopupMenuButton(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: KBorderRadius.r16.radius,
-                                ),
-                                icon: const Icon(Icons.more_vert_rounded),
-                                itemBuilder: (context) => [
-                                  if (ref
-                                          .watch(showRecommendationsProvider)
-                                          .ifNull(true) &&
-                                      ref
-                                          .watch(recommendsInOverflowProvider)
-                                          .ifNull(false))
-                                    PopupMenuItem(
-                                      onTap: () => RecommendsRoute(
-                                        mangaId: mangaId,
-                                        mangaTitle: data?.title,
-                                      ).push(context),
-                                      child: Text(
-                                        context.l10n.seeRecommendations,
+                      actions: selectionActions,
+                    )
+                  : PreferredSize(
+                      preferredSize: const Size.fromHeight(kToolbarHeight),
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: scrollPx,
+                        builder: (context, px, _) {
+                          final t = (px / 160).clamp(0.0, 1.0);
+                          return AppBar(
+                            leading: detailNavigationBackButton(context),
+                            backgroundColor: twoColumn
+                                ? surface
+                                : Color.lerp(Colors.transparent, surface, t),
+                            elevation: 0,
+                            scrolledUnderElevation: 0,
+                            // Scrim under the icons while the bar is transparent
+                            // (hero showing); fades out as the bar turns opaque.
+                            flexibleSpace: twoColumn || t >= 1
+                                ? null
+                                : DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.black.withValues(
+                                            alpha: 0.45 * (1 - t),
+                                          ),
+                                          Colors.transparent,
+                                        ],
                                       ),
                                     ),
-                                  PopupMenuItem(
-                                    onTap: () => Future.microtask(() {
-                                      if (!context.mounted) return null;
-                                      return showDialog(
-                                        context: context,
-                                        builder: (context) =>
-                                            EditMangaCategoryDialog(
-                                              mangaId: mangaId,
-                                            ),
-                                        animationStyle: context.motionStyle,
-                                      );
-                                    }),
-                                    child: Text(context.l10n.editCategory),
                                   ),
-                                  PopupMenuItem(
-                                    onTap: () =>
-                                        startMigration(context, mangaId, data),
-                                    child: Text(context.l10n.migrate),
+                            // Tablets show the title beside the cover, so a
+                            // second one in the bar would duplicate it.
+                            title: twoColumn
+                                ? SeriesAppBarTitle(
+                                    title: data?.title ?? context.l10n.manga,
+                                  )
+                                : Opacity(
+                                    opacity: t,
+                                    child: Text(
+                                      data?.title ?? context.l10n.manga,
+                                    ),
                                   ),
-                                  PopupMenuItem(
-                                    onTap: () => refresh(true),
+                            actions: pageActions,
+                          );
+                        },
+                      ),
+                    ),
+              endDrawerEnableOpenDragGesture: false,
+              floatingActionButton:
+                  !twoColumn &&
+                      firstUnreadChapter != null &&
+                      selectedChapters.value.isEmpty
+                  ? BrandFab(
+                      label: Text(
+                        data?.lastReadChapter?.hasReadingProgress == true
+                            ? context.l10n.resume
+                            : context.l10n.start,
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      onPressed: () {
+                        ReaderRoute(
+                          mangaId: firstUnreadChapter.mangaId,
+                          chapterId: firstUnreadChapter.id,
+                          showReaderLayoutAnimation: true,
+                        ).push(context);
+                      },
+                    )
+                  : null,
+              // Banner above the content, not over it: the hero owns the whole top
+              // of this screen and a floating banner cuts the cover in half.
+              body: Column(
+                children: [
+                  ServerUnreachableBanner(onRetry: refresh),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        NotificationListener<ScrollNotification>(
+                          onNotification: (n) {
+                            if (n.metrics.axis == Axis.vertical) {
+                              scrollPx.value = n.metrics.pixels;
+                            }
+                            return false;
+                          },
+                          child: data != null
+                              ? twoColumn
+                                    ? BigScreenMangaDetails(
+                                        expansion: infoExpansion,
+                                        chapterList: chapterListEntries,
+                                        manga: data,
+                                        mangaId: mangaId,
+                                        onRefresh: refresh,
+                                        onDescriptionRefresh: mangaRefresh,
+                                        onListRefresh: chapterListRefresh,
+                                        selectedChapters: selectedChapters,
+                                      )
+                                    : SmallScreenMangaDetails(
+                                        chapterList: chapterListEntries,
+                                        manga: data,
+                                        mangaId: mangaId,
+                                        onRefresh: refresh,
+                                        onDescriptionRefresh: mangaRefresh,
+                                        onListRefresh: chapterListRefresh,
+                                        selectedChapters: selectedChapters,
+                                      )
+                              : Emoticons(
+                                  title: context.l10n.noMangaFound,
+                                  button: TextButton(
+                                    onPressed: refresh,
                                     child: Text(context.l10n.refresh),
                                   ),
-                                  if (data?.realUrl != null)
-                                    PopupMenuItem(
-                                      onTap: () => openInBrowser(data!.realUrl!),
-                                      child: Text(
-                                        context.l10n.openSourceInBrowser,
-                                      ),
-                                    ),
-                                  PopupMenuItem(
-                                    onTap: openOnServer,
-                                    child: Text(context.l10n.openOnServer),
-                                  ),
-                                ],
-                                popUpAnimationStyle: context.motionStyle,
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-            endDrawerEnableOpenDragGesture: false,
-            floatingActionButton:
-                !context.isWideDesktop &&
-                    firstUnreadChapter != null &&
-                    selectedChapters.value.isEmpty
-                ? BrandFab(
-                    label: Text(
-                      data?.lastReadChapter?.hasReadingProgress == true
-                          ? context.l10n.resume
-                          : context.l10n.start,
-                    ),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    onPressed: () {
-                      ReaderRoute(
-                        mangaId: firstUnreadChapter.mangaId,
-                        chapterId: firstUnreadChapter.id,
-                        showReaderLayoutAnimation: true,
-                      ).push(context);
-                    },
-                  )
-                : null,
-            // Banner above the content, not over it: the hero owns the whole top
-            // of this screen and a floating banner cuts the cover in half.
-            body: Column(
-              children: [
-                ServerUnreachableBanner(onRetry: refresh),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      NotificationListener<ScrollNotification>(
-                        onNotification: (n) {
-                          if (n.metrics.axis == Axis.vertical) {
-                            scrollPx.value = n.metrics.pixels;
-                          }
-                          return false;
-                        },
-                        child: data != null
-                            ? context.isTablet
-                                  ? BigScreenMangaDetails(
-                                      expansion: infoExpansion,
-                                      chapterList: chapterListEntries,
-                                      manga: data,
-                                      mangaId: mangaId,
-                                      onRefresh: refresh,
-                                      onDescriptionRefresh: mangaRefresh,
-                                      onListRefresh: chapterListRefresh,
-                                      selectedChapters: selectedChapters,
-                                    )
-                                  : SmallScreenMangaDetails(
-                                      chapterList: chapterListEntries,
-                                      manga: data,
-                                      mangaId: mangaId,
-                                      onRefresh: refresh,
-                                      onDescriptionRefresh: mangaRefresh,
-                                      onListRefresh: chapterListRefresh,
-                                      selectedChapters: selectedChapters,
-                                    )
-                            : Emoticons(
-                                title: context.l10n.noMangaFound,
-                                button: TextButton(
-                                  onPressed: refresh,
-                                  child: Text(context.l10n.refresh),
                                 ),
-                              ),
-                      ),
-                      if (selectedChapters.value.isNotEmpty &&
-                          !context.isTablet)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: MultiChaptersActionsBottomAppBar(
-                            afterOptionSelected: chapterListRefresh,
-                            selectedChapters: selectedChapters,
-                            chapterList: filteredChapterList.value,
-                          ),
                         ),
-                    ],
+                        if (selectedChapters.value.isNotEmpty && !twoColumn)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: MultiChaptersActionsBottomAppBar(
+                              afterOptionSelected: chapterListRefresh,
+                              selectedChapters: selectedChapters,
+                              chapterList: filteredChapterList.value,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-        return titleTopBarSlot(
-          topBar: topBar,
-          leading: detailNavigationBackButton(context),
-          title: context.isWideDesktop
-              ? SeriesAppBarTitle(
-                  title: data?.title ?? context.l10n.manga,
-                )
-              : Text(data?.title ?? context.l10n.manga),
-          child: scaffold,
-        );
-      },
+          );
+          // Single-column with the merged bar: the phone body has no bar of
+          // its own, so the page's own toolbar moves to the shell bar. The
+          // selection toolbar swaps in the phone AppBar's selection actions.
+          if (topBar && !twoColumn && selectedChapters.value.isNotEmpty) {
+            return TopBarSlot(
+              slotKey: 'selection',
+              content: DesktopTitleSlot(
+                leading: IconButton(
+                  onPressed: () => selectedChapters.value = ({}),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+                title: Text(
+                  context.l10n.numSelected(selectedChapters.value.length),
+                ),
+                actions: selectionActions,
+              ),
+              minWidth: titleTopBarSlotMinWidth(selectionActions.length),
+              child: scaffold,
+            );
+          }
+          return titleTopBarSlot(
+            topBar: topBar,
+            leading: detailNavigationBackButton(context),
+            title: twoColumn
+                ? SeriesAppBarTitle(title: data?.title ?? context.l10n.manga)
+                : Text(data?.title ?? context.l10n.manga),
+            actions: pageActions,
+            child: scaffold,
+          );
+        },
         refresh: refresh,
         wrapper: (body) {
           final topBar = showsMergedTopBar(context);

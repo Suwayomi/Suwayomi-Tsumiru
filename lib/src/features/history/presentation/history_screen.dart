@@ -34,8 +34,8 @@ class HistoryScreen extends ConsumerWidget {
     final historyState = ref.watch(readingHistoryProvider);
     final searchQuery = ref.watch(historySearchQueryProvider);
     final hasActiveFilters = ref.watch(historyHasActiveFiltersProvider);
-    final desktop = context.isDesktop;
-    final phone = !context.isTablet;
+    final desktop = context.usesDesktopShell;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     // The persistent-search setting puts the tappable box under the title;
     // otherwise phone pages get a search icon in the app bar.
     final persistentBox =
@@ -136,7 +136,7 @@ class HistoryScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(8),
               child: SizedBox(
-                width: context.isLargeTablet
+                width: context.windowSizeClass >= WindowSizeClass.expanded
                     ? context.widthScale(scale: .5)
                     : null,
                 child: Padding(

@@ -194,7 +194,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
           return false;
         },
         child: Scaffold(
-          appBar: context.isDesktop
+          appBar: context.usesDesktopShell
               ? null
               : AppBar(
                   leading: detailNavigationBackButton(context),
@@ -206,7 +206,8 @@ class GlobalSearchScreen extends HookConsumerWidget {
                         Align(
                           alignment: Alignment.centerRight,
                           child: SizedBox(
-                            width: context.isLargeTablet
+                            width: context.windowSizeClass >=
+                                    WindowSizeClass.expanded
                                 ? context.widthScale(scale: .5)
                                 : null,
                             child: Padding(
@@ -219,7 +220,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                     ),
                   ),
                 ),
-          body: context.isDesktop
+          body: context.usesDesktopShell
               ? SafeArea(
                   child: Column(
                     children: [

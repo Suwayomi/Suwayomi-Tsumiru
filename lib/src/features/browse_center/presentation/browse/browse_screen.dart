@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
@@ -59,7 +58,7 @@ class BrowseScreen extends HookConsumerWidget {
       return null;
     }, [tabController.index]);
     useListenable(tabController);
-    final phone = !context.isTablet;
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
     // Phone searches the Sources tab from the app-bar entry (or the box in
     // the tab when the persistent setting is on); other tabs are unchanged.
     final persistentBox =
@@ -75,12 +74,6 @@ class BrowseScreen extends HookConsumerWidget {
           const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
           const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
         ],
-        if (context.isTablet && !context.isDesktop)
-          IconButton(
-            tooltip: context.l10n.globalSearch,
-            onPressed: () => openGlobalSearch(context),
-            icon: const Icon(Icons.travel_explore_rounded),
-          ),
         // The search overlay/dropdown already offers "Search all sources".
         IconButton(
           tooltip: context.l10n.filterSources,
@@ -111,7 +104,7 @@ class BrowseScreen extends HookConsumerWidget {
     ];
     final tabBar = TabBar(
       dividerColor: Colors.transparent,
-      isScrollable: context.isTablet,
+      isScrollable: context.windowSizeClass >= WindowSizeClass.medium,
       controller: tabController,
       tabs: [
         Tab(text: context.l10n.sources),
@@ -126,7 +119,7 @@ class BrowseScreen extends HookConsumerWidget {
         // Desktop replaces the title with a search box driving the current
         // tab's own filter (the sidebar already names the page). Phone and
         // tablet keep the title.
-        title: context.isDesktop
+        title: context.usesDesktopShell
             ? Align(
                 alignment: Alignment.centerLeft,
                 child: ConstrainedBox(

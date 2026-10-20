@@ -71,7 +71,7 @@ Page<void> _detailNavigationPage(
   // the main thread, so a slow drag through 600 px is enough to freeze a
   // release build. Only the transition style follows the width; in-flight
   // transitions keep the style they started with.
-  final tablet = context.isTablet;
+  final tablet = context.windowSizeClass >= WindowSizeClass.medium;
   final reduceMotion = context.reduceMotion;
   final platformBuilder = _platformTransitionBuilder(context);
   final Duration duration = reduceMotion
