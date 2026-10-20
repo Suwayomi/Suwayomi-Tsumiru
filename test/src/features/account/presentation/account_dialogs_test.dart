@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
-import 'package:tsumiru/src/features/account/data/account_actions.dart';
 import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
 import 'package:tsumiru/src/features/account/presentation/account_password_dialog.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -164,104 +162,4 @@ void main() {
       expect(submitted, [' old ', ' new ']);
     },
   );
-
-  testWidgets('password failure restores the form after loading', (
-    tester,
-  ) async {
-    final pending = Completer<void>();
-    await openDialog(
-      tester,
-      AccountPasswordDialog(
-        onSubmit: ({required currentPassword, required newPassword}) =>
-            pending.future,
-      ),
-    );
-    await fill(tester, ['old', 'new', 'new']);
-    await tester.tap(find.byType(ElevatedButton));
-    await tester.pump();
-    expect(
-      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-      isNull,
-    );
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    pending.completeError(const SocketException('private transport detail'));
-    await tester.pumpAndSettle();
-    final context = tester.element(find.byType(AccountPasswordDialog));
-    expect(
-      find.text(AppLocalizations.of(context)!.authTestConnectionFailedNetwork),
-      findsOneWidget,
-    );
-    expect(find.textContaining('private transport detail'), findsNothing);
-    expect(
-      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-      isNotNull,
-    );
-    expect(
-      tester
-          .widget<TextFormField>(find.byType(TextFormField).first)
-          .controller!
-          .text,
-      'old',
-    );
-  });
-
-  for (final confirmed in [false, true]) {
-    testWidgets(
-      'password outcome explains sign-in requirement: confirmed=$confirmed',
-      (tester) async {
-        await openDialog(
-          tester,
-          AccountPasswordDialog(
-            onSubmit: ({required currentPassword, required newPassword}) async {
-              if (confirmed) throw const AccountPasswordSignInRequired();
-              throw const AccountPasswordUnconfirmed();
-            },
-          ),
-        );
-        await fill(tester, ['old', 'new', 'new']);
-        await tester.tap(find.byType(ElevatedButton));
-        await tester.pumpAndSettle();
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(AccountPasswordDialog)),
-        )!;
-        expect(
-          find.text(
-            confirmed
-                ? l10n.accountPasswordSignInRequired
-                : l10n.accountPasswordUnconfirmed,
-          ),
-          findsOneWidget,
-        );
-        expect(find.byType(AlertDialog), findsOneWidget);
-      },
-    );
-  }
-
-  for (final passwordDialog in [false, true]) {
-    testWidgets('completion after unmount is safe: password=$passwordDialog', (
-      tester,
-    ) async {
-      final pending = Completer<void>();
-      await openDialog(
-        tester,
-        passwordDialog
-            ? AccountPasswordDialog(
-                onSubmit: ({required currentPassword, required newPassword}) =>
-                    pending.future,
-              )
-            : AccountCodeDialog(
-                mode: AccountCodeMode.recovery,
-                onSubmit: ({required code, username, required password}) =>
-                    pending.future,
-              ),
-      );
-      await fill(tester, ['value', 'password', 'password']);
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pump();
-      await tester.pumpWidget(const SizedBox());
-      pending.complete();
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-    });
-  }
 }

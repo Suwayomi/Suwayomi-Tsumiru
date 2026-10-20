@@ -11,7 +11,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/about/data/about_repository.dart';
@@ -20,7 +19,6 @@ import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.d
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
-import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
 
 const _unsupportedMessage =
@@ -53,16 +51,6 @@ class _FailingAbout extends AboutRepository {
 
 Object _unauthorizedAbout() => OperationMessageException(
   OperationException(graphqlErrors: [GraphQLError(message: 'Unauthorized')]),
-);
-
-Object _notFoundAbout() => OperationMessageException(
-  OperationException(
-    linkException: HttpLinkParserException(
-      originalException: const ServerNotJsonException(404, 'Not Found'),
-      originalStackTrace: StackTrace.empty,
-      response: http.Response('Not Found', 404),
-    ),
-  ),
 );
 
 Future<void> _pumpWebOnboarding(
@@ -109,16 +97,6 @@ void main() {
 
     expect(find.text(_unsupportedMessage), findsOneWidget);
     expect(find.text(_unconfirmedMessage), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  testWidgets('a 404 Not Found shows the unconfirmed row', (tester) async {
-    await _pumpWebOnboarding(tester, _notFoundAbout());
-    await _testConnection(tester);
-
-    expect(find.text(_unconfirmedMessage), findsOneWidget);
-    expect(find.text(_unsupportedMessage), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

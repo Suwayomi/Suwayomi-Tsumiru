@@ -3,7 +3,7 @@ import 'package:tsumiru/src/features/offline/data/background/background_token_re
 import 'package:tsumiru/src/features/offline/data/background/background_work_order.dart';
 
 void main() {
-  test('work order round-trips through json incl. int-keyed maps', () {
+  test('work order round-trips and decodes a legacy payload', () {
     final order = BackgroundWorkOrder(
       chapterIds: const [5, 6, 7],
       mangaIdByChapter: const {5: 1, 6: 1, 7: 2},
@@ -12,7 +12,11 @@ void main() {
       addPort: false,
       wifiOnly: true,
       auth: const BackgroundTokenRecord(
-          gen: 3, authType: 'uiLogin', accessToken: 'A', refreshToken: 'R'),
+        gen: 3,
+        authType: 'uiLogin',
+        accessToken: 'A',
+        refreshToken: 'R',
+      ),
       baseDir: '/data/app/offline',
       generationByChapter: const {5: 0, 6: 2, 7: 1},
       rootIsolateToken: 99887766,
@@ -28,25 +32,14 @@ void main() {
     expect(restored.auth.accessToken, 'A');
     expect(restored.baseDir, '/data/app/offline');
     expect(restored.rootIsolateToken, 99887766);
-  });
 
-  test('baseDir defaults to empty when absent (back-compat decode)', () {
-    final order = BackgroundWorkOrder(
-      chapterIds: const [1],
-      mangaIdByChapter: const {1: 1},
-      serverBase: 'https://s.example',
-      port: null,
-      addPort: false,
-      wifiOnly: false,
-      auth: const BackgroundTokenRecord(gen: 0, authType: 'none'),
-      baseDir: '/x',
-    );
-    final json = order.toJson()
+    final legacyJson = order.toJson()
       ..remove('baseDir')
-      ..remove('generationByChapter');
-    final restored = BackgroundWorkOrder.fromJson(json);
-    expect(restored.baseDir, '');
-    expect(restored.rootIsolateToken, 0);
-    expect(restored.generationByChapter, isEmpty);
+      ..remove('generationByChapter')
+      ..remove('rootIsolateToken');
+    final legacy = BackgroundWorkOrder.fromJson(legacyJson);
+    expect(legacy.baseDir, '');
+    expect(legacy.rootIsolateToken, 0);
+    expect(legacy.generationByChapter, isEmpty);
   });
 }

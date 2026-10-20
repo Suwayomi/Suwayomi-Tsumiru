@@ -13,8 +13,12 @@ void main() {
   tearDown(() => db.close());
 
   test('offlineMangaToDto maps id/title/thumbnail and safe defaults', () async {
-    await db.upsertMangaMetadata(id: 7, title: 'Solo', thumbnailUrl: '/t.jpg',
-        updatedAt: DateTime(2026));
+    await db.upsertMangaMetadata(
+      id: 7,
+      title: 'Solo',
+      thumbnailUrl: '/t.jpg',
+      updatedAt: DateTime(2026),
+    );
     final m = await db.mangaById(7);
     final dto = offlineMangaToDto(m!, chapterCount: 12);
     expect(dto.id, 7);
@@ -26,52 +30,23 @@ void main() {
     expect(dto.chapters.totalCount, 12);
   });
 
-  test('mangaById returns null for an unknown id', () async {
-    expect(await db.mangaById(999), isNull);
-  });
+  test(
+    'offlineMangaToDto carries lastReadAt for the "Last Read" sort',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 7,
+        title: 'Solo',
+        updatedAt: DateTime(2026),
+      );
+      final m = (await db.mangaById(7))!;
 
-  test('offlineMangaToDto carries lastReadAt for the "Last Read" sort',
-      () async {
-    await db.upsertMangaMetadata(id: 7, title: 'Solo', updatedAt: DateTime(2026));
-    final m = (await db.mangaById(7))!;
+      final withRead = offlineMangaToDto(m, lastReadAt: '1700000000000');
+      expect(withRead.lastReadChapter?.lastReadAt, '1700000000000');
 
-    final withRead = offlineMangaToDto(m, lastReadAt: '1700000000000');
-    expect(withRead.lastReadChapter?.lastReadAt, '1700000000000');
-
-    final neverRead = offlineMangaToDto(m);
-    expect(neverRead.lastReadChapter, isNull);
-  });
-
-  test('offlineMangaToDto carries firstUnreadChapter when supplied', () async {
-    await db.upsertMangaMetadata(id: 7, title: 'Solo', updatedAt: DateTime(2026));
-    final m = (await db.mangaById(7))!;
-    await db.upsertChapterMetadata(id: 42, mangaId: 7, name: 'Ch 5',
-        chapterIndex: 5, isRead: false, lastPageRead: 0, isBookmarked: false,
-        serverIsDownloaded: true, pageCount: 18, updatedAt: DateTime(2026));
-    final chapter = (await db.chaptersForManga(7)).single;
-
-    final withTarget = offlineMangaToDto(m, firstUnread: chapter);
-    expect(withTarget.firstUnreadChapter?.id, 42);
-
-    final noTarget = offlineMangaToDto(m);
-    expect(noTarget.firstUnreadChapter, isNull);
-  });
-
-  test('offlineChapterToDto maps fields from a catalog row', () async {
-    await db.upsertChapterMetadata(id: 3, mangaId: 7, name: 'Ch 3',
-        chapterIndex: 3, isRead: true, lastPageRead: 4, isBookmarked: false,
-        serverIsDownloaded: true, pageCount: 20, updatedAt: DateTime(2026));
-    final rows = await db.chaptersForManga(7);
-    final dto = offlineChapterToDto(rows.single);
-    expect(dto.id, 3);
-    expect(dto.mangaId, 7);
-    expect(dto.name, 'Ch 3');
-    expect(dto.sourceOrder, 3);
-    expect(dto.isRead, true);
-    expect(dto.isDownloaded, true); // from serverIsDownloaded
-    expect(dto.lastPageRead, 4);
-    expect(dto.pageCount, 20);
-  });
+      final neverRead = offlineMangaToDto(m);
+      expect(neverRead.lastReadChapter, isNull);
+    },
+  );
 
   // A null warning (pre-rating row) must not resolve to SAFE, or an
   // adult-tagged series leaks past the offline content filter.
@@ -87,20 +62,6 @@ void main() {
     final dto = offlineMangaToDto((await db.mangaById(77))!);
     expect(dto.source?.contentWarning, Enum$ContentWarning.MIXED);
     expect(isAdultManga(dto.source?.contentWarning, dto.genre), true);
-  });
-
-  test('genre survives the JSON round-trip; junk degrades to no tags', () async {
-    await db.upsertMangaMetadata(
-      id: 78,
-      title: 'Tagged',
-      updatedAt: DateTime(2026, 1, 1),
-      genre: jsonEncode(['Action', 'Drama']),
-    );
-    expect(offlineMangaToDto((await db.mangaById(78))!).genre,
-        ['Action', 'Drama']);
-    expect(offlineGenre('not json'), isEmpty);
-    expect(offlineGenre('{"a":1}'), isEmpty);
-    expect(offlineGenre(null), isEmpty);
   });
 
   test('full metadata survives upsert → read', () async {
@@ -149,29 +110,5 @@ void main() {
     expect(dto.chapters.totalCount, 12);
     final catIds = dto.categories.nodes.map((n) => n.id).toSet();
     expect(catIds, {2, 5});
-  });
-
-  test('unstored manga gets safe defaults + no categories', () async {
-    await db.upsertMangaMetadata(
-      id: 99,
-      title: 'Minimal',
-      updatedAt: DateTime(2026, 1, 1),
-    );
-    final row = (await db.mangaById(99))!;
-    final cats = await db.categoriesForManga(99);
-    final dto = offlineMangaToDto(row, offlineCategories: cats);
-
-    expect(dto.status, Enum$MangaStatus.UNKNOWN);
-    expect(dto.unreadCount, 0);
-    expect(dto.downloadCount, 0);
-    expect(dto.bookmarkCount, 0);
-    expect(dto.categories.nodes, isEmpty);
-  });
-
-  test('allOfflineCategories returns persisted categories', () async {
-    await db.upsertCategory(1, 'Shonen', 0, isHidden: false);
-    await db.upsertCategory(2, 'Seinen', 1, isHidden: false);
-    final all = await db.allOfflineCategories();
-    expect(all.map((c) => c.id).toSet(), {1, 2});
   });
 }

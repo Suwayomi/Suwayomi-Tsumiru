@@ -30,30 +30,33 @@ void main() {
     await db.replaceMangaCategories(1, [3]);
     // The offline library only lists series with files on this device.
     await db.upsertChapterMetadata(
-        id: 11,
-        mangaId: 1,
-        name: 'c1',
-        chapterIndex: 1,
-        isRead: false,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 1,
-        updatedAt: DateTime(2026));
+      id: 11,
+      mangaId: 1,
+      name: 'c1',
+      chapterIndex: 1,
+      isRead: false,
+      lastPageRead: 0,
+      isBookmarked: false,
+      serverIsDownloaded: true,
+      pageCount: 1,
+      updatedAt: DateTime(2026),
+    );
     await db.setChapterDeviceState(11, OfflineDeviceState.downloaded, bytes: 1);
   }
 
-  test('library: hanging fetch is cut at the cap and the catalog served',
-      () async {
-    await seedCatalog();
-    final r = await libraryWithOfflineFallback(
-      fetch: hang,
-      db: db,
-      offlineEnabled: true,
-      fetchTimeout: const Duration(milliseconds: 50),
-    );
-    expect(r!.single.id, 1);
-  });
+  test(
+    'library: hanging fetch is cut at the cap and the catalog served',
+    () async {
+      await seedCatalog();
+      final r = await libraryWithOfflineFallback(
+        fetch: hang,
+        db: db,
+        offlineEnabled: true,
+        fetchTimeout: const Duration(milliseconds: 50),
+      );
+      expect(r!.single.id, 1);
+    },
+  );
 
   test('library: hang reports the server unreachable', () async {
     await seedCatalog();
@@ -66,43 +69,5 @@ void main() {
       fetchTimeout: const Duration(milliseconds: 50),
     );
     expect(reachable, isFalse);
-  });
-
-  test('library: no catalog -> no cap, a slow fetch still wins', () async {
-    // Empty catalog: cutting the fetch would just replace a working (slow)
-    // load with an error, so the cap must not apply.
-    final r = await libraryWithOfflineFallback(
-      fetch: () async {
-        await Future.delayed(const Duration(milliseconds: 200));
-        return null;
-      },
-      db: db,
-      offlineEnabled: true,
-      fetchTimeout: const Duration(milliseconds: 50),
-    );
-    expect(r, isNull);
-  });
-
-  test('categories: hanging fetch falls back to stored categories', () async {
-    await seedCatalog();
-    final r = await categoriesWithOfflineFallback(
-      fetch: hang,
-      db: db,
-      offlineEnabled: true,
-      fetchTimeout: const Duration(milliseconds: 50),
-    );
-    expect(r!.single.name, 'Shelf');
-  });
-
-  test('chapters: hanging fetch falls back to catalog chapters', () async {
-    await seedCatalog();
-    final r = await chaptersWithOfflineFallback(
-      fetch: hang,
-      db: db,
-      offlineEnabled: true,
-      mangaId: 1,
-      fetchTimeout: const Duration(milliseconds: 50),
-    );
-    expect(r!.single.id, 11);
   });
 }

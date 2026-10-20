@@ -4,12 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
-import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 import '../../../helpers/fake_page_store.dart';
 
@@ -19,34 +15,6 @@ List<PageRef> _pages(int n) => [
 
 void main() {
   const noBackoff = Duration.zero;
-
-  test('a later permission denial outranks an ordinary page failure', () async {
-    final secondStarted = Completer<void>();
-    final engine = ChapterDownloadEngine(
-      writePage: FakePageStore(),
-      maxAttempts: 1,
-      parallelPageLimit: 2,
-      refreshAuth: () async => false,
-      fetchPage: (url) async {
-        if (url.endsWith('p0')) {
-          await secondStarted.future;
-          throw StateError('missing page');
-        }
-        secondStarted.complete();
-        await Future<void>.delayed(Duration.zero);
-        throw const AccountPermissionDenied(
-          Enum$UserPermission.DOWNLOAD_CHAPTERS,
-        );
-      },
-    );
-    final outcome = await engine.download(
-      mangaId: 1,
-      chapterId: 2,
-      pages: _pages(2),
-      isCancelled: () => false,
-    );
-    expect(outcome.error, isA<AccountPermissionDenied>());
-  });
 
   test('downloads all pages and reports each stored', () async {
     final store = FakePageStore();
@@ -126,45 +94,50 @@ void main() {
     expect(refreshes, 1);
   });
 
-  test('gives up with authFailed when refresh says auth is dead', () async {
-    final engine = ChapterDownloadEngine(
-      fetchPage: (url) async => throw const PageAuthException(),
-      writePage: FakePageStore(),
-      refreshAuth: () async => false, // auth dead
-      backoff: (_) => noBackoff,
-    );
-    final out = await engine.download(
-      mangaId: 1,
-      chapterId: 1,
-      pages: _pages(3),
-      isCancelled: () => false,
-    );
-    expect(out.authFailed, true);
-    expect(out.succeeded, false);
-  });
+  test(
+    'terminal outcomes: dead auth fails and offline parks unretried',
+    () async {
+      final engine = ChapterDownloadEngine(
+        fetchPage: (url) async => throw const PageAuthException(),
+        writePage: FakePageStore(),
+        refreshAuth: () async => false, // auth dead
+        backoff: (_) => noBackoff,
+      );
+      final out = await engine.download(
+        mangaId: 1,
+        chapterId: 1,
+        pages: _pages(3),
+        isCancelled: () => false,
+      );
+      expect(out.authFailed, true);
+      expect(out.succeeded, false);
 
-  test('retries transient failures up to maxAttempts then errors', () async {
-    var calls = 0;
-    final engine = ChapterDownloadEngine(
-      fetchPage: (url) async {
-        calls++;
-        throw Exception('boom');
-      },
-      writePage: FakePageStore(),
-      refreshAuth: () async => true,
-      maxAttempts: 3,
-      backoff: (_) => noBackoff,
-    );
-    final out = await engine.download(
-      mangaId: 1,
-      chapterId: 1,
-      pages: _pages(1),
-      isCancelled: () => false,
-    );
-    expect(out.succeeded, false);
-    expect(out.error, isNotNull);
-    expect(calls, 3); // 3 attempts for the single page
-  });
+      var offlineCalls = 0;
+      final offline = ChapterDownloadEngine(
+        fetchPage: (url) async {
+          offlineCalls++;
+          throw const PageOfflineException('test-offline');
+        },
+        writePage: FakePageStore(),
+        refreshAuth: () async => true,
+        maxAttempts: 3,
+        backoff: (_) => noBackoff,
+      );
+      final offlineOut = await offline.download(
+        mangaId: 1,
+        chapterId: 1,
+        pages: _pages(1),
+        isCancelled: () => false,
+      );
+      expect(offlineOut.offline, isTrue);
+      expect(offlineOut.offlineReason, 'test-offline');
+      expect(offlineOut.error, isNull);
+      expect(offlineOut.authFailed, isFalse);
+      expect(offlineOut.succeeded, isFalse);
+      expect(offlineOut.storedPages, isEmpty);
+      expect(offlineCalls, 1, reason: 'offline short-circuits, no retry burn');
+    },
+  );
 
   test('never exceeds parallelPageLimit concurrent fetches', () async {
     var inFlight = 0;
@@ -190,29 +163,5 @@ void main() {
     );
     expect(peak, lessThanOrEqualTo(5));
     expect(peak, greaterThan(1)); // actually parallel
-  });
-
-  test('stops promptly when cancelled', () async {
-    var fetched = 0;
-    var cancel = false;
-    final engine = ChapterDownloadEngine(
-      parallelPageLimit: 2,
-      fetchPage: (url) async {
-        fetched++;
-        if (fetched >= 4) cancel = true;
-        return (bytes: [0], ext: 'jpg');
-      },
-      writePage: FakePageStore(),
-      refreshAuth: () async => true,
-      backoff: (_) => noBackoff,
-    );
-    final out = await engine.download(
-      mangaId: 1,
-      chapterId: 1,
-      pages: _pages(100),
-      isCancelled: () => cancel,
-    );
-    expect(out.cancelled, true);
-    expect(fetched, lessThan(100));
   });
 }

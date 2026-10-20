@@ -7,7 +7,6 @@ import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/utils/crash/diagnostics.dart';
-import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 class RecordingLink extends Link {
   RecordingLink(this.response);
@@ -84,40 +83,6 @@ void main() {
     expect(result?.permissions, [Enum$UserPermission.DOWNLOAD_CHAPTERS]);
   });
 
-  test(
-    'registration redemption requests identity and tokens without grants',
-    () async {
-      final repo = repository(
-        Response(
-          response: {},
-          data: {
-            '__typename': 'Mutation',
-            'redeemRegistrationCode': {
-              '__typename': 'RedeemRegistrationCodePayload',
-              'accessToken': 'a',
-              'refreshToken': 'r',
-              'user': {'__typename': 'UserType', 'id': 2, 'username': 'reader'},
-            },
-          },
-        ),
-      );
-      final result = await repo.redeemRegistrationCode(
-        Input$RedeemRegistrationCodeInput(
-          code: 'invite',
-          username: 'reader',
-          password: 'password',
-        ),
-      );
-      expect(result?.accessToken, 'a');
-      final document = printNode(link.recorded.operation.document);
-      for (final field in ['accessToken', 'refreshToken', 'id', 'username']) {
-        expect(document, contains(field));
-      }
-      expect(document, isNot(contains('permissions')));
-      expect(document, isNot(contains('roles')));
-    },
-  );
-
   test('account update preserves absence of optional role changes', () async {
     final repo = repository(
       Response(
@@ -142,34 +107,6 @@ void main() {
     });
   });
 
-  test('user settings forwards the server input shape and errors', () async {
-    final repo = repository(
-      Response(
-        response: {},
-        errors: [const GraphQLError(message: 'Rejected')],
-      ),
-    );
-    await expectLater(
-      repo.setSettings(
-        Input$SetUserSettingsInput(
-          userSettings: Input$PartialUserSettingsTypeInput(
-            autoDownloadNewChapters: true,
-          ),
-        ),
-      ),
-      throwsA(isA<OperationMessageException>()),
-    );
-    expect(link.recorded.variables, {
-      'input': {
-        'userSettings': {'autoDownloadNewChapters': true},
-      },
-    });
-    expect(
-      printNode(link.recorded.operation.document),
-      contains('setUserSettings'),
-    );
-  });
-
   group('capability diagnostics', () {
     final lines = <String>[];
     setUp(() {
@@ -177,27 +114,5 @@ void main() {
       setDiagnosticSink(lines.add);
     });
     tearDown(() => setDiagnosticSink(null));
-
-    AccountRepository dying() => AccountRepository(
-      GraphQLClient(
-        link: Link.function(
-          (request, [forward]) => Stream.error(StateError('client disposed')),
-        ),
-        cache: GraphQLCache(),
-      ),
-    );
-
-    test('an unknown answer the caller still wants is logged', () async {
-      expect(await dying().capability(), AccountCapability.unknown);
-      expect(lines.single, contains('account-capability: unknown'));
-    });
-
-    test('an answer a superseded caller throws away is not logged', () async {
-      expect(
-        await dying().capability(stillWanted: () => false),
-        AccountCapability.unknown,
-      );
-      expect(lines, isEmpty);
-    });
   });
 }

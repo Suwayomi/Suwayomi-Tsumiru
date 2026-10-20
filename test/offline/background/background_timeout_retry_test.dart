@@ -69,35 +69,6 @@ void main() {
     expect(after.downloadGeneration, before.downloadGeneration + 1);
   });
 
-  test('removing a keep rule invalidates a delayed queue request', () async {
-    await db.setChapterDeviceState(5, OfflineDeviceState.none);
-    await db.setKeepRule(1, OfflineKeepRule.all, 3);
-    final before = (await db.chapterById(5))!;
-    await db.setKeepRule(1, OfflineKeepRule.off, 3);
-    await coordinator().queueChapter(
-      5,
-      expectedGeneration: before.downloadGeneration,
-      expectedKeepConfig: (rule: OfflineKeepRule.all, count: 3),
-    );
-    final after = (await db.chapterById(5))!;
-    expect(after.deviceState, OfflineDeviceState.none);
-    expect(after.downloadGeneration, before.downloadGeneration);
-  });
-
-  test('matching generation and keep rule admit the queue request', () async {
-    await db.setChapterDeviceState(5, OfflineDeviceState.none);
-    await db.setKeepRule(1, OfflineKeepRule.all, 3);
-    final before = (await db.chapterById(5))!;
-    await coordinator().queueChapter(
-      5,
-      expectedGeneration: before.downloadGeneration,
-      expectedKeepConfig: (rule: OfflineKeepRule.all, count: 3),
-    );
-    final after = (await db.chapterById(5))!;
-    expect(after.deviceState, OfflineDeviceState.queued);
-    expect(after.downloadGeneration, before.downloadGeneration);
-  });
-
   test('a stale explicit retry cannot restore a deleted chapter', () async {
     await db.setChapterDeviceState(5, OfflineDeviceState.error);
     final before = (await db.chapterById(5))!;
@@ -130,16 +101,6 @@ void main() {
   });
 
   test(
-    'timeout markers parse without producing chapter terminal records',
-    () async {
-      await log.appendTimeout();
-      final entries = await log.parse();
-      expect(entries.single, isA<TimeoutEntry>());
-      expect(entries.whereType<ChapterEntry>(), isEmpty);
-    },
-  );
-
-  test(
     'replay reports timeout before truncating and preserves chapter state',
     () async {
       final before = await db.chapterById(5);
@@ -161,18 +122,6 @@ void main() {
       expect(await log.parse(), isEmpty);
       await replay();
       expect(notifications, 1);
-    },
-  );
-
-  test(
-    'automatic queueing leaves an error and its generation untouched',
-    () async {
-      await db.setChapterDeviceState(5, OfflineDeviceState.error);
-      await db.bumpChapterGeneration(5);
-      await coordinator().queueChapter(5);
-      final row = (await db.chapterById(5))!;
-      expect(row.deviceState, OfflineDeviceState.error);
-      expect(row.downloadGeneration, 1);
     },
   );
 

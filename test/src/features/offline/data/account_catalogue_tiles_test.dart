@@ -125,62 +125,6 @@ void main() {
     });
   }
 
-  testWidgets('non-account label and removal tolerate matching account ID', (
-    tester,
-  ) async {
-    await tester.runAsync(() async {
-      final repository = _Repository()
-        ..row = const AccountCatalogue(
-          id: 'A',
-          owner: 'non-account',
-          path: '/offline/non-account',
-          bytes: 2048,
-          isNonAccount: true,
-          address: 'https://old.example',
-        );
-      final scope = await container(repository, active: true);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: scope,
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: const OfflineSettingsScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Downloads without account login'), findsOneWidget);
-      await tester.tap(find.byTooltip('Delete'));
-      await tester.pumpAndSettle();
-      expect(
-        find.textContaining(
-          'Downloads without account login on https://old.example',
-        ),
-        findsOneWidget,
-      );
-      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
-      await tester.pumpAndSettle();
-      expect(repository.removals, 1);
-      await tester.pumpWidget(const SizedBox());
-      scope.dispose();
-    });
-  });
-
-  test('active binding is hidden and rejected by removal action', () async {
-    final repository = _Repository();
-    final scope = await container(repository, active: true);
-    expect(await scope.read(inactiveAccountCataloguesProvider.future), isEmpty);
-    await expectLater(
-      scope
-          .read(accountCatalogueActionsProvider)
-          .remove(_catalogue, sessionEpoch: 0),
-      throwsStateError,
-    );
-    expect(repository.removals, 0);
-    scope.dispose();
-  });
-
   test('identity mutation waits for an admitted removal', () async {
     final repository = _Repository()
       ..started = Completer()

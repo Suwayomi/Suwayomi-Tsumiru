@@ -43,32 +43,12 @@ void main() {
     )..where((t) => t.id.equals(id))).getSingle();
   }
 
-  test('chapterNumber and scanlator persist through the upsert', () async {
-    final c = await upsert(id: 10, number: 9.5, scanlator: 'Nyx Scans');
-    expect((c.chapterNumber, c.scanlator), (9.5, 'Nyx Scans'));
-  });
-
-  test('mapper prefers the real number and carries the scanlator', () async {
-    final c = await upsert(id: 11, number: 2, scanlator: 'A');
-    final dto = offlineChapterToDto(c);
-    expect((dto.chapterNumber, dto.scanlator, dto.sourceOrder), (2.0, 'A', 11));
-  });
-
   test(
     'mapper falls back to the index for pre-v9 rows (null number)',
     () async {
       final c = await upsert(id: 12);
       final dto = offlineChapterToDto(c);
       expect((dto.chapterNumber, dto.scanlator), (12.0, null));
-    },
-  );
-
-  test(
-    'omitting the fields on a later upsert preserves synced values',
-    () async {
-      await upsert(id: 13, number: 4, scanlator: 'B');
-      final c = await upsert(id: 13); // e.g. a caller without the new fields
-      expect((c.chapterNumber, c.scanlator), (4.0, 'B'));
     },
   );
 

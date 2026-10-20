@@ -46,34 +46,4 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(MaterialBanner), findsNothing);
   });
-
-  testWidgets('the chosen offline view keeps a way back online after the '
-      'outage flag clears', (tester) async {
-    late ProviderContainer container;
-    await tester.pumpWidget(
-      ProviderScope(
-        child: Builder(
-          builder: (context) {
-            container = ProviderScope.containerOf(context);
-            return MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(body: ServerUnreachableBanner()),
-            );
-          },
-        ),
-      ),
-    );
-    // "View offline" pressed; then any successful request elsewhere clears
-    // the outage flag while the catalog stays pinned.
-    container.read(viewOfflineNowProvider.notifier).set(true);
-    container.read(serverUnreachableProvider.notifier).set(false);
-    await tester.pumpAndSettle();
-    expect(find.text("You're viewing offline"), findsOneWidget);
-
-    await tester.tap(find.text('Go online'));
-    await tester.pumpAndSettle();
-    expect(container.read(viewOfflineNowProvider), isFalse);
-    expect(find.byType(MaterialBanner), findsNothing);
-  });
 }

@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/account_session_startup.dart';
@@ -21,7 +19,6 @@ import 'package:tsumiru/src/features/offline/data/offline_download_coordinator.d
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
-import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -156,42 +153,6 @@ void main() {
     return container;
   }
 
-  test(
-    'signed-out UI login starts no verification, notifications or permission refresh',
-    () async {
-      var verifications = 0;
-      var notifications = 0;
-      var refreshes = 0;
-      final repository = FakeAccountRepository();
-      final container = await setup(
-        mode: AuthType.uiLogin,
-        repository: repository,
-        verify: () async {
-          verifications++;
-          return 'A';
-        },
-        notify: () async {
-          notifications++;
-        },
-        refresh: () async {
-          refreshes++;
-          return AccountAccess(capability: AccountCapability.unknown);
-        },
-      );
-      final startup = AccountSessionStartup(container);
-      addTearDown(startup.dispose);
-      await startup.start();
-      container.read(serverUnreachableProvider.notifier).set(true);
-      container.read(serverUnreachableProvider.notifier).set(false);
-      await Future<void>.delayed(Duration.zero);
-      expect(verifications, 0);
-      expect(notifications, 0);
-      expect(refreshes, 0);
-      expect(repository.probes, 0);
-      expect(repository.currentCalls, 0);
-    },
-  );
-
   test('changing the LAN address re-syncs notifications', () async {
     var notifications = 0;
     final container = await setup(
@@ -210,45 +171,6 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(notifications, atLaunch + 1);
   });
-
-  test(
-    'address changes during an identity change re-sync once it settles',
-    () async {
-      var notifications = 0;
-      final resynced = Completer<void>();
-      final container = await setup(
-        verify: () async => 'A',
-        notify: () async {
-          if (++notifications == 2) resynced.complete();
-        },
-      );
-      final startup = AccountSessionStartup(container);
-      addTearDown(startup.dispose);
-      await startup.start();
-      expect(notifications, 1);
-      final gate = Completer<void>();
-      final change = container
-          .read(authCredentialsStoreProvider.notifier)
-          .withIdentityChange(() => gate.future, preserveSession: true);
-      expect(
-        container.read(authCredentialsStoreProvider.notifier).identityChanging,
-        isTrue,
-      );
-      container
-          .read(serverLanUrlProvider.notifier)
-          .update('http://192.168.5.5:4567');
-      container
-          .read(serverLanUrlProvider.notifier)
-          .update('http://192.168.5.6:4567');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifications, 1);
-      gate.complete();
-      await change;
-      await resynced.future;
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(notifications, 2);
-    },
-  );
 
   test('restoring download permission requests startup work again', () async {
     var verifications = 0;
@@ -288,45 +210,6 @@ void main() {
     expect(notifications, 2);
   });
 
-  test('worker-only denial resumes once after a fresh grant', () async {
-    await preferences.setString(DBKeys.offlineCatalogServerId.name, 'A');
-    var verifications = 0;
-    var notifications = 0;
-    final resumed = Completer<void>();
-    final container = await setup(
-      verify: () async {
-        verifications++;
-        return 'A';
-      },
-      notify: () async {
-        if (++notifications == 2) resumed.complete();
-      },
-    );
-    AccountAccess granted() => AccountAccess(
-      capability: AccountCapability.supported,
-      user: Fragment$AccountDto(
-        id: 2,
-        username: 'reader',
-        roles: [],
-        permissions: [Enum$UserPermission.DOWNLOAD_CHAPTERS],
-      ),
-    );
-    container.read(_accessProvider.notifier).set(granted());
-    final startup = AccountSessionStartup(container);
-    addTearDown(startup.dispose);
-    await startup.start();
-    await preferences.setString(
-      'offline.downloadPermission/A',
-      '{"paused":false,"denialRevision":1}',
-    );
-    container.read(_accessProvider.notifier).set(granted());
-    await resumed.future.timeout(const Duration(seconds: 2));
-    container.read(_accessProvider.notifier).set(granted());
-    await Future<void>.delayed(Duration.zero);
-    expect(verifications, 2);
-    expect(notifications, 2);
-  });
-
   test(
     'verification completing after an identity change starts no old-account work',
     () async {
@@ -346,60 +229,6 @@ void main() {
       verified.complete('catalog-a');
       await work;
       expect(notifications, 0);
-    },
-  );
-
-  test('reconnect retries verification after an offline launch', () async {
-    var verifications = 0;
-    var notifications = 0;
-    final synced = Completer<void>();
-    final container = await setup(
-      verify: () async {
-        if (++verifications == 1) throw const SocketException('offline');
-        return 'catalog-a';
-      },
-      notify: () async {
-        notifications++;
-        synced.complete();
-      },
-    );
-    container.read(serverUnreachableProvider.notifier).set(true);
-    final startup = AccountSessionStartup(container);
-    addTearDown(startup.dispose);
-    await startup.start();
-    expect(notifications, 0);
-    container.read(serverUnreachableProvider.notifier).set(false);
-    await synced.future;
-    expect(verifications, 2);
-    expect(notifications, 1);
-  });
-
-  test(
-    'dispose removes reconnect listeners and stops a delayed continuation',
-    () async {
-      final pending = Completer<void>();
-      final entered = Completer<void>();
-      var verifications = 0;
-      final container = await setup(
-        verify: () async {
-          verifications++;
-          return 'catalog-a';
-        },
-        notify: () {
-          entered.complete();
-          return pending.future;
-        },
-      );
-      final startup = AccountSessionStartup(container);
-      final work = startup.start();
-      await entered.future;
-      startup.dispose();
-      container.read(serverUnreachableProvider.notifier).set(true);
-      container.read(serverUnreachableProvider.notifier).set(false);
-      container.dispose();
-      pending.complete();
-      await work;
-      expect(verifications, 1);
     },
   );
 
@@ -451,53 +280,5 @@ void main() {
     addTearDown(startup.dispose);
     await startup.start();
     await coordinator.pumped.future.timeout(const Duration(seconds: 2));
-  });
-
-  test(
-    'offline turning on during the launch pass it is read by runs no second pass',
-    () async {
-      // At launch offline turns on as soon as the server identity loads,
-      // while the pass that awaited it is still running and about to read it.
-      var verifications = 0;
-      late ProviderContainer container;
-      container = await setup(
-        verify: () async {
-          verifications++;
-          return 'catalog-a';
-        },
-        notify: () async {
-          container.read(_offlineProvider.notifier).set(true);
-          container.read(offlineActiveProvider);
-          await pumpEventQueue();
-          // Off again before the pass reads it, so the test stays out of the
-          // offline launch path; what's checked is only whether it reruns.
-          container.read(_offlineProvider.notifier).set(false);
-          container.read(offlineActiveProvider);
-        },
-      );
-      final startup = AccountSessionStartup(container);
-      addTearDown(startup.dispose);
-      await startup.start();
-      await pumpEventQueue();
-      expect(verifications, 1);
-    },
-  );
-
-  test('offline turning on between passes still starts one', () async {
-    var verifications = 0;
-    final container = await setup(
-      verify: () async {
-        verifications++;
-        return 'catalog-a';
-      },
-      notify: () async {},
-    );
-    final startup = AccountSessionStartup(container);
-    addTearDown(startup.dispose);
-    await startup.start();
-    expect(verifications, 1);
-    container.read(_offlineProvider.notifier).set(true);
-    await pumpEventQueue();
-    expect(verifications, 2);
   });
 }

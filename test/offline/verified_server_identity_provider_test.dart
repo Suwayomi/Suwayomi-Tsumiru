@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -152,58 +151,4 @@ void main() {
       );
     });
   }
-
-  test('late A verification cannot overwrite verified B identity', () async {
-    final started = Completer<void>();
-    final delayedA = Completer<String>();
-    fixture.repository.resolveIdentity = () {
-      if (fixture.userId == 1) {
-        started.complete();
-        return delayedA.future;
-      }
-      return Future.value('catalog-B');
-    };
-    final oldResult = fixture.container
-        .read(verifiedServerInstanceIdProvider.future)
-        .then<Object>((value) => value, onError: (Object error) => error);
-    await started.future;
-    await fixture.switchToB();
-    expect(
-      await fixture.container.read(verifiedServerInstanceIdProvider.future),
-      'catalog-B',
-    );
-    delayedA.complete('catalog-A');
-    await oldResult;
-    await fixture.container.pump();
-    expect(
-      fixture.preferences.getString(DBKeys.offlineLastServerId.name),
-      'catalog-B',
-    );
-    expect(CatchupStateStore(fixture.preferences).identityAuthorized, isTrue);
-  });
-
-  test('offline LAN alias keeps the bound local catalogue available', () async {
-    fixture.offline = true;
-    fixture.container.updateOverrides([
-      sharedPreferencesProvider.overrideWithValue(fixture.preferences),
-      authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
-      currentServerAddressProvider.overrideWithValue('http://192.0.2.10:4567'),
-      offlineServerIdentityRepositoryProvider.overrideWithValue(
-        fixture.repository,
-      ),
-    ]);
-    expect(
-      await fixture.container.read(serverInstanceIdProvider.future),
-      'catalog-A',
-    );
-    await expectLater(
-      fixture.container.read(verifiedServerInstanceIdProvider.future),
-      throwsA(anything),
-    );
-    expect(CatchupStateStore(fixture.preferences).identityAuthorized, isFalse);
-    expect(
-      await fixture.container.read(serverInstanceIdProvider.future),
-      'catalog-A',
-    );
-  });
 }

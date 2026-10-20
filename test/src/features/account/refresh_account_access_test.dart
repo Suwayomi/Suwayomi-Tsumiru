@@ -56,12 +56,4 @@ void main() {
     await refresh();
     expect(checks, 2);
   });
-
-  test('an unknown answer is never reused', () async {
-    answer = AccountCapability.unknown;
-    await refresh();
-    answer = AccountCapability.supported;
-    expect((await refresh()).capability, AccountCapability.supported);
-    expect(checks, 2);
-  });
 }

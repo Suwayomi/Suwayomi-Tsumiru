@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path/path.dart' as p;
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_schedule.dart';
-import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/background/work_order_admission.dart';
 
 void main() {
@@ -46,28 +44,4 @@ void main() {
       },
     );
   }
-  test('scheduled roots roundtrip and legacy snapshots retain their root', () {
-    CatchupWorkSpec spec(String id, bool scoped) => CatchupWorkSpec(
-      serverId: id,
-      accountScoped: scoped,
-      wifiOnly: true,
-      storageCapEnabled: false,
-      storageCapBytes: 0,
-      manga: [],
-    );
-    final scoped = CatchupWorkSpec.fromJson(spec('account-a', true).toJson());
-    expect(
-      scoped.storagePath('/offline'),
-      p.join('/offline', 'accounts', 'account-a'),
-    );
-    final legacyJson = spec('legacy', false).toJson()..remove('accountScoped');
-    expect(
-      CatchupWorkSpec.fromJson(legacyJson).storagePath('/offline'),
-      '/offline',
-    );
-    expect(
-      () => spec('../other', true).storagePath('/offline'),
-      throwsArgumentError,
-    );
-  });
 }

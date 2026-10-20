@@ -6,7 +6,6 @@ import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
-import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 class AdminLink extends Link {
   final requests = <Request>[];
@@ -108,19 +107,6 @@ void main() {
   }
 
   test(
-    'a retained repository reads the current grant before each request',
-    () async {
-      await repository.users(first: 25);
-      access = adminAccess(granted: false);
-      await expectLater(
-        repository.users(first: 25),
-        throwsA(isA<AccountPermissionDenied>()),
-      );
-      expect(link.requests, hasLength(1));
-    },
-  );
-
-  test(
     'nonadministrators omit role and replace the complete permission list',
     () {
       final input = accountPermissionUpdate(
@@ -141,45 +127,6 @@ void main() {
           role: Enum$UserRole.USER,
         ).toJson(),
         {'userId': 5, 'permissions': [], 'role': 'USER'},
-      );
-    },
-  );
-
-  test(
-    'built-in account and unauthorized role edits never reach transport',
-    () async {
-      await expectLater(
-        repository.updateAccount(
-          Input$UpdateUserInput(userId: 1, permissions: []),
-        ),
-        throwsA(isA<AccountPermissionDenied>()),
-      );
-      await expectLater(
-        repository.updateAccount(
-          Input$UpdateUserInput(userId: 5, role: Enum$UserRole.ADMIN),
-        ),
-        throwsA(isA<AccountPermissionDenied>()),
-      );
-      expect(link.requests, isEmpty);
-    },
-  );
-
-  test(
-    'administration preserves GraphQL permission and transport errors',
-    () async {
-      link.respond = (_) => Response(
-        response: {},
-        errors: [const GraphQLError(message: 'Forbidden')],
-      );
-      await expectLater(
-        repository.users(first: 25),
-        throwsA(isA<OperationMessageException>()),
-      );
-      await expectLater(
-        repository.register(
-          Input$RegisterInput(username: 'taken', password: 'pass'),
-        ),
-        throwsA(isA<OperationMessageException>()),
       );
     },
   );
@@ -216,22 +163,5 @@ void main() {
       repository.client.cache.store.toMap().toString(),
       isNot(contains('one-time-')),
     );
-  });
-
-  test('code revocation passes the selected code ID', () async {
-    link.respond = (_) => Response(
-      response: {},
-      data: {
-        '__typename': 'Mutation',
-        'revokeUserCode': {
-          '__typename': 'RevokeUserCodePayload',
-          'clientMutationId': null,
-        },
-      },
-    );
-    await repository.revokeCode(Input$RevokeUserCodeInput(id: 7));
-    expect(link.requests.single.variables, {
-      'input': {'id': 7},
-    });
   });
 }

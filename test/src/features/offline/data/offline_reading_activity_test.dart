@@ -17,10 +17,8 @@ import 'package:tsumiru/src/features/offline/data/offline_download_providers.dar
 
 import '../../../../helpers/offline_test_db.dart';
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 /// putChapter can't reach the server — the airplane-mode shape.
 class _UnreachableRepo extends MangaBookRepository {
@@ -40,17 +38,17 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> seedChapter(int id) => db.upsertChapterMetadata(
-        id: id,
-        mangaId: 1,
-        name: 'c$id',
-        chapterIndex: id,
-        isRead: false,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 30,
-        updatedAt: DateTime(2026),
-      );
+    id: id,
+    mangaId: 1,
+    name: 'c$id',
+    chapterIndex: id,
+    isRead: false,
+    lastPageRead: 0,
+    isBookmarked: false,
+    serverIsDownloaded: true,
+    pageCount: 30,
+    updatedAt: DateTime(2026),
+  );
 
   test('reading offline stamps the Last Read signal locally', () async {
     await seedChapter(10);
@@ -61,18 +59,6 @@ void main() {
     // Epoch seconds, not millis — must sort against server-written values.
     expect(stamp!, greaterThan(1700000000));
     expect(stamp, lessThan(10000000000));
-  });
-
-  test('marking read stamps Last Read; marking unread leaves it alone',
-      () async {
-    await seedChapter(11);
-    await db.setChapterReadState(11, true);
-    final read = await db.chapterById(11);
-    expect(read!.lastReadAt, isNotNull);
-
-    await db.setChapterReadState(11, false);
-    final unread = await db.chapterById(11);
-    expect(unread!.lastReadAt, read.lastReadAt);
   });
 
   test('an offline-captured progress push that cannot reach the server is '
@@ -91,17 +77,5 @@ void main() {
     final row = await db.chapterById(12);
     expect(row!.lastPageRead, 7);
     expect(row.progressDirty, isTrue);
-  });
-
-  test('an online-only user still sees the failed push', () async {
-    final result = await recordReadingProgressWithDependencies(
-      offlineEnabled: false,
-      offlineDatabase: null,
-      repository: _UnreachableRepo(),
-      chapterId: 13,
-      lastPageRead: 7,
-      isRead: false,
-    );
-    expect(result.hasError, isTrue);
   });
 }

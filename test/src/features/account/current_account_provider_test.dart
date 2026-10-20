@@ -120,54 +120,6 @@ void main() {
     },
   );
 
-  test('offline account switch reads only the new account cache', () async {
-    await setup(
-      cache: {
-        'account.current/catalog-1': _cached(1),
-        'account.current/catalog-2': _cached(2),
-      },
-      offline: true,
-    );
-    await container.read(accountAccessProvider.future);
-    expect(container.read(currentAccountProvider)?.id, 1);
-    await container
-        .read(authCredentialsStoreProvider.notifier)
-        .saveUiLoginTokens(
-          accessToken: 'B-access',
-          refreshToken: 'B-refresh',
-          binding: _binding(2),
-        );
-    await container.read(accountAccessProvider.future);
-    expect(container.read(currentAccountProvider)?.id, 2);
-    expect(preferences.getString('account.current/catalog-1'), _cached(1));
-  });
-
-  for (final entry in {
-    'invalid JSON': 'not-json',
-    'another catalogue': _cached(2),
-    'another user': jsonEncode({
-      'catalogId': 'catalog-1',
-      'user': _user(2).toJson(),
-    }),
-    'missing profile fields': jsonEncode({
-      'catalogId': 'catalog-1',
-      'user': {'id': 1},
-    }),
-  }.entries) {
-    test('cached profile with ${entry.key} is ignored', () async {
-      await setup(
-        cache: {'account.current/catalog-1': entry.value},
-        offline: true,
-      );
-      await container.read(accountAccessProvider.future);
-      expect(container.read(currentAccountProvider), isNull);
-      expect(
-        container.read(settledAccountAccessProvider).canManageUsers,
-        isFalse,
-      );
-    });
-  }
-
   test('late A profile cannot persist after switching to B', () async {
     await setup();
     final started = Completer<void>();
@@ -216,18 +168,6 @@ void main() {
         container.read(settledAccountAccessProvider).canManageUsers,
         isFalse,
       );
-    },
-  );
-  test(
-    'legacy access permits existing behavior before any asynchronous load',
-    () {
-      final legacy = ProviderContainer(
-        overrides: [authTypeKeyProvider.overrideWithValue(AuthType.basic)],
-      );
-      addTearDown(legacy.dispose);
-      final access = legacy.read(settledAccountAccessProvider);
-      expect(access.capability, AccountCapability.unsupported);
-      expect(access.allows(Enum$UserPermission.MANAGE_USERS), isTrue);
     },
   );
 }

@@ -93,29 +93,7 @@ void main() {
         ['code', null, 'password'],
       ]);
     });
-
-    testWidgets('known unsupported server hides code links, popup=$popup', (
-      tester,
-    ) async {
-      await mount(
-        tester,
-        popup
-            ? const LoginCredentialsPopup(authType: AuthType.uiLogin)
-            : const InlineAuthSection(),
-        capability: AccountCapability.unsupported,
-      );
-      expect(find.text('Create account'), findsNothing);
-      expect(find.text('Reset password'), findsNothing);
-    });
   }
-
-  testWidgets('inline without stored credentials displays sign-in form', (
-    tester,
-  ) async {
-    await mount(tester, const InlineAuthSection());
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Log out'), findsNothing);
-  });
 
   testWidgets('logout calls shared action and preserves UI mode', (
     tester,

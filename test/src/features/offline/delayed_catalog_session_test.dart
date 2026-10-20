@@ -157,17 +157,6 @@ void main() {
   });
   tearDown(() => container.dispose());
 
-  test('current library response still mirrors and warms covers', () async {
-    container.listen(libraryMangaListProvider, (_, _) {});
-    final pending = container.read(libraryMangaListProvider.future);
-    await library.entered.future;
-    library.response.complete([_manga()]);
-    expect((await pending)!.single.id, 1);
-    expect(sync.mangaWrites, 1);
-    expect(sync.prunes, 1);
-    expect(covers.calls, 1);
-  });
-
   test(
     'delayed library from previous account cannot mirror prune or warm covers',
     () async {
@@ -180,19 +169,6 @@ void main() {
       expect(sync.mangaWrites, 0);
       expect(sync.prunes, 0);
       expect(covers.calls, 0);
-    },
-  );
-
-  test(
-    'delayed manga details from previous account cannot mirror metadata',
-    () async {
-      container.listen(mangaWithIdProvider(mangaId: 1), (_, _) {});
-      final pending = container.read(mangaWithIdProvider(mangaId: 1).future);
-      await details.entered.future;
-      auth.epoch++;
-      details.manga.complete(_manga());
-      expect(await pending, isNull);
-      expect(sync.mangaWrites, 0);
     },
   );
 

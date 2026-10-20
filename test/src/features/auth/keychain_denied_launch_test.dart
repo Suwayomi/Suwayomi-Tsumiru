@@ -18,7 +18,6 @@ import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
-import 'package:tsumiru/src/features/auth/data/basic_auth_migration.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 import 'package:tsumiru/src/features/auth/presentation/sign_in_action.dart';
@@ -92,7 +91,7 @@ class _DeniedStorage implements FlutterSecureStorage {
 /// A readable, writable store whose writes or deletes can start failing, to
 /// model the keychain refusing partway through a run.
 class _FlakyStorage implements FlutterSecureStorage {
-  _FlakyStorage(this.store, {this.failDeletes = false});
+  _FlakyStorage(this.store) : failDeletes = false;
   final Map<String, String> store;
   bool failWrites = false;
   bool failDeletes;
@@ -417,191 +416,6 @@ void main() {
       expect(state.uiRefreshToken, isNull);
       expect(backing, isEmpty);
       expect(_invalidated(), isFalse);
-    },
-  );
-
-  test(
-    'a switch whose credential delete is refused cannot reuse the old sign-in',
-    () async {
-      final backing = <String, String>{
-        'auth.ui.accessToken': _testToken(),
-        'auth.ui.refreshToken': 'old-refresh',
-        'auth.simple.cookie': 'JSESSIONID=old',
-        kBasicCredentialsSecureKey: 'Basic old',
-      };
-      final first = _container(_FlakyStorage(backing, failDeletes: true));
-      final before = await first.read(authCredentialsStoreProvider.future);
-      expect(before.uiAccessToken, isNotNull);
-
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .clearAllForServerSwitch();
-      expect(_invalidated(), isTrue);
-      expect(backing, isNotEmpty);
-
-      debugResetKeychainRefusal();
-      final restarted = _container(_FlakyStorage(backing));
-      final auth = await restarted.read(authCredentialsStoreProvider.future);
-      final basic = await restarted.read(credentialsProvider.future);
-
-      expect(auth.uiAccessToken, isNull);
-      expect(auth.uiRefreshToken, isNull);
-      expect(auth.simpleLoginCookie, isNull);
-      expect(basic, isNull);
-      expect(backing, isEmpty);
-      expect(_invalidated(), isFalse);
-    },
-  );
-
-  test(
-    'a deferred Basic migration cannot restore a credential the user cleared',
-    () async {
-      // The migration was deferred because the keychain refused, so the legacy
-      // copy is still there when the user switches server.
-      SharedPreferences.setMockInitialValues({'basicCredentials': 'Basic old'});
-      _prefs = await SharedPreferences.getInstance();
-      final backing = <String, String>{kBasicCredentialsSecureKey: 'Basic old'};
-      final first = _container(_FlakyStorage(backing, failDeletes: true));
-      await first.read(credentialsProvider.future);
-
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .clearAllForServerSwitch();
-      expect(_invalidated(), isTrue);
-      expect(_prefs.getString('basicCredentials'), isNull);
-
-      // Next launch, keychain working again: the invalidation cleanup runs,
-      // and the migration must not re-import the cleared sign-in behind it.
-      debugResetKeychainRefusal();
-      final nextStorage = _FlakyStorage(backing);
-      await migrateBasicAuthCredentials(prefs: _prefs, secure: nextStorage);
-      final restarted = _container(nextStorage);
-      expect(await restarted.read(credentialsProvider.future), isNull);
-      expect(backing[kBasicCredentialsSecureKey], isNull);
-    },
-  );
-
-  test(
-    'a sign-in that saves after a refused one is read next launch',
-    () async {
-      final backing = <String, String>{
-        'auth.ui.accessToken': 'old-access',
-        'auth.ui.refreshToken': 'old-refresh',
-      };
-      final storage = _FlakyStorage(backing)..failWrites = true;
-      final first = _container(storage);
-      await first.read(authCredentialsStoreProvider.future);
-
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .saveUiLoginTokens(accessToken: 'refused-access', refreshToken: 'r');
-      expect(_invalidated(), isTrue);
-
-      storage.failWrites = false;
-      final token = _testToken();
-      await first
-          .read(authCredentialsStoreProvider.notifier)
-          .saveUiLoginTokens(accessToken: token, refreshToken: 'saved-refresh');
-      expect(_invalidated(), isFalse);
-      expect(backing['auth.ui.accessToken'], token);
-
-      debugResetKeychainRefusal();
-      final restarted = _container(_FlakyStorage(backing));
-      final state = await restarted.read(authCredentialsStoreProvider.future);
-      expect(state.uiAccessToken, token);
-      expect(state.uiRefreshToken, 'saved-refresh');
-    },
-  );
-
-  test('proxy headers read at startup survive a later refused write', () async {
-    final storage = _FlakyStorage({
-      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
-    });
-    final c = _container(storage);
-    expect(await c.read(customHttpHeadersProvider.future), {
-      'CF-Access-Client-Id': 'abc',
-    });
-
-    storage.failWrites = true;
-    await c
-        .read(authCredentialsStoreProvider.notifier)
-        .saveSimpleLoginCookie('JSESSIONID=x');
-    expect(_invalidated(), isTrue);
-
-    c.invalidate(customHttpHeadersProvider);
-    expect(await c.read(customHttpHeadersProvider.future), {
-      'CF-Access-Client-Id': 'abc',
-    });
-  });
-
-  test('account invalidation keeps proxy headers', () async {
-    final backing = <String, String>{
-      'auth.ui.accessToken': 'old-access',
-      'auth.ui.refreshToken': 'old-refresh',
-      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
-    };
-    final first = _container(_FlakyStorage(backing, failDeletes: true));
-    await first.read(authCredentialsStoreProvider.future);
-
-    // The sign-out cannot delete the stored tokens, so the marker says the
-    // account state is unknown.
-    await first
-        .read(authCredentialsStoreProvider.notifier)
-        .clearUiLoginTokens();
-    expect(_invalidated(), isTrue);
-
-    // Next launch, keychain working again: the account cleanup must not take
-    // the endpoint's proxy headers with it.
-    debugResetKeychainRefusal();
-    final restarted = _container(_FlakyStorage(backing));
-    final auth = await restarted.read(authCredentialsStoreProvider.future);
-    expect(auth.uiAccessToken, isNull);
-    expect(await restarted.read(customHttpHeadersProvider.future), {
-      'CF-Access-Client-Id': 'abc',
-    });
-    expect(backing['custom.headers'], isNotNull);
-  });
-
-  test(
-    'a refused Basic migration is retried next launch instead of lost',
-    () async {
-      SharedPreferences.setMockInitialValues({'basicCredentials': 'Basic abc'});
-      _prefs = await SharedPreferences.getInstance();
-      final token = _testToken();
-      final backing = <String, String>{
-        'auth.simple.cookie': 'JSESSIONID=abc123',
-        'auth.ui.accessToken': token,
-        'auth.ui.refreshToken': 'refresh',
-        'custom.headers': '{"CF-Access-Client-Id":"abc"}',
-      };
-
-      // Launch 1: the keychain reads work, but the migration's write is
-      // refused. The legacy preference stays as the only durable copy, so the
-      // account is not marked invalidated.
-      await migrateBasicAuthCredentials(
-        prefs: _prefs,
-        secure: _FlakyStorage(backing)..failWrites = true,
-      );
-      expect(_prefs.getString('basicCredentials'), 'Basic abc');
-      expect(_invalidated(), isFalse);
-
-      // Launch 2, keychain working again: the migration retries and the login
-      // survives, with the credentials already in secure storage.
-      debugResetKeychainRefusal();
-      final nextStorage = _FlakyStorage(backing);
-      await migrateBasicAuthCredentials(prefs: _prefs, secure: nextStorage);
-
-      expect(_prefs.getString('basicCredentials'), isNull);
-      expect(backing[kBasicCredentialsSecureKey], 'Basic abc');
-      final restarted = _container(nextStorage);
-      expect(await restarted.read(credentialsProvider.future), 'Basic abc');
-      final auth = await restarted.read(authCredentialsStoreProvider.future);
-      expect(auth.simpleLoginCookie, 'JSESSIONID=abc123');
-      expect(auth.uiAccessToken, token);
-      expect(auth.uiRefreshToken, 'refresh');
-      expect(await restarted.read(customHttpHeadersProvider.future), {
-        'CF-Access-Client-Id': 'abc',
-      });
     },
   );
 

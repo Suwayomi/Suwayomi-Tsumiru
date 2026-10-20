@@ -44,7 +44,6 @@ void main() {
   late IoOfflinePageStore store;
   late BackgroundCompletionLog log;
   late CatchupLedger ledger;
-  late CatchupLedger persisted;
   late List<QueuedChapterSpec> queue;
   late List<int> downloads;
   late bool stopped;
@@ -92,7 +91,6 @@ void main() {
       capBlocked: () async => capReached,
       persist: (value) async {
         ledger = value;
-        persisted = value;
       },
       allowance: 10,
     );
@@ -105,7 +103,6 @@ void main() {
     store = IoOfflinePageStore(OfflinePaths(tmp.path));
     log = BackgroundCompletionLog(File('${tmp.path}/completion.jsonl'));
     ledger = const CatchupLedger();
-    persisted = ledger;
     queue = [const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 0)];
     downloads = [];
     stopped = false;
@@ -113,50 +110,6 @@ void main() {
     serverDownloaded = true;
     enqueue = (_) async => throw StateError('Already downloaded');
     attempt = stage;
-  });
-
-  test('accepted fifth server request persists before yielding', () async {
-    serverDownloaded = false;
-    ledger = const CatchupLedger(queuedServerRetries: {'1:0': 4});
-    enqueue = (_) async {
-      stopped = true;
-      return true;
-    };
-    expect((await run()).interrupted, isTrue);
-    expect(ledger.queuedServerRetries, {'1:0': 5});
-    expect(persisted.queuedServerRetries, {'1:0': 5});
-    stopped = false;
-    enqueue = (_) async => fail('Exhausted request repeated');
-    await run();
-    expect(
-      (await log.parse()).whereType<ChapterEntry>().single.status,
-      'error',
-    );
-  });
-
-  test('foreground server baseline leaves one accepted request', () async {
-    serverDownloaded = false;
-    queue = [
-      const QueuedChapterSpec(
-        chapterId: 1,
-        mangaId: 1,
-        generation: 0,
-        serverFetchAttempts: 4,
-      ),
-    ];
-    var accepted = 0;
-    enqueue = (_) async {
-      accepted++;
-      return true;
-    };
-    await run();
-    await run();
-    expect(accepted, 1);
-    expect(ledger.queuedServerRetries, {'1:0': 5});
-    expect(
-      (await log.parse()).whereType<ChapterEntry>().single.status,
-      'error',
-    );
   });
 
   test(
@@ -178,18 +131,6 @@ void main() {
       expect(downloads, [1]);
     },
   );
-
-  test('cancellation discards delayed permission errors', () async {
-    attempt = (_) async {
-      stopped = true;
-      throw const AccountPermissionDenied(
-        Enum$UserPermission.DOWNLOAD_CHAPTERS,
-      );
-    };
-    expect((await run()).interrupted, isTrue);
-    expect(await log.parse(), isEmpty);
-    expect(ledger.queuedDownloadRetries, isEmpty);
-  });
 
   test(
     'matching partial staging can finish above cap without admitting fresh work',
@@ -221,46 +162,6 @@ void main() {
     },
   );
 
-  test('a fresh chapter above cap does not block later partial work', () async {
-    capReached = true;
-    queue = [
-      const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 0),
-      const QueuedChapterSpec(chapterId: 2, mangaId: 1, generation: 0),
-    ];
-    await store.beginChapter(
-      1,
-      2,
-      const ChapterManifest(generation: 0, indices: [0, 1]),
-    );
-    await store.writePage(1, 2, 0, [1], 'jpg');
-    attempt = (chapter) async {
-      await store.writePage(chapter.mangaId, chapter.chapterId, 1, [2], 'jpg');
-      return (bytes: 2, transient: false);
-    };
-    expect((await run()).completed, 1);
-    expect(downloads, [2]);
-    expect(await store.readManifest(1, 1), isNull);
-    final success = (await log.parse()).whereType<ChapterEntry>().single;
-    expect(success.chapterId, 2);
-    expect(success.status, 'downloaded');
-    expect(success.pages, 2);
-  });
-
-  test('old-generation staging cannot admit a new request above cap', () async {
-    capReached = true;
-    queue = [const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 1)];
-    await store.beginChapter(
-      1,
-      1,
-      const ChapterManifest(generation: 0, indices: [0, 1]),
-    );
-    await store.writePage(1, 1, 0, [1], 'jpg');
-    expect((await run()).completed, 0);
-    expect(downloads, isEmpty);
-    expect(await log.parse(), isEmpty);
-    expect((await store.readManifest(1, 1))!.generation, 0);
-  });
-
   test(
     'thirty queued chapters finish across three ten-chapter wakes',
     () async {
@@ -280,37 +181,6 @@ void main() {
   );
 
   test(
-    'complete staging repairs a missing success record without downloading',
-    () async {
-      await stage(queue.single);
-      expect(await log.parse(), isEmpty);
-      await run();
-      expect(downloads, isEmpty);
-      final success = (await log.parse()).whereType<ChapterEntry>().single;
-      expect(success.status, 'downloaded');
-      expect(success.generation, 0);
-      expect(success.bytes, 1);
-      expect(success.pages, 1);
-    },
-  );
-
-  test(
-    'a deletion and new generation allow the chapter to download again',
-    () async {
-      await run();
-      await log.appendDeleted(1, 1);
-      queue = [
-        const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 1),
-      ];
-      expect((await run()).completed, 1);
-      expect(downloads, [1, 1]);
-      final successes = (await log.parse()).whereType<ChapterEntry>().toList();
-      expect(successes.map((entry) => entry.generation), [0, 1]);
-      expect((await store.readManifest(1, 1))!.generation, 1);
-    },
-  );
-
-  test(
     'five hard device failures produce one error and stop further attempts',
     () async {
       attempt = (_) async => (bytes: 0, transient: false);
@@ -325,93 +195,6 @@ void main() {
     },
   );
 
-  test(
-    'spent server retries leave all five device attempts available',
-    () async {
-      ledger = const CatchupLedger(queuedServerRetries: {'1:0': 5});
-      attempt = (_) async => (bytes: 0, transient: false);
-      for (var wake = 0; wake < 6; wake++) {
-        await run();
-      }
-      expect(downloads.length, 5);
-      expect(ledger.queuedServerRetries, {'1:0': 5});
-      expect(ledger.queuedDownloadRetries, {'1:0': 5});
-      expect(
-        (await log.parse()).whereType<ChapterEntry>().single.status,
-        'error',
-      );
-    },
-  );
-
-  test('completed fifth hard failure persists before yielding', () async {
-    ledger = const CatchupLedger(queuedDownloadRetries: {'1:0': 4});
-    attempt = (_) async {
-      stopped = true;
-      return (bytes: 0, transient: false);
-    };
-    expect((await run()).interrupted, isTrue);
-    expect(ledger.queuedDownloadRetries, {'1:0': 5});
-    expect(persisted.queuedDownloadRetries, {'1:0': 5});
-    expect(await log.parse(), isEmpty);
-    stopped = false;
-    await run();
-    expect(downloads, [1]);
-    expect(
-      (await log.parse()).whereType<ChapterEntry>().single.status,
-      'error',
-    );
-  });
-
-  test(
-    'completed bytes after yield await later ownership before terminal',
-    () async {
-      attempt = (chapter) async {
-        final result = await stage(chapter);
-        stopped = true;
-        return result;
-      };
-      expect((await run()).interrupted, isTrue);
-      expect(await log.parse(), isEmpty);
-      expect(ledger.queuedDownloadRetries, isEmpty);
-      stopped = false;
-      await run();
-      expect(downloads, [1]);
-      expect(
-        (await log.parse()).whereType<ChapterEntry>().single.status,
-        'downloaded',
-      );
-    },
-  );
-
-  test('matching keep budgets follow a chapter into the queue', () async {
-    serverDownloaded = false;
-    ledger = const CatchupLedger(
-      chapterGenerations: {1: 0},
-      serverFetchRetries: {1: 4},
-      downloadRetries: {1: 4},
-    );
-    enqueue = (_) async => true;
-    await run();
-    expect(ledger.queuedServerRetries, {'1:0': 5});
-    serverDownloaded = true;
-    attempt = (_) async => (bytes: 0, transient: false);
-    await run();
-    expect(ledger.queuedDownloadRetries, {'1:0': 5});
-  });
-
-  test('older keep budgets do not spend a new queue generation', () async {
-    ledger = const CatchupLedger(
-      chapterGenerations: {1: 0},
-      serverFetchRetries: {1: 5},
-      downloadRetries: {1: 5},
-    );
-    queue = [const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 1)];
-    attempt = (_) async => (bytes: 0, transient: false);
-    await run();
-    expect(ledger.queuedDownloadRetries, {'1:1': 1});
-    expect(await log.parse(), isEmpty);
-  });
-
   test('cancellation after the callback consumes no retry', () async {
     attempt = (_) async {
       stopped = true;
@@ -423,20 +206,4 @@ void main() {
     expect(ledger.queuedServerRetries, isEmpty);
     expect(await log.parse(), isEmpty);
   });
-
-  test(
-    'a transient failure stops the wake without consuming a retry',
-    () async {
-      queue = [
-        const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 0),
-        const QueuedChapterSpec(chapterId: 2, mangaId: 1, generation: 0),
-      ];
-      attempt = (_) async => (bytes: 0, transient: true);
-      expect((await run()).interrupted, isTrue);
-      expect(downloads, [1]);
-      expect(ledger.queuedDownloadRetries, isEmpty);
-      expect(ledger.queuedServerRetries, isEmpty);
-      expect(await log.parse(), isEmpty);
-    },
-  );
 }

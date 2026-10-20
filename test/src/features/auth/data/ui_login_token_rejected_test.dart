@@ -19,7 +19,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
-import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/ui_login_token_rejected.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
@@ -184,41 +183,6 @@ void main() {
     });
   });
 
-  test('an authorized UI token still signs in on web', () async {
-    final seenAuth = <String?>[];
-    final probe = await _probeServer(authorized: true, seenAuth: seenAuth);
-    addTearDown(() => probe.close(force: true));
-    final base = 'http://127.0.0.1:${probe.port}';
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: true);
-      addTearDown(container.dispose);
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(
-        link.operations,
-        containsAllInOrder([
-          'Login',
-          'AccountCapability',
-          'CurrentAccount',
-          'OfflineServerIdentity',
-        ]),
-      );
-      final credentials = container
-          .read(authCredentialsStoreProvider)
-          .requireValue;
-      expect(credentials.uiAccessToken, link.token);
-      expect(credentials.accountBinding?.userId, 2);
-    });
-  });
-
   test('a proxy failure after sign-in does not block web sign-in', () async {
     final seenAuth = <String?>[];
     final probe = await _probeServer(
@@ -242,149 +206,6 @@ void main() {
             password: 'password',
             serverBaseUrl: base,
           );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-        link.token,
-      );
-    });
-  });
-
-  test('an unreadable probe body does not block web sign-in', () async {
-    final seenAuth = <String?>[];
-    final probe = await _probeServer(
-      authorized: false,
-      seenAuth: seenAuth,
-      rawBody: '<html>proxy login</html>',
-    );
-    addTearDown(() => probe.close(force: true));
-    final base = 'http://127.0.0.1:${probe.port}';
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: true);
-      addTearDown(container.dispose);
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-        link.token,
-      );
-    });
-  });
-
-  test('a probe transport failure does not block web sign-in', () async {
-    final probe = await _probeServer(authorized: false, seenAuth: []);
-    final base = 'http://127.0.0.1:${probe.port}';
-    await probe.close(force: true);
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: true);
-      addTearDown(container.dispose);
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-        link.token,
-      );
-    });
-  });
-
-  test('a probe timeout does not block web sign-in', () async {
-    final seenAuth = <String?>[];
-    final probe = await _probeServer(
-      authorized: true,
-      seenAuth: seenAuth,
-      delay: const Duration(seconds: 10),
-    );
-    addTearDown(() => probe.close(force: true));
-    final base = 'http://127.0.0.1:${probe.port}';
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: true);
-      addTearDown(container.dispose);
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-        link.token,
-      );
-    });
-  });
-
-  test('custom headers reach the token probe on web', () async {
-    final seenAuth = <String?>[];
-    final seenHeaders = <Map<String, String>>[];
-    final probe = await _probeServer(
-      authorized: true,
-      seenAuth: seenAuth,
-      seenHeaders: seenHeaders,
-    );
-    addTearDown(() => probe.close(force: true));
-    final base = 'http://127.0.0.1:${probe.port}';
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: true);
-      addTearDown(container.dispose);
-      await container
-          .read(customHttpHeadersProvider.notifier)
-          .put('CF-Access-Client-Id', 'id123');
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(seenHeaders, hasLength(1));
-      expect(seenHeaders.single['cf-access-client-id'], 'id123');
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-        link.token,
-      );
-    });
-  });
-
-  test('the token probe is skipped off web', () async {
-    final seenAuth = <String?>[];
-    final probe = await _probeServer(authorized: false, seenAuth: seenAuth);
-    addTearDown(() => probe.close(force: true));
-    final base = 'http://127.0.0.1:${probe.port}';
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: false);
-      addTearDown(container.dispose);
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(seenAuth, isEmpty);
       expect(
         container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
         link.token,

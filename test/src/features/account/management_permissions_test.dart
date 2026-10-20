@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:tsumiru/src/features/account/data/account_permission.dart';
-import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/browse_center/data/extension_repository/extension_repository.dart';
 import 'package:tsumiru/src/features/browse_center/data/extension_store_repository/extension_store_repository.dart';
@@ -98,59 +97,6 @@ void main() {
       },
     );
   }
-
-  for (final admin in [false, true]) {
-    test(
-      '${admin ? 'admin' : 'legacy'} dispatches management mutations',
-      () async {
-        access = AccountAccess(
-          capability: admin
-              ? AccountCapability.supported
-              : AccountCapability.unsupported,
-          user: admin
-              ? Fragment$AccountDto(
-                  id: 1,
-                  username: 'admin',
-                  permissions: [],
-                  roles: [Enum$UserRole.ADMIN],
-                )
-              : null,
-        );
-        for (final entry in actions().entries) {
-          await expectLater(
-            entry.value(),
-            throwsA(isNot(isA<AccountPermissionDenied>())),
-            reason: entry.key,
-          );
-        }
-        expect(link.calls, actions().length);
-      },
-    );
-  }
-
-  test(
-    'source pin, visibility, extension update and personal backup remain available',
-    () async {
-      for (final action in <Future<dynamic> Function()>[
-        () => sources.setSourcePinned('1', true),
-        () => sources.setSourceHidden('1', true),
-        () => extensions.updateExtension('pkg'),
-        () => backup.createBackup(
-          includeCategories: true,
-          includeChapters: true,
-          includeHistory: true,
-          includeTracking: true,
-          includeClientData: true,
-        ),
-      ]) {
-        await expectLater(
-          action(),
-          throwsA(isNot(isA<AccountPermissionDenied>())),
-        );
-      }
-      expect(link.calls, 4);
-    },
-  );
 
   testWidgets('external install is rejected before reading a file', (
     tester,

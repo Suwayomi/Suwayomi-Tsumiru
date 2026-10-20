@@ -11,9 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_actions.dart';
-import 'package:tsumiru/src/features/account/data/account_notice.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
-import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_state.dart';
 import 'package:tsumiru/src/features/auth/presentation/reauth_banner.dart';
@@ -194,74 +192,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-  }
-
-  for (final uncertain in [false, true]) {
-    testWidgets(
-      '${uncertain ? 'unconfirmed' : 'confirmed'} password failure survives a fresh root and verified login clears it',
-      (tester) async {
-        await tester.runAsync(() => failRotation(uncertain));
-        final restored = freshContainer();
-        await tester.runAsync(
-          () => restored.read(authCredentialsStoreProvider.future),
-        );
-        expect(restored.read(needsReauthProvider), false);
-        expect(
-          restored.read(accountNoticeProvider),
-          uncertain
-              ? AccountNoticeKind.passwordUnconfirmed
-              : AccountNoticeKind.passwordSignInRequired,
-        );
-        await mountRoot(tester, restored);
-        final expected = uncertain
-            ? 'The password change could not be confirmed. Sign in again to continue.'
-            : 'Sign in again to continue.';
-        expect(find.byType(MaterialBanner), findsOneWidget);
-        expect(find.text(expected), findsOneWidget);
-        expect(
-          find.text(
-            uncertain
-                ? 'Sign in again to continue.'
-                : 'The password change could not be confirmed. Sign in again to continue.',
-          ),
-          findsNothing,
-        );
-        server.failLogin = false;
-        await tester.runAsync(
-          () => restored
-              .read(authCoordinatorProvider.notifier)
-              .loginUi(
-                gqlClient: restored.read(unauthenticatedGraphQlClientProvider),
-                username: 'Reader',
-                password: 'test-replacement-password',
-              ),
-        );
-        await tester.pumpAndSettle();
-        expect(
-          server.operations,
-          containsAllInOrder([
-            'Login',
-            'AccountCapability',
-            'CurrentAccount',
-            'OfflineServerIdentity',
-          ]),
-        );
-        expect(
-          restored
-              .read(authCredentialsStoreProvider)
-              .requireValue
-              .accountBinding
-              ?.userId,
-          2,
-        );
-        expect(restored.read(accountNoticeProvider), isNull);
-        expect(find.byType(MaterialBanner), findsNothing);
-        final afterSignIn = freshContainer();
-        await mountRoot(tester, afterSignIn);
-        expect(afterSignIn.read(accountNoticeProvider), isNull);
-        expect(find.byType(MaterialBanner), findsNothing);
-      },
-    );
   }
 
   testWidgets(

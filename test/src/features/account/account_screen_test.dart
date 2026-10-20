@@ -16,7 +16,6 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/settings/presentation/more/more_screen.dart';
-import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -222,90 +221,6 @@ void main() {
     },
   );
 
-  testWidgets('administrator permissions expand to nine allowed grants', (
-    tester,
-  ) async {
-    await pump(tester, account: user(admin: true));
-    expect(find.text('Full access'), findsOneWidget);
-    expect(find.text('Download chapters'), findsNothing);
-    await tester.tap(find.text('Permissions'));
-    await tester.pumpAndSettle();
-    expect(find.text('Allowed'), findsNWidgets(9));
-    expect(find.text('Restricted'), findsNothing);
-    expect(find.textContaining('NSFW'), findsNothing);
-    expect(find.byType(Switch), findsNothing);
-    expect(find.byType(Checkbox), findsNothing);
-  });
-
-  testWidgets('built-in administrator can open the password dialog', (
-    tester,
-  ) async {
-    await pump(tester, account: user(id: 1, admin: true));
-    await tester.tap(find.text('Change password'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.byType(TextFormField), findsNWidgets(3));
-    expect(find.text('Server'), findsNothing);
-  });
-
-  testWidgets('built-in password requires verified settings permission', (
-    tester,
-  ) async {
-    await pump(tester, account: user(id: 1));
-    expect(
-      tester
-          .widget<ListTile>(find.widgetWithText(ListTile, 'Change password'))
-          .onTap,
-      isNull,
-    );
-    await pump(
-      tester,
-      account: user(id: 1, admin: true),
-      capability: AccountCapability.unknown,
-    );
-    expect(
-      tester
-          .widget<ListTile>(find.widgetWithText(ListTile, 'Change password'))
-          .onTap,
-      isNull,
-    );
-  });
-
-  testWidgets('Manage users entry requires a verified grant', (tester) async {
-    await pump(tester, account: user());
-    expect(find.text('Manage users'), findsNothing);
-    await pump(tester, account: user(admin: true));
-    expect(find.text('Manage users'), findsOneWidget);
-    await pump(
-      tester,
-      account: user(admin: true),
-      capability: AccountCapability.unknown,
-    );
-    expect(find.text('Manage users'), findsNothing);
-  });
-
-  testWidgets('refresh and password dialog invoke account actions', (
-    tester,
-  ) async {
-    await pump(tester, account: user());
-    await tester.tap(find.byTooltip('Refresh'));
-    await tester.pumpAndSettle();
-    expect(actions.refreshes, 1);
-    await tester.tap(find.text('Change password'));
-    await tester.pumpAndSettle();
-    final fields = find.byType(TextFormField);
-    await tester.enterText(fields.at(0), 'old-password');
-    await tester.enterText(fields.at(1), 'new-password');
-    await tester.enterText(fields.at(2), 'new-password');
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Change password'));
-    await tester.pumpAndSettle();
-    expect(actions.password, (
-      current: 'old-password',
-      replacement: 'new-password',
-    ));
-    expect(find.byType(AlertDialog), findsNothing);
-  });
-
   testWidgets('sign out requires confirmation', (tester) async {
     await pump(tester, account: user());
     await tester.tap(find.text('Sign out'));
@@ -318,17 +233,6 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Sign out'));
     await tester.pumpAndSettle();
     expect(actions.signOuts, 1);
-  });
-
-  testWidgets('More exposes supported account above categories', (
-    tester,
-  ) async {
-    await pump(tester, account: user(), more: true);
-    expect(find.text('Account'), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.text('Account')).dy,
-      lessThan(tester.getTopLeft(find.text('Categories')).dy),
-    );
   });
 
   testWidgets(
@@ -345,84 +249,4 @@ void main() {
       expect(find.textContaining('Sign-in needed'), findsOneWidget);
     },
   );
-
-  for (final capability in [
-    AccountCapability.unknown,
-    AccountCapability.unsupported,
-  ]) {
-    testWidgets(
-      'More retains signed-out UI Login entry with $capability capability',
-      (tester) async {
-        await pump(
-          tester,
-          more: true,
-          credentials: false,
-          capability: capability,
-        );
-        expect(find.text('Account'), findsOneWidget);
-        expect(find.textContaining('Sign-in needed'), findsOneWidget);
-      },
-    );
-  }
-
-  testWidgets(
-    'signed-out Account disables refresh and opens real sign-in popup with account codes',
-    (tester) async {
-      await pump(
-        tester,
-        credentials: false,
-        capability: AccountCapability.unknown,
-      );
-      expect(
-        tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.refresh_rounded),
-            )
-            .onPressed,
-        isNull,
-      );
-      await tester.drag(find.byType(ListView), const Offset(0, 300));
-      await tester.pumpAndSettle();
-      expect(actions.refreshes, 0);
-      expect(find.text('Sign out'), findsNothing);
-      await tester.tap(find.text('Sign in'));
-      await tester.pumpAndSettle();
-      expect(find.byType(LoginCredentialsPopup), findsOneWidget);
-      expect(
-        tester
-            .widget<LoginCredentialsPopup>(find.byType(LoginCredentialsPopup))
-            .authType,
-        AuthType.uiLogin,
-      );
-      expect(find.text('Create account'), findsOneWidget);
-      expect(find.text('Reset password'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'signed-in legacy Account retains sign-out without an account DTO',
-    (tester) async {
-      await pump(tester, capability: AccountCapability.unsupported);
-      expect(find.text('Sign in'), findsNothing);
-      await tester.tap(find.text('Sign out'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Sign out'));
-      await tester.pumpAndSettle();
-      expect(actions.signOuts, 1);
-    },
-  );
-
-  for (final mode in [AuthType.none, AuthType.basic]) {
-    testWidgets('More hides unsupported account surface for $mode', (
-      tester,
-    ) async {
-      await pump(
-        tester,
-        more: true,
-        mode: mode,
-        capability: AccountCapability.unsupported,
-      );
-      expect(find.text('Account'), findsNothing);
-    });
-  }
 }

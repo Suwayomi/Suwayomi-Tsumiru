@@ -64,7 +64,7 @@ void main() {
 
   final good = base64.encode(utf8.encode('admin:adminwords'));
 
-  test('a rejected Basic password is not stored as a sign-in', () async {
+  test('only a verified Basic password is stored', () async {
     final server = await _basicAuthServer(good);
     addTearDown(() => server.close(force: true));
     await HttpOverrides.runZoned(() async {
@@ -83,15 +83,7 @@ void main() {
         throwsA(isA<BasicCredentialsRejected>()),
       );
       expect(container.read(credentialsProvider).value, isNull);
-    }, createHttpClient: _RealHttpOverrides().createHttpClient);
-  });
 
-  test('the right Basic password is stored', () async {
-    final server = await _basicAuthServer(good);
-    addTearDown(() => server.close(force: true));
-    await HttpOverrides.runZoned(() async {
-      final container = await _containerFor(server);
-      addTearDown(container.dispose);
       await container
           .read(authCoordinatorProvider.notifier)
           .loginBasic(
