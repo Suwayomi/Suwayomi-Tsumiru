@@ -14,6 +14,7 @@ import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../desktop/desktop_brand.dart';
+import '../desktop/desktop_top_bar.dart';
 import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
@@ -79,6 +80,10 @@ class DesktopSidebar extends ConsumerWidget {
     // The traffic-lights inset exists only on native macOS; web and tablets
     // always use the logo column.
     final isMacOS = isDesktopPlatform && isMacOSRuntime;
+    // The bar's top-left corner is free only while it shows as one row. In
+    // the two-row fallback (narrow window, sidebar forced collapsed) the title
+    // bar already carries the logo, so the sidebar starts with the nav rows.
+    final showBrandRow = isMacOS && desktopTopBarShowsMergedRow(context, ref);
     final windowWidth = MediaQuery.sizeOf(context).width;
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
     void collapse() =>
@@ -206,7 +211,7 @@ class DesktopSidebar extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (isMacOS) ...[
+                        if (showBrandRow) ...[
                           if (showExpanded)
                             DesktopBrandRow(
                               onCollapse: collapse,

@@ -445,13 +445,15 @@ void main() {
         find.descendant(of: titleBar, matching: find.byType(TsumiruLogo)),
         findsOneWidget,
       );
-      // The 80 px macOS column carries its own logo as its first row.
+      // The title bar's logo is the only one: the sidebar's brand row shows
+      // only with the merged one-row bar.
+      expect(find.byType(TsumiruLogo), findsOneWidget);
       expect(
         find.descendant(
           of: find.byType(DesktopSidebar),
-          matching: find.byType(TsumiruLogo),
+          matching: find.byType(DesktopBrandRow),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.byType(WindowCaptionButton), findsNothing);
       expect(

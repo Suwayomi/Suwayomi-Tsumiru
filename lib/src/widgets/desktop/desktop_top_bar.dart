@@ -74,6 +74,60 @@ String _activeLeafLocation(BuildContext context) {
   return _matchedLocationOrNull(context) ?? '';
 }
 
+/// Whether the merged one-row bar is showing at this build, using the same
+/// decision [DesktopTopBar] makes. The macOS sidebar draws its brand row only
+/// alongside it: in the two-row fallback the title bar already carries the
+/// logo, and the narrow layout forces the sidebar collapsed.
+bool desktopTopBarShowsMergedRow(BuildContext context, WidgetRef ref) =>
+    _topBarLayout(context, ref, _activeLeafLocation(context)).merged;
+
+/// The bar's layout decision for [location]: the parts it draws and whether
+/// the one-row layout fits or the two rows stack.
+_TopBarLayout _topBarLayout(
+  BuildContext context,
+  WidgetRef ref,
+  String location,
+) {
+  final width = MediaQuery.sizeOf(context).width;
+  // Window chrome (drag area, caption buttons, traffic-lights inset) exists
+  // only on native desktop. Web and tablets show the same bar and sidebar
+  // without it; the breakpoint then drops the buttons' width like macOS.
+  final native = isDesktopPlatform;
+  final isMacOS = native && isMacOSRuntime;
+  final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
+  final brandWidth = DesktopSidebar.widthFor(
+    expanded: sidebarIsExpanded(context, preference),
+    isMacOS: isMacOS,
+    windowWidth: width,
+  );
+  final stacked = ref.watch(topBarSlotRegistryProvider)[location];
+  final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
+  final merged =
+      entry == null ||
+      width >=
+          topBarBreakpoint(
+            brandWidth: brandWidth,
+            slotMinWidth: entry.minWidth,
+            // No caption buttons off native desktop, like macOS.
+            isMacOS: isMacOS || !native,
+          );
+  return (
+    merged: merged,
+    brandWidth: brandWidth,
+    isMacOS: isMacOS,
+    native: native,
+    entry: entry,
+  );
+}
+
+typedef _TopBarLayout = ({
+  bool merged,
+  double brandWidth,
+  bool isMacOS,
+  bool native,
+  TopBarSlotEntry? entry,
+});
+
 /// Window width at and above which the title bar and the page toolbar merge
 /// into one 64 px bar. Below it the two rows stack: the 40 px title bar with
 /// the toolbar below it. Built from the same widths and gaps as the bar
@@ -489,29 +543,12 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   }
 
   Widget _buildBar(BuildContext context, WidgetRef ref, String location) {
-    final width = MediaQuery.sizeOf(context).width;
-    // Window chrome (drag area, caption buttons, traffic-lights inset) exists
-    // only on native desktop. Web and tablets show the same bar and sidebar
-    // without it; the breakpoint then drops the buttons' width like macOS.
-    final native = isDesktopPlatform;
-    final isMacOS = native && isMacOSRuntime;
-    final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
-    final brandWidth = DesktopSidebar.widthFor(
-      expanded: sidebarIsExpanded(context, preference),
-      isMacOS: isMacOS,
-      windowWidth: width,
-    );
-    final stacked = ref.watch(topBarSlotRegistryProvider)[location];
-    final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
-    final merged =
-        entry == null ||
-        width >=
-            topBarBreakpoint(
-              brandWidth: brandWidth,
-              slotMinWidth: entry.minWidth,
-              // No caption buttons off native desktop, like macOS.
-              isMacOS: isMacOS || !native,
-            );
+    final layout = _topBarLayout(context, ref, location);
+    final merged = layout.merged;
+    final brandWidth = layout.brandWidth;
+    final isMacOS = layout.isMacOS;
+    final native = layout.native;
+    final entry = layout.entry;
     final theme = Theme.of(context);
     if (!merged) {
       return Column(
