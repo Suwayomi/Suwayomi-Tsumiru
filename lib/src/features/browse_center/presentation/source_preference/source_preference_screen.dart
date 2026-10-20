@@ -56,6 +56,7 @@ class SourcePreferenceScreen extends HookConsumerWidget {
                   return SourcePreferenceToWidget(
                     enabled: canManage,
                     key: ValueKey("Source-preference-$index"),
+                    index: index,
                     sourcePreference: sourcePreference,
                     onChanged: (value) async {
                       await AppUtils.guard(

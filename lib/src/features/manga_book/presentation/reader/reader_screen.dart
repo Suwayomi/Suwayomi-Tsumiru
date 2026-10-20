@@ -16,6 +16,7 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/emoticons.dart';
 import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
@@ -374,6 +375,15 @@ class ReaderScreen extends HookConsumerWidget {
                   ) {
                     if (chapterPagesData == null) {
                       return const SizedBox.shrink();
+                    }
+                    // A chapter whose page list came back empty (a login-only
+                    // source refusing to hand out pages) has nothing to read.
+                    // Show the same failure state a failed page fetch gets
+                    // instead of mounting the reader with zero pages.
+                    if (chapterPagesData.pages.isEmpty) {
+                      return Emoticons(
+                        title: context.l10n.errorSomethingWentWrong,
+                      );
                     }
                     return switch (autoReaderMode ??
                         data.metaData.readerMode ??

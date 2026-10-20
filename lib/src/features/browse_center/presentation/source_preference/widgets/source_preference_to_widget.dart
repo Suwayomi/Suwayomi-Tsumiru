@@ -20,26 +20,39 @@ class SourcePreferenceToWidget extends StatelessWidget {
     required this.sourcePreference,
     required this.onChanged,
     this.enabled = true,
+    this.index,
   });
 
   final SourcePreference sourcePreference;
   final bool enabled;
   final ValueChanged<SourcePreferenceChange> onChanged;
 
+  /// Position in the preference list; keys the tile when the server sends no
+  /// preference key.
+  final int? index;
+
+  Key? _keyFor(String? key) => key != null
+      ? Key(key)
+      : index != null
+          ? ValueKey('Source-preference-$index')
+          : null;
+
+  String _titleFor(String? title, String? key) => title ?? key ?? "";
+
   @override
   Widget build(BuildContext context) {
     SourcePreference? prop = sourcePreference;
     return switch (prop) {
       CheckBoxPreference(
-        key: String key,
-        checkBoxTitle: String title,
+        key: String? key,
+        checkBoxTitle: String? title,
         summary: String? summary,
         checkBoxDefaultValue: bool defaultValue,
         checkBoxValue: bool? currentValue,
       ) =>
         CheckboxListTile(
-          key: Key(key),
-          title: Text(title),
+          key: _keyFor(key),
+          title: Text(_titleFor(title, key)),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           value: currentValue.ifNull(defaultValue.ifNull()),
           onChanged: enabled
@@ -53,15 +66,15 @@ class SourcePreferenceToWidget extends StatelessWidget {
           controlAffinity: ListTileControlAffinity.trailing,
         ),
       SwitchPreferenceCompat(
-        key: String key,
-        switchTitle: String title,
+        key: String? key,
+        switchTitle: String? title,
         summary: String? summary,
         switchDefaultValue: bool defaultValue,
         switchValue: bool? currentValue,
       ) =>
         SwitchListTile(
-          key: Key(key),
-          title: Text(title),
+          key: _keyFor(key),
+          title: Text(_titleFor(title, key)),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           value: currentValue.ifNull(defaultValue.ifNull()),
           onChanged: enabled
@@ -75,7 +88,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
           controlAffinity: ListTileControlAffinity.trailing,
         ),
       ListPreference(
-        key: String key,
+        key: String? key,
         listTitle: String? title,
         listDefaultValue: String? defaultValue,
         listValue: String? currentValue,
@@ -83,14 +96,14 @@ class SourcePreferenceToWidget extends StatelessWidget {
         entryValues: List<String> entryValues,
       ) =>
         ListTile(
-          key: Key(key),
-          title: Text(title ?? ""),
+          key: _keyFor(key),
+          title: Text(_titleFor(title, key)),
           subtitle: currentValue.isNotBlank ? Text(currentValue!) : null,
           onTap: enabled
               ? () => showDialog(
                   context: context,
                   builder: (context) => RadioListPopup<String>(
-                    title: title ?? "",
+                    title: _titleFor(title, key),
                     optionList: entryValues.toList(),
                     value: currentValue ?? defaultValue ?? "",
                     onChange: (value) {
@@ -110,7 +123,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
               : null,
         ),
       MultiSelectListPreference(
-        key: String key,
+        key: String? key,
         multiSelectTitle: String? title,
         summary: String? summary,
         multiSelectDefaultValue: List<String>? defaultValue,
@@ -119,14 +132,14 @@ class SourcePreferenceToWidget extends StatelessWidget {
         entryValues: List<String> entryValues,
       ) =>
         ListTile(
-          key: Key(key),
-          title: Text(title ?? ""),
+          key: _keyFor(key),
+          title: Text(_titleFor(title, key)),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           onTap: enabled
               ? () => showDialog(
                   context: context,
                   builder: (context) => MultiSelectPopup<String>(
-                    title: title ?? "",
+                    title: _titleFor(title, key),
                     optionList: entryValues.toList(),
                     values:
                         currentValue?.toList() ?? defaultValue?.toList() ?? [],
@@ -147,7 +160,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
               : null,
         ),
       EditTextPreference(
-        key: String key,
+        key: String? key,
         editTextTitle: String? title,
         summary: String? summary,
         EditTextDefaultValue: String? defaultValue,
@@ -156,14 +169,14 @@ class SourcePreferenceToWidget extends StatelessWidget {
         dialogMessage: String? dialogMessage,
       ) =>
         ListTile(
-          key: Key(key),
-          title: Text(title ?? ""),
+          key: _keyFor(key),
+          title: Text(_titleFor(title, key)),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           onTap: enabled
               ? () => showDialog(
                   context: context,
                   builder: (context) => TextFieldPopup(
-                    title: dialogTitle ?? title ?? "",
+                    title: dialogTitle ?? _titleFor(title, key),
                     subtitle: dialogMessage ?? summary ?? "",
                     onChange: (value) async {
                       onChanged(
@@ -180,8 +193,10 @@ class SourcePreferenceToWidget extends StatelessWidget {
                 )
               : null,
         ),
-      SourcePreference() => throw UnimplementedError(
-        'Unhandled preference type: ${prop.runtimeType}',
+      SourcePreference() => ListTile(
+        key: _keyFor(null),
+        enabled: false,
+        title: Text(context.l10n.unsupportedPreference),
       ),
     };
   }
