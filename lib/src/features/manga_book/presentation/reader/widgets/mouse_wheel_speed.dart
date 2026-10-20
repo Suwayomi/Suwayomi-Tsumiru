@@ -10,6 +10,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../utils/wheel_scroll.dart';
@@ -74,10 +75,20 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
   /// external-scroll listener doesn't mistake the follow for a takeover.
   bool _applying = false;
 
+  /// Cached in [didChangeDependencies] because [ScrollConfiguration.of]
+  /// registers an inherited dependency, which belongs in the lifecycle.
+  ScrollBehavior? _behavior;
+
   @override
   void initState() {
     super.initState();
     _ticker = createTicker(_tick);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _behavior = ScrollConfiguration.of(context);
   }
 
   @override
@@ -120,11 +131,44 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     return false;
   }
 
+  /// Mirrors `Scrollable._pointerSignalEventDelta` (`scrollable.dart:933-951`):
+  /// with a pointer axis modifier held, a mouse wheel reads the other axis, so
+  /// Shift + wheel scrolls a horizontal strip. Trackpads already send both
+  /// axes and are not flipped.
+  double _axisDelta(PointerScrollEvent event) {
+    final pressed = HardwareKeyboard.instance.logicalKeysPressed;
+    final flipAxes =
+        pressed.any(
+          (_behavior ?? const ScrollBehavior()).pointerAxisModifiers.contains,
+        ) &&
+        event.kind == PointerDeviceKind.mouse;
+    final axis = flipAxes ? flipAxis(widget.axis) : widget.axis;
+    return axis == Axis.horizontal
+        ? event.scrollDelta.dx
+        : event.scrollDelta.dy;
+  }
+
+  double? _targetFor(ScrollPosition position, PointerScrollEvent event) {
+    return wheelScrollTarget(
+      pixels: position.pixels,
+      pendingTarget: identical(_pendingOn, position) ? _pendingTarget : null,
+      rawDelta: _axisDelta(event),
+      reverse: widget.reverse,
+      speed: widget.speed,
+      minExtent: position.minScrollExtent,
+      maxExtent: position.maxScrollExtent,
+    );
+  }
+
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     if (event.kind != PointerDeviceKind.mouse) return;
     final position = widget.positionOf();
     if (position == null || !position.hasPixels) return;
+    // Scrollable only registers when the event would move it. Doing the same
+    // leaves an event we can't use, such as Shift + vertical wheel on a
+    // vertical strip, to the platform's own handling instead of swallowing it.
+    if (_targetFor(position, event) == null) return;
     GestureBinding.instance.pointerSignalResolver.register(event, _glideTo);
   }
 
@@ -132,55 +176,49 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     if (event is! PointerScrollEvent) return;
     final position = widget.positionOf();
     if (position == null || !position.hasPixels) return;
-    event.respond(allowPlatformDefault: false);
 
     if (_pendingOn != position) {
       _ticker?.stop();
       _pendingTarget = null;
       _pendingOn = position;
     }
-    final target = wheelScrollTarget(
-      pixels: position.pixels,
-      pendingTarget: _pendingTarget,
-      rawDelta: widget.axis == Axis.vertical
-          ? event.scrollDelta.dy
-          : event.scrollDelta.dx,
-      reverse: widget.reverse,
-      speed: widget.speed,
-      minExtent: position.minScrollExtent,
-      maxExtent: position.maxScrollExtent,
-    );
+    final target = _targetFor(position, event);
     if (target == null) {
-      // A notch can cancel the follow exactly, or push against an end.
+      // A notch can cancel the follow exactly, or push against an end. The
+      // event was registered before this check, so leave it unhandled.
       _stopFollower();
       return;
     }
     _pendingTarget = target;
+    event.respond(allowPlatformDefault: false);
 
     if (!mounted) return;
+    // A glide is user scrolling: auto scroll yields to it the same way it does
+    // to the platform's own wheel jump, which reports a direction change. The
+    // reduce-motion jump below is user scrolling too, so it reports the same.
+    _notifyUserScroll(position, target);
     if (context.reduceMotion) {
       _stopFollower();
       position.jumpTo(target);
       return;
     }
 
-    // A glide is user scrolling: auto scroll yields to it the same way it does
-    // to the platform's own wheel jump, which reports a direction change.
-    final notificationContext = position.context.notificationContext;
-    if (notificationContext != null) {
-      UserScrollNotification(
-        metrics: position.copyWith(),
-        context: notificationContext,
-        direction: target < position.pixels
-            ? ScrollDirection.forward
-            : ScrollDirection.reverse,
-      ).dispatch(notificationContext);
-    }
-
     if (_ticker!.isTicking) return;
     _lastTick = Duration.zero;
     _primed = false;
     _ticker!.start();
+  }
+
+  void _notifyUserScroll(ScrollPosition position, double target) {
+    final notificationContext = position.context.notificationContext;
+    if (notificationContext == null) return;
+    UserScrollNotification(
+      metrics: position.copyWith(),
+      context: notificationContext,
+      direction: target < position.pixels
+          ? ScrollDirection.forward
+          : ScrollDirection.reverse,
+    ).dispatch(notificationContext);
   }
 
   void _tick(Duration elapsed) {

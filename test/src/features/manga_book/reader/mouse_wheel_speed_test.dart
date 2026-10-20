@@ -6,6 +6,7 @@
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/utils/wheel_scroll.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/mouse_wheel_speed.dart';
@@ -70,12 +71,18 @@ Future<ScrollController> _pump(
   return controller;
 }
 
-Future<void> _wheel(WidgetTester tester, Offset delta) async {
+Future<void> _wheel(
+  WidgetTester tester,
+  Offset delta, {
+  bool shift = false,
+}) async {
+  if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
   final center = tester.getCenter(find.byType(ListView));
   final pointer = TestPointer(1, PointerDeviceKind.mouse);
   pointer.hover(center);
   await tester.sendEventToBinding(pointer.scroll(delta));
   await tester.pumpAndSettle();
+  if (shift) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
 }
 
 void main() {
@@ -124,5 +131,18 @@ void main() {
       lessThan(total * 0.4),
       reason: 'one frame covered too much of the move: $samples',
     );
+  });
+
+  testWidgets('Shift plus vertical wheel scrolls a horizontal strip', (
+    tester,
+  ) async {
+    final plain = await _pump(tester, speed: 1, axis: Axis.horizontal);
+    await _wheel(tester, const Offset(0, 53), shift: true);
+    final base = plain.position.pixels;
+    expect(base, greaterThan(0), reason: 'the platform did not scroll at all');
+
+    final scaled = await _pump(tester, speed: 1.7, axis: Axis.horizontal);
+    await _wheel(tester, const Offset(0, 53), shift: true);
+    expect(scaled.position.pixels, closeTo(base * 1.7, 0.5));
   });
 }
