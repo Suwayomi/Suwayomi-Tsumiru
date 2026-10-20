@@ -8,15 +8,9 @@ class MigrationGlobalSearchRoute extends GoRouteData
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    if ($extra == null) {
-      // If no manga provided, navigate back
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.pop();
-      });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    return MigrationGlobalSearchScreen(sourceManga: $extra!.sourceManga);
+    final extra = $extra;
+    if (extra == null) return const _MigrationDataUnavailable();
+    return MigrationGlobalSearchScreen(sourceManga: extra.sourceManga);
   }
 }
 
@@ -38,10 +32,7 @@ class MigrationSourceMangaRoute extends GoRouteData
   @override
   Widget build(BuildContext context, GoRouterState state) {
     final extra = $extra;
-    if (extra == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => context.pop());
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    if (extra == null) return const _MigrationDataUnavailable();
     return MigrationSourceMangaScreen(data: extra);
   }
 }
@@ -56,8 +47,7 @@ class MigrationBulkConfigRoute extends GoRouteData
   Widget build(BuildContext context, GoRouterState state) {
     final extra = $extra;
     if (extra == null || extra.mangaIds.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => context.pop());
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const _MigrationDataUnavailable();
     }
     return MigrationBulkConfigScreen(mangaIds: extra.mangaIds);
   }
@@ -72,9 +62,47 @@ class MigrationBulkRunRoute extends GoRouteData with $MigrationBulkRunRoute {
   Widget build(BuildContext context, GoRouterState state) {
     final extra = $extra;
     if (extra == null || extra.mangaIds.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => context.pop());
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const _MigrationDataUnavailable();
     }
     return MigrationBulkRunScreen(data: extra);
+  }
+}
+
+/// Shown when a migration route's `$extra` is gone, which happens when the app
+/// restores a location from a URL (extras are not serialized). Popping silently
+/// would drop the user on an unrelated page.
+class _MigrationDataUnavailable extends StatelessWidget {
+  const _MigrationDataUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.l10n.migrationDataUnavailable,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  final router = GoRouter.of(context);
+                  if (router.canPop()) {
+                    router.pop();
+                  } else {
+                    const LibraryRoute(categoryId: 0).go(context);
+                  }
+                },
+                child: Text(context.l10n.back),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

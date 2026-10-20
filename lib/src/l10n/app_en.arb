@@ -2547,6 +2547,7 @@
     }
   },
   "migrationListNoMatch": "No match found",
+  "migrationDataUnavailable": "This migration was not restored. Go back and start it again.",
   "migrationLatestChapter": "Latest chapter: {chapter}",
   "@migrationLatestChapter": {
     "placeholders": {

@@ -41,7 +41,7 @@ class DesktopSidebar extends ConsumerWidget {
     required this.onDestinationSelected,
   });
 
-  final int selectedIndex;
+  final int? selectedIndex;
   final ValueChanged<int> onDestinationSelected;
 
   static const double expandedWidth = 208;

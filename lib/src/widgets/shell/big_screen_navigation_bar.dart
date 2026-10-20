@@ -24,7 +24,7 @@ class BigScreenNavigationBar extends ConsumerWidget {
     required this.onDestinationSelected,
   });
 
-  final int selectedIndex;
+  final int? selectedIndex;
   final ValueChanged<int> onDestinationSelected;
 
   NavigationRailDestination getNavigationRailDestination(

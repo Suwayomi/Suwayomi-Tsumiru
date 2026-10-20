@@ -404,7 +404,7 @@ class DetailNavigationShellRoute extends ShellRouteData {
 
   @override
   Widget builder(context, state, navigator) =>
-      DetailNavigationShellScreen(child: navigator);
+      DetailNavigationShellScreen(highlightBranch: false, child: navigator);
 
   @override
   Page<void> pageBuilder(context, state, navigator) =>
