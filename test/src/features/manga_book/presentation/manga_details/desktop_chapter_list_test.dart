@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -90,6 +91,14 @@ final _manga = MangaDto.fromJson({
   'inLibrary': true,
   'inLibraryAt': '0',
   'initialized': true,
+  // Reading progress, so the header offers Resume rather than Start.
+  'lastReadChapter': {
+    'id': 2,
+    'isRead': false,
+    'lastPageRead': 4,
+    'lastReadAt': '1',
+    '__typename': 'ChapterType',
+  },
   'meta': [],
   'sourceId': '0',
   'status': 'ONGOING',
@@ -178,6 +187,24 @@ class _FakeToast implements Toast {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Mirrors the desktop shell: the sidebar takes layout width from the page
+/// (60 px collapsed, 208 px expanded) without changing the window size class.
+class _ShellInset extends StatelessWidget {
+  const _ShellInset({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final inset = width >= 1200 ? 208.0 : (width >= 840 ? 60.0 : 0.0);
+    return Padding(
+      padding: EdgeInsets.only(left: inset),
+      child: child,
+    );
+  }
+}
+
 Widget _app(
   SharedPreferences preferences, {
   List<Override> overrides = const [],
@@ -212,7 +239,9 @@ Widget _app(
           builder: (context) => Column(
             children: [
               if (showsMergedTopBar(context)) const DesktopTopBar(),
-              const Expanded(child: MangaDetailsScreen(mangaId: 1)),
+              const Expanded(
+                child: _ShellInset(child: MangaDetailsScreen(mangaId: 1)),
+              ),
             ],
           ),
         ),
@@ -257,6 +286,26 @@ Future<void> _pumpDesktop(
 bool _oneLineRows(WidgetTester tester) =>
     tester.widget<ChapterListTile>(find.byType(ChapterListTile).first).desktop;
 
+/// A present label can still be ellipsised, so check the laid-out text.
+void _expectFullLabel(WidgetTester tester, String label) {
+  final finder = find.text(label);
+  expect(finder, findsOneWidget);
+  final paragraph = tester.renderObject<RenderParagraph>(finder);
+  expect(
+    paragraph.didExceedMaxLines,
+    isFalse,
+    reason: '"$label" is ellipsised',
+  );
+  final painter = TextPainter(
+    text: TextSpan(text: label, style: (paragraph.text as TextSpan).style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(tester.element(finder)),
+    maxLines: 1,
+  )..layout();
+  expect(paragraph.size.width, greaterThanOrEqualTo(painter.width));
+  painter.dispose();
+}
+
 Future<void> _selectRange(WidgetTester tester, String from, String to) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
   await tester.tap(find.text(from));
@@ -277,14 +326,34 @@ void main() {
     expect(find.byType(BigScreenMangaDetails), findsOneWidget);
     expect(find.byType(SmallScreenMangaDetails), findsNothing);
     expect(find.byType(BrandFab), findsNothing);
+    // The info column beside the cover is too narrow for both pills, so they
+    // move to their own full-width row and keep their labels.
+    expect(
+      find.byKey(const ValueKey('series-header-stacked-controls')),
+      findsOneWidget,
+    );
+    _expectFullLabel(tester, 'Resume');
+    _expectFullLabel(tester, 'In library');
 
     tester.view.physicalSize = const Size(1199, 900);
     await tester.pumpAndSettle();
     expect(_oneLineRows(tester), isFalse);
+    expect(
+      find.byKey(const ValueKey('series-header-stacked-controls')),
+      findsNothing,
+    );
+    _expectFullLabel(tester, 'Resume');
+    _expectFullLabel(tester, 'In library');
 
     tester.view.physicalSize = const Size(1200, 900);
     await tester.pumpAndSettle();
     expect(_oneLineRows(tester), isTrue);
+    expect(
+      find.byKey(const ValueKey('series-header-stacked-controls')),
+      findsOneWidget,
+    );
+    _expectFullLabel(tester, 'Resume');
+    _expectFullLabel(tester, 'In library');
   });
 
   testWidgets('Undo after bulk mark read restores once the bar is gone', (

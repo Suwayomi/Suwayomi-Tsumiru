@@ -76,149 +76,218 @@ class SeriesHeader extends ConsumerWidget {
         ? ref.watch(firstUnreadInFilteredChapterListProvider(mangaId: manga.id))
         : null;
     final inLibrary = manga.inLibrary.ifNull();
+    final resumeLabel = manga.lastReadChapter?.hasReadingProgress == true
+        ? context.l10n.resume
+        : context.l10n.start;
+    final libraryLabel = inLibrary
+        ? context.l10n.inLibrary
+        : context.l10n.addToLibrary;
+    // The two buttons need this much room beside the cover to keep both labels
+    // on one line. Measured from the real labels, padding and icon, so the
+    // switch follows the content rather than a window width.
+    final resumeWidth = next != null
+        ? _pillWidth(context, resumeLabel, gradient: true)
+        : 0.0;
+    final libraryWidth = _pillWidth(context, libraryLabel, gradient: false);
+    final controlsWidth = resumeWidth + libraryWidth + (next != null ? 10 : 0);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                key: const ValueKey('series-header-cover'),
-                width: coverWidth,
-                height: coverWidth * 1.5,
-                child: CardTheme(
-                  data: CardTheme.of(context).copyWith(margin: EdgeInsets.zero),
-                  child: MangaCoverGridTile(
-                    manga: manga,
-                    showBadges: false,
-                    showTitle: false,
-                    showDarkOverlay: false,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  if (!desktop) ...[
-                    InkWell(
-                      onTap: () =>
-                          openGlobalSearch(context, query: manga.title),
-                      child: Text(
-                        manga.title,
-                        style: context.textTheme.titleLarge,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final infoWidth = constraints.maxWidth - coverWidth - 18;
+          final stackControls = controlsWidth > infoWidth;
+          // Equal halves while both labels fit; past that the wider label gets
+          // the larger share, so neither is clipped.
+          final halfWidth = (constraints.maxWidth - 10) / 2;
+          final equalButtons =
+              halfWidth >= resumeWidth && halfWidth >= libraryWidth;
+          Widget stacked(Widget pill, double width) =>
+              Expanded(flex: equalButtons ? 1 : width.ceil(), child: pill);
+          Widget resumePill() => SeriesHeaderPill(
+            gradient: true,
+            icon: Icons.play_arrow_rounded,
+            label: resumeLabel,
+            onPressed: () => ReaderRoute(
+              mangaId: next!.mangaId,
+              chapterId: next.id,
+              showReaderLayoutAnimation: true,
+            ).push(context),
+          );
+          Widget libraryPill() => SeriesHeaderPill(
+            icon: inLibrary
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            label: libraryLabel,
+            onPressed: onLibraryPressed,
+          );
+          // Loose flex weighted by the measured widths, so neither label is
+          // capped at an equal share of the row.
+          final controls = Row(
+            key: const ValueKey('series-header-controls'),
+            children: [
+              if (next != null) ...[
+                Flexible(flex: resumeWidth.ceil(), child: resumePill()),
+                const SizedBox(width: 10),
+              ],
+              Flexible(flex: libraryWidth.ceil(), child: libraryPill()),
+            ],
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        key: const ValueKey('series-header-cover'),
+                        width: coverWidth,
+                        height: coverWidth * 1.5,
+                        child: CardTheme(
+                          data: CardTheme.of(
+                            context,
+                          ).copyWith(margin: EdgeInsets.zero),
+                          child: MangaCoverGridTile(
+                            manga: manga,
+                            showBadges: false,
+                            showTitle: false,
+                            showDarkOverlay: false,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                  ],
-                  InkWell(
-                    onTap: manga.author.isNotBlank
-                        ? () => openGlobalSearch(context, query: manga.author)
-                        : null,
-                    child: Text(
-                      manga.author ?? context.l10n.unknownAuthor,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.bodyMedium,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        MangaStatus.fromJson(manga.status.name).icon,
-                        size: 16,
-                        color: context.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              MangaStatus.fromJson(
-                                manga.status.name,
-                              ).toLocale(context),
-                              style: context.textTheme.bodySmall,
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          if (!desktop) ...[
+                            InkWell(
+                              onTap: () =>
+                                  openGlobalSearch(context, query: manga.title),
+                              child: Text(
+                                manga.title,
+                                style: context.textTheme.titleLarge,
+                              ),
                             ),
-                            if (manga.source?.displayName != null) ...[
-                              const Text(' • '),
-                              InkWell(
-                                onTap: manga.source!.id.isNotBlank
-                                    ? () => SourceTypeRoute(
-                                        sourceId: manga.source!.id,
-                                        sourceType: SourceType.POPULAR,
-                                      ).go(context)
-                                    : null,
-                                child: Text(
-                                  manga.source!.displayName,
-                                  style: context.textTheme.bodySmall,
+                            const SizedBox(height: 6),
+                          ],
+                          InkWell(
+                            onTap: manga.author.isNotBlank
+                                ? () => openGlobalSearch(
+                                    context,
+                                    query: manga.author,
+                                  )
+                                : null,
+                            child: Text(
+                              manga.author ?? context.l10n.unknownAuthor,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.textTheme.bodyMedium,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(
+                                MangaStatus.fromJson(manga.status.name).icon,
+                                size: 16,
+                                color: context.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      MangaStatus.fromJson(
+                                        manga.status.name,
+                                      ).toLocale(context),
+                                      style: context.textTheme.bodySmall,
+                                    ),
+                                    if (manga.source?.displayName != null) ...[
+                                      const Text(' • '),
+                                      InkWell(
+                                        onTap: manga.source!.id.isNotBlank
+                                            ? () => SourceTypeRoute(
+                                                sourceId: manga.source!.id,
+                                                sourceType: SourceType.POPULAR,
+                                              ).go(context)
+                                            : null,
+                                        child: Text(
+                                          manga.source!.displayName,
+                                          style: context.textTheme.bodySmall,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],
+                          ),
+                          if (belowStatus != null) ...[
+                            const SizedBox(height: 6),
+                            belowStatus!,
                           ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (belowStatus != null) ...[
-                    const SizedBox(height: 6),
-                    belowStatus!,
-                  ],
-                  if (desktop) ...[
-                    const Spacer(),
-                    const SizedBox(height: 10),
-                    MangaRatingBar(mangaId: manga.id, compact: true),
-                    const SizedBox(height: 4),
-                    Row(
-                      key: const ValueKey('series-header-controls'),
-                      children: [
-                        if (next != null) ...[
-                          Flexible(
-                            child: SeriesHeaderPill(
-                              gradient: true,
-                              icon: Icons.play_arrow_rounded,
-                              label:
-                                  manga.lastReadChapter?.hasReadingProgress ==
-                                      true
-                                  ? context.l10n.resume
-                                  : context.l10n.start,
-                              onPressed: () => ReaderRoute(
-                                mangaId: next.mangaId,
-                                chapterId: next.id,
-                                showReaderLayoutAnimation: true,
-                              ).push(context),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
+                          if (desktop) ...[
+                            const Spacer(),
+                            const SizedBox(height: 10),
+                            MangaRatingBar(mangaId: manga.id, compact: true),
+                            if (!stackControls) ...[
+                              const SizedBox(height: 4),
+                              controls,
+                            ],
+                          ],
                         ],
-                        Flexible(
-                          child: SeriesHeaderPill(
-                            icon: inLibrary
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            label: inLibrary
-                                ? context.l10n.inLibrary
-                                : context.l10n.addToLibrary,
-                            onPressed: onLibraryPressed,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
+              if (stackControls) ...[
+                const SizedBox(height: 14),
+                Row(
+                  key: const ValueKey('series-header-stacked-controls'),
+                  children: [
+                    if (next != null) ...[
+                      stacked(resumePill(), resumeWidth),
+                      const SizedBox(width: 10),
+                    ],
+                    stacked(libraryPill(), libraryWidth),
+                  ],
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+double _pillWidth(
+  BuildContext context,
+  String label, {
+  required bool gradient,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: context.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final labelWidth = painter.width.ceilToDouble();
+  painter.dispose();
+  // Horizontal padding, the 20 px icon and its gap, matching SeriesHeaderPill.
+  return labelWidth + (gradient ? 44 : 40) + 20 + (gradient ? 6 : 8);
 }
 
 class SeriesHeaderPill extends HookWidget {
