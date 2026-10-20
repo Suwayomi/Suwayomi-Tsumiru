@@ -12,9 +12,8 @@ void main() {
     test('reports the read fraction', () {
       expect(coverReadFraction(totalChapters: 10, unreadCount: 3), 0.7);
       expect(coverReadFraction(totalChapters: 8, unreadCount: 0), 1.0);
-    });
 
-    test('nothing read, no chapters or more unread than total -> null', () {
+      // Nothing read, no chapters or more unread than total -> null.
       expect(coverReadFraction(totalChapters: 10, unreadCount: 10), isNull);
       expect(coverReadFraction(totalChapters: 0, unreadCount: 0), isNull);
       // Clamps instead of going negative.

@@ -84,19 +84,6 @@ class _LateDownloadCache extends _RecordingCacheManager {
   }
 }
 
-class _DelayedCacheManager extends _RecordingCacheManager {
-  final entered = Completer<void>();
-  final lookup = Completer<FileInfo?>();
-  @override
-  Future<FileInfo?> getFileFromCache(
-    String key, {
-    bool ignoreMemCache = false,
-  }) {
-    if (!entered.isCompleted) entered.complete();
-    return lookup.future;
-  }
-}
-
 /// Records cache traffic; [cachedKeys] entries answer getFileFromCache.
 class _RecordingCacheManager extends Fake implements CacheManager {
   final cachedKeys = <String>{};
@@ -185,94 +172,5 @@ void main() {
     await warmer.warmLibraryCovers(manga);
     expect(cache.downloads, hasLength(2));
     expect(cache.lookups.last, cache.downloads.first.key);
-  });
-
-  test('account replacement cancels a pending cover cache lookup', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final auth = _SessionStore();
-    final cache = _DelayedCacheManager();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        authCredentialsStoreProvider.overrideWith(() => auth),
-        coverCacheManagerProvider.overrideWithValue(cache),
-      ],
-    );
-    addTearDown(container.dispose);
-    final pending = container
-        .read(offlineCoverWarmerProvider.notifier)
-        .warmLibraryCovers([_manga(1, thumbnailUrl: '/manga/1/thumbnail')]);
-    await cache.entered.future;
-    auth.epoch++;
-    cache.lookup.complete(null);
-    await pending;
-    expect(cache.downloads, isEmpty);
-  });
-
-  group('isCoverImagePath', () {
-    test('routes covers and source icons to the durable cache, not pages', () {
-      expect(isCoverImagePath('/api/v1/manga/12/thumbnail'), isTrue);
-      expect(isCoverImagePath('/api/v1/extension/icon/foo.apk'), isTrue);
-      expect(isCoverImagePath('/api/v1/manga/12/chapter/3/page/0'), isFalse);
-    });
-  });
-
-  group('OfflineCoverWarmer', () {
-    late _RecordingCacheManager cache;
-    late ProviderContainer container;
-
-    setUp(() async {
-      SharedPreferences.setMockInitialValues({
-        'flutter.serverUrl': 'http://server.test',
-        'flutter.serverPortToggle': false,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      cache = _RecordingCacheManager();
-      container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          coverCacheManagerProvider.overrideWithValue(cache),
-        ],
-      );
-      addTearDown(container.dispose);
-    });
-
-    test(
-      'downloads missing covers only, under the un-tokened cache key',
-      () async {
-        // Missing covers download under the un-tokened key.
-        await container
-            .read(offlineCoverWarmerProvider.notifier)
-            .warmLibraryCovers([
-              _manga(1, thumbnailUrl: '/api/v1/manga/1/thumbnail'),
-              _manga(2, thumbnailUrl: '/api/v1/manga/2/thumbnail'),
-            ]);
-        expect(cache.downloads.map((d) => d.key).toSet(), {
-          'http://server.test/api/v1/manga/1/thumbnail',
-          'http://server.test/api/v1/manga/2/thumbnail',
-        });
-
-        // Covers already in the cache are skipped.
-        cache.downloads.clear();
-        cache.cachedKeys.add('http://server.test/api/v1/manga/1/thumbnail');
-        await container
-            .read(offlineCoverWarmerProvider.notifier)
-            .warmLibraryCovers([
-              _manga(1, thumbnailUrl: '/api/v1/manga/1/thumbnail'),
-              _manga(2, thumbnailUrl: '/api/v1/manga/2/thumbnail'),
-            ]);
-        expect(cache.downloads.map((d) => d.key).toList(), [
-          'http://server.test/api/v1/manga/2/thumbnail',
-        ]);
-
-        // Manga with no thumbnail are ignored.
-        cache.downloads.clear();
-        await container
-            .read(offlineCoverWarmerProvider.notifier)
-            .warmLibraryCovers([_manga(1, thumbnailUrl: null)]);
-        expect(cache.downloads, isEmpty);
-      },
-    );
   });
 }

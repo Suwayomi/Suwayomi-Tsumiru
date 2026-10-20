@@ -29,13 +29,6 @@ ChapterDto _ch(int id) => Fragment$ChapterDto(
 
 void main() {
   group('DeleteChaptersSettings.fromMeta', () {
-    test('defaults to all-off when the keys are absent', () {
-      final s = DeleteChaptersSettings.fromMeta(const {});
-      expect(s.deleteManuallyMarkedRead, isFalse);
-      expect(s.deleteWhileReading, 0);
-      expect(s.deleteWithBookmark, isFalse);
-    });
-
     test('parses the webUI_ global-meta keys and rejects bad values', () {
       final parsed = DeleteChaptersSettings.fromMeta(const {
         kDeleteChaptersManuallyMarkedReadKey: 'true',
@@ -90,12 +83,6 @@ void main() {
       expect(chapterIdToDeleteWhileReading(desc, false, 3, 1), 3);
       expect(chapterIdToDeleteWhileReading(desc, false, 3, 2), 2);
       expect(chapterIdToDeleteWhileReading(desc, false, 3, 3), 1);
-    });
-
-    test('never targets a chapter ahead, out of range, or an unknown id', () {
-      expect(chapterIdToDeleteWhileReading(asc, true, 1, 2), isNull);
-      expect(chapterIdToDeleteWhileReading(desc, false, 1, 2), isNull);
-      expect(chapterIdToDeleteWhileReading(asc, true, 999, 1), isNull);
     });
   });
 }

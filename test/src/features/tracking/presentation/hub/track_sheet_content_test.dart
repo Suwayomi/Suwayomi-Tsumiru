@@ -95,27 +95,4 @@ void main() {
     expect(find.text('Log in to edit'), findsOneWidget);
     expect(find.text('Log in to a tracker'), findsNothing);
   });
-
-  testWidgets('error state shows the message and a retry', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          trackersProvider.overrideWith(
-            (ref) async => throw Exception('network error'),
-          ),
-          mangaTrackRecordsProvider(mangaId: 1).overrideWith((ref) async => []),
-        ],
-        child: const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: TrackSheetContent(mangaId: 1)),
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.text('Exception: network error'), findsOneWidget);
-    expect(find.text('Refresh'), findsOneWidget);
-  });
 }

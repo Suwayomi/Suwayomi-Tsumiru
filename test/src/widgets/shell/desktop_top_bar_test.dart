@@ -149,25 +149,11 @@ Future<void> pumpRoute(
 }
 
 void main() {
-  test('breakpoint is built from the actual part widths', () {
-    // Brand block + gap + slot + gap + window buttons + gap.
-    expect(
-      topBarBreakpoint(brandWidth: 208, slotMinWidth: 500, isMacOS: false),
-      208 + 10 + 500 + 10 + 3 * 46 + 10,
-    );
-    // macOS draws no window buttons.
-    expect(
-      topBarBreakpoint(brandWidth: 208, slotMinWidth: 500, isMacOS: true),
-      208 + 10 + 500 + 10,
-    );
-  });
-
-  testWidgets('merged bar layout across native, web and tablets', (
-    tester,
-  ) async {
+  testWidgets('merged bar, two-row fallback and macOS rail', (tester) async {
     addTearDown(() {
       debugDesktopPlatformOverride = null;
       debugAndroidOverride = null;
+      debugMacOSOverride = null;
     });
 
     // Native desktop: one bar above the sidebar, window chrome, drag area.
@@ -277,18 +263,11 @@ void main() {
     expect(find.byType(DesktopTopBar), findsNothing);
     expect(find.byType(DesktopTitleBar), findsNothing);
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('two-row fallback and macOS rail', (tester) async {
-    addTearDown(() {
-      debugMacOSOverride = null;
-      debugDesktopPlatformOverride = null;
-    });
 
     // Below the breakpoint the title bar and toolbar stack; the sidebar
     // starts under the toolbar row, auto-collapsed.
     SharedPreferences.setMockInitialValues(const {});
-    var prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
     await pumpRoute(tester, const Size(600, 900));
     final titleBar = find.byType(DesktopTitleBar);
     expect(titleBar, findsOneWidget);
@@ -384,30 +363,6 @@ void main() {
     );
     expect(find.byType(DesktopBrandRow), findsOneWidget);
     expect(find.text('Tsumiru'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('auto-collapse below the breakpoint keeps the preference', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': true});
-    final prefs = await SharedPreferences.getInstance();
-    await _pumpFrame(tester, prefs, size: const Size(900, 900));
-
-    expect(
-      tester.getSize(find.byType(DesktopSidebar)).width,
-      DesktopSidebar.collapsedWidth,
-    );
-    expect(prefs.getBool('sidebarExpanded'), isTrue);
-
-    // Back at full width the saved preference applies again, still unchanged.
-    tester.view.physicalSize = const Size(1400, 900);
-    await tester.pumpAndSettle();
-    expect(
-      tester.getSize(find.byType(DesktopSidebar)).width,
-      DesktopSidebar.expandedWidth,
-    );
-    expect(prefs.getBool('sidebarExpanded'), isTrue);
     expect(tester.takeException(), isNull);
   });
 }

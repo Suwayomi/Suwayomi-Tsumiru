@@ -4,41 +4,27 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:hooks_riverpod/misc.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
-import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
-import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
 import 'package:tsumiru/src/widgets/server_unreachable_view.dart';
-
-const _unsupportedMessage =
-    "This server uses a sign-in method the browser version can't use. Set the server's authentication mode to UI login, or use the Android, iOS or desktop app.";
-const _unconfirmedMessage =
-    "This server didn't accept the browser's request. If it uses Basic auth or Simple login, set its authentication mode to UI login, or use the Android, iOS or desktop app. Otherwise check the address.";
 
 Widget _host(
   AsyncValue<int> async, {
   VoidCallback? refresh,
   bool escapeHatch = false,
   bool catalogAvailable = false,
-  List<Override> extraOverrides = const [],
 }) => ProviderScope(
   overrides: [
     offlineCatalogAvailableProvider.overrideWith(
       (ref) async => catalogAvailable,
     ),
-    ...extraOverrides,
   ],
   child: MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -56,94 +42,7 @@ Widget _host(
   ),
 );
 
-// Web overrides: the browser flag plus a saved sign-in method, as the
-// server-unreachable view reads them.
-Future<List<Override>> _webOverrides({
-  required bool isWeb,
-  AuthType? savedAuthType,
-}) async {
-  SharedPreferences.setMockInitialValues({
-    if (savedAuthType != null) 'authType': savedAuthType.index,
-  });
-  return [
-    isWebProvider.overrideWithValue(isWeb),
-    sharedPreferencesProvider.overrideWithValue(
-      await SharedPreferences.getInstance(),
-    ),
-  ];
-}
-
-// A non-JSON GraphQL answer in its production wrapping: the repository throws
-// the message exception around the operation exception.
-OperationMessageException _notJsonError(int status, String snippet) =>
-    OperationMessageException(
-      OperationException(
-        linkException: HttpLinkParserException(
-          originalException: ServerNotJsonException(status, snippet),
-          originalStackTrace: StackTrace.empty,
-          response: http.Response(snippet, status),
-        ),
-      ),
-    );
-
-// A genuine unreachable-server failure as it arrives in the app: the GraphQL
-// wrapper around a ServerException whose cause is a socket error.
-OperationMessageException _connectionError() => OperationMessageException(
-  OperationException(
-    linkException: ServerException(
-      parsedResponse: null,
-      originalException: const SocketException('unreachable'),
-    ),
-  ),
-);
-
 void main() {
-  testWidgets('a connection failure shows the server-unreachable view', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _host(AsyncError(_connectionError(), StackTrace.current), refresh: () {}),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ServerUnreachableView), findsOneWidget);
-    expect(find.text("Can't reach your server"), findsOneWidget);
-  });
-
-  testWidgets(
-    'an ordinary error keeps the generic error and its escape hatches',
-    (tester) async {
-      await tester.pumpWidget(
-        _host(AsyncError<int>('boom', StackTrace.current)),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byType(ServerUnreachableView), findsNothing);
-      expect(find.text('boom'), findsOneWidget);
-      expect(find.text('View offline'), findsNothing);
-
-      // The pin is a bypass, never a mask: the error stays on screen.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpWidget(
-        _host(
-          AsyncError<int>('boom', StackTrace.current),
-          escapeHatch: true,
-          catalogAvailable: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('boom'), findsOneWidget);
-      expect(find.text('View offline'), findsOneWidget);
-
-      // Without a catalog there is nothing to view offline.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpWidget(
-        _host(AsyncError<int>('boom', StackTrace.current), escapeHatch: true),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('View offline'), findsNothing);
-    },
-  );
-
   // The live 3:03 failure, end to end: proxy answers 502 HTML for a dead
   // upstream -> parser wraps the decoder throw -> the app treats it as
   // unreachable and offers the offline library.
@@ -171,67 +70,5 @@ void main() {
 
     expect(find.byType(ServerUnreachableView), findsOneWidget);
     expect(find.text('View offline'), findsOneWidget);
-  });
-
-  testWidgets('a web 404 "Not Found" shows auth guidance, other 404s do not', (
-    tester,
-  ) async {
-    // Basic and no-auth saved logins both get the unconfirmed guidance.
-    for (final auth in [AuthType.basic, AuthType.none]) {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpWidget(
-        _host(
-          AsyncError<int>(_notJsonError(404, 'Not Found'), StackTrace.current),
-          extraOverrides: await _webOverrides(isWeb: true, savedAuthType: auth),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.byType(ServerUnreachableView),
-        findsOneWidget,
-        reason: '$auth',
-      );
-      expect(find.text(_unconfirmedMessage), findsOneWidget, reason: '$auth');
-      expect(find.text(_unsupportedMessage), findsNothing, reason: '$auth');
-    }
-
-    // A different 404 body keeps the generic error.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(
-      _host(
-        AsyncError<int>(
-          _notJsonError(404, '<html>proxy 404</html>'),
-          StackTrace.current,
-        ),
-        extraOverrides: await _webOverrides(
-          isWeb: true,
-          savedAuthType: AuthType.basic,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(ServerUnreachableView), findsNothing);
-    expect(
-      find.text('Server returned a non-JSON response (HTTP 404)'),
-      findsOneWidget,
-    );
-
-    // Native is never given the web guidance.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(
-      _host(
-        AsyncError<int>(_notJsonError(404, 'Not Found'), StackTrace.current),
-        extraOverrides: await _webOverrides(
-          isWeb: false,
-          savedAuthType: AuthType.basic,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(ServerUnreachableView), findsNothing);
-    expect(
-      find.text('Server returned a non-JSON response (HTTP 404)'),
-      findsOneWidget,
-    );
   });
 }

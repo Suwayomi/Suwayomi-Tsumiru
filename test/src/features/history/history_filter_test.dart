@@ -102,14 +102,13 @@ void main() {
         historyItemMatchesFilter(_item(inLibrary: true), notInLibrary),
         isFalse,
       );
-    });
 
-    test('filters combine, so all must pass', () {
-      const filter = (unfinishedSeries: true, unread: true, inLibrary: true);
-      expect(historyItemMatchesFilter(_item(), filter), isTrue);
+      // Filters combine, so all must pass.
+      const combined = (unfinishedSeries: true, unread: true, inLibrary: true);
+      expect(historyItemMatchesFilter(_item(), combined), isTrue);
       // Fails on library membership alone.
       expect(
-        historyItemMatchesFilter(_item(inLibrary: false), filter),
+        historyItemMatchesFilter(_item(inLibrary: false), combined),
         isFalse,
       );
     });

@@ -148,7 +148,7 @@ Future<void> openConnectDialog(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('shows Disconnected and the four settings rows', (tester) async {
+  testWidgets('load, unsupported server and connect states', (tester) async {
     await pumpScreen(tester, KoSyncLink());
 
     expect(find.text('KOReader Sync'), findsOneWidget);
@@ -160,11 +160,9 @@ void main() {
     expect(find.text('Prompt'), findsNWidgets(2));
     expect(find.text('Binary'), findsOneWidget);
     expect(find.text('0'), findsOneWidget);
-  });
 
-  testWidgets('a server without KOReader Sync fields shows the update message', (
-    tester,
-  ) async {
+    // A server without KOReader Sync fields shows the update message.
+    await tester.pumpWidget(const SizedBox.shrink());
     await pumpScreen(
       tester,
       KoSyncLink(),
@@ -182,10 +180,9 @@ void main() {
       ),
       findsOneWidget,
     );
-  });
 
-  testWidgets('connect success and failure', (tester) async {
     // A failed connect keeps the dialog open and saves nothing.
+    await tester.pumpWidget(const SizedBox.shrink());
     final failing = KoSyncLink(connectSucceeds: false);
     await pumpScreen(tester, failing);
     await openConnectDialog(tester);

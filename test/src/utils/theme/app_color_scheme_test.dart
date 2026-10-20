@@ -14,7 +14,8 @@ void main() {
   ColorScheme darkScheme(AppTheme theme) =>
       schemeFromTokens(tokensFor(theme, Brightness.dark), Brightness.dark);
 
-  test('Monochrome dark: onPrimary is dark against its light-grey accent', () {
+  test('Monochrome dark: onPrimary is dark against its light-grey accent, and '
+      'every dark theme contrasts', () {
     final scheme = darkScheme(AppTheme.mono);
     // The accent is a near-white grey, so white text was illegible (#105).
     expect(
@@ -23,15 +24,13 @@ void main() {
       reason: 'the Monochrome accent should be light',
     );
     expect(scheme.onPrimary, Colors.black);
-  });
 
-  test('every dark theme: onPrimary genuinely contrasts primary', () {
     for (final theme in AppTheme.values) {
       if (theme == AppTheme.custom) continue; // custom is ColorScheme.fromSeed
-      final scheme = darkScheme(theme);
+      final dark = darkScheme(theme);
       final contrast =
-          (scheme.primary.computeLuminance() -
-                  scheme.onPrimary.computeLuminance())
+          (dark.primary.computeLuminance() -
+                  dark.onPrimary.computeLuminance())
               .abs();
       expect(
         contrast,

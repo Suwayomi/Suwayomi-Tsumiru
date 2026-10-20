@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
-import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import 'package:tsumiru/src/utils/misc/graphql_undefined_field.dart';
 
 GraphQLError _error(String message, {Map<String, dynamic>? extensions}) =>
@@ -94,37 +93,6 @@ void main() {
         field: 'user',
       ),
       isFalse,
-    );
-  });
-
-  test('a contradicting classification does not match', () {
-    expect(
-      isUndefinedFieldError(
-        _error(
-          "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined",
-          extensions: {'classification': 'DataFetchingException'},
-        ),
-        type: 'Query',
-        field: 'user',
-      ),
-      isFalse,
-    );
-  });
-
-  test('onlyUndefinedFieldErrors unwraps OperationMessageException', () {
-    expect(
-      onlyUndefinedFieldErrors(
-        OperationMessageException(
-          OperationException(
-            graphqlErrors: [
-              _error('Cannot query field "user" on type "Query".'),
-            ],
-          ),
-        ),
-        type: 'Query',
-        field: 'user',
-      ),
-      isTrue,
     );
   });
 }

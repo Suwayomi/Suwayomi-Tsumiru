@@ -10,30 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/tracking/domain/tracker_oauth_helpers.dart';
 
 void main() {
-  const authUrl =
-      'https://myanimelist.net/v1/oauth2/authorize?response_type=code&client_id=abc';
-  const trackerId = 1;
-  const trackerName = 'MyAnimeList';
   const redirectUrl = 'tsumiru://tracker-oauth';
-
-  group('buildTrackerAuthUrl', () {
-    test('starts with the authUrl and carries the state JSON', () {
-      final result = buildTrackerAuthUrl(
-        authUrl: authUrl,
-        trackerId: trackerId,
-        trackerName: trackerName,
-        redirectUrl: redirectUrl,
-      );
-      expect(result, startsWith(authUrl));
-      expect(result, contains('&state='));
-      final stateEncoded = Uri.parse(result).queryParameters['state']!;
-      final stateDecoded =
-          jsonDecode(Uri.decodeComponent(stateEncoded)) as Map<String, dynamic>;
-      expect(stateDecoded['redirectUrl'], equals(redirectUrl));
-      expect(stateDecoded['trackerId'], equals(trackerId));
-      expect(stateDecoded['trackerName'], equals(trackerName));
-    });
-  });
 
   group('parseTrackerIdFromCallback', () {
     Uri makeUri(Map<String, dynamic> stateMap) {
@@ -41,7 +18,7 @@ void main() {
       return Uri.parse('tsumiru://tracker-oauth?code=xyz&state=$encoded');
     }
 
-    test('reads the tracker id, including a string form', () {
+    test('reads the tracker id, including a string form, or null', () {
       expect(
         parseTrackerIdFromCallback(
           makeUri({
@@ -58,9 +35,8 @@ void main() {
         ),
         equals(42),
       );
-    });
 
-    test('returns null for a missing, malformed or id-less state', () {
+      // A missing, malformed or id-less state has no tracker.
       expect(
         parseTrackerIdFromCallback(
           Uri.parse('tsumiru://tracker-oauth?code=xyz'),

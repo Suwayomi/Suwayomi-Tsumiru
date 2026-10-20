@@ -9,7 +9,7 @@ import 'package:tsumiru/src/features/tracking/domain/track_progress_gate.dart';
 
 void main() {
   group('shouldTrackProgress', () {
-    test('auto path gates on enabledAfterReading, not manual mark-read', () {
+    test('auto path gates on enabledAfterReading, manual on its own flag', () {
       expect(
         shouldTrackProgress(
           isRead: true,
@@ -41,9 +41,7 @@ void main() {
         ),
         isTrue,
       );
-    });
 
-    test('manual path gates on enabledManualMarkRead, not after-reading', () {
       expect(
         shouldTrackProgress(
           isRead: true,
@@ -75,9 +73,8 @@ void main() {
         ),
         isTrue,
       );
-    });
 
-    test('read and record gates apply to both paths', () {
+      // Read and record gates apply to both paths.
       expect(
         shouldTrackProgress(
           isRead: false,

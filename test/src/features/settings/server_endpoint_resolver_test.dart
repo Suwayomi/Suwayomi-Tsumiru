@@ -6,7 +6,7 @@ void main() {
     const external = 'https://suwayomi.example.com';
     const lan = 'http://192.168.1.100:4567';
 
-    test('prefers a reachable LAN URL, else the external URL', () async {
+    test('prefers a reachable LAN URL, else falls back to the external URL', () async {
       expect(
         await selectServerUrl(
           externalUrl: external,
@@ -23,10 +23,6 @@ void main() {
         ),
         lan,
       );
-    });
-
-    test('falls back to the external URL when the LAN URL is unavailable, '
-        'normalising it before probing', () async {
       expect(
         await selectServerUrl(
           externalUrl: external,
@@ -36,6 +32,7 @@ void main() {
         external,
       );
 
+      // The fallback normalises the LAN URL before probing it.
       var probed = '';
       await selectServerUrl(
         externalUrl: external,

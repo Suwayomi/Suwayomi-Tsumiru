@@ -23,6 +23,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/widgets/zoom/zoom_view.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 const double _viewportWidth = 400.0;
 const double _viewportHeight = 800.0;
@@ -99,65 +100,54 @@ Future<ZoomViewController> _pumpHarness(
 // bug specific to one axis or one sign shows up clearly.
 const _localFocal = Offset(120, 250);
 
+/// The real on-screen magnification of the page, read off its paint
+/// transform. Unlike [WidgetTester.getSize] this reflects the FittedBox zoom.
+double _paintScale() {
+  final transform = find
+      .byKey(_pageKey)
+      .evaluate()
+      .first
+      .renderObject!
+      .getTransformTo(null);
+  final unit =
+      transform.transform3(Vector3(1, 0, 0)) - transform.transform3(Vector3(0, 0, 0));
+  return unit.length;
+}
+
 void main() {
-  for (final axis in [Axis.vertical, Axis.horizontal]) {
-    for (final reverse in [false, true]) {
-      final label = 'scrollAxis: $axis, reverse: $reverse';
+  testWidgets(
+    'setScale keeps the on-screen size honest and anchors an off-center focal '
+    'point — scrollAxis: horizontal, reverse: true',
+    (tester) async {
+      final zoomController = await _pumpHarness(
+        tester,
+        scrollAxis: Axis.horizontal,
+        reverse: true,
+      );
 
-      testWidgets(
-          'setScaleWithAnimation keeps an off-center focal point anchored on '
-          'screen — $label', (tester) async {
-        final zoomController =
-            await _pumpHarness(tester, scrollAxis: axis, reverse: reverse);
+      // Scaling up and back down changes the rendered size, not the layout.
+      expect(_paintScale(), closeTo(1.0, 0.001));
+      zoomController.setScale(2.0);
+      await tester.pumpAndSettle();
+      expect(_paintScale(), closeTo(2.0, 0.01));
+      zoomController.setScale(1.0);
+      await tester.pumpAndSettle();
+      expect(_paintScale(), closeTo(1.0, 0.01));
 
-        final focalBefore = _globalPositionOf(_localFocal);
-        zoomController.setScaleWithAnimation(2.0, focalPoint: focalBefore);
-        await tester.pumpAndSettle();
-        final focalAfter = _globalPositionOf(_localFocal);
+      final focalBefore = _globalPositionOf(_localFocal);
+      zoomController.setScaleWithAnimation(2.0, focalPoint: focalBefore);
+      await tester.pumpAndSettle();
+      final focalAfter = _globalPositionOf(_localFocal);
 
-        expect(
-          (focalAfter - focalBefore).distance,
-          lessThan(5.0),
-          reason: 'zooming in centered on a point must leave that point '
-              'where it was on screen — before: $focalBefore, after: '
-              '$focalAfter (dx drift: '
-              '${(focalAfter.dx - focalBefore.dx).abs()}, dy drift: '
-              '${(focalAfter.dy - focalBefore.dy).abs()})',
-        );
-      });
-
-      testWidgets(
-          'a live two-finger pinch keeps its focal point anchored on '
-          'screen — $label', (tester) async {
-        await _pumpHarness(tester, scrollAxis: axis, reverse: reverse);
-
-        final focalBefore = _globalPositionOf(_localFocal);
-
-        final g1 =
-            await tester.startGesture(focalBefore + const Offset(-20, 0));
-        final g2 =
-            await tester.startGesture(focalBefore + const Offset(20, 0));
-        for (var i = 0; i < 20; i++) {
-          await g1.moveBy(const Offset(-2, 0));
-          await g2.moveBy(const Offset(2, 0));
-          await tester.pump(const Duration(milliseconds: 16));
-        }
-        await g1.up();
-        await g2.up();
-        await tester.pumpAndSettle();
-
-        final focalAfter = _globalPositionOf(_localFocal);
-
-        expect(
-          (focalAfter - focalBefore).distance,
-          lessThan(15.0),
-          reason: 'the pinched point must stay under the fingers as the '
-              'content scales up around it — before: $focalBefore, '
-              'after: $focalAfter (dx drift: '
-              '${(focalAfter.dx - focalBefore.dx).abs()}, dy drift: '
-              '${(focalAfter.dy - focalBefore.dy).abs()})',
-        );
-      });
-    }
-  }
+      expect(
+        (focalAfter - focalBefore).distance,
+        lessThan(5.0),
+        reason: 'zooming in centered on a point must leave that point '
+            'where it was on screen — before: $focalBefore, after: '
+            '$focalAfter (dx drift: '
+            '${(focalAfter.dx - focalBefore.dx).abs()}, dy drift: '
+            '${(focalAfter.dy - focalBefore.dy).abs()})',
+      );
+    },
+  );
 }

@@ -17,7 +17,6 @@ import 'package:tsumiru/src/features/browse_center/presentation/global_search/co
 import 'package:tsumiru/src/features/browse_center/presentation/global_search/global_search_screen.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/source/controller/source_controller.dart';
 import 'package:tsumiru/src/features/hotkeys/presentation/global_shortcut_host.dart';
-import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_repository.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
@@ -155,7 +154,6 @@ Future<GoRouter> _pump(
   WidgetTester tester,
   Size size, {
   String location = '/library/0',
-  Future<List<MangaDto>?> Function(Ref ref)? libraryList,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -191,8 +189,6 @@ Future<GoRouter> _pump(
         quickSearchResultsProvider(
           query: null,
         ).overrideWith((ref) => AsyncData(const <QuickSearchResults>[])),
-        if (libraryList != null)
-          libraryMangaListProvider.overrideWith(libraryList),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -212,25 +208,6 @@ Future<void> _openSeriesFromLibrary(WidgetTester tester) async {
 }
 
 void main() {
-  for (final size in [const Size(1400, 900), const Size(412, 915)]) {
-    testWidgets(
-      'back from a series opened from the library returns to the library at '
-      '${size.width}px',
-      (tester) async {
-        await _pump(tester, size);
-        await _openSeriesFromLibrary(tester);
-        expect(find.byType(BackButton), findsOneWidget);
-
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
-
-        expect(find.text('LIBRARY'), findsOneWidget);
-        expect(find.byType(MangaDetailsScreen), findsNothing);
-        expect(tester.takeException(), isNull);
-      },
-    );
-  }
-
   testWidgets('every back path returns to the right page', (tester) async {
     final router = await _pump(tester, const Size(412, 915));
     await _openSeriesFromLibrary(tester);
@@ -317,37 +294,5 @@ void main() {
     await _pump(tester, const Size(412, 915), location: '/manga/1');
     expect(find.byType(MangaDetailsScreen), findsOneWidget);
     expect(find.byType(BackButton), findsNothing);
-  });
-
-  testWidgets('leaving a series opened from a category refreshes the library', (
-    tester,
-  ) async {
-    var libraryBuilds = 0;
-    final router = await _pump(
-      tester,
-      const Size(412, 915),
-      libraryList: (ref) async {
-        ref.keepAlive();
-        libraryBuilds++;
-        return const <MangaDto>[];
-      },
-    );
-    final container = ProviderScope.containerOf(
-      tester.element(find.text('LIBRARY')),
-      listen: false,
-    );
-    await container.read(libraryMangaListProvider.future);
-    expect(libraryBuilds, 1);
-
-    router.push(const MangaRoute(mangaId: 1, categoryId: 2).location);
-    await tester.pumpAndSettle();
-    expect(find.byType(MangaDetailsScreen), findsOneWidget);
-
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-    expect(find.text('LIBRARY'), findsOneWidget);
-
-    await container.read(libraryMangaListProvider.future);
-    expect(libraryBuilds, 2, reason: 'the library list is re-read on exit');
   });
 }

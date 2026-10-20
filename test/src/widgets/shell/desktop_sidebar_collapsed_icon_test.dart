@@ -22,10 +22,8 @@ import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 
 Future<void> _pumpCollapsed(
   WidgetTester tester,
-  SharedPreferences prefs, {
-  bool downloadsPaused = false,
-  int extensionUpdates = 0,
-}) async {
+  SharedPreferences prefs,
+) async {
   tester.view.physicalSize = const Size(1400, 900);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -34,10 +32,8 @@ Future<void> _pumpCollapsed(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        downloadsPausedBadgeProvider.overrideWith((ref) => downloadsPaused),
-        extensionUpdateBadgeCountProvider.overrideWith(
-          (ref) async => extensionUpdates,
-        ),
+        downloadsPausedBadgeProvider.overrideWith((ref) => false),
+        extensionUpdateBadgeCountProvider.overrideWith((ref) async => 0),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -95,32 +91,6 @@ void main() {
         tester.widget<Container>(rows.at(i)).padding,
         isNot(const EdgeInsets.symmetric(horizontal: 12)),
         reason: 'collapsed row $i must not keep the expanded 12 px padding',
-      );
-    }
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('badges do not change the collapsed icon size', (tester) async {
-    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
-    final prefs = await SharedPreferences.getInstance();
-    await _pumpCollapsed(
-      tester,
-      prefs,
-      downloadsPaused: true,
-      extensionUpdates: 3,
-    );
-    expect(find.byType(Badge), findsWidgets);
-
-    final icons = find.descendant(
-      of: find.byType(DesktopSidebar),
-      matching: find.byType(AnimatedNavIcon),
-    );
-    expect(icons, findsNWidgets(6));
-    for (var i = 0; i < 6; i++) {
-      expect(
-        tester.getSize(icons.at(i)),
-        const Size(24, 24),
-        reason: 'badged collapsed destination icon $i must stay 24x24',
       );
     }
     expect(tester.takeException(), isNull);

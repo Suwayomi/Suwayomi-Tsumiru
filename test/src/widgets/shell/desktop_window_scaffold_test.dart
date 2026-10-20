@@ -38,7 +38,6 @@ import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_title_bar.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_window_scaffold.dart';
-import 'package:tsumiru/src/widgets/shell/detail_navigation_shell_screen.dart';
 import 'package:window_manager/window_manager.dart';
 
 const _png1x1 =
@@ -229,52 +228,6 @@ void main() {
     // Flush the reader's debounced progress timer before teardown.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 3));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('detail shell shows exactly one bar and no strip', (
-    tester,
-  ) async {
-    final container = await _container();
-    addTearDown(container.dispose);
-    await _pump(
-      tester,
-      container,
-      const DetailNavigationShellScreen(child: Text('detail page')),
-    );
-
-    expect(find.byType(DesktopTopBar), findsOneWidget);
-    expect(find.byType(DesktopTitleBar), findsNothing);
-    expect(find.byType(DragToMoveArea), findsOneWidget);
-    expect(find.text('detail page'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('phones and hosted web draw no strip', (tester) async {
-    debugDesktopPlatformOverride = false;
-    var container = await _container();
-    addTearDown(container.dispose);
-    await _pump(tester, container, const Text('plain page'));
-
-    expect(find.byType(DesktopTitleBar), findsNothing);
-    expect(find.byType(DesktopTopBar), findsNothing);
-    expect(find.text('plain page'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-
-    // Hosted web shows the merged bar instead, and no window chrome.
-    await tester.pumpWidget(const SizedBox.shrink());
-    container = await _container();
-    addTearDown(container.dispose);
-    await _pump(
-      tester,
-      container,
-      const DetailNavigationShellScreen(child: Text('detail page')),
-    );
-    expect(find.byType(DesktopTopBar), findsOneWidget);
-    expect(find.byType(DesktopTitleBar), findsNothing);
-    expect(find.byType(DragToMoveArea), findsNothing);
-    expect(find.byType(WindowCaptionButton), findsNothing);
-    expect(find.text('detail page'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

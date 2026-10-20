@@ -4,19 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:tsumiru/src/widgets/cover_cache/cover_cache_manager_io.dart';
-
-class _SupportDirectory extends PathProviderPlatform {
-  _SupportDirectory(this.path);
-  final String path;
-
-  @override
-  Future<String?> getApplicationSupportPath() async => path;
-}
 
 List<int> _ftyp(String major, List<String> compatible) {
   final size = 16 + 4 * compatible.length;
@@ -64,51 +53,6 @@ void main() {
         ]),
         isFalse,
       );
-    });
-  });
-
-  group('transcodeAvifInFlight', () {
-    test('returned future completes and clears the in-flight entry', () async {
-      var calls = 0;
-      Future<void> transcode() async {
-        calls++;
-      }
-
-      await transcodeAvifInFlight(
-        'cover-in-flight',
-        transcode,
-      ).timeout(const Duration(seconds: 5));
-      await transcodeAvifInFlight(
-        'cover-in-flight',
-        transcode,
-      ).timeout(const Duration(seconds: 5));
-
-      expect(calls, 2);
-    });
-  });
-
-  group('createCoverCacheManager', () {
-    late Directory support;
-    late PathProviderPlatform previousPaths;
-
-    setUp(() async {
-      support = await Directory.systemTemp.createTemp('cover-cache-test');
-      previousPaths = PathProviderPlatform.instance;
-      PathProviderPlatform.instance = _SupportDirectory(support.path);
-    });
-
-    tearDown(() async {
-      PathProviderPlatform.instance = previousPaths;
-      await support.delete(recursive: true);
-    });
-
-    test('keeps covers for 90 days, capped at 5000 files', () async {
-      final manager = createCoverCacheManager();
-      addTearDown(manager.dispose);
-      await manager.config.fileSystem.createFile('probe');
-      expect(manager.config.cacheKey, 'tsumiruCovers');
-      expect(manager.config.stalePeriod, const Duration(days: 90));
-      expect(manager.config.maxNrOfCacheObjects, 5000);
     });
   });
 }

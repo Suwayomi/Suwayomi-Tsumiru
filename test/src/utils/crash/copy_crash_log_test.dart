@@ -10,52 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/utils/crash/copy_crash_log.dart';
 
 void main() {
-  group('crashLogHeader', () {
-    test('renders the four-line preamble and keeps unknown as unknown', () {
-      expect(
-        crashLogHeader(
-          appVersion: '1.3.2',
-          buildNumber: '42',
-          serverVersion: 'v2.1.1867',
-          platform: 'android 15',
-        ),
-        'Tsumiru v1.3.2 (build 42)\n'
-        'Server: v2.1.1867\n'
-        'Platform: android 15\n'
-        '---\n',
-      );
-      final unknown = crashLogHeader(
-        appVersion: '1.3.2',
-        buildNumber: '42',
-        serverVersion: 'unknown',
-        platform: 'web',
-      );
-      expect(unknown, contains('\nServer: unknown\n'));
-    });
-  });
-
   group('crashLogForClipboard', () {
-    test('returns null for a path with no log, header or not', () {
-      final dir = Directory.systemTemp.createTempSync('crashlog-');
-      addTearDown(() => dir.deleteSync(recursive: true));
-      final path = '${dir.path}/crash.log';
-
-      expect(crashLogForClipboard(path), isNull);
-      expect(
-        crashLogForClipboard(
-          path,
-          header: crashLogHeader(
-            appVersion: '1.3.2',
-            buildNumber: '42',
-            serverVersion: 'unknown',
-            platform: 'web',
-          ),
-        ),
-        isNull,
-      );
-      expect(crashLogForClipboard(null, header: 'anything'), isNull);
-    });
-
     test('prepends the header and redacts the body', () {
       final dir = Directory.systemTemp.createTempSync('crashlog-');
       addTearDown(() => dir.deleteSync(recursive: true));

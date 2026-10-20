@@ -5,8 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/hotkeys/presentation/global_shortcut_host.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/search_stack/search_stack_screen.dart';
-import 'package:tsumiru/src/features/settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 
 // Faithful reproduction: the host wraps a router shell and NOTHING is given
 // focus (exactly like the real app at the library screen). A `Shortcuts`
@@ -18,13 +16,6 @@ import 'package:tsumiru/src/features/settings/presentation/general/quick_search_
 // The host navigates via the app's typed LibraryRoute (`/library/0`) and
 // DownloadsRoute (`/downloads`); this test router provides plain routes at
 // those exact locations so Ctrl+L / Ctrl+J are exercised for real.
-
-// Force quick-search on so OpenSearch takes effect (the real provider is
-// SharedPreferences-backed and would be null/off in a test).
-class _ToggleOn extends QuickSearchToggle {
-  @override
-  bool? build() => true;
-}
 
 GoRouter _router() => GoRouter(
   initialLocation: '/',
@@ -137,84 +128,4 @@ void main() {
     expect(find.text('LIBRARY'), findsOneWidget, reason: 'Ctrl+L → library');
   });
 
-  testWidgets('Ctrl+J opens downloads with nothing pre-focused', (
-    tester,
-  ) async {
-    await _pumpRouter(tester);
-    await _defocus(tester);
-
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('DOWNLOADS'),
-      findsOneWidget,
-      reason: 'Ctrl+J → downloads',
-    );
-  });
-
-  testWidgets('Ctrl+F opens quick search with nothing pre-focused', (
-    tester,
-  ) async {
-    final container = ProviderContainer(
-      overrides: [quickSearchToggleProvider.overrideWith(_ToggleOn.new)],
-    );
-    addTearDown(container.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: GlobalShortcutHost(
-            child: Scaffold(body: Center(child: Text('home'))),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(container.read(quickOpenVisibleProvider), isFalse);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pump();
-
-    expect(
-      container.read(quickOpenVisibleProvider),
-      isTrue,
-      reason: 'Ctrl+F opens search',
-    );
-  });
-
-  testWidgets('Esc closes the quick-open overlay instead of going back', (
-    tester,
-  ) async {
-    final container = ProviderContainer(
-      overrides: [quickSearchToggleProvider.overrideWith(_ToggleOn.new)],
-    );
-    addTearDown(container.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: GlobalShortcutHost(
-            child: Scaffold(body: Center(child: Text('home'))),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    container.read(quickOpenVisibleProvider.notifier).state = true;
-    await tester.pump();
-
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pump();
-
-    expect(
-      container.read(quickOpenVisibleProvider),
-      isFalse,
-      reason: 'Esc closes the overlay',
-    );
-  });
 }

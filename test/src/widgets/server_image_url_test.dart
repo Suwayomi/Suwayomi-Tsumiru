@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/web_default_server_url.dart';
 import 'package:tsumiru/src/widgets/server_image.dart';
 
 // Representative server-emitted paths: root-relative and already carrying the
@@ -13,14 +14,13 @@ const _icon =
     '/api/v1/extension/icon/eu.kanade.tachiyomi.extension.en.mangadex';
 const _page = '/api/v1/manga/7/chapter/2/page/0';
 
-String _build(String serverUrl, String path, {bool appendApiToUrl = false}) =>
-    serverFileUrl(
-      path: path,
-      baseUrl: serverUrl,
-      port: 4567,
-      addPort: false,
-      appendApiToUrl: appendApiToUrl,
-    );
+String _build(String serverUrl, String path) => serverFileUrl(
+  path: path,
+  baseUrl: serverUrl,
+  port: 4567,
+  addPort: false,
+  appendApiToUrl: false,
+);
 
 void main() {
   group('serverFileUrl', () {
@@ -49,94 +49,37 @@ void main() {
         _build('http://127.0.0.1:4567/', '$_page?format=JPEG&a%20b=1'),
         'http://127.0.0.1:4567$_page?format=JPEG&a%20b=1',
       );
+
+      // The same base-URL parsing drives the web default server URL: root,
+      // sub-path, deep link and bare origins resolve to the base.
+      expect(
+        webDefaultServerUrl('http://127.0.0.1:4600/'),
+        'http://127.0.0.1:4600',
+      );
+      expect(
+        webDefaultServerUrl('http://127.0.0.1:4600/tsumiru/'),
+        'http://127.0.0.1:4600/tsumiru',
+      );
+      final page = Uri.parse('http://127.0.0.1:4600/tsumiru/library');
+      final base = page.resolve('/tsumiru/');
+      expect(base, isNot(page));
+      expect(
+        webDefaultServerUrl(base.toString()),
+        'http://127.0.0.1:4600/tsumiru',
+      );
+      expect(
+        webDefaultServerUrl('http://127.0.0.1:4600/tsumiru'),
+        'http://127.0.0.1:4600/tsumiru',
+      );
+      expect(
+        webDefaultServerUrl('http://127.0.0.1:4600'),
+        'http://127.0.0.1:4600',
+      );
+      expect(
+        webDefaultServerUrl('https://example.com:8443/reader/'),
+        'https://example.com:8443/reader',
+      );
     });
-
-    test('appends /api/v1 only for paths the server did not prefix', () {
-      // Already-prefixed paths are not doubled.
-      expect(
-        _build('http://127.0.0.1:4567', _page, appendApiToUrl: true),
-        'http://127.0.0.1:4567$_page',
-      );
-      expect(
-        _build('http://127.0.0.1:4567/', _icon, appendApiToUrl: true),
-        'http://127.0.0.1:4567$_icon',
-      );
-      // An unprefixed path gets the prefix.
-      expect(
-        _build(
-          'http://127.0.0.1:4567',
-          '/manga/7/thumbnail',
-          appendApiToUrl: true,
-        ),
-        'http://127.0.0.1:4567/api/v1/manga/7/thumbnail',
-      );
-      // A bare "api/" prefix counts as already prefixed.
-      expect(
-        _build(
-          'http://127.0.0.1:4567',
-          'api/v1/manga/7/thumbnail',
-          appendApiToUrl: true,
-        ),
-        'http://127.0.0.1:4567/api/v1/manga/7/thumbnail',
-      );
-    });
-
-    test('passes absolute URLs through and returns empty for a blank path', () {
-      for (final url in [
-        'https://cdn.tld/icon.png',
-        'http://cdn.tld/icon.png',
-        'file:///tmp/page.jpg',
-      ]) {
-        expect(_build('http://127.0.0.1:4567', url), url);
-      }
-      // A source restored from the offline catalog carries no iconUrl;
-      // fetching the bare origin would return the WebUI's index.html.
-      expect(_build('http://127.0.0.1:4567', ''), '');
-    });
-  });
-
-  group('appendUiLoginToken', () {
-    const url = 'http://127.0.0.1:4567$_icon';
-
-    test('appends and encodes the token, or is a no-op', () {
-      expect(appendUiLoginToken(url, 'abc.def'), '$url?token=abc.def');
-      // Chapter page URLs carry server-side conversion params.
-      expect(
-        appendUiLoginToken('$url?format=JPEG', 'abc.def'),
-        '$url?format=JPEG&token=abc.def',
-      );
-      expect(
-        appendUiLoginToken(url, 'a+b/c=='),
-        '$url?token=${Uri.encodeQueryComponent('a+b/c==')}',
-      );
-      expect(appendUiLoginToken(url, null), url);
-      expect(appendUiLoginToken(url, ''), url);
-      expect(appendUiLoginToken('', 'abc.def'), '');
-    });
-  });
-
-  group('appendUiLoginTokenToWebUrl', () {
-    test(
-      'appends to http(s) URLs and leaves file or unparsable URLs alone',
-      () {
-        expect(
-          appendUiLoginTokenToWebUrl('http://127.0.0.1:4567$_icon', 'abc.def'),
-          'http://127.0.0.1:4567$_icon?token=abc.def',
-        );
-        expect(
-          appendUiLoginTokenToWebUrl('https://host.tld/x.jpg', 'abc.def'),
-          'https://host.tld/x.jpg?token=abc.def',
-        );
-        expect(
-          appendUiLoginTokenToWebUrl('file:///tmp/a.jpg', 'abc.def'),
-          'file:///tmp/a.jpg',
-        );
-        expect(
-          appendUiLoginTokenToWebUrl('http://[::1', 'abc.def'),
-          'http://[::1',
-        );
-      },
-    );
   });
 
   // Off the web, a ui_login token rides an image request's header, never its
