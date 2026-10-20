@@ -9,13 +9,12 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../shell/desktop_sidebar.dart';
 import '../shell/sidebar_expanded.dart';
-import '../tsumiru_logo.dart';
+import 'desktop_brand.dart';
 import 'desktop_title_bar.dart';
 
 /// Height of the merged window bar: the title bar and the page toolbar as one
@@ -28,10 +27,6 @@ const double kDesktopTopBarGap = 10;
 /// Width of the minimise / maximise-restore / close cluster: three buttons at
 /// window_manager's 46 px minimum width each.
 const double kWindowButtonsWidth = 3 * 46;
-
-/// Left inset on macOS: clears the native traffic lights, which AppKit keeps
-/// at the top-left of the window when the title bar is hidden.
-const double kMacOSTrafficLightsInset = 80;
 
 /// Minimum search-field width the merged bar keeps before falling back to two
 /// rows.
@@ -593,9 +588,10 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
 
 /// The bar's left end, exactly the sidebar's current width so the column
 /// lines up: logo plus name with the collapse chevron at its right end when
-/// expanded, the logo alone (tap to expand) when collapsed. macOS shows the
-/// traffic-lights inset instead of the logo and name. The width animates with
-/// the same tween as the sidebar, so the two stay in sync.
+/// expanded, the logo alone (tap to expand) when collapsed. macOS leaves this
+/// block empty for the traffic lights; its brand row is the sidebar's first
+/// item instead. The width animates with the same tween as the sidebar, so
+/// the two stay in sync.
 class _BrandBlock extends ConsumerWidget {
   const _BrandBlock({required this.width, required this.isMacOS});
 
@@ -626,52 +622,14 @@ class _BrandBlock extends ConsumerWidget {
         return SizedBox(
           width: animatedWidth,
           height: kDesktopTopBarHeight,
+          // macOS: the traffic lights keep this corner; the brand row is the
+          // first item of the sidebar. The block still animates with the
+          // sidebar's width so the layout below stays aligned.
           child: isMacOS
-              ? Row(
-                  children: [
-                    const SizedBox(width: kMacOSTrafficLightsInset),
-                    if (showExpanded) ...[
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        tooltip: context.l10n.collapseSidebar,
-                        onPressed: toggle,
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                  ],
-                )
+              ? const SizedBox.expand()
               : showExpanded
-              ? Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 4),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () => const AboutRoute().push(context),
-                        child: const TsumiruLogo(size: kBrandLogoSize),
-                      ),
-                      const SizedBox(width: kBrandGap),
-                      Expanded(
-                        child: Text('Tsumiru', style: brandNameStyle(context)),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        tooltip: context.l10n.collapseSidebar,
-                        onPressed: toggle,
-                      ),
-                    ],
-                  ),
-                )
-              : Center(
-                  child: IconButton(
-                    icon: const TsumiruLogo(size: kBrandLogoSize),
-                    tooltip: context.l10n.expandSidebar,
-                    onPressed: toggle,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ),
+              ? DesktopBrandRow(onCollapse: toggle)
+              : Center(child: DesktopBrandExpandButton(onExpand: toggle)),
         );
       },
     );

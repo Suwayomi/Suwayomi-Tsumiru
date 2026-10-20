@@ -13,6 +13,7 @@ import '../../features/offline/data/offline_nav_status.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
+import '../desktop/desktop_brand.dart';
 import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
@@ -29,9 +30,9 @@ bool sidebarIsExpanded(BuildContext context, bool preference) =>
 /// (60 px, 80 px on macOS so the traffic lights fit above the column): 44 px
 /// icon-only rows with 6 px gaps, the label as a hover [Tooltip]. The logo
 /// header lives in the desktop top bar above the sidebar, so the sidebar
-/// starts directly under the bar; on macOS collapsed the expand chevron sits
-/// at the sidebar's bottom, since the bar shows no logo to click. Width
-/// animates over 200 ms unless reduced motion is requested.
+/// starts directly under the bar; on macOS the header moves into the sidebar
+/// as its first row, since the traffic lights take the bar's top-left corner.
+/// Width animates over 200 ms unless reduced motion is requested.
 class DesktopSidebar extends ConsumerWidget {
   const DesktopSidebar({
     super.key,
@@ -80,6 +81,8 @@ class DesktopSidebar extends ConsumerWidget {
     final isMacOS = isDesktopPlatform && isMacOSRuntime;
     final windowWidth = MediaQuery.sizeOf(context).width;
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
+    void collapse() =>
+        ref.read(sidebarExpandedProvider.notifier).update(false);
 
     final cs = context.colorScheme;
     final selectedBg = cs.primary.withValues(alpha: 0.22);
@@ -160,8 +163,7 @@ class DesktopSidebar extends ConsumerWidget {
 
     // The sidebar doesn't scroll on its own, so in a short window its rows
     // would overflow the bottom. Let it scroll when it can't fit, while still
-    // filling the height when there's room. The macOS expand button floats
-    // over the bottom so it stays put while the rows scroll under it.
+    // filling the height when there's room.
     return LayoutBuilder(
       builder: (context, constraints) => TweenAnimationBuilder<double>(
         tween: Tween<double>(
@@ -181,7 +183,6 @@ class DesktopSidebar extends ConsumerWidget {
             : const Duration(milliseconds: 200),
         builder: (context, width, _) {
           final showExpanded = width > (expandedWidth + collapsedWidth) / 2;
-          final showExpandButton = isMacOS && !showExpanded;
           final maxHeight = constraints.hasBoundedHeight
               ? constraints.maxHeight
               : null;
@@ -193,44 +194,44 @@ class DesktopSidebar extends ConsumerWidget {
                 border: Border(right: BorderSide(color: cs.outlineVariant)),
               ),
               padding: const EdgeInsets.all(8),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: ((maxHeight ?? 0) - 16).clamp(
-                            0.0,
-                            double.infinity,
-                          ),
-                        ),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              for (var i = 0; i < navList.length; i++)
-                                row(i, showExpanded),
-                              if (showExpandButton) const SizedBox(height: 48),
-                            ],
-                          ),
-                        ),
-                      ),
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: ((maxHeight ?? 0) - 16).clamp(
+                      0.0,
+                      double.infinity,
                     ),
                   ),
-                  if (showExpandButton)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: IconButton(
-                          icon: const Icon(Icons.chevron_right),
-                          tooltip: context.l10n.expandSidebar,
-                          onPressed: expand,
-                        ),
-                      ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (isMacOS) ...[
+                          if (showExpanded)
+                            DesktopBrandRow(
+                              onCollapse: collapse,
+                              height: _rowHeight,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                            )
+                          else
+                            SizedBox(
+                              height: _rowHeight,
+                              child: Center(
+                                child: DesktopBrandExpandButton(
+                                  onExpand: expand,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                        ],
+                        for (var i = 0; i < navList.length; i++)
+                          row(i, showExpanded),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
           );
