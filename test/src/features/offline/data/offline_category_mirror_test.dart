@@ -62,59 +62,32 @@ void main() {
     );
   }
 
-  group('syncCategories', () {
-    test('prunes categories the server no longer has', () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([cat(1, 'A'), cat(2, 'B')]);
-      await seedDownloadedManga(10, [2]);
+  Future<Never> boom() async => throw const SocketException('unreachable');
 
-      await sync.syncCategories([cat(1, 'A')]);
+  test('syncs prune, keep the mirror on an empty list, mirror hidden and '
+      'serve offline', () async {
+    final sync = OfflineSync(db);
+    await sync.syncCategories([cat(1, 'A'), cat(2, 'Doomed')]);
+    await seedDownloadedManga(10, [1]);
+    await seedDownloadedManga(11, [2]);
 
-      final stored = await db.allOfflineCategories();
-      expect(stored.map((c) => c.id), [1]);
-      // Membership rows of the pruned category go with it.
-      expect(await db.categoriesForManga(10), isEmpty);
-    });
+    await sync.syncCategories([cat(1, 'A', hidden: true)]);
+    expect((await db.allOfflineCategories()).map((c) => c.id), [1]);
+    expect((await db.allOfflineCategories()).single.isHidden, isTrue);
+    expect(await db.categoriesForManga(11), isEmpty);
 
-    test('an empty server list never wipes the mirror', () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([cat(1, 'A')]);
+    await sync.syncCategories(const []);
+    expect((await db.allOfflineCategories()).length, 1);
 
-      await sync.syncCategories(const []);
+    await sync.syncCategories([cat(1, 'A')]);
+    expect((await db.allOfflineCategories()).single.isHidden, isFalse);
 
-      expect((await db.allOfflineCategories()).length, 1);
-    });
-
-    test('mirrors the hidden flag both ways', () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([cat(1, 'A', hidden: true)]);
-      expect((await db.allOfflineCategories()).single.isHidden, isTrue);
-
-      await sync.syncCategories([cat(1, 'A')]);
-      expect((await db.allOfflineCategories()).single.isHidden, isFalse);
-    });
-  });
-
-  group('categoriesWithOfflineFallback catalog serve', () {
-    Future<Never> boom() async => throw const SocketException('unreachable');
-
-    test('deleted category stops appearing offline after a re-sync', () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([cat(1, 'A'), cat(2, 'Doomed')]);
-      await seedDownloadedManga(10, [1]);
-      await seedDownloadedManga(11, [2]);
-
-      // Server deleted category 2; next online category load re-syncs.
-      await sync.syncCategories([cat(1, 'A')]);
-
-      final tabs = await categoriesWithOfflineFallback(
-        fetch: boom,
-        db: db,
-        offlineEnabled: true,
-      );
-      expect(tabs!.map((t) => t.id), isNot(contains(2)));
-      // Its manga did not vanish -- it re-homes into Default.
-      expect(tabs.firstWhere((t) => t.id == 0).mangas.totalCount, 1);
-    });
+    final tabs = await categoriesWithOfflineFallback(
+      fetch: boom,
+      db: db,
+      offlineEnabled: true,
+    );
+    expect(tabs!.map((t) => t.id), isNot(contains(2)));
+    expect(tabs.firstWhere((t) => t.id == 0).mangas.totalCount, 1);
   });
 }

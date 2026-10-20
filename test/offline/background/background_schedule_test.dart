@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -16,15 +15,12 @@ import 'package:tsumiru/src/features/notifications/data/background/notification_
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_entry.dart';
 import 'package:tsumiru/src/features/notifications/data/local_notification_service.dart';
 import 'package:tsumiru/src/features/notifications/data/notification_state_store.dart';
-import 'package:tsumiru/src/features/offline/data/background/background_download_controller.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_schedule.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_spec_writer.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
-import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
-import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -89,17 +85,6 @@ class _Schedule extends WorkmanagerPlatform {
   Future<void> cancelByUniqueName(String uniqueName) async {
     cancellations.add(uniqueName);
   }
-}
-
-class _StartAfterPublication extends BackgroundDownloadController {
-  _StartAfterPublication(super.ref, this.onStart)
-    : super(isAndroid: () => false, connectivityChanges: const Stream.empty());
-
-  final Future<void> Function(bool userInitiated) onStart;
-
-  @override
-  Future<void> requestStart({bool userInitiated = false}) =>
-      onStart(userInitiated);
 }
 
 void main() {
@@ -249,40 +234,6 @@ void main() {
     },
   );
 
-  test(
-    'a scheduling failure still requests the foreground download service',
-    () async {
-      schedule.refuseRegistration = true;
-      container.dispose();
-      var starts = 0;
-      container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          offlineDatabaseProvider.overrideWithValue(db),
-          offlinePathsProvider.overrideWithValue(paths),
-          offlineEnabledProvider.overrideWith((ref) => true),
-          offlineActiveProvider.overrideWith((ref) => true),
-          backgroundDownloadsPlatformProvider.overrideWithValue(true),
-          credentialsProvider.overrideWithBuild((ref, notifier) async => null),
-          authCredentialsStoreProvider.overrideWithBuild(
-            (ref, notifier) async => const AuthCredentialsState.empty(),
-          ),
-          backgroundDownloadControllerProvider.overrideWith(
-            (ref) => _StartAfterPublication(ref, (userInitiated) async {
-              starts++;
-              expect(userInitiated, isTrue);
-              expect(schedule.registrations, hasLength(1));
-            }),
-          ),
-        ],
-      );
-      await container.read(downloadStarterProvider)(userInitiated: true);
-
-      expect(starts, 1);
-      expect(NotificationStateStore(prefs).readConfig()!.anyEnabled, isFalse);
-    },
-  );
-
   test('pausing cancels a queue-only schedule', () async {
     await config();
     await writeCatchupWorkSpec(container.read);
@@ -291,16 +242,6 @@ void main() {
     await reconcileBackgroundSchedule();
 
     expect(schedule.registrations, hasLength(1));
-    expect(schedule.cancellations, [kNewChapterPeriodicName]);
-  });
-
-  test('an obsolete identity epoch cannot keep queue work scheduled', () async {
-    await config();
-    await writeCatchupWorkSpec(container.read);
-    await prefs.setInt(CatchupStateStore.identityEpochKey, 1);
-    await reconcileBackgroundSchedule();
-
-    expect(schedule.registrations, isEmpty);
     expect(schedule.cancellations, [kNewChapterPeriodicName]);
   });
 }

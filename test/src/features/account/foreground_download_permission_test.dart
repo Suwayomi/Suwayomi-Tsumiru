@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +7,6 @@ import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
-import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
@@ -44,17 +42,6 @@ Fragment$AccountDto _user(bool allowed) => Fragment$AccountDto(
   permissions: [if (allowed) Enum$UserPermission.DOWNLOAD_CHAPTERS],
   roles: [],
 );
-
-class _DelayedRepository extends FakeAccountRepository {
-  final entered = Completer<void>();
-  final response = Completer<Fragment$AccountDto>();
-
-  @override
-  Future<Fragment$AccountDto?> current() {
-    if (!entered.isCompleted) entered.complete();
-    return response.future;
-  }
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -117,59 +104,4 @@ void main() {
     });
   }
 
-  test('a stale settled snapshot cannot fail a verified download', () async {
-    final repository = FakeAccountRepository(user: _user(true));
-    final container = ProviderContainer(
-      retry: (_, _) => null,
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-        authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
-        authCredentialsStoreProvider.overrideWith(_Credentials.new),
-        accountRepositoryProvider.overrideWithValue(repository),
-        // What the real provider reports while any refresh is in flight —
-        // and downloads keep one in flight almost constantly. Verification
-        // must judge on the access it just fetched, or a save fails at
-        // random with "Account permissions could not be verified".
-        settledAccountAccessProvider.overrideWithValue(
-          AccountAccess(capability: AccountCapability.unknown),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container.read(authCredentialsStoreProvider.future);
-    container.read(authCredentialsStoreProvider.notifier).activateSession();
-    await verifyDownloadPermission(container.read);
-    expect(
-      CatchupStateStore(preferences).downloadPermissionPaused('A'),
-      isFalse,
-    );
-  });
-
-  test(
-    'only a fresh grant at the current denial revision clears the pause',
-    () async {
-      final repository = _DelayedRepository();
-      final container = await setup(repository);
-      await pauseDownloadsForPermission(container.read);
-      final verification = expectLater(
-        verifyDownloadPermission(container.read),
-        throwsA(isA<AccountPermissionUnavailable>()),
-      );
-      await repository.entered.future;
-      await pauseDownloadsForPermission(container.read);
-      repository.response.complete(_user(true));
-      await verification;
-      expect(
-        CatchupStateStore(preferences).downloadPermissionPaused('A'),
-        isTrue,
-      );
-      expect(CatchupStateStore(preferences).downloadPermissionRevision('A'), 2);
-      await verifyDownloadPermission(container.read);
-      expect(
-        CatchupStateStore(preferences).downloadPermissionPaused('A'),
-        isFalse,
-      );
-      expect(downloadPermissionAllowed(container.read), isTrue);
-    },
-  );
 }

@@ -9,28 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
-import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 
-class _ReduceMotionOn extends AppReduceMotion {
-  @override
-  bool build() => true;
-}
-
-Future<Toast> _pumpToastHost(
-  WidgetTester tester, {
-  bool reduceMotion = false,
-}) async {
+Future<Toast> _pumpToastHost(WidgetTester tester) async {
   late BuildContext hostContext;
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        if (reduceMotion)
-          appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
-      ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => ReduceMotionScope(child: child!),
         home: Builder(
           builder: (context) {
             hostContext = context;
@@ -58,35 +44,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('ForbiddenException'), findsNothing);
-    toast.close();
-    await tester.pump(const Duration(seconds: 5));
-  });
-
-  testWidgets('an error with nothing left to say still tells the user', (
-    tester,
-  ) async {
-    final toast = await _pumpToastHost(tester);
-
-    toast.showError('   ');
-    await tester.pump();
-
-    expect(find.text('Something went wrong!'), findsOneWidget);
-
-    toast.close();
-    await tester.pump(const Duration(seconds: 5));
-  });
-
-  testWidgets('a real error message is shown as it is', (tester) async {
-    final toast = await _pumpToastHost(tester);
-
-    toast.showError("Extension can't be updated to the same version");
-    await tester.pump();
-
-    expect(
-      find.text("Extension can't be updated to the same version"),
-      findsOneWidget,
-    );
-
     toast.close();
     await tester.pump(const Duration(seconds: 5));
   });

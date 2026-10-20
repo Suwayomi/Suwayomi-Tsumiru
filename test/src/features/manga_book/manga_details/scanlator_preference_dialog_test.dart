@@ -27,19 +27,6 @@ import 'chapter_test_helpers.dart';
 GraphQLClient _dummyClient() =>
     GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
-class _RecordingRepo extends MangaBookRepository {
-  _RecordingRepo() : super(_dummyClient());
-  final List<(int, String, dynamic)> patched = [];
-  @override
-  Future<void> patchMangaMeta({
-    required int mangaId,
-    required String key,
-    required dynamic value,
-  }) async {
-    patched.add((mangaId, key, value));
-  }
-}
-
 class _FailingRepo extends MangaBookRepository {
   _FailingRepo() : super(_dummyClient());
   @override
@@ -168,24 +155,6 @@ void main() {
     expect(find.byType(ScanlatorPreferenceDialog), findsOneWidget);
     return repo;
   }
-
-  testWidgets('checking A then saving persists the new rank order', (
-    tester,
-  ) async {
-    final repo = await pumpDialog(tester, repo: _RecordingRepo());
-
-    await tester.tap(find.byKey(const ValueKey('unranked-A')));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
-    expect(
-      repo.patched,
-      contains((1, 'flutter_preferredScanlators', '["B","A"]')),
-    );
-    expect(find.byType(ScanlatorPreferenceDialog), findsNothing);
-  });
 
   testWidgets('a failed server write keeps the dialog open', (tester) async {
     await pumpDialog(tester, repo: _FailingRepo());

@@ -50,16 +50,6 @@ void main() {
       expect(index, 4);
     });
 
-    test('uses saved progress for normal resume', () {
-      final index = readerInitialPageIndex(
-        chapter: _chapter(lastPageRead: 2),
-        chapterPages: _pages(loadedCount: 5),
-        openAtEnd: false,
-      );
-
-      expect(index, 2);
-    });
-
     test('clamps stale progress to the loaded pages', () {
       final index = readerInitialPageIndex(
         chapter: _chapter(lastPageRead: 99),

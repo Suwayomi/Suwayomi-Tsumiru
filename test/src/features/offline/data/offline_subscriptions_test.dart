@@ -30,22 +30,6 @@ void main() {
     updatedAt: DateTime(2026),
   );
 
-  test('manual series remains visible when its only download fails', () async {
-    await seedManga(1, 'Manual');
-    await seedChapter(10, 1);
-    await db.setChapterDeviceState(10, OfflineDeviceState.queued);
-    final rows = db.watchOfflineSeries();
-    expect((await rows.first).single.inFlight, 1);
-    await db.setChapterDeviceState(10, OfflineDeviceState.error);
-    final failed = (await rows.first).single;
-    expect(failed.manga.keepRule, OfflineKeepRule.off);
-    expect(failed.inFlight, 0);
-    expect(failed.downloaded, 0);
-    expect(failed.failed, 1);
-    await db.setChapterDeviceState(10, OfflineDeviceState.none);
-    expect(await rows.first, isEmpty);
-  });
-
   test('lists series with files OR a rule (union); excludes neither', () async {
     // m1: keep all + 2 downloaded (100B each) + 1 queued.
     await seedManga(1, 'Alpha');

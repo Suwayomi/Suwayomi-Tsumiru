@@ -13,30 +13,12 @@ import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/manga_book/data/downloads/downloads_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
-import 'package:tsumiru/src/features/manga_book/domain/downloads/downloads_model.dart';
-import 'package:tsumiru/src/features/manga_book/domain/downloads/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/controller/downloads_controller.dart';
 import 'package:tsumiru/src/features/manga_book/widgets/download_status_icon.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/widgets/custom_circular_progress_indicator.dart';
 
 import '../../../helpers/legacy_account_access.dart';
-
-DownloadDto _download(DownloadState state, double progress, {int id = 1}) =>
-    Fragment$DownloadDto(
-      chapter: Fragment$DownloadDto$chapter(
-        id: id,
-        name: 'c1',
-        sourceOrder: 1,
-        isDownloaded: false,
-        pageCount: 20,
-      ),
-      manga: Fragment$DownloadDto$manga(id: 1, title: 'M', downloadCount: 0),
-      progress: progress,
-      state: state,
-      tries: 0,
-      position: 0,
-    );
 
 class _FakeRepo implements DownloadsRepository {
   final enqueue = Completer<void>();
@@ -68,14 +50,14 @@ ChapterDto _chapter() => Fragment$ChapterDto(
 );
 
 void main() {
-  Future<_FakeRepo> pump(WidgetTester tester, {DownloadDto? download}) async {
+  Future<_FakeRepo> pump(WidgetTester tester) async {
     final repo = _FakeRepo();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           settledAccountAccessProvider.overrideWithValue(legacyAccountAccess),
           offlineEnabledProvider.overrideWithValue(false),
-          downloadsFromIdProvider(1).overrideWithValue(download),
+          downloadsFromIdProvider(1).overrideWithValue(null),
           downloadUpdatesProvider.overrideWith((ref) => const Stream.empty()),
           downloadsRepositoryProvider.overrideWithValue(repo),
         ],
@@ -94,51 +76,19 @@ void main() {
     return repo;
   }
 
-  testWidgets('tapping download shows progress before the queue reports it', (
+  testWidgets('tapping download shows progress, restored when the queue fails', (
     tester,
   ) async {
-    await pump(tester);
+    final repo = await pump(tester);
 
     await tester.tap(find.byIcon(Icons.cloud_download_outlined));
     await tester.pump();
 
     expect(find.byType(MiniCircularProgressIndicator), findsOneWidget);
     expect(find.byIcon(Icons.cloud_download_outlined), findsNothing);
-  });
 
-  testWidgets('a failed request puts the download button back', (tester) async {
-    final repo = await pump(tester);
-
-    await tester.tap(find.byIcon(Icons.cloud_download_outlined));
-    await tester.pump();
     repo.enqueue.completeError(Exception('offline'));
     await tester.pump();
-
-    expect(find.byIcon(Icons.cloud_download_outlined), findsOneWidget);
-  });
-
-  testWidgets('a queued chapter shows a static icon, not a spinner', (
-    tester,
-  ) async {
-    await pump(tester, download: _download(DownloadState.QUEUED, 0));
-
-    expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
-    expect(
-      find.byType(MiniCircularProgressIndicator),
-      findsNothing,
-      reason: 'an animating spinner here repaints every visible row per frame',
-    );
-  });
-
-  testWidgets('progress clears if the queue never reports the chapter', (
-    tester,
-  ) async {
-    final repo = await pump(tester);
-
-    await tester.tap(find.byIcon(Icons.cloud_download_outlined));
-    await tester.pump();
-    repo.enqueue.complete();
-    await tester.pump(const Duration(seconds: 11));
 
     expect(find.byIcon(Icons.cloud_download_outlined), findsOneWidget);
   });

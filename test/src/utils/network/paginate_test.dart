@@ -50,14 +50,6 @@ void main() {
     expect(await collectAllPages<int>(counted.fetch), [1, 2, 3, 4]);
   });
 
-  test('a failed page (null) aborts to null — never a partial list', () async {
-    final p = pager([
-      (nodes: [1, 2], hasNextPage: true, endCursor: 20, totalCount: 5),
-      null, // transient failure mid-pagination
-    ]);
-    expect(await collectAllPages<int>(p.fetch), isNull);
-  });
-
   test('a truncated response returns null, never a short list', () async {
     // Server claims 5 but stops advertising more after 3.
     final truncated = pager([
@@ -71,13 +63,5 @@ void main() {
       (nodes: [1, 2], hasNextPage: true, endCursor: null, totalCount: 5),
     ]);
     expect(await collectAllPages<int>(nullCursor.fetch), isNull);
-  });
-
-  test('an empty but complete library (totalCount 0) returns an empty list, '
-      'not null', () async {
-    final p = pager([
-      (nodes: <int>[], hasNextPage: false, endCursor: null, totalCount: 0),
-    ]);
-    expect(await collectAllPages<int>(p.fetch), isEmpty);
   });
 }

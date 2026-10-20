@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
-import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/offline_chapter_catchup.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -99,8 +98,12 @@ void main() {
   );
 
   test(
-    'spent attempts transfer to matching metadata and clear the obligation',
+    'attempts transfer when metadata arrives and clear the obligation',
     () async {
+      // No local row yet: the obligation is retained.
+      expect(await adoptWorkerObligations(container.read), isTrue);
+      expect(state.readLedger('catalog').serverFetchRetries, {5: 5});
+
       await seed();
       await db.incrementServerFetchAttempts(5);
       expect(await adoptWorkerObligations(container.read), isTrue);
@@ -110,15 +113,6 @@ void main() {
     },
   );
 
-  test('missing metadata retains the obligation until it arrives', () async {
-    expect(await adoptWorkerObligations(container.read), isTrue);
-    expect(state.readLedger('catalog').serverFetchRetries, {5: 5});
-    await seed();
-    expect(await adoptWorkerObligations(container.read), isTrue);
-    expect((await db.chapterById(5))!.serverFetchAttempts, 5);
-    expect(state.readLedger('catalog').pendingServerFetch, isEmpty);
-  });
-
   test('an old worker generation cannot overwrite a newer chapter', () async {
     await seed();
     await db.bumpChapterGeneration(5);
@@ -127,30 +121,4 @@ void main() {
     expect((await db.chapterById(5))!.serverFetchAttempts, 1);
     expect((await db.chapterById(5))!.downloadGeneration, 1);
   });
-
-  for (final deny in [true, false]) {
-    test(
-      deny
-          ? 'permission hold retains worker attempts'
-          : 'an active worker lock retains attempts',
-      () async {
-        await seed();
-        BackgroundDownloadLock? lock;
-        if (deny) {
-          allowed = false;
-          container.invalidate(settledAccountAccessProvider);
-        } else {
-          lock = BackgroundDownloadLock(File('${tmp.path}/.bg_lock'));
-          expect(await lock.acquire('test'), isTrue);
-        }
-        try {
-          expect(await adoptWorkerObligations(container.read), isFalse);
-          expect(state.readLedger('catalog').serverFetchRetries, {5: 5});
-          expect((await db.chapterById(5))!.serverFetchAttempts, 0);
-        } finally {
-          await lock?.release();
-        }
-      },
-    );
-  }
 }

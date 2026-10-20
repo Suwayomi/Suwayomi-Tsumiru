@@ -27,7 +27,8 @@ AuthCredentialsState _credentials(String account, String token) =>
 void main() {
   const url = 'http://server/api/v1/manga/1/thumbnail';
 
-  test('separates accounts, including unbound and changing sessions', () {
+  test('separates accounts and session generations, and rotation does not '
+      'change the key', () {
     final store = _Store();
     String key(String account, AuthCredentialsStore owner) =>
         accountImageCacheKey(
@@ -62,51 +63,47 @@ void main() {
       ),
       isNot(unbound),
     );
-  });
 
-  test(
-    'rotation does not change the key, which never includes credentials',
-    () {
-      final store = _Store();
-      final first = accountImageCacheKey(
-        '$url?token=secret-one',
+    // Rotation does not change the key, which never includes credentials.
+    final rotated = _Store();
+    final first = accountImageCacheKey(
+      '$url?token=secret-one',
+      authType: AuthType.uiLogin,
+      store: rotated,
+      credentials: _credentials('a', 'secret-one'),
+    );
+    final second = accountImageCacheKey(
+      '$url?token=secret-two',
+      authType: AuthType.uiLogin,
+      store: rotated,
+      credentials: _credentials('a', 'secret-two'),
+    );
+    expect(first, second);
+    expect(
+      first,
+      accountImageCacheKey(
+        url,
         authType: AuthType.uiLogin,
-        store: store,
-        credentials: _credentials('a', 'secret-one'),
-      );
-      final second = accountImageCacheKey(
-        '$url?token=secret-two',
-        authType: AuthType.uiLogin,
-        store: store,
+        store: rotated,
         credentials: _credentials('a', 'secret-two'),
-      );
-      expect(first, second);
+      ),
+    );
+    expect(first, isNot(contains('secret')));
+    expect(first, isNot(contains('token=')));
+
+    // Legacy auth preserves existing URL keys.
+    for (final mode in AuthType.values.where(
+      (mode) => mode != AuthType.uiLogin,
+    )) {
       expect(
-        first,
         accountImageCacheKey(
           url,
-          authType: AuthType.uiLogin,
-          store: store,
-          credentials: _credentials('a', 'secret-two'),
+          authType: mode,
+          store: _Store(),
+          credentials: null,
         ),
+        url,
       );
-      expect(first, isNot(contains('secret')));
-      expect(first, isNot(contains('token=')));
-
-      // Legacy auth preserves existing URL keys.
-      for (final mode in AuthType.values.where(
-        (mode) => mode != AuthType.uiLogin,
-      )) {
-        expect(
-          accountImageCacheKey(
-            url,
-            authType: mode,
-            store: _Store(),
-            credentials: null,
-          ),
-          url,
-        );
-      }
-    },
-  );
+    }
+  });
 }

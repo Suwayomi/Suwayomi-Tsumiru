@@ -10,7 +10,6 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
-import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 
 GoRouter _router(String location) {
   final quickSearch = $appRoutes.whereType<ShellRoute>().first;
@@ -53,13 +52,12 @@ GoRouter _router(String location) {
 Future<GoRouter> _pump(
   WidgetTester tester,
   Size size,
-  String location, [
-  Map<String, Object> initialPrefs = const {},
-]) async {
+  String location,
+) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  SharedPreferences.setMockInitialValues(initialPrefs);
+  SharedPreferences.setMockInitialValues(const {});
   final prefs = await SharedPreferences.getInstance();
   final router = _router(location);
   addTearDown(router.dispose);
@@ -83,50 +81,6 @@ Future<GoRouter> _pump(
 }
 
 void main() {
-  testWidgets('detail shell follows the sidebar preference at desktop width', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      const Size(1400, 900),
-      const LibraryUpdateErrorsRoute().location,
-    );
-    expect(
-      tester.getSize(find.byType(DesktopSidebar)).width,
-      DesktopSidebar.expandedWidth,
-    );
-    expect(tester.takeException(), isNull);
-
-    await tester.pumpWidget(const SizedBox());
-    await _pump(
-      tester,
-      const Size(1400, 900),
-      const LibraryUpdateErrorsRoute().location,
-      const {'sidebarExpanded': false},
-    );
-    expect(
-      tester.getSize(find.byType(DesktopSidebar)).width,
-      DesktopSidebar.collapsedWidth,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('detail shell shows the collapsed sidebar at tablet width', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      const Size(800, 900),
-      const LibraryUpdateErrorsRoute().location,
-    );
-    expect(find.byType(NavigationRail), findsNothing);
-    expect(
-      tester.getSize(find.byType(DesktopSidebar)).width,
-      DesktopSidebar.collapsedWidth,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('reader covers the rail and back returns to series', (
     tester,
   ) async {

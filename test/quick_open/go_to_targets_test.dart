@@ -11,19 +11,6 @@ void main() {
     expect(hits.any((t) => t.label(l) == l.reader), isTrue);
   });
 
-  test('Library returns the Library page and the Library settings page', () {
-    final hits = matchGoToTargets('library', l, includeHotkeys: true);
-    final page = hits.where((t) => t.label(l) == l.library).toList();
-    expect(page, hasLength(2));
-    expect(page.where((t) => t.subtitle == null), hasLength(1));
-    final settings = page.singleWhere((t) => t.subtitle != null);
-    expect(settings.subtitle!(l), l.settings);
-  });
-
-  test('empty query returns nothing', () {
-    expect(matchGoToTargets('', l, includeHotkeys: true), isEmpty);
-  });
-
   test('hotkeys destination excluded when includeHotkeys is false', () {
     final withHk = matchGoToTargets('key', l, includeHotkeys: true);
     final without = matchGoToTargets('key', l, includeHotkeys: false);

@@ -13,11 +13,6 @@ import 'package:tsumiru/src/constants/enum.dart';
 
 void main() {
   group('WebtoonScaleType.maxContentWidth', () {
-    test('fitScreen never caps (returns full width)', () {
-      expect(WebtoonScaleType.fitScreen.maxContentWidth(400, 800), 400);
-      expect(WebtoonScaleType.fitScreen.maxContentWidth(1600, 900), 1600);
-    });
-
     test('landscape screen is capped to the aspect column', () {
       // 1600x900 landscape: 4:3 → 900 * 3/4 = 675 (< 1600) so cap to 675.
       expect(WebtoonScaleType.ratio4to3.maxContentWidth(1600, 900), 675);

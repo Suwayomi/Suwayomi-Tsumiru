@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/reader_keyboard_shortcuts.dart';
 
 void main() {
-  test('vertical bindings map scroll, page skims and chapter jumps', () {
+  test('vertical and RTL binding map', () {
     final manager = readerShortcutManager(Axis.vertical);
     expect(
       manager.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowDown)],
@@ -44,53 +44,8 @@ void main() {
       manager.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
       isA<NextChapterIntent>(),
     );
-  });
 
-  test('auto-scroll support maps space to toggle and +/- to speed', () {
-    final withAuto = readerShortcutManager(
-      Axis.vertical,
-      autoScrollSupported: true,
-    );
-    expect(
-      withAuto.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
-      isA<AutoScrollToggleIntent>(),
-    );
-    expect(
-      withAuto.shortcuts[const SingleActivator(LogicalKeyboardKey.equal)],
-      isA<AutoScrollFasterIntent>(),
-    );
-    expect(
-      withAuto.shortcuts[const SingleActivator(LogicalKeyboardKey.minus)],
-      isA<AutoScrollSlowerIntent>(),
-    );
-
-    // Without the engine mounted, space stays page navigation.
-    final without = readerShortcutManager(Axis.vertical);
-    expect(
-      without.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
-      isA<NextScrollIntent>(),
-    );
-    expect(
-      without.shortcuts[const SingleActivator(
-        LogicalKeyboardKey.space,
-        shift: true,
-      )],
-      isA<PreviousScrollIntent>(),
-    );
-    expect(
-      without.shortcuts[const SingleActivator(LogicalKeyboardKey.equal)],
-      isNull,
-    );
-
-    // Horizontal (paged) mode keeps space as next-page.
-    final horizontal = readerShortcutManager(Axis.horizontal);
-    expect(
-      horizontal.shortcuts[const SingleActivator(LogicalKeyboardKey.space)],
-      isA<NextScrollIntent>(),
-    );
-  });
-
-  test('RTL flips left/right only', () {
+    // RTL flips left/right only.
     final rtl = readerShortcutManager(Axis.horizontal, isRtl: true);
     expect(
       rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],

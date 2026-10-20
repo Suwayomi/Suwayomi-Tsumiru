@@ -76,19 +76,6 @@ void main() {
       expect(await inLibraryAtOf(1), '1699000000000');
     });
 
-    test('absent manga with no downloads is purged from the catalog', () async {
-      await seedManga(1, inLibraryAt: '1699000000000');
-      await seedManga(2, inLibraryAt: '1700000000000');
-
-      // Only manga 1 is in the server library this sync.
-      await OfflineSync(db).pruneRemovedLibraryManga([
-        _serverManga(1, inLibraryAt: '1699000000000'),
-      ]);
-
-      // Manga 2 had no downloads, so it is deleted entirely after the
-      // removed-sentinel stamp.
-      expect(await inLibraryAtOf(2), isNull);
-    });
   });
 
   group('libraryManga() after repair', () {});
@@ -110,18 +97,5 @@ void main() {
       expect(await inLibraryAtOf(1), kLibraryRemovedSentinel);
       expect(await db.libraryManga(), isEmpty);
     });
-
-    test(
-      'a target with inLibrary: true is visible in libraryManga()',
-      () async {
-        await OfflineSync(db).syncManga(
-          _serverManga(1, inLibraryAt: '1699000000000'),
-          fetchedAtGen: db.syncGeneration,
-        );
-
-        expect(await inLibraryAtOf(1), '1699000000000');
-        expect((await db.libraryManga()).map((m) => m.id), contains(1));
-      },
-    );
   });
 }

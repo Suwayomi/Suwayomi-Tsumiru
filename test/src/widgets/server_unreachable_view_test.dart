@@ -14,21 +14,19 @@ import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
+import 'package:tsumiru/src/widgets/server_unauthorized_view.dart';
 import 'package:tsumiru/src/widgets/server_unreachable_view.dart';
 
 const _unsupportedMessage =
     "This server uses a sign-in method the browser version can't use. Set the server's authentication mode to UI login, or use the Android, iOS or desktop app.";
-const _unconfirmedMessage =
-    "This server didn't accept the browser's request. If it uses Basic auth or Simple login, set its authentication mode to UI login, or use the Android, iOS or desktop app. Otherwise check the address.";
 
 Future<ProviderContainer> _pump(
   WidgetTester tester, {
-  VoidCallback? onRetry,
   bool hasCatalog = false,
   bool offlineEscape = true,
   bool isWeb = false,
-  bool webNotFoundVerdict = false,
   AuthType? savedAuthType,
+  bool unauthorized = false,
 }) async {
   SharedPreferences.setMockInitialValues({
     if (savedAuthType != null) 'authType': savedAuthType.index,
@@ -50,11 +48,9 @@ Future<ProviderContainer> _pump(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: ServerUnreachableView(
-            onRetry: onRetry,
-            offlineEscape: offlineEscape,
-            webNotFoundVerdict: webNotFoundVerdict,
-          ),
+          body: unauthorized
+              ? const ServerUnauthorizedView(message: 'Unauthorized')
+              : ServerUnreachableView(offlineEscape: offlineEscape),
         ),
       ),
     ),
@@ -70,26 +66,6 @@ Future<void> _unmount(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('shows the unreachable message and retries when offered', (
-    tester,
-  ) async {
-    await _pump(tester);
-    expect(find.text("Can't reach your server"), findsOneWidget);
-    expect(find.text('Connection settings'), findsOneWidget);
-    // No retry button without a retry callback.
-    expect(find.text('Refresh'), findsNothing);
-    await _unmount(tester);
-
-    // With one, the retry button shows and fires.
-    var retried = 0;
-    await _pump(tester, onRetry: () => retried++);
-    expect(find.text('Refresh'), findsOneWidget);
-    await tester.tap(find.text('Refresh'));
-    await tester.pumpAndSettle();
-    expect(retried, 1);
-    await _unmount(tester);
-  });
-
   testWidgets(
     'View offline shows only with a catalog and a screen that uses it',
     (tester) async {
@@ -110,54 +86,36 @@ void main() {
       await tester.pumpAndSettle();
       expect(container.read(viewOfflineNowProvider), isTrue);
       await _unmount(tester);
+
+      // The 401 view follows the same sign-in rule: the server message passes
+      // through off web, and unsupported modes get the web guidance.
+      await _pump(tester, unauthorized: true, savedAuthType: AuthType.basic);
+      expect(find.text('Unauthorized'), findsOneWidget);
+      expect(find.text(_unsupportedMessage), findsNothing);
+      await _unmount(tester);
+
+      for (final auth in [AuthType.basic, AuthType.simpleLogin]) {
+        await _pump(
+          tester,
+          unauthorized: true,
+          isWeb: true,
+          savedAuthType: auth,
+        );
+        expect(find.text(_unsupportedMessage), findsOneWidget, reason: '$auth');
+        expect(find.text('Unauthorized'), findsNothing, reason: '$auth');
+        await _unmount(tester);
+      }
+
+      // UI login on web keeps the server message.
+      await _pump(
+        tester,
+        unauthorized: true,
+        isWeb: true,
+        savedAuthType: AuthType.uiLogin,
+      );
+      expect(find.text('Unauthorized'), findsOneWidget);
+      expect(find.text(_unsupportedMessage), findsNothing);
+      await _unmount(tester);
     },
   );
-
-  testWidgets('web guidance explains unsupported sign-in modes', (
-    tester,
-  ) async {
-    // Basic and Simple login on web explain the mode.
-    for (final auth in [AuthType.basic, AuthType.simpleLogin]) {
-      await _pump(tester, isWeb: true, savedAuthType: auth);
-      expect(find.text(_unsupportedMessage), findsOneWidget, reason: '$auth');
-      expect(find.text('Connection settings'), findsOneWidget, reason: '$auth');
-      await _unmount(tester);
-    }
-
-    // UI login on web keeps the unreachable message.
-    await _pump(tester, isWeb: true, savedAuthType: AuthType.uiLogin);
-    expect(find.text(_unsupportedMessage), findsNothing);
-    expect(find.text("Can't reach your server"), findsOneWidget);
-    await _unmount(tester);
-
-    // Native keeps it too, whatever the saved mode.
-    await _pump(tester, isWeb: false, savedAuthType: AuthType.basic);
-    expect(find.text(_unsupportedMessage), findsNothing);
-    expect(find.text("Can't reach your server"), findsOneWidget);
-    await _unmount(tester);
-  });
-
-  testWidgets('a 404 verdict gets the unconfirmed guidance only on web', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      isWeb: true,
-      webNotFoundVerdict: true,
-      savedAuthType: AuthType.none,
-    );
-    expect(find.text(_unconfirmedMessage), findsOneWidget);
-    expect(find.text(_unsupportedMessage), findsNothing);
-    await _unmount(tester);
-
-    await _pump(
-      tester,
-      isWeb: false,
-      webNotFoundVerdict: true,
-      savedAuthType: AuthType.basic,
-    );
-    expect(find.text(_unconfirmedMessage), findsNothing);
-    expect(find.text("Can't reach your server"), findsOneWidget);
-    await _unmount(tester);
-  });
 }

@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/ast.dart';
 import 'package:gql/language.dart';
 
+import 'src/graphql/cache_contract/graphql_documents.dart';
+
 class _Collector extends RecursiveVisitor {
   final spreads = <String>{};
   final variables = <String>{};
@@ -80,5 +82,21 @@ void main() {
       }
     }
     expect(missing, isEmpty);
+
+    // The same documents must satisfy the directive-variable rule: a variable
+    // used by @include/@skip has a default that matches the missing-variable
+    // behaviour, including variables reached through fragments.
+    final documents = loadGraphQLDocuments();
+    final directiveViolations = <String>[];
+    for (final entry in documents.operations) {
+      directiveViolations.addAll(
+        directiveVariableViolations(entry, documents.fragments),
+      );
+    }
+    expect(
+      directiveViolations,
+      isEmpty,
+      reason: directiveViolations.join('\n'),
+    );
   });
 }

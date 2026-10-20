@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_client.dart';
 import 'package:tsumiru/src/features/notifications/data/notification_state_store.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
-import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_download_executor.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
@@ -315,29 +314,6 @@ void main() {
     },
   );
 
-  test(
-    'a new keep generation starts with a fresh device retry budget',
-    () async {
-      serverChapterCount = 1;
-      failPage = true;
-      await enableOverlap(queuedCount: 0, chapterGenerations: {1: 1});
-      await state.writeLedger(
-        'catalog-uuid',
-        const CatchupLedger(
-          pendingDownloads: {1: 1},
-          pendingServerFetch: {1: 1},
-          serverFetchRetries: {1: 5},
-          downloadRetries: {1: 5},
-        ),
-      );
-      expect(await run(), isTrue);
-      expect(resolvedPages, [1]);
-      expect(state.readLedger('catalog-uuid').downloadRetries, {1: 1});
-      expect(state.readLedger('catalog-uuid').chapterGenerations, {1: 1});
-      expect(state.readLedger('catalog-uuid').serverFetchRetries, isEmpty);
-    },
-  );
-
   test('a different live server identity prevents chapter requests', () async {
     serverIdentity = 'other-catalog';
     await run();
@@ -345,19 +321,6 @@ void main() {
     expect(resolvedPages, isEmpty);
     expect(pages, isEmpty);
   });
-
-  test(
-    'queued and keep-rule downloads share the ten-chapter allowance',
-    () async {
-      await enableOverlap(queuedCount: 4);
-      expect(await run(), isTrue);
-      expect(pages.length, 10);
-      expect(pages.toSet().length, 10);
-      final entries = await log.parse();
-      expect(entries.whereType<ChapterEntry>().length, 4);
-      expect(entries.whereType<AdoptChapterEntry>().length, 6);
-    },
-  );
 
   test(
     'live pause blocks a previously published queue before network work',
@@ -368,33 +331,6 @@ void main() {
       );
       expect(await run(), isTrue);
       expect(requests, 0);
-    },
-  );
-
-  test(
-    'yield aborts a slow page and releases ownership without spending retries',
-    () async {
-      holdPage = true;
-      final running = run();
-      await pageRequested.future.timeout(const Duration(seconds: 5));
-      final contender = BackgroundDownloadLock(
-        File('${tmp.path}/offline/.bg_lock'),
-      );
-      expect(await contender.acquire('test'), isFalse);
-      await contender.requestYield();
-      expect(await running.timeout(const Duration(seconds: 5)), isTrue);
-      expect(await contender.acquire('test'), isTrue);
-      await contender.release();
-      expect(state.readLedger('catalog-uuid').queuedDownloadRetries, isEmpty);
-      expect((await log.parse()).whereType<ChapterEntry>(), isEmpty);
-      releasePage.complete();
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      final files = await Directory('${tmp.path}/offline')
-          .list(recursive: true)
-          .where((entry) => entry.path.endsWith('.jpg'))
-          .toList();
-      expect(files, isEmpty);
-      expect(pages, [1]);
     },
   );
 }

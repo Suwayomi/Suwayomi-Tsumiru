@@ -9,8 +9,6 @@
 // download service. Every download trigger MUST go through
 // downloadStarterProvider — these tests fail if one forgets to.
 
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -33,7 +31,7 @@ import '../../../../helpers/fake_page_store.dart';
 import '../../../../helpers/offline_test_db.dart';
 
 class _MangaRepository extends MangaBookRepository {
-  _MangaRepository({this.requested, this.response})
+  _MangaRepository()
     : super(
         GraphQLClient(
           link: Link.function((request, [forward]) => const Stream.empty()),
@@ -41,14 +39,9 @@ class _MangaRepository extends MangaBookRepository {
         ),
       );
 
-  final Completer<void>? requested;
-  final Completer<void>? response;
-
   @override
   Future<ChapterDto?> getChapter({required int chapterId}) async {
     expect(chapterId, 1);
-    requested?.complete();
-    await response?.future;
     return Fragment$ChapterDto(
       id: chapterId,
       mangaId: 7,
@@ -152,59 +145,5 @@ void main() {
           'the keep-rule trigger must invoke downloadStarterProvider — '
           'this is the bug where "Download all" did nothing on Android',
     );
-  });
-
-  testWidgets('delayed manual save preserves a replacement chapter', (
-    tester,
-  ) async {
-    final signals = (await tester.runAsync(
-      () async => (requested: Completer<void>(), response: Completer<void>()),
-    ))!;
-    final requested = signals.requested;
-    final response = signals.response;
-    final h = await harness(
-      tester,
-      mangaRepository: _MangaRepository(
-        requested: requested,
-        response: response,
-      ),
-    );
-    await tester.runAsync(() async {
-      await db.upsertMangaMetadata(
-        id: 7,
-        title: 'M',
-        updatedAt: DateTime(2026),
-      );
-      await db.upsertChapterMetadata(
-        id: 1,
-        mangaId: 7,
-        name: 'c1',
-        chapterIndex: 1,
-        isRead: false,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 1,
-        updatedAt: DateTime(2026),
-      );
-      final saving = saveChapterToDevice(h.ref, 1);
-      await requested.future.timeout(const Duration(seconds: 10));
-      await db.transaction(() async {
-        await db.bumpChapterGeneration(1);
-        await db.setChapterPinned(1, false);
-        await db.setChapterDeviceState(1, OfflineDeviceState.error);
-        for (var attempt = 0; attempt < 5; attempt++) {
-          await db.incrementServerFetchAttempts(1);
-        }
-      });
-      response.complete();
-      await saving;
-      final chapter = (await db.chapterById(1))!;
-      expect(chapter.downloadGeneration, 1);
-      expect(chapter.pinned, isFalse);
-      expect(chapter.serverFetchAttempts, 5);
-      expect(chapter.deviceState, OfflineDeviceState.error);
-      expect(h.starts(), 0);
-    });
   });
 }

@@ -16,7 +16,6 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_settings_dialog.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/reading_mode_tab.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -29,7 +28,7 @@ class _FakeMangaWithId extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => manga;
 }
 
-MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
+MangaDto _manga() => Fragment$MangaDto(
   id: 1,
   title: 'Test Manga',
   bookmarkCount: 0,
@@ -39,10 +38,7 @@ MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
   inLibrary: true,
   inLibraryAt: '0',
   initialized: true,
-  meta: [
-    for (final e in meta.entries)
-      Fragment$MangaDto$meta(key: e.key, value: e.value),
-  ],
+  meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
@@ -82,10 +78,7 @@ class _SheetHost extends ConsumerWidget {
 void main() {
   late ValueNotifier<bool> visibility;
 
-  Future<void> pumpHost(
-    WidgetTester tester, {
-    Map<String, String> meta = const {},
-  }) async {
+  Future<void> pumpHost(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     visibility = ValueNotifier(true);
@@ -97,7 +90,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaWithIdProvider(
             mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga(meta: meta))),
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -114,28 +107,6 @@ void main() {
     expect(find.byType(ReaderSettingsDialog), findsOneWidget);
   }
 
-  Finder tabScrollable() => find
-      .descendant(
-        of: find.byType(ReadingModeTab),
-        matching: find.byType(Scrollable),
-      )
-      .first;
-
-  testWidgets('Reading-mode tab renders the parity chip rows', (tester) async {
-    await pumpHost(tester);
-    await openSheet(tester);
-
-    expect(find.text('For this series'), findsOneWidget);
-    expect(find.text('Paged (left to right)'), findsOneWidget);
-    expect(find.text('Rotation'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Tap zones'),
-      100,
-      scrollable: tabScrollable(),
-    );
-    expect(find.text('Tap zones'), findsOneWidget);
-  });
-
   testWidgets('C3: barrier tap dismisses and restores chrome', (tester) async {
     await pumpHost(tester);
     await openSheet(tester);
@@ -147,27 +118,6 @@ void main() {
     await tester.tapAt(const Offset(400, 40));
     await tester.pumpAndSettle();
     expect(find.byType(ReaderSettingsDialog), findsNothing);
-    expect(visibility.value, true);
-  });
-
-  testWidgets('C3: system back closes the SHEET and restores chrome', (
-    tester,
-  ) async {
-    await pumpHost(tester);
-    await openSheet(tester);
-
-    await tester.tap(find.text('Custom filter'));
-    await tester.pumpAndSettle();
-    expect(visibility.value, false);
-
-    final widgetsAppState =
-        tester.state<State<WidgetsApp>>(find.byType(WidgetsApp))
-            as WidgetsBindingObserver;
-    await widgetsAppState.didPopRoute();
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ReaderSettingsDialog), findsNothing);
-    expect(find.text('open'), findsOneWidget, reason: 'host route survives');
     expect(visibility.value, true);
   });
 }

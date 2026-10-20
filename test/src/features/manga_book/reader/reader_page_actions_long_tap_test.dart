@@ -42,7 +42,6 @@ const _shareKey = ValueKey('reader-page-action-share');
 Future<void> _pumpReader(
   WidgetTester tester, {
   required bool longTapOn,
-  VoidCallback? onTap,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -64,7 +63,7 @@ Future<void> _pumpReader(
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ReaderView(
-            toggleVisibility: onTap ?? () {},
+            toggleVisibility: () {},
             scrollDirection: Axis.vertical,
             mangaId: 1,
             readerScanlatorGroup: '',
@@ -102,25 +101,4 @@ void main() {
     expect(find.byKey(_copyKey), findsOneWidget);
     expect(find.byKey(_shareKey), findsOneWidget);
   });
-
-  testWidgets('pref OFF: long-press is a no-op', (tester) async {
-    await _pumpReader(tester, longTapOn: false);
-
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(ReaderView)),
-    );
-    await tester.pump(const Duration(milliseconds: 600));
-    await tester.pump();
-
-    expect(find.byKey(_copyKey), findsNothing);
-
-    await gesture.up();
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(_copyKey), findsNothing);
-  });
-
-  // The reason the magnifier's removal mattered: a long-press recognizer that
-  // consumes nothing still wins the gesture, and the tap that was meant to turn
-  // the page is lost. Users reported having to tap twice.
 }

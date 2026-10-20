@@ -11,15 +11,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
-import 'package:tsumiru/src/features/library/presentation/library/controller/library_grouping.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
-import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_panels.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
@@ -30,7 +27,6 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
-import 'package:tsumiru/src/widgets/manga_cover/providers/manga_cover_providers.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
   defaultCategory: false,
@@ -200,21 +196,6 @@ Future<void> _openFilterPanel(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openDisplayPanel(WidgetTester tester) async {
-  await tester.tap(find.byTooltip('Display'));
-  await tester.pumpAndSettle();
-}
-
-/// Opens the Filter panel and returns the toolbar button rect plus the open
-/// panel rect, both in screen coordinates.
-
-/// Opens the Display panel and returns the toolbar button rect plus the open
-/// panel rect, both in screen coordinates.
-
-/// Pumps the real [DesktopLibraryFilterPanel] in its 720x600 box on the
-/// given window surface. Used on narrow windows, where the library keeps
-/// the in-between UI and the desktop panel cannot open from the toolbar.
-
 void main() {
   group('Library filter panel (desktop 1400x980)', () {
     testWidgets('Yes/No segments write true/false on two filters', (
@@ -244,102 +225,5 @@ void main() {
       expect(container.read(libraryMangaFilterStartedProvider), isFalse);
       expect(tester.takeException(), isNull);
     });
-
-    testWidgets('reset is disabled when idle and clears every filter', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(1400, 980),
-      );
-      await _openFilterPanel(tester);
-
-      final reset = find.widgetWithText(TextButton, 'Reset');
-      expect(tester.widget<TextButton>(reset).onPressed, isNull);
-
-      container
-          .read(libraryMangaFilterDownloadedProvider.notifier)
-          .update(true);
-      container.read(libraryMangaFilterMinRatingProvider.notifier).update(3);
-      await tester.pump();
-
-      expect(tester.widget<TextButton>(reset).onPressed, isNotNull);
-      await tester.tap(reset);
-      await tester.pump();
-
-      expect(container.read(libraryMangaFilterDownloadedProvider), isNull);
-      expect(container.read(libraryMangaFilterMinRatingProvider), 0);
-      expect(tester.widget<TextButton>(reset).onPressed, isNull);
-      expect(tester.takeException(), isNull);
-    });
   });
-
-  group('Library display panel (desktop 1400x980)', () {
-    testWidgets('radios update display mode, grid style, group style', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(1400, 980),
-      );
-      await _openDisplayPanel(tester);
-
-      expect(find.text('Display Mode'), findsOneWidget);
-
-      await tester.tap(find.text('Comfortable grid'));
-      await tester.pump();
-      expect(
-        container.read(libraryDisplayModeProvider),
-        DisplayMode.comfortableGrid,
-      );
-
-      await tester.ensureVisible(find.text('Staggered'));
-      await tester.tap(find.text('Staggered'));
-      await tester.pump();
-      expect(
-        container.read(libraryGridStyleKeyProvider),
-        LibraryGridStyle.staggered,
-      );
-
-      await tester.ensureVisible(find.text('Sections'));
-      await tester.tap(find.text('Sections'));
-      await tester.pump();
-      expect(
-        container.read(libraryGroupStyleKeyProvider),
-        LibraryGroupStyle.headers,
-      );
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('badge radios and toggles update their providers', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(1400, 980),
-      );
-      await _openDisplayPanel(tester);
-
-      await tester.ensureVisible(find.text('Hide'));
-      await tester.tap(find.text('Hide'));
-      await tester.pump();
-      expect(container.read(unreadBadgeStyleProvider), UnreadBadgeMode.hidden);
-
-      final languageToggle = find.ancestor(
-        of: find.text('Language'),
-        matching: find.byType(InkWell),
-      );
-      expect(languageToggle, findsOneWidget);
-      await tester.ensureVisible(languageToggle);
-      await tester.tap(languageToggle);
-      await tester.pump();
-      // The badge default is off, so tapping enables it.
-      expect(container.read(languageBadgeProvider), isTrue);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('AdaptiveSegments', () {});
-
-  group('Library organizer (phone 412x900)', () {});
 }

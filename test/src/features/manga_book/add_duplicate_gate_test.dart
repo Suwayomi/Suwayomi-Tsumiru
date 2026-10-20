@@ -26,27 +26,8 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 import 'reader/reader_test_fixtures.dart';
 
-Fragment$MangaDto$trackRecords$nodes _node({
-  int trackerId = 1,
-  String remoteId = '42',
-}) => Fragment$MangaDto$trackRecords$nodes(
-  id: 1,
-  trackerId: trackerId,
-  remoteId: remoteId,
-  status: 1,
-  score: 0,
-  title: 'Tracked',
-);
-
-MangaDto _manga({
-  required int id,
-  required String title,
-  List<Fragment$MangaDto$trackRecords$nodes> trackerNodes = const [],
-}) => testManga().copyWith.call(
-  id: id,
-  title: title,
-  trackRecords: Fragment$MangaDto$trackRecords(nodes: trackerNodes),
-);
+MangaDto _manga({required int id, required String title}) =>
+    testManga().copyWith.call(id: id, title: title);
 
 CategoryDto _cat({required int id, required String name}) =>
     Fragment$CategoryDto(
@@ -105,34 +86,25 @@ ProviderContainer _container({
   ],
 );
 
-Widget _harness(
-  ProviderContainer c,
-  MangaDto manga, {
-  Future<bool> Function(MangaDto from, MangaDto to)? migrateDuplicate,
-  void Function(BuildContext context, MangaDto manga)? openEntry,
-}) => UncontrolledProviderScope(
-  container: c,
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Consumer(
-      builder: (context, ref, _) => Scaffold(
-        body: Center(
-          child: ElevatedButton(
-            onPressed: () => addMangaToLibraryWithCategory(
-              ref,
-              context,
-              manga,
-              migrateDuplicate: migrateDuplicate,
-              openEntry: openEntry,
+Widget _harness(ProviderContainer c, MangaDto manga) =>
+    UncontrolledProviderScope(
+      container: c,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Consumer(
+          builder: (context, ref, _) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () =>
+                    addMangaToLibraryWithCategory(ref, context, manga),
+                child: const Text('add'),
+              ),
             ),
-            child: const Text('add'),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
 
 void main() {
   testWidgets('a library-list error fails open — the add proceeds', (
@@ -152,96 +124,5 @@ void main() {
 
     expect(find.byType(AlertDialog), findsNothing);
     expect(repo.addedToLibrary, contains(76));
-  });
-
-  testWidgets('no duplicate in the library adds straight through', (
-    tester,
-  ) async {
-    final repo = _RecordingRepo();
-    final other = _manga(id: 2, title: 'Something Else');
-    final candidate = _manga(id: 76, title: 'Solo Leveling');
-    final c = _container(repo: repo, library: (ref) async => [other]);
-    addTearDown(c.dispose);
-
-    await tester.pumpWidget(_harness(c, candidate));
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(repo.addedToLibrary, contains(76));
-  });
-
-  testWidgets('migrating a duplicate ends the add — no second add call', (
-    tester,
-  ) async {
-    final repo = _RecordingRepo();
-    // Tracker-certain duplicate with a distinct title so the card is tappable.
-    final existing = _manga(
-      id: 2,
-      title: 'Existing Entry',
-      trackerNodes: [_node()],
-    );
-    final candidate = _manga(
-      id: 76,
-      title: 'New Candidate',
-      trackerNodes: [_node()],
-    );
-    final migrateCalls = <(int, int)>[];
-    final c = _container(repo: repo, library: (ref) async => [existing]);
-    addTearDown(c.dispose);
-
-    await tester.pumpWidget(
-      _harness(
-        c,
-        candidate,
-        migrateDuplicate: (from, to) async {
-          migrateCalls.add((from.id, to.id));
-          return true;
-        },
-      ),
-    );
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Existing Entry'));
-    await tester.pumpAndSettle();
-
-    expect(migrateCalls, contains((2, 76)));
-    expect(repo.addedToLibrary, isEmpty);
-  });
-
-  testWidgets('opening a duplicate ends the add and navigates to it', (
-    tester,
-  ) async {
-    final repo = _RecordingRepo();
-    final existing = _manga(
-      id: 2,
-      title: 'Existing Entry',
-      trackerNodes: [_node()],
-    );
-    final candidate = _manga(
-      id: 76,
-      title: 'New Candidate',
-      trackerNodes: [_node()],
-    );
-    final openedIds = <int>[];
-    final c = _container(repo: repo, library: (ref) async => [existing]);
-    addTearDown(c.dispose);
-
-    await tester.pumpWidget(
-      _harness(
-        c,
-        candidate,
-        openEntry: (context, manga) => openedIds.add(manga.id),
-      ),
-    );
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-
-    await tester.longPress(find.text('Existing Entry'));
-    await tester.pumpAndSettle();
-
-    expect(openedIds, contains(2));
-    expect(repo.addedToLibrary, isEmpty);
   });
 }

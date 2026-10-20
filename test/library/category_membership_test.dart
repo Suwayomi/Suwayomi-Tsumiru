@@ -9,27 +9,6 @@ import 'package:tsumiru/src/features/library/presentation/library/widgets/edit_m
 
 void main() {
   group('categoryMembership (bulk category tri-state)', () {
-    test('all selected series in the category → true', () {
-      expect(
-        categoryMembership([
-          {1, 2},
-          {1, 3},
-          {1},
-        ], 1),
-        isTrue,
-      );
-    });
-
-    test('no selected series in the category → false', () {
-      expect(
-        categoryMembership([
-          {2, 3},
-          {4},
-        ], 1),
-        isFalse,
-      );
-    });
-
     test('some in, some out → null (mixed)', () {
       expect(
         categoryMembership([

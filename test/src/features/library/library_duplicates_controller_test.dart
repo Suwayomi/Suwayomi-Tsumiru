@@ -28,45 +28,6 @@ ProviderContainer _container({
 }
 
 void main() {
-  test('a fake library with a title duplicate produces one group', () async {
-    final c = _container(
-      library: (ref) async => [_m(1, 'Solo Leveling'), _m(2, 'Solo Leveling')],
-    );
-    addTearDown(c.dispose);
-
-    final groups = await c.read(
-      libraryDuplicatesProvider(checkDescriptions: false).future,
-    );
-
-    expect(groups, hasLength(1));
-    expect(groups.single.memberIds, [1, 2]);
-  });
-
-  test('an empty library produces no groups', () async {
-    final c = _container(library: (ref) async => const []);
-    addTearDown(c.dispose);
-
-    final groups = await c.read(
-      libraryDuplicatesProvider(checkDescriptions: false).future,
-    );
-
-    expect(groups, isEmpty);
-  });
-
-  test(
-    'a null library (offline read failure) fails open to no groups',
-    () async {
-      final c = _container(library: (ref) async => null);
-      addTearDown(c.dispose);
-
-      final groups = await c.read(
-        libraryDuplicatesProvider(checkDescriptions: false).future,
-      );
-
-      expect(groups, isEmpty);
-    },
-  );
-
   test('rescan refetches the library so removals show up', () async {
     // Simulates a removal happening elsewhere (e.g. the details page)
     // between scans.

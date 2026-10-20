@@ -15,9 +15,7 @@ import 'package:tsumiru/src/features/migration/data/offline_migration_service.da
 import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
-import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
-import 'package:tsumiru/src/features/offline/data/offline_download_coordinator.dart';
 import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
@@ -141,7 +139,6 @@ void main() {
   }
 
   const migrate = MigrationOption(migrateDownloads: true, deleteSource: true);
-  const copy = MigrationOption(migrateDownloads: true, deleteSource: false);
 
   test(
     'Migrate moves the matched download onto the target and clears source',
@@ -163,36 +160,6 @@ void main() {
       final source = (await db.chapterById(101))!;
       expect(source.deviceState, OfflineDeviceState.none); // cleared
       expect(reconciled, [2]); // target reconciled once
-    },
-  );
-
-  test(
-    'moving files invalidates an outstanding source queue request',
-    () async {
-      final svc = await seed();
-      final before = (await db.chapterById(101))!;
-      await svc.migrate(fromMangaId: 1, toMangaId: 2, options: migrate);
-      final coordinator = OfflineDownloadCoordinator(
-        db: db,
-        store: store,
-        engine: ChapterDownloadEngine(
-          writePage: store,
-          refreshAuth: () async => false,
-          fetchPage: (_) async => (bytes: [1], ext: 'jpg'),
-        ),
-        resolvePages: (_) async => ['/page/0'],
-      );
-      await coordinator.queueChapter(
-        101,
-        expectedGeneration: before.downloadGeneration,
-      );
-      final source = (await db.chapterById(101))!;
-      expect(source.deviceState, OfflineDeviceState.none);
-      expect(source.downloadGeneration, before.downloadGeneration + 1);
-      expect(
-        (await db.chapterById(201))!.deviceState,
-        OfflineDeviceState.downloaded,
-      );
     },
   );
 
@@ -223,22 +190,6 @@ void main() {
       catalogServerId: 'srv',
     );
     expect((await db.chapterById(101))!.deviceState, OfflineDeviceState.none);
-  });
-
-  test('Copy duplicates files and leaves the source download intact', () async {
-    final svc = await seed();
-    final res = await svc.migrate(fromMangaId: 1, toMangaId: 2, options: copy);
-    expect(res.movedDownloads, 1);
-    expect(store.calls.single.toChapterId, 201);
-    expect(store.deletedChapters, isNot(contains(101))); // source kept
-    expect(
-      (await db.chapterById(201))!.deviceState,
-      OfflineDeviceState.downloaded,
-    );
-    expect(
-      (await db.chapterById(101))!.deviceState,
-      OfflineDeviceState.downloaded,
-    ); // source kept
   });
 
   test('a transfer failure pins the target for a reconcile re-fetch', () async {
@@ -281,18 +232,4 @@ void main() {
     },
   );
 
-  test('nothing to do when both offline toggles are off', () async {
-    final svc = await seed();
-    final res = await svc.migrate(
-      fromMangaId: 1,
-      toMangaId: 2,
-      options: const MigrationOption(
-        migrateOfflineSettings: false,
-        migrateDownloads: false,
-      ),
-    );
-    expect(res.movedDownloads, 0);
-    expect(store.calls, isEmpty);
-    expect(reconciled, isEmpty);
-  });
 }

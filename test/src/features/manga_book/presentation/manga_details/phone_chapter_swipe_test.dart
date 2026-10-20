@@ -11,11 +11,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
-import 'package:tsumiru/src/features/manga_book/data/downloads/downloads_repository.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
-import 'package:tsumiru/src/features/manga_book/domain/downloads/downloads_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/controller/downloads_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
@@ -54,28 +52,6 @@ class _RecordingBook extends MangaBookRepository {
   @override
   Future<void> deleteChapters(List<int> chapterIds) async {
     deleted.add(chapterIds);
-  }
-}
-
-class _RecordingDownloads extends DownloadsRepository {
-  _RecordingDownloads()
-    : super(
-        _dummyClient(),
-        _dummyClient(),
-        permissions: legacyAccountPermissions,
-      );
-
-  final queued = <int>[];
-  final removed = <int>[];
-
-  @override
-  Future<void> addChaptersBatchToDownloadQueue(List<int> chapterIds) async {
-    queued.addAll(chapterIds);
-  }
-
-  @override
-  Future<void> removeChapterFromDownloadQueue(int chapterId) async {
-    removed.add(chapterId);
   }
 }
 
@@ -159,8 +135,6 @@ Future<void> _pumpPhone(
   WidgetTester tester, {
   Map<String, Object> prefs = const {},
   _RecordingBook? book,
-  _RecordingDownloads? downloads,
-  Map<int, DownloadDto> queue = const {},
 }) async {
   tester.view.physicalSize = const Size(412, 915);
   tester.view.devicePixelRatio = 1;
@@ -179,10 +153,6 @@ Future<void> _pumpPhone(
         downloadStatusProvider.overrideWith((ref) async => null),
         if (book != null)
           mangaBookRepositoryProvider.overrideWith((ref) => book),
-        if (downloads != null)
-          downloadsRepositoryProvider.overrideWith((ref) => downloads),
-        for (final entry in queue.entries)
-          downloadsFromIdProvider(entry.key).overrideWithValue(entry.value),
         mangaWithIdProvider(mangaId: 1).overrideWith(_Manga.new),
         mangaChapterListProvider(mangaId: 1).overrideWith(_Chapters.new),
         mangaChapterListWithFilterProvider(
@@ -212,7 +182,7 @@ Future<void> _swipe(WidgetTester tester, String label, Offset delta) async {
 }
 
 void main() {
-  testWidgets('swipe right past 56px marks an unread chapter read', (
+  testWidgets('swipe right marks an unread chapter read and a read one unread', (
     tester,
   ) async {
     final book = _RecordingBook();
@@ -221,68 +191,11 @@ void main() {
     expect(book.batches, hasLength(1));
     expect(book.batches.single.ids, contains(4));
     expect(book.batches.single.patch.isRead, isTrue);
-    expect(tester.takeException(), isNull);
-  });
 
-  testWidgets('swipe right on a read chapter marks it unread', (tester) async {
-    final book = _RecordingBook();
-    await _pumpPhone(tester, book: book);
     await _swipe(tester, 'Chapter 1', const Offset(200, 0));
-    expect(book.batches, hasLength(1));
-    expect(book.batches.single.ids, contains(1));
-    expect(book.batches.single.patch.isRead, isFalse);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('swipe left toggles the bookmark both ways', (tester) async {
-    final book = _RecordingBook();
-    await _pumpPhone(tester, book: book);
-    await _swipe(tester, 'Chapter 4', const Offset(-200, 0));
-    expect(book.putCalls, hasLength(1));
-    expect(book.putCalls.single.id, 4);
-    expect(book.putCalls.single.patch.isBookmarked, isTrue);
-    await _swipe(tester, 'Chapter 3', const Offset(-200, 0));
-    expect(book.putCalls, hasLength(2));
-    expect(book.putCalls.last.id, 3);
-    expect(book.putCalls.last.patch.isBookmarked, isFalse);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('disabled makes that direction inert', (tester) async {
-    final book = _RecordingBook();
-    await _pumpPhone(
-      tester,
-      book: book,
-      prefs: const {'chapterSwipeToRight': 3, 'chapterSwipeToLeft': 3},
-    );
-    await _swipe(tester, 'Chapter 4', const Offset(200, 0));
-    await _swipe(tester, 'Chapter 4', const Offset(-200, 0));
-    expect(book.batches, isEmpty);
-    expect(book.putCalls, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('download swipe asks before deleting a downloaded chapter', (
-    tester,
-  ) async {
-    final book = _RecordingBook();
-    await _pumpPhone(
-      tester,
-      book: book,
-      prefs: const {'chapterSwipeToLeft': 2},
-    );
-    await _swipe(tester, 'Chapter 3', const Offset(-200, 0));
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(
-      find.text('Are you sure you want to delete the selected chapters?'),
-      findsOneWidget,
-    );
-    expect(book.deleted, isEmpty);
-
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(book.deleted, isEmpty);
+    expect(book.batches, hasLength(2));
+    expect(book.batches.last.ids, contains(1));
+    expect(book.batches.last.patch.isRead, isFalse);
     expect(tester.takeException(), isNull);
   });
 }

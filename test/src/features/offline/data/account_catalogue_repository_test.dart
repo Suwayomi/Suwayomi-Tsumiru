@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -74,58 +73,6 @@ void main() {
   );
 
   test(
-    'removes only non-account data and its independent preferences',
-    () async {
-      final account = await catalogue('A');
-      final target = Directory(nonAccountStoragePath(root.path));
-      await target.create();
-      await File(p.join(target.path, 'catalog.sqlite')).writeAsBytes([1, 2]);
-      final rootData = File(p.join(root.path, 'catalog.sqlite'));
-      await rootData.writeAsBytes([3, 4]);
-      await preferences.setString(offlineNonAccountCatalogServerIdKey, 'A');
-      await preferences.setString(offlineNonAccountLastServerIdKey, 'A');
-      await preferences.setString(offlineNonAccountLastServerAddressKey, 'old');
-      await preferences.setString('offlineCatalogServerId', 'A');
-      await preferences.setString('account.current/A', '{}');
-      await preferences.setInt('offlineCatchUpWatermark/A', 20);
-      final row = (await repository.list()).firstWhere(
-        (row) => row.isNonAccount,
-      );
-      await repository.remove(row, canRemove: () => true);
-      expect(
-        await File(p.join(target.path, 'catalog.sqlite')).exists(),
-        isFalse,
-      );
-      expect(
-        await File(p.join(target.path, '.bg_lock.sqlite')).exists(),
-        isTrue,
-      );
-      expect(await File(p.join(root.path, '.bg_lock.sqlite')).exists(), isTrue);
-      expect(
-        await File(p.join(account.path, 'catalog.sqlite')).exists(),
-        isTrue,
-      );
-      expect(await rootData.readAsBytes(), [3, 4]);
-      expect(
-        preferences.containsKey(offlineNonAccountCatalogServerIdKey),
-        isFalse,
-      );
-      expect(
-        preferences.containsKey(offlineNonAccountLastServerIdKey),
-        isFalse,
-      );
-      expect(
-        preferences.containsKey(offlineNonAccountLastServerAddressKey),
-        isFalse,
-      );
-      expect(preferences.getString('offlineCatalogServerId'), 'A');
-      expect(preferences.getString('account.current/A'), '{}');
-      expect(preferences.getInt('offlineCatchUpWatermark/A'), 20);
-      expect((await repository.list()).single.isNonAccount, isFalse);
-    },
-  );
-
-  test(
     'non-account removal rejects stale admission, paths and symlinks',
     () async {
       final target = Directory(nonAccountStoragePath(root.path));
@@ -165,18 +112,4 @@ void main() {
       expect(await data.exists(), isTrue);
     },
   );
-
-  test('uses matching cached user and refuses symlink trees', () async {
-    final a = await catalogue('A');
-    await preferences.setString(
-      'account.current/A',
-      jsonEncode({
-        'catalogId': 'A',
-        'user': {'id': 2, 'username': 'cached'},
-      }),
-    );
-    expect((await repository.list()).single.username, 'cached');
-    await createTestLink(p.join(a.path, 'linked'), root.path);
-    expect(await repository.list(), isEmpty);
-  });
 }

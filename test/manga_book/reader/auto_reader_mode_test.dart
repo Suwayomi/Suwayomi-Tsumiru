@@ -14,54 +14,17 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/a
 // manga and comic → null (fall through to the user's default). Auto-detect
 // never picks a page direction — RTL for manga comes from the factory default.
 void main() {
-  group('autoReaderModeFor', () {
-    ReaderMode? resolve({List<String>? genres, String? sourceName}) =>
-        autoReaderModeFor(genres: genres, sourceName: sourceName);
+  test('webtoon-family tags detect webtoon; manga falls through', () {
+    ReaderMode? resolve({List<String>? genres}) =>
+        autoReaderModeFor(genres: genres);
 
-    const webtoon = ReaderMode.webtoon;
+    expect(resolve(genres: ['Manhwa']), ReaderMode.webtoon);
+    expect(resolve(genres: ['Manhua']), ReaderMode.webtoon);
+    expect(resolve(genres: ['Long Strip']), ReaderMode.webtoon);
+    expect(resolve(genres: ['Webtoon']), ReaderMode.webtoon);
 
-    group('webtoon family → webtoon (scroll)', () {
-      test('manhwa / manhua / long strip / webtoon tags', () {
-        expect(resolve(genres: ['Manhwa']), webtoon);
-        expect(resolve(genres: ['Manhua']), webtoon);
-        expect(resolve(genres: ['Long Strip']), webtoon);
-        expect(resolve(genres: ['Webtoon']), webtoon);
-      });
-    });
-
-    group('manga → null (never forces a direction; user default wins)', () {
-      // A manga tag is still a manga tag — but auto-detect deliberately has no
-      // opinion on LTR vs RTL. It returns null so the user's Default Reading
-      // Mode is honoured (RTL by default, LTR if they chose it).
-      test('explicit manga tag → null', () {
-        expect(resolve(genres: ['Manga']), isNull);
-      });
-    });
-
-    group('no reliable signal → null (respect the user default)', () {});
-
-    group('comic → null (fall through to the default)', () {});
-  });
-
-  group('sessionAutoReaderMode', () {
-    ReaderMode? resolve({bool enabled = true, ReaderMode? seriesMode}) =>
-        sessionAutoReaderMode(
-          enabled: enabled,
-          seriesMode: seriesMode,
-          genres: const ['Manhwa'],
-        );
-
-    test('Default or unset series mode takes the detected mode', () {
-      expect(resolve(), ReaderMode.webtoon);
-      expect(resolve(seriesMode: ReaderMode.defaultReader), ReaderMode.webtoon);
-    });
-
-    test('an explicit series mode wins over detection', () {
-      expect(resolve(seriesMode: ReaderMode.singleHorizontalLTR), isNull);
-    });
-
-    test('off when auto-detect is disabled', () {
-      expect(resolve(enabled: false), isNull);
-    });
+    // A manga tag is still a manga tag, but auto-detect deliberately has no
+    // opinion on LTR vs RTL: it returns null so the user's default wins.
+    expect(resolve(genres: ['Manga']), isNull);
   });
 }

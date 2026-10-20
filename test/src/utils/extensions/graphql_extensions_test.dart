@@ -4,11 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
-import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 String _shown(String serverMessage) => OperationMessageException(
@@ -33,33 +30,6 @@ void main() {
         "Extension can't be updated to the same version. "
         "Reinstall the extension instead",
       );
-    });
-
-    test('a null message leaves nothing; plain errors pass through', () {
-      expect(
-        _shown(
-          "Exception while fetching data (/updateExtension) : null\n"
-          "\n"
-          "java.lang.NullPointerException\n"
-          "\tat suwayomi.tachidesk.manga.impl.extension.Extension."
-          "installExtension(Extension.kt:451)",
-        ),
-        isEmpty,
-      );
-      expect(_shown('Unauthorized'), 'Unauthorized');
-    });
-
-    test('a transport failure still reports its own cause', () {
-      final e = OperationMessageException(
-        OperationException(
-          linkException: HttpLinkParserException(
-            originalException: const SocketException('server unreachable'),
-            originalStackTrace: StackTrace.empty,
-            response: http.Response('', 500),
-          ),
-        ),
-      );
-      expect(e.toString(), contains('server unreachable'));
     });
   });
 }

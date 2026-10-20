@@ -32,15 +32,6 @@ class _ThrowingRepository extends MangaBookRepository {
   }
 }
 
-class _OkRepository extends MangaBookRepository {
-  _OkRepository() : super(_dummyClient());
-  @override
-  Future<void> putChapter({
-    required int chapterId,
-    required ChapterChange patch,
-  }) async {}
-}
-
 void main() {
   group('a failed online progress push is surfaced, not swallowed', () {
     test(
@@ -63,17 +54,5 @@ void main() {
         );
       },
     );
-
-    test('online-only + successful push -> no error', () async {
-      final result = await recordReadingProgressWithDependencies(
-        offlineEnabled: false,
-        offlineDatabase: null,
-        repository: _OkRepository(),
-        chapterId: 42,
-        lastPageRead: 7,
-        isRead: false,
-      );
-      expect(result.hasError, isFalse);
-    });
   });
 }

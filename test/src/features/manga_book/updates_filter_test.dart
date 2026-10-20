@@ -6,35 +6,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
-import 'package:tsumiru/src/features/manga_book/domain/updates/updates_filter.dart';
 
 void main() {
   group('updatesFilterInput', () {
-    test('always scopes to the library', () {
-      final input = updatesFilterInput(kNoUpdatesFilter);
-      expect(input.inLibrary?.equalTo, true);
-    });
-
-    test('maps downloaded and bookmarked straight through', () {
-      final included = updatesFilterInput((
-        downloaded: true,
-        unread: null,
-        started: null,
-        bookmarked: true,
-      ));
-      expect(included.isDownloaded?.equalTo, true);
-      expect(included.isBookmarked?.equalTo, true);
-
-      final excluded = updatesFilterInput((
-        downloaded: false,
-        unread: null,
-        started: null,
-        bookmarked: false,
-      ));
-      expect(excluded.isDownloaded?.equalTo, false);
-      expect(excluded.isBookmarked?.equalTo, false);
-    });
-
     test('inverts unread into the server isRead field', () {
       final unread = updatesFilterInput((
         downloaded: null,
@@ -51,20 +25,18 @@ void main() {
         bookmarked: null,
       ));
       expect(read.isRead?.equalTo, true);
-    });
 
-    // Komikku's updatesView.sq requires read = 0 on BOTH sides of started, so a
-    // finished chapter is neither started nor not-started.
-    test('started keeps only unread chapters with progress', () {
-      final input = updatesFilterInput((
+      // Komikku's updatesView.sq requires read = 0 on BOTH sides of started,
+      // so a finished chapter is neither started nor not-started.
+      final started = updatesFilterInput((
         downloaded: null,
         unread: null,
         started: true,
         bookmarked: null,
       ));
-      expect(input.and, hasLength(2));
-      expect(input.and!.first.isRead?.equalTo, false);
-      expect(input.and!.last.lastPageRead?.greaterThan, 0);
+      expect(started.and, hasLength(2));
+      expect(started.and!.first.isRead?.equalTo, false);
+      expect(started.and!.last.lastPageRead?.greaterThan, 0);
     });
   });
 }

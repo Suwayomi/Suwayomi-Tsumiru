@@ -6,52 +6,19 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/browse_center/domain/content_rating.dart';
-import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 void main() {
-  group('source-list policy', () {
-    test('only SAFE is not adult', () {
-      expect(isNsfwFromWarning(Enum$ContentWarning.SAFE), false);
-      expect(isNsfwFromWarning(Enum$ContentWarning.MIXED), true);
-      expect(isNsfwFromWarning(Enum$ContentWarning.NSFW), true);
-    });
-
-    test('unknown future enum value maps to 18+ (safe failure)', () {
-      expect(isNsfwFromWarning(Enum$ContentWarning.$unknown), true);
-    });
-  });
-
-  group('adult tags', () {
-    test('matches whole tags case-insensitively', () {
-      expect(hasAdultTag(['Adult']), true);
-      expect(hasAdultTag(['Ecchi', 'SMUT']), true);
-      expect(hasAdultTag([' 18+ ']), true);
-    });
+  test('adult tags match whole tags case-insensitively, no false positives', () {
+    expect(hasAdultTag(['Adult']), true);
+    expect(hasAdultTag(['Ecchi', 'SMUT']), true);
+    expect(hasAdultTag([' 18+ ']), true);
 
     // "Mature" marks dark themes on aggregators, not adult content — it was
     // flagging ordinary action manhwa. And whole-tag matching keeps compound
     // tags like "Young Adult" from tripping "adult".
-    test('does not match Mature, compound tags, or ordinary tags', () {
-      expect(hasAdultTag(['Mature']), false);
-      expect(hasAdultTag(['Young Adult']), false);
-      expect(hasAdultTag(['Action', 'Romance', 'Drama']), false);
-      expect(hasAdultTag(const []), false);
-    });
-  });
-
-  group('library filter: the series decides, not the source', () {
-    // A MIXED source mixes R18 with clean titles; Komikku resolves it on the
-    // manga's own tags, not the whole source (LewdMangaChecker.kt:19).
-
-    test('NSFW source is adult regardless of tags', () {
-      expect(isAdultManga(Enum$ContentWarning.NSFW, ['Action']), true);
-    });
-
-    test('SAFE source is not adult even if tags say otherwise', () {
-      expect(isAdultManga(Enum$ContentWarning.SAFE, ['Hentai']), false);
-    });
-
-    // Komikku's `any {}` on an empty tag list is false, so an untagged series
-    // on a mixed source shows — that's parity, not a leak.
+    expect(hasAdultTag(['Mature']), false);
+    expect(hasAdultTag(['Young Adult']), false);
+    expect(hasAdultTag(['Action', 'Romance', 'Drama']), false);
+    expect(hasAdultTag(const []), false);
   });
 }

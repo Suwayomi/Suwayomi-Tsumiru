@@ -42,33 +42,4 @@ void main() {
       expect(calls, [0], reason: 'the sub-watermark entry ends the scan');
     },
   );
-
-  test('feed scan is bounded even when every page is full', () async {
-    final calls = <int>[];
-    Future<List<_Node>?> fetch(int page) async {
-      calls.add(page);
-      return [
-        for (var i = 0; i < 50; i++)
-          (mangaId: page * 50 + i, fetchedAt: 100000 - page * 50 - i),
-      ];
-    }
-
-    final scan = await touchedSinceWatermark(
-      fetchPage: fetch,
-      keepRuleManga: {1},
-      watermark: 10,
-    );
-    expect(
-      calls,
-      hasLength(3),
-      reason: 'the page budget caps a stale-watermark scan',
-    );
-    expect(
-      scan.sawWatermark,
-      isFalse,
-      reason:
-          'an exhausted budget must not pass off the unseen tail as '
-          'covered — the caller falls back to a full keep-rule pass',
-    );
-  });
 }

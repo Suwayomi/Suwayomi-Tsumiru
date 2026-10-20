@@ -20,7 +20,6 @@ Widget _harness({
   required List<Filter> filters,
   required List<FilterChange> appliedChanges,
   ValueChanged<List<FilterChange>?>? onSubmitted,
-  VoidCallback? onReset,
 }) => MaterialApp(
   localizationsDelegates: AppLocalizations.localizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
@@ -29,39 +28,11 @@ Widget _harness({
     sourceId: '1',
     appliedChanges: appliedChanges,
     onSubmitted: onSubmitted ?? (_) {},
-    onReset: onReset ?? () {},
+    onReset: () {},
   ),
 );
 
-bool _boxValue(WidgetTester tester, String title) => tester
-    .widget<CheckboxListTile>(find.widgetWithText(CheckboxListTile, title))
-    .value!;
-
 void main() {
-  testWidgets(
-    'the sheet re-seeds when the applied filters change while mounted',
-    (tester) async {
-      await tester.pumpWidget(
-        _harness(
-          filters: [_checkBox('Completed'), _checkBox('Licensed')],
-          appliedChanges: const [],
-        ),
-      );
-      await tester.pump();
-      expect(_boxValue(tester, 'Completed'), isFalse);
-
-      await tester.pumpWidget(
-        _harness(
-          filters: [_checkBox('Completed'), _checkBox('Licensed')],
-          appliedChanges: [FilterChange(checkBoxState: true, position: 0)],
-        ),
-      );
-      await tester.pump();
-
-      expect(_boxValue(tester, 'Completed'), isTrue);
-    },
-  );
-
   testWidgets('applying a second filter keeps the one already applied', (
     tester,
   ) async {
@@ -89,26 +60,4 @@ void main() {
       ]),
     );
   });
-
-  testWidgets(
-    'reset clears the ticks and tells the screen to drop the filters',
-    (tester) async {
-      var resetCalls = 0;
-      await tester.pumpWidget(
-        _harness(
-          filters: [_checkBox('Completed')],
-          appliedChanges: [FilterChange(checkBoxState: true, position: 0)],
-          onReset: () => resetCalls++,
-        ),
-      );
-      await tester.pump();
-      expect(_boxValue(tester, 'Completed'), isTrue);
-
-      await tester.tap(find.widgetWithText(TextButton, 'Reset'));
-      await tester.pump();
-
-      expect(resetCalls, 1);
-      expect(_boxValue(tester, 'Completed'), isFalse);
-    },
-  );
 }

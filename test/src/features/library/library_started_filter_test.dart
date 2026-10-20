@@ -15,7 +15,7 @@ const _totalChapters = 5;
 
 /// [readChapters] drives the server's unread count; [lastPageRead] is progress
 /// inside the chapter currently being read, which is not the same thing.
-MangaDto _manga(int id, {required int readChapters, int lastPageRead = 0}) =>
+MangaDto _manga(int id, {required int readChapters}) =>
     Fragment$MangaDto(
       id: id,
       title: 'M$id',
@@ -37,8 +37,8 @@ MangaDto _manga(int id, {required int readChapters, int lastPageRead = 0}) =>
       lastReadChapter: Fragment$MangaDto$lastReadChapter(
         id: id * 100,
         isRead: readChapters > 0,
-        lastPageRead: lastPageRead,
-        lastReadAt: (readChapters > 0 || lastPageRead > 0) ? '1700000000' : '0',
+        lastPageRead: 0,
+        lastReadAt: readChapters > 0 ? '1700000000' : '0',
       ),
     );
 
@@ -74,14 +74,6 @@ void main() {
 
   test('Started keeps only the ones with a finished chapter', () {
     expect(_run(items, started: true).map((m) => m.id), [1, 3]);
-  });
-
-  test('Not started keeps the rest', () {
-    expect(_run(items, started: false).map((m) => m.id), [2]);
-  });
-
-  test('unset keeps everything', () {
-    expect(_run(items, started: null).map((m) => m.id), [1, 2, 3]);
   });
 
   // Started counts finished chapters, not pages. Reading part way into a

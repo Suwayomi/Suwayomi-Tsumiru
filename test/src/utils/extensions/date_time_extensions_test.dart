@@ -29,9 +29,7 @@ void main() {
   }
 
   group('convertToDaysAgo', () {
-    testWidgets('today reads as Today and late yesterday as Yesterday', (
-      tester,
-    ) async {
+    testWidgets('counts calendar days, not elapsed hours', (tester) async {
       await pump(tester);
       final now = DateTime.now();
       final earlyToday = DateTime(now.year, now.month, now.day, 0, 0, 1);
@@ -49,13 +47,7 @@ void main() {
         59,
       );
       expect(lateYesterday.convertToDaysAgo(context), 'Yesterday');
-    });
 
-    testWidgets('late two days ago reads as "2 days ago" in both helpers', (
-      tester,
-    ) async {
-      await pump(tester);
-      final now = DateTime.now();
       final lateTwoDaysAgo = DateTime(
         now.year,
         now.month,

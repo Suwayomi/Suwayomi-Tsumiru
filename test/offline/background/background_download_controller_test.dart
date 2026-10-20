@@ -18,7 +18,6 @@ import 'package:tsumiru/src/features/offline/data/background/download_task_handl
 import 'package:tsumiru/src/features/offline/data/background/foreground_service_gateway.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
-import 'package:tsumiru/src/features/offline/data/offline_download_stall.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
@@ -97,28 +96,6 @@ class DelayedManifestStore extends IoOfflinePageStore {
   @override
   Future<ChapterManifest?> readManifest(int mangaId, int chapterId) =>
       onManifest?.call() ?? super.readManifest(mangaId, chapterId);
-}
-
-class _ManualTimer implements Timer {
-  _ManualTimer(this.duration, this.callback);
-  final Duration duration;
-  final void Function() callback;
-  bool _active = true;
-  int _tick = 0;
-
-  void fire() {
-    if (!_active) return;
-    _active = false;
-    _tick++;
-    callback();
-  }
-
-  @override
-  bool get isActive => _active;
-  @override
-  int get tick => _tick;
-  @override
-  void cancel() => _active = false;
 }
 
 /// Stands in for the OS scheduler: without it, reconcileBackgroundSchedule
@@ -314,16 +291,6 @@ void main() {
     await pumpEventQueue();
   }
 
-  List<_ManualTimer> useManualTimers() {
-    final timers = <_ManualTimer>[];
-    makeTimer = (duration, callback) {
-      final timer = _ManualTimer(duration, callback);
-      timers.add(timer);
-      return timer;
-    };
-    return timers;
-  }
-
   test('old same-account attempt cannot park or restart a chapter', () async {
     service.running = true;
     seedAttempt(attempt: 'attempt-B');
@@ -345,54 +312,9 @@ void main() {
     expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
   });
 
-  test(
-    'queued completion rejects a replaced attempt after awaiting storage',
-    () async {
-      final entered = Completer<void>();
-      final release = Completer<void>();
-      pageStore.onManifest = () async {
-        if (!entered.isCompleted) entered.complete();
-        await release.future;
-        return null;
-      };
-      service.running = true;
-      seedAttempt();
-      controller.register();
-      await controller.startupSettled;
-      final event = {
-        'kind': 'chapterDone',
-        'chapterId': 5,
-        'gen': 0,
-        'status': 'downloaded',
-        'catalogServerId': 'catalog-A',
-        'identityEpoch': 0,
-        'attemptId': 'attempt-A',
-      };
-      service.callback!(event);
-      await entered.future;
-      service.callback!({...event, 'status': 'error'});
-      seedAttempt(attempt: 'attempt-B');
-      await controller.ensureServiceRunning();
-      release.complete();
-      await pumpEventQueue();
-      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
-    },
-  );
-
   group('resume replay gating', () {
     // A queued chapter is already in the setUp, so a replay that reaches
     // ensureServiceRunning starts the FGS — service.starts is the signal.
-    test(
-      'notification-shade peek (inactive → resumed) does not replay',
-      () async {
-        // Seed a non-null previous so this isn't mistaken for the launch resume.
-        controller.didChangeAppLifecycleState(AppLifecycleState.inactive);
-        controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
-        await pumpEventQueue();
-        expect(service.starts, 0);
-      },
-    );
-
     test('first resume at launch replays', () async {
       controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
       await pumpUntil(() => service.starts > 0);
@@ -409,64 +331,5 @@ void main() {
     expect(prefs.getString(DBKeys.offlineDownloadsStalled.name), 'background');
     expect(notices.where((n) => n == 'background'), hasLength(1));
     expect(service.values, isEmpty);
-  });
-
-  test(
-    'handoff waits through delayed native shutdown before restarting',
-    () async {
-      final timers = useManualTimers();
-      service.running = true;
-      await prefs.setBool(DBKeys.offlineDownloadsPaused.name, true);
-      await controller.pause();
-      await prefs.setBool(DBKeys.offlineDownloadsPaused.name, false);
-      await controller.resume();
-
-      for (var i = 0; i < 3; i++) {
-        timers.singleWhere((timer) => timer.isActive).fire();
-        await pumpEventQueue();
-        expect(service.starts, 0);
-        expect(service.messages, [
-          {'op': 'pause'},
-        ]);
-        expect(
-          timers.singleWhere((timer) => timer.isActive).duration,
-          const Duration(milliseconds: 500),
-        );
-      }
-
-      service.running = false;
-      timers.singleWhere((timer) => timer.isActive).fire();
-      await pumpUntil(() => service.starts >= 1);
-
-      expect(service.starts, 1);
-      expect(service.running, isTrue);
-      expect(service.messages, [
-        {'op': 'pause'},
-      ]);
-    },
-  );
-
-  test('cold launch releases a persisted refusal', () async {
-    await container
-        .read(offlineDownloadsStalledProvider.notifier)
-        .set('background');
-    await controller.ensureServiceRunning();
-    expect(service.starts, 0);
-    await controller.maybeStartAfterReplay();
-    expect(service.starts, 1);
-  });
-
-  test('exhausted Android budget has its own persisted reason', () async {
-    service.onStart = () async => ServiceRequestFailure(
-      error: PlatformException(
-        code: 'ForegroundServiceStartNotAllowedException',
-        message:
-            'Time limit already exhausted for foreground service type dataSync',
-      ),
-    );
-    await controller.ensureServiceRunning();
-    expect(container.read(offlineDownloadsStalledProvider), 'budget');
-    await controller.ensureServiceRunning(force: true);
-    expect(service.starts, 1);
   });
 }

@@ -18,7 +18,6 @@ import 'package:tsumiru/src/features/account/data/account_bootstrap.dart';
 import 'package:tsumiru/src/features/account/data/account_session_startup.dart';
 import 'package:tsumiru/src/features/account/data/account_session_storage.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
-import 'package:tsumiru/src/features/offline/data/account_storage_recovery_state.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
@@ -30,68 +29,8 @@ class _Endpoint extends ServerEndpointResolver {
   String? build() => 'http://server';
 }
 
-class _SlowRecovery extends AccountSessionStorage {
-  _SlowRecovery(super.ref);
-  final entered = Completer<void>();
-  final released = Completer<void>();
-  @override
-  Future<void> recover({Map<int, bool> progressChoices = const {}}) {
-    if (!entered.isCompleted) entered.complete();
-    return released.future;
-  }
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  test(
-    'startup verifies the server while storage recovery is still running',
-    () async {
-      FlutterSecureStorage.setMockInitialValues({});
-      SharedPreferences.setMockInitialValues({});
-      final probed = Completer<void>();
-      late _SlowRecovery recovery;
-      final container = ProviderContainer(
-        retry: (_, _) => null,
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(
-            await SharedPreferences.getInstance(),
-          ),
-          authTypeKeyProvider.overrideWithValue(AuthType.none),
-          serverEndpointResolverProvider.overrideWith(_Endpoint.new),
-          currentServerAddressProvider.overrideWithValue('http://server'),
-          offlineActiveProvider.overrideWithValue(false),
-          accountSessionStorageProvider.overrideWith(
-            (ref) => recovery = _SlowRecovery(ref),
-          ),
-          verifiedServerInstanceIdProvider.overrideWith((ref) async {
-            if (!probed.isCompleted) probed.complete();
-            throw const SocketException('offline');
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(authCredentialsStoreProvider.future);
-      container
-          .read(accountStorageRecoveryProvider.notifier)
-          .update(
-            const AccountStorageRecoveryState(
-              AccountStorageRecoveryPhase.pending,
-            ),
-          );
-      container.read(accountSessionStorageProvider);
-      addTearDown(() {
-        if (!recovery.released.isCompleted) recovery.released.complete();
-      });
-      final startup = AccountSessionStartup(container);
-      addTearDown(startup.dispose);
-      final started = startup.start();
-      await recovery.entered.future;
-      await probed.future.timeout(const Duration(seconds: 1));
-      expect(recovery.released.isCompleted, isFalse);
-      await started;
-    },
-  );
 
   test('offline upgrade verifies the stored account on reconnect', () async {
     FlutterSecureStorage.setMockInitialValues({

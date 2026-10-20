@@ -41,19 +41,17 @@ OfflineChapter dl(
 void main() {
   final now = DateTime(2026, 3, 1);
 
-  test('evicts downloaded chapters not in the desired set (non-pinned)', () {
-    final r = applySafetyNets(
+  test('eviction spares pinned and session-read chapters', () {
+    final evicted = applySafetyNets(
       downloaded: [dl(1), dl(2)],
       desired: {1},
       nets: SafetyNetConfig.off,
       now: now,
     );
-    expect(r.evict, {2});
-    expect(r.overCapWarning, false);
-  });
+    expect(evicted.evict, {2});
+    expect(evicted.overCapWarning, false);
 
-  test('session-read chapters dodge rule eviction', () {
-    final r = applySafetyNets(
+    final sessionRead = applySafetyNets(
       downloaded: [dl(1), dl(2)],
       desired: {1},
       nets: SafetyNetConfig.off,
@@ -61,22 +59,20 @@ void main() {
       protected: {2},
     );
     expect(
-      r.evict,
+      sessionRead.evict,
       isEmpty,
       reason:
           'a chapter read this session must survive its manga\'s '
           'keep-rule until the next launch',
     );
-  });
 
-  test('never evicts pinned, even if not desired', () {
-    final r = applySafetyNets(
+    final pinned = applySafetyNets(
       downloaded: [dl(1, pinned: true)],
       desired: {},
       nets: SafetyNetConfig.off,
       now: now,
     );
-    expect(r.evict, isEmpty);
+    expect(pinned.evict, isEmpty);
   });
 
   test(

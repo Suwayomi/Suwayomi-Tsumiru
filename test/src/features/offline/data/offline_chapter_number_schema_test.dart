@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' as raw;
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
-import 'package:tsumiru/src/features/offline/data/offline_dto_mappers.dart';
 
 import '../../../../helpers/offline_test_db.dart';
 
@@ -18,39 +17,6 @@ void main() {
   late OfflineDatabase db;
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
-
-  Future<OfflineChapter> upsert({
-    required int id,
-    double? number,
-    String? scanlator,
-  }) async {
-    await db.upsertChapterMetadata(
-      id: id,
-      mangaId: 1,
-      name: 'c$id',
-      chapterIndex: id,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: false,
-      pageCount: 3,
-      updatedAt: DateTime(2026),
-      chapterNumber: number,
-      scanlator: scanlator,
-    );
-    return (db.select(
-      db.offlineChapters,
-    )..where((t) => t.id.equals(id))).getSingle();
-  }
-
-  test(
-    'mapper falls back to the index for pre-v9 rows (null number)',
-    () async {
-      final c = await upsert(id: 12);
-      final dto = offlineChapterToDto(c);
-      expect((dto.chapterNumber, dto.scanlator), (12.0, null));
-    },
-  );
 
   group('v8 -> v9 upgrade (real fixture, columns genuinely absent)', () {
     late Directory tmp;

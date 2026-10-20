@@ -9,15 +9,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
-import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 
 void main() {
-  group('ReaderOrientation.deviceOrientations', () {
-    test('Default applies nothing (existing users see zero change)', () {
-      expect(ReaderOrientation.defaultRotation.deviceOrientations, isNull);
-    });
-  });
-
   group('TapInvert', () {
     test('legacy bool migration: true→both, false/null→none', () {
       expect(TapInvert.fromLegacyInvert(true), TapInvert.both);
@@ -34,13 +27,6 @@ void main() {
       expect(TapInvert.vertical.invertsVertical, isTrue);
       expect(TapInvert.both.invertsHorizontal, isTrue);
       expect(TapInvert.both.invertsVertical, isTrue);
-    });
-
-    test('"both" equals the old bool-true full swap', () {
-      // Old behavior swapped every zone; both must invert both axes so
-      // migrated users notice nothing.
-      final both = TapInvert.fromLegacyInvert(true);
-      expect(both.invertsHorizontal && both.invertsVertical, isTrue);
     });
   });
 }

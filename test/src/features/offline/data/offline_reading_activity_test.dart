@@ -50,7 +50,7 @@ void main() {
     updatedAt: DateTime(2026),
   );
 
-  test('reading offline stamps the Last Read signal locally', () async {
+  test('an offline read stamps Last Read and queues a dirty push', () async {
     await seedChapter(10);
     await db.setChapterProgress(10, lastPageRead: 5);
     final row = await db.chapterById(10);
@@ -59,10 +59,7 @@ void main() {
     // Epoch seconds, not millis — must sort against server-written values.
     expect(stamp!, greaterThan(1700000000));
     expect(stamp, lessThan(10000000000));
-  });
 
-  test('an offline-captured progress push that cannot reach the server is '
-      'not an error', () async {
     await seedChapter(12);
     final result = await recordReadingProgressWithDependencies(
       offlineEnabled: true,
@@ -74,8 +71,8 @@ void main() {
     );
     // Dirty-flagged for the next sync, so a connection failure here isn't an error.
     expect(result.hasError, isFalse);
-    final row = await db.chapterById(12);
-    expect(row!.lastPageRead, 7);
-    expect(row.progressDirty, isTrue);
+    final dirty = await db.chapterById(12);
+    expect(dirty!.lastPageRead, 7);
+    expect(dirty.progressDirty, isTrue);
   });
 }

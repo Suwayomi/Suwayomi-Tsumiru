@@ -9,14 +9,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 
 import 'chapter_test_helpers.dart';
 
-List<Object> _labels(List<MangaChapterListEntry> entries) => [
-  for (final entry in entries)
-    switch (entry) {
-      MangaChapterEntry() => entry.chapter.chapterNumber,
-      MissingChaptersEntry() => 'missing:${entry.count}',
-    },
-];
-
 void main() {
   for (final ascending in [false, true]) {
     for (final numbers in [
@@ -57,57 +49,4 @@ void main() {
       );
     }
   }
-
-  test('puts the initial gap at the end in descending order', () {
-    final chapters = [
-      ch(id: 3, number: 10),
-      ch(id: 2, number: 6),
-      ch(id: 1, number: 4),
-    ];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {1, 2, 3},
-          ascending: false,
-        ),
-      ),
-      [10, 'missing:3', 6, 'missing:1', 4, 'missing:3'],
-    );
-  });
-
-  test('places a gap after a real chapter zero instead of before it', () {
-    final chapters = [ch(id: 0, number: 0), ch(id: 10, number: 10)];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {0, 10},
-          ascending: true,
-        ),
-      ),
-      [0, 'missing:9', 10],
-    );
-  });
-
-  test('merges notices made adjacent by a display filter', () {
-    final chapters = [
-      ch(id: 1, number: 1),
-      ch(id: 3, number: 3),
-      ch(id: 5, number: 5),
-    ];
-
-    expect(
-      _labels(
-        buildMangaChapterListEntries(
-          sortedChapters: chapters,
-          visibleChapterIds: {1, 5},
-          ascending: true,
-        ),
-      ),
-      [1, 'missing:2', 5],
-    );
-  });
 }

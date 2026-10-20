@@ -21,7 +21,7 @@ Future<ProviderContainer> _containerWith(Map<String, Object> stored) async {
 
 void main() {
   group('legacy value carries into both viewers', () {
-    test('pinch to zoom', () async {
+    test('pinch, double tap and disable zoom out', () async {
       final c = await _containerWith({'pinchToZoom': false});
       addTearDown(c.dispose);
 
@@ -60,22 +60,16 @@ void main() {
             'Use the paged*/longStrip* providers instead:\n'
             '${offenders.join('\n')}',
       );
-    });
 
-    test('double tap to zoom', () async {
-      final c = await _containerWith({'doubleTapToZoom': false});
-      addTearDown(c.dispose);
+      final doubleTap = await _containerWith({'doubleTapToZoom': false});
+      addTearDown(doubleTap.dispose);
+      expect(doubleTap.read(pagedDoubleTapToZoomProvider), isFalse);
+      expect(doubleTap.read(longStripDoubleTapToZoomProvider), isFalse);
 
-      expect(c.read(pagedDoubleTapToZoomProvider), isFalse);
-      expect(c.read(longStripDoubleTapToZoomProvider), isFalse);
-    });
-
-    test('disable zoom out', () async {
-      final c = await _containerWith({'disableZoomOut': true});
-      addTearDown(c.dispose);
-
-      expect(c.read(pagedDisableZoomOutProvider), isTrue);
-      expect(c.read(longStripDisableZoomOutProvider), isTrue);
+      final zoomOut = await _containerWith({'disableZoomOut': true});
+      addTearDown(zoomOut.dispose);
+      expect(zoomOut.read(pagedDisableZoomOutProvider), isTrue);
+      expect(zoomOut.read(longStripDisableZoomOutProvider), isTrue);
     });
   });
 
@@ -88,22 +82,5 @@ void main() {
 
     expect(c.read(pagedPinchToZoomProvider), isFalse);
     expect(c.read(longStripPinchToZoomProvider), isTrue);
-  });
-
-  test('setting one viewer leaves the other alone', () async {
-    final c = await _containerWith({'pinchToZoom': true});
-    addTearDown(c.dispose);
-
-    expect(c.read(pagedPinchToZoomProvider), isTrue);
-    expect(c.read(longStripPinchToZoomProvider), isTrue);
-
-    c.read(pagedPinchToZoomProvider.notifier).update(false);
-
-    expect(c.read(pagedPinchToZoomProvider), isFalse);
-    expect(
-      c.read(longStripPinchToZoomProvider),
-      isTrue,
-      reason: 'the two switches must stop moving together',
-    );
   });
 }

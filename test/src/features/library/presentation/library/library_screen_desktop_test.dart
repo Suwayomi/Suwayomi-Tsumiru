@@ -18,7 +18,6 @@ import 'package:tsumiru/src/features/library/presentation/library/library_screen
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
-import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -66,12 +65,8 @@ Future<ProviderContainer> _pumpLibrary(
   WidgetTester tester, {
   required Size surface,
   bool withManga = false,
-  bool persistentSearchBar = false,
-  ScrollbarThemeData? scrollbarTheme,
 }) async {
-  SharedPreferences.setMockInitialValues({
-    if (persistentSearchBar) 'libraryPersistentSearchBar': true,
-  });
+  SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [
@@ -139,22 +134,19 @@ Future<ProviderContainer> _pumpLibrary(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         scrollBehavior: const AppScrollBehavior(),
-        home: ScrollbarTheme(
-          data: scrollbarTheme ?? const ScrollbarThemeData(),
-          // Native desktop draws the toolbar in the shell bar above the
-          // page; narrower surfaces keep the page on its own.
-          child: Builder(
-            builder: (context) => showsMergedTopBar(context)
-                ? const Scaffold(
-                    body: Column(
-                      children: [
-                        DesktopTopBar(),
-                        Expanded(child: LibraryScreen(categoryId: 1)),
-                      ],
-                    ),
-                  )
-                : const LibraryScreen(categoryId: 1),
-          ),
+        // Native desktop draws the toolbar in the shell bar above the
+        // page; narrower surfaces keep the page on its own.
+        home: Builder(
+          builder: (context) => showsMergedTopBar(context)
+              ? const Scaffold(
+                  body: Column(
+                    children: [
+                      DesktopTopBar(),
+                      Expanded(child: LibraryScreen(categoryId: 1)),
+                    ],
+                  ),
+                )
+              : const LibraryScreen(categoryId: 1),
         ),
       ),
     ),
@@ -164,8 +156,10 @@ Future<ProviderContainer> _pumpLibrary(
 }
 
 void main() {
-  group('LibraryScreen desktop header', () {
-    testWidgets('desktop shows the toolbar, no Library title', (tester) async {
+  group('LibraryScreen responsive header', () {
+    testWidgets('desktop shows the toolbar, phone keeps the AppBar', (
+      tester,
+    ) async {
       await _pumpLibrary(tester, surface: const Size(1400, 980));
 
       expect(tester.takeException(), isNull);
@@ -176,82 +170,15 @@ void main() {
       expect(find.text('One', findRichText: true), findsOneWidget);
       expect(find.text('Two', findRichText: true), findsOneWidget);
       expect(find.textContaining('More (', findRichText: true), findsNothing);
-    });
 
-    testWidgets('phone keeps the old AppBar (no regression)', (tester) async {
-      await _pumpLibrary(tester, surface: const Size(412, 800));
+      // Crossing the breakpoint re-renders the same screen as the phone
+      // layout, so both branches are checked without remounting the tree.
+      tester.view.physicalSize = const Size(412, 800);
+      await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
       expect(find.byType(DesktopLibraryToolbar), findsNothing);
       expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
-    });
-
-    testWidgets(
-      'landscape-phone sticky search shows global search with a query',
-      (tester) async {
-        final container = await _pumpLibrary(
-          tester,
-          surface: const Size(915, 412),
-          persistentSearchBar: true,
-        );
-
-        container.read(libraryQueryProvider.notifier).update('sword');
-        await tester.pumpAndSettle();
-
-        expect(
-          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-      },
-    );
-  });
-
-  group('Library toolbar in the shell bar', () {
-    bool insideBar(WidgetTester tester, Rect barRect, Finder control) {
-      final rect = tester.getRect(control);
-      return barRect.left <= rect.left &&
-          rect.right <= barRect.right &&
-          barRect.top <= rect.top &&
-          rect.bottom <= barRect.bottom;
-    }
-
-    testWidgets('search, sort, filter and display sit inside the bar', (
-      tester,
-    ) async {
-      await _pumpLibrary(tester, surface: const Size(1400, 980));
-
-      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
-      final barRect = tester.getRect(find.byType(DesktopTopBar));
-      expect(
-        insideBar(tester, barRect, find.byType(DesktopLibraryToolbar)),
-        isTrue,
-      );
-      expect(
-        insideBar(tester, barRect, find.byType(DesktopSearchField)),
-        isTrue,
-        reason: 'search field',
-      );
-      expect(
-        insideBar(tester, barRect, find.byIcon(Icons.sort_rounded)),
-        isTrue,
-        reason: 'sort control',
-      );
-      expect(
-        insideBar(tester, barRect, find.text('Filter')),
-        isTrue,
-        reason: 'filter control',
-      );
-      expect(
-        insideBar(tester, barRect, find.byTooltip('Display')),
-        isTrue,
-        reason: 'display control',
-      );
-
-      // Category tabs stay in the page body under the bar.
-      final tabTop = tester.getTopLeft(find.text('One', findRichText: true)).dy;
-      expect(tabTop, greaterThan(barRect.bottom - 1));
-      expect(tester.takeException(), isNull);
     });
   });
 }

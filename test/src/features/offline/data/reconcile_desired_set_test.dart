@@ -48,13 +48,11 @@ void main() {
     ch(5, 5), // unread
   ];
 
-  test('off keeps nothing (except pinned)', () {
+  test('keep-rule table', () {
     expect(desiredChapterIds(chapters, OfflineKeepRule.off, 3), isEmpty);
     final withPin = [...chapters, ch(9, 9, read: true, pinned: true)];
     expect(desiredChapterIds(withPin, OfflineKeepRule.off, 3), {9});
-  });
 
-  test('all keeps every chapter', () {
     expect(desiredChapterIds(chapters, OfflineKeepRule.all, 3), {
       1,
       2,
@@ -62,27 +60,18 @@ void main() {
       4,
       5,
     });
-  });
 
-  test('allUnread keeps only unread', () {
     expect(desiredChapterIds(chapters, OfflineKeepRule.allUnread, 3), {
       3,
       4,
       5,
     });
-  });
 
-  test(
-    'nUnread keeps the N lowest-index unread after the furthest-read position',
-    () {
-      expect(desiredChapterIds(chapters, OfflineKeepRule.nUnread, 2), {3, 4});
-    },
-  );
+    expect(desiredChapterIds(chapters, OfflineKeepRule.nUnread, 2), {3, 4});
 
-  test('nUnread unions pinned even when read or beyond N', () {
-    final c = [...chapters, ch(1, 1, read: true, pinned: true)];
-    // id 1 already present but pinned; plus next-2-unread {3,4}
-    expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {1, 3, 4});
+    // Pinned chapters are unioned even when read or beyond N.
+    final pinned = [...chapters, ch(1, 1, read: true, pinned: true)];
+    expect(desiredChapterIds(pinned, OfflineKeepRule.nUnread, 2), {1, 3, 4});
   });
 
   test('nUnread skips a permanently-errored chapter and lets the next unread '

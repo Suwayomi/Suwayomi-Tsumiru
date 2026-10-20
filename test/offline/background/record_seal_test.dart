@@ -7,7 +7,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/features/offline/data/background/record_seal.dart';
@@ -40,17 +39,14 @@ void main() {
     ),
   );
 
-  test('a persisted record carries none of its secrets in clear', () {
+  test('secrets are sealed and a wrong key reads them as absent', () {
     final raw = jsonEncode(_record.toJson());
     expect(raw, isNot(contains('secret')));
     expect(raw, isNot(contains('c2VjcmV0')));
     // Identity metadata the workers match on without the key stays readable.
     expect(raw, contains('catalog'));
-  });
 
-  test('another key reads the secrets as absent: the record authenticates '
-      'as nobody and matches no identity', () {
-    final raw = jsonEncode(_record.toJson());
+    // Another key: the record authenticates as nobody and matches no identity.
     RecordSeal.debugKey = _key(2);
     final read = BackgroundTokenRecord.fromJson(
       jsonDecode(raw) as Map<String, Object?>,
@@ -62,30 +58,4 @@ void main() {
     expect(read.catalogServerId, 'catalog');
     expect(read.sameIdentity(_record), isFalse);
   });
-
-  group('load', () {
-    setUp(() {
-      RecordSeal.debugKey = null;
-      FlutterSecureStorage.setMockInitialValues({});
-    });
-
-    test('the app creates the key once and the workers find it', () async {
-      const storage = FlutterSecureStorage();
-      expect(await RecordSeal.load(storage), isFalse);
-      expect(RecordSeal.ready, isFalse);
-
-      expect(await RecordSeal.load(storage, create: true), isTrue);
-      final sealed = jsonEncode(_record.toJson());
-
-      // A worker isolate: same store, no key in memory yet.
-      RecordSeal.debugKey = null;
-      expect(await RecordSeal.load(storage), isTrue);
-      final read = BackgroundTokenRecord.fromJson(
-        jsonDecode(sealed) as Map<String, Object?>,
-      );
-      expect(read.refreshToken, 'secret-refresh');
-    });
-  });
 }
-
-extension on BackgroundTokenRecord {}

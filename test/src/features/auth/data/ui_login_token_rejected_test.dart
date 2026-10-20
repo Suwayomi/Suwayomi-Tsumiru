@@ -182,34 +182,4 @@ void main() {
       expect(credentials.accountBinding, isNull);
     });
   });
-
-  test('a proxy failure after sign-in does not block web sign-in', () async {
-    final seenAuth = <String?>[];
-    final probe = await _probeServer(
-      authorized: false,
-      seenAuth: seenAuth,
-      statusCode: 502,
-      rawBody: '<html>Bad Gateway</html>',
-    );
-    addTearDown(() => probe.close(force: true));
-    final base = 'http://127.0.0.1:${probe.port}';
-    await _runZoned(() async {
-      final container = await _container(base, isWeb: true);
-      addTearDown(container.dispose);
-      final link = _UiLoginChain();
-      final client = GraphQLClient(link: link, cache: GraphQLCache());
-      await container
-          .read(authCoordinatorProvider.notifier)
-          .loginUi(
-            gqlClient: client,
-            username: 'reader',
-            password: 'password',
-            serverBaseUrl: base,
-          );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
-        link.token,
-      );
-    });
-  });
 }

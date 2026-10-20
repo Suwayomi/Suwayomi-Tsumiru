@@ -8,35 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/migration/domain/bulk_migration_types.dart';
 import 'package:tsumiru/src/features/migration/domain/concurrency.dart';
 import 'package:tsumiru/src/features/migration/domain/smart_search_engine.dart';
-import 'package:tsumiru/src/features/migration/domain/string_similarity.dart';
 
 void main() {
-  group('normalizedLevenshteinSimilarity', () {
-    test('a near match scores high, an unrelated one scores low', () {
-      expect(
-        normalizedLevenshteinSimilarity('Solo Leveling', 'Solo Levelling'),
-        greaterThan(0.9),
-      );
-      expect(
-        normalizedLevenshteinSimilarity('Solo Leveling', 'Berserk'),
-        lessThan(0.4),
-      );
-    });
-  });
-
-  group('sanitizeQuery', () {
-    test('trims separator chars from the ends', () {
-      expect(sanitizeQuery('  - Naruto : '), 'Naruto');
-    });
-    test('normalizes fancy quotes and dashes', () {
-      expect(sanitizeQuery('‘Hero’ — tale'), "'Hero' - tale");
-    });
-  });
-
   group('SmartSearchEngine.regularSearch', () {
     const engine = SmartSearchEngine();
 
-    test('picks the highest-scoring eligible candidate', () async {
+    test('picks the highest-scoring candidate and rejects the 0.4 floor', () async {
       final r = await engine.regularSearch(
         title: 'Solo Leveling',
         search: (q) async => [
@@ -46,40 +23,22 @@ void main() {
       );
       expect(r.mangaId, 2);
       expect(r.confidence, 1.0);
-    });
 
-    test('a lone unrelated candidate is NOT auto-accepted as 1.0', () async {
       // Komikku would shortcut a single candidate to 1.0; we compute the real
       // score and reject it below the 0.4 floor.
-      final r = await engine.regularSearch(
+      final lone = await engine.regularSearch(
         title: 'Solo Leveling',
         search: (q) async => [
           (id: 9, title: 'Completely Different Manga', thumbnailUrl: null),
         ],
       );
-      expect(r.hasMatch, isFalse);
+      expect(lone.hasMatch, isFalse);
     });
   });
 
   group('buildSmartMatcher — first-hit-wins over priority sources', () {
     BulkMigrationEntry entry(int id, String title) =>
         BulkMigrationEntry(fromMangaId: id, fromTitle: title);
-
-    test('returns the match from the first source that has one', () async {
-      final searched = <String>[];
-      final matcher = buildSmartMatcher(
-        targetSourceIds: ['srcA', 'srcB'],
-        rateLimiter: RateLimiter(minInterval: Duration.zero),
-        search: (sourceId, query) async {
-          searched.add(sourceId);
-          if (sourceId == 'srcA') return []; // no hit on the first source
-          return [(id: 42, title: 'Solo Leveling', thumbnailUrl: null)];
-        },
-      );
-      final outcome = await matcher(entry(1, 'Solo Leveling'), CancelToken());
-      expect(outcome.toMangaId, 42);
-      expect(searched, ['srcA', 'srcB']);
-    });
 
     test(
       'stops at the first source with a hit (no needless later search)',

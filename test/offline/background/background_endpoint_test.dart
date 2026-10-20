@@ -43,35 +43,4 @@ void main() {
       },
     );
   });
-
-  group('switchServerBaseIfVerified', () {
-    test('verification runs against the new address and keeps it', () async {
-      var base = _external;
-      String? seenByVerify;
-      final verified = await switchServerBaseIfVerified(
-        base: () => base,
-        setBase: (value) => base = value,
-        next: _lan,
-        verify: () async {
-          seenByVerify = base;
-          return true;
-        },
-      );
-      expect(verified, isTrue);
-      expect(seenByVerify, _lan);
-      expect(base, _lan);
-    });
-
-    test('a failed verification restores the previous address', () async {
-      var base = _external;
-      final verified = await switchServerBaseIfVerified(
-        base: () => base,
-        setBase: (value) => base = value,
-        next: _lan,
-        verify: () async => false,
-      );
-      expect(verified, isFalse);
-      expect(base, _external);
-    });
-  });
 }

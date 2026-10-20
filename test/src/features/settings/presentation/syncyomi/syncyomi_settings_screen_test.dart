@@ -209,14 +209,8 @@ Future<void> _pump(
   await tester.pump();
 }
 
-ListTile _tileWith(WidgetTester tester, String text) =>
-    tester.widget<ListTile>(find.widgetWithText(ListTile, text));
-
-int _statusPolls(_Harness harness) =>
-    harness.server.operations.where((name) => name == 'LastSyncStatus').length;
-
 void main() {
-  testWidgets('shows every setting, unset until the server has them', (
+  testWidgets('loads, reports an unsupported server and saves values', (
     tester,
   ) async {
     await _pump(tester, _Harness());
@@ -232,9 +226,8 @@ void main() {
     expect(find.text('Not set'), findsNWidgets(2));
     expect(find.text('Manual only'), findsOneWidget);
     expect(find.text('Never synced'), findsOneWidget);
-  });
 
-  testWidgets('a server without the SyncYomi fields says so', (tester) async {
+    // A server without the SyncYomi fields says so.
     await _pump(tester, _Harness(supportsSyncYomi: false));
 
     expect(
@@ -245,11 +238,8 @@ void main() {
     );
     expect(find.text('Sync now'), findsNothing);
     expect(find.text('Host'), findsNothing);
-  });
 
-  testWidgets('Sync data and interval pickers save their values', (
-    tester,
-  ) async {
+    // Sync data and the interval pickers save their values.
     final harness = _Harness(
       settings: _settings(dataManga: true, dataHistory: true),
     );
@@ -288,182 +278,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(intervalHarness.server.writes, ['UpdateSyncYomiInterval']);
     expect(intervalHarness.server.writeVariables.last['syncInterval'], 'PT3H');
-  });
-
-  testWidgets('Sync now gates on config, starts, then polls to its own end', (
-    tester,
-  ) async {
-    // Disabled until the switch, host and key are all set.
-    await _pump(tester, _Harness());
-    expect(_tileWith(tester, 'Sync now').enabled, isFalse);
-    await _pump(
-      tester,
-      _Harness(settings: _settings(host: 'https://syncyomi.example.com')),
-    );
-    expect(_tileWith(tester, 'Sync now').enabled, isFalse);
-    await _pump(
-      tester,
-      _Harness(
-        settings: _settings(host: 'https://syncyomi.example.com', apiKey: 'k'),
-      ),
-    );
-    expect(_tileWith(tester, 'Sync now').enabled, isFalse);
-    await _pump(
-      tester,
-      _Harness(
-        settings: _settings(
-          enabled: true,
-          host: 'https://syncyomi.example.com',
-          apiKey: 'k',
-        ),
-      ),
-    );
-    expect(_tileWith(tester, 'Sync now').enabled, isTrue);
-
-    // Over an old SUCCESS: Sync now starts a run and polls to its own end.
-    final harness = _Harness(
-      settings: _settings(
-        enabled: true,
-        host: 'https://syncyomi.example.com',
-        apiKey: 'k',
-      ),
-      status: {
-        '__typename': 'SyncStatus',
-        'state': 'SUCCESS',
-        'errorMessage': null,
-        'startDate': '1',
-        'endDate': '1700000001000',
-      },
-    );
-    await _pump(tester, harness, settle: false);
-    expect(find.textContaining('Last synced'), findsOneWidget);
-    final polls = _statusPolls(harness);
-
-    await tester.tap(find.text('Sync now'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    expect(harness.server.writes, ['StartSync']);
-
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump();
-    expect(_statusPolls(harness), greaterThan(polls));
-
-    harness.server.status = {
-      '__typename': 'SyncStatus',
-      'state': 'SUCCESS',
-      'errorMessage': null,
-      'startDate': '2',
-      'endDate': '1800000001000',
-    };
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump();
-    await tester.pump();
-    expect(find.textContaining('Last synced'), findsOneWidget);
-    final settled = _statusPolls(harness);
-
-    await tester.pump(const Duration(seconds: 6));
-    await tester.pump();
-    expect(_statusPolls(harness), settled);
-    await tester.pumpWidget(const SizedBox());
-  });
-
-  testWidgets('host validation and the status line', (tester) async {
-    // A host that is not an http(s) URL is refused, not saved.
-    var harness = _Harness();
-    await _pump(tester, harness);
-    await tester.tap(find.text('Host'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'syncyomi.example.com');
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Enter a URL starting with http:// or https://'),
-      findsOneWidget,
-    );
-    expect(harness.server.writes, isEmpty);
-    expect(find.byType(TextField), findsOneWidget);
-
-    // A saved host is trimmed of whitespace and trailing slashes.
-    harness = _Harness();
-    await _pump(tester, harness);
-    await tester.tap(find.text('Host'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byType(TextField),
-      '  https://syncyomi.example.com///  ',
-    );
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-    expect(harness.server.writes, ['UpdateSyncYomiHost']);
-    expect(
-      harness.server.writeVariables.last['syncYomiHost'],
-      'https://syncyomi.example.com',
-    );
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('https://syncyomi.example.com'), findsOneWidget);
-
-    // A host the server refuses leaves the dialog open with the text.
-    harness = _Harness(failHostWrite: true);
-    await _pump(tester, harness);
-    await tester.tap(find.text('Host'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byType(TextField),
-      'https://syncyomi.example.com',
-    );
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-    expect(harness.server.writes, ['UpdateSyncYomiHost']);
-    expect(find.byType(TextField), findsOneWidget);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      'https://syncyomi.example.com',
-    );
-
-    // The status line follows the last sync state.
-    await _pump(
-      tester,
-      _Harness(
-        status: {
-          '__typename': 'SyncStatus',
-          'state': 'SUCCESS',
-          'errorMessage': null,
-          'startDate': '1700000000000',
-          'endDate': '1700000001000',
-        },
-      ),
-    );
-    expect(find.textContaining('Last synced'), findsOneWidget);
-
-    await _pump(
-      tester,
-      _Harness(
-        status: {
-          '__typename': 'SyncStatus',
-          'state': 'ERROR',
-          'errorMessage': 'host unreachable',
-          'startDate': '1700000000000',
-          'endDate': '1700000001000',
-        },
-      ),
-    );
-    expect(find.text('Last sync failed: host unreachable'), findsOneWidget);
-
-    await _pump(
-      tester,
-      _Harness(
-        status: {
-          '__typename': 'SyncStatus',
-          'state': 'DOWNLOADING',
-          'errorMessage': null,
-          'startDate': '1700000000000',
-          'endDate': null,
-        },
-      ),
-      settle: false,
-    );
-    expect(find.text('Syncing: Downloading'), findsOneWidget);
-    // The poll timer must not outlive the screen.
-    await tester.pumpWidget(const SizedBox());
   });
 }

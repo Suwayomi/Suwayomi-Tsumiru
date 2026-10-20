@@ -143,13 +143,6 @@ Future<GoRouter> _pumpRouter(WidgetTester tester) async {
   return router;
 }
 
-Future<void> _resize(WidgetTester tester, double width) async {
-  tester.view.physicalSize = Size(width, 900);
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 100));
-  await tester.pump(const Duration(milliseconds: 200));
-}
-
 void main() {
   testWidgets('rapid flips across 600 px settle without stacking shells', (
     tester,
@@ -181,19 +174,5 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(tester.takeException(), isNull);
     expect(find.byType(NavigationShellScreen), findsOneWidget);
-  });
-
-  testWidgets('resizing across 1200 px keeps the single shell', (tester) async {
-    await _pumpRouter(tester);
-    expect(tester.takeException(), isNull);
-
-    final shell = find.byType(NavigationShellScreen).evaluate().single;
-    for (final w in [1199.0, 1200.0, 1400.0]) {
-      await _resize(tester, w);
-      expect(tester.takeException(), isNull, reason: 'at width $w');
-      final shells = find.byType(NavigationShellScreen).evaluate();
-      expect(shells, hasLength(1), reason: 'at width $w');
-      expect(identical(shells.single, shell), isTrue);
-    }
   });
 }

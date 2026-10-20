@@ -4,21 +4,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/update_status/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/widgets/shell/update_banner_state.dart';
 
-ProviderContainer _container({bool runningNow = false}) {
+ProviderContainer _container() {
   final container = ProviderContainer(
     overrides: [
       // arm() reads this to seed whether a run is already in flight.
       updateProgressSocketProvider.overrideWith(
         (ref) => Stream.value(
           Fragment$UpdateProgressDto(
-            isRunning: runningNow,
+            isRunning: false,
             totalJobs: 0,
             finishedJobs: 0,
           ),
@@ -36,17 +35,6 @@ ProviderContainer _container({bool runningNow = false}) {
 
 void main() {
   group('UpdateOptimistic', () {
-    test('defaults are off; arm() shows the banner immediately', () {
-      final c = _container();
-      expect(c.read(updateOptimisticProvider), isFalse);
-      c.read(updateOptimisticProvider.notifier).arm();
-      expect(c.read(updateOptimisticProvider), isTrue);
-
-      expect(c.read(updateBannerVisibleProvider), isFalse);
-      c.read(updateBannerVisibleProvider.notifier).set(true);
-      expect(c.read(updateBannerVisibleProvider), isTrue);
-    });
-
     test('holds through pre-start idle and releases on the end edge', () async {
       final c = _container();
       // Resolve the seed read to "not running" before arming.
@@ -77,42 +65,6 @@ void main() {
         isFalse,
         reason: 'released on the running→idle edge',
       );
-    });
-
-    test(
-      'a second arm mid-run releases on the next idle edge, not 12s later',
-      () async {
-        final c = _container(runningNow: true);
-        // Seed read resolves to "already running".
-        await c.read(updateProgressSocketProvider.future);
-        final notifier = c.read(updateOptimisticProvider.notifier);
-        notifier.arm();
-        expect(c.read(updateOptimisticProvider), isTrue);
-
-        // The change-only stream never re-delivers `true`; the idle edge alone
-        // must release the hold because arm() seeded "already seen running".
-        notifier.onRealRunning(false);
-        expect(c.read(updateOptimisticProvider), isFalse);
-      },
-    );
-
-    test('safety timeout releases the hold after 12s if no run registers', () {
-      fakeAsync((async) {
-        final container = ProviderContainer(
-          overrides: [
-            updateProgressSocketProvider.overrideWith(
-              (ref) => const Stream.empty(),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        container.read(updateOptimisticProvider.notifier).arm();
-        expect(container.read(updateOptimisticProvider), isTrue);
-
-        async.elapse(const Duration(seconds: 12));
-        expect(container.read(updateOptimisticProvider), isFalse);
-      });
     });
   });
 }

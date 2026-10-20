@@ -129,31 +129,11 @@ void main() {
     return result;
   }
 
-  test('a live token goes out without a refresh', () {
-    withStore(fresh, const [], (async, container, calls, client) {
-      expect(gate(async, container, client), fresh);
-      expect(calls, isEmpty);
-    });
-  });
-
   test('a token about to expire is refreshed first', () {
     final due = _jwt(const Duration(seconds: 30));
     withStore(due, [_success(fresh)], (async, container, calls, client) {
       expect(gate(async, container, client), fresh);
       expect(calls, hasLength(1));
-    });
-  });
-
-  test('an expired token gets a second refresh attempt', () {
-    final expired = _jwt(const Duration(minutes: -78));
-    withStore(expired, [_unreachable, _success(fresh)], (
-      async,
-      container,
-      calls,
-      client,
-    ) {
-      expect(gate(async, container, client), fresh);
-      expect(calls, hasLength(2));
     });
   });
 

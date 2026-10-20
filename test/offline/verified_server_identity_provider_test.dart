@@ -109,7 +109,7 @@ void main() {
   setUp(() async => fixture = await _Fixture.create());
   tearDown(() => fixture.container.dispose());
 
-  test('matching account and catalogue authorize background work', () async {
+  test('matching authorises and each mismatch revokes', () async {
     expect(
       await fixture.container.read(verifiedServerInstanceIdProvider.future),
       'catalog-A',
@@ -123,10 +123,10 @@ void main() {
       fixture.preferences.getString(DBKeys.offlineLastServerAddress.name),
       _Fixture.address,
     );
-  });
 
-  for (final mismatch in ['account', 'catalogue']) {
-    test('a different $mismatch revokes background authorization', () async {
+    for (final mismatch in ['account', 'catalogue']) {
+      fixture.container.dispose();
+      fixture = await _Fixture.create();
       await CatchupStateStore(fixture.preferences).setIdentityAuthorized(true);
       await fixture.preferences.setString(
         DBKeys.offlineLastServerId.name,
@@ -149,6 +149,7 @@ void main() {
         fixture.preferences.getString(DBKeys.offlineLastServerId.name),
         'previous-verified',
       );
-    });
-  }
+      fixture.container.dispose();
+    }
+  });
 }

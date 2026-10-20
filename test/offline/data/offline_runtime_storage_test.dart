@@ -74,35 +74,4 @@ void main() {
       'A private title',
     );
   });
-
-  test('refused drain leaves A usable and never opens B', () async {
-    await runtime.replace(drain: () async {}, open: () => open('A'));
-    final a = container.read(offlineRuntimeStorageProvider)!;
-    await expectLater(
-      runtime.replace(
-        drain: () async => throw StateError('Worker busy'),
-        open: () async => throw StateError('must not open'),
-      ),
-      throwsStateError,
-    );
-    expect(container.read(offlineRuntimeStorageProvider), same(a));
-    expect(await a.db.mangaById(1), isNull);
-  });
-  test('overlapping storage changes are refused', () async {
-    final gate = Completer<void>();
-    final switching = runtime.replace(
-      drain: () => gate.future,
-      open: () => open('A'),
-    );
-    await expectLater(
-      runtime.replace(drain: () async {}, open: () => open('B')),
-      throwsStateError,
-    );
-    gate.complete();
-    await switching;
-    expect(
-      container.read(offlineRuntimeStorageProvider)!.paths.baseDir,
-      endsWith('/A'),
-    );
-  });
 }

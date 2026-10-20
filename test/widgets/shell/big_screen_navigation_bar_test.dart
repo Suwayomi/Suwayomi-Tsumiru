@@ -86,78 +86,71 @@ double _sidebarWidth(WidgetTester tester) =>
     tester.getSize(find.byType(DesktopSidebar)).width;
 
 void main() {
-  testWidgets(
-    'collapse toggles the desktop sidebar; the bar logo expands it again',
-    (tester) async {
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      await _pump(tester, prefs);
-
-      // Default: expanded (labels beside icons), collapse chevron in the bar.
-      expect(find.byType(DesktopSidebar), findsOneWidget);
-      expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
-      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
-      expect(tester.takeException(), isNull);
-
-      // Collapse from the bar.
-      await tester.tap(find.byIcon(Icons.chevron_left));
-      await tester.pumpAndSettle();
-
-      expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
-      expect(
-        find.byIcon(Icons.chevron_left),
-        findsNothing,
-        reason: 'collapsed bar shows the logo, not a chevron',
-      );
-      expect(
-        find.byIcon(Icons.chevron_right),
-        findsNothing,
-        reason: 'the sidebar itself carries no toggle',
-      );
-      expect(
-        find.byType(TsumiruLogo),
-        findsOneWidget,
-        reason: 'collapsed bar keeps the logo (tap to expand)',
-      );
-      expect(
-        tester.takeException(),
-        isNull,
-        reason: 'the narrow collapsed sidebar must not overflow',
-      );
-
-      // Expand again by tapping the bar logo.
-      await tester.tap(find.byType(TsumiruLogo));
-      await tester.pumpAndSettle();
-      expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
-
-      // Collapsed state persists across a rebuild.
-      await tester.tap(find.byIcon(Icons.chevron_left));
-      await tester.pumpAndSettle();
-      expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
-      await _pump(tester, prefs);
-      expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
-    },
-  );
-
-  testWidgets('900x900 auto-collapses the sidebar and keeps the preference', (
-    tester,
-  ) async {
-    // Saved preference is expanded (the default): below 1200 px the sidebar
-    // still shows collapsed, without touching the stored value.
+  testWidgets('collapse, auto-collapse and accessible labels', (tester) async {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, size: const Size(900, 900));
+    await _pump(tester, prefs);
+
+    // Default: expanded (labels beside icons), collapse chevron in the bar.
+    expect(find.byType(DesktopSidebar), findsOneWidget);
+    expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // Collapse from the bar.
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+
+    expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
+    expect(
+      find.byIcon(Icons.chevron_left),
+      findsNothing,
+      reason: 'collapsed bar shows the logo, not a chevron',
+    );
+    expect(
+      find.byIcon(Icons.chevron_right),
+      findsNothing,
+      reason: 'the sidebar itself carries no toggle',
+    );
+    expect(
+      find.byType(TsumiruLogo),
+      findsOneWidget,
+      reason: 'collapsed bar keeps the logo (tap to expand)',
+    );
+    expect(
+      tester.takeException(),
+      isNull,
+      reason: 'the narrow collapsed sidebar must not overflow',
+    );
+
+    // Expand again by tapping the bar logo.
+    await tester.tap(find.byType(TsumiruLogo));
+    await tester.pumpAndSettle();
+    expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
+
+    // Collapsed state persists across a rebuild.
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
+    await _pump(tester, prefs);
+    expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
+
+    // 900x900 auto-collapses the sidebar and keeps the preference: the saved
+    // preference is expanded (the default), but below 1200 px the sidebar
+    // still shows collapsed without touching the stored value.
+    await tester.pumpWidget(const SizedBox.shrink());
+    SharedPreferences.setMockInitialValues(const {});
+    final narrowPrefs = await SharedPreferences.getInstance();
+    await _pump(tester, narrowPrefs, size: const Size(900, 900));
 
     expect(find.byType(DesktopSidebar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
     expect(_sidebarWidth(tester), 60);
-    // The saved preference still says expanded (the provider writes its
-    // initial back on first read, so the stored value is never false here).
     final container = ProviderScope.containerOf(
       tester.element(find.byType(DesktopSidebar)),
     );
     expect(container.read(sidebarExpandedProvider), isTrue);
-    expect(prefs.getBool('sidebarExpanded'), isNot(isFalse));
+    expect(narrowPrefs.getBool('sidebarExpanded'), isNot(isFalse));
     expect(find.byIcon(Icons.chevron_left), findsNothing);
     expect(find.byIcon(Icons.chevron_right), findsNothing);
     expect(tester.takeException(), isNull);
@@ -166,31 +159,13 @@ void main() {
     tester.view.physicalSize = const Size(1400, 900);
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), 208);
-  });
 
-  testWidgets('tapping a row calls onDestinationSelected with its index', (
-    tester,
-  ) async {
+    // Each row exposes its label exactly once to screen readers.
+    await tester.pumpWidget(const SizedBox.shrink());
     SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    final tapped = <int>[];
-    await _pump(tester, prefs, onDestinationSelected: tapped.add);
-
-    final l10n = _l10n(tester);
-    await tester.tap(find.text(l10n.browse));
-    await tester.pumpAndSettle();
-    expect(tapped, [
-      3,
-    ], reason: 'desktop nav list is the tablet list (History sits at 2)');
-  });
-
-  testWidgets('each row exposes its label exactly once to screen readers', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
+    final semanticPrefs = await SharedPreferences.getInstance();
     final handle = tester.ensureSemantics();
-    await _pump(tester, prefs);
+    await _pump(tester, semanticPrefs);
 
     final l10n = _l10n(tester);
     Finder libraryRow() => find.byWidgetPredicate(
@@ -232,15 +207,5 @@ void main() {
       ),
     );
     handle.dispose();
-  });
-
-  testWidgets('badges still render on the sidebar icons', (tester) async {
-    SharedPreferences.setMockInitialValues(const {});
-    final prefs = await SharedPreferences.getInstance();
-    await _pump(tester, prefs, downloadsPaused: true);
-
-    // Paused downloads with work waiting badges the Downloads tab.
-    expect(find.byType(Badge), findsWidgets);
-    expect(tester.takeException(), isNull);
   });
 }

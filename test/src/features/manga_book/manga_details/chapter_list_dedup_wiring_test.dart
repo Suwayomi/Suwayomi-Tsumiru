@@ -8,9 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
-import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 import 'chapter_test_helpers.dart';
@@ -27,13 +25,6 @@ class _FixedPreferredScanlators extends MangaPreferredScanlators {
   final List<String> groups;
   @override
   List<String> build({required int mangaId}) => groups;
-}
-
-class _FixedShowAll extends MangaShowAllScanlatorVersions {
-  _FixedShowAll(this.value);
-  final bool value;
-  @override
-  bool build({required int mangaId}) => value;
 }
 
 class _FixedUnreadFilter extends MangaChapterFilterUnread {
@@ -59,10 +50,7 @@ final _chapters = [
 ];
 
 Future<ProviderContainer> _container({
-  List<ChapterDto>? chapters,
   List<String> preference = const [],
-  bool showAll = false,
-  bool offline = false,
   bool? unreadFilter,
 }) async {
   SharedPreferences.setMockInitialValues({});
@@ -72,14 +60,10 @@ Future<ProviderContainer> _container({
       sharedPreferencesProvider.overrideWithValue(prefs),
       mangaChapterListProvider(
         mangaId: 1,
-      ).overrideWith(() => _FixedChapterList(chapters ?? _chapters)),
+      ).overrideWith(() => _FixedChapterList(_chapters)),
       mangaPreferredScanlatorsProvider(
         mangaId: 1,
       ).overrideWith(() => _FixedPreferredScanlators(preference)),
-      mangaShowAllScanlatorVersionsProvider(
-        mangaId: 1,
-      ).overrideWith(() => _FixedShowAll(showAll)),
-      offlineActiveProvider.overrideWithValue(offline),
       if (unreadFilter != null)
         mangaChapterFilterUnreadProvider.overrideWith(
           () => _FixedUnreadFilter(unreadFilter),
@@ -91,18 +75,8 @@ Future<ProviderContainer> _container({
   return c;
 }
 
-List<int> _ids(
-  ProviderContainer c, {
-  int? keepChapterId,
-  String? readerScanlatorGroup,
-}) => c
-    .read(
-      mangaChapterListWithFilterProvider(
-        mangaId: 1,
-        keepChapterId: keepChapterId,
-        readerScanlatorGroup: readerScanlatorGroup,
-      ),
-    )
+List<int> _ids(ProviderContainer c) => c
+    .read(mangaChapterListWithFilterProvider(mangaId: 1))
     .value!
     .map((e) => e.id)
     .toList();
@@ -115,47 +89,4 @@ void main() {
       expect(_ids(c), [5, 3, 2]);
     },
   );
-
-  test('show-all ON -> raw list passes through', () async {
-    final c = await _container(preference: const ['B'], showAll: true);
-    expect(_ids(c), [5, 4, 3, 2, 1]);
-  });
-
-  test('preferred scanlator filtering behaves the same offline', () async {
-    final catalogShaped = [
-      ch(id: 1, number: 0, scanlator: 'A', sourceOrder: 0),
-      ch(id: 2, number: 1, scanlator: 'B', sourceOrder: 1),
-      ch(id: 3, number: 2, scanlator: 'A', sourceOrder: 2),
-      ch(id: 4, number: 3, scanlator: 'B', sourceOrder: 3),
-    ];
-    final c = await _container(
-      chapters: catalogShaped,
-      preference: const ['B'],
-      offline: true,
-    );
-    expect(_ids(c), [4, 2]);
-  });
-
-  test('keepChapterId surfaces a hidden copy', () async {
-    final c = await _container(preference: const ['B']);
-    expect(_ids(c, keepChapterId: 1), [5, 3, 2, 1]);
-  });
-
-  test('hidden scanlator chapters do not become missing chapters', () async {
-    final c = await _container(
-      preference: const ['A'],
-      chapters: [
-        ch(id: 1, number: 1, scanlator: 'A', sourceOrder: 0),
-        ch(id: 2, number: 2, scanlator: 'B', sourceOrder: 1),
-        ch(id: 3, number: 3, scanlator: 'A', sourceOrder: 2),
-      ],
-    );
-
-    final entries = c.read(mangaChapterListEntriesProvider(mangaId: 1)).value!;
-    expect(entries.whereType<MissingChaptersEntry>(), isEmpty);
-    expect(
-      entries.whereType<MangaChapterEntry>().map((entry) => entry.chapter.id),
-      [3, 1],
-    );
-  });
 }

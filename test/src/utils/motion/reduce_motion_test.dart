@@ -91,7 +91,7 @@ Future<void> _expectPageAppearsInstantly(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('the OS flag and the app flag each turn motion off', (
+  testWidgets('OS and app flags turn motion off, at runtime and on routes', (
     tester,
   ) async {
     // Neither flag leaves motion on.
@@ -118,6 +118,7 @@ void main() {
 
     // App flag alone.
     await tester.pumpWidget(const SizedBox.shrink());
+    tester.platformDispatcher.clearAccessibilityFeaturesTestValue();
     final appProbe = _Probe();
     await tester.pumpWidget(
       _app(
@@ -127,25 +128,20 @@ void main() {
     );
     _expectReduced(appProbe);
     await _expectPageAppearsInstantly(tester);
-  });
 
-  testWidgets('set(true) at runtime turns reduced motion on below the scope', (
-    tester,
-  ) async {
-    final probe = _Probe();
-    await tester.pumpWidget(_app(probe));
-    expect(probe.reduceMotion, isFalse);
-
+    // set(true) at runtime turns reduced motion on below the scope.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final runtimeProbe = _Probe();
+    await tester.pumpWidget(_app(runtimeProbe));
+    expect(runtimeProbe.reduceMotion, isFalse);
     ProviderScope.containerOf(
-      probe.context!,
+      runtimeProbe.context!,
     ).read(appReduceMotionProvider.notifier).set(true);
     await tester.pump();
+    _expectReduced(runtimeProbe);
 
-    _expectReduced(probe);
-  });
-
-  testWidgets('route transitions follow reduced motion', (tester) async {
     // A closing page is hidden at once when reduced.
+    await tester.pumpWidget(const SizedBox.shrink());
     final reducedProbe = _Probe();
     await tester.pumpWidget(
       _app(

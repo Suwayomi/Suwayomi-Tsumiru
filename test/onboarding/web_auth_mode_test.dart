@@ -26,57 +26,44 @@ OperationException _notJsonError(int status, String snippet) =>
     );
 
 void main() {
-  group('connectionAuthChoices', () {
-    test('web offers UI login and no auth only', () {
-      expect(connectionAuthChoices(isWeb: true), [
-        AuthType.none,
-        AuthType.uiLogin,
-      ]);
-    });
-  });
+  test('web capabilities and unsupported auth modes', () {
+    expect(connectionAuthChoices(isWeb: true), [
+      AuthType.none,
+      AuthType.uiLogin,
+    ]);
 
-  group('onboardingAuthChoices', () {});
+    // Basic and simple login are unusable from a browser.
+    expect(isWebUnsupportedAuthMode(AuthType.basic), isTrue);
+    expect(isWebUnsupportedAuthMode(AuthType.simpleLogin), isTrue);
 
-  group('isWebUnsupportedAuthMode', () {
-    test('basic and simple login are unusable from a browser', () {
-      expect(isWebUnsupportedAuthMode(AuthType.basic), isTrue);
-      expect(isWebUnsupportedAuthMode(AuthType.simpleLogin), isTrue);
-    });
-  });
-
-  group('webServerAuthUnsupported', () {
-    test('a rejected about query reads as an unusable mode', () {
-      expect(
-        webServerAuthUnsupported(
-          aboutError: OperationException(
-            graphqlErrors: [GraphQLError(message: 'Unauthorized')],
-          ),
-          detectedAuthType: null,
+    // A rejected about query reads as an unusable mode.
+    expect(
+      webServerAuthUnsupported(
+        aboutError: OperationException(
+          graphqlErrors: [GraphQLError(message: 'Unauthorized')],
         ),
-        isTrue,
-      );
-    });
+        detectedAuthType: null,
+      ),
+      isTrue,
+    );
 
-    test('detected basic login reads as an unusable mode', () {
-      // Simple login stays out: the browser probe cannot tell it apart, so it
-      // reads as UI login and is caught after sign-in instead.
-      expect(
-        webServerAuthUnsupported(
-          aboutError: null,
-          detectedAuthType: AuthType.basic,
-        ),
-        isTrue,
-      );
-    });
+    // Simple login stays out: the browser probe cannot tell it apart, so it
+    // reads as UI login and is caught after sign-in instead.
+    expect(
+      webServerAuthUnsupported(
+        aboutError: null,
+        detectedAuthType: AuthType.basic,
+      ),
+      isTrue,
+    );
 
-    test('a readable 404 "Not Found" reads as Basic-gated', () {
-      expect(
-        webServerAuthUnsupported(
-          aboutError: _notJsonError(404, 'Not Found'),
-          detectedAuthType: null,
-        ),
-        isTrue,
-      );
-    });
+    // A readable 404 "Not Found" reads as Basic-gated.
+    expect(
+      webServerAuthUnsupported(
+        aboutError: _notJsonError(404, 'Not Found'),
+        detectedAuthType: null,
+      ),
+      isTrue,
+    );
   });
 }

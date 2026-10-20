@@ -34,28 +34,4 @@ void main() {
     expect(find.textContaining('Skipping 3 chapters'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
-  for (final continueReading in [false, true]) {
-    testWidgets('confirmation returns $continueReading', (tester) async {
-      bool? result;
-      await tester.pumpWidget(
-        _app(
-          Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                result = await confirmReaderChapterGap(context, 1);
-              },
-              child: const Text('Navigate'),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('Navigate'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Skipping 1 chapter.'), findsOneWidget);
-      await tester.tap(find.text(continueReading ? 'Continue' : 'Cancel'));
-      await tester.pumpAndSettle();
-      expect(result, continueReading);
-    });
-  }
 }

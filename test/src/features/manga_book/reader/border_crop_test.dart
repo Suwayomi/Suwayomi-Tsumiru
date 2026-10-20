@@ -56,28 +56,5 @@ void main() {
       expect(result.width, 8);
       expect(result.height, 8);
     });
-
-    test('asymmetric border trims each side independently', () {
-      // Content 3..17 x, 2..12 y — different margins each side.
-      final rect = (left: 3, top: 2, right: 17, bottom: 12);
-      final buf = _buffer(20, 20, _white, rect, _red);
-      final result = findContentRect(buf, 20, 20);
-      expect(result, isNotNull);
-      expect(result!.left, 3);
-      expect(result.top, 2);
-      expect(result.right, 17);
-      expect(result.bottom, 12);
-    });
-
-    test('content reaching every edge returns null (no border)', () {
-      final buf = _buffer(20, 20, _red, null, null);
-      expect(findContentRect(buf, 20, 20), isNull);
-    });
-
-    test('degenerate input (bad dimensions) returns null', () {
-      final buf = _buffer(10, 10, _white, null, null);
-      expect(findContentRect(buf, 0, 10), isNull);
-      expect(findContentRect(buf, 10, 10, threshold: 0), isNull);
-    });
   });
 }

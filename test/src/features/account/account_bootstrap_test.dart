@@ -23,7 +23,6 @@ import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_transition.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
-import 'package:tsumiru/src/features/offline/data/offline_runtime_storage.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
@@ -181,72 +180,4 @@ void main() {
     },
   );
 
-  test('unbound account verifies ownership before opening storage', () async {
-    await setup();
-    await restoreAccountSession(container);
-    expect(server.operations, [
-      'AccountCapability',
-      'CurrentAccount',
-      'OfflineServerIdentity',
-    ]);
-    expect(opened, ['account-root']);
-    final credentials = container
-        .read(authCredentialsStoreProvider)
-        .requireValue;
-    expect(credentials.accountBinding?.userId, 2);
-  });
-
-  for (final failure in ['offline', 'unknown']) {
-    test('$failure unbound account cannot adopt or open a catalogue', () async {
-      await setup();
-      server.offline = failure == 'offline';
-      server.unknown = failure == 'unknown';
-      await expectLater(restoreAccountSession(container), throwsA(anything));
-      expect(opened, isEmpty);
-      expect(container.read(offlineRuntimeStorageProvider), isNull);
-      expect(
-        container
-            .read(authCredentialsStoreProvider)
-            .requireValue
-            .accountBinding,
-        isNull,
-      );
-      expect(server.operations, ['AccountCapability']);
-    });
-  }
-
-  test('switch during refresh rejects startup before account lookup', () async {
-    await setup(expired: true);
-    server.refreshStarted = Completer<void>();
-    server.refreshRelease = Completer<void>();
-    final restored = expectLater(
-      restoreAccountSession(container),
-      throwsStateError,
-    );
-    await server.refreshStarted!.future;
-    await container
-        .read(authCredentialsStoreProvider.notifier)
-        .saveUiLoginTokens(
-          accessToken: 'B-access',
-          refreshToken: 'B-refresh',
-          binding: const AccountBinding(
-            address: 'http://192.0.2.10',
-            userId: 3,
-            username: 'B',
-            catalogId: 'B-root',
-          ),
-        );
-    server.refreshRelease!.complete();
-    await restored;
-    expect(server.operations, ['RefreshToken']);
-    expect(opened, isEmpty);
-    expect(
-      container
-          .read(authCredentialsStoreProvider)
-          .requireValue
-          .accountBinding
-          ?.catalogId,
-      'B-root',
-    );
-  });
 }

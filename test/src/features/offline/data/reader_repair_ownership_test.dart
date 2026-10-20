@@ -40,14 +40,14 @@ class _ReaderOwnership extends BackgroundDownloadController {
 }
 
 void main() {
-  for (final state in [
-    OfflineDeviceState.none,
-    OfflineDeviceState.queued,
-    OfflineDeviceState.downloaded,
-  ]) {
-    test(
-      'opening ${state.name} chapter only takes ownership when repair is needed',
-      () async {
+  test(
+    'opening a chapter only takes ownership when repair is needed',
+    () async {
+      for (final state in [
+        OfflineDeviceState.none,
+        OfflineDeviceState.queued,
+        OfflineDeviceState.downloaded,
+      ]) {
         final db = testOfflineDatabase();
         addTearDown(db.close);
         await db.upsertChapterMetadata(
@@ -105,7 +105,7 @@ void main() {
         final row = (await db.chapterById(5))!;
         expect(row.deviceState, repaired ? OfflineDeviceState.queued : state);
         expect(row.downloadGeneration, repaired ? 1 : 0);
-      },
-    );
-  }
+      }
+    },
+  );
 }

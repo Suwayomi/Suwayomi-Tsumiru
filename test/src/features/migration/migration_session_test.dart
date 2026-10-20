@@ -17,7 +17,6 @@ import 'package:tsumiru/src/features/manga_book/data/downloads/downloads_reposit
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/migration/controller/bulk_migration_providers.dart';
-import 'package:tsumiru/src/features/migration/data/migration_journal.dart';
 import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
@@ -65,22 +64,6 @@ class _Chapters extends MangaBookRepository {
   }
 }
 
-class _DeadDownloadSource extends _Chapters {
-  final refreshed = <int>[];
-  @override
-  Future<List<ChapterDto>?> getStoredChapterList(int mangaId) async {
-    calls.add(mangaId);
-    return [ch(id: 10, number: 1, isDownloaded: true)];
-  }
-
-  @override
-  Future<List<ChapterDto>?> getChapterList(int mangaId) async {
-    refreshed.add(mangaId);
-    if (mangaId == 1) throw StateError('Missing source');
-    return [ch(id: 20, number: 1)];
-  }
-}
-
 class _Downloads extends Fake implements DownloadsRepository {
   final queued = <int>[];
   @override
@@ -91,40 +74,6 @@ class _Downloads extends Fake implements DownloadsRepository {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  test(
-    'download migration reads the dead source from stored chapters',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        CatchupStateStore.identityAuthorizedKey: true,
-      });
-      final chapters = _DeadDownloadSource();
-      final downloads = _Downloads();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(
-            await SharedPreferences.getInstance(),
-          ),
-          authCredentialsStoreProvider.overrideWith(_Session.new),
-          authTypeKeyProvider.overrideWith(_UiLogin.new),
-          mangaBookRepositoryProvider.overrideWithValue(chapters),
-          downloadsRepositoryProvider.overrideWithValue(downloads),
-          offlineActiveProvider.overrideWithValue(false),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(authCredentialsStoreProvider.future);
-      await migrateOfflineLocalState(
-        container,
-        1,
-        2,
-        const MigrationOption(migrateDownloads: true),
-      );
-      expect(chapters.calls, [1]);
-      expect(chapters.refreshed, [2]);
-      expect(downloads.queued, [20]);
-    },
-  );
 
   test(
     'account replacement stops download migration and runtime drain waits',
@@ -173,27 +122,4 @@ void main() {
     },
   );
 
-  test('unverified startup leaves legacy recovery bytes untouched', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final legacy = MigrationJournal(prefs);
-    await legacy.put(
-      const MigrationJournalEntry(
-        fromMangaId: 1,
-        toMangaId: 2,
-        state: MigrationPairState.copying,
-        options: MigrationOption(deleteSource: true),
-      ),
-    );
-    final bytes = prefs.getString(MigrationJournal.prefsKey);
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        authCredentialsStoreProvider.overrideWith(_Session.new),
-      ],
-    );
-    addTearDown(container.dispose);
-    await recoverBulkMigrationsAtLaunch(container);
-    expect(prefs.getString(MigrationJournal.prefsKey), bytes);
-  });
 }

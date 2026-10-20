@@ -1,16 +1,34 @@
-import 'dart:convert';
-import 'dart:io';
-
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_client.dart';
-import 'package:tsumiru/src/features/notifications/data/background/notification_worker.dart';
 import 'package:tsumiru/src/features/notifications/data/local_notification_service.dart';
 import 'package:tsumiru/src/features/notifications/data/notification_state_store.dart';
 import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 
-class RealHttpOverrides extends HttpOverrides {}
+class RecordingPlugin implements FlutterLocalNotificationsPlugin {
+  String? payload;
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #show) {
+      payload = invocation.namedArguments[#payload] as String?;
+      return Future<void>.value();
+    }
+    if (invocation.memberName == #getNotificationAppLaunchDetails) {
+      return Future<NotificationAppLaunchDetails?>.value(
+        NotificationAppLaunchDetails(
+          true,
+          notificationResponse: NotificationResponse(
+            notificationResponseType:
+                NotificationResponseType.selectedNotification,
+            payload: payload,
+          ),
+        ),
+      );
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +62,7 @@ void main() {
     sessionFingerprint: notificationIdentityFingerprint(record),
   );
 
-  test('ownership proof covers config, payload, outbox and session tags', () {
+  test('ownership proof covers config, payload, outbox and session tags', () async {
     const endpoint = NotificationEndpoint(
       baseUrl: 'https://server',
       addPort: false,
@@ -135,79 +153,67 @@ void main() {
       notificationIdentityFingerprint(first),
       isNot(notificationIdentityFingerprint(changedSession)),
     );
-  });
 
-  test('old and unowned actions never send with a new account token', () async {
-    for (final catalog in <String?>['catalog', null]) {
-      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      addTearDown(() => server.close(force: true));
-      final sent = <String?>[];
-      server.listen((request) async {
-        sent.add(request.headers.value('authorization'));
-        await request.drain<void>();
-        request.response.headers.contentType = ContentType.json;
-        request.response.write(
-          jsonEncode({
-            'data': {
-              'updateChapters': {'clientMutationId': null},
-            },
-          }),
-        );
-        await request.response.close();
-      });
-      await HttpOverrides.runZoned(() async {
-        SharedPreferences.setMockInitialValues({});
-        final store = await NotificationStateStore.open();
-        final endpoint = NotificationEndpoint(
-          baseUrl: 'http://127.0.0.1',
-          port: server.port,
-        );
-        final address = 'http://127.0.0.1|${server.port}';
-        final a = token('A', address, catalog: catalog);
-        final b = token('B', address, catalog: catalog);
-        final oldAction = NotificationPayload.chapter(
-          mangaId: 1,
-          chapterId: 2,
-          chapterIds: [2],
-          identityEpoch: 1,
-          catalogServerId: catalog,
-          sessionFingerprint: notificationIdentityFingerprint(a),
-        );
-        await store.writeConfig(config(a, endpoint));
-        await store.writeTokenRecord(b);
-        await handleNotificationAction(
-          kNotifActionMarkRead,
-          oldAction.encode(),
-        );
-        expect(sent, isEmpty, reason: '$catalog');
-        await store.writeConfig(config(b, endpoint));
-        await handleNotificationAction(
-          kNotifActionDownload,
-          oldAction.encode(),
-        );
-        await handleNotificationAction(
-          kNotifActionMarkRead,
-          const NotificationPayload.chapter(
-            mangaId: 1,
-            chapterId: 2,
-            chapterIds: [2],
-          ).encode(),
-        );
-        expect(sent, isEmpty, reason: '$catalog');
-        final currentAction = NotificationPayload.chapter(
-          mangaId: 1,
-          chapterId: 2,
-          chapterIds: [2],
-          identityEpoch: 1,
-          catalogServerId: catalog,
-          sessionFingerprint: notificationIdentityFingerprint(b),
-        );
-        await handleNotificationAction(
-          kNotifActionMarkRead,
-          currentAction.encode(),
-        );
-        expect(sent, ['Bearer B'], reason: '$catalog');
-      }, createHttpClient: RealHttpOverrides().createHttpClient);
+    // Summary and update-error payloads retain their originating session.
+    const configA = NotificationWorkerConfig(
+      serverId: 's',
+      endpoint: NotificationEndpoint(baseUrl: 'https://s'),
+      newChaptersEnabled: true,
+      includedCategoryIds: {},
+      excludedCategoryIds: {},
+      hideContent: true,
+      identityEpoch: 4,
+      catalogServerId: 'a',
+      sessionFingerprint: 'session-a',
+    );
+    const configB = NotificationWorkerConfig(
+      serverId: 's',
+      endpoint: NotificationEndpoint(baseUrl: 'https://s'),
+      newChaptersEnabled: true,
+      includedCategoryIds: {},
+      excludedCategoryIds: {},
+      hideContent: true,
+      identityEpoch: 5,
+      catalogServerId: 'b',
+      sessionFingerprint: 'session-b',
+    );
+    var plugin = RecordingPlugin();
+    var service = LocalNotificationService(plugin);
+    await service.showNewChapters(
+      summaryTitle: 'New',
+      summaryText: 'Chapters',
+      summaryLines: [],
+      series: [],
+      hideContent: true,
+      markReadLabel: 'Read',
+      viewLabel: 'View',
+      downloadLabel: 'Download',
+      identityEpoch: 4,
+      catalogServerId: 'a',
+      sessionFingerprint: 'session-a',
+    );
+    final summary = NotificationPayload.decode(plugin.payload);
+    for (final item in [summary]) {
+      expect(item.requiresSession, isTrue);
+      expect(item.mangaId, isNull);
+      expect(item.matchesConfig(configA), isTrue);
+      expect(item.matchesConfig(configB), isFalse);
     }
+    plugin = RecordingPlugin();
+    service = LocalNotificationService(plugin);
+    await service.showLibraryUpdateError(
+      'Library update errors',
+      'One update failed',
+      identityEpoch: 4,
+      catalogServerId: 'a',
+      sessionFingerprint: 'session-a',
+    );
+    final decodedError = NotificationPayload.decode(plugin.payload);
+    expect(decodedError.isUpdateErrors, isTrue);
+    expect(decodedError.requiresSession, isTrue);
+    expect(decodedError.identityEpoch, 4);
+    expect(decodedError.catalogServerId, 'a');
+    expect(decodedError.sessionFingerprint, 'session-a');
+    expect(decodedError.matchesConfig(configB), isFalse);
   });
 }

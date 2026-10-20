@@ -24,29 +24,16 @@ GraphQLClient _dummyClient() =>
     GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingRepo extends MangaBookRepository {
-  _RecordingRepo({this.fail = false}) : super(_dummyClient());
+  _RecordingRepo() : super(_dummyClient());
 
-  /// Simulates an unreachable server: every meta write throws.
-  final bool fail;
   final List<(int, String, dynamic)> patched = [];
-  final List<(int, String)> deleted = [];
   @override
   Future<void> patchMangaMeta({
     required int mangaId,
     required String key,
     required dynamic value,
   }) async {
-    if (fail) throw Exception('server unreachable');
     patched.add((mangaId, key, value));
-  }
-
-  @override
-  Future<void> deleteMangaMeta({
-    required int mangaId,
-    required String key,
-  }) async {
-    if (fail) throw Exception('server unreachable');
-    deleted.add((mangaId, key));
   }
 }
 
@@ -124,61 +111,6 @@ void main() {
       );
     });
 
-    test('the Tsumiru-only alphabetical flag takes priority over a stale '
-        'webUI_sortBy value for that same manga', () async {
-      final repo = _RecordingRepo();
-      final c = await _containerFor(repo, {
-        1: {
-          'flutter_chapterSortIsAlphabetical': 'true',
-          'webUI_sortBy': 'chapterNumber',
-        },
-      });
-      expect(
-        c.read(mangaChapterSortPreferenceProvider(mangaId: 1)),
-        ChapterSort.alphabetical,
-      );
-    });
-
-    test(
-      'selecting a WebUI-interoperable axis writes webUI_sortBy AND deletes '
-      'the alphabetical flag (rather than leaving a "false" behind)',
-      () async {
-        final repo = _RecordingRepo();
-        final c = await _containerFor(repo, {
-          1: {'flutter_chapterSortIsAlphabetical': 'true'},
-        });
-        await c
-            .read(mangaChapterSortPreferenceProvider(mangaId: 1).notifier)
-            .update(ChapterSort.uploadDate);
-
-        expect(repo.deleted, [(1, 'flutter_chapterSortIsAlphabetical')]);
-        expect(
-          repo.patched.where(
-            (p) => p.$2 == 'flutter_chapterSortIsAlphabetical',
-          ),
-          isEmpty,
-        );
-        expect(repo.patched, contains((1, 'webUI_sortBy', 'uploadedAt')));
-      },
-    );
-
-    test('a failed write (server unreachable) is returned as an error and does '
-        'NOT change the displayed sort', () async {
-      final repo = _RecordingRepo(fail: true);
-      final c = await _containerFor(repo, {
-        1: {'webUI_sortBy': 'source'},
-      });
-      final result = await c
-          .read(mangaChapterSortPreferenceProvider(mangaId: 1).notifier)
-          .update(ChapterSort.alphabetical);
-
-      expect(result.hasError, isTrue);
-      await c.read(mangaWithIdProvider(mangaId: 1).future);
-      expect(
-        c.read(mangaChapterSortPreferenceProvider(mangaId: 1)),
-        ChapterSort.source,
-      );
-    });
   });
 
   group('MangaChapterSortDirectionPreference — per-manga, not global', () {

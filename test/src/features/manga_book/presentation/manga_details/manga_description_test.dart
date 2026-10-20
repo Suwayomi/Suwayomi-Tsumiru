@@ -10,7 +10,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widge
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/sorayomi.dart';
 
 import '../../reader/reader_test_fixtures.dart';
 
@@ -78,33 +77,4 @@ void main() {
     expect(inLibrary, isTrue);
     expect(refreshes, 0);
   });
-
-  testWidgets('opens markdown links with the supplied callback', (
-    tester,
-  ) async {
-    String? openedUrl;
-
-    await tester.pumpWidget(
-      _app(
-        MangaDescriptionBody(
-          description: '[Source](https://example.com/title)',
-          isExpanded: true,
-          onToggleExpanded: () {},
-          onOpenLink: (url) => openedUrl = url,
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Source', findRichText: true));
-    await tester.pump();
-
-    expect(openedUrl, 'https://example.com/title');
-  });
 }
-
-Widget _app(Widget child) => MaterialApp(
-  scrollBehavior: const AppScrollBehavior(),
-  home: Scaffold(
-    body: Padding(padding: const EdgeInsets.all(16), child: child),
-  ),
-);

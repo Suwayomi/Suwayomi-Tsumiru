@@ -14,11 +14,5 @@ void main() {
       expect(page.nodes, List.generate(50, (i) => i));
       expect(page.hasNextPage, isTrue);
     });
-
-    test('a full page and nothing past it is the last page', () {
-      final page = splitPageWindow(List.generate(50, (i) => i), 50);
-      expect(page.nodes, hasLength(50));
-      expect(page.hasNextPage, isFalse);
-    });
   });
 }

@@ -50,12 +50,25 @@ void main() {
       );
 
   test(
-    'syncChapters orphans a downloaded chapter the server no longer lists',
+    'syncChapters orphans server-deleted chapters but never on an empty list',
     () async {
       await downloaded(1);
       await downloaded(2);
+      final sync = OfflineSync(db);
+
+      // A failed/empty fetch must not orphan anything.
+      await sync.syncChapters(const []);
+      expect(
+        (await db.chapterById(1))!.deviceState,
+        OfflineDeviceState.downloaded,
+      );
+      expect(
+        (await db.chapterById(2))!.deviceState,
+        OfflineDeviceState.downloaded,
+      );
+
       // The server now lists only chapter 1 — chapter 2 was deleted server-side.
-      await OfflineSync(db).syncChapters([serverChapter(1)]);
+      await sync.syncChapters([serverChapter(1)]);
       // Still on the server → kept.
       expect(
         (await db.chapterById(1))!.deviceState,
@@ -65,18 +78,6 @@ void main() {
       expect(
         (await db.chapterById(2))!.deviceState,
         OfflineDeviceState.orphaned,
-      );
-    },
-  );
-
-  test(
-    'syncChapters does not orphan device chapters on an empty list',
-    () async {
-      await downloaded(1);
-      await OfflineSync(db).syncChapters(const []); // failed/empty fetch
-      expect(
-        (await db.chapterById(1))!.deviceState,
-        OfflineDeviceState.downloaded,
       );
     },
   );

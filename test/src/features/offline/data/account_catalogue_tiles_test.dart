@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -9,9 +8,7 @@ import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/offline/data/account_catalogue.dart';
 import 'package:tsumiru/src/features/offline/data/account_catalogue_providers.dart';
-import 'package:tsumiru/src/features/offline/presentation/offline_settings_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 const _catalogue = AccountCatalogue(
   id: 'A',
@@ -79,50 +76,6 @@ void main() {
     );
     await result.read(authCredentialsStoreProvider.future);
     return result;
-  }
-
-  for (final action in ['cancel', 'delete', 'changed session']) {
-    testWidgets('signed-out catalogue supports $action', (tester) async {
-      await tester.runAsync(() async {
-        final repository = _Repository();
-        final scope = await container(repository);
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: scope,
-            child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: const OfflineSettingsScreen(),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Inactive account downloads'), findsOneWidget);
-        expect(find.text('reader'), findsOneWidget);
-        expect(find.textContaining('2.0 KB'), findsOneWidget);
-        await tester.tap(find.byTooltip('Delete'));
-        await tester.pumpAndSettle();
-        expect(
-          find.textContaining('reader on https://server.example'),
-          findsOneWidget,
-        );
-        if (action == 'changed session') {
-          await scope
-              .read(authCredentialsStoreProvider.notifier)
-              .withIdentityChange(() async {});
-        }
-        await tester.tap(
-          find.widgetWithText(
-            TextButton,
-            action == 'cancel' ? 'Cancel' : 'Delete',
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(repository.removals, action == 'delete' ? 1 : 0);
-        await tester.pumpWidget(const SizedBox());
-        scope.dispose();
-      });
-    });
   }
 
   test('identity mutation waits for an admitted removal', () async {

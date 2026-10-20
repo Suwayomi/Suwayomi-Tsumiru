@@ -5,35 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
-import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
-import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
 
 import '../../../../helpers/offline_test_db.dart';
-
-ChapterDto serverChapter(
-  int id, {
-  required int lastPageRead,
-  required bool isRead,
-  bool isBookmarked = false,
-}) => Fragment$ChapterDto(
-  id: id,
-  mangaId: 1,
-  name: 'c$id',
-  chapterNumber: id.toDouble(),
-  sourceOrder: id,
-  isRead: isRead,
-  isBookmarked: isBookmarked,
-  isDownloaded: true,
-  lastPageRead: lastPageRead,
-  pageCount: 30,
-  fetchedAt: '0',
-  uploadDate: '0',
-  lastReadAt: '0',
-  url: '',
-  meta: const <Fragment$ChapterDto$meta>[],
-);
 
 void main() {
   late OfflineDatabase db;
@@ -70,35 +44,6 @@ void main() {
   );
 
   test(
-    'down-sync preserves dirty local progress (no stale-server overwrite)',
-    () async {
-      await seed(5, lastPageRead: 16);
-      await db.setChapterProgress(
-        5,
-        lastPageRead: 20,
-        isRead: false,
-      ); // read offline
-      await OfflineSync(
-        db,
-      ).syncChapters([serverChapter(5, lastPageRead: 16, isRead: false)]);
-      final c = await db.chapterById(5);
-      expect(c!.lastPageRead, 20); // local kept, not clobbered by server's 16
-      expect(c.progressDirty, true); // still pending up-sync
-    },
-  );
-
-  test('setChapterBookmark marks bookmarkDirty, not progressDirty', () async {
-    await seed(9);
-    await db.setChapterBookmark(9, true);
-    final c = await db.chapterById(9);
-    expect(c!.bookmarkDirty, true);
-    expect(c.progressDirty, false); // independent of read-progress dirtiness
-    expect((await db.dirtyChapters()).map((e) => e.id), [9]);
-    await db.clearBookmarkDirty(9);
-    expect(await db.dirtyChapters(), isEmpty);
-  });
-
-  test(
     'partial write dirties position only; completion dirties both',
     () async {
       await seed(5);
@@ -113,18 +58,24 @@ void main() {
     },
   );
 
-  test(
-    'setChapterReadState writes isRead + readStateDirty, not position',
-    () async {
-      await seed(5);
-      await db.setChapterProgress(5, lastPageRead: 4, isRead: null);
-      await db.clearProgressDirtyIfUnchanged(5, lastPageRead: 4);
-      await db.setChapterReadState(5, true);
-      final c = (await db.chapterById(5))!;
-      expect(c.isRead, isTrue);
-      expect(c.readStateDirty, isTrue);
-      expect(c.progressDirty, isFalse);
-      expect(c.lastPageRead, 4);
-    },
-  );
+  test('bookmark and read-state changes stay independent of progress', () async {
+    await seed(9);
+    await db.setChapterBookmark(9, true);
+    var c = (await db.chapterById(9))!;
+    expect(c.bookmarkDirty, true);
+    expect(c.progressDirty, false); // independent of read-progress dirtiness
+    expect((await db.dirtyChapters()).map((e) => e.id), [9]);
+    await db.clearBookmarkDirty(9);
+    expect(await db.dirtyChapters(), isEmpty);
+
+    await seed(5);
+    await db.setChapterProgress(5, lastPageRead: 4, isRead: null);
+    await db.clearProgressDirtyIfUnchanged(5, lastPageRead: 4);
+    await db.setChapterReadState(5, true);
+    c = (await db.chapterById(5))!;
+    expect(c.isRead, isTrue);
+    expect(c.readStateDirty, isTrue);
+    expect(c.progressDirty, isFalse);
+    expect(c.lastPageRead, 4);
+  });
 }

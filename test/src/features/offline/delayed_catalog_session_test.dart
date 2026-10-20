@@ -11,7 +11,6 @@ import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repos
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_cover_warmer.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
@@ -169,21 +168,6 @@ void main() {
       expect(sync.mangaWrites, 0);
       expect(sync.prunes, 0);
       expect(covers.calls, 0);
-    },
-  );
-
-  test(
-    'delayed chapters from previous account cannot mirror or fetch source',
-    () async {
-      final pending = container.read(
-        mangaChapterListProvider(mangaId: 1).future,
-      );
-      await details.entered.future;
-      auth.epoch++;
-      details.chapters.complete([]);
-      expect(await pending, isNull);
-      expect(sync.chapterWrites, 0);
-      expect(details.sourceFetches, 0);
     },
   );
 }

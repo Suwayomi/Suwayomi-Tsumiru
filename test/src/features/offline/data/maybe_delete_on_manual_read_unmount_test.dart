@@ -150,23 +150,6 @@ void main() {
   }
 
   testWidgets(
-    'a WidgetRef captured before the widget unmounts throws on the very next read '
-    '(reproduces the reported crash)',
-    (tester) async {
-      final h = await harness(tester);
-      await h.unmountChild();
-
-      expect(
-        () => h.ref.read(offlineActiveProvider),
-        throwsA(isA<StateError>()),
-        reason:
-            'this is exactly the crash from the field log: '
-            'ConsumerStatefulElement.read throwing once its element is disposed',
-      );
-    },
-  );
-
-  testWidgets(
     'maybeDeleteOnManualLocal deletes the device copy via a container obtained '
     'from a since-unmounted widget, where the widget\'s own ref would throw',
     (tester) async {

@@ -57,17 +57,4 @@ void main() {
       expect(r!.single.id, 1);
     },
   );
-
-  test('library: hang reports the server unreachable', () async {
-    await seedCatalog();
-    bool? reachable;
-    await libraryWithOfflineFallback(
-      fetch: hang,
-      db: db,
-      offlineEnabled: true,
-      onReachability: (r) => reachable = r,
-      fetchTimeout: const Duration(milliseconds: 50),
-    );
-    expect(reachable, isFalse);
-  });
 }

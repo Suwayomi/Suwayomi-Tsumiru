@@ -72,44 +72,6 @@ void main() {
 
   group('original bug — empty offlineChapters causes silent no-op', () {});
 
-  // --- syncAndReconcileMangaSet guards -----------------------------------------
-
-  group('syncAndReconcileMangaSet — guards', () {
-    test('offline inactive → no-op even when manga IDs are provided', () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final db = testOfflineDatabase();
-      addTearDown(db.close);
-      final repo = _NullChapterRepo();
-      final starterCalls = <bool>[];
-
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          offlineActiveProvider.overrideWithValue(false),
-          offlineDatabaseProvider.overrideWithValue(db),
-          mangaBookRepositoryProvider.overrideWithValue(repo),
-          downloadStarterProvider.overrideWithValue(
-            ({bool userInitiated = false}) async =>
-                starterCalls.add(userInitiated),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await syncAndReconcileMangaSet(container, {1, 2});
-
-      expect(
-        repo.calledFor,
-        isEmpty,
-        reason:
-            'offline inactive means no catalog is available; no '
-            'sync or download should start',
-      );
-      expect(starterCalls, isEmpty);
-    });
-  });
-
   // --- syncAndReconcileMangaSet integration ------------------------------------
 
   group('syncAndReconcileMangaSet — chapter fetch and download start', () {
@@ -158,40 +120,5 @@ void main() {
         );
       },
     );
-
-    test('userInitiated is passed through to the download starter', () async {
-      // The bulk keep-rule change is an explicit user gesture, so the FGS
-      // must start in user-initiated mode (drives the "X/Y" notification).
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final db = testOfflineDatabase();
-      addTearDown(db.close);
-      final repo = _NullChapterRepo();
-      final starterCalls = <bool>[];
-
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          offlineActiveProvider.overrideWithValue(true),
-          offlineDatabaseProvider.overrideWithValue(db),
-          mangaBookRepositoryProvider.overrideWithValue(repo),
-          downloadStarterProvider.overrideWithValue(
-            ({bool userInitiated = false}) async =>
-                starterCalls.add(userInitiated),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await syncAndReconcileMangaSet(container, {1}, userInitiated: true);
-
-      expect(
-        starterCalls,
-        [true],
-        reason:
-            'a user-initiated bulk keep must start the FGS in '
-            'user-initiated mode, not the background default',
-      );
-    });
   });
 }

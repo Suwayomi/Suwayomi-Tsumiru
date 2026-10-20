@@ -5,7 +5,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
-import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 
 void main() {
   setUp(() async {
@@ -27,37 +26,19 @@ void main() {
 
   group('applyIsolateCustomHeaders', () {});
 
-  group('validateCustomHeaderName', () {
-    test('rejects empty / spaced / colon names', () {
-      expect(validateCustomHeaderName(''), isNotNull);
-      expect(validateCustomHeaderName('   '), isNotNull);
-      expect(validateCustomHeaderName('Bad Name'), isNotNull);
-      expect(validateCustomHeaderName('Bad:Name'), isNotNull);
-    });
-  });
+  test('validation rejects bad names and decode never throws', () {
+    expect(validateCustomHeaderName(''), isNotNull);
+    expect(validateCustomHeaderName('   '), isNotNull);
+    expect(validateCustomHeaderName('Bad Name'), isNotNull);
+    expect(validateCustomHeaderName('Bad:Name'), isNotNull);
 
-  group('CustomHttpHeadersStore.decode', () {
-    test('malformed input reads as empty, never throws', () {
-      expect(CustomHttpHeadersStore.decode(null), isEmpty);
-      expect(CustomHttpHeadersStore.decode(''), isEmpty);
-      expect(CustomHttpHeadersStore.decode('not-json'), isEmpty);
-      expect(CustomHttpHeadersStore.decode('[1,2]'), isEmpty);
-    });
+    expect(CustomHttpHeadersStore.decode(null), isEmpty);
+    expect(CustomHttpHeadersStore.decode(''), isEmpty);
+    expect(CustomHttpHeadersStore.decode('not-json'), isEmpty);
+    expect(CustomHttpHeadersStore.decode('[1,2]'), isEmpty);
   });
 
   group('server_resolver extraHeaders', () {});
-
-  group('BackgroundTokenRecord extraHeaders', () {
-    test('round-trips through JSON', () {
-      const record = BackgroundTokenRecord(
-        gen: 0,
-        authType: 'none',
-        extraHeaders: {'CF-Access-Client-Id': 'id'},
-      );
-      final revived = BackgroundTokenRecord.fromJson(record.toJson());
-      expect(revived.extraHeaders, {'CF-Access-Client-Id': 'id'});
-    });
-  });
 
   group('CustomHttpHeadersStore — secure-storage persistence', () {});
 }

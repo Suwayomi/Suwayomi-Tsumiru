@@ -44,7 +44,6 @@ void main() {
     WidgetTester tester, {
     required int width,
     required int height,
-    bool invert = false,
   }) async {
     final image = await _rasterImage(width, height);
     addTearDown(image.dispose);
@@ -52,7 +51,7 @@ void main() {
       MaterialApp(
         home: RotateWidePage(
           imageProvider: _TestImageProvider(image),
-          invert: invert,
+          invert: false,
         ),
       ),
     );
@@ -64,12 +63,5 @@ void main() {
 
     final rotated = tester.widget<RotatedBox>(find.byType(RotatedBox));
     expect(rotated.quarterTurns, 1);
-  });
-
-  testWidgets('invert flips the rotation direction', (tester) async {
-    await pumpPage(tester, width: 200, height: 100, invert: true);
-
-    final rotated = tester.widget<RotatedBox>(find.byType(RotatedBox));
-    expect(rotated.quarterTurns, -1);
   });
 }

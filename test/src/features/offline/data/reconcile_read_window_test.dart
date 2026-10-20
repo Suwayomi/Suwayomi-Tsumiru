@@ -36,7 +36,7 @@ OfflineChapter _ch(int id, {bool isRead = false, String? readAt}) =>
 
 void main() {
   group('readChaptersInDeleteWindow', () {
-    test('a window of one keeps only the most recently read chapter', () {
+    test('window width and most-recently-read ordering', () {
       final chapters = [
         _ch(1, isRead: true),
         _ch(2, isRead: true),
@@ -45,40 +45,20 @@ void main() {
       ];
 
       expect(readChaptersInDeleteWindow(chapters, 2), {3});
-    });
-
-    test('a wider window keeps more of the recently read chapters', () {
-      final chapters = [
-        _ch(1, isRead: true),
-        _ch(2, isRead: true),
-        _ch(3, isRead: true),
-        _ch(4),
-      ];
-
       expect(readChaptersInDeleteWindow(chapters, 4), {1, 2, 3});
-    });
-
-    test('the setting being off keeps nothing', () {
       expect(readChaptersInDeleteWindow([_ch(1, isRead: true)], 0), isEmpty);
-    });
 
-    test(
-      'dipping back to an early chapter keeps that one, not the furthest',
-      () {
-        final chapters = [
+      expect(
+        readChaptersInDeleteWindow([
           _ch(1, isRead: true, readAt: '2000'),
           _ch(2, isRead: true, readAt: '3000'),
           _ch(50, isRead: true, readAt: '1000'),
-        ];
-
-        expect(
-          readChaptersInDeleteWindow(chapters, 2),
-          {2},
-          reason:
-              'chapter 2 was read most recently even though 50 is further '
-              'along',
-        );
-      },
-    );
+        ], 2),
+        {2},
+        reason:
+            'chapter 2 was read most recently even though 50 is further '
+            'along',
+      );
+    });
   });
 }

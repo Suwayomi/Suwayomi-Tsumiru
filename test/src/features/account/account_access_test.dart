@@ -34,51 +34,45 @@ const missingUser = GraphQLError(
 );
 
 void main() {
-  test('users receive only their grants', () {
-    final access = AccountAccess(
+  test('permission grants, unknown capability and error classification', () {
+    final user = AccountAccess(
       capability: AccountCapability.supported,
       user: account(permissions: [Enum$UserPermission.DOWNLOAD_CHAPTERS]),
     );
-    expect(access.allows(Enum$UserPermission.DOWNLOAD_CHAPTERS), isTrue);
-    expect(access.allows(Enum$UserPermission.MANAGE_SETTINGS), isFalse);
-    expect(access.canManageUsers, isFalse);
-  });
-  test('admins can manage users and roles without individual grants', () {
-    final access = AccountAccess(
+    expect(user.allows(Enum$UserPermission.DOWNLOAD_CHAPTERS), isTrue);
+    expect(user.allows(Enum$UserPermission.MANAGE_SETTINGS), isFalse);
+    expect(user.canManageUsers, isFalse);
+
+    final admin = AccountAccess(
       capability: AccountCapability.supported,
       user: account(roles: [Enum$UserRole.ADMIN]),
     );
-    expect(access.allows(Enum$UserPermission.MANAGE_SETTINGS), isTrue);
-    expect(access.canManageUsers, isTrue);
-    expect(access.canEditRoles, isTrue);
-  });
-  test('user managers cannot edit roles', () {
-    final access = AccountAccess(
+    expect(admin.allows(Enum$UserPermission.MANAGE_SETTINGS), isTrue);
+    expect(admin.canManageUsers, isTrue);
+    expect(admin.canEditRoles, isTrue);
+
+    final manager = AccountAccess(
       capability: AccountCapability.supported,
       user: account(permissions: [Enum$UserPermission.MANAGE_USERS]),
     );
-    expect(access.canManageUsers, isTrue);
-    expect(access.canEditRoles, isFalse);
-  });
-  test('unknown capability does not trust stored grants', () {
-    final access = AccountAccess(
+    expect(manager.canManageUsers, isTrue);
+    expect(manager.canEditRoles, isFalse);
+
+    final unknown = AccountAccess(
       capability: AccountCapability.unknown,
       user: account(roles: [Enum$UserRole.ADMIN]),
     );
-    expect(access.allows(Enum$UserPermission.DOWNLOAD_CHAPTERS), isFalse);
-    expect(access.canManageUsers, isFalse);
-    expect(access.canEditRoles, isFalse);
-  });
-  test(
-    'legacy servers retain actions but do not expose account management',
-    () {
-      final access = AccountAccess(capability: AccountCapability.unsupported);
-      expect(access.allows(Enum$UserPermission.MANAGE_SETTINGS), isTrue);
-      expect(access.canManageUsers, isFalse);
-      expect(access.canEditRoles, isFalse);
-    },
-  );
-  test('auth, execution, nested-field, and mixed errors remain unknown', () {
+    expect(unknown.allows(Enum$UserPermission.DOWNLOAD_CHAPTERS), isFalse);
+    expect(unknown.canManageUsers, isFalse);
+    expect(unknown.canEditRoles, isFalse);
+
+    // Legacy servers retain actions but do not expose account management.
+    final legacy = AccountAccess(capability: AccountCapability.unsupported);
+    expect(legacy.allows(Enum$UserPermission.MANAGE_SETTINGS), isTrue);
+    expect(legacy.canManageUsers, isFalse);
+    expect(legacy.canEditRoles, isFalse);
+
+    // Auth, execution, nested-field and mixed errors all remain unknown.
     for (final errors in [
       [const GraphQLError(message: 'Unauthorized')],
       [

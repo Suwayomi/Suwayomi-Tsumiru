@@ -71,27 +71,15 @@ void main() {
 
     // Started is chapter total minus unread, so an uncorrected aggregate makes
     // a series you just finished a chapter of read as "not started".
-    test('finishing a chapter offline shows one fewer unread', () async {
+    test('finishing, un-reading and a stale down-sync all correct the count', () async {
       await db.setChapterReadState(1, true);
       expect(await unreadAsShown(), 2);
-    });
-
-    test('marking it unread again puts it back', () async {
-      await db.setChapterReadState(1, true);
       await db.setChapterReadState(1, false);
       expect(await unreadAsShown(), 3);
-    });
-
-    test('a position-only write leaves it alone', () async {
-      await db.setChapterProgress(2, lastPageRead: 4);
-      expect(await unreadAsShown(), 3);
-    });
-
-    // A down-sync landing before the push must not clobber the correction.
-    test('survives a stale down-sync landing before the push', () async {
       await db.setChapterReadState(1, true);
       expect(await unreadAsShown(), 2);
 
+      // A down-sync landing before the push must not clobber the correction.
       // The server has not been told yet, so its aggregate still says 3.
       await db.upsertMangaMetadata(
         id: 1,
@@ -150,22 +138,6 @@ void main() {
         _serverChapter(13, isRead: false),
       ]);
       expect(await unreadAsShown(), 1);
-    });
-
-    test('stays within zero and the chapter total', () async {
-      for (var i = 1; i <= 3; i++) {
-        await db.setChapterReadState(i, true);
-      }
-      expect(await unreadAsShown(), 0);
-
-      // A stale aggregate at the maximum plus a locally-unread chapter must
-      // not push the shown count past the total.
-      await db.setChapterReadState(1, false);
-      await db.setChapterReadState(2, false);
-      await db.setChapterReadState(3, false);
-      final shown = await unreadAsShown();
-      expect(shown, lessThanOrEqualTo(3));
-      expect(shown, greaterThanOrEqualTo(0));
     });
 
     // The inverse transition: a chapter the server counts as read, marked

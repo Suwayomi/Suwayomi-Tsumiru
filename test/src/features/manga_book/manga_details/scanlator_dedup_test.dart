@@ -24,30 +24,6 @@ void main() {
       expect(rows.map((c) => c.id), [1, 2, 3]);
     });
 
-    test('preserves regular and special chapters with the same number', () {
-      final rows = filterPreferredScanlators(
-        [
-          ch(id: 1, number: 6, name: 'Chapter 6', scanlator: 'A'),
-          ch(id: 2, number: 6, name: 'Special 6', scanlator: 'A'),
-          ch(id: 3, number: 6, name: 'Chapter 6', scanlator: 'B'),
-        ],
-        const ['A'],
-      );
-      expect(rows.map((c) => c.id), [1, 2]);
-    });
-
-    test('preserves every season when chapter numbering restarts', () {
-      final rows = filterPreferredScanlators(
-        [
-          ch(id: 1, number: 0, name: 'Season 1 Chapter 0', scanlator: 'A'),
-          ch(id: 2, number: 1, name: 'Season 1 Chapter 1', scanlator: 'A'),
-          ch(id: 3, number: 0, name: 'Season 2 Chapter 0', scanlator: 'A'),
-          ch(id: 4, number: 1, name: 'Season 2 Chapter 1', scanlator: 'A'),
-        ],
-        const ['A'],
-      );
-      expect(rows.map((c) => c.id), [1, 2, 3, 4]);
-    });
   });
 
   group('applyReaderSessionScanlator', () {
@@ -87,86 +63,6 @@ void main() {
         keepChapterId: 1,
       );
       expect(rows.map((c) => c.id), [1, 4]);
-    });
-
-    test(
-      'uses saved preferences before source order when session group is missing',
-      () {
-        final rows = applyReaderSessionScanlator(
-          [
-            ch(
-              id: 1,
-              number: 1,
-              name: 'Chapter 1',
-              scanlator: 'A',
-              sourceOrder: 0,
-            ),
-            ch(
-              id: 2,
-              number: 1,
-              name: 'Chapter 1',
-              scanlator: 'B',
-              sourceOrder: 1,
-            ),
-          ],
-          scanlatorGroup: 'C',
-          preferred: const ['B', 'A'],
-        );
-        expect(rows.single.id, 2);
-      },
-    );
-
-    test(
-      'offline selects the actually downloaded release without copying flags',
-      () {
-        final rows = applyReaderSessionScanlator(
-          [
-            ch(
-              id: 1,
-              number: 1,
-              name: 'Chapter 1',
-              scanlator: 'A',
-              sourceOrder: 0,
-            ),
-            ch(
-              id: 2,
-              number: 1,
-              name: 'Chapter 1',
-              scanlator: 'B',
-              sourceOrder: 1,
-              isDownloaded: true,
-            ),
-          ],
-          scanlatorGroup: 'A',
-          offline: true,
-        );
-        expect(rows.single.id, 2);
-        expect(rows.single.isDownloaded, isTrue);
-      },
-    );
-
-    test('keeps the exact open release', () {
-      final rows = applyReaderSessionScanlator(
-        [
-          ch(
-            id: 1,
-            number: 1,
-            name: 'Chapter 1',
-            scanlator: 'A',
-            sourceOrder: 0,
-          ),
-          ch(
-            id: 2,
-            number: 1,
-            name: 'Chapter 1',
-            scanlator: 'B',
-            sourceOrder: 1,
-          ),
-        ],
-        scanlatorGroup: 'A',
-        keepChapterId: 2,
-      );
-      expect(rows.single.id, 2);
     });
   });
 

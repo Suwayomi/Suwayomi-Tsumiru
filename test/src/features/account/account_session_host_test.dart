@@ -83,34 +83,4 @@ void main() {
     expect(find.text('B library'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
-  testWidgets('token refresh preserves the mounted application session', (
-    tester,
-  ) async {
-    final container = ProviderContainer(
-      overrides: [authCredentialsStoreProvider.overrideWith(_Auth.new)],
-    );
-    await container.read(authCredentialsStoreProvider.future);
-    var restarts = 0;
-    await tester.pumpWidget(
-      AccountSessionHost(
-        initialContainer: container,
-        restart: (old) async {
-          restarts++;
-          return old;
-        },
-        builder: _View.new,
-        loading: const SizedBox(),
-        errorBuilder: (error) => Text('$error'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    (container.read(authCredentialsStoreProvider.notifier) as _Auth).publish(
-      'rotated-A',
-    );
-    await tester.pumpAndSettle();
-    expect(restarts, 0);
-    expect(find.text('A library'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 }

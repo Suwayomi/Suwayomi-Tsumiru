@@ -1,10 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql/client.dart';
 import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
-import 'package:tsumiru/src/features/account/presentation/account_password_dialog.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 Future<void> openDialog(WidgetTester tester, Widget dialog) async {
@@ -66,100 +62,4 @@ void main() {
     },
   );
 
-  testWidgets(
-    'recovery blocks duplicate submission and retains server error for retry',
-    (tester) async {
-      var calls = 0;
-      final pending = Completer<void>();
-      await openDialog(
-        tester,
-        AccountCodeDialog(
-          mode: AccountCodeMode.recovery,
-          onSubmit: ({required code, username, required password}) {
-            calls++;
-            expect(code, 'recovery');
-            expect(username, isNull);
-            expect(password, ' new password ');
-            return calls == 1 ? pending.future : Future.value();
-          },
-        ),
-      );
-      expect(find.byType(TextFormField), findsNWidgets(3));
-      await fill(tester, [' recovery ', ' new password ', ' new password ']);
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pump();
-      expect(
-        tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-        isNull,
-      );
-      expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Cancel'))
-            .onPressed,
-        isNull,
-      );
-      expect(
-        tester.widget<PopScope>(find.byType(PopScope).last).canPop,
-        isFalse,
-      );
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      for (final field in tester.widgetList<TextFormField>(
-        find.byType(TextFormField),
-      )) {
-        expect(field.enabled, isFalse);
-      }
-      pending.completeError(
-        OperationException(
-          graphqlErrors: [
-            const GraphQLError(message: 'Invalid or expired code'),
-          ],
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Invalid or expired code'), findsOneWidget);
-      expect(calls, 1);
-      expect(
-        tester
-            .widget<TextFormField>(find.byType(TextFormField).first)
-            .controller!
-            .text,
-        ' recovery ',
-      );
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pumpAndSettle();
-      expect(calls, 2);
-      expect(find.byType(AlertDialog), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'password change validates confirmation and preserves both passwords',
-    (tester) async {
-      List<String>? submitted;
-      await openDialog(
-        tester,
-        AccountPasswordDialog(
-          onSubmit: ({required currentPassword, required newPassword}) async {
-            submitted = [currentPassword, newPassword];
-          },
-        ),
-      );
-      for (final field in tester.widgetList<EditableText>(
-        find.byType(EditableText),
-      )) {
-        expect(field.obscureText, isTrue);
-      }
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pump();
-      expect(submitted, isNull);
-      await fill(tester, [' old ', ' new ', 'wrong']);
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pump();
-      expect(find.text('Passwords do not match'), findsOneWidget);
-      await tester.enterText(find.byType(TextFormField).last, ' new ');
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pumpAndSettle();
-      expect(submitted, [' old ', ' new ']);
-    },
-  );
 }

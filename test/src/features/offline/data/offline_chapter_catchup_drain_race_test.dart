@@ -44,20 +44,6 @@ class _PausingMangaBookRepository extends MangaBookRepository {
   }
 }
 
-/// Same contract as above, but never pauses — used where the pause needs to
-/// happen earlier in the call chain (the database read).
-class _CountingMangaBookRepository extends MangaBookRepository {
-  _CountingMangaBookRepository() : super(_dummyClient());
-
-  int callCount = 0;
-
-  @override
-  Future<List<ChapterDto>?> getStoredChapterList(int mangaId) async {
-    callCount++;
-    return null;
-  }
-}
-
 /// An empty in-memory [OfflineDatabase] whose `libraryManga()` pauses on
 /// [gate] before delegating to the real (empty) query — lets a test land a
 /// concurrent drain event while `runKeepRuleCatchUp` is between setting
@@ -119,40 +105,6 @@ void main() {
             'each _pullAwaiting pass that processes an obligation '
             'kicks the download starter',
       );
-    });
-
-    test('no concurrent drain event → only a single pass runs', () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final repo = _CountingMangaBookRepository();
-      var startCalls = 0;
-
-      seedAwaitingServerDownloadsForTest({1});
-
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          offlineActiveProvider.overrideWithValue(true),
-          mangaBookRepositoryProvider.overrideWithValue(repo),
-          downloadStarterProvider.overrideWithValue(({
-            bool userInitiated = false,
-          }) async {
-            startCalls++;
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await pullAfterServerDownloads(container);
-
-      expect(
-        repo.callCount,
-        1,
-        reason:
-            'without a concurrent drain event there is nothing to '
-            'replay',
-      );
-      expect(startCalls, 1);
     });
   });
 

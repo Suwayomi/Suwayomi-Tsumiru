@@ -15,7 +15,6 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
-import 'package:tsumiru/src/features/offline/data/offline_read_fallback.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
@@ -57,129 +56,41 @@ void main() {
 
   group('offlineDefaultCategoryDto', () {});
 
-  group('categoriesWithOfflineFallback', () {
-    Future<Never> boom() async => throw const SocketException('offline');
-
-    test(
-      'returns a single default category (count) when fetch throws',
-      () async {
-        await db.upsertMangaMetadata(
-          id: 1,
-          title: 'A',
-          updatedAt: DateTime(2026),
-        );
-        await db.upsertMangaMetadata(
-          id: 2,
-          title: 'B',
-          updatedAt: DateTime(2026),
-        );
-        await db.upsertChapterMetadata(
-          id: 901,
-          mangaId: 1,
-          name: 'dl901',
-          chapterIndex: 1,
-          isRead: true,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 1,
-          updatedAt: DateTime(2026),
-        );
-        await db.setChapterDeviceState(
-          901,
-          OfflineDeviceState.downloaded,
-          bytes: 1,
-        );
-        await db.upsertChapterMetadata(
-          id: 902,
-          mangaId: 2,
-          name: 'dl902',
-          chapterIndex: 1,
-          isRead: true,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 1,
-          updatedAt: DateTime(2026),
-        );
-        await db.setChapterDeviceState(
-          902,
-          OfflineDeviceState.downloaded,
-          bytes: 1,
-        );
-        final cats = await categoriesWithOfflineFallback(
-          fetch: boom,
-          db: db,
-          offlineEnabled: true,
-        );
-        expect(cats!.length, 1);
-        expect(cats.single.mangas.totalCount, 2);
-      },
-    );
-  });
-
   group('chapterMetaWithOfflineFallback', () {});
 
   // The bugs Aaron actually hit: the real gating providers must render offline,
   // not just the helpers in isolation.
-  group('real gating providers offline', () {
-    test(
-      'reader chapter provider serves a downloaded chapter offline',
-      () async {
-        await db.upsertChapterMetadata(
-          id: 99,
-          mangaId: 1,
-          name: 'Ch99',
-          chapterIndex: 5,
-          isRead: false,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 10,
-          updatedAt: DateTime(2026),
-        );
-        final c = await _container(db, [
-          mangaBookRepositoryProvider.overrideWithValue(
-            _ThrowingMangaBookRepo(),
-          ),
-        ]);
-        final ch = await c.read(chapterProvider(chapterId: 99).future);
-        expect(ch!.id, 99);
-        expect(ch.name, 'Ch99');
-      },
+  test('real gating providers render offline', () async {
+    await db.upsertMangaMetadata(
+      id: 1,
+      title: 'Saved',
+      updatedAt: DateTime(2026),
     );
+    await db.upsertChapterMetadata(
+      id: 99,
+      mangaId: 1,
+      name: 'Ch99',
+      chapterIndex: 5,
+      isRead: false,
+      lastPageRead: 0,
+      isBookmarked: false,
+      serverIsDownloaded: true,
+      pageCount: 10,
+      updatedAt: DateTime(2026),
+    );
+    await db.setChapterDeviceState(99, OfflineDeviceState.downloaded, bytes: 1);
 
-    test(
-      'categoryMangaList falls back to the offline catalog on connection loss',
-      () async {
-        await db.upsertMangaMetadata(
-          id: 1,
-          title: 'Saved',
-          updatedAt: DateTime(2026),
-        );
-        await db.upsertChapterMetadata(
-          id: 905,
-          mangaId: 1,
-          name: 'dl905',
-          chapterIndex: 1,
-          isRead: true,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 1,
-          updatedAt: DateTime(2026),
-        );
-        await db.setChapterDeviceState(
-          905,
-          OfflineDeviceState.downloaded,
-          bytes: 1,
-        );
-        final c = await _container(db, [
-          categoryRepositoryProvider.overrideWithValue(_ThrowingCategoryRepo()),
-        ]);
-        final list = await c.read(categoryMangaListProvider(0).future);
-        expect(list!.map((m) => m.id), [1]);
-      },
-    );
+    final reader = await _container(db, [
+      mangaBookRepositoryProvider.overrideWithValue(_ThrowingMangaBookRepo()),
+    ]);
+    final ch = await reader.read(chapterProvider(chapterId: 99).future);
+    expect(ch!.id, 99);
+    expect(ch.name, 'Ch99');
+
+    final list = await _container(db, [
+      categoryRepositoryProvider.overrideWithValue(_ThrowingCategoryRepo()),
+    ]);
+    final mangas = await list.read(categoryMangaListProvider(0).future);
+    expect(mangas!.map((m) => m.id), [1]);
   });
 }

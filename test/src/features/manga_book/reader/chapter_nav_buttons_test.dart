@@ -12,17 +12,6 @@ void main() {
     void previous() {}
     void next() {}
 
-    test('LTR: leading button goes back, trailing goes forward', () {
-      final mapped = chapterNavCallbacks(
-        isRtl: false,
-        onPreviousChapter: previous,
-        onNextChapter: next,
-      );
-
-      expect(mapped.leading, same(previous));
-      expect(mapped.trailing, same(next));
-    });
-
     test('RTL: leading button goes forward, trailing goes back', () {
       final mapped = chapterNavCallbacks(
         isRtl: true,

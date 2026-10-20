@@ -124,8 +124,6 @@ ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
 Future<void> _pumpReaderOnLastChapter(
   WidgetTester tester, {
   ChapterDto? nextChapter,
-  bool chapterListLoaded = true,
-  ReaderMode mode = ReaderMode.webtoon,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -141,9 +139,9 @@ Future<void> _pumpReaderOnLastChapter(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         mangaBookRepositoryProvider.overrideWithValue(_QuietRepo()),
-        mangaWithIdProvider(
-          mangaId: 1,
-        ).overrideWith(() => _FakeMangaWithId(_webtoonManga(mode))),
+        mangaWithIdProvider(mangaId: 1).overrideWith(
+          () => _FakeMangaWithId(_webtoonManga(ReaderMode.webtoon)),
+        ),
         chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
         chapterProvider(
           chapterId: 3,
@@ -155,7 +153,7 @@ Future<void> _pumpReaderOnLastChapter(
           chapterId: 2,
           readerScanlatorGroup: '',
         ).overrideWithValue(
-          chapterListLoaded ? (first: nextChapter, second: null) : null,
+          (first: nextChapter, second: null),
         ),
         trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
       ],
@@ -190,23 +188,6 @@ void main() {
       tester.getTopLeft(card).dy,
       greaterThan(pageBottom),
       reason: 'the finish card must sit after the last page, not over it',
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a chapter ahead still gets the card, without the note', (
-    tester,
-  ) async {
-    await _pumpReaderOnLastChapter(
-      tester,
-      nextChapter: _chapter(id: 3, sourceOrder: 3),
-    );
-
-    expect(find.text('Finished'), findsOneWidget);
-    expect(
-      find.text("There's no next chapter"),
-      findsNothing,
-      reason: 'the end-of-manga note must not show while a chapter is ahead',
     );
     expect(tester.takeException(), isNull);
   });

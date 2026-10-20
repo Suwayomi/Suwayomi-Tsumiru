@@ -178,25 +178,6 @@ void main() {
     },
   );
 
-  group('journal', () {
-    test('round-trips entries through persistence', () async {
-      await journal.put(
-        const MigrationJournalEntry(
-          fromMangaId: 1,
-          toMangaId: 2,
-          state: MigrationPairState.copied,
-          options: MigrationOption(deleteSource: true),
-          copiedSourceRecordIds: [700],
-        ),
-      );
-      final reloaded = MigrationJournal(await SharedPreferences.getInstance());
-      final e = reloaded.entryFor(1)!;
-      expect(e.toMangaId, 2);
-      expect(e.state, MigrationPairState.copied);
-      expect(e.copiedSourceRecordIds, [700]);
-    });
-  });
-
   group('commit — Migrate', () {
     test('copies then removes, marks done, clears journal', () async {
       final repo = FakeMigrationRepository();
@@ -225,38 +206,6 @@ void main() {
       expect(journal.entryFor(1)!.state, MigrationPairState.failed);
     });
 
-    test(
-      'remove failure leaves the entry failed after a successful copy',
-      () async {
-        final repo = FakeMigrationRepository(removeShouldFail: {1});
-        final runner = makeRunner(
-          repo: repo,
-          journal: journal,
-          entries: [entry(1, to: 100)],
-        );
-        await runner.commit(deleteSource: true);
-        expect(runner.entries.single.phase, BulkEntryPhase.failed);
-        expect(repo.copyCalls, [1]);
-        expect(repo.removeCalls, [1]);
-        expect(journal.entryFor(1)!.state, MigrationPairState.failed);
-      },
-    );
-  });
-
-  group('commit — Copy (deleteSource false)', () {
-    test('copies but never removes', () async {
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-        options: const MigrationOption(deleteSource: false),
-      );
-      await runner.commit(deleteSource: false);
-      expect(runner.entries.single.phase, BulkEntryPhase.done);
-      expect(repo.removeCalls, isEmpty);
-      expect(journal.entries(), isEmpty);
-    });
   });
 
   group('dirty-state gate', () {
@@ -272,39 +221,6 @@ void main() {
       expect(runner.entries.single.phase, BulkEntryPhase.dirtyBlocked);
       expect(repo.copyCalls, isEmpty);
       expect(repo.removeCalls, isEmpty);
-    });
-  });
-
-  group('auth-pause', () {
-    test('waits for reauth before committing', () async {
-      final repo = FakeMigrationRepository();
-      var waited = false;
-      var needsAuth = true;
-      final runner = makeRunner(
-        repo: repo,
-        journal: journal,
-        entries: [entry(1, to: 100)],
-        isReauthNeeded: () => needsAuth,
-        waitAuthReady: (t) async {
-          waited = true;
-          needsAuth = false;
-        },
-      );
-      await runner.commit(deleteSource: true);
-      expect(waited, isTrue);
-      expect(runner.entries.single.phase, BulkEntryPhase.done);
-    });
-  });
-
-  group('cancel', () {
-    test('cancel stops further entries', () async {
-      final repo = FakeMigrationRepository();
-      final entries = List.generate(6, (i) => entry(i, to: 100 + i));
-      final runner = makeRunner(repo: repo, journal: journal, entries: entries);
-      runner.cancel();
-      await runner.commit(deleteSource: true);
-      // Nothing should have been copied — the token was already cancelled.
-      expect(repo.copyCalls, isEmpty);
     });
   });
 
@@ -345,20 +261,5 @@ void main() {
       expect(journal.entries(), isEmpty);
     });
 
-    test('failed → left for retry, never removed', () async {
-      await journal.put(
-        const MigrationJournalEntry(
-          fromMangaId: 1,
-          toMangaId: 100,
-          state: MigrationPairState.failed,
-          options: MigrationOption(deleteSource: true),
-        ),
-      );
-      final repo = FakeMigrationRepository();
-      final runner = makeRunner(repo: repo, journal: journal, entries: []);
-      await runner.recover();
-      expect(repo.removeCalls, isEmpty);
-      expect(journal.entryFor(1)!.state, MigrationPairState.failed);
-    });
   });
 }

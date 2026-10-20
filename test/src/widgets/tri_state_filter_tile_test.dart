@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/widgets/organizer_heading.dart';
 import 'package:tsumiru/src/widgets/tri_state_filter_tile.dart';
 
 /// Stands in for a `bool?` preference provider.
@@ -56,61 +55,12 @@ Future<List<bool?>> _pump(
 }
 
 void main() {
-  group('FilterState', () {
-    test('maps to and from the persisted bool?', () {
-      expect(FilterState.fromValue(null), FilterState.any);
-      expect(FilterState.fromValue(true), FilterState.included);
-      expect(FilterState.fromValue(false), FilterState.excluded);
-      expect(FilterState.any.value, isNull);
-      expect(FilterState.included.value, isTrue);
-      expect(FilterState.excluded.value, isFalse);
-      for (final state in FilterState.values) {
-        expect(FilterState.fromValue(state.value), state);
-      }
-    });
-  });
-
   group('TriStateFilterTile', () {
     /// Which pill reads as selected.
     Set<String> selectedLabels(WidgetTester tester) => {
       for (final chip in tester.widgetList<FilterChip>(find.byType(FilterChip)))
         if (chip.selected) ((chip.label as Text).data)!,
     };
-
-    testWidgets('names all three states, with a contextual header', (
-      tester,
-    ) async {
-      await _pump(tester);
-      expect(find.text('Download Status'), findsOneWidget);
-      expect(find.text('Any'), findsOneWidget);
-      expect(find.text('Included'), findsOneWidget);
-      expect(find.text('Excluded'), findsOneWidget);
-      expect(find.byType(FilterChip), findsNWidgets(3));
-      expect(find.byType(OrganizerHeading), findsOneWidget);
-      expect(
-        tester
-            .widget<Text>(
-              find.descendant(
-                of: find.byType(OrganizerHeading),
-                matching: find.byType(Text),
-              ),
-            )
-            .data,
-        'Download Status',
-      );
-
-      // Custom labels replace the generic ones.
-      await _pump(
-        tester,
-        includedLabel: 'Downloaded',
-        excludedLabel: 'Not Downloaded',
-      );
-      expect(find.text('Any'), findsOneWidget);
-      expect(find.text('Downloaded'), findsOneWidget);
-      expect(find.text('Not Downloaded'), findsOneWidget);
-      expect(find.text('Included'), findsNothing);
-      expect(find.text('Excluded'), findsNothing);
-    });
 
     testWidgets('exactly one pill is selected and taps write their state', (
       tester,

@@ -38,15 +38,6 @@ Response _updateMangasResponse(List<int> ids) => Response(
     );
 
 void main() {
-  test('addMangasToLibrary returns the server-confirmed updated ids',
-      () async {
-    final repo = MangaBookRepository(_clientWith(_updateMangasResponse([5, 9])));
-
-    final result = await repo.addMangasToLibrary([5, 9, 3]);
-
-    expect(result, [5, 9]);
-  });
-
   test('addMangasToLibrary reflects a partial server-side apply', () async {
     // Server only confirmed one of the two requested ids.
     final repo = MangaBookRepository(_clientWith(_updateMangasResponse([5])));

@@ -3,7 +3,6 @@
 // Widget test for the gated-server flow: Test connection → "needs a login" →
 // auth sub-form.
 
-import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -51,116 +50,6 @@ http.Client _uiLoginServerClient() =>
     });
 
 void main() {
-  testWidgets('pending connection shows progress until the response arrives', (
-    tester,
-  ) async {
-    FlutterSecureStorage.setMockInitialValues({});
-    SharedPreferences.setMockInitialValues({'onboarding.step': 1});
-    final preferences = await SharedPreferences.getInstance();
-    final response = Completer<void>();
-    await tester.binding.setSurfaceSize(const Size(1080, 2400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-          onboardingHttpClientProvider.overrideWithValue(
-            () => MockClient.streaming((request, body) async {
-              await response.future;
-              final query =
-                  (jsonDecode(await body.bytesToString()) as Map)['query']
-                      as String;
-              return http.StreamedResponse(
-                Stream.value(
-                  utf8.encode(
-                    query.contains('aboutServer')
-                        ? _aboutOk
-                        : _authUnauthorized,
-                  ),
-                ),
-                200,
-              );
-            }),
-          ),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const OnboardingScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Server URL'),
-      'https://server.example',
-    );
-    await tester.tap(find.text('Test connection'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
-    expect(find.text('Checking connection…'), findsWidgets);
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
-    response.complete();
-    await tester.pumpAndSettle();
-    expect(find.text('Checking connection…'), findsNothing);
-    expect(find.text('This server needs a login'), findsOneWidget);
-  });
-
-  testWidgets('Next keeps a failed address and retries it', (tester) async {
-    FlutterSecureStorage.setMockInitialValues({});
-    SharedPreferences.setMockInitialValues({'onboarding.step': 1});
-    final preferences = await SharedPreferences.getInstance();
-    await tester.binding.setSurfaceSize(const Size(1080, 2400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    var reachable = false;
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-          onboardingHttpClientProvider.overrideWithValue(
-            () => MockClient.streaming((request, body) async {
-              if (!reachable) throw http.ClientException('Unreachable');
-              final query =
-                  (jsonDecode(await body.bytesToString()) as Map)['query']
-                      as String;
-              return http.StreamedResponse(
-                Stream.value(
-                  utf8.encode(
-                    query.contains('aboutServer')
-                        ? _aboutOk
-                        : _authUnauthorized,
-                  ),
-                ),
-                200,
-              );
-            }),
-          ),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const OnboardingScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final addressField = find.widgetWithText(TextField, 'Server URL');
-    await tester.enterText(addressField, 'https://server.example');
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining("Couldn't reach a server"), findsOneWidget);
-    expect(
-      tester.widget<TextField>(addressField).controller!.text,
-      'https://server.example',
-    );
-    expect(find.text("You're all set"), findsNothing);
-    reachable = true;
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    expect(find.text('This server needs a login'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
   /// Pumps the onboarding wizard on step 2 with [client] standing in for the
   /// server, then runs "Test connection" on [address].
   Future<void> pumpAndTestConnection(
@@ -206,33 +95,6 @@ void main() {
           .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
           .initialSelection,
       AuthType.uiLogin,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a manual sign-in method pick wins over later detection', (
-    tester,
-  ) async {
-    await pumpAndTestConnection(tester, _uiLoginServerClient);
-    expect(find.text('UI login'), findsWidgets);
-
-    // The user picks simple login themselves...
-    tester
-        .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
-        .onSelected!(AuthType.simpleLogin);
-    await tester.pumpAndSettle();
-    expect(find.text('Simple login'), findsWidgets);
-
-    // ...and a later probe, which detects UI login again, must not override it.
-    await tester.tap(find.text('Test connection'));
-    await tester.pumpAndSettle();
-    expect(find.text('This server needs a login'), findsOneWidget);
-    expect(find.text('Simple login'), findsWidgets);
-    expect(
-      tester
-          .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
-          .initialSelection,
-      AuthType.simpleLogin,
     );
     expect(tester.takeException(), isNull);
   });

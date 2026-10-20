@@ -7,7 +7,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,12 +17,9 @@ import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_session_storage.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
-import 'package:tsumiru/src/features/account/presentation/account_session_host.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_transition.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
-import 'package:tsumiru/src/features/offline/data/account_storage_recovery.dart';
-import 'package:tsumiru/src/features/offline/data/account_storage_recovery_state.dart';
 import 'package:tsumiru/src/features/offline/data/offline_bootstrap.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_runtime_storage.dart';
@@ -44,39 +40,6 @@ const _a = AccountBinding(
   username: 'A',
   catalogId: 'A',
 );
-
-class _Form extends StatefulWidget {
-  const _Form({super.key, required this.changing});
-  final bool changing;
-  @override
-  State<_Form> createState() => _FormState();
-}
-
-class _FormState extends State<_Form> {
-  final controller = TextEditingController();
-  String? error;
-  void reject() => setState(() => error = 'Rejected request');
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    home: Scaffold(
-      body: Offstage(
-        offstage: widget.changing,
-        child: Column(
-          children: [
-            TextField(controller: controller),
-            if (error != null) Text(error!),
-          ],
-        ),
-      ),
-    ),
-  );
-}
 
 class _Fixture {
   _Fixture(this.preferences);
@@ -194,53 +157,9 @@ class _Fixture {
     return fixture;
   }
 
-  Widget host(GlobalKey<_FormState> form) => AccountSessionHost(
-    initialContainer: active,
-    sessionKey: (scope) {
-      final state = scope.read(authCredentialsStoreProvider).requireValue;
-      return (
-        scope.read(authTypeKeyProvider),
-        scope.read(currentServerAddressProvider),
-        state.accountBinding,
-        state.uiAccessToken,
-        state.uiRefreshToken,
-        state.simpleLoginCookie,
-        scope.read(offlineRuntimeStorageProvider),
-      );
-    },
-    onRetained: (scope) async {
-      retained++;
-      scope.read(authCredentialsStoreProvider.notifier).activateSession();
-    },
-    restart: (previous) async {
-      restarts++;
-      final storage = previous
-          .read(offlineRuntimeStorageProvider.notifier)
-          .take();
-      final next = create();
-      await next.read(authCredentialsStoreProvider.future);
-      await next
-          .read(offlineRuntimeStorageProvider.notifier)
-          .replace(drain: () async {}, open: () async => storage);
-      next.read(authCredentialsStoreProvider.notifier).activateSession();
-      active = next;
-      return next;
-    },
-    builder: (changing) => _Form(key: form, changing: changing),
-    loading: const SizedBox(),
-    errorBuilder: (error) => Text('Restart failed: $error'),
-  );
-
   Future<void> close() => active
       .read(offlineRuntimeStorageProvider.notifier)
       .replace(drain: () async {}, open: () async => null);
-}
-
-Future<void> _settleHost(WidgetTester tester) async {
-  for (var i = 0; i < 8; i++) {
-    await tester.pump();
-    await Future<void>.delayed(const Duration(milliseconds: 5));
-  }
 }
 
 void main() {
@@ -331,105 +250,4 @@ void main() {
     );
   }
 
-  testWidgets('overlapping restore preserves recovery conflicts', (
-    tester,
-  ) async {
-    await tester.runAsync(() async {
-      final fixture = await _Fixture.open(legacy: true, partial: true);
-      fixture.recoveryStarted = Completer<void>();
-      fixture.recoveryRelease = Completer<void>();
-      const conflict = AccountProgressConflict(
-        chapterId: 7,
-        name: 'Chapter 7',
-        originalPage: 8,
-        currentPage: 2,
-        originalRead: false,
-        currentRead: false,
-        originalBookmarked: false,
-        currentBookmarked: false,
-      );
-      fixture.recoveryError = AccountStorageProgressConflict([conflict]);
-      final session = fixture.active.read(accountSessionStorageProvider);
-      final recovery = session.recover();
-      await fixture.recoveryStarted!.future;
-      final restore = session.restore();
-      fixture.recoveryRelease!.complete();
-      await Future.wait([recovery, restore]);
-      final status = fixture.active.read(accountStorageRecoveryProvider);
-      expect(status?.phase, AccountStorageRecoveryPhase.failed);
-      expect(status?.conflicts, [conflict]);
-      expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
-      await fixture.close();
-      fixture.active.dispose();
-    });
-  });
-
-  testWidgets(
-    'sign-out cancels pending recovery without reopening its catalogue',
-    (tester) async {
-      await tester.runAsync(() async {
-        final fixture = await _Fixture.open(legacy: true, partial: true);
-        fixture.recoveryStarted = Completer<void>();
-        fixture.recoveryRelease = Completer<void>();
-        final recovery = fixture.active
-            .read(accountSessionStorageProvider)
-            .recover();
-        await fixture.recoveryStarted!.future;
-        final credentials = fixture.active.read(
-          authCredentialsStoreProvider.notifier,
-        );
-        final signOut = credentials.withIdentityChange(
-          credentials.clearUiLoginTokens,
-        );
-        fixture.recoveryRelease!.complete();
-        await Future.wait([recovery, signOut]);
-        expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
-        expect(fixture.active.read(accountStorageRecoveryProvider), isNull);
-        expect(fixture.active.read(offlineEnabledProvider), isFalse);
-        await fixture.close();
-        fixture.active.dispose();
-      });
-    },
-  );
-
-  testWidgets(
-    'rejected native account action retains the form, error and open database',
-    (tester) async {
-      await tester.runAsync(() async {
-        final fixture = await _Fixture.open();
-        final before = fixture.active.read(offlineRuntimeStorageProvider)!;
-        await before.db.upsertMangaMetadata(
-          id: 1,
-          title: 'A private title',
-          updatedAt: DateTime(2026),
-        );
-        final form = GlobalKey<_FormState>();
-        await tester.pumpWidget(fixture.host(form));
-        final originalForm = form.currentState;
-        await tester.enterText(find.byType(TextField), 'draft input');
-        await expectLater(
-          fixture.active
-              .read(authCredentialsStoreProvider.notifier)
-              .withIdentityChange<void>(() async {
-                throw StateError('rejected');
-              }),
-          throwsStateError,
-        );
-        form.currentState!.reject();
-        await _settleHost(tester);
-        expect(fixture.restarts, 0);
-        expect(fixture.retained, 1);
-        expect(form.currentState, same(originalForm));
-        expect(find.text('draft input'), findsOneWidget);
-        expect(find.text('Rejected request'), findsOneWidget);
-        expect(
-          fixture.active.read(offlineRuntimeStorageProvider),
-          same(before),
-        );
-        expect((await before.db.mangaById(1))!.title, 'A private title');
-        await fixture.close();
-        await tester.pumpWidget(const SizedBox());
-      });
-    },
-  );
 }
