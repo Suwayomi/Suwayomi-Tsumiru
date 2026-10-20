@@ -740,10 +740,10 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
   ),
 ];
 
-/// Notifications page (9 rows, plain "Notifications" breadcrumb). The five
-/// rows under "New chapter notifications" only render while it is on — same
-/// [notificationsNewChaptersEnabledProvider] read as the screen. The rest
-/// always render.
+/// Notifications page (9 rows, plain "Notifications" breadcrumb), Android
+/// only. The five rows under "New chapter notifications" only render while it
+/// is on — same [notificationsNewChaptersEnabledProvider] read as the screen.
+/// The rest always render there.
 List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'notificationsNewChapters',
@@ -753,7 +753,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsNewChapters',
     ).push(c),
-    visible: (_, _) => true,
+    visible: (_, _) => isAndroidNative,
   ),
   SettingsSearchEntry(
     id: 'notificationsCheckInterval',
@@ -763,6 +763,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
       highlight: 'notificationsCheckInterval',
     ).push(c),
     visible: (ref, _) =>
+        isAndroidNative &&
         ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
   ),
   SettingsSearchEntry(
@@ -773,6 +774,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
       highlight: 'notificationsWifiOnly',
     ).push(c),
     visible: (ref, _) =>
+        isAndroidNative &&
         ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
   ),
   SettingsSearchEntry(
@@ -783,6 +785,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
       highlight: 'notificationsChargingOnly',
     ).push(c),
     visible: (ref, _) =>
+        isAndroidNative &&
         ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
   ),
   SettingsSearchEntry(
@@ -794,6 +797,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
       highlight: 'notificationsHideContent',
     ).push(c),
     visible: (ref, _) =>
+        isAndroidNative &&
         ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
   ),
   SettingsSearchEntry(
@@ -804,6 +808,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
       highlight: 'notificationsCheckNow',
     ).push(c),
     visible: (ref, _) =>
+        isAndroidNative &&
         ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
   ),
   SettingsSearchEntry(
@@ -813,7 +818,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsDownloadsComplete',
     ).push(c),
-    visible: (_, _) => true,
+    visible: (_, _) => isAndroidNative,
   ),
   SettingsSearchEntry(
     id: 'notificationsAppUpdates',
@@ -822,7 +827,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsAppUpdates',
     ).push(c),
-    visible: (_, _) => true,
+    visible: (_, _) => isAndroidNative,
   ),
   SettingsSearchEntry(
     id: 'notificationsExtensionUpdates',
@@ -831,7 +836,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsExtensionUpdates',
     ).push(c),
-    visible: (_, _) => true,
+    visible: (_, _) => isAndroidNative,
   ),
 ];
 

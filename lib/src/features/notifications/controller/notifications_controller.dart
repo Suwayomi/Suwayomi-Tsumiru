@@ -13,6 +13,7 @@ import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../auth/data/jwt_utils.dart';
@@ -208,6 +209,7 @@ class NotificationsController {
   /// Create the channels and request the Android 13+ POST_NOTIFICATIONS
   /// permission before enabling, then reconcile the schedule.
   Future<void> requestPermissionAndSync() async {
+    if (!isAndroidNative) return;
     final service = LocalNotificationService();
     await service.init();
     await service.requestPermission();
@@ -217,6 +219,7 @@ class NotificationsController {
   /// Manual "check now" — a one-off job under its OWN unique name so it can't
   /// collide with or suppress the periodic schedule.
   Future<void> checkNow() async {
+    if (!isAndroidNative) return;
     await sync();
     await Workmanager().registerOneOffTask(
       kNewChapterCheckNowName,

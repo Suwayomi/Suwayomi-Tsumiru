@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../routes/router_config.dart';
+import '../../../../utils/platform/is_android_native.dart';
 
 /// One "jump to" destination — a screen, settings page, or category.
 class GoToTarget {
@@ -77,12 +78,13 @@ List<GoToTarget> appGoToTargets({required bool includeHotkeys}) => [
     navigate: (c) => const DownloadsSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
-  GoToTarget(
-    label: (l) => l.notifications,
-    icon: Icons.notifications_rounded,
-    navigate: (c) => const NotificationsSettingsRoute().push(c),
-    subtitle: (l) => l.settings,
-  ),
+  if (isAndroidNative)
+    GoToTarget(
+      label: (l) => l.notifications,
+      icon: Icons.notifications_rounded,
+      navigate: (c) => const NotificationsSettingsRoute().push(c),
+      subtitle: (l) => l.settings,
+    ),
   GoToTarget(
     label: (l) => l.reader,
     icon: Icons.chrome_reader_mode_rounded,

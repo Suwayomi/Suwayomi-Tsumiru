@@ -14,6 +14,7 @@ import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/platform/current_platform_description.dart';
+import '../../../../utils/platform/is_android_native.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -58,11 +59,12 @@ class SettingsScreen extends StatelessWidget {
             // this screen, so there's no separate "Offline" entry.
             onTap: () => const DownloadsSettingsRoute().push(context),
           ),
-          ListTile(
-            title: Text(context.l10n.notifications),
-            leading: const Icon(Icons.notifications_rounded),
-            onTap: () => const NotificationsSettingsRoute().push(context),
-          ),
+          if (isAndroidNative)
+            ListTile(
+              title: Text(context.l10n.notifications),
+              leading: const Icon(Icons.notifications_rounded),
+              onTap: () => const NotificationsSettingsRoute().push(context),
+            ),
           ListTile(
             title: Text(context.l10n.reader),
             leading: const Icon(Icons.chrome_reader_mode_rounded),
