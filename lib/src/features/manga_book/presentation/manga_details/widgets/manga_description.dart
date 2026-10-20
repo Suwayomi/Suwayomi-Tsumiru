@@ -101,6 +101,7 @@ class MangaDescription extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final twoColumn = context.windowSizeClass >= WindowSizeClass.expanded;
     final isExpanded = useState(false);
     useListenable(expansion);
     final expanded = expansion?.isExpanded ?? isExpanded.value;
@@ -192,7 +193,7 @@ class MangaDescription extends HookConsumerWidget {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    context.isTablet
+                    twoColumn
                         ? context.l10n.seriesNextChapterExpected(soonDays)
                         : soonDays == 0
                         ? context.l10n.soon
@@ -261,7 +262,7 @@ class MangaDescription extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (context.isTablet)
+        if (twoColumn)
           SeriesHeader(
             manga: manga,
             belowStatus: soonWidget,
@@ -362,19 +363,19 @@ class MangaDescription extends HookConsumerWidget {
           builder: (context) {
             final offlineEnabled = ref.watch(offlineEnabledProvider);
             return Padding(
-              padding: context.isWideDesktop
+              padding: twoColumn
                   ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
                   : const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (context.isWideDesktop) ...[
+                  if (twoColumn) ...[
                     Divider(height: 1, color: cs.outlineVariant),
                     const SizedBox(height: 6),
                   ],
                   Row(
                     children: [
-                      if (!context.isWideDesktop)
+                      if (!twoColumn)
                         Expanded(
                           child: MangaActionButton(
                             active: inLibrary,
@@ -415,7 +416,7 @@ class MangaDescription extends HookConsumerWidget {
                             refresh: (_) => refresh(),
                           ),
                         ),
-                      if (context.isTablet)
+                      if (twoColumn)
                         Expanded(
                           child: PopupMenuButton<String>(
                             key: moreKey,
@@ -470,7 +471,7 @@ class MangaDescription extends HookConsumerWidget {
             );
           },
         ),
-        if (!context.isWideDesktop) MangaRatingBar(mangaId: manga.id),
+        if (!twoColumn) MangaRatingBar(mangaId: manga.id),
         if (expansion == null)
           descriptionSection(expanded, true)
         else

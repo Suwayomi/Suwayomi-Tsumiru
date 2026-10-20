@@ -6,6 +6,17 @@
 
 part of '../custom_extensions.dart';
 
+/// Width classes from Material's window size classes: compact < 600,
+/// medium 600-839, expanded 840-1199, large 1200-1599, extra-large >= 1600.
+enum WindowSizeClass { compact, medium, expanded, large, extraLarge }
+
+extension WindowSizeClassOrder on WindowSizeClass {
+  bool operator >=(WindowSizeClass other) => index >= other.index;
+  bool operator >(WindowSizeClass other) => index > other.index;
+  bool operator <=(WindowSizeClass other) => index <= other.index;
+  bool operator <(WindowSizeClass other) => index < other.index;
+}
+
 /// Helper class for device related operations.
 ///
 extension ContextExtensions on BuildContext {
@@ -31,8 +42,8 @@ extension ContextExtensions on BuildContext {
 
   double get horizontal =>
       (MediaQuery.of(this).orientation == Orientation.portrait
-          ? MediaQuery.of(this).size.width
-          : MediaQuery.of(this).size.height);
+      ? MediaQuery.of(this).size.width
+      : MediaQuery.of(this).size.height);
   double horizontalScale({double scale = 1}) => scale * horizontal;
 
   ///
@@ -42,8 +53,8 @@ extension ContextExtensions on BuildContext {
   double verticalScale({double scale = 1}) => scale * vertical;
   double get vertical =>
       (MediaQuery.of(this).orientation == Orientation.landscape
-          ? MediaQuery.of(this).size.width
-          : MediaQuery.of(this).size.height);
+      ? MediaQuery.of(this).size.width
+      : MediaQuery.of(this).size.height);
 
   /// The same of [MediaQuery.of(context).size]
   Size get mediaQuerySize => MediaQuery.of(this).size;
@@ -184,17 +195,27 @@ extension ContextExtensions on BuildContext {
   /// True if the width is less than 1200p
   bool get isDesktopOrLess => width <= 1200;
 
+  /// Material window size class for the current window
+  /// (developer.android.com "Use window size classes").
+  /// A window shorter than 600 on its shortest side stays compact even when
+  /// it is wide, which keeps a landscape phone on the phone layout.
+  WindowSizeClass get windowSizeClass {
+    if (mediaQueryShortestSide < 600) return WindowSizeClass.compact;
+    if (width < 840) return WindowSizeClass.medium;
+    if (width < 1200) return WindowSizeClass.expanded;
+    if (width < 1600) return WindowSizeClass.large;
+    return WindowSizeClass.extraLarge;
+  }
+
   /// True if the window gets the desktop layout: width >= 600 with a
   /// shortestSide >= 600, so a landscape phone keeps the in-between layout.
-  bool get isDesktopOrWider =>
-      width >= 600 && mediaQueryShortestSide >= 600;
+  bool get isDesktopOrWider => windowSizeClass >= WindowSizeClass.medium;
 
   /// Same as [isDesktopOrWider].
   bool get isDesktop => isDesktopOrWider;
 
-  /// Old 1200px rule: the full labelled sidebar and the series page's
-  /// two-column layout still only appear from this width.
-  bool get isWideDesktop => width >= 1200;
+  /// True for the full labelled sidebar layout (large and up).
+  bool get isWideDesktop => windowSizeClass >= WindowSizeClass.large;
 
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 
@@ -210,14 +231,10 @@ extension ContextExtensions on BuildContext {
   /// and less than 1200 return [tablet] value.
   /// if the device width is less than 300  return [watch] value.
   /// in other cases return [mobile] value.
-  T responsiveValue<T>({
-    T? watch,
-    T? mobile,
-    T? tablet,
-    T? desktop,
-  }) {
+  T responsiveValue<T>({T? watch, T? mobile, T? tablet, T? desktop}) {
     assert(
-        watch != null || mobile != null || tablet != null || desktop != null);
+      watch != null || mobile != null || tablet != null || desktop != null,
+    );
 
     var deviceWidth = mediaQuerySize.width;
     //big screen width can display less sizes
@@ -227,12 +244,7 @@ extension ContextExtensions on BuildContext {
       if (deviceWidth >= 300) mobile, //mobile is allowed
       watch, //watch is allowed
     ].whereType<T>();
-    final looseValues = [
-      watch,
-      mobile,
-      tablet,
-      desktop,
-    ].whereType<T>();
+    final looseValues = [watch, mobile, tablet, desktop].whereType<T>();
     return strictValues.firstOrNull ?? looseValues.first;
   }
 
@@ -247,8 +259,9 @@ extension ContextExtensions on BuildContext {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: sheet,
       ),
       sheetAnimationStyle: motionStyle,
@@ -261,9 +274,7 @@ extension ContextExtensions on BuildContext {
       useSafeArea: true,
       useRootNavigator: false,
       barrierDismissible: true,
-      builder: (context) => Dialog.fullscreen(
-        child: dialog,
-      ),
+      builder: (context) => Dialog.fullscreen(child: dialog),
       animationStyle: motionStyle,
     );
   }

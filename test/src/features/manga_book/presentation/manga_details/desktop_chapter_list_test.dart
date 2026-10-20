@@ -20,10 +20,13 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/big_screen_manga_details.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/small_screen_manga_details.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
+import 'package:tsumiru/src/utils/theme/brand.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 ChapterDto _chapter({
@@ -259,6 +262,19 @@ Future<void> _selectRange(WidgetTester tester, String from, String to) async {
 }
 
 void main() {
+  testWidgets('Series page switches to two columns at 840', (tester) async {
+    await _pumpDesktop(tester, size: const Size(839, 900));
+    expect(find.byType(SmallScreenMangaDetails), findsOneWidget);
+    expect(find.byType(BigScreenMangaDetails), findsNothing);
+    expect(find.byType(BrandFab), findsOneWidget);
+
+    tester.view.physicalSize = const Size(840, 900);
+    await tester.pumpAndSettle();
+    expect(find.byType(BigScreenMangaDetails), findsOneWidget);
+    expect(find.byType(SmallScreenMangaDetails), findsNothing);
+    expect(find.byType(BrandFab), findsNothing);
+  });
+
   testWidgets('Undo after bulk mark read restores once the bar is gone', (
     tester,
   ) async {

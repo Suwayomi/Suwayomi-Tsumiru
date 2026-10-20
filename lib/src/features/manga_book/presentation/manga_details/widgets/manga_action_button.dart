@@ -35,7 +35,7 @@ class MangaActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
     final color = active ? cs.primary : cs.onSurfaceVariant;
-    final desktop = context.isWideDesktop;
+    final desktop = context.windowSizeClass >= WindowSizeClass.expanded;
     return TextButton(
       onPressed: onPressed,
       style:

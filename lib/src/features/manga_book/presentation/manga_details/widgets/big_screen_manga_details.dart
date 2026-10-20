@@ -79,7 +79,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final desktop = context.isWideDesktop;
+    final desktop = context.windowSizeClass >= WindowSizeClass.expanded;
     final selection = useValueListenable(selectedChapters);
     final selecting = selection.isNotEmpty;
     final anchor = useState<int?>(null);
@@ -614,10 +614,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
           for (final action in overflowed)
             PopupMenuItem(
               onTap: action.onTap,
-              child: ChapterMenuRow(
-                icon: action.icon,
-                label: action.label,
-              ),
+              child: ChapterMenuRow(icon: action.icon, label: action.label),
             ),
           if (overflowed.isNotEmpty) const PopupMenuDivider(),
           PopupMenuItem(
@@ -691,12 +688,8 @@ class _ChapterSelectionHeader extends ConsumerWidget {
           if (browserChapter != null) const PopupMenuDivider(),
           if (browserChapter != null)
             PopupMenuItem(
-              onTap: () => openChapterInBrowser(
-                context,
-                ref,
-                browserChapter,
-                seriesUrl,
-              ),
+              onTap: () =>
+                  openChapterInBrowser(context, ref, browserChapter, seriesUrl),
               child: ChapterMenuRow(
                 icon: Icons.public_rounded,
                 label: context.l10n.openInBrowser,
