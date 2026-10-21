@@ -13,6 +13,7 @@
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Suwayomi/Suwayomi-Tsumiru?label=download)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest)
+[![Translation status](https://hosted.weblate.org/widget/suwayomi/suwayomi-tsumiru/svg-badge.svg)](https://hosted.weblate.org/engage/suwayomi/)
 
 </div>
 
@@ -50,6 +51,14 @@ Get the latest build from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumir
 - **iOS:** the build is unsigned, so it has to be sideloaded.
 
 You need a running Suwayomi-Server that your device can reach.
+
+## Translations
+
+Tsumiru is translated on [Hosted Weblate](https://hosted.weblate.org/projects/suwayomi/suwayomi-tsumiru/). Pick your language there to fix or add translations; changes come back to this repo as pull requests.
+
+<a href="https://hosted.weblate.org/engage/suwayomi/">
+  <img src="https://hosted.weblate.org/widget/suwayomi/suwayomi-tsumiru/multi-auto.svg" alt="Translation status" />
+</a>
 
 ## Contributing
 
