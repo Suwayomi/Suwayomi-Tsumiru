@@ -140,7 +140,10 @@ Future<void> _pumpPhone(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  SharedPreferences.setMockInitialValues(prefs);
+  SharedPreferences.setMockInitialValues({
+    'showRecommendations': false,
+    ...prefs,
+  });
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
