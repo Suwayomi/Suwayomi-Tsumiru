@@ -25,7 +25,7 @@ passed with `--cache`.
 Existing nonempty values, including translations inherited from a base locale,
 are preserved. Regional eligibility uses the catalogs before the import, so a
 new base translation does not prevent a region-specific import in the same run.
-Norwegian Bokmål (`nb` and `nb_NO`) uses upstream Bokmål catalogs from Norway;
+Norwegian Bokmål (`nb`) uses upstream Bokmål catalogs from Norway;
 Nynorsk is not substituted. Simplified and Traditional Chinese use separate
 catalogs. Generic `zh` is left unchanged to avoid adding Simplified fallbacks to
 Traditional Chinese. Gan Chinese has no matching upstream catalog.
