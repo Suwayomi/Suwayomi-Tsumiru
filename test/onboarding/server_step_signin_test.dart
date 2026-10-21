@@ -71,6 +71,11 @@ class _LoginCoordinator extends AuthCoordinator {
   }) async {
     expect(serverBaseUrl, 'http://192.168.2.4:4568');
     expect(ref.read(currentServerAddressProvider), serverBaseUrl);
+    if (password != 'password') {
+      throw OperationException(
+        graphqlErrors: [const GraphQLError(message: 'Unauthorized')],
+      );
+    }
     await ref
         .read(authCredentialsStoreProvider.notifier)
         .saveUiLoginTokens(accessToken: 'access', refreshToken: 'refresh');
@@ -93,6 +98,7 @@ void main() {
           final authReady = Completer<void>();
           var aboutCalls = 0;
           var authCalls = 0;
+          var loginCalls = 0;
           var restarts = 0;
           ProviderContainer createContainer() => ProviderContainer(
             overrides: [
@@ -109,9 +115,28 @@ void main() {
                       200,
                     );
                   }
-                  final query =
-                      (jsonDecode(await body.bytesToString()) as Map)['query']
-                          as String;
+                  final payload = jsonDecode(await body.bytesToString()) as Map;
+                  final query = payload['query'] as String;
+                  if (query.contains('mutation Login')) {
+                    loginCalls++;
+                    expect(payload['variables']['input']['username'], 'reader');
+                    final rejected =
+                        payload['variables']['input']['password'] != 'password';
+                    return http.StreamedResponse(
+                      Stream.value(
+                        utf8.encode(
+                          rejected
+                              ? _authUnauthorized
+                              : '{"data":{"__typename":"Mutation","login":{'
+                                    '"__typename":"LoginPayload",'
+                                    '"accessToken":"access",'
+                                    '"refreshToken":"refresh"}}}',
+                        ),
+                      ),
+                      200,
+                      headers: {'content-type': 'application/json'},
+                    );
+                  }
                   final isAbout = query.contains('aboutServer');
                   if (isAbout) {
                     aboutCalls++;
@@ -217,6 +242,37 @@ void main() {
             );
             await tester.enterText(
               find.widgetWithText(TextField, 'Password'),
+              'Password',
+            );
+            await tester.tap(find.text('Sign in'));
+            await tester.pumpAndSettle();
+            expect(loginCalls, 1);
+            expect(restarts, 0);
+            expect(active.read(currentServerAddressProvider), originalAddress);
+            expect(
+              active.read(authCredentialsStoreProvider).value!.sessionEpoch,
+              originalEpoch,
+            );
+            expect(tester.element(field), same(element));
+            expect(
+              tester.widget<TextField>(field).controller!.text,
+              'http://192.168.2.4:4568',
+            );
+            expect(
+              tester
+                  .widget<TextField>(find.widgetWithText(TextField, 'User Name'))
+                  .controller!
+                  .text,
+              'reader',
+            );
+            expect(find.text('This server needs a login'), findsOneWidget);
+            expect(
+              find.textContaining("Those credentials didn't work"),
+              findsOneWidget,
+            );
+            expect(find.text("You're all set"), findsNothing);
+            await tester.enterText(
+              find.widgetWithText(TextField, 'Password'),
               'password',
             );
             await tester.tap(find.text('Sign in'));
@@ -238,6 +294,7 @@ void main() {
           expect(find.text("You're all set"), findsOneWidget);
           expect(aboutCalls, 1);
           expect(authCalls, 1);
+          expect(loginCalls, needsLogin ? 2 : 0);
           expect(tester.takeException(), isNull);
         },
       );

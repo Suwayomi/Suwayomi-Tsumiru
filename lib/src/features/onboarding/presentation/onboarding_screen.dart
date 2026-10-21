@@ -27,6 +27,7 @@ import '../../account/data/account_actions.dart';
 import '../../account/data/account_providers.dart';
 import '../../account/domain/account_access.dart';
 import '../../account/presentation/account_code_dialog.dart';
+import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../auth/data/ui_login_token_rejected.dart';
@@ -666,8 +667,7 @@ class _ServerStep extends HookConsumerWidget {
       // pre-flights it before committing: confirm it's really Suwayomi over
       // Basic AND that these creds actually authorise the @RequireAuth API —
       // otherwise picking the wrong auth type would "succeed" against a server
-      // whose public aboutServer answers regardless of credentials. ui/simple
-      // need no pre-flight: performSignIn's login round-trip throws on rejection.
+      // whose public aboutServer answers regardless of credentials.
       if (authChoice.value == AuthType.basic) {
         final extra = ref.read(customHttpHeadersProvider).value;
         if (!await basicAuthConfirms(
@@ -689,6 +689,29 @@ class _ServerStep extends HookConsumerWidget {
         }
       }
       try {
+        final coordinator = ref.read(authCoordinatorProvider.notifier);
+        if (authChoice.value == AuthType.uiLogin) {
+          await coordinator.verifyUiCredentials(
+            gqlClient: GraphQLClient(
+              link: HttpLink(
+                graphqlUriFor(base).toString(),
+                httpClient: client,
+                httpResponseDecoder: tsumiruHttpResponseDecoder,
+                defaultHeaders:
+                    ref.read(customHttpHeadersProvider).value ?? const {},
+              ),
+              cache: GraphQLCache(store: InMemoryStore()),
+            ),
+            username: user,
+            password: pass,
+          );
+        } else if (authChoice.value == AuthType.simpleLogin) {
+          await coordinator.verifySimpleCredentials(
+            serverBaseUrl: base,
+            username: user,
+            password: pass,
+          );
+        }
         await finishOnboardingSignIn(ref, () async {
           await adopt(base);
           await performSignIn(
