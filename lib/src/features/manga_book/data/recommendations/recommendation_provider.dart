@@ -66,6 +66,10 @@ class RecommendationUnavailableOnWeb implements Exception {
   const RecommendationUnavailableOnWeb();
 }
 
+class RecommendationServiceUnavailable implements Exception {
+  const RecommendationServiceUnavailable();
+}
+
 /// A provider's HTTP call returned a non-200. Surfaced per-section as an error
 /// (Komikku parity) instead of an empty list — a flaky upstream isn't "no recs".
 class RecommendationHttpException implements Exception {

@@ -4,16 +4,23 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/cover_row_section.dart';
+import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../../offline/data/server_reachability.dart';
 import '../../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
+import '../../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../../../data/recommendations/recommendation_provider.dart';
 import '../../../data/recommendations/recommendation_repository.dart';
 import '../../recommends/recommendation_card.dart';
+import '../../recommends/recommendation_loading.dart';
 
 class RecommendsRow extends HookConsumerWidget {
   const RecommendsRow({super.key, required this.mangaId, this.mangaTitle});
@@ -23,17 +30,52 @@ class RecommendsRow extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(showRecommendationsProvider).ifNull(true) ||
-        ref.watch(recommendsInOverflowProvider).ifNull(false) ||
-        ref.watch(serverUnreachableProvider) ||
-        ref.watch(viewOfflineNowProvider)) {
-      return const SizedBox.shrink();
+    final retry = useState(0);
+    final credentials = ref.watch(authCredentialsStoreProvider).value;
+    final server = ref.watch(serverUrlProvider);
+    final visible =
+        ref.watch(showRecommendationsProvider).ifNull(true) &&
+        !ref.watch(recommendsInOverflowProvider).ifNull(false) &&
+        !ref.watch(serverUnreachableProvider) &&
+        !ref.watch(viewOfflineNowProvider);
+    final recommendationContext = visible
+        ? ref.watch(recommendationSetupProvider(mangaId)).value?.ctx
+        : null;
+    final lookupIdentity = useRef<String?>(null);
+    if (recommendationContext != null) {
+      final trackerKeys = recommendationContext.remoteIdByTracker.keys.toList()
+        ..sort();
+      lookupIdentity.value = jsonEncode([
+        recommendationContext.title,
+        recommendationContext.sourceName,
+        recommendationContext.mangaUrl,
+        {
+          for (final key in trackerKeys)
+            key: recommendationContext.remoteIdByTracker[key],
+        },
+      ]);
     }
+    final snapshot = useMemoized(() => <Recommendation>[], [
+      mangaId,
+      server,
+      credentials?.sessionEpoch,
+      credentials?.sessionChanging,
+      credentials?.accountBinding?.catalogId,
+      credentials?.accountBinding?.userId,
+      retry.value,
+      lookupIdentity.value,
+    ]);
+    if (!visible) return const SizedBox.shrink();
     final recs = ref.watch(mangaRecommendationsProvider(mangaId));
-    if (recs.hasError || (recs.hasValue && recs.value!.isEmpty)) {
-      return const SizedBox.shrink();
+    if (snapshot.isEmpty && recs.asData?.value.isNotEmpty == true) {
+      snapshot.addAll(recs.value!);
     }
-    final list = recs.value;
+    final list = snapshot.isEmpty ? null : snapshot;
+    void refresh() {
+      ref.invalidate(recommendationSetupProvider(mangaId));
+      retry.value++;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -58,7 +100,26 @@ class RecommendsRow extends HookConsumerWidget {
               child: list == null
                   ? SizedBox(
                       height: width * 1.5 + 42,
-                      child: const Center(child: CircularProgressIndicator()),
+                      child: recs.isLoading
+                          ? const RecommendationLoading(explainServices: true)
+                          : Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    recs.hasError
+                                        ? context.l10n.suggestionsLoadFailed
+                                        : context.l10n.suggestionsEmpty,
+                                    textAlign: TextAlign.center,
+                                    style: context.textTheme.bodyMedium,
+                                  ),
+                                  TextButton(
+                                    onPressed: refresh,
+                                    child: Text(context.l10n.retry),
+                                  ),
+                                ],
+                              ),
+                            ),
                     )
                   : null,
             );

@@ -13,8 +13,9 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
-import '../../data/recommendations/recommendation_provider.dart';
 import '../../data/recommendations/recommendation_repository.dart';
+import 'recommendation_error_message.dart';
+import 'recommendation_loading.dart';
 
 /// Komikku's BrowseRecommendsScreen: one provider's full recommendation list as
 /// a cover grid, opened from a section header on the recommendations screen.
@@ -58,12 +59,9 @@ class RecommendsBrowseScreen extends ConsumerWidget {
               title: barTitle,
             ),
       body: recs.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Emoticons(
-          title: e is RecommendationUnavailableOnWeb
-              ? context.l10n.recommendationsUnavailableWeb
-              : context.l10n.errorSomethingWentWrong,
-        ),
+        loading: () => const RecommendationLoading(),
+        error: (e, _) =>
+            Emoticons(title: recommendationErrorMessage(context, e, title)),
         data: (list) => list.isEmpty
             ? Emoticons(title: context.l10n.noResultFound)
             : GridView.builder(

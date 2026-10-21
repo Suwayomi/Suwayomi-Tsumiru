@@ -74,6 +74,21 @@ query Recommendations(\$search: String!) {
       body: jsonEncode({'query': query, 'variables': variables}),
     );
     if (response.statusCode != 200) {
+      try {
+        final payload = jsonDecode(response.body);
+        final errors = payload is Map ? payload['errors'] : null;
+        if (errors is List &&
+            errors.any(
+              (error) =>
+                  error is Map &&
+                  error['message'] ==
+                      'The AniList API has been temporarily disabled due to severe stability issues.',
+            )) {
+          throw const RecommendationServiceUnavailable();
+        }
+      } on FormatException {
+        // Non-JSON error pages still use the HTTP error below.
+      }
       throw RecommendationHttpException(response.statusCode);
     }
     var media = (jsonDecode(response.body)['data']?['Page']?['media']

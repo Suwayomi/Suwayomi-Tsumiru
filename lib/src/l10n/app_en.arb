@@ -4208,5 +4208,25 @@
   "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
   "@lockToPortraitSubtitle": {
     "description": "Subtitle for the lock-to-portrait general setting"
-  }
+  },
+  "recommendationsLoadFailed": "Couldn't load recommendations from {provider}. Try again later.",
+  "@recommendationsLoadFailed": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "recommendationsServiceUnavailable": "{provider} is temporarily unavailable. Try again later.",
+  "@recommendationsServiceUnavailable": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "suggestionsFetching": "Fetching suggestions…",
+  "suggestionsFetchingSubtitle": "Checking recommendation services. This may take a moment.",
+  "suggestionsEmpty": "No suggestions found for this title.",
+  "suggestionsLoadFailed": "Couldn’t load suggestions. Try again later."
 }
