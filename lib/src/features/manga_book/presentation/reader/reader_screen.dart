@@ -376,12 +376,8 @@ class ReaderScreen extends HookConsumerWidget {
                       if (chapterPagesData == null) {
                         return const SizedBox.shrink();
                       }
-                      // A chapter whose page list came back empty (a paid
-                      // chapter that is still locked, a login-only source
-                      // refusing to hand out pages) has nothing to read. Say
-                      // so instead of mounting the reader with zero pages.
-                      // The reader's top bar isn't mounted, so this view
-                      // needs its own way back.
+                      // Empty chapters never mount the reader toolbar, so this view
+                      // needs its own back button.
                       if (chapterPagesData.pages.isEmpty) {
                         return Scaffold(
                           appBar: AppBar(),
@@ -600,7 +596,9 @@ class ReaderScreen extends HookConsumerWidget {
                     refresh: () => ref.refresh(
                       chapterPagesProvider(chapterId: chapterId).future,
                     ),
-                    addScaffoldWrapper: true,
+                    addScaffoldWrapper:
+                        chapterPagesView.hasError &&
+                        !chapterPagesView.isLoading,
                   );
                 },
                 refresh: () => ref.refresh(chapterProviderWithIndex.future),

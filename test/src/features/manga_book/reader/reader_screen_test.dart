@@ -123,6 +123,7 @@ ChapterPagesDto _emptyChapterPages() => ChapterPagesDto(
 Future<void> _openReader(
   WidgetTester tester, {
   required FutureOr<ChapterPagesDto?> Function(Ref ref) chapterPages,
+  bool settle = true,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -166,7 +167,13 @@ Future<void> _openReader(
     ),
   );
   await tester.tap(find.text('Open reader'));
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+  }
 }
 
 Future<void> _goBack(WidgetTester tester) async {
@@ -297,17 +304,38 @@ void main() {
     await _goBack(tester);
   });
 
-  testWidgets(
-    'a page list that fails to load can be retried or backed out of',
-    (tester) async {
-      await _openReader(
-        tester,
-        chapterPages: (ref) => throw Exception('Chapter is locked'),
-      );
+  testWidgets('page loading has no app bar and a failed fetch can be retried', (
+    tester,
+  ) async {
+    final firstFetch = Completer<ChapterPagesDto?>();
+    var fetchCount = 0;
+    await _openReader(
+      tester,
+      chapterPages: (ref) {
+        fetchCount++;
+        return fetchCount == 1 ? firstFetch.future : _chapterPages();
+      },
+      settle: false,
+    );
 
-      expect(find.text('Exception: Chapter is locked'), findsOneWidget);
-      expect(find.text('Refresh'), findsOneWidget);
-      await _goBack(tester);
-    },
-  );
+    expect(fetchCount, 1);
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byType(BackButton), findsNothing);
+    expect(find.byType(PagedReaderViewport), findsNothing);
+
+    firstFetch.completeError(Exception('Chapter is locked'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exception: Chapter is locked'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.text('Refresh'), findsOneWidget);
+
+    await tester.tap(find.text('Refresh'));
+    await tester.pumpAndSettle();
+
+    expect(fetchCount, 2);
+    expect(find.text('Exception: Chapter is locked'), findsNothing);
+    expect(find.text('Refresh'), findsNothing);
+    expect(find.byType(PagedReaderViewport), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
