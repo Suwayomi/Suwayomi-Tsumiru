@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -31,6 +33,28 @@ class RecommendsRow extends HookConsumerWidget {
     final retry = useState(0);
     final credentials = ref.watch(authCredentialsStoreProvider).value;
     final server = ref.watch(serverUrlProvider);
+    final visible =
+        ref.watch(showRecommendationsProvider).ifNull(true) &&
+        !ref.watch(recommendsInOverflowProvider).ifNull(false) &&
+        !ref.watch(serverUnreachableProvider) &&
+        !ref.watch(viewOfflineNowProvider);
+    final recommendationContext = visible
+        ? ref.watch(recommendationSetupProvider(mangaId)).value?.ctx
+        : null;
+    final lookupIdentity = useRef<String?>(null);
+    if (recommendationContext != null) {
+      final trackerKeys = recommendationContext.remoteIdByTracker.keys.toList()
+        ..sort();
+      lookupIdentity.value = jsonEncode([
+        recommendationContext.title,
+        recommendationContext.sourceName,
+        recommendationContext.mangaUrl,
+        {
+          for (final key in trackerKeys)
+            key: recommendationContext.remoteIdByTracker[key],
+        },
+      ]);
+    }
     final snapshot = useMemoized(() => <Recommendation>[], [
       mangaId,
       server,
@@ -39,13 +63,9 @@ class RecommendsRow extends HookConsumerWidget {
       credentials?.accountBinding?.catalogId,
       credentials?.accountBinding?.userId,
       retry.value,
+      lookupIdentity.value,
     ]);
-    if (!ref.watch(showRecommendationsProvider).ifNull(true) ||
-        ref.watch(recommendsInOverflowProvider).ifNull(false) ||
-        ref.watch(serverUnreachableProvider) ||
-        ref.watch(viewOfflineNowProvider)) {
-      return const SizedBox.shrink();
-    }
+    if (!visible) return const SizedBox.shrink();
     final recs = ref.watch(mangaRecommendationsProvider(mangaId));
     if (snapshot.isEmpty && recs.asData?.value.isNotEmpty == true) {
       snapshot.addAll(recs.value!);

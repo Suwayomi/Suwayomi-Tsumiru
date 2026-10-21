@@ -5,10 +5,12 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
+import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/mangaupdates_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -60,8 +62,11 @@ void main() {
     required Future<List<Recommendation>> Function() fetch,
     bool defaultRetry = false,
     bool healthy = false,
+    RecommendationProvider? actualProvider,
+    Map<String, String> trackerIds = const {},
+    http.Client? requestClient,
   }) {
-    final provider = _Fetch(fetch);
+    final provider = actualProvider ?? _Fetch(fetch);
     final container = ProviderContainer(
       retry: defaultRetry ? null : (_, _) => null,
       overrides: [
@@ -86,10 +91,10 @@ void main() {
           (ref) async => (
             ctx: RecommendationContext(
               title: title,
-              remoteIdByTracker: const {},
+              remoteIdByTracker: trackerIds,
               sourceName: '',
               mangaUrl: null,
-              client: client,
+              client: requestClient ?? client,
             ),
             providers: [
               provider,
@@ -122,6 +127,100 @@ void main() {
       providerRecommendationsProvider(1, 'Test|test').future,
     );
   }
+
+  Future<List<Recommendation>> runMangaUpdates(
+    String? id, {
+    bool fail = false,
+  }) {
+    const provider = MangaUpdatesCommunityProvider();
+    final requestClient = MockClient((request) async {
+      if (fail) return http.Response('Unavailable', 503);
+      if (request.method == 'POST') {
+        return http.Response(
+          '{"results":[{"record":{"title":"Example","series_id":1}}]}',
+          200,
+        );
+      }
+      return http.Response(
+        jsonEncode({
+          'recommendations': [
+            {
+              'series_name': 'Lookup result ${request.url.pathSegments.last}',
+              'series_url': 'https://example.test/rec',
+            },
+          ],
+        }),
+        200,
+      );
+    });
+    addTearDown(requestClient.close);
+    final container = create(
+      user: 1,
+      fetch: () async => [],
+      actualProvider: provider,
+      trackerIds: {'mangaupdates': ?id},
+      requestClient: requestClient,
+    );
+    return container.read(
+      providerRecommendationsProvider(1, provider.key).future,
+    );
+  }
+
+  for (final transition in [
+    (from: '1', to: '2'),
+    (from: null, to: '2'),
+    (from: '1', to: null),
+  ]) {
+    test(
+      'real MangaUpdates cache respects tracker lookup change ${transition.from} to ${transition.to}',
+      () async {
+        expect(
+          (await runMangaUpdates(transition.from)).single.title,
+          'Lookup result 1',
+        );
+        await expectLater(
+          runMangaUpdates(transition.to, fail: true),
+          throwsA(
+            isA<RecommendationHttpException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              503,
+            ),
+          ),
+        );
+      },
+    );
+  }
+  test(
+    'real MangaUpdates serves cached recommendations when the same linked ID fails',
+    () async {
+      await runMangaUpdates('1');
+      expect(
+        (await runMangaUpdates('1', fail: true)).single.title,
+        'Lookup result 1',
+      );
+    },
+  );
+  test(
+    'v3 cache written before lookup identity was included is ignored and retained',
+    () async {
+      const provider = MangaUpdatesCommunityProvider();
+      final oldKey =
+          'recsCache:v3:${jsonEncode([
+            ['catalog', 'catalog', 1],
+            1,
+            'Example',
+            provider.key,
+          ])}';
+      final oldValue = jsonEncode([_saved.toJson()]);
+      await prefs.setString(oldKey, oldValue);
+      await expectLater(
+        runMangaUpdates('2', fail: true),
+        throwsA(isA<RecommendationHttpException>()),
+      );
+      expect(prefs.getString(oldKey), oldValue);
+    },
+  );
 
   test(
     'a different server cannot reuse the same manga recommendation cache',

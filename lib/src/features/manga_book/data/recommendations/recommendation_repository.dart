@@ -14,6 +14,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../auth/data/auth_credentials_store.dart';
 import '../../../offline/data/offline_server_identity_repository.dart';
 import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../../../tracking/controller/manga_track_records_controller.dart';
 import '../../../tracking/data/tracker_repository.dart';
 import '../../presentation/manga_details/controller/manga_details_controller.dart';
 import 'providers/anilist_provider.dart';
@@ -47,9 +48,12 @@ recommendationSetup(Ref ref, int mangaId) async {
   if (manga == null || title == null || title.isEmpty) return null;
 
   final trackers = await ref.watch(trackersProvider.future);
+  final records = await ref.watch(
+    mangaTrackRecordsProvider(mangaId: mangaId).future,
+  );
   final nameById = {for (final t in trackers) t.id: t.name.toLowerCase()};
   final remoteIdByTracker = <String, String>{};
-  for (final rec in manga.trackRecords.nodes) {
+  for (final rec in records) {
     final name = nameById[rec.trackerId];
     if (name != null) remoteIdByTracker[name] = rec.remoteId;
   }
@@ -137,9 +141,12 @@ Future<List<Recommendation>> providerRecommendations(
   if (setup == null) return const [];
   final provider = setup.providers.firstWhere((p) => p.key == providerKey);
   final prefs = ref.read(sharedPreferencesProvider);
+  final lookupId = provider is TrackerRecommendationProvider
+      ? setup.ctx.remoteIdByTracker[provider.trackerKey]
+      : null;
   final cacheKey = scope == null
       ? null
-      : 'recsCache:v3:${jsonEncode([scope, mangaId, setup.ctx.title, providerKey])}';
+      : 'recsCache:v3:${jsonEncode([scope, mangaId, setup.ctx.title, providerKey, lookupId])}';
   try {
     final recs = await provider
         .fetch(setup.ctx)
