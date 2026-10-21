@@ -20,13 +20,13 @@
 
 > *Tsumiru* (積みる) takes the 積, "pile up", from *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them. It swaps the "read" for *miru*, "to look".
 
-## What it is
+## About
 
 Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), so [you'll need a server running first](https://github.com/Suwayomi/Suwayomi-Server#downloading-and-running-the-app). Your library and reading progress are stored on the server, and Tsumiru reads them on Android, iOS, Linux, Windows, macOS or the web. Guides and the FAQ are at [tsumiru.app](https://tsumiru.app).
 
 ## Screenshots
 
-<img src="./.github/readme-images/phone-series-framed.png" alt="A series page on Android" height="250"/> <img src="flatpak/screenshots/02-series.png" alt="A series page on desktop" height="250"/>
+<img src="./.github/readme-images/phone-series-framed.png" alt="A series page on Android" width="26%"/> <img src="flatpak/screenshots/02-series.png" alt="A series page on desktop" width="71%"/>
 
 ## Features
 
