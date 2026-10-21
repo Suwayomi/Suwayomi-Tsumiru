@@ -1,0 +1,4262 @@
+{
+    "removeBookmark": "Elimina el marcador",
+    "categoryNumberOfItems": "Mostra el nombre d'elements",
+    "@categoryNumberOfItems": {
+        "description": "Library Display > Tabs: checkbox to show a manga count next to each category tab label"
+    },
+    "scrollAmountTiny": "Molt petit",
+    "scrollAmountSmall": "Petit",
+    "scrollAmountMedium": "Mitjà",
+    "scrollAmountLarge": "Gran",
+    "autoScroll": "Desplaçament automàtic",
+    "@autoScroll": {
+        "description": "Reader utils bar: auto-scroll toggle label (webtoon)"
+    },
+    "tabs": "Pestanyes",
+    "@tabs": {
+        "description": "Library Display sheet section heading for tab-related toggles"
+    },
+    "languageBadge": "Idioma",
+    "browse": "Explora",
+    "@browse": {
+        "description": "Screen title, Navigation Bar text and Button text of both Browse screen and Browse Settings Screen"
+    },
+    "buildTime": "Hora de compilació",
+    "@buildTime": {
+        "description": "Text title to show build time of Server in About Screen"
+    },
+    "cancel": "Cancel·la",
+    "@cancel": {
+        "description": "Text for Cancel button in a Popup"
+    },
+    "categories": "Categories",
+    "@categories": {
+        "description": "Button text of edit Categories screen in Library settings screen"
+    },
+    "channel": "Canal",
+    "@channel": {
+        "description": "Text title to show Channel of the Server (Stable, preview) in About Screen"
+    },
+    "chapterDownloadLimit": "Límit de baixada de capítols",
+    "@chapterDownloadLimit": {
+        "description": "Title Text for changing Chapter download limit settings"
+    },
+    "chapterDownloadLimitDesc": "Limita la quantitat de capítols nous que es baixaran.",
+    "@chapterDownloadLimitDesc": {
+        "description": "Sub Title Text for changing Chapter download limit settings"
+    },
+    "chapterDisplayChapterNumber": "Número de capítol",
+    "@chapterDisplayChapterNumber": {
+        "description": "Radio button text for displaying chapters by chapter number"
+    },
+    "chapterDisplaySourceTitle": "Títol de la font",
+    "@chapterDisplaySourceTitle": {
+        "description": "Radio button text for displaying chapters by source title"
+    },
+    "client": "Client",
+    "@client": {
+        "description": "Text title for the name of the client in About screen"
+    },
+    "close": "Tanca",
+    "@close": {
+        "description": "Text for close button"
+    },
+    "next": "Següent",
+    "setCategories": "Estableix les categories",
+    "delete": "Elimina",
+    "@delete": {
+        "description": "Text for delete button"
+    },
+    "deleteCategoryTitle": "N'esteu segur?",
+    "@deleteCategoryTitle": {
+        "description": "Popup title when deleting Category"
+    },
+    "deleteChapters": "Elimina els capítols",
+    "deleteChapterAfterManuallyMarkedRead": "Elimina el capítol després de marcar-lo manualment com a llegit",
+    "deleteFinishedChaptersWhileReading": "Elimina els capítols acabats mentre llegiu",
+    "allowDeletingBookmarkedChapters": "Permet eliminar els capítols amb marcador",
+    "deleteWhileReadingDisabled": "Desactivat",
+    "deleteWhileReadingLastRead": "Últim capítol llegit",
+    "deleteWhileReadingSecondToLast": "Segon capítol llegit comptant des del final",
+    "deleteWhileReadingThirdToLast": "Tercer capítol llegit comptant des del final",
+    "deleteWhileReadingFourthToLast": "Quart capítol llegit comptant des del final",
+    "deleteWhileReadingFifthToLast": "Cinquè capítol llegit comptant des del final",
+    "discord": "Discord",
+    "@discord": {
+        "description": "Discord app title"
+    },
+    "display": "Visualització",
+    "@display": {
+        "description": "Text for Display tab in Library screen drawer"
+    },
+    "displayModeComfortableGrid": "Graella còmoda",
+    "displayModeCompactGrid": "Graella compacta",
+    "@displayModeCompactGrid": {
+        "description": "Library-only label for display mode Grid, whose title sits on the cover"
+    },
+    "displayModeList": "Llista",
+    "@displayModeList": {
+        "description": "Radio button text for Manga Cover display mode - List"
+    },
+    "filterStateExcluded": "Exclosa",
+    "@filterStateExcluded": {
+        "description": "Generic tri-state filter chip to hide entries that match"
+    },
+    "filterOptionDownloaded": "Baixat",
+    "@filterOptionDownloaded": {
+        "description": "Download-status filter chip: only downloaded entries"
+    },
+    "filterOptionUnread": "No llegit",
+    "@filterOptionUnread": {
+        "description": "Read-status filter chip: only entries with unread chapters"
+    },
+    "filterOptionRead": "Llegit",
+    "@filterOptionRead": {
+        "description": "Read-status filter chip: only fully read entries"
+    },
+    "filterOptionStarted": "Iniciat",
+    "@filterOptionStarted": {
+        "description": "Progress filter chip: only entries with at least one chapter read"
+    },
+    "filterOptionBookmarked": "Amb marcador",
+    "@filterOptionBookmarked": {
+        "description": "Bookmarks filter chip: only entries with a bookmarked chapter"
+    },
+    "filterOptionFinished": "Acabat",
+    "@filterOptionFinished": {
+        "description": "Series filter chip: only series with every chapter read"
+    },
+    "filterHeaderLibrary": "Biblioteca",
+    "@filterHeaderLibrary": {
+        "description": "Section label for the library-membership filter chip row"
+    },
+    "filterOptionCompleted": "Completada",
+    "@filterOptionCompleted": {
+        "description": "Publication-status filter chip: only entries the source marked completed"
+    },
+    "filterShortDownloaded": "Baixat",
+    "@filterShortDownloaded": {
+        "description": "Short filter segment heading for the downloaded tri-state"
+    },
+    "filterShortStarted": "Iniciat",
+    "@filterShortStarted": {
+        "description": "Short filter segment heading for the started tri-state"
+    },
+    "filterShortBookmarked": "Amb marcador",
+    "@filterShortBookmarked": {
+        "description": "Short filter segment heading for the bookmarked tri-state"
+    },
+    "filterShortCompleted": "Completada",
+    "@filterShortCompleted": {
+        "description": "Short filter segment heading for the completed tri-state"
+    },
+    "longStripWidthLimitUnitPixels": "px",
+    "@longStripWidthLimitUnitPixels": {
+        "description": "Width slider unit chip: absolute pixels"
+    },
+    "groupStyleTabs": "Pestanyes",
+    "@groupStyleTabs": {
+        "description": "Group display chip: one page per group, behind a swipeable tab bar"
+    },
+    "downloadAllChapters": "Tot",
+    "@downloadAllChapters": {
+        "description": "Bulk-download menu item: queue every not-yet-downloaded chapter."
+    },
+    "downloadLocation": "Ubicació de les baixades",
+    "@downloadLocation": {
+        "description": "Settings label Text to update Download location"
+    },
+    "downloadLocationHint": "El camí del directori del servidor on s'han de desar els fitxers baixats",
+    "@downloadLocationHint": {
+        "description": "Hint text for updating downloads location"
+    },
+    "downloaded": "Baixat",
+    "@downloaded": {
+        "description": "Text to show downloaded chapters status in Filters  "
+    },
+    "downloading": "S'està baixant",
+    "@downloading": {
+        "description": "Text to show chapters downloading"
+    },
+    "downloadNextChapter": "Capítol següent",
+    "@downloadNextChapter": {
+        "description": "Bulk-download menu item: queue the next single chapter after the last read."
+    },
+    "downloads": "Baixades",
+    "@downloads": {
+        "description": "Screen title and Navigation text of Downloads screen"
+    },
+    "downloadUnreadChapters": "No llegit",
+    "@downloadUnreadChapters": {
+        "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters."
+    },
+    "edit": "Edita",
+    "@edit": {
+        "description": "Popup button text to edit Category in Edit category screen"
+    },
+    "error": "Error",
+    "@error": {
+        "description": "Text to show error downloading chapters"
+    },
+    "excludeEntryWithUnreadChapters": "Ignora les baixades automàtiques de capítols per a les entrades amb capítols no llegits",
+    "@excludeEntryWithUnreadChapters": {
+        "description": "Toggle's title to change Toggle Exclude Entry With Unread Chapters setting"
+    },
+    "filter": "Filtre",
+    "@filter": {
+        "description": "title of filter Tab across the app"
+    },
+    "finished": "Acabat",
+    "@finished": {
+        "description": "Text shown when a chapter is finished in continuous reading"
+    },
+    "flareSolverrSessionName": "Nom de la sessió de FlareSolverr",
+    "@flareSolverrSessionName": {
+        "description": "Title text for FlareSolverr Session Name property"
+    },
+    "flareSolverrSessionTTL": "TTL de la sessió de FlareSolverr",
+    "@flareSolverrSessionTTL": {
+        "description": "Title text for FlareSolverr Session TTL property"
+    },
+    "general": "General",
+    "@general": {
+        "description": "Screen title and Button text of General setting screen"
+    },
+    "globalSearch": "Cerca global",
+    "@globalSearch": {
+        "description": "Screen title of Global Search screen"
+    },
+    "includeCategories": "Categories",
+    "@includeCategories": {
+        "description": "Check box text to include categories during create backup"
+    },
+    "includeChapters": "Capítols",
+    "@includeChapters": {
+        "description": "Check box text to include chapters during create backup"
+    },
+    "includeHistory": "Historial",
+    "includeTracking": "Seguiment",
+    "install": "Instal·la",
+    "@install": {
+        "description": "Button text to install the extension"
+    },
+    "installing": "S'està instal·lant",
+    "@installing": {
+        "description": "Button text to show that the extension is installing"
+    },
+    "appThemeTitle": "Tema",
+    "@appThemeTitle": {
+        "description": "Header for the color theme picker"
+    },
+    "appThemeCustom": "Personalitzat",
+    "customFilter": "Filtre personalitzat",
+    "@customFilter": {
+        "description": "Reader settings sheet tab for brightness/color filters"
+    },
+    "customBrightness": "Brillantor personalitzada",
+    "@customBrightness": {
+        "description": "Custom-filter tab: brightness toggle + slider label"
+    },
+    "colorFilterRed": "Vermell",
+    "colorFilterGreen": "Verd",
+    "colorFilterBlue": "Blau",
+    "colorFilterAlpha": "Alfa",
+    "colorFilterBlendMode": "Mode de fusió del filtre de color",
+    "@colorFilterBlendMode": {
+        "description": "Section label for the blend-mode chips"
+    },
+    "colorFilterModeDefault": "Predeterminat",
+    "colorFilterModeMultiply": "Multiplica",
+    "colorFilterModeScreen": "Pantalla",
+    "colorFilterModeOverlay": "Superposició",
+    "grayscale": "Escala de grisos",
+    "languages": "Idiomes",
+    "@languages": {
+        "description": "Popup title to filter extensions based on language"
+    },
+    "latest": "Novetats",
+    "@latest": {
+        "description": "Button text to take user to the latest tab of Source manga screen"
+    },
+    "library": "Biblioteca",
+    "@library": {
+        "description": "Screen title and Button text of Library and Library Settings screen"
+    },
+    "localSourceLocation": "Ubicació de la font local",
+    "@localSourceLocation": {
+        "description": "Text for Local Source Location settings property"
+    },
+    "localSourceLocationDescription": "El camí del directori del servidor on es desen els fitxers de les fonts locals",
+    "@localSourceLocationDescription": {
+        "description": "Description text for Local Source Location property"
+    },
+    "manga": "Manga",
+    "@manga": {
+        "description": "Screen title and Button text of Manga details screen"
+    },
+    "mangaSortDateAdded": "Data d'afegiment",
+    "@mangaSortDateAdded": {
+        "description": "Radio button text for Manga sort Type - Date Added"
+    },
+    "mangaSortLastChapterDate": "Últim capítol",
+    "@mangaSortLastChapterDate": {
+        "description": "Radio button text for Manga sort Type - Last Chapter Date (upload date of the most recent chapter from the source)"
+    },
+    "mangaSortLastRead": "Darrera lectura",
+    "@mangaSortLastRead": {
+        "description": "Radio button text for Manga sort Type - Last Read"
+    },
+    "mangaSortRandom": "A l'atzar",
+    "@mangaSortRandom": {
+        "description": "Radio button text for Manga sort Type - Random (seeded shuffle; re-tap to re-roll)"
+    },
+    "mangaSortUnread": "No llegit",
+    "@mangaSortUnread": {
+        "description": "Radio button text for Manga sort Type - Unread"
+    },
+    "mangaStatusCancelled": "Cancel·lada",
+    "@mangaStatusCancelled": {
+        "description": "Text to show Manga Status Cancelled in Manga details screen"
+    },
+    "mangaStatusCompleted": "Completada",
+    "@mangaStatusCompleted": {
+        "description": "Text to show Manga Status Completed in Manga details screen"
+    },
+    "mangaStatusLicensed": "Amb llicència",
+    "@mangaStatusLicensed": {
+        "description": "Text to show Manga Status Licensed in Manga details screen"
+    },
+    "mangaStatusOnHiatus": "En pausa",
+    "@mangaStatusOnHiatus": {
+        "description": "Text to show Manga Status On Hiatus in Manga details screen"
+    },
+    "mangaStatusOngoing": "En curs",
+    "@mangaStatusOngoing": {
+        "description": "Text to show Manga Status Ongoing in Manga details screen"
+    },
+    "mangaStatusPublishingFinished": "Publicació acabada",
+    "@mangaStatusPublishingFinished": {
+        "description": "Text to show Manga Status Publishing Finished in Manga details screen"
+    },
+    "mangaStatusUnknown": "Desconegut",
+    "@mangaStatusUnknown": {
+        "description": "Text to show Manga Status Unknown in Manga details screen"
+    },
+    "misc": "Divers",
+    "@misc": {
+        "description": "Section title for misc settings"
+    },
+    "more": "Més",
+    "@more": {
+        "description": "Screen title and Navigation text of More screen"
+    },
+    "moveToTop": "Mou al principi",
+    "@moveToTop": {
+        "description": "Button text to move download/category to the top of list"
+    },
+    "readerChapterGapContinue": "Continua",
+    "@readerChapterGapContinue": {
+        "description": "Confirm skipping chapters in the reader"
+    },
+    "none": "Cap",
+    "@none": {
+        "description": "Text for None"
+    },
+    "download": "Baixa",
+    "obsolete": "Obsolet",
+    "@obsolete": {
+        "description": "Text to show that the extension has become Obsolete"
+    },
+    "openInBrowser": "Obre al navegador",
+    "or": "o",
+    "@or": {
+        "description": "text literal for word or"
+    },
+    "parallelSourceRequest": "Peticions simultànies a la font",
+    "@parallelSourceRequest": {
+        "description": "Text for Parallel source requests property"
+    },
+    "password": "Contrasenya",
+    "@password": {
+        "description": "Title text for password field"
+    },
+    "all": "Tot",
+    "hasResults": "Té resultats",
+    "pinSource": "Fixa la font",
+    "allSources": "Totes les fonts",
+    "unpinSource": "Deixa de fixar la font",
+    "queued": "En cua",
+    "@queued": {
+        "description": "Text to show chapters are queued for downloading"
+    },
+    "reader": "Lector",
+    "@reader": {
+        "description": "Screen title and Button text of Reader screen"
+    },
+    "readerMode": "Mode de lectura",
+    "@readerMode": {
+        "description": "Popup title and Button text of Reader Mode popup"
+    },
+    "readerModeChipDefault": "Predeterminat",
+    "@readerModeChipDefault": {
+        "description": "Reading-mode chip - Default"
+    },
+    "readerModeChipLongStrip": "Tira llarga",
+    "@readerModeChipLongStrip": {
+        "description": "Reading-mode chip - Long strip (webtoon)"
+    },
+    "readerModeDefaultReader": "Predeterminat",
+    "@readerModeDefaultReader": {
+        "description": "Radio button text for Reader Mode Type - Default"
+    },
+    "readerModeWebtoon": "Tira llarga",
+    "@readerModeWebtoon": {
+        "description": "Radio button text for Reader Mode Type - Webtoon"
+    },
+    "readerNavigationLayout": "Zones de toc",
+    "@readerNavigationLayout": {
+        "description": "Popup title and Button text of Reader Navigation Layout popup"
+    },
+    "readerNavigationLayoutDefault": "Predeterminat",
+    "@readerNavigationLayoutDefault": {
+        "description": "Radio button text for Reader Navigation Layout - Default"
+    },
+    "readerNavigationLayoutDisabled": "Desactivat",
+    "@readerNavigationLayoutDisabled": {
+        "description": "Radio button text for Reader Navigation Layout - Disabled"
+    },
+    "readerNavigationLayoutEdge": "Vora",
+    "@readerNavigationLayoutEdge": {
+        "description": "Radio button text for Reader Navigation Layout - Edge"
+    },
+    "readerNavigationLayoutInvert": "Inverteix les zones tàctils",
+    "@readerNavigationLayoutInvert": {
+        "description": "Switch title to invert Tap to scroll in reader screen"
+    },
+    "readerNoPages": "No s'ha trobat cap pàgina",
+    "@readerNoPages": {
+        "description": "Shown instead of the reader when the source returns a chapter with no pages."
+    },
+    "readerOrientationDefault": "Predeterminat",
+    "@readerOrientationDefault": {
+        "description": "Rotation chip - Default (follow the app)"
+    },
+    "readerTapInvertBoth": "Tots dos",
+    "@readerTapInvertBoth": {
+        "description": "Tap-invert option - both axes"
+    },
+    "readerTapInvertHorizontal": "Horitzontal",
+    "@readerTapInvertHorizontal": {
+        "description": "Tap-invert option - horizontal axis"
+    },
+    "readerTapInvertNone": "Cap",
+    "@readerTapInvertNone": {
+        "description": "Tap-invert option - none"
+    },
+    "readerTapInvertVertical": "Vertical",
+    "@readerTapInvertVertical": {
+        "description": "Tap-invert option - vertical axis"
+    },
+    "readerKeepScreenOn": "Mantén la pantalla encesa",
+    "@readerKeepScreenOn": {
+        "description": "Reader switch tile title: keep the screen awake while reading"
+    },
+    "refresh": "Actualitza",
+    "@refresh": {
+        "description": "Refresh button text"
+    },
+    "migrate": "Migra",
+    "migrationListTitle": "Migra",
+    "migrationListNoMatch": "No s'ha trobat cap coincidència",
+    "migrationSelectAllSources": "Selecciona-ho tot",
+    "migrationContinue": "Continua",
+    "migrationSelectedHeader": "Seleccionada",
+    "migrationAvailableHeader": "Disponible",
+    "migrationObsoleteSource": "Obsolet",
+    "migrationSelectAll": "Selecciona-ho tot",
+    "migrationInvertSelection": "Inverteix",
+    "migrationGroupDone": "Fet",
+    "migrationRetry": "Torna-ho a provar",
+    "migrationActionMigrate": "Migra",
+    "migrationActionCopy": "Copia",
+    "notificationAppUpdateTitle": "Hi ha una actualització disponible",
+    "notificationActionMarkRead": "Marca com a llegit",
+    "notificationActionDownload": "Baixa",
+    "customMigration": "Personalitzat",
+    "done": "Fet",
+    "webtoonScaleTypeFitScreen": "Ajusta a la pantalla",
+    "@webtoonScaleTypeFitScreen": {
+        "description": "Long strip scale chip"
+    },
+    "webtoonScaleTypeOriginalSize": "Mida original",
+    "@webtoonScaleTypeOriginalSize": {
+        "description": "Long strip scale chip: render pages at native size, never upscaled"
+    },
+    "source": "Font",
+    "@source": {
+        "description": "Screen title and Button text of source screen"
+    },
+    "remove": "Elimina",
+    "@remove": {
+        "description": "Remove Button text"
+    },
+    "reset": "Restableix",
+    "@reset": {
+        "description": "Button text of reset button in source filters"
+    },
+    "restore": "Restaura",
+    "@restore": {
+        "description": "Button Text to create backup"
+    },
+    "restoreBackupTitle": "Restaura la còpia de seguretat",
+    "@restoreBackupTitle": {
+        "description": "Button text to create backup"
+    },
+    "resume": "Reprèn",
+    "@resume": {
+        "description": "Button Text to resume Chapter reading/downloading"
+    },
+    "retry": "Torna-ho a provar",
+    "@retry": {
+        "description": "Retry Button Text"
+    },
+    "retryAll": "Reintenta-ho tot",
+    "save": "Desa",
+    "@save": {
+        "description": "Save Button Text"
+    },
+    "saveAsCBZArchive": "Desa com a arxiu CBZ",
+    "@saveAsCBZArchive": {
+        "description": "Settings toggle label for Save as CBZ archive"
+    },
+    "search": "Cerca",
+    "@search": {
+        "description": "Search field hint Text"
+    },
+    "select": "Selecciona",
+    "selectAll": "Selecciona-ho tot",
+    "server": "Servidor",
+    "@server": {
+        "description": "Text title for the server in About screen"
+    },
+    "serverAddress": "Adreça del servidor",
+    "serverVersion": "Versió del servidor",
+    "@serverVersion": {
+        "description": "Text title for the current version of the Server in About screen"
+    },
+    "settings": "Configuració",
+    "@settings": {
+        "description": "Screen title and Button text of Settings screen"
+    },
+    "skipUpdatingEntries": "Omet l'actualització de les entrades",
+    "@skipUpdatingEntries": {
+        "description": "Settings Text to update skip Updating Entries"
+    },
+    "sort": "Ordena",
+    "@sort": {
+        "description": "title of sort Tab across the app"
+    },
+    "sourceTypeFilter": "Filtre",
+    "@sourceTypeFilter": {
+        "description": "Tab text Filter for source screen type"
+    },
+    "sourceTypeLatest": "Novetats",
+    "@sourceTypeLatest": {
+        "description": "Tab text Latest for source screen type"
+    },
+    "sourceTypePopular": "Populars",
+    "@sourceTypePopular": {
+        "description": "Tab text Popular for source screen type"
+    },
+    "sources": "Fonts",
+    "@sources": {
+        "description": "title of Sources Tab in Browse Screen"
+    },
+    "start": "Inicia",
+    "@start": {
+        "description": "Button text start reading the manga"
+    },
+    "started": "Iniciat",
+    "@started": {
+        "description": "Library filter label: manga the user has started reading (read at least one chapter)"
+    },
+    "systemTrayIcon": "Mostra la icona a la safata del sistema",
+    "@systemTrayIcon": {
+        "description": "Switch title to Show icon in system tray in settings"
+    },
+    "thatHaventBeenStarted": "Que no s'han començat",
+    "@thatHaventBeenStarted": {
+        "description": "Setting option Text for Skip updating entries to toggle That haven't been started"
+    },
+    "themeModeDark": "Fosc",
+    "@themeModeDark": {
+        "description": "Radio button text for App theme - Dark"
+    },
+    "themeModeLight": "Clar",
+    "@themeModeLight": {
+        "description": "Radio button text for App theme - Light"
+    },
+    "themeModeSystem": "Sistema",
+    "@themeModeSystem": {
+        "description": "Radio button text for App theme - System"
+    },
+    "today": "Avui",
+    "@today": {
+        "description": "Today Text to show the release date of manga"
+    },
+    "unifiedSearchLibrarySection": "Biblioteca",
+    "@unifiedSearchLibrarySection": {
+        "description": "Unified search section header"
+    },
+    "uninstall": "Desinstal·la",
+    "@uninstall": {
+        "description": "Button text to Uninstall the extension"
+    },
+    "uninstalling": "S'està desinstal·lant",
+    "@uninstalling": {
+        "description": "Button text to show that the extension is uninstalling"
+    },
+    "unread": "No llegit",
+    "@unread": {
+        "description": "Checkbox text to unread bookmarked manga/chapters across app"
+    },
+    "update": "Actualitza",
+    "@update": {
+        "description": "Button text to update the extension"
+    },
+    "updates": "Actualitzacions",
+    "@updates": {
+        "description": "Screen title and Button text of Updates screen"
+    },
+    "updatesGroupingModeDisabled": "Desactivat",
+    "updating": "S'està actualitzant",
+    "@updating": {
+        "description": "Button text to show that the extension is updating"
+    },
+    "withUnreadChapter": "Amb capítol(s) no llegit(s)",
+    "@withUnreadChapter": {
+        "description": "Setting option Text for Skip updating entries to toggle With unread chapter(s)"
+    },
+    "yesterday": "Ahir",
+    "@yesterday": {
+        "description": "Yesterday Text to show the release date of manga"
+    },
+    "history": "Historial",
+    "offlineDownloadsSection": "Baixades",
+    "@offlineDownloadsSection": {
+        "description": "Section header for offline download behaviour settings"
+    },
+    "markAsRead": "Marca com a llegit",
+    "chapterSwipeDisabled": "Desactivat",
+    "markAsUnread": "Marca com a no llegit",
+    "markPreviousAsRead": "Marca els anteriors com a llegits",
+    "downloadsServerTab": "Servidor",
+    "@downloadsServerTab": {
+        "description": "Downloads tab: the server download queue"
+    },
+    "tracking": "Seguiment",
+    "@tracking": {
+        "description": "Settings entry and screen title for the Tracking screen"
+    },
+    "copiedToClipboard": "S'ha copiat al porta-retalls",
+    "updateProgressAfterReading": "Actualitza el progrés després de llegir",
+    "@updateProgressAfterReading": {
+        "description": "Toggle label: automatically sync reading progress after a chapter is read"
+    },
+    "trackers": "Seguiment",
+    "@trackers": {
+        "description": "Section header listing connected tracker accounts"
+    },
+    "logIn": "Inicia la sessió",
+    "@logIn": {
+        "description": "Button label to log in to a tracker account"
+    },
+    "logOut": "Tanca la sessió",
+    "@logOut": {
+        "description": "Button label to log out of a tracker account"
+    },
+    "addTracking": "Afegeix seguiment",
+    "@addTracking": {
+        "description": "Button label on an unbound tracker card in the hub sheet; tapping opens the tracker search to bind a remote entry"
+    },
+    "track": "Segueix",
+    "@track": {
+        "description": "Primary button label in the tracker search sheet; tapping binds the selected remote entry to the manga"
+    },
+    "trackPrivately": "Segueix en privat",
+    "@trackPrivately": {
+        "description": "Secondary button label in the tracker search sheet; tapping binds the selected entry with the private flag enabled"
+    },
+    "trackStatus": "Estat",
+    "@trackStatus": {
+        "description": "Row label for the track status field in the track editor"
+    },
+    "trackScore": "Puntuació",
+    "@trackScore": {
+        "description": "Row label for the track score field in the track editor"
+    },
+    "trackStartDate": "Data d'inici",
+    "@trackStartDate": {
+        "description": "Row label for the start-date field in the track editor"
+    },
+    "trackFinishDate": "Data d'acabament",
+    "@trackFinishDate": {
+        "description": "Row label for the finish-date field in the track editor"
+    },
+    "trackMarkPrivate": "Segueix en privat",
+    "@trackMarkPrivate": {
+        "description": "Overflow menu item that marks the track record as private"
+    },
+    "trackMarkPublic": "Segueix en públic",
+    "@trackMarkPublic": {
+        "description": "Overflow menu item that marks the track record as public"
+    },
+    "groupByDefault": "Predeterminat",
+    "@groupByDefault": {
+        "description": "Group mode: by category (the existing category tabs behaviour)"
+    },
+    "groupBySource": "Per font",
+    "@groupBySource": {
+        "description": "Group mode: one tab per manga source"
+    },
+    "filterTracked": "Amb seguiment",
+    "@filterTracked": {
+        "description": "Filter section heading shown when at least one tracker is logged in"
+    },
+    "copyImageToClipboard": "Copia",
+    "@copyImageToClipboard": {
+        "description": "Reader page-actions sheet: copy the current page image itself to the clipboard"
+    },
+    "zoomStartLeft": "Esquerra",
+    "@zoomStartLeft": {
+        "description": "Zoom start position chip"
+    },
+    "zoomStartRight": "Dreta",
+    "@zoomStartRight": {
+        "description": "Zoom start position chip"
+    },
+    "hotkeysReaderSection": "Lector",
+    "@hotkeysReaderSection": {
+        "description": "Hotkeys page section header"
+    },
+    "hotkeyOpenSearch": "Cerca",
+    "@hotkeyOpenSearch": {
+        "description": "Hotkey action"
+    },
+    "hotkeyReaderPrevPage": "Pàgina anterior",
+    "@hotkeyReaderPrevPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderNextPage": "Pàgina següent",
+    "@hotkeyReaderNextPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderPrevChapter": "Capítol anterior",
+    "@hotkeyReaderPrevChapter": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderNextChapter": "Capítol següent",
+    "@hotkeyReaderNextChapter": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderToggleMenu": "Commuta el menú",
+    "@hotkeyReaderToggleMenu": {
+        "description": "Reader hotkey action"
+    },
+    "extensionStores": "Botigues d'extensions",
+    "@extensionStores": {
+        "description": "Screen title for the Extension stores screen"
+    },
+    "addExtensionStore": "Afegeix una botiga d'extensions",
+    "@addExtensionStore": {
+        "description": "Title of the dialog used to add an extension store"
+    },
+    "add": "Afegeix",
+    "@add": {
+        "description": "Generic button text for Add"
+    },
+    "unknownScanlator": "Desconegut",
+    "@unknownScanlator": {
+        "description": "Label for chapters with no scanlator group, shown in the preferred scanlation groups dialog"
+    },
+    "actionShowEntry": "Mostra l'entrada",
+    "@actionShowEntry": {
+        "description": "Button text to open the existing library entry from a duplicate candidate"
+    },
+    "duplicatedEntries": "Entrades duplicades",
+    "@duplicatedEntries": {
+        "description": "Title of the library settings row that opens the library-wide duplicate scan"
+    },
+    "duplicatedEntriesSubtitle": "Mostra totes les entrades duplicades de la biblioteca",
+    "@duplicatedEntriesSubtitle": {
+        "description": "Subtitle of the library settings row that opens the library-wide duplicate scan"
+    },
+    "checkDescription": "Comproveu la descripció",
+    "@checkDescription": {
+        "description": "Switch title to include description-substring matching in the duplicate scan"
+    },
+    "offlineChaptersDownloadedSection": "Baixat",
+    "@offlineChaptersDownloadedSection": {
+        "description": "Section header for fully downloaded chapters in the offline chapter list"
+    },
+    "offlineChapterRetry": "Torna-ho a provar",
+    "@offlineChapterRetry": {
+        "description": "Button to retry a failed chapter download"
+    },
+    "offlineChaptersQueued": "En cua",
+    "@offlineChaptersQueued": {
+        "description": "Status label for a chapter waiting in the download queue"
+    },
+    "accountPreviousPage": "Pàgina anterior",
+    "offlineRecoveryRead": "Llegit",
+    "syncyomi": "SyncYomi",
+    "@syncyomi": {
+        "description": "Settings entry and screen title for the SyncYomi library sync server"
+    },
+    "syncYomiSyncInterval": "Interval de sincronització",
+    "syncYomiEvery30Minutes": "Cada 30 minuts",
+    "syncYomiEveryHour": "Cada hora",
+    "syncYomiEvery3Hours": "Cada 3 hores",
+    "syncYomiEvery6Hours": "Cada 6 hores",
+    "syncYomiEvery12Hours": "Cada 12 hores",
+    "syncYomiDaily": "Cada dia",
+    "syncYomiWeekly": "Cada setmana",
+    "syncYomiSyncData": "Dades de sincronització",
+    "@syncYomiSyncData": {
+        "description": "Which kinds of data a SyncYomi sync carries"
+    },
+    "syncYomiSyncDataManga": "Entrades de la biblioteca",
+    "syncYomiSyncDataChapters": "Capítols",
+    "syncYomiSyncDataCategories": "Categories",
+    "syncYomiSyncDataHistory": "Historial",
+    "syncYomiSyncDataTracking": "Seguiment",
+    "syncYomiSyncNow": "Sincronitza ara",
+    "syncYomiStepCreatingBackup": "S'està creant la còpia de seguretat",
+    "syncYomiStepDownloading": "S'està baixant",
+    "syncYomiStepMerging": "S'està fusionant",
+    "syncYomiStepUploading": "S'està pujant",
+    "syncYomiStepRestoring": "S'està restaurant",
+    "syncYomiSyncStarted": "S'ha iniciat la sincronització",
+    "koreaderSync": "KOReader Sync",
+    "koreaderSyncStatus": "Estat de la sincronització",
+    "koreaderSyncStatusDisconnected": "Desconnectat",
+    "koreaderSyncConnectTitle": "Connecta al servidor de sincronització de KOReader",
+    "koreaderSyncDisconnectTitle": "Desconnecta del servidor de sincronització de KOReader",
+    "koreaderSyncUsername": "Nom d'usuari",
+    "koreaderSyncConnectFailed": "No s'ha pogut connectar al servidor de sincronització de KOReader.",
+    "koreaderSyncDisconnectFailed": "No s'ha pogut desconnectar del servidor de sincronització de KOReader.",
+    "koreaderSyncStrategyForward": "Sincronitza a un estat més nou",
+    "koreaderSyncStrategyBackward": "Sincronitza a un estat més antic",
+    "koreaderSyncStrategyPrompt": "Pregunta",
+    "koreaderSyncStrategyKeepLocal": "Conserva el local",
+    "koreaderSyncStrategyKeepRemote": "Conserva el remot",
+    "koreaderSyncStrategyDisabled": "Desactivat",
+    "koreaderSyncChecksumMethod": "Mètode de coincidència de documents",
+    "koreaderSyncChecksumBinary": "Binari",
+    "koreaderSyncChecksumFilename": "Nom del fitxer",
+    "koreaderSyncPercentageToleranceDescription": "La sincronització no s'activarà si la diferència de progrés està dins d'aquesta tolerància.",
+    "webInterfaceFlavor": "Interfície",
+    "webInterfaceWebUI": "WebUI",
+    "webInterfaceWebUIDescription": "Utilitza la WebUI predeterminada",
+    "webInterfaceVUI": "VUI",
+    "webInterfaceCustom": "Personalitzat",
+    "webInterfaceBundled": "Inclòs",
+    "webInterfaceBundledDescription": "Utilitza la versió que es va incloure amb la versió del servidor",
+    "webInterfaceStable": "Estable",
+    "webInterfaceStableDescription": "Utilitzeu la darrera versió publicada.",
+    "webInterfacePreview": "Vista prèvia",
+    "webInterfacePreviewDescription": "Utilitzeu les funcions més recents i ajudeu-nos a preparar-les per a una versió estable.",
+    "webInterfaceAutomaticUpdates": "Actualitzacions automàtiques",
+    "webInterfaceInstallUpdate": "Instal·la",
+    "accountPermissionDenied": "El vostre compte no té permís per a aquesta acció.",
+    "migrationIdentityUnavailable": "Connecteu-vos al servidor i inicieu la sessió abans de migrar.",
+    "accountSettingsUnavailable": "No s'ha pogut verificar la configuració del compte. Torneu a connectar-vos i torneu-ho a provar.",
+    "manageSettingsPermissionRequired": "Necessiteu permís per gestionar la configuració del servidor.",
+    "addCategory": "Afegeix una categoria",
+    "@addCategory": {
+        "description": "Popup title and Button text to add new category in Edit Category Screen"
+    },
+    "addToLibrary": "Afegeix a la biblioteca",
+    "@addToLibrary": {
+        "description": "Button text to add Manga to Library in Manga Details Screen"
+    },
+    "allScanlators": "Tots els scanlators",
+    "@allScanlators": {
+        "description": "Text for all Scanlators in manga description screen chapter filter"
+    },
+    "animatePageTransitions": "Anima les transicions de pàgina",
+    "@animatePageTransitions": {
+        "description": "Reader toggle: animate page transitions"
+    },
+    "appLanguage": "Idioma de l'aplicació",
+    "@appLanguage": {
+        "description": "Popup title and Button text to change App Language"
+    },
+    "appTheme": "Mode del tema de l'aplicació",
+    "@appTheme": {
+        "description": "Popup title and Button text to change App Theme Mode"
+    },
+    "appTitle": "Tsumiru",
+    "@appTitle": {
+        "description": "Name of the app (Sorayomi in native script)"
+    },
+    "authType": "Tipus d'autenticació",
+    "@authType": {
+        "description": "Popup title and Button text to change App Authentication"
+    },
+    "authTypeBasic": "Autenticació bàsica",
+    "@authTypeBasic": {
+        "description": "Radio button text for the Basic Authentication type"
+    },
+    "authTypeUiLogin": "Inici de sessió de la IU (recomanat)",
+    "@authTypeUiLogin": {
+        "description": "Radio button text for Suwayomi server's ui_login (JWT) auth mode, marked as recommended"
+    },
+    "authReverseProxyHelp": "Si feu servir un servidor intermediari invers davant de Suwayomi (Pangolin, Authelia, Authentik, Cloudflare Access, etc.), configureu-lo perquè deixi passar les peticions i deixeu que Suwayomi gestioni l'autenticació aquí. Per als noms d'amfitrió públics, desactiveu l'opció «Utilitza el port del servidor» a la pantalla Servidor perquè les peticions vagin al port estàndard 443.",
+    "@authReverseProxyHelp": {
+        "description": "Helper text under the login fields explaining how to use Sorayomi with a reverse proxy in front of Suwayomi"
+    },
+    "authTestConnection": "Prova la connexió",
+    "@authTestConnection": {
+        "description": "Button text for testing the entered credentials against the server"
+    },
+    "authTestConnectionSuccess": "Connectat.",
+    "@authTestConnectionSuccess": {
+        "description": "Success toast text after Test Connection succeeds"
+    },
+    "authTestConnectionFailedNetwork": "No s'ha pogut accedir al servidor. Comproveu l'URL i la connectivitat.",
+    "@authTestConnectionFailedNetwork": {
+        "description": "Error message when Test Connection cannot reach the server"
+    },
+    "authTestConnectionFailedAuth": "No s'ha pogut iniciar la sessió. Comproveu el nom d'usuari i la contrasenya.",
+    "@authTestConnectionFailedAuth": {
+        "description": "Error message when Test Connection reaches the server but credentials are rejected"
+    },
+    "authTestConnectionFailedMode": "Pot ser que el servidor no estigui en el mode d'autenticació seleccionat. Comproveu el paràmetre authMode del servidor.",
+    "@authTestConnectionFailedMode": {
+        "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
+    },
+    "authBrowserSessionUnverified": "El servidor no ha confirmat la sessió del navegador. Comproveu el mode d'autenticació i la connexió. Per a l'inici de sessió simple, serviu Tsumiru des del mateix lloc que el servidor.",
+    "authTestConnectionFailedShape": "El servidor no ha respost com s'esperava. L'URL apunta a l'API de Suwayomi?",
+    "@authTestConnectionFailedShape": {
+        "description": "Error message when the server's response is not the expected shape"
+    },
+    "authTestConnectionFailedTls": "Ha fallat l'encaixada TLS. Causes habituals: 1) El servidor és HTTP sense xifrar: canvieu l'URL a http://. 2) Nom d'amfitrió públic darrere d'un servidor intermediari invers: desactiveu l'opció «Utilitza el port del servidor» a la pantalla Servidor perquè les peticions vagin al port estàndard 443.",
+    "@authTestConnectionFailedTls": {
+        "description": "Error message when the client sends TLS bytes to a plaintext server, or vice versa — typically a wrong scheme (http vs https) or wrong port"
+    },
+    "authSessionExpired": "La sessió ha caducat; torneu a iniciar la sessió.",
+    "@authSessionExpired": {
+        "description": "Banner text shown at top of screens when the session has expired and the user must re-authenticate"
+    },
+    "authCredentialsNotSaved": "Sessió iniciada. Aquest dispositiu no ha pogut desar l'inici de sessió, així que l'haureu de tornar a iniciar la propera vegada que obriu l'aplicació.",
+    "@authCredentialsNotSaved": {
+        "description": "Toast shown after signing in when the device refused to save the credentials; the sign-in works for this run only"
+    },
+    "authReauthenticate": "Torna a autenticar",
+    "@authReauthenticate": {
+        "description": "Button text on the session-expired banner that opens the re-auth prompt"
+    },
+    "authInsecureTransportTitle": "Connexió no segura",
+    "@authInsecureTransportTitle": {
+        "description": "Title of the http:// warning confirmation dialog"
+    },
+    "authInsecureTransportWarning": "L'URL del servidor fa servir http://: el nom d'usuari i la contrasenya s'enviaran sense xifrar per la xarxa. Feu servir https:// tret que confieu plenament en la xarxa.",
+    "@authInsecureTransportWarning": {
+        "description": "Warning body shown when the user is about to send credentials over http:// instead of https://"
+    },
+    "authInsecureTransportContinue": "Ho entenc, continua",
+    "@authInsecureTransportContinue": {
+        "description": "Button text to acknowledge the http:// warning and proceed anyway"
+    },
+    "authLogoutConfirm": "Voleu tancar la sessió i esborrar les credencials desades? Haureu de tornar a iniciar la sessió per fer servir aquest servidor.",
+    "@authLogoutConfirm": {
+        "description": "Confirmation dialog text shown when the user taps Log out"
+    },
+    "authImageUrlLogWarning": "Nota: amb l'inici de sessió de la IU, els URL de les imatges inclouen el vostre testimoni d'accés com a paràmetre de consulta, que pot aparèixer als registres d'accés del servidor.",
+    "@authImageUrlLogWarning": {
+        "description": "Additional note in helper text explaining the ui_login image URL token leak risk"
+    },
+    "autoDownloadCategoriesAll": "Totes les categories",
+    "autoDownloadCategoriesHint": "Baixa automàticament els capítols nous només de les categories incloses (l'exclusió sempre té prioritat). Toqueu per alternar: ✓ inclou · – exclou · buit predeterminat.",
+    "autoDownloadCategoriesIncluded": "Incloses: {names}",
+    "@autoDownloadCategoriesIncluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "autoDownloadCategoriesExcluded": "Excloses: {names}",
+    "@autoDownloadCategoriesExcluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCategories": "Categories per actualitzar",
+    "updateCategoriesAll": "Totes les categories",
+    "updateCategoriesHint": "En una actualització global de la biblioteca només es comproven les categories incloses (l'exclusió sempre té prioritat). Toqueu per alternar: ✓ inclou · – exclou · buit predeterminat.",
+    "updateCategoriesIncluded": "Incloses: {names}",
+    "@updateCategoriesIncluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCategoriesExcluded": "Excloses: {names}",
+    "@updateCategoriesExcluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "autoWebtoonSnack": "Lectura en estil webtoon",
+    "@autoWebtoonSnack": {
+        "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
+    },
+    "automaticBackup": "Còpia de seguretat automàtica",
+    "@automaticBackup": {
+        "description": "Settings group title for automatic backup settings"
+    },
+    "automaticUpdate": "Actualització automàtica",
+    "@automaticUpdate": {
+        "description": "Popup title and Settings text to update Automatic Global Update interval"
+    },
+    "centerMarginDoubleAndWide": "Dobles i amples",
+    "@centerMarginDoubleAndWide": {
+        "description": "Center margin chip"
+    },
+    "centerMarginDoublePages": "Pàgines dobles",
+    "@centerMarginDoublePages": {
+        "description": "Center margin chip"
+    },
+    "centerMarginType": "Tipus de marge central",
+    "@centerMarginType": {
+        "description": "Section label for the paged center-margin chip row"
+    },
+    "centerMarginWidePages": "Pàgines amples",
+    "@centerMarginWidePages": {
+        "description": "Center margin chip"
+    },
+    "cropBorders": "Retalla les vores",
+    "@cropBorders": {
+        "description": "Reader toggle: crop page borders"
+    },
+    "dualPageSpreadInLandscape": "Doble pàgina en horitzontal",
+    "imageScaleTypeSmartFit": "Ajust intel·ligent",
+    "@imageScaleTypeSmartFit": {
+        "description": "Image scale type chip"
+    },
+    "imageScaleTypeStretch": "Estira",
+    "@imageScaleTypeStretch": {
+        "description": "Image scale type chip"
+    },
+    "invertDoublePages": "Inverteix les pàgines dobles",
+    "@invertDoublePages": {
+        "description": "Paged reader toggle"
+    },
+    "invertSplitPagesPlacement": "Inverteix la col·locació de les pàgines dividides",
+    "invertWidePageRotation": "Inverteix la rotació de les pàgines amples",
+    "landscapeZoom": "Amplia automàticament les imatges amples",
+    "@landscapeZoom": {
+        "description": "Paged reader toggle: disable landscape zoom-in"
+    },
+    "navigateToPan": "Desplaça les imatges amples",
+    "@navigateToPan": {
+        "description": "Paged reader toggle: navigate-to-pan"
+    },
+    "pageLayout": "Disposició de les pàgines",
+    "@pageLayout": {
+        "description": "Section label for the paged page-layout chip row"
+    },
+    "pageLayoutAutomatic": "Automàtica",
+    "@pageLayoutAutomatic": {
+        "description": "Page layout chip"
+    },
+    "pageLayoutDoublePages": "Pàgines dobles",
+    "@pageLayoutDoublePages": {
+        "description": "Page layout chip"
+    },
+    "readerForThisSeries": "Per a aquesta sèrie",
+    "@readerForThisSeries": {
+        "description": "Group heading for the per-manga override settings in the reader sheet"
+    },
+    "readerGroupActions": "Accions",
+    "@readerGroupActions": {
+        "description": "Reader settings group heading for long-tap actions"
+    },
+    "showTapZonesOverlaySubtitle": "Mostra breument en obrir el lector",
+    "@showTapZonesOverlaySubtitle": {
+        "description": "Subtitle for the tap zones overlay setting"
+    },
+    "readerGroupEInk": "E-Ink",
+    "@readerGroupEInk": {
+        "description": "Reader settings group heading for E-Ink screen options"
+    },
+    "readerGroupNavigation": "Navegació",
+    "@readerGroupNavigation": {
+        "description": "Reader settings group heading for volume-key navigation"
+    },
+    "readerGroupPagerViewer": "Paginat",
+    "@readerGroupPagerViewer": {
+        "description": "Group heading for the paged-reader settings, in both the reader sheet and Reader settings"
+    },
+    "readerGroupReading": "Lectura",
+    "@readerGroupReading": {
+        "description": "Reader settings group heading for chapter-to-chapter reading options"
+    },
+    "readerSectionRotation": "Rotació",
+    "@readerSectionRotation": {
+        "description": "Section label for the rotation chip row"
+    },
+    "rotateWidePagesToFit": "Gira les pàgines amples perquè hi càpiguen",
+    "splitWidePages": "Divideix les pàgines amples",
+    "alwaysShowChapterTransition": "Mostra sempre la transició entre capítols",
+    "autoWebtoonMode": "Mode de lectura automàtic",
+    "autoWebtoonModeSubtitle": "Obre els manhwa, manhua i webtoons en mode de desplaçament webtoon. La resta manté el vostre mode de lectura predeterminat.",
+    "flashColorWhiteBlack": "Blanc i negre",
+    "flashDuration": "Durada del flaix",
+    "flashDurationMs": "{ms} ms",
+    "@flashDurationMs": {
+        "placeholders": {
+            "ms": {
+                "type": "int"
+            }
+        }
+    },
+    "flashEvery": "Flaix cada",
+    "flashEveryPages": "{count, plural, =1{1 pàgina} other{{count} pàgines}}",
+    "@flashEveryPages": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "flashOnPageChange": "Flaix en canviar de pàgina",
+    "flashWith": "Flaix amb",
+    "forceHorizontalSeekbar": "Força la barra de desplaçament horitzontal",
+    "leftHandedVerticalSeekbar": "Barra de desplaçament vertical per a esquerrans",
+    "showActionsOnLongTap": "Mostra les accions amb una pulsació llarga",
+    "showContentInCutoutArea": "Mostra el contingut a l'àrea de la retallada",
+    "showVerticalSeekbarInLandscape": "Mostra la barra de desplaçament vertical en horitzontal",
+    "refreshChaptersFromSource": "Actualitza els capítols des de la font",
+    "@refreshChaptersFromSource": {
+        "description": "Switch title for refreshing chapters from the source when opening an entry"
+    },
+    "refreshChaptersFromSourceSubtitle": "Si està desactivat, en obrir una entrada es mostren els capítols que ja hi ha al servidor. Si està activat, també es comprova si la font té capítols nous.",
+    "@refreshChaptersFromSourceSubtitle": {
+        "description": "Switch subtitle explaining the refresh-chapters-from-source toggle"
+    },
+    "backup": "Còpia de seguretat i restauració",
+    "@backup": {
+        "description": "Screen title and Button text of Backup & Restore screen"
+    },
+    "backupAndRestore": "Còpia de seguretat i restauració",
+    "@backupAndRestore": {
+        "description": "Title for Backup and Restore section in settings"
+    },
+    "backupCleanup": "Neteja de còpies de seguretat",
+    "@backupCleanup": {
+        "description": "Title for file backup cleanup edit tile"
+    },
+    "backupInterval": "Interval de les còpies de seguretat",
+    "@backupInterval": {
+        "description": "Title for file backup interval edit tile"
+    },
+    "backupLocation": "Ubicació de les còpies de seguretat",
+    "@backupLocation": {
+        "description": "Title for backup file storage location edit tile"
+    },
+    "backupTime": "Hora de la còpia de seguretat",
+    "@backupTime": {
+        "description": "Title for file backup time edit tile"
+    },
+    "bookmark": "Marcador",
+    "categoryTabs": "Mostra les pestanyes de categories",
+    "@categoryTabs": {
+        "description": "Library Group checkbox to show or hide the category tab bar in Tabs mode"
+    },
+    "categoryVisibilityDeviceOnly": "Només s'ha canviat en aquest dispositiu fins que us torneu a connectar",
+    "@categoryVisibilityDeviceOnly": {
+        "description": "Toast when hiding or showing a category offline: the change lives on the device mirror and the server setting returns on the next online sync"
+    },
+    "sectionHeadersShowAllCategories": "Mostra totes les categories",
+    "@sectionHeadersShowAllCategories": {
+        "description": "Library Group checkbox to scroll all sections together in Section headers mode"
+    },
+    "showHiddenCategories": "Mostra les categories ocultes",
+    "@showHiddenCategories": {
+        "description": "Library Display > Tabs: checkbox to include categories marked as hidden in the tab bar"
+    },
+    "smallerTapZones": "Zones de toc més petites",
+    "@smallerTapZones": {
+        "description": "Reader toggle: shrink the tap navigation zones"
+    },
+    "smoothAutoScroll": "Desplaçament automàtic suau",
+    "@smoothAutoScroll": {
+        "description": "Long-strip reader toggle"
+    },
+    "scrollAmount": "Distància de desplaçament amb el teclat",
+    "@scrollAmount": {
+        "description": "Keyboard scroll step, fraction of the screen"
+    },
+    "autoAdvance": "Avançament automàtic",
+    "@autoAdvance": {
+        "description": "Reader utils bar: auto-advance toggle label (paged)"
+    },
+    "autoScrollInterval": "Interval de desplaçament automàtic",
+    "@autoScrollInterval": {
+        "description": "Long-strip auto-scroll: seconds per advance"
+    },
+    "autoAdvanceInterval": "Interval d'avançament automàtic",
+    "@autoAdvanceInterval": {
+        "description": "Paged reader auto-advance: seconds per page turn"
+    },
+    "autoScrollSeconds": "{count, plural, =1{1 segon} other{{count} segons}}",
+    "@autoScrollSeconds": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "continueReadingButton": "Botó de continuar llegint",
+    "@continueReadingButton": {
+        "description": "Library display checkbox to overlay a continue-reading (next unread chapter) button on manga covers"
+    },
+    "sourceBadge": "Icona de la font",
+    "cacheCleared": "S'ha buidat la memòria cau",
+    "@cacheCleared": {
+        "description": "Toast Text to show after clearing cache"
+    },
+    "categoryUpdate": "Actualització de la categoria",
+    "@categoryUpdate": {
+        "description": "Button text to update the mangas in the Category"
+    },
+    "chapterNumber": "Capítol {number}",
+    "@chapterNumber": {
+        "description": "Text title for Chapter name in chapter list",
+        "placeholders": {
+            "number": {
+                "example": "12.5",
+                "type": "String"
+            }
+        }
+    },
+    "chapterSortAlphabetical": "Alfabèticament",
+    "@chapterSortAlphabetical": {
+        "description": "Radio button text for sort Alphabetically"
+    },
+    "chapterSortChapterNumber": "Per número de capítol",
+    "@chapterSortChapterNumber": {
+        "description": "Radio button text for sort by Chapter Number"
+    },
+    "chapterSortFetchedDate": "Per data d'obtenció",
+    "@chapterSortFetchedDate": {
+        "description": "Radio button text for sort by Fetched Date"
+    },
+    "chapterSortSource": "Per font",
+    "@chapterSortSource": {
+        "description": "Radio button text for sort by Source"
+    },
+    "chapterSortUploadDate": "Per data de pujada",
+    "@chapterSortUploadDate": {
+        "description": "Radio button text for sort by Upload Date"
+    },
+    "checkForServerUpdates": "Comprova si hi ha actualitzacions del servidor",
+    "@checkForServerUpdates": {
+        "description": "Button text to check for Server updates"
+    },
+    "checkForUpdates": "Comprova si hi ha actualitzacions",
+    "@checkForUpdates": {
+        "description": "Button text to check for App Updates"
+    },
+    "clearCache": "Buida la memòria cau",
+    "@clearCache": {
+        "description": "Button text for clear cache in General Settings screen"
+    },
+    "clientVersion": "Versió del client",
+    "@clientVersion": {
+        "description": "Text title for the current version of the client in About screen"
+    },
+    "cloudflareBypass": "Evitació de Cloudflare",
+    "@cloudflareBypass": {
+        "description": "Section title for Cloudflare Bypass"
+    },
+    "collapseSidebar": "Replega la barra lateral",
+    "connection": "Connexió",
+    "connectionAuthNone": "Sense autenticació",
+    "connectionAuthSignedIn": "Sessió iniciada",
+    "connectionAuthSignInNeeded": "Cal iniciar la sessió",
+    "copied": "S'ha copiat!",
+    "@copied": {
+        "description": "Copied Text"
+    },
+    "copyMsg": "S'ha copiat «{msg}»!",
+    "@copyMsg": {
+        "description": "Toast text to show that the message has been copied",
+        "placeholders": {
+            "msg": {
+                "example": "Client : Sorayomi",
+                "type": "String"
+            }
+        }
+    },
+    "createBackupDescription": "Fes una còpia de seguretat de la biblioteca en format de Tachidesk",
+    "@createBackupDescription": {
+        "description": "Button text description to create backup"
+    },
+    "createBackupTitle": "Crea una còpia de seguretat",
+    "@createBackupTitle": {
+        "description": "Button text to create backup"
+    },
+    "credentials": "Credencials",
+    "@credentials": {
+        "description": "Popup title and Button text to enter Authentication credentials"
+    },
+    "back": "Enrere",
+    "finish": "Acaba",
+    "onboardingSkip": "Omet",
+    "onboardingWelcomeTitle": "Us donem la benvinguda a Tsumiru",
+    "onboardingWelcomeSubtitle": "Un lector per a la vostra biblioteca de Suwayomi.",
+    "onboardingChooseTheme": "Trieu el tema",
+    "onboardingServerTitle": "Connecteu el servidor",
+    "onboardingServerSubtitle": "Tsumiru llegeix del vostre servidor de Suwayomi.",
+    "onboardingServerPortHint": "Suwayomi s'executa al port 4567 per defecte.",
+    "onboardingServerStepLabel": "PAS 2 DE 3",
+    "onboardingServerOnNetwork": "En aquesta xarxa",
+    "onboardingServerRemote": "Remot",
+    "onboardingServerNone": "Encara no tinc servidor",
+    "onboardingNoServerHelp": "Cap problema: podeu configurar un servidor de Suwayomi i connectar-lo més tard a la Configuració.",
+    "onboardingNoServerLink": "Com configurar un servidor",
+    "onboardingTestConnection": "Prova la connexió",
+    "onboardingFindServer": "Cerca el servidor",
+    "onboardingResolvedAddress": "S'ha trobat el servidor a {url}",
+    "@onboardingResolvedAddress": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingFoundAt": "a {address}",
+    "@onboardingFoundAt": {
+        "placeholders": {
+            "address": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingResolvedNoAuth": "Aquest servidor està a punt; no cal iniciar la sessió.",
+    "onboardingResolvedNeedsAuth": "Aquest servidor requereix iniciar la sessió. Afegiu el nom d'usuari i la contrasenya a continuació.",
+    "onboardingSearchNetwork": "Cerca a la meva xarxa",
+    "onboardingCheckingConnection": "S'està comprovant la connexió…",
+    "onboardingSigningIn": "S'està iniciant la sessió…",
+    "onboardingSearching": "S'està cercant a la xarxa…",
+    "onboardingNoServerFound": "No s'ha trobat cap servidor de Suwayomi a la xarxa. Introduïu l'adreça manualment.",
+    "onboardingChooseServer": "Trieu un servidor",
+    "onboardingNeedsLogin": "Aquest servidor requereix iniciar la sessió",
+    "onboardingEnterAddress": "Introduïu l'adreça del servidor o toqueu «Cerca a la meva xarxa».",
+    "onboardingSignIn": "Inicia la sessió",
+    "onboardingCredsRejected": "Aquestes credencials no han funcionat. Comproveu el nom d'usuari, la contrasenya i el mètode d'inici de sessió.",
+    "onboardingNotReachedHttpsHint": "Si és darrere d'un servidor intermediari invers, proveu la seva adreça https.",
+    "onboardingAuthMode": "Mètode d'inici de sessió",
+    "onboardingAuthModeAuto": "Nom d'usuari i contrasenya (automàtic)",
+    "onboardingAuthModeBasic": "Autenticació bàsica",
+    "onboardingAuthModeSimple": "Inici de sessió simple",
+    "onboardingAuthModeUi": "Inici de sessió de la IU",
+    "onboardingResolvedBasicGated": "Alguna cosa ha respost a {url}, però és darrere d'un inici de sessió que no podem travessar. Trieu «Nom d'usuari i contrasenya» i introduïu les credencials.",
+    "@onboardingResolvedBasicGated": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingResolvedUnconfirmed": "S'ha arribat a {url}, però no ha respost com un servidor de Suwayomi; sovint és un encaminador o una altra aplicació, no el vostre servidor. Comproveu l'adreça i el port, o feu-la servir igualment.",
+    "@onboardingResolvedUnconfirmed": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingNotReached": "No s'ha pogut accedir a cap servidor en aquesta adreça. Comproveu que estigui en funcionament i que s'hi pugui accedir des d'aquest dispositiu.",
+    "webUnsupportedAuthMode": "Aquest servidor fa servir un mètode d'inici de sessió que la versió del navegador no pot utilitzar. Establiu el mode d'autenticació del servidor a «Inici de sessió de la IU», o feu servir l'aplicació d'Android, d'iOS o d'escriptori.",
+    "@webUnsupportedAuthMode": {
+        "description": "Shown on web instead of the generic unreachable message when the server answers but uses Basic auth or Simple login, which a cross-origin page cannot use"
+    },
+    "webServerAuthUnconfirmed": "Aquest servidor no ha acceptat la petició del navegador. Si fa servir l'autenticació bàsica o l'inici de sessió simple, establiu el mode d'autenticació a «Inici de sessió de la IU», o feu servir l'aplicació d'Android, d'iOS o d'escriptori. Si no, comproveu l'adreça.",
+    "@webServerAuthUnconfirmed": {
+        "description": "Shown on web when the server answers 404 Not Found, which can mean Basic auth or a mistyped subpath"
+    },
+    "webUiLoginOnlyHint": "La versió del navegador només funciona amb l'inici de sessió de la IU (paràmetre del servidor: server.authMode).",
+    "@webUiLoginOnlyHint": {
+        "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
+    },
+    "onboardingUseAddressAnyway": "Utilitza aquesta adreça igualment",
+    "onboardingConnected": "Connectat — Suwayomi v{version}",
+    "@onboardingConnected": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingConnectFailed": "No s'ha pogut accedir a aquest servidor. Comproveu l'adreça (i l'inici de sessió, si en requereix).",
+    "onboardingDoneTitle": "Tot a punt",
+    "onboardingDoneSubtitle": "Exploreu les fonts per començar a afegir manga a la biblioteca.",
+    "current": "Actual",
+    "@current": {
+        "description": "Text to show the currently reading chapter in Reader Screen"
+    },
+    "daysAgo": "{days, plural, =1{fa 1 dia} other{fa {days} dies}}",
+    "@daysAgo": {
+        "description": "Days ago text to show the release date of manga",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "justNow": "Ara mateix",
+    "minutesAgo": "{minutes, plural, =1{fa 1 minut} other{fa {minutes} minuts}}",
+    "@minutesAgo": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "{hours, plural, =1{fa 1 hora} other{fa {hours} hores}}",
+    "@hoursAgo": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "libraryLastUpdated": "Última actualització de la biblioteca: {time}",
+    "debugLogs": "Registres de depuració",
+    "@debugLogs": {
+        "description": "Switch title for Debug logs in settings"
+    },
+    "defaultCategory": "Categoria predeterminada en afegir manga nou a la biblioteca",
+    "@defaultCategory": {
+        "description": "Checkbox description when creating a Category to add manga to the Category by Default"
+    },
+    "defaultCategoryOnAdd": "Categoria predeterminada",
+    "alwaysAsk": "Pregunta sempre",
+    "ok": "D'acord",
+    "deleteChaptersConfirm": "Esteu segur que voleu eliminar els capítols seleccionats?",
+    "deleteCategoryDescription": "Això mourà tot el manga d'aquesta categoria a la predeterminada!",
+    "@deleteCategoryDescription": {
+        "description": "Popup description when deleting Category"
+    },
+    "deleteFromServer": "Elimina del servidor…",
+    "deleteOnDeviceDownloads": "Elimina les baixades del dispositiu",
+    "deleteOnDeviceDownloadsDescription": "Elimina la còpia d'un capítol d'aquest dispositiu a mesura que el llegiu. El servidor conserva la seva còpia; això només allibera espai al telèfon.",
+    "deleteServerDownloads": "Elimina les baixades del servidor",
+    "deleteServerDownloadsDescription": "Elimina la còpia d'un capítol del servidor a mesura que el llegiu (i també d'aquest dispositiu). Aquesta configuració es comparteix amb la interfície web.",
+    "downloadProtectionWindowTitle": "Mantén baixats els capítols llegits recentment",
+    "downloadProtectionWindowDescription": "Torna a baixar els capítols de la finestra de conservació si falten al dispositiu (cal tenir activada l'eliminació mentre llegiu).",
+    "displayMode": "Mode de visualització",
+    "@displayMode": {
+        "description": "Radio Group title to change manga Cover display in Library and Source Screens"
+    },
+    "displayModeCoverOnly": "Graella només amb portades",
+    "@displayModeCoverOnly": {
+        "description": "Radio button text for Manga Cover display mode - Cover-only grid"
+    },
+    "displayModeDescriptiveList": "Llista descriptiva",
+    "@displayModeDescriptiveList": {
+        "description": "Radio button text for Manga Cover display mode - Descriptive List"
+    },
+    "displayModeGrid": "Graella",
+    "@displayModeGrid": {
+        "description": "Radio button text for Manga Cover display mode - Grid"
+    },
+    "gridStyle": "Estil de la graella",
+    "@gridStyle": {
+        "description": "Library Display section label for the grid cover-geometry chip row"
+    },
+    "gridStyleUniform": "Uniforme",
+    "@gridStyleUniform": {
+        "description": "Grid style chip: every cover cropped into the same fixed cell"
+    },
+    "gridStyleNonUniform": "No uniforme",
+    "@gridStyleNonUniform": {
+        "description": "Grid style chip: covers keep their aspect ratio, rows still align"
+    },
+    "gridStyleStaggered": "Esglaonada",
+    "@gridStyleStaggered": {
+        "description": "Grid style chip: masonry layout where columns pack independently"
+    },
+    "outlineOnCovers": "Contorn a les portades",
+    "@outlineOnCovers": {
+        "description": "Library Display checkbox to draw a thin outline around every cover"
+    },
+    "filterStateAny": "Qualsevol",
+    "@filterStateAny": {
+        "description": "Tri-state filter chip to not filter on this at all"
+    },
+    "filterStateIncluded": "Inclòs",
+    "@filterStateIncluded": {
+        "description": "Generic tri-state filter chip to show only entries that match"
+    },
+    "filterHeaderDownloadStatus": "Estat de baixada",
+    "@filterHeaderDownloadStatus": {
+        "description": "Section label for the downloaded filter chip row"
+    },
+    "filterOptionNotDownloaded": "No baixat",
+    "@filterOptionNotDownloaded": {
+        "description": "Download-status filter chip: only entries with nothing downloaded"
+    },
+    "filterHeaderStorage": "Emmagatzematge",
+    "@filterHeaderStorage": {
+        "description": "Section label for the on-device filter chip row"
+    },
+    "filterOptionOnDevice": "Al dispositiu",
+    "@filterOptionOnDevice": {
+        "description": "Storage filter chip: only entries kept on this device"
+    },
+    "filterOptionRemote": "Remot",
+    "@filterOptionRemote": {
+        "description": "Storage filter chip: only entries with nothing kept on this device"
+    },
+    "filterHeaderReadStatus": "Estat de lectura",
+    "@filterHeaderReadStatus": {
+        "description": "Section label for the unread filter chip row"
+    },
+    "filterHeaderProgress": "Progrés",
+    "@filterHeaderProgress": {
+        "description": "Section label for the started filter chip row"
+    },
+    "filterOptionNotStarted": "No iniciat",
+    "@filterOptionNotStarted": {
+        "description": "Progress filter chip: only entries with no chapters read yet"
+    },
+    "filterHeaderBookmarks": "Marcadors",
+    "@filterHeaderBookmarks": {
+        "description": "Section label for the bookmarked filter chip row"
+    },
+    "filterOptionNotBookmarked": "Sense marcador",
+    "@filterOptionNotBookmarked": {
+        "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
+    },
+    "filterHeaderSeries": "Sèrie",
+    "@filterHeaderSeries": {
+        "description": "Section label for the series-progress filter chip row"
+    },
+    "filterOptionUnfinished": "Sense acabar",
+    "@filterOptionUnfinished": {
+        "description": "Series filter chip: only series with chapters left to read"
+    },
+    "filterOptionInLibrary": "A la biblioteca",
+    "@filterOptionInLibrary": {
+        "description": "Library filter chip: only entries saved to the library"
+    },
+    "filterOptionNotInLibrary": "Fora de la biblioteca",
+    "@filterOptionNotInLibrary": {
+        "description": "Library filter chip: only entries not saved to the library"
+    },
+    "filterHeaderPublicationStatus": "Estat de publicació",
+    "@filterHeaderPublicationStatus": {
+        "description": "Section label for the completed filter chip row"
+    },
+    "filterOptionNotCompleted": "No completada",
+    "@filterOptionNotCompleted": {
+        "description": "Publication-status filter chip: only entries not marked completed"
+    },
+    "filterHeaderContentRating": "Classificació del contingut",
+    "@filterHeaderContentRating": {
+        "description": "Section label for the lewd filter chip row"
+    },
+    "filterOptionLewd": "Explícit",
+    "@filterOptionLewd": {
+        "description": "Content-rating filter chip: only entries the source marked NSFW"
+    },
+    "filterOptionNotLewd": "No explícit",
+    "@filterOptionNotLewd": {
+        "description": "Content-rating filter chip: only entries not marked NSFW"
+    },
+    "filterShortLewd": "Explícit",
+    "@filterShortLewd": {
+        "description": "Short filter segment heading for the lewd tri-state"
+    },
+    "allTags": "Totes les etiquetes",
+    "@allTags": {
+        "description": "Tags filter row that clears the tag selection"
+    },
+    "anyCategory": "Qualsevol categoria",
+    "@anyCategory": {
+        "description": "Categories filter summary when no category is included or excluded"
+    },
+    "searchTags": "Cerca etiquetes…",
+    "@searchTags": {
+        "description": "Hint in the tags filter search field"
+    },
+    "limitTitleLines": "Limita els títols a 2 línies",
+    "@limitTitleLines": {
+        "description": "Library Display checkbox to cap titles at two ellipsized lines"
+    },
+    "longStripWidthLimit": "Amplada màxima",
+    "@longStripWidthLimit": {
+        "description": "Long strip slider: cap the strip at a percentage of the window or an absolute pixel width"
+    },
+    "longStripWidthLimitFullWidth": "Amplada completa",
+    "@longStripWidthLimitFullWidth": {
+        "description": "Readout at the width slider's 100% position (the off state)"
+    },
+    "longStripWidthLimitPercent": "{percent}%",
+    "@longStripWidthLimitPercent": {
+        "description": "Value readout for the width slider in percent mode",
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitPx": "{px} px",
+    "@longStripWidthLimitPx": {
+        "description": "Value readout for the width slider in pixel mode",
+        "placeholders": {
+            "px": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitUnitPercent": "%",
+    "@longStripWidthLimitUnitPercent": {
+        "description": "Width slider unit chip: percent of window"
+    },
+    "listSize": "Mida de la llista",
+    "@listSize": {
+        "description": "Library Display section label for the List and Descriptive List scale slider"
+    },
+    "unreadBadgeMode": "Distintiu de no llegits",
+    "@unreadBadgeMode": {
+        "description": "Library Badges section label for the unread badge chip row"
+    },
+    "unreadBadgeModeCount": "Mostra el nombre",
+    "@unreadBadgeModeCount": {
+        "description": "Unread badge chip: show the number of unread chapters"
+    },
+    "unreadBadgeModeDot": "Mostra un distintiu simple",
+    "@unreadBadgeModeDot": {
+        "description": "Unread badge chip: show a plain accent chip with no number"
+    },
+    "unreadBadgeModeHidden": "Amaga",
+    "@unreadBadgeModeHidden": {
+        "description": "Unread badge chip: do not draw the badge at all"
+    },
+    "badgeLayout": "Disposició dels distintius",
+    "@badgeLayout": {
+        "description": "Library Badges section label for the drag-to-reorder badge list"
+    },
+    "badgeLayoutHint": "Arrossegueu per reordenar. Toqueu la fletxa per moure un distintiu a l'altra cantonada.",
+    "@badgeLayoutHint": {
+        "description": "Helper text under Badge layout explaining the drag handle and side toggle"
+    },
+    "badgeMoveToLeft": "Mou a la cantonada esquerra",
+    "@badgeMoveToLeft": {
+        "description": "Tooltip on the badge side toggle when the badge is on the right"
+    },
+    "badgeMoveToRight": "Mou a la cantonada dreta",
+    "@badgeMoveToRight": {
+        "description": "Tooltip on the badge side toggle when the badge is on the left"
+    },
+    "groupStyle": "Visualització dels grups",
+    "@groupStyle": {
+        "description": "Library Group section label for the group presentation chip row"
+    },
+    "groupStyleHeaders": "Capçaleres de secció",
+    "@groupStyleHeaders": {
+        "description": "Group display chip: one continuous scroll with a sticky header per group"
+    },
+    "groupStyleSections": "Seccions",
+    "@groupStyleSections": {
+        "description": "Group display radio in the desktop Display panel: sections style"
+    },
+    "backupCleanupDescription": "{count, select, 0{Mai} 01{Elimina les còpies de seguretat de més d'1 dia} other{Elimina les còpies de seguretat de més de {count} dies}}",
+    "nChapters": "{n, plural, =0{Cap} =1{1 capítol} other{{n} capítols}}",
+    "@nChapters": {
+        "description": "Text for showing N chapters"
+    },
+    "nDays": "{count, select, 01{01 dia} other{{count} dies}}",
+    "@nDays": {
+        "description": "to show Number of days with plural"
+    },
+    "groupByTag": "Per etiqueta",
+    "@groupByTag": {
+        "description": "Group mode: one tab per source genre and user tag"
+    },
+    "groupByLanguage": "Per idioma",
+    "@groupByLanguage": {
+        "description": "Group mode: one tab per source language"
+    },
+    "downloadNextChaptersN": "Els {n} capítols següents",
+    "@downloadNextChaptersN": {
+        "description": "Bulk-download menu item: queue the next N chapters after the last read.",
+        "placeholders": {
+            "n": {
+                "type": "int"
+            }
+        }
+    },
+    "onDeviceDownloads": "Baixades al dispositiu",
+    "@onDeviceDownloads": {
+        "description": "Settings entry: on-device (offline) downloads screen"
+    },
+    "downloadToServer": "Baixa al servidor",
+    "editCategory": "Edita la categoria",
+    "@editCategory": {
+        "description": "Screen title, Button text and  of Downloads screen"
+    },
+    "hideCategory": "Amaga la categoria",
+    "showCategory": "Mostra la categoria",
+    "showUpdateProgressBanner": "Mostra el bàner de progrés de l'actualització",
+    "libraryPersistentSearchBar": "Barra de cerca permanent",
+    "@libraryPersistentSearchBar": {
+        "description": "Library setting: always show the search bar under the app bar instead of behind the search button"
+    },
+    "libraryPersistentSearchBarSubtitle": "Mostra un quadre de cerca sota el títol a totes les pàgines en lloc d'una icona de cerca",
+    "@libraryPersistentSearchBarSubtitle": {
+        "description": "Subtitle for the persistent search bar library setting"
+    },
+    "incognitoMode": "Mode d'incògnit",
+    "incognitoModeDescription": "Posa en pausa l'historial de lectura",
+    "emptyCategory": "El nom de la categoria no pot estar buit",
+    "@emptyCategory": {
+        "description": "Description to show that category list is empty in Edit Category screen"
+    },
+    "enableSocksProxy": "Utilitza un servidor intermediari SOCKS",
+    "@enableSocksProxy": {
+        "description": "Switch title to enable SOCKS Proxy"
+    },
+    "enterProp": "Introduïu {prop}",
+    "@enterProp": {
+        "description": "Hint text for text field to enter value of Property"
+    },
+    "errorBackupCreate": "No s'ha pogut crear la còpia de seguretat",
+    "@errorBackupCreate": {
+        "description": "Error Text to show that backup creating failed"
+    },
+    "errorBackupRestore": "No s'ha pogut restaurar la còpia de seguretat!",
+    "@errorBackupRestore": {
+        "description": "toast to show that backup restoration failed"
+    },
+    "errorExtension": "No es troba l'extensió seleccionada",
+    "@errorExtension": {
+        "description": "Error Description to show when user selected unknown extension from list"
+    },
+    "errorFilePick": "No s'ha seleccionat cap fitxer!",
+    "@errorFilePick": {
+        "description": "Error Description to show when user does not selected an file"
+    },
+    "errorFilePickUnknownExtension": "Seleccioneu un fitxer amb l'extensió {extensionName}",
+    "@errorFilePickUnknownExtension": {
+        "description": "Error Description to show when user selected unknown extension file"
+    },
+    "errorLaunchURL": "No s'ha pogut obrir!\nS'està copiant «{url}» al porta-retalls",
+    "@errorLaunchURL": {
+        "description": "Error Description to show when App failed to launch an URL and copied the URL to clipboard",
+        "placeholders": {
+            "url": {
+                "example": "http://sorayomi.suwayomi.org",
+                "type": "String"
+            }
+        }
+    },
+    "errorPassword": "La contrasenya no pot estar buida",
+    "@errorPassword": {
+        "description": "Error Description to show that password cannot be empty"
+    },
+    "errorSomethingWentWrong": "Alguna cosa ha anat malament!",
+    "@errorSomethingWentWrong": {
+        "description": "Error Description to show that Something went wrong!"
+    },
+    "errorUserName": "El nom d'usuari no pot estar buit",
+    "@errorUserName": {
+        "description": "Error Description to show that UserName cannot be empty"
+    },
+    "expandSidebar": "Desplega la barra lateral",
+    "extensionInstalled": "S'ha instal·lat l'extensió!",
+    "@extensionInstalled": {
+        "description": "Toast text to show that the Extension Installed successfully"
+    },
+    "extensionListEmpty": "La llista d'extensions és buida",
+    "@extensionListEmpty": {
+        "description": "Description to show that Extension list is empty in Extension list tab of Browse screen"
+    },
+    "extensionRepository": "Repositori d'extensions",
+    "@extensionRepository": {
+        "description": "Screen title text for Extension repository settings screen"
+    },
+    "extensionRepositoryDescription": "Afegiu repositoris des dels quals es poden instal·lar extensions",
+    "@extensionRepositoryDescription": {
+        "description": "Subtitle text for Extension repository settings property"
+    },
+    "extensions": "Extensions",
+    "@extensions": {
+        "description": "Extension list Tab title in Browse Screen"
+    },
+    "findServer": "Cerca",
+    "@findServer": {
+        "description": "Button text of Find Server"
+    },
+    "flareSolverr": "FlareSolverr",
+    "@flareSolverr": {
+        "description": "Toggle title to enable FlareSolverr"
+    },
+    "flareSolverrRequestTimeout": "Temps d'espera de les peticions de FlareSolverr",
+    "@flareSolverrRequestTimeout": {
+        "description": "Title text for FlareSolverr Request Timeout property"
+    },
+    "flareSolverrServerUrl": "URL del servidor de FlareSolverr",
+    "@flareSolverrServerUrl": {
+        "description": "Title text for FlareSolverr Server Url property"
+    },
+    "gitHub": "GitHub",
+    "@gitHub": {
+        "description": "GitHub app title"
+    },
+    "globalUpdate": "Actualització global",
+    "@globalUpdate": {
+        "description": "Button text of Global Manga Update"
+    },
+    "gqlDebugLogs": "Registres de depuració de GraphQL",
+    "@gqlDebugLogs": {
+        "description": "Switch title for Graphql Debug logs in settings"
+    },
+    "gqlDebugLogsHint": "Inclou registres amb informació que pot comprometre la privadesa",
+    "@gqlDebugLogsHint": {
+        "description": "Switch subTitle for Graphql Debug logs in settings"
+    },
+    "help": "Ajuda",
+    "@help": {
+        "description": "Button text of help in about screen"
+    },
+    "hideEmptyCategory": "Amaga les categories buides",
+    "@hideEmptyCategory": {
+        "description": "Switch button text to Hide empty category in library"
+    },
+    "inLibrary": "A la biblioteca",
+    "@inLibrary": {
+        "description": "Button and Chip text to show that the manga is in Library"
+    },
+    "includeClientData": "Configuració de l'aplicació",
+    "installingExtension": "S'està instal·lant l'extensió",
+    "@installingExtension": {
+        "description": "Toast text to show that the extension is installing"
+    },
+    "invalidPort": "Port no vàlid",
+    "@invalidPort": {
+        "description": "Error when Submitted invalid Port Number"
+    },
+    "invalidProp": "{property} no vàlid",
+    "@invalidProp": {
+        "description": "Toast text for select invalid property value"
+    },
+    "ip": "Adreça IP",
+    "@ip": {
+        "description": "Option title for Server IP Address in Server settings"
+    },
+    "ipHintText": "Introduïu l'adreça IP d'enllaç del servidor",
+    "isTrueBlack": "Negre pur",
+    "@isTrueBlack": {
+        "description": "Switch title to enable {} black theme"
+    },
+    "appThemeIndigoNight": "Nit índigo",
+    "appThemeCarbon": "Carboni",
+    "appThemePlum": "Pruna",
+    "customColor": "Color personalitzat",
+    "@customColor": {
+        "description": "Tile to pick a custom seed color"
+    },
+    "customColorFilter": "Filtre de color personalitzat",
+    "@customColorFilter": {
+        "description": "Custom-filter tab: RGBA color filter toggle"
+    },
+    "customHeaders": "Capçaleres HTTP personalitzades",
+    "@customHeaders": {
+        "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
+    },
+    "onboardingCustomHeadersHint": "Només cal per a alguns servidors intermediaris i passarel·les d'accés.",
+    "customHeadersDescription": "S'envien amb cada petició al servidor. Només calen quan el servidor és darrere d'una passarel·la d'autenticació, una protecció Zero Trust o un servidor intermediari invers que requereix capçaleres addicionals.",
+    "@customHeadersDescription": {
+        "description": "Explanation under the Custom HTTP headers section"
+    },
+    "customHeaderEmpty": "No hi ha capçaleres personalitzades. Afegiu-ne una si el servidor és darrere d'una passarel·la d'autenticació o d'un servidor intermediari invers que requereix capçaleres addicionals.",
+    "@customHeaderEmpty": {
+        "description": "Empty state for the custom headers list"
+    },
+    "customHeaderName": "Nom de la capçalera",
+    "@customHeaderName": {
+        "description": "Label for the custom header name field"
+    },
+    "customHeaderValue": "Valor de la capçalera",
+    "@customHeaderValue": {
+        "description": "Label for the custom header value field"
+    },
+    "customHeaderAdd": "Afegeix una capçalera",
+    "@customHeaderAdd": {
+        "description": "Button to add a custom HTTP header"
+    },
+    "customHeaderNameInvalid": "Nom de capçalera no vàlid (sense espais ni dos punts).",
+    "@customHeaderNameInvalid": {
+        "description": "Validation error for a bad custom header name"
+    },
+    "customHeaderExists": "Ja existeix una capçalera amb aquest nom.",
+    "@customHeaderExists": {
+        "description": "Validation error for a duplicate custom header name"
+    },
+    "colorFilterModeLighten": "Esvaeix / Aclareix",
+    "colorFilterModeDarken": "Crema / Enfosqueix",
+    "invertedColors": "Invertits",
+    "@invertedColors": {
+        "description": "Custom-filter tab: invert page colors toggle"
+    },
+    "pureBlackAmoled": "Negre pur (AMOLED)",
+    "@pureBlackAmoled": {
+        "description": "AMOLED dark variant toggle"
+    },
+    "lewd": "Explícit",
+    "@lewd": {
+        "description": "Library filter label: NSFW/lewd manga from adult sources"
+    },
+    "libraryColumnsLandscape": "Columnes (horitzontal)",
+    "@libraryColumnsLandscape": {
+        "description": "Library Display section heading for the landscape column count slider"
+    },
+    "libraryColumnsPortrait": "Columnes (vertical)",
+    "@libraryColumnsPortrait": {
+        "description": "Library Display section heading for the portrait column count slider"
+    },
+    "lockToPortrait": "Bloqueja en vertical",
+    "@lockToPortrait": {
+        "description": "General setting: lock the app to portrait orientation"
+    },
+    "lockToPortraitSubtitle": "Impedeix que l'aplicació giri a horitzontal als telèfons",
+    "@lockToPortraitSubtitle": {
+        "description": "Subtitle for the lock-to-portrait general setting"
+    },
+    "mangaGridSize": "Mida de la graella de manga",
+    "@mangaGridSize": {
+        "description": "Popup title and Button text to change Manga Grid size"
+    },
+    "mangaMissingSources": "Manga amb fonts que falten",
+    "@mangaMissingSources": {
+        "description": "Group title to show the Manga Missing Sources when restoring Backup"
+    },
+    "mangaSortAlphabetical": "Alfabètic",
+    "@mangaSortAlphabetical": {
+        "description": "Radio button text for Manga sort Type - Alphabetical"
+    },
+    "mangaSortLastUpdated": "Data d'obtenció dels capítols",
+    "@mangaSortLastUpdated": {
+        "description": "Radio button text for Manga sort Type - Last Updated"
+    },
+    "mangaSortLastUpdate": "Última actualització",
+    "mangaSortRating": "Valoració",
+    "minimumRating": "Valoració mínima",
+    "mangaSortTrackerScore": "Puntuació del servei de seguiment",
+    "@mangaSortTrackerScore": {
+        "description": "Radio button text for Manga sort Type - Tracker score (mean normalized 0–10)"
+    },
+    "mangaSortTotalChapters": "Total de capítols",
+    "@mangaSortTotalChapters": {
+        "description": "Radio button text for Manga sort Type - Total Chapters"
+    },
+    "missingExtension": "Extensions que falten",
+    "@missingExtension": {
+        "description": "Group title to show the Missing Extensions when restoring Backup"
+    },
+    "missingTrackers": "Serveis de seguiment que falten",
+    "@missingTrackers": {
+        "description": "Group title to show the Missing Trackers when restoring Backup"
+    },
+    "moveToBottom": "Mou al final",
+    "@moveToBottom": {
+        "description": "Button text to move download/category to the bottom of list"
+    },
+    "soon": "Aviat",
+    "inNDays": "{days, plural, =1{D'aquí a 1 dia} other{D'aquí a {days} dies}}",
+    "@inNDays": {
+        "description": "Next-chapter estimate on the manga details page",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "smartUpdate": "Actualització intel·ligent",
+    "smartUpdateExpected": "Es preveu que surtin capítols nous d'aquí a uns {predicted}; es comprova aproximadament cada {interval}.",
+    "@smartUpdateExpected": {
+        "placeholders": {
+            "predicted": {
+                "type": "String"
+            },
+            "interval": {
+                "type": "String"
+            }
+        }
+    },
+    "dayCount": "{count, plural, =1{1 dia} other{{count} dies}}",
+    "@dayCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "nHours": "{n, plural, =1{1 hora} other{{n} hores}}",
+    "@nHours": {
+        "description": "Text to represent 'n' hours"
+    },
+    "nMinutes": "{n, plural, =1{1 minut} other{{n} minuts}}",
+    "@nMinutes": {
+        "description": "Text to represent 'n' Minutes"
+    },
+    "nRepo": "{n, plural, =1{1 repositori} other{{n} repositoris}}",
+    "@nRepo": {
+        "description": "Text to show n repo as subtitle"
+    },
+    "nSeconds": "{n, plural, =1{1 segon} other{{n} segons}}",
+    "@nSeconds": {
+        "description": "Text to represent 'n' seconds"
+    },
+    "nSources": "{n, plural, =1{1 font} other{{n} fonts}}",
+    "@nSources": {
+        "description": "Text to represent n number Parallel source requests"
+    },
+    "nameCountDisplay": "{name}: {count}",
+    "@nameCountDisplay": {
+        "description": "Text pattern to display an name and count in a string",
+        "placeholders": {
+            "count": {
+                "example": "22",
+                "type": "int"
+            },
+            "name": {
+                "example": "Downloaded",
+                "type": "String"
+            }
+        }
+    },
+    "newUpdateAvailable": "Hi ha una actualització nova disponible",
+    "@newUpdateAvailable": {
+        "description": "Popup title to show that the App/Server has and update"
+    },
+    "nextChapter": "Següent: {chapterTitle}",
+    "@nextChapter": {
+        "description": "Text for Next Chapter button in Manga Reader Screen"
+    },
+    "nothingToDownload": "No hi ha res per baixar",
+    "@nothingToDownload": {
+        "description": "Toast shown when a bulk-download preset would queue zero chapters."
+    },
+    "noVisibleCategories": "No hi ha categories visibles",
+    "noCategoriesFound": "No teniu cap categoria. \n(Consell: toqueu el botó Més per crear-ne una per organitzar la biblioteca)",
+    "@noCategoriesFound": {
+        "description": "Hint text to add new Category when category list is empty"
+    },
+    "noCategoriesFoundAlt": "No teniu cap categoria. \nCreeu-ne una a la configuració per organitzar la biblioteca",
+    "@noCategoriesFoundAlt": {
+        "description": "Hint text to add new Category in Settings when category list is empty"
+    },
+    "needsServerConnection": "Cal connexió amb el servidor",
+    "@needsServerConnection": {
+        "description": "Error toast when a server-stored setting is changed while the server is unreachable"
+    },
+    "noCategoryMangaFound": "No s'ha trobat cap manga en aquesta categoria. \n(Consell: comproveu la cerca i els filtres!)",
+    "@noCategoryMangaFound": {
+        "description": "Hint text to check filter when manga list is empty in Category tab in Library"
+    },
+    "noChaptersFound": "No s'ha trobat cap capítol",
+    "@noChaptersFound": {
+        "description": "Text to show that the Chapter list is empty in Manga details Screen"
+    },
+    "noDownloads": "No hi ha baixades",
+    "@noDownloads": {
+        "description": "Text to show that there is no active downloads in Downloads Screen"
+    },
+    "noMangaFound": "No s'ha trobat cap manga",
+    "@noMangaFound": {
+        "description": "Text to show that the Manga list is empty"
+    },
+    "noOfChapters": "{count} capítols",
+    "@noOfChapters": {
+        "description": "Title text to show the number of chapters in the Manga details screen",
+        "placeholders": {
+            "count": {
+                "example": "23",
+                "type": "int"
+            }
+        }
+    },
+    "missingChapters": "{count, plural, =1{Falta 1 capítol} other{Falten {count} capítols}}",
+    "@missingChapters": {
+        "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapWarning": "{count, plural, =1{S'omet 1 capítol. Pot ser que falti a la font o que estigui filtrat.} other{S'ometen {count} capítols. Pot ser que faltin a la font o que estiguin filtrats.}}",
+    "@readerChapterGapWarning": {
+        "description": "Reader warning before crossing a gap in chapter numbering, including filtered chapters",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "seeRecommendations": "Mostra les recomanacions",
+    "@seeRecommendations": {
+        "description": "Button on the manga details page opening the recommendations screen"
+    },
+    "recommendations": "Recomanacions",
+    "@recommendations": {
+        "description": "Title of the recommendations screen"
+    },
+    "noRecommendationsForTitle": "Ara mateix no hi ha recomanacions per a aquest títol",
+    "@noRecommendationsForTitle": {
+        "description": "Empty state on the recommendations screen when no provider returned results"
+    },
+    "similarTo": "Semblants a {title}",
+    "@similarTo": {
+        "description": "Recommendations screen title for a single manga",
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "httpErrorCheckWebView": "HTTP {statusCode}; comproveu el lloc web a la WebView",
+    "@httpErrorCheckWebView": {
+        "description": "Per-provider error on the recommendations screen when its API returns a non-200",
+        "placeholders": {
+            "statusCode": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesSeeAll": "Mostra-ho tot",
+    "seriesTagsMore": "{count} més",
+    "@seriesTagsMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "suggestions": "Suggeriments",
+    "@suggestions": {
+        "description": "Header for the inline suggestions row on the manga details page"
+    },
+    "showRecommendations": "Mostra les recomanacions",
+    "@showRecommendations": {
+        "description": "Appearance setting toggling the suggestions row on manga details"
+    },
+    "showRecommendationsSubtitle": "Mostra una fila de títols semblants a la pàgina de detalls del manga",
+    "@showRecommendationsSubtitle": {
+        "description": "Subtitle for the show recommendations setting"
+    },
+    "noPropFound": "No s'ha trobat cap {prop}",
+    "@noPropFound": {
+        "description": "Template text to say No value for property found"
+    },
+    "noResultFound": "No s'ha trobat cap resultat",
+    "@noResultFound": {
+        "description": "Text to show that no results found for the given search query"
+    },
+    "noServerFound": "No s'ha trobat cap servidor a la xarxa local",
+    "@noServerFound": {
+        "description": "Text to show that no Server found in locale network"
+    },
+    "noSourcesFound": "No s'ha trobat cap font",
+    "@noSourcesFound": {
+        "description": "Text to show that the Source list is empty"
+    },
+    "noUpdatesAvailable": "Feu servir la versió més recent",
+    "@noUpdatesAvailable": {
+        "description": "Text to show that the user is using the latest version of the app"
+    },
+    "noUpdatesFound": "No s'ha trobat cap actualització",
+    "@noUpdatesFound": {
+        "description": "Toast Text to show that there are no Updates available"
+    },
+    "nsfw": "Mostra les extensions i fonts NSFW",
+    "@nsfw": {
+        "description": "Switch text to show/hide the nsfw extensions"
+    },
+    "nsfw18": "18+",
+    "@nsfw18": {
+        "description": "18+ tag Text to show in extensions list"
+    },
+    "nsfwInfo": "Això no impedeix que extensions no oficials o potencialment mal etiquetades mostrin contingut NSFW (18+) a l'aplicació",
+    "@nsfwInfo": {
+        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
+    },
+    "numSelected": "{num} seleccionats",
+    "@numSelected": {
+        "description": "Title text to show the number of chapters selected in the Manga details screen and Updates screen",
+        "placeholders": {
+            "num": {
+                "example": "23",
+                "type": "int"
+            }
+        }
+    },
+    "removeFromDevice": "Elimina del dispositiu",
+    "undo": "Desfés",
+    "filtered": "filtrats",
+    "unreadCount": "{count, plural, =1{1 no llegit} other{{count} no llegits}}",
+    "@unreadCount": {
+        "description": "Chapter header subline unread segment",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "6"
+            }
+        }
+    },
+    "onDeviceSize": "{size} al dispositiu",
+    "@onDeviceSize": {
+        "description": "Chapter header subline on-device segment",
+        "placeholders": {
+            "size": {
+                "type": "String",
+                "example": "2.1 GB"
+            }
+        }
+    },
+    "onDevice": "Al dispositiu",
+    "offlineBulkDeleteWarning": "{count} d'aquests es desen en aquest dispositiu i també s'eliminaran d'aquí.",
+    "@offlineBulkDeleteWarning": {
+        "description": "Bulk server-delete confirm: warns N selected chapters are also on this device",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "openFlareSolverr": "Consulteu FlareSolverr per saber com configurar-lo",
+    "@openFlareSolverr": {
+        "description": "Text for link to Open Flare Solverr setup documentation"
+    },
+    "openInWeb": "Obre al web",
+    "@openInWeb": {
+        "description": "Button title text for open the url in web"
+    },
+    "openSourceInBrowser": "Obre la pàgina de la font",
+    "@openSourceInBrowser": {
+        "description": "Menu item: open the manga page on the original source website"
+    },
+    "openOnServer": "Obre al servidor",
+    "@openOnServer": {
+        "description": "Menu item: open the manga in the Suwayomi server WebUI"
+    },
+    "page": "Pàgina: {number}",
+    "@page": {
+        "description": "Text to show the last read Page number of the chapter in Manga details screen",
+        "placeholders": {
+            "number": {
+                "example": "23",
+                "type": "int"
+            }
+        }
+    },
+    "pageOfTotal": "Pàgina {current} de {total}",
+    "@pageOfTotal": {
+        "description": "Tooltip on the current chapter's progress line",
+        "placeholders": {
+            "current": {
+                "type": "int",
+                "example": "12"
+            },
+            "total": {
+                "type": "int",
+                "example": "45"
+            }
+        }
+    },
+    "pause": "Pausa",
+    "@pause": {
+        "description": "Button text to pause downloads"
+    },
+    "pinnedSources": "Fonts fixades",
+    "filterSources": "Filtra les fonts",
+    "pinchToZoom": "Pessiga per fer zoom",
+    "@pinchToZoom": {
+        "description": "Switch title to enable pinch to zoom in reader screen"
+    },
+    "doubleTapToZoom": "Toc doble per fer zoom",
+    "disableZoomOut": "Desactiva l'allunyament",
+    "disableZoomIn": "Desactiva l'apropament",
+    "previousChapter": "Anterior: {chapterTitle}",
+    "@previousChapter": {
+        "description": "Text for Previous Chapter button in Manga Reader Screen"
+    },
+    "quickSearch": "Cerca ràpida",
+    "@quickSearch": {
+        "description": "Screen title and Button text of Quick Search screen"
+    },
+    "readerMouseScrollSpeed": "Velocitat de desplaçament de la roda del ratolí",
+    "@readerMouseScrollSpeed": {
+        "description": "Desktop-only reader setting: how far one wheel notch scrolls."
+    },
+    "readerModeChipLegacyContinuous": "Horitzontal continu (antic)",
+    "@readerModeChipLegacyContinuous": {
+        "description": "Reading-mode chip shown when a series still uses the legacy continuous-horizontal mode"
+    },
+    "readerModeChipLongStripGaps": "Tira llarga amb separacions",
+    "@readerModeChipLongStripGaps": {
+        "description": "Reading-mode chip - Long strip with gaps (continuous vertical)"
+    },
+    "readerModeChipPagedLtr": "Paginat (d'esquerra a dreta)",
+    "@readerModeChipPagedLtr": {
+        "description": "Reading-mode chip - Paged (left to right)"
+    },
+    "readerModeChipPagedRtl": "Paginat (de dreta a esquerra)",
+    "@readerModeChipPagedRtl": {
+        "description": "Reading-mode chip - Paged (right to left)"
+    },
+    "readerModeChipPagedVertical": "Paginat (vertical)",
+    "@readerModeChipPagedVertical": {
+        "description": "Reading-mode chip - Paged (vertical)"
+    },
+    "readerModeContinuousHorizontalLTR": "Horitzontal continu (LTR, antic)",
+    "@readerModeContinuousHorizontalLTR": {
+        "description": "Radio button text for Reader Mode Type - Continuous Horizontal (LTR)"
+    },
+    "readerModeContinuousHorizontalRTL": "Horitzontal continu (RTL, antic)",
+    "@readerModeContinuousHorizontalRTL": {
+        "description": "Radio button text for Reader Mode Type - Continuous Horizontal (RTL)"
+    },
+    "readerModeContinuousVertical": "Tira llarga amb separacions",
+    "@readerModeContinuousVertical": {
+        "description": "Radio button text for Reader Mode Type - Continuous Vertical"
+    },
+    "readerModeSingleHorizontalLTR": "Paginat (d'esquerra a dreta)",
+    "@readerModeSingleHorizontalLTR": {
+        "description": "Radio button text for Reader Mode Type - Single Horizontal (LTR)"
+    },
+    "readerModeSingleHorizontalRTL": "Paginat (de dreta a esquerra)",
+    "@readerModeSingleHorizontalRTL": {
+        "description": "Radio button text for Reader Mode Type - Single Horizontal (RTL)"
+    },
+    "readerModeSingleVertical": "Paginat (vertical)",
+    "@readerModeSingleVertical": {
+        "description": "Radio button text for Reader Mode Type - Single Vertical"
+    },
+    "readerNavigationLayoutKindlish": "Estil Kindle",
+    "@readerNavigationLayoutKindlish": {
+        "description": "Radio button text for Reader Navigation Layout - Kindle-ish"
+    },
+    "readerNavigationLayoutLShaped": "En forma de L",
+    "@readerNavigationLayoutLShaped": {
+        "description": "Radio button text for Reader Navigation Layout - L Shaped"
+    },
+    "readerNavigationLayoutRightAndLeft": "Dreta i esquerra",
+    "@readerNavigationLayoutRightAndLeft": {
+        "description": "Radio button text for Reader Navigation Layout - Right And Left"
+    },
+    "readerNoPagesSubtitle": "Pot ser que aquest capítol estigui bloquejat o que la font requereixi que inicieu la sessió.",
+    "@readerNoPagesSubtitle": {
+        "description": "Explains why a chapter can have no pages, under readerNoPages. Paid chapters that are still locked come back empty."
+    },
+    "readerOrientationFree": "Lliure",
+    "@readerOrientationFree": {
+        "description": "Rotation chip - Free rotation"
+    },
+    "readerOrientationLandscape": "Horitzontal",
+    "@readerOrientationLandscape": {
+        "description": "Rotation chip - Landscape (sensor)"
+    },
+    "readerOrientationLockedLandscape": "Horitzontal bloquejat",
+    "@readerOrientationLockedLandscape": {
+        "description": "Rotation chip - Locked landscape"
+    },
+    "readerOrientationLockedPortrait": "Vertical bloquejat",
+    "@readerOrientationLockedPortrait": {
+        "description": "Rotation chip - Locked portrait"
+    },
+    "readerOrientationPortrait": "Vertical",
+    "@readerOrientationPortrait": {
+        "description": "Rotation chip - Portrait (sensor)"
+    },
+    "readerOrientationReversePortrait": "Vertical invertit",
+    "@readerOrientationReversePortrait": {
+        "description": "Rotation chip - Reverse portrait"
+    },
+    "readerOverlay": "Superposició inicial del lector",
+    "@readerOverlay": {
+        "description": "Toggle subtile text for Initial Reader Overlay"
+    },
+    "readerOverlaySubtitle": "Mostra el títol i la configuració ràpida en obrir un capítol",
+    "@readerOverlaySubtitle": {
+        "description": "Shows title and quick settings when opening a chapter"
+    },
+    "readerPadding": "Farciment del lector",
+    "@readerPadding": {
+        "description": "Slider title text for Reader Padding"
+    },
+    "readerScrollAnimation": "Animació de desplaçament",
+    "@readerScrollAnimation": {
+        "description": "Switch title to Disable scroll animation in reader screen"
+    },
+    "readerFeedbackToasts": "Avisos de lectura",
+    "@readerFeedbackToasts": {
+        "description": "Switch title for the toggle that shows reader feedback toasts"
+    },
+    "readerFeedbackToastsSubtitle": "Mostra missatges com ara «s'està carregant el capítol següent» i «no hi ha més capítols»",
+    "@readerFeedbackToastsSubtitle": {
+        "description": "Switch subtitle explaining the reader feedback toasts toggle"
+    },
+    "readerSwipeChapterToggle": "Canvi lliscant",
+    "@readerSwipeChapterToggle": {
+        "description": "Switch title to toggle `swipe to change chapter` in reader screen"
+    },
+    "readerSwipeChapterToggleDescription": "Llisqueu per canviar de capítol al lector",
+    "@readerSwipeChapterToggleDescription": {
+        "description": "Switch tile description for, toggle `swipe to change chapter` in reader screen"
+    },
+    "readerLastPageSwipeToggle": "Lliscament a l'última pàgina",
+    "@readerLastPageSwipeToggle": {
+        "description": "Last page swipe"
+    },
+    "readerLastPageSwipeToggleDescription": "Llisqueu al capítol següent només a l'última pàgina",
+    "@readerLastPageSwipeToggleDescription": {
+        "description": "Swipe to next chapter only at last page"
+    },
+    "chapterSeparator": "Separador de capítols",
+    "@chapterSeparator": {
+        "description": "Text for the separator between chapters in continuous reading mode"
+    },
+    "lastChapterNotification": "Aquest és l'últim capítol",
+    "@lastChapterNotification": {
+        "description": "Notification text shown when user is at the last chapter"
+    },
+    "firstChapterNotification": "Aquest és el primer capítol",
+    "@firstChapterNotification": {
+        "description": "Notification text shown when user is at the first chapter"
+    },
+    "loadingNextChapter": "S'està carregant el capítol següent...",
+    "@loadingNextChapter": {
+        "description": "Loading text shown when loading next chapter in continuous reading"
+    },
+    "loadingPreviousChapter": "S'està carregant el capítol anterior...",
+    "@loadingPreviousChapter": {
+        "description": "Loading text shown when loading previous chapter in continuous reading"
+    },
+    "noMoreChaptersAhead": "No hi ha capítol següent",
+    "@noMoreChaptersAhead": {
+        "description": "Shown at the end of the last chapter when no next chapter exists"
+    },
+    "noMoreChaptersBehind": "No hi ha més capítols anteriors",
+    "@noMoreChaptersBehind": {
+        "description": "Notification text shown when user tries to scroll past the first chapter"
+    },
+    "nextChapterLoaded": "S'ha carregat: {chapterName}",
+    "@nextChapterLoaded": {
+        "description": "Success message shown when next chapter is loaded",
+        "placeholders": {
+            "chapterName": {
+                "type": "String",
+                "description": "The name of the loaded chapter"
+            }
+        }
+    },
+    "previousChapterLoaded": "S'ha carregat: {chapterName}",
+    "@previousChapterLoaded": {
+        "description": "Success message shown when previous chapter is loaded",
+        "placeholders": {
+            "chapterName": {
+                "type": "String",
+                "description": "The name of the loaded chapter"
+            }
+        }
+    },
+    "failedToLoadNextChapter": "No s'ha pogut carregar el capítol següent",
+    "@failedToLoadNextChapter": {
+        "description": "Error message shown when next chapter fails to load"
+    },
+    "failedToLoadPreviousChapter": "No s'ha pogut carregar el capítol anterior",
+    "@failedToLoadPreviousChapter": {
+        "description": "Error message shown when previous chapter fails to load"
+    },
+    "chapterCompleted": "Capítol completat",
+    "@chapterCompleted": {
+        "description": "Text shown when a chapter is completed in continuous reading"
+    },
+    "readerVolumeTap": "Tecles de volum",
+    "@readerVolumeTap": {
+        "description": "Switch button text for Reader Page Navigation with Volume Tap"
+    },
+    "readerVolumeTapInvert": "Inverteix les tecles de volum",
+    "@readerVolumeTapInvert": {
+        "description": "Switch button text to invert Volume Tap "
+    },
+    "readerVolumeTapSubtitle": "Navega amb les tecles de volum",
+    "@readerVolumeTapSubtitle": {
+        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
+    },
+    "readerKeepScreenOnSubtitle": "Evita que la pantalla entri en repòs mentre llegiu",
+    "@readerKeepScreenOnSubtitle": {
+        "description": "Reader switch tile subtitle for keep screen on"
+    },
+    "readerIgnoreSafeAreaToggle": "Ignora l'àrea segura",
+    "@readerIgnoreSafeAreaToggle": {
+        "description": "Toggle text to ignore safe area in reader"
+    },
+    "readerIgnoreSafeAreaToggleDescription": "Permet que el contingut s'estengui a les zones de la retallada i de l'indicador d'inici",
+    "@readerIgnoreSafeAreaToggleDescription": {
+        "description": "Description for ignore safe area toggle in reader settings"
+    },
+    "reddit": "Reddit",
+    "@reddit": {
+        "description": "Reddit app title"
+    },
+    "migrationSelectTargetSource": "Selecciona la font de destinació",
+    "migrationSearchInSource": "Cerca a {sourceName}",
+    "migrationPreview": "Previsualització de la migració",
+    "migrationInProgress": "Migració en curs",
+    "migrationComplete": "La migració s'ha completat correctament",
+    "migrationFailed": "Ha fallat la migració",
+    "migrationCancelled": "S'ha cancel·lat la migració",
+    "migrateChapters": "Migra els capítols",
+    "migrateChaptersDescription": "Copia l'estat de lectura dels capítols a la font nova",
+    "migrateCategories": "Migra les categories",
+    "migrateCategoriesDescription": "Copia les categories del manga a la font nova",
+    "migrateDownloads": "Migra les baixades",
+    "migrateDownloadsDescription": "Mou els capítols baixats a la font nova",
+    "migrateTracking": "Migra el seguiment",
+    "migrateTrackingDescription": "Copia la informació de seguiment a la font nova",
+    "migrateReaderSettings": "Configuració del lector",
+    "migrateOfflineSettings": "Regla de mantenir sense connexió",
+    "migrationOptions": "Opcions de migració",
+    "migrationSettings": "Configuració de la migració",
+    "bulkMigrationTitle": "Migra les fonts",
+    "targetSourcesPriority": "Fonts de destinació",
+    "targetSourcesPriorityHint": "Cada sèrie es compara amb aquestes fonts per ordre, començant per la de dalt. Arrossegueu per reordenar.",
+    "availableSources": "Fonts disponibles",
+    "noTargetSourcesSelected": "Afegiu com a mínim una font de destinació on cercar.",
+    "searchManually": "Tria cada coincidència manualment",
+    "searchManuallyDescription": "Reviseu i trieu cada destinació en lloc de fer la coincidència automàticament.",
+    "migrationPausedReauth": "En pausa: torneu a iniciar la sessió per continuar.",
+    "migrationSelectSourcesTitle": "Selecciona les fonts",
+    "migrationListTitleProgress": "Migra ({done}/{total})",
+    "@migrationListTitleProgress": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDataUnavailable": "Aquesta migració no s'ha restaurat. Torneu enrere i torneu-la a començar.",
+    "migrationLatestChapter": "Últim capítol: {chapter}",
+    "@migrationLatestChapter": {
+        "placeholders": {
+            "chapter": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationSearchManually": "Cerca manualment",
+    "migrationSkip": "Omet",
+    "migrationMigrateNow": "Migra ara",
+    "migrationCopyNow": "Copia ara",
+    "migrationSelectPinned": "Selecciona les fixades",
+    "migrationSelectNone": "No en seleccionis cap",
+    "migrationSelectEnabled": "Selecciona les activades",
+    "migrationSearchForSource": "Cerca fonts",
+    "migrationDataToMigrateHeader": "Dades per migrar",
+    "migrationAdditionalSearchQuery": "Consulta de cerca addicional",
+    "migrationAdditionalSearchQueryHint": "S'afegeix a cada títol en cercar a les fonts.",
+    "migrationHideUnmatched": "Amaga les entrades sense coincidència",
+    "migrationHideWithoutUpdates": "Amaga les entrades sense capítols nous",
+    "migrationHideWithoutUpdatesSubtitle": "Amaga les sèries en què la font nova no té més capítols.",
+    "seriesNextChapterExpected": "Es preveu el capítol següent {days, plural, =0{aviat} =1{d'aquí a 1 dia} other{d'aquí a {days} dies}}",
+    "@seriesNextChapterExpected": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationPickSourceTitle": "Migra des d'una font",
+    "migrationFilterObsolete": "Mostra només les obsoletes",
+    "migrationSortMode": "Mode d'ordenació",
+    "migrationSortDirection": "Sentit de l'ordenació",
+    "migrationNeedsMigration": "Cal migrar",
+    "migrationOtherSources": "Altres fonts",
+    "migrationSourceSeriesCount": "{count, plural, =1{1 sèrie} other{{count} sèries}}",
+    "@migrationSourceSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationNoLibrarySources": "La biblioteca és buida; no hi ha res per migrar.",
+    "migrationGroupNeedsReview": "Cal revisar",
+    "migrationGroupNoMatch": "Sense coincidència",
+    "migrationGroupFailed": "Fallides",
+    "migrationGroupReady": "A punt",
+    "migrationGroupInProgress": "En curs",
+    "migrationGroupSkipped": "Omeses",
+    "migrationFindManually": "Cerca manualment",
+    "migrationOverwriteTracking": "Sobreescriu el seguiment de la destinació",
+    "migrationKeepTargetTracking": "Aquesta sèrie ja té seguiment a la destinació. Conserveu-ne el seguiment o sobreescriviu-lo amb el de l'origen.",
+    "migrationLargeBatchWarning": "És un lot gran. Pot trigar una estona i fer moltes peticions a la font.",
+    "migrationTrackerCollisionSummary": "{count, plural, =1{1 sèrie ja té seguiment a la seva destinació; se'n conserva el seguiment tret que trieu sobreescriure'l.} other{{count} sèries ja tenen seguiment a les seves destinacions; se'n conserva el seguiment tret que trieu sobreescriure'l.}}",
+    "@migrationTrackerCollisionSummary": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationActionMigrateDescription": "Mou cada sèrie a la font nova i elimina l'original.",
+    "migrationActionCopyDescription": "Afegeix cada sèrie a la font nova i conserva l'original.",
+    "migrateSeriesCount": "Migra {count} sèries",
+    "@migrateSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "copySeriesCount": "Copia {count} sèries",
+    "@copySeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDoneMigrated": "S'han migrat {count} sèries",
+    "@migrationDoneMigrated": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDoneCopied": "S'han copiat {count} sèries",
+    "@migrationDoneCopied": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationNewChaptersTitle": "Capítols nous",
+    "notificationNewChaptersSummary": "Actualitzacions de {count} sèries",
+    "@notificationNewChaptersSummary": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChaptersGeneric": "{count} capítols nous",
+    "@notificationChaptersGeneric": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChapterSingle": "Capítol {number}",
+    "@notificationChapterSingle": {
+        "placeholders": {
+            "number": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationChapterSingleAndMore": "Capítol {number} i {count} més",
+    "@notificationChapterSingleAndMore": {
+        "placeholders": {
+            "number": {
+                "type": "String"
+            },
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChaptersMultiple": "Capítols {numbers}",
+    "@notificationChaptersMultiple": {
+        "placeholders": {
+            "numbers": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationChaptersMultipleAndMore": "Capítols {numbers} i {count} més",
+    "@notificationChaptersMultipleAndMore": {
+        "placeholders": {
+            "numbers": {
+                "type": "String"
+            },
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "libraryUpdateErrors": "Errors d'actualització de la biblioteca",
+    "libraryUpdateErrorsCount": "Errors d'actualització de la biblioteca ({count})",
+    "@libraryUpdateErrorsCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "libraryUpdateErrorsEmpty": "No hi ha errors d'actualització",
+    "libraryUpdateErrorsEmptyDetail": "Aquí es mostren les sèries que no s'han pogut actualitzar",
+    "notificationLibraryErrorTitle": "Ha fallat l'actualització de la biblioteca",
+    "notificationLibraryErrorBody": "No s'han pogut actualitzar {count} sèries",
+    "@notificationLibraryErrorBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationDownloadErrorTitle": "Ha fallat la baixada",
+    "notificationDownloadErrorBody": "No s'han pogut baixar {count} capítols",
+    "@notificationDownloadErrorBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "backgroundDownloadScheduleFailed": "No s'han pogut programar les baixades en segon pla. Torneu-ho a provar des de Baixades.",
+    "notificationDownloadsPausedBackground": "Android ha posat en pausa les baixades en segon pla. Obriu Tsumiru per tornar-ho a provar.",
+    "notificationDownloadsPausedService": "No s'han pogut iniciar les baixades. Toqueu «Torna-ho a provar» a Baixades.",
+    "notificationDownloadsPausedTitle": "Baixades en pausa",
+    "@notificationDownloadsPausedTitle": {
+        "description": "Notification shown when on-device downloads stop because they cannot continue"
+    },
+    "notificationDownloadsPausedNoServer": "No hi ha connexió. Es reprendran quan torni.",
+    "@notificationDownloadsPausedNoServer": {
+        "description": "Body when downloads pause because the Suwayomi server is unreachable"
+    },
+    "notificationDownloadsPausedWifi": "S'està esperant la Wi-Fi.",
+    "@notificationDownloadsPausedWifi": {
+        "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
+    },
+    "notificationBackupCompleteTitle": "S'ha completat la còpia de seguretat",
+    "notificationRestoreCompleteTitle": "S'ha completat la restauració",
+    "notificationBackupFailedTitle": "Ha fallat la còpia de seguretat",
+    "notificationRestoreFailedTitle": "Ha fallat la restauració",
+    "notificationAppUpdateBody": "Tsumiru {version} està disponible",
+    "@notificationAppUpdateBody": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationExtensionUpdateTitle": "Actualitzacions d'extensions",
+    "notificationExtensionUpdateBody": "{count} extensions tenen actualitzacions",
+    "@notificationExtensionUpdateBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationIncognitoTitle": "Mode d'incògnit",
+    "notificationIncognitoBody": "L'historial i les actualitzacions de progrés estan en pausa",
+    "notificationsErrors": "Notificacions d'error",
+    "notificationsErrorsSubtitle": "Baixades i actualitzacions de la biblioteca fallides",
+    "notificationsBackup": "Notificacions de còpia de seguretat",
+    "notificationsAppUpdates": "Notificacions d'actualització de l'aplicació",
+    "notificationsExtensionUpdates": "Notificacions d'actualització d'extensions",
+    "notificationActionView": "Mostra els capítols",
+    "notificationDownloadsCompleteTitle": "Baixades completades",
+    "notificationDownloadsCompleteBody": "{count} capítols baixats",
+    "@notificationDownloadsCompleteBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notifications": "Notificacions",
+    "notificationsNewChapters": "Notificacions de capítols nous",
+    "notificationsNewChaptersSubtitle": "Notifica quan les sèries que seguiu tinguin capítols nous",
+    "notificationsDownloadsComplete": "Notificacions de baixades",
+    "notificationsCheckInterval": "Interval de comprovació",
+    "notificationsWifiOnly": "Només amb Wi-Fi",
+    "notificationsChargingOnly": "Només mentre es carrega",
+    "notificationsHideContent": "Amaga el contingut de les notificacions",
+    "notificationsHideContentSubtitle": "Mostra només un recompte, sense títols ni portades",
+    "notificationsCheckNow": "Comprova ara",
+    "notificationsReliabilityNote": "Les comprovacions es fan periòdicament, no a l'instant. Alguns dispositius restringeixen les actualitzacions en segon pla.",
+    "selectTargetSource": "Selecciona la font de destinació",
+    "noSourcesAvailable": "No hi ha fonts disponibles per a la migració",
+    "checkSourceConfiguration": "Comproveu la configuració de la font",
+    "noAlternativeSources": "No hi ha fonts alternatives disponibles",
+    "installMoreSources": "Instal·leu més fonts per habilitar la migració",
+    "errorLoadingSources": "S'ha produït un error en carregar les fonts",
+    "errorGettingMigrationSources": "No s'han pogut obtenir les fonts de migració",
+    "errorSearchingMangaInSource": "No s'ha pogut cercar el manga a la font",
+    "errorFetchingSourceManga": "No s'ha pogut obtenir el manga d'origen",
+    "errorSourceMangaNotFound": "No s'ha trobat el manga d'origen",
+    "errorFetchingTargetManga": "No s'ha pogut obtenir el manga de destinació",
+    "errorTargetMangaNotFound": "No s'ha trobat el manga de destinació",
+    "searchManga": "Cerca manga...",
+    "searchForManga": "Cerca manga a la font de destinació",
+    "enterSearchTerm": "Introduïu un terme de cerca per trobar manga",
+    "noResultsFound": "No s'ha trobat cap resultat",
+    "tryDifferentSearch": "Proveu un terme de cerca diferent",
+    "searchError": "Error de cerca",
+    "importantNotice": "Avís important",
+    "migrationWarning": "Això mourà permanentment les dades del manga. Aquesta acció no es pot desfer.",
+    "deleteSourceWarning": "El manga original s'eliminarà de la biblioteca després de la migració.",
+    "confirmMigration": "Confirma la migració",
+    "migrationConfirmationMessage": "Esteu segur que voleu migrar aquest manga? Aquesta acció no es pot desfer.",
+    "startMigration": "Inicia la migració",
+    "preparingMigration": "S'està preparant la migració...",
+    "migrationCompleted": "S'ha completat la migració!",
+    "migrationSuccessMessage": "El manga s'ha migrat correctament a la font nova.",
+    "migrationCancelledMessage": "S'ha cancel·lat el procés de migració. No s'ha fet cap canvi.",
+    "cancelMigration": "Cancel·la la migració",
+    "cancelMigrationConfirmation": "Esteu segur que voleu cancel·lar la migració? Aquesta acció no es pot desfer.",
+    "quickPresets": "Configuracions ràpides",
+    "quickMigration": "Ràpida",
+    "fullMigration": "Completa",
+    "deleteSourceManga": "Elimina el manga d'origen",
+    "deleteSourceMangaDescription": "Elimina el manga original de la biblioteca després de la migració",
+    "webtoonScaleType": "Escala de la tira llarga",
+    "@webtoonScaleType": {
+        "description": "Section label for the long-strip scale chip row"
+    },
+    "webtoonScaleTypeRatio16to9": "16:9",
+    "@webtoonScaleTypeRatio16to9": {
+        "description": "Smart scale chip"
+    },
+    "webtoonScaleTypeRatio20to9": "20:9",
+    "@webtoonScaleTypeRatio20to9": {
+        "description": "Smart scale chip"
+    },
+    "webtoonScaleTypeRatio3to2": "3:2",
+    "@webtoonScaleTypeRatio3to2": {
+        "description": "Smart scale chip"
+    },
+    "webtoonScaleTypeRatio4to3": "4:3",
+    "@webtoonScaleTypeRatio4to3": {
+        "description": "Smart scale chip"
+    },
+    "yes": "Sí",
+    "no": "No",
+    "from": "De",
+    "to": "A",
+    "migrationDetails": "Detalls de la migració",
+    "searchAllSources": "Cerca a totes les fonts",
+    "searchingAllSources": "S'està cercant a totes les fonts disponibles...",
+    "noMatchingMangaFound": "No s'ha trobat cap manga coincident a cap font",
+    "deleteSourceAfterMigration": "Elimina el manga d'origen després de la migració",
+    "reload": "Torna a carregar",
+    "@reload": {
+        "description": "Reload button text"
+    },
+    "removeFromLibrary": "Voleu eliminar-lo de la biblioteca?",
+    "@removeFromLibrary": {
+        "description": "Remove From Library Popup text"
+    },
+    "restoreBackupDescription": "Restaura Tachidesk des d'una còpia de seguretat",
+    "@restoreBackupDescription": {
+        "description": "Button text description to create backup"
+    },
+    "restored": "S'ha restaurat la còpia de seguretat!",
+    "@restored": {
+        "description": "Toast Text to show that the backup has been restored"
+    },
+    "restoring": "S'està restaurant la còpia de seguretat",
+    "@restoring": {
+        "description": "Toast Text to show that the backup is restoring"
+    },
+    "scanlators": "Scanlators",
+    "@scanlators": {
+        "description": "Title text for Scanlators"
+    },
+    "searchLibraryHint": "Cerca per títol o autor...",
+    "@searchLibraryHint": {
+        "description": "Placeholder text in the library search field"
+    },
+    "searchingForUpdates": "S'estan cercant actualitzacions",
+    "@searchingForUpdates": {
+        "description": "Toast Text for searching for updates of the App/Server"
+    },
+    "selectBelow": "Selecciona els de sota",
+    "selectInBetween": "Selecciona els intermedis",
+    "@selectInBetween": {
+        "description": "Toast Text for selecting chapters in between first and last Chapters"
+    },
+    "selectNext10": "Selecciona els 10 següents",
+    "@selectNext10": {
+        "description": "Toast Text for selecting next 10 chapters"
+    },
+    "selectUnread": "Selecciona els no llegits",
+    "@selectUnread": {
+        "description": "Popup Text for selecting unread chapters"
+    },
+    "serverBindings": "Enllaços del servidor",
+    "@serverBindings": {
+        "description": "Title for server bindings settings"
+    },
+    "serverOwnSettingsCaption": "Aquesta configuració canvia el servidor de Suwayomi mateix, no com s'hi connecta aquesta aplicació.",
+    "serverPort": "Port del servidor",
+    "@serverPort": {
+        "description": "Popup title and Button text to update Server Port"
+    },
+    "serverPortHintText": "Port del servidor",
+    "@serverPortHintText": {
+        "description": "Text Filed hint text to update Server Port"
+    },
+    "serverSettingsSubtitle": "Configureu el servidor de Suwayomi mateix.",
+    "serverSignedOutTitle": "Sessió tancada",
+    "@serverSignedOutTitle": {
+        "description": "Title shown when the server rejects the app's credentials."
+    },
+    "serverSignedOutSubtitle": "El servidor no ha acceptat aquestes credencials. Torneu a iniciar la sessió a la configuració de connexió.",
+    "@serverSignedOutSubtitle": {
+        "description": "Subtitle shown when the server rejects the app's credentials."
+    },
+    "serverUnreachableTitle": "No es pot accedir al servidor",
+    "@serverUnreachableTitle": {
+        "description": "Shown when the app cannot connect to the Suwayomi server"
+    },
+    "serverUnreachableSubtitle": "Assegureu-vos que estigui en funcionament i comproveu la configuració de connexió.",
+    "@serverUnreachableSubtitle": {
+        "description": "Guidance under the server-unreachable message"
+    },
+    "serverUnreachableAction": "Configuració de connexió",
+    "@serverUnreachableAction": {
+        "description": "Button that opens the connection settings screen"
+    },
+    "offlineViewBannerTitle": "Esteu en mode sense connexió",
+    "@offlineViewBannerTitle": {
+        "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
+    },
+    "offlineViewGoOnline": "Connecta't",
+    "@offlineViewGoOnline": {
+        "description": "Banner button that leaves the offline view and loads from the server again"
+    },
+    "clearCrashLog": "Esborra el registre de depuració",
+    "copyCrashLog": "Copia el registre de depuració",
+    "copyCrashLogSubtitle": "Per als informes d'errors: copia els errors recents i els diagnòstics del lector",
+    "crashLogCleared": "S'ha esborrat el registre de depuració",
+    "crashLogCopied": "S'ha copiat el registre de depuració al porta-retalls",
+    "noCrashLog": "No s'ha trobat cap registre de depuració",
+    "serverUrl": "URL del servidor",
+    "@serverUrl": {
+        "description": "Popup title and Button text to update Server Url"
+    },
+    "serverUrlHintText": "URL del servidor",
+    "@serverUrlHintText": {
+        "description": "Text Filed hint text to update Server Url"
+    },
+    "addLocalNetworkAddress": "Afegeix una adreça de la xarxa local",
+    "serverExternalUrl": "URL externa / remota",
+    "serverLanUrl": "URL interna / LAN",
+    "serverLanUrlOptional": "Opcional",
+    "serverLanUrlHintText": "http://192.168.1.100:4567",
+    "serverActiveUrl": "Connexió activa",
+    "serverUsingLanUrl": "S'està fent servir la LAN",
+    "serverUsingExternalUrl": "S'està fent servir la remota",
+    "cleartextAddressWarning": "Aquesta adreça fa servir http:// sense xifrar per Internet: l'inici de sessió i la sessió viatgen en clar i qualsevol pel camí els pot llegir. Feu servir https://, per exemple mitjançant un servidor intermediari invers.",
+    "@cleartextAddressWarning": {
+        "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
+    },
+    "skipThisVersion": "No m'ho recordis per a aquesta versió",
+    "socksHost": "Amfitrió SOCKS",
+    "socksPassword": "Contrasenya SOCKS",
+    "socksPort": "Port SOCKS",
+    "socksProxy": "Servidor intermediari SOCKS",
+    "@socksProxy": {
+        "description": "Section title for SOCKS Proxy settings"
+    },
+    "socksUserName": "Nom d'usuari SOCKS",
+    "socksVersion": "Versió de SOCKS",
+    "@socksVersion": {
+        "description": "Title for Socks version picker"
+    },
+    "tomorrow": "Demà",
+    "upcoming": "Properament",
+    "upcomingGuide": "Què és això?",
+    "upcomingGuideBody": "Dates previstes de les properes publicacions de la biblioteca, estimades a partir del ritme d'actualització recent de cada sèrie. Són estimacions, no garanties, i les sèries completades no s'hi inclouen.",
+    "upcomingEmpty": "Encara no hi ha cap publicació prevista. Apareixeran aquí quan la biblioteca tingui prou historial de capítols per fer-ne l'estimació.",
+    "unifiedSearchHint": "Cerca a la biblioteca, a l'aplicació i a les fonts",
+    "@unifiedSearchHint": {
+        "description": "Placeholder text in the unified search field"
+    },
+    "unifiedSearchGoToSection": "Ves a",
+    "@unifiedSearchGoToSection": {
+        "description": "Unified search section header for app navigation"
+    },
+    "unifiedSearchFiltersSection": "Filtres",
+    "@unifiedSearchFiltersSection": {
+        "description": "Unified search section header for operator autocomplete suggestions"
+    },
+    "unifiedSearchExamplesSection": "Exemples",
+    "@unifiedSearchExamplesSection": {
+        "description": "Unified search section header for example queries in the empty state"
+    },
+    "unifiedSearchAllSources": "Cerca «{query}» a totes les fonts",
+    "@unifiedSearchAllSources": {
+        "description": "Row that hands off to global source search",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchLibraryFor": "Cerca «{query}» a la biblioteca",
+    "@phoneSearchLibraryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Library filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchHistoryFor": "Cerca «{query}» a l'historial",
+    "@phoneSearchHistoryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the History filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchSourcesFor": "Cerca «{query}» a les fonts",
+    "@phoneSearchSourcesFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Sources filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchNoResults": "Cap resultat",
+    "@phoneSearchNoResults": {
+        "description": "Phone search: trailing label on the dimmed page row when nothing on the page matches"
+    },
+    "reinstall": "Reinstal·la",
+    "@reinstall": {
+        "description": "Button tooltip on an installed extension: uninstall it and install it again"
+    },
+    "reinstalling": "S'està reinstal·lant",
+    "unknownAuthor": "Autor desconegut",
+    "@unknownAuthor": {
+        "description": "Text to show unknown author in Manga details screen"
+    },
+    "unknownManga": "Manga desconegut",
+    "@unknownManga": {
+        "description": "Text to show unknown manga in Manga details screen"
+    },
+    "unknownSource": "Font desconeguda",
+    "@unknownSource": {
+        "description": "Text to show unknown Source in Manga details screen"
+    },
+    "readProgressBar": "Barra de progrés de lectura",
+    "updateCompleted": "S'ha completat l'actualització",
+    "@updateCompleted": {
+        "description": "Button text to show that extension update is completed"
+    },
+    "updateFailed": "No s'ha pogut actualitzar {property}",
+    "@updateFailed": {
+        "description": "Failed to update Text"
+    },
+    "updatesGroupingLabel": "Agrupació de capítols",
+    "updatesGroupingHint": "Agrupa els capítols consecutius de la mateixa sèrie en una sola entrada plegable.",
+    "updatesGroupingModeCollapsed": "Plegat",
+    "updatesGroupingModeExpanded": "Desplegat",
+    "updatesGroupingShowMore": "+{count} més",
+    "@updatesGroupingShowMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "updatingLibrary": "S'està actualitzant la biblioteca…",
+    "updatingLibraryProgress": "S'està actualitzant la biblioteca ({percent}% · {checked}/{total})",
+    "@updatingLibraryProgress": {
+        "description": "App-root banner text while a library update is running, once the job total is known. Percent alongside the raw checked/total counts (locked in the design spec: Komikku's banner is percent-only, ours adds counts since the data is already available).",
+        "placeholders": {
+            "percent": {
+                "example": "37",
+                "type": "int"
+            },
+            "checked": {
+                "example": "44",
+                "type": "int"
+            },
+            "total": {
+                "example": "120",
+                "type": "int"
+            }
+        }
+    },
+    "userName": "Nom d'usuari",
+    "@userName": {
+        "description": "Title text for User Name field"
+    },
+    "validating": "S'està validant",
+    "@validating": {
+        "description": "toast to show backup validation is in progress"
+    },
+    "versionAvailable": "La versió {version} de {app} està disponible!!",
+    "@versionAvailable": {
+        "description": "Text to show that there is an update to App/Server",
+        "placeholders": {
+            "app": {
+                "example": "Server",
+                "type": "String"
+            },
+            "version": {
+                "example": "v0.4.2",
+                "type": "String"
+            }
+        }
+    },
+    "webUI": "Obre al web",
+    "@webUI": {
+        "description": "Button text to open in web UI"
+    },
+    "webView": "Vista web",
+    "@webView": {
+        "description": "Button text to open manga website"
+    },
+    "whatsNew": "Què hi ha de nou?",
+    "@whatsNew": {
+        "description": "Button text to open whats new page of app in web"
+    },
+    "withCompletedStatus": "Amb l'estat Completada",
+    "@withCompletedStatus": {
+        "description": "Setting option Text for Skip updating entries to toggle With Completed status"
+    },
+    "recentlyRead": "Llegits recentment",
+    "@recentlyRead": {
+        "description": "Recently Read Text to show reading history grouping"
+    },
+    "searchHistory": "Cerca a l'historial...",
+    "noHistoryFound": "No s'ha trobat cap historial de lectura",
+    "startReadingToSeeHistory": "Comenceu a llegir manga per veure aquí el vostre historial",
+    "noSearchResults": "No hi ha resultats de cerca",
+    "tryDifferentSearchTerm": "Proveu un terme de cerca diferent",
+    "errorOccurred": "S'ha produït un error",
+    "viewManga": "Mostra el manga",
+    "timeoutSettings": "Configuració dels temps d'espera",
+    "serverRequestTimeout": "Temps d'espera de les peticions al servidor",
+    "@serverRequestTimeout": {
+        "description": "Controls how long to wait for server responses"
+    },
+    "serverRequestTimeoutDescription": "Temps d'espera de les respostes del servidor (en segons)",
+    "autoRefreshOnTimeout": "Actualitza automàticament en esgotar-se el temps",
+    "@autoRefreshOnTimeout": {
+        "description": "Toggle automatic retry on timeout"
+    },
+    "autoRefreshOnTimeoutDescription": "Torna a provar automàticament les peticions que esgoten el temps d'espera",
+    "autoRefreshRetryDelay": "Retard entre reintents automàtics",
+    "@autoRefreshRetryDelay": {
+        "description": "Delay between auto retry attempts in seconds"
+    },
+    "autoRefreshRetryDelayDescription": "Retard entre els intents automàtics (en segons)",
+    "offline": "Sense connexió",
+    "@offline": {
+        "description": "Settings entry and screen title for offline downloads"
+    },
+    "offlineStorageSection": "Emmagatzematge",
+    "@offlineStorageSection": {
+        "description": "Section header in Offline Settings"
+    },
+    "offlineStorageUsage": "Emmagatzematge utilitzat",
+    "@offlineStorageUsage": {
+        "description": "Label for current offline storage usage tile"
+    },
+    "offlineRemoveAllDownloads": "Elimina totes les baixades",
+    "@offlineRemoveAllDownloads": {
+        "description": "Label for the remove-all tile in Offline Settings"
+    },
+    "offlineRemoveAllConfirm": "Voleu eliminar tots els capítols baixats d'aquest dispositiu? La biblioteca del servidor no es toca.",
+    "@offlineRemoveAllConfirm": {
+        "description": "Body text for remove-all confirmation dialog"
+    },
+    "offlineSafetyNets": "Mesures de seguretat",
+    "@offlineSafetyNets": {
+        "description": "Section header for safety net settings"
+    },
+    "downloadOverWifiOnly": "Baixa només amb Wi-Fi",
+    "@downloadOverWifiOnly": {
+        "description": "Toggle to restrict background downloads to Wi-Fi connections"
+    },
+    "downloadNewChaptersInBackground": "Baixa els capítols nous en segon pla",
+    "downloadNewChaptersInBackgroundDescription": "Obté els capítols nous de les sèries que manteniu sense connexió, sense obrir l'aplicació",
+    "backgroundCatchupFetchFiles": "Baixa els fitxers en segon pla",
+    "backgroundCatchupFetchFilesDescription": "Si està desactivat, les comprovacions en segon pla només troben i posen en cua els capítols nous. Els fitxers es baixen la propera vegada que obriu l'aplicació.",
+    "@backgroundCatchupFetchFilesDescription": {
+        "description": "Sub-option under downloadNewChaptersInBackground: whether the background run also downloads chapter files, or only detects/queues them"
+    },
+    "offlineConcurrencyLabel": "Baixades simultànies",
+    "@offlineConcurrencyLabel": {
+        "description": "Label for the download concurrency slider"
+    },
+    "offlineConcurrencyValue": "{count} alhora",
+    "@offlineConcurrencyValue": {
+        "description": "Value subtitle for the download concurrency slider",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineStorageCapEnable": "Limita l'emmagatzematge sense connexió",
+    "@offlineStorageCapEnable": {
+        "description": "Toggle to enable the storage cap safety net"
+    },
+    "offlineStorageCapLimit": "Límit d'emmagatzematge",
+    "@offlineStorageCapLimit": {
+        "description": "Label for the storage cap MB slider"
+    },
+    "offlineMegabytes": "{count} MB",
+    "@offlineMegabytes": {
+        "description": "Storage cap value shown as megabytes",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineTimeEvictEnable": "Elimina automàticament les baixades antigues",
+    "@offlineTimeEvictEnable": {
+        "description": "Toggle to enable time-based eviction"
+    },
+    "offlineKeepDaysLabel": "Conserva les baixades durant",
+    "@offlineKeepDaysLabel": {
+        "description": "Label for the keep-days slider"
+    },
+    "offlineDays": "{count} dies",
+    "@offlineDays": {
+        "description": "Keep-days value shown as days",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineNotAvailable": "Les baixades sense connexió no estan disponibles en aquesta plataforma.",
+    "@offlineNotAvailable": {
+        "description": "Shown in Offline Settings when offline storage is unavailable"
+    },
+    "keepOffline": "Mantén sense connexió",
+    "@keepOffline": {
+        "description": "Tooltip for the per-series keep-offline popup button in manga details"
+    },
+    "keepOfflineOff": "Desactivat",
+    "@keepOfflineOff": {
+        "description": "Keep-offline rule: disabled"
+    },
+    "keepOfflineNextUnread": "Mantén els {count} següents no llegits",
+    "@keepOfflineNextUnread": {
+        "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "keepOfflineAllUnread": "Mantén tots els no llegits",
+    "@keepOfflineAllUnread": {
+        "description": "Keep-offline rule: keep all unread chapters on device"
+    },
+    "keepOfflineAll": "Mantén tots els capítols",
+    "@keepOfflineAll": {
+        "description": "Keep-offline rule: keep every chapter on device"
+    },
+    "offlineDownloadAction": "Sense connexió",
+    "@offlineDownloadAction": {
+        "description": "Series offline button label when nothing is downloaded yet"
+    },
+    "offlineOnDevice": "Al dispositiu",
+    "@offlineOnDevice": {
+        "description": "Series offline button label when the series has downloads on this device"
+    },
+    "offlineSheetTitle": "Lectura sense connexió",
+    "viewOffline": "Mostra sense connexió",
+    "@viewOffline": {
+        "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
+    },
+    "offlineSheetSubtitle": "Manté els capítols baixats en aquest dispositiu i els completa automàticament a mesura que llegiu. És independent de les baixades del servidor (la icona del núvol de dalt).",
+    "offlineDownloadAll": "Baixa tots els capítols",
+    "@offlineDownloadAll": {
+        "description": "Series offline action: download every chapter to this device"
+    },
+    "offlineRemoveSeries": "Elimina-ho tot (aquesta sèrie)",
+    "@offlineRemoveSeries": {
+        "description": "Series offline action: remove this series' downloads from the device"
+    },
+    "offlineDownloadingToast": "S'està baixant a aquest dispositiu…",
+    "@offlineDownloadingToast": {
+        "description": "Snackbar shown after starting a series download"
+    },
+    "chapterSwipeToLeft": "Capítol en lliscar cap a l'esquerra",
+    "chapterSwipeToRight": "Capítol en lliscar cap a la dreta",
+    "chapterSwipeBookmarkChapter": "Posa un marcador al capítol",
+    "markedAsRead": "{count, plural, =1{S'ha marcat 1 capítol com a llegit} other{S'han marcat {count} capítols com a llegits}}",
+    "@markedAsRead": {
+        "description": "Toast after bulk mark-read, with an Undo action",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "markedAsUnread": "{count, plural, =1{S'ha marcat 1 capítol com a no llegit} other{S'han marcat {count} capítols com a no llegits}}",
+    "@markedAsUnread": {
+        "description": "Toast after bulk mark-unread, with an Undo action",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "manageDownloads": "Gestiona les baixades",
+    "@manageDownloads": {
+        "description": "Title/entry for the page listing on-device keep-rule subscriptions"
+    },
+    "manageDownloadsEmpty": "Encara no hi ha cap subscripció de baixades",
+    "manageDownloadsNothingYet": "Encara no s'ha baixat res",
+    "offlineManualOnly": "Només manual",
+    "manageDownloadsChangeRule": "Canvia la regla",
+    "manageDownloadsStopKeep": "Deixa de conservar (mantén els fitxers)",
+    "manageDownloadsStopDelete": "Deixa de conservar i elimina els fitxers",
+    "manageDownloadsKeepFilesConfirm": "Voleu deixar de conservar automàticament {count} sèries, però mantenir els capítols ja baixats en aquest dispositiu?",
+    "@manageDownloadsKeepFilesConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "manageDownloadsDeleteConfirm": "Voleu deixar de conservar {count} sèries i eliminar-ne els capítols baixats d'aquest dispositiu? Les còpies del servidor no es toquen.",
+    "@manageDownloadsDeleteConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "manageDownloadsGrowConfirm": "Això baixarà més capítols de {count} sèries. Voleu continuar?",
+    "@manageDownloadsGrowConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineDownloadingCount": "S'estan baixant {count}",
+    "@offlineDownloadingCount": {
+        "description": "Series button label while N chapters are downloading",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "downloadsOnDeviceTab": "Al dispositiu",
+    "@downloadsOnDeviceTab": {
+        "description": "Downloads tab: files downloaded on this device"
+    },
+    "downloadsQueue": "Cua",
+    "@downloadsQueue": {
+        "description": "Header title above the server download queue"
+    },
+    "downloadPagesProgress": "{done}/{total} pàgines",
+    "@downloadPagesProgress": {
+        "description": "Progress text for a downloading chapter, e.g. 24/25 pages",
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineNoFiles": "Encara no s'ha baixat res en aquest dispositiu",
+    "@offlineNoFiles": {
+        "description": "Empty state for the on-device downloads tab"
+    },
+    "yourRating": "La vostra valoració",
+    "addTag": "Afegeix una etiqueta",
+    "tags": "Etiquetes",
+    "searchForSources": "Cerca fonts",
+    "searchForExtensions": "Cerca extensions",
+    "searchSourcesHint": "Cerca fonts...",
+    "@searchSourcesHint": {
+        "description": "Placeholder in the desktop Browse search box on the Sources and Migrate tabs"
+    },
+    "searchExtensionsHint": "Cerca extensions...",
+    "@searchExtensionsHint": {
+        "description": "Placeholder in the desktop Browse search box on the Extensions tab"
+    },
+    "noTagsYet": "Encara no hi ha etiquetes a la biblioteca",
+    "copyToClipboard": "Copia al porta-retalls",
+    "searchTips": "Consells de cerca",
+    "searchTipsPlainWords": "Les paraules soles coincideixen amb el títol, l'autor, els gèneres i les etiquetes.",
+    "@searchTipsPlainWords": {
+        "description": "First paragraph of the search tips dialog"
+    },
+    "searchTipsField": "Escriviu un camp i dos punts, com ara {example}, per cercar en un sol camp. Els suggeriments es mostren mentre escriviu.",
+    "@searchTipsField": {
+        "description": "Second paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "searchTipsExclude": "Excloeu amb un signe menys: {example}",
+    "@searchTipsExclude": {
+        "description": "Third paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "updateProgressManualMarkRead": "Actualitza el progrés en marcar com a llegit",
+    "@updateProgressManualMarkRead": {
+        "description": "Toggle label: sync progress when a chapter is manually marked as read"
+    },
+    "updateProgressManualMarkReadDesc": "No s'aplica en marcar com a llegits en bloc",
+    "@updateProgressManualMarkReadDesc": {
+        "description": "Subtitle for the manual-mark-read progress toggle"
+    },
+    "reLogin": "El testimoni ha caducat; torneu a iniciar la sessió",
+    "@reLogin": {
+        "description": "Subtitle shown on a tracker tile when the token is expired, prompting the user to log in again"
+    },
+    "trackerLoginSuccess": "Sessió iniciada a {trackerName}",
+    "@trackerLoginSuccess": {
+        "description": "Toast shown after a successful tracker login",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "manageTrackers": "Gestiona els serveis de seguiment",
+    "@manageTrackers": {
+        "description": "Button / list-tile label that opens the Tracking settings screen from the track hub sheet"
+    },
+    "noTrackersLoggedIn": "Inicieu la sessió en un servei de seguiment",
+    "@noTrackersLoggedIn": {
+        "description": "Empty-state message shown in the track hub sheet when no tracker account is logged in"
+    },
+    "logInToEdit": "Inicia la sessió per editar",
+    "@logInToEdit": {
+        "description": "Button shown on a read-only tracker card when the tracker account is logged out but the manga already has a bound record; tapping pops the sheet and opens Tracking Settings"
+    },
+    "trackBindSuccess": "S'ha afegit a {trackerName}",
+    "@trackBindSuccess": {
+        "description": "Success toast shown after a manga is successfully bound to a tracker",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackChaptersRead": "Capítols llegits",
+    "@trackChaptersRead": {
+        "description": "Row label for the chapters-read field in the track editor"
+    },
+    "trackRemoveEntry": "Elimina el seguiment",
+    "@trackRemoveEntry": {
+        "description": "Overflow menu item that removes the track record"
+    },
+    "trackRemoveConfirmTitle": "Voleu eliminar el seguiment?",
+    "@trackRemoveConfirmTitle": {
+        "description": "Title of the confirmation dialog when removing a track record"
+    },
+    "trackRemoveConfirmBody": "Això eliminarà l'entrada de seguiment de {trackerName}.",
+    "@trackRemoveConfirmBody": {
+        "description": "Body of the remove-tracking confirmation dialog",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackRemoveAlsoOnRemote": "Elimina-la també de {trackerName}",
+    "@trackRemoveAlsoOnRemote": {
+        "description": "Checkbox in the remove-tracking dialog that also deletes the entry on the tracker service",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackChangeEntry": "Canvia l'entrada",
+    "@trackChangeEntry": {
+        "description": "Overflow menu item that opens the tracker search to rebind to a different entry"
+    },
+    "trackPrivateBadge": "Privat",
+    "@trackPrivateBadge": {
+        "description": "Badge shown on a private track record in the track editor header"
+    },
+    "group": "Agrupa",
+    "@group": {
+        "description": "Label for the Group tab in the library organizer sheet (Filter/Sort/Display/Group)"
+    },
+    "groupByStatus": "Per estat",
+    "@groupByStatus": {
+        "description": "Group mode: one tab per publication status"
+    },
+    "groupUngrouped": "Sense agrupar",
+    "@groupUngrouped": {
+        "description": "Group mode: single tab containing all library manga"
+    },
+    "groupByTrackStatus": "Per estat de seguiment",
+    "@groupByTrackStatus": {
+        "description": "Group mode: one tab per tracker status (Reading, Completed, etc.); gated on logged-in trackers"
+    },
+    "copyPageLink": "Copia l'enllaç de la pàgina",
+    "@copyPageLink": {
+        "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
+    },
+    "copiedImage": "S'ha copiat la imatge",
+    "@copiedImage": {
+        "description": "Toast shown after the current page image was copied to the clipboard"
+    },
+    "shareImage": "Comparteix la imatge",
+    "@shareImage": {
+        "description": "Reader page-actions sheet: share the current page image file via the system share sheet"
+    },
+    "saveToGallery": "Desa a la galeria",
+    "@saveToGallery": {
+        "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
+    },
+    "copyFirstPage": "Copia la primera",
+    "@copyFirstPage": {
+        "description": "Reader page-actions sheet: copy the first page image in a two-page spread"
+    },
+    "shareFirstPage": "Comparteix la primera",
+    "@shareFirstPage": {
+        "description": "Reader page-actions sheet: share the first page image in a two-page spread"
+    },
+    "saveFirstPage": "Desa la primera",
+    "@saveFirstPage": {
+        "description": "Reader page-actions sheet: save the first page image in a two-page spread"
+    },
+    "copySecondPage": "Copia la segona",
+    "@copySecondPage": {
+        "description": "Reader page-actions sheet: copy the second page image in a two-page spread"
+    },
+    "shareSecondPage": "Comparteix la segona",
+    "@shareSecondPage": {
+        "description": "Reader page-actions sheet: share the second page image in a two-page spread"
+    },
+    "saveSecondPage": "Desa la segona",
+    "@saveSecondPage": {
+        "description": "Reader page-actions sheet: save the second page image in a two-page spread"
+    },
+    "copySpread": "Copia la doble pàgina",
+    "@copySpread": {
+        "description": "Reader page-actions sheet: copy a combined two-page spread image"
+    },
+    "shareSpread": "Comparteix la doble pàgina",
+    "@shareSpread": {
+        "description": "Reader page-actions sheet: share a combined two-page spread image"
+    },
+    "saveSpread": "Desa la doble pàgina",
+    "@saveSpread": {
+        "description": "Reader page-actions sheet: save a combined two-page spread image"
+    },
+    "savedToGallery": "S'ha desat a la galeria",
+    "@savedToGallery": {
+        "description": "Toast shown after the current page image was saved to the device gallery"
+    },
+    "zoomStart": "Posició inicial del zoom",
+    "@zoomStart": {
+        "description": "Section label for the paged zoom-start chip row"
+    },
+    "zoomStartAutomatic": "Automàtica",
+    "@zoomStartAutomatic": {
+        "description": "Zoom start position chip"
+    },
+    "zoomStartCenter": "Centre",
+    "@zoomStartCenter": {
+        "description": "Zoom start position chip"
+    },
+    "offlineServerMismatch": "Les baixades sense connexió són d'un altre servidor.",
+    "offlineServerMismatchDisabled": "El mode sense connexió està desactivat aquí. Esborreu les baixades de l'altre servidor per fer-lo servir.",
+    "offlineServerMismatchClear": "Esborra les baixades antigues",
+    "offlineServerMismatchDismiss": "Descarta",
+    "offlineServerMismatchConfirmTitle": "Voleu esborrar les dades sense connexió?",
+    "offlineServerMismatchConfirmBody": "Això elimina tot el manga del dispositiu i les baixades en cua del servidor anterior.",
+    "offlineCatalogClearFailed": "No s'han pogut esborrar les dades sense connexió. Poseu en pausa les baixades i torneu-ho a provar.",
+    "offlineServerMismatchClearAction": "Esborra les dades sense connexió",
+    "keyboardShortcuts": "Dreceres de teclat",
+    "@keyboardShortcuts": {
+        "description": "Settings tile + Hotkeys page title"
+    },
+    "hotkeysGlobalSection": "Global",
+    "@hotkeysGlobalSection": {
+        "description": "Hotkeys page section header"
+    },
+    "hotkeyGoBack": "Torna enrere",
+    "@hotkeyGoBack": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenLibrary": "Obre la biblioteca",
+    "@hotkeyOpenLibrary": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenDownloads": "Obre les baixades",
+    "@hotkeyOpenDownloads": {
+        "description": "Hotkey action"
+    },
+    "hotkeyReaderFirstPage": "Primera pàgina",
+    "@hotkeyReaderFirstPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderLastPage": "Última pàgina",
+    "@hotkeyReaderLastPage": {
+        "description": "Reader hotkey action"
+    },
+    "extensionStoresDescription": "Afegiu botigues d'extensions des de les quals el servidor instal·la",
+    "@extensionStoresDescription": {
+        "description": "Subtitle for the Extension stores settings row when no stores are added yet"
+    },
+    "recommendsInOverflow": "Recomanacions al menú de desbordament",
+    "@recommendsInOverflow": {
+        "description": "Setting to move the recommendations button into the overflow menu"
+    },
+    "recommendsInOverflowSubtitle": "Mou les recomanacions al menú de desbordament en lloc de mostrar la fila a la pàgina del manga",
+    "@recommendsInOverflowSubtitle": {
+        "description": "Subtitle for the recommendations-in-overflow setting"
+    },
+    "storeIndexUrl": "URL de l'índex de la botiga",
+    "@storeIndexUrl": {
+        "description": "Label for the index URL field in the Add extension store dialog"
+    },
+    "extensionStoreAlreadyExists": "Aquesta botiga d'extensions ja existeix",
+    "@extensionStoreAlreadyExists": {
+        "description": "Validation error shown when the entered store URL is already in the list"
+    },
+    "processing": "S'està processant…",
+    "@processing": {
+        "description": "Button label shown while an extension store is being added"
+    },
+    "removeExtensionStore": "Elimina la botiga d'extensions",
+    "@removeExtensionStore": {
+        "description": "Title of the confirmation dialog for removing an extension store"
+    },
+    "removeExtensionStoreBody": "Voleu eliminar la botiga d'extensions «{name}» ({url})?",
+    "@removeExtensionStoreBody": {
+        "description": "Body of the confirmation dialog for removing an extension store",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "extensionStoresEmpty": "Encara no heu afegit cap botiga d'extensions",
+    "@extensionStoresEmpty": {
+        "description": "Empty state text on the Extension stores screen"
+    },
+    "nStores": "{count, plural, =1{1 botiga} other{{count} botigues}}",
+    "@nStores": {
+        "description": "Text to show n extension stores as subtitle",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "preferredScanlationGroups": "Grups preferits",
+    "@preferredScanlationGroups": {
+        "description": "Title for the preferred scanlation groups filter-sheet row and ranking dialog"
+    },
+    "preferredGroupsHint": "Els grups marcats es prefereixen per ordre; els capítols que no cobreixen recorren a altres grups.",
+    "@preferredGroupsHint": {
+        "description": "Hint text explaining the preferred scanlation groups ranking dialog"
+    },
+    "noGroupPreference": "Sense preferència",
+    "@noGroupPreference": {
+        "description": "Subtitle shown when no preferred scanlation groups are set"
+    },
+    "showAllChapterVersions": "Mostra totes les versions",
+    "@showAllChapterVersions": {
+        "description": "Switch title to show every scanlator's copy of each chapter instead of the deduped preferred version"
+    },
+    "possibleDuplicatesTitle": "Possibles duplicats",
+    "@possibleDuplicatesTitle": {
+        "description": "Title of the dialog shown when a manga being added may already be in the library"
+    },
+    "possibleDuplicatesBody": "Teniu entrades a la biblioteca amb un nom semblant.\n\nSeleccioneu una entrada per migrar o afegiu-la igualment.",
+    "@possibleDuplicatesBody": {
+        "description": "Body text of the possible-duplicates dialog shown before adding a manga to the library"
+    },
+    "actionAddAnyway": "Afegeix igualment",
+    "@actionAddAnyway": {
+        "description": "Button text to add a manga to the library despite a possible duplicate"
+    },
+    "duplicateSameTrackerEntry": "Mateixa entrada de {tracker}",
+    "@duplicateSameTrackerEntry": {
+        "description": "Label on a duplicate candidate that shares a tracker binding, naming the tracker",
+        "placeholders": {
+            "tracker": {
+                "type": "String"
+            }
+        }
+    },
+    "duplicateSameTrackerEntryGeneric": "Mateixa entrada del servei de seguiment",
+    "@duplicateSameTrackerEntryGeneric": {
+        "description": "Label on a duplicate candidate that shares a tracker binding when the tracker's name isn't known"
+    },
+    "duplicateAllowAll": "Permet-los tots",
+    "@duplicateAllowAll": {
+        "description": "Button text to add every remaining duplicate candidate during a bulk add"
+    },
+    "duplicateSkipIt": "Omet-lo",
+    "@duplicateSkipIt": {
+        "description": "Button text to skip a single duplicate candidate during a bulk add"
+    },
+    "duplicateSkipAll": "Omet-los tots",
+    "@duplicateSkipAll": {
+        "description": "Button text to skip every remaining duplicate candidate during a bulk add"
+    },
+    "bulkAddedSkipped": "Se n'han afegit {added} i omès {skipped}",
+    "@bulkAddedSkipped": {
+        "description": "Summary toast after a bulk add where some entries were skipped as duplicates",
+        "placeholders": {
+            "added": {
+                "type": "int"
+            },
+            "skipped": {
+                "type": "int"
+            }
+        }
+    },
+    "bulkAdded": "S'han afegit {added} a la biblioteca",
+    "@bulkAdded": {
+        "description": "Summary toast after a bulk add where no entries were skipped",
+        "placeholders": {
+            "added": {
+                "type": "int"
+            }
+        }
+    },
+    "scanForDuplicates": "Cerca duplicats",
+    "@scanForDuplicates": {
+        "description": "Button text to run the library-wide duplicate scan"
+    },
+    "duplicatesOfflineTitleOnly": "Sense connexió: només es compara pel títol",
+    "@duplicatesOfflineTitleOnly": {
+        "description": "Notice shown during the duplicate scan while offline, since tracker and description matching need server data"
+    },
+    "duplicatesRemoveConfirm": "{count, plural, =1{Voleu eliminar 1 entrada de la biblioteca?} other{Voleu eliminar {count} entrades de la biblioteca?}} També s'eliminaran els capítols baixats en aquest dispositiu.",
+    "@duplicatesRemoveConfirm": {
+        "description": "Confirmation dialog body for removing entries found by the duplicate scan",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatesRemoveOfflineTooltip": "Torneu a connectar-vos al servidor per eliminar entrades",
+    "@duplicatesRemoveOfflineTooltip": {
+        "description": "Tooltip on the disabled remove action in the duplicate scan while offline"
+    },
+    "duplicatesRemoved": "S'han eliminat {count} de la biblioteca",
+    "@duplicatesRemoved": {
+        "description": "Toast after removing entries from the duplicate scan when all removals succeeded",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatesRemovedPartial": "S'han eliminat {removed} de {total}. La resta no s'han pogut eliminar.",
+    "@duplicatesRemovedPartial": {
+        "description": "Toast after removing entries from the duplicate scan when a removal failed partway, so fewer were removed than requested",
+        "placeholders": {
+            "removed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineChaptersScreenTitle": "Capítols baixats",
+    "@offlineChaptersScreenTitle": {
+        "description": "AppBar title for the offline series drill-down chapter list"
+    },
+    "offlineChaptersActiveSection": "S'estan baixant / En cua",
+    "@offlineChaptersActiveSection": {
+        "description": "Section header for chapters currently downloading or queued in the offline chapter list"
+    },
+    "offlineChaptersErrorSection": "Fallits",
+    "@offlineChaptersErrorSection": {
+        "description": "Section header for chapters that failed to download"
+    },
+    "offlineChaptersEmpty": "Encara no hi ha capítols desats en aquest dispositiu.",
+    "@offlineChaptersEmpty": {
+        "description": "Empty state for the offline chapter drill-down screen"
+    },
+    "offlineChapterDelete": "Elimina del dispositiu",
+    "@offlineChapterDelete": {
+        "description": "Button / tooltip to remove an on-device chapter"
+    },
+    "notificationDownloadsPausedBudget": "S'ha arribat al límit de baixades en segon pla d'Android. Obriu Tsumiru per tornar-ho a provar.",
+    "accountRegistrationTitle": "Crea un compte",
+    "accountRecoveryTitle": "Restableix la contrasenya",
+    "accountRegistrationCode": "Codi de registre",
+    "accountRecoveryCode": "Codi de recuperació",
+    "accountCodeRequired": "Introduïu un codi",
+    "accountCurrentPassword": "Contrasenya actual",
+    "accountNewPassword": "Contrasenya nova",
+    "accountConfirmPassword": "Confirmeu la contrasenya",
+    "accountPasswordsDoNotMatch": "Les contrasenyes no coincideixen",
+    "accountChangePassword": "Canvia la contrasenya",
+    "accountTitle": "Compte",
+    "accountPermissions": "Permisos",
+    "accountPermissionsSummary": "{allowed} de {total} permesos",
+    "@accountPermissionsSummary": {
+        "placeholders": {
+            "allowed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "accountPermissionsFullAccess": "Accés complet",
+    "accountPermissionsUnavailable": "No disponible",
+    "accountPermissionAllowed": "Permès",
+    "accountPermissionRestricted": "Restringit",
+    "accountRoleAdmin": "Administrador",
+    "accountRoleUser": "Usuari",
+    "accountRoleVisitor": "Visitant",
+    "accountRoleUnknown": "Rol desconegut",
+    "accountSignOut": "Tanca la sessió",
+    "accountSignOutConfirmation": "Voleu tancar la sessió d'aquest compte? Els capítols baixats es mantindran en aquest dispositiu.",
+    "accountBuiltInPassword": "La contrasenya d'aquest compte es gestiona a la configuració del servidor.",
+    "accountPermissionInstallExtensions": "Instal·lar extensions",
+    "accountPermissionInstallExternalExtensions": "Instal·lar fitxers d'extensions",
+    "accountPermissionUninstallExtensions": "Desinstal·lar extensions",
+    "accountPermissionDownloadChapters": "Baixar capítols",
+    "accountPermissionManageSettings": "Gestionar la configuració del servidor",
+    "accountPermissionManageUsers": "Gestionar els usuaris",
+    "accountPermissionManageExtensionStores": "Gestionar les botigues d'extensions",
+    "accountPermissionManageSourcePreferences": "Gestionar les preferències de les fonts",
+    "accountPermissionManageCache": "Gestionar la memòria cau del servidor",
+    "accountPasswordUnconfirmed": "No s'ha pogut confirmar el canvi de contrasenya. Torneu a iniciar la sessió per continuar.",
+    "accountPasswordSignInRequired": "Torneu a iniciar la sessió per continuar.",
+    "accountSearchUsers": "Cerca usuaris",
+    "accountCreateUser": "Crea un compte",
+    "accountCodes": "Codis pendents",
+    "accountNoUsers": "No s'ha trobat cap usuari",
+    "accountNoCodes": "No hi ha codis pendents",
+    "accountRole": "Rol",
+    "accountBuiltInReadOnly": "El rol i els permisos de l'administrador integrat no es poden canviar.",
+    "accountNoUserRemoval": "Aquest servidor no permet eliminar usuaris actualment.",
+    "accountCodeShownOnce": "Copieu aquest codi abans de tancar. No es tornarà a mostrar.",
+    "accountCodeExpires": "Caduca el {date}",
+    "@accountCodeExpires": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "accountRevokeCode": "Revoca el codi",
+    "accountRevokeCodeConfirmation": "Voleu revocar aquest codi? Ja no es podrà fer servir per crear un compte ni per restablir una contrasenya.",
+    "accountIssueRecoveryCode": "Crea un codi de recuperació",
+    "accountIssueRegistrationCode": "Crea un codi de registre",
+    "accountPasswordWhitespace": "Aquest servidor requereix una contrasenya sense espais al principi ni al final.",
+    "accountCatalogueWithoutLogin": "Baixades sense inici de sessió de compte",
+    "accountInactiveCatalogues": "Baixades de comptes inactius",
+    "accountCatalogueOwner": "Compte {id}",
+    "@accountCatalogueOwner": {
+        "placeholders": {
+            "id": {
+                "type": "String"
+            }
+        }
+    },
+    "accountCatalogueUnknownServer": "Servidor desconegut",
+    "accountCataloguesUnavailable": "No s'han pogut carregar les baixades desades dels comptes.",
+    "accountCatalogueRemoveTitle": "Voleu eliminar les baixades del compte?",
+    "accountCatalogueRemoveConfirm": "Voleu eliminar d'aquest dispositiu els capítols baixats i la biblioteca sense connexió de {account} a {server}? Les dades del servidor no canviaran.",
+    "@accountCatalogueRemoveConfirm": {
+        "placeholders": {
+            "account": {
+                "type": "String"
+            },
+            "server": {
+                "type": "String"
+            }
+        }
+    },
+    "accountCatalogueRemoveFailed": "No s'han pogut eliminar les baixades del compte. Pot ser que s'estiguin fent servir.",
+    "recommendationsUnavailableWeb": "Aquestes recomanacions no estan disponibles a l'aplicació web.",
+    "offlineRecoveryRunning": "S'estan recuperant les baixades. Podeu continuar fent servir l'aplicació.",
+    "offlineRecoveryFailed": "S'ha aturat la recuperació de les baixades. S'han conservat els fitxers existents. Torneu-ho a provar per continuar.",
+    "offlineRecoveryUnavailable": "Els capítols desats no estan disponibles temporalment mentre es recuperen les baixades.",
+    "offlineRecoveryCompleted": "S'han recuperat {count} imatges",
+    "@offlineRecoveryCompleted": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineRecoveryConflicts": "Alguns capítols tenen un progrés de lectura diferent a la còpia original i a l'actual. Trieu quin progrés voleu conservar. Es fa una còpia de seguretat de totes dues còpies.",
+    "offlineRecoveryReview": "Revisa el progrés",
+    "offlineRecoveryOriginal": "Utilitza l'original",
+    "offlineRecoveryCurrent": "Utilitza l'actual",
+    "offlineRecoveryOriginalAll": "Utilitza l'original per a tots",
+    "offlineRecoveryCurrentAll": "Utilitza l'actual per a tots",
+    "offlineRecoveryNotBookmarked": "Sense marcador",
+    "offlineRecoveryLastRead": "Darrera lectura: {time}",
+    "@offlineRecoveryLastRead": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "offlineRecoveryUnknownTime": "No registrat",
+    "offlineRecoveryPendingSync": "Sincronització pendent: {fields}",
+    "@offlineRecoveryPendingSync": {
+        "placeholders": {
+            "fields": {
+                "type": "String"
+            }
+        }
+    },
+    "offlineRecoveryNoPendingSync": "No hi ha canvis pendents",
+    "offlineRecoveryPagePosition": "posició de la pàgina",
+    "offlineRecoveryReadStatus": "estat de lectura",
+    "offlineRecoveryBookmark": "marcador",
+    "offlineRecoveryManualRead": "Estat de lectura canviat manualment",
+    "bulkDownloadPresetDescription": "{preset} per a cada sèrie seleccionada. S'ometran els capítols que ja estiguin baixats.",
+    "@bulkDownloadPresetDescription": {
+        "description": "Confirmation for applying a chapter download preset to selected library series",
+        "placeholders": {
+            "preset": {
+                "type": "String"
+            }
+        }
+    },
+    "syncyomiSubtitle": "Sincronitzeu la biblioteca i el progrés de lectura mitjançant un servidor SyncYomi",
+    "syncYomiEnabled": "Sincronitza amb SyncYomi",
+    "syncYomiHost": "Amfitrió",
+    "@syncYomiHost": {
+        "description": "Base URL of the SyncYomi server, e.g. the origin only, without /api/sync"
+    },
+    "syncYomiHostHint": "https://syncyomi.example.com",
+    "syncYomiHostInvalid": "Introduïu un URL que comenci per http:// o https://",
+    "syncYomiApiKey": "Clau de l'API",
+    "syncYomiSet": "Definida",
+    "syncYomiNotSet": "Sense definir",
+    "syncYomiEveryNHours": "{count, plural, =1{Cada hora} other{Cada {count} hores}}",
+    "@syncYomiEveryNHours": {
+        "description": "Interval wording for a server-set interval the picker does not offer",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncYomiEveryNMinutes": "{count, plural, =1{Cada minut} other{Cada {count} minuts}}",
+    "@syncYomiEveryNMinutes": {
+        "description": "Interval wording for a server-set interval under an hour",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncYomiSyncDataNone": "No hi ha res seleccionat",
+    "syncYomiSyncDataInclude": "Inclou: {list}",
+    "@syncYomiSyncDataInclude": {
+        "description": "Summary of the data kinds a sync includes, comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiNeverSynced": "No s'ha sincronitzat mai",
+    "syncYomiLastSynced": "Darrera sincronització: {time}",
+    "@syncYomiLastSynced": {
+        "description": "Status line after a successful sync; time is a localised date and time",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiLastSyncFailed": "Ha fallat la darrera sincronització: {error}",
+    "@syncYomiLastSyncFailed": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiUnknownError": "Error desconegut",
+    "syncYomiSyncing": "S'està sincronitzant…",
+    "@syncYomiSyncing": {
+        "description": "Status line and tooltip while a step the app does not know is running"
+    },
+    "syncYomiSyncingStep": "S'està sincronitzant: {step}",
+    "@syncYomiSyncingStep": {
+        "placeholders": {
+            "step": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiStepStarting": "S'està iniciant",
+    "syncYomiAlreadyRunning": "Ja hi ha una sincronització en curs",
+    "syncYomiDisabled": "Activeu primer «Sincronitza amb SyncYomi»",
+    "syncYomiUnsupported": "Aquest servidor no admet SyncYomi. Actualitzeu Suwayomi per fer-lo servir.",
+    "@syncYomiUnsupported": {
+        "description": "Message on the SyncYomi settings screen when the server has no SyncYomi settings"
+    },
+    "koreaderSyncSubtitle": "Sincronitzeu el progrés de lectura amb KOReader",
+    "koreaderSyncConnectedAs": "Connectat com a {username} a {serverAddress}",
+    "@koreaderSyncConnectedAs": {
+        "description": "KOReader Sync connection status subtitle",
+        "placeholders": {
+            "username": {
+                "type": "String"
+            },
+            "serverAddress": {
+                "type": "String"
+            }
+        }
+    },
+    "koreaderSyncConnect": "Connecta",
+    "koreaderSyncDisconnect": "Desconnecta",
+    "koreaderSyncUnknownError": "Error desconegut",
+    "koreaderSyncPercentageTolerance": "Tolerància del percentatge",
+    "koreaderSyncPercentageToleranceInvalid": "Introduïu un nombre entre 0 i 1.",
+    "koreaderSyncShowPassword": "Mostra la contrasenya",
+    "koreaderSyncHidePassword": "Amaga la contrasenya",
+    "koreaderSyncUnsupported": "Aquest servidor no admet KOReader Sync. Actualitzeu Suwayomi per fer-lo servir.",
+    "webInterface": "Interfície web",
+    "webInterfaceExplanation": "El que mostra el servidor quan algú obre la seva adreça en un navegador. Això no canvia aquesta aplicació.",
+    "webInterfaceExplanationCurrent": "El que mostra el servidor quan algú obre la seva adreça en un navegador. Aquesta és la interfície que feu servir ara.",
+    "webInterfaceUnsupported": "Aquest servidor no admet la configuració de la interfície web.",
+    "unsupportedPreference": "L'aplicació no admet aquest paràmetre.",
+    "webInterfaceVUIDescription": "Una interfície web centrada en la vista prèvia feta amb Svelte",
+    "webInterfaceTsumiru": "Tsumiru",
+    "webInterfaceTsumiruDescription": "Una interfície web moderna feta amb Flutter, amb 13 temes, mode d'incògnit i aplicacions per a totes les plataformes",
+    "webInterfaceCustomDescription": "Utilitza una WebUI personalitzada. Substituïu el contingut del directori «webUI» del directori arrel del servidor pels fitxers de la WebUI personalitzada.",
+    "webInterfaceUnknown": "Interfície desconeguda",
+    "webInterfaceChannel": "Canal d'actualització",
+    "webInterfaceBundledOnly": "«Inclòs» només funciona amb la WebUI predeterminada. Trieu «Estable» o «Vista prèvia» per a altres interfícies.",
+    "webInterfaceOff": "Desactivat",
+    "webInterfaceHours": "{hours, plural, =1{Cada hora} other{Cada {hours} hores}}",
+    "@webInterfaceHours": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "webInterfaceInstalledVersion": "Versió instal·lada",
+    "webInterfaceCheckUpdate": "Comprova si hi ha actualitzacions",
+    "webInterfaceUpdateAvailable": "Actualització disponible: {tag}",
+    "@webInterfaceUpdateAvailable": {
+        "placeholders": {
+            "tag": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceInstallSwitch": "Instal·leu-la per canviar el servidor a {name}",
+    "@webInterfaceInstallSwitch": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceUpToDate": "Actualitzat",
+    "webInterfaceInstalling": "S'està instal·lant l'actualització: {progress}%",
+    "@webInterfaceInstalling": {
+        "placeholders": {
+            "progress": {
+                "type": "int"
+            }
+        }
+    },
+    "webInterfaceInstalled": "S'ha instal·lat l'actualització de la interfície web.",
+    "webInterfaceUpdateFailed": "El servidor no ha pogut instal·lar l'actualització de la interfície web. Comproveu els registres del servidor i torneu-ho a provar.",
+    "webInterfaceError": "Interfície web: {error}",
+    "@webInterfaceError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceCustomUpdates": "Les interfícies personalitzades s'instal·len manualment al directori «webUI» del servidor.",
+    "updatedByYourServer": "Actualitzat pel servidor",
+    "serverInstalledNewTsumiru": "S'ha instal·lat una versió nova de Tsumiru al servidor",
+    "reloadWebBuild": "Torna a carregar",
+    "couldntReachSource": "No s'ha pogut accedir a {source}",
+    "@couldntReachSource": {
+        "description": "Inline error in a global search source row",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "about": "Quant a",
+    "@about": {
+        "description": "Screen title and Button text of About screen"
+    },
+    "advanced": "Avançat",
+    "@advanced": {
+        "description": "Section title Text for Advanced Section"
+    },
+    "appearance": "Aparença",
+    "@appearance": {
+        "description": "Screen title and Button text of Appearance screen"
+    },
+    "authTypeSimpleLogin": "Inici de sessió simple",
+    "@authTypeSimpleLogin": {
+        "description": "Radio button text for Suwayomi server's simple_login auth mode"
+    },
+    "authLogout": "Tanca la sessió",
+    "@authLogout": {
+        "description": "Tile title in settings to log out and clear stored credentials"
+    },
+    "authTypeNone": "Cap",
+    "@authTypeNone": {
+        "description": "Radio button text for no Authentication"
+    },
+    "authentication": "Autenticació",
+    "@authentication": {
+        "description": "Section title for server authentication"
+    },
+    "autoDownload": "Baixada automàtica",
+    "@autoDownload": {
+        "description": "Title for Auto-download Section in downloads settings"
+    },
+    "autoDownloadNewChapters": "Baixa els capítols nous",
+    "@autoDownloadNewChapters": {
+        "description": "Toggle's title to change Auto Download New Chapters settings"
+    },
+    "autoDownloadCategories": "Categories",
+    "centerMarginNone": "Cap",
+    "@centerMarginNone": {
+        "description": "Center margin chip"
+    },
+    "imageScaleType": "Tipus d'escalat",
+    "@imageScaleType": {
+        "description": "Section label for the paged image scale-type chip row"
+    },
+    "imageScaleTypeFitHeight": "Ajusta a l'alçada",
+    "@imageScaleTypeFitHeight": {
+        "description": "Image scale type chip"
+    },
+    "imageScaleTypeFitScreen": "Ajusta a la pantalla",
+    "@imageScaleTypeFitScreen": {
+        "description": "Image scale type chip"
+    },
+    "imageScaleTypeFitWidth": "Ajusta a l'amplada",
+    "@imageScaleTypeFitWidth": {
+        "description": "Image scale type chip"
+    },
+    "imageScaleTypeOriginalSize": "Mida original",
+    "@imageScaleTypeOriginalSize": {
+        "description": "Image scale type chip"
+    },
+    "pageLayoutSinglePage": "Pàgina única",
+    "@pageLayoutSinglePage": {
+        "description": "Page layout chip"
+    },
+    "showTapZonesOverlay": "Mostra la superposició de zones tàctils",
+    "@showTapZonesOverlay": {
+        "description": "Reader setting: flash the tap zones when a chapter opens"
+    },
+    "readerGroupDisplay": "Visualització",
+    "@readerGroupDisplay": {
+        "description": "Reader settings group heading for display options"
+    },
+    "readerGroupWebtoonViewer": "Tira llarga",
+    "@readerGroupWebtoonViewer": {
+        "description": "Group heading for the long-strip settings, in both the reader sheet and Reader settings"
+    },
+    "readerSectionReadingMode": "Mode de lectura",
+    "@readerSectionReadingMode": {
+        "description": "Section label for the reading-mode chip row"
+    },
+    "readerSectionTapInvert": "Inverteix les zones tàctils",
+    "@readerSectionTapInvert": {
+        "description": "Section label for the tap-invert chip row"
+    },
+    "readerSectionTapZones": "Zones de toc",
+    "@readerSectionTapZones": {
+        "description": "Section label for the tap-zone chip row"
+    },
+    "backgroundColorAuto": "Automàtic",
+    "backgroundColorBlack": "Negre",
+    "backgroundColorGray": "Gris",
+    "backgroundColorWhite": "Blanc",
+    "flashColorBlack": "Negre",
+    "flashColorWhite": "Blanc",
+    "readerBackgroundColor": "Color de fons",
+    "readerFullscreen": "Pantalla completa",
+    "showPageNumber": "Mostra el número de pàgina",
+    "automaticallyRefreshMetadata": "Actualitza automàticament les metadades",
+    "@automaticallyRefreshMetadata": {
+        "description": "Settings text to update Automatically refresh metadata"
+    },
+    "automaticallyRefreshMetadataSubtitle": "Comprova si hi ha portada i detalls nous en actualitzar la biblioteca",
+    "@automaticallyRefreshMetadataSubtitle": {
+        "description": "Settings sub title text to update Automatically refresh metadata"
+    },
+    "backupLocationDescription": "El camí del directori del servidor on s'han de desar les còpies de seguretat automàtiques",
+    "@backupLocationDescription": {
+        "description": "description for editing backup location"
+    },
+    "badges": "Distintius",
+    "@badges": {
+        "description": "Checkbox Group title to enable Badges on manga Cover in Library Screen"
+    },
+    "bookmarked": "Amb marcador",
+    "@bookmarked": {
+        "description": "Checkbox text to filter bookmarked manga chapters in Manga Details screen"
+    }
+}
