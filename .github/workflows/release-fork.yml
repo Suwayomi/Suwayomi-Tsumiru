@@ -148,7 +148,10 @@ jobs:
       - name: Build Android
         if: matrix.target == 'android'
         run: |
-          flutter build apk --release
+          # Universal APK gets +5000 so it outranks every split APK (highest ABI offset is 4000), allowing split -> universal upgrades.
+          base="$(grep '^version:' pubspec.yaml | sed 's/.*+//')"
+          case "$base" in ''|*[!0-9]*) echo "::error::Could not parse numeric build number from pubspec.yaml: $base"; exit 1;; esac
+          flutter build apk --release --build-number "$((5000 + base))"
           flutter build apk --release --split-per-abi
 
       - name: Build ${{ matrix.target }}
