@@ -20,5 +20,6 @@ Future<void> finishOnboardingSignIn(
     await signIn();
     await preferences.setInt('onboarding.step', 2);
     await preferences.setString('onboarding.pendingProbe', '');
+    await preferences.setBool('onboarding.advanceAfterProbe', false);
   });
 }
