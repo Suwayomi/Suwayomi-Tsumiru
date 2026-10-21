@@ -16,7 +16,6 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri               # GPU-accelerated rendering
-  - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.freedesktop.secrets   # libsecret credential store (host keyring)
   # connectivity_plus watches NetworkManager to notice a network change
   # and re-check whether the LAN server address is reachable.
