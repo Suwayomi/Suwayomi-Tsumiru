@@ -16,6 +16,7 @@ import 'auth_session_transition.dart';
 import 'basic_auth_migration.dart';
 import 'credential_snapshot.dart';
 import 'jwt_utils.dart';
+import 'pending_tracker_oauth_store.dart';
 import 'secure_credentials_provider.dart';
 import 'simple_login_client.dart';
 
@@ -318,6 +319,8 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       throw StateError('Authentication session changed');
     }
     if (Zone.current[_identityZone] == this) return action();
+    final wasAdmitted = sessionAdmitted;
+    var cancellationFailed = false;
     _identityChanges++;
     if (preserveSession) _handovers++;
     if (!preserveSession) {
@@ -332,6 +335,16 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       await previous;
       invalidatePendingWrites();
       await _mutationTail;
+      if (!preserveSession) {
+        try {
+          if (!await ref.read(pendingTrackerOAuthStoreProvider).cancel()) {
+            throw StateError('Could not cancel pending tracker sign-in');
+          }
+        } catch (_) {
+          cancellationFailed = true;
+          throw StateError('Could not cancel pending tracker sign-in');
+        }
+      }
       return await runZoned(
         () async {
           final transition = preserveSession
@@ -347,10 +360,16 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
         },
       );
     } finally {
+      final restoreAdmission =
+          cancellationFailed &&
+          !_retired &&
+          _activeSessionEpoch != null &&
+          wasAdmitted;
       _identityChanges--;
       if (!preserveSession) {
         _sessionChanges--;
         _sessionEpoch++;
+        if (restoreAdmission) _activeSessionEpoch = _sessionEpoch;
       }
       invalidatePendingWrites();
       _publishSession();

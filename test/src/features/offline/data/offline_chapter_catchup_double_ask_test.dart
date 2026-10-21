@@ -23,6 +23,7 @@ import 'package:tsumiru/src/features/offline/data/offline_chapter_catchup.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
+import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 GraphQLClient _dummyClient() =>
@@ -76,6 +77,9 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         offlineActiveProvider.overrideWithValue(true),
+        verifiedServerInstanceIdProvider.overrideWithValue(
+          const AsyncData('test-server'),
+        ),
         offlineDatabaseProvider.overrideWithValue(db),
         mangaBookRepositoryProvider.overrideWithValue(repo),
         updatesRepositoryProvider.overrideWithValue(_EmptyUpdatesRepository()),

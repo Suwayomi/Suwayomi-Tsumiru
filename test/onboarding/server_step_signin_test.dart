@@ -18,6 +18,7 @@ import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/presentation/account_session_host.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
+import 'package:tsumiru/src/features/auth/data/pending_tracker_oauth_store.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -57,6 +58,19 @@ http.Client _uiLoginServerClient() =>
         200,
       );
     });
+
+class _NoPendingOAuth implements PendingTrackerOAuthStore {
+  @override
+  Future<String?> read() async => null;
+  @override
+  Future<bool> replace(String payload) async => false;
+  @override
+  Future<bool> clearIfNonce(String nonce) async => false;
+  @override
+  Future<bool> claim(String expectedPayload) async => false;
+  @override
+  Future<bool> cancel() async => true;
+}
 
 class _LoginCoordinator extends AuthCoordinator {
   @override
@@ -103,6 +117,9 @@ void main() {
           ProviderContainer createContainer() => ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(sp),
+              pendingTrackerOAuthStoreProvider.overrideWithValue(
+                _NoPendingOAuth(),
+              ),
               isWebProvider.overrideWithValue(isWeb),
               authCoordinatorProvider.overrideWith(_LoginCoordinator.new),
               onboardingHttpClientProvider.overrideWithValue(
@@ -260,7 +277,9 @@ void main() {
             );
             expect(
               tester
-                  .widget<TextField>(find.widgetWithText(TextField, 'User Name'))
+                  .widget<TextField>(
+                    find.widgetWithText(TextField, 'User Name'),
+                  )
                   .controller!
                   .text,
               'reader',
