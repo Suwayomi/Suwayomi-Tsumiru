@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -22,7 +23,6 @@ import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/web_auth_mode.dart';
 import '../../../utils/theme/brand.dart';
-import '../../about/data/about_repository.dart';
 import '../../account/data/account_actions.dart';
 import '../../account/data/account_providers.dart';
 import '../../account/domain/account_access.dart';
@@ -165,7 +165,7 @@ class OnboardingScreen extends HookConsumerWidget {
                       isLast: isLast,
                       onBack: () => moveTo(step.value - 1),
                       onNext: () {
-                        if (step.value == 1 && !serverVerified.value) {
+                        if (step.value == 1) {
                           nextRequest.value++;
                         } else if (isLast) {
                           finish();
@@ -628,18 +628,21 @@ class _ServerStep extends HookConsumerWidget {
     Future<void> openCodeDialog(AccountCodeMode mode) async {
       final base = resolvedUrl.value;
       if (base == null || base.isEmpty) return;
-      await adopt(base);
-      if (!context.mounted) return;
-      final redeem = ref.read(accountActionsProvider).redeemCode;
       await showDialog<void>(
         context: context,
         builder: (_) => AccountCodeDialog(
           mode: mode,
           onSubmit: ({required code, username, required password}) async {
-            await finishOnboardingSignIn(
-              ref,
-              () => redeem(code: code, username: username, password: password),
-            );
+            await finishOnboardingSignIn(ref, () async {
+              await adopt(base);
+              await ref
+                  .read(accountActionsProvider)
+                  .redeemCode(
+                    code: code,
+                    username: username,
+                    password: password,
+                  );
+            });
           },
         ),
         animationStyle: context.motionStyle,
@@ -686,16 +689,16 @@ class _ServerStep extends HookConsumerWidget {
         }
       }
       try {
-        await finishOnboardingSignIn(
-          ref,
-          () => performSignIn(
+        await finishOnboardingSignIn(ref, () async {
+          await adopt(base);
+          await performSignIn(
             ref,
             authType: authChoice.value,
             serverBaseUrl: base,
             username: user,
             password: pass,
-          ),
-        );
+          );
+        });
       } catch (e) {
         if (e is UiLoginTokenRejected) unsupportedAfterLogin.value = true;
         return false;
@@ -704,14 +707,18 @@ class _ServerStep extends HookConsumerWidget {
       return true;
     }
 
+    Future<void> completeConnection() async {
+      final base = resolvedUrl.value;
+      if (base == null) return;
+      await finishOnboardingSignIn(ref, () => adopt(base));
+      if (context.mounted) onSignedIn();
+    }
+
     Future<void> markConnected() async {
       state.value = _TestState.connected;
       onVerifiedChanged(true);
       if (preferences.getBool('onboarding.advanceAfterProbe') == true) {
-        await preferences.setString('onboarding.pendingProbe', '');
-        await preferences.setBool('onboarding.advanceAfterProbe', false);
-        await preferences.setInt('onboarding.step', 2);
-        if (context.mounted) onSignedIn();
+        await completeConnection();
       }
     }
 
@@ -726,40 +733,44 @@ class _ServerStep extends HookConsumerWidget {
       unsupportedAfterLogin.value = false;
       unsupportedFromNotFound.value = false;
       onVerifiedChanged(false);
-      await ref.read(serverPortToggleProvider.notifier).update(false);
-      if (!context.mounted) return;
-      await ref.read(serverExternalUrlProvider.notifier).update(url);
-      if (!context.mounted) return;
-      await Future<void>.delayed(const Duration(milliseconds: 150));
-      if (!context.mounted) return;
-      final result = await AsyncValue.guard(
-        () => ref.read(aboutRepositoryProvider).getAbout(),
+      final client = ref.read(onboardingHttpClientProvider)();
+      final graphQl = GraphQLClient(
+        link: HttpLink(
+          graphqlUriFor(url).toString(),
+          httpClient: client,
+          httpResponseDecoder: tsumiruHttpResponseDecoder,
+          defaultHeaders: ref.read(customHttpHeadersProvider).value ?? const {},
+        ),
+        cache: GraphQLCache(store: InMemoryStore()),
       );
-      if (!context.mounted) return;
-      if (result.hasError || result.value == null) {
-        final failure = result.error;
-        final aboutError = failure is OperationMessageException
-            ? failure.exception
-            : failure;
-        if (webServerAuthUnsupported(
-          aboutError: aboutError,
-          detectedAuthType: null,
-        )) {
-          unsupportedFromNotFound.value =
-              aboutError != null && isBasicGatedNotFound(aboutError);
-          state.value = _TestState.unsupportedAuth;
+      try {
+        final result = await graphQl.query(
+          QueryOptions(
+            document: gql(kAboutProbeQuery),
+            fetchPolicy: FetchPolicy.noCache,
+          ),
+        );
+        if (!context.mounted) return;
+        final about = result.data?['aboutServer'];
+        if (result.hasException || about == null) {
+          final failure = result.exception;
+          if (webServerAuthUnsupported(
+            aboutError: failure,
+            detectedAuthType: null,
+          )) {
+            unsupportedFromNotFound.value =
+                failure != null && isBasicGatedNotFound(failure);
+            state.value = _TestState.unsupportedAuth;
+            onVerifiedChanged(false);
+            return;
+          }
+          errorDetail.value = failure?.toString();
+          state.value = _TestState.failed;
           onVerifiedChanged(false);
           return;
         }
-        errorDetail.value = result.error?.toString();
-        state.value = _TestState.failed;
-        onVerifiedChanged(false);
-        return;
-      }
-      version.value = result.value?.version;
-      resolvedUrl.value = url;
-      final client = ref.read(onboardingHttpClientProvider)();
-      try {
+        version.value = about['version'] as String?;
+        resolvedUrl.value = url;
         final probe = await webAuthProbe(
           url,
           client: client,
@@ -848,8 +859,10 @@ class _ServerStep extends HookConsumerWidget {
             onVerifiedChanged(false);
           case ResolveOutcome.found:
           case ResolveOutcome.basicGated:
-            await adopt(result.baseUrl);
-            if (!context.mounted) return;
+            resolvedUrl.value = result.baseUrl;
+            if (urlController.text != result.baseUrl) {
+              urlController.text = result.baseUrl;
+            }
             version.value = result.serverVersion;
             final needsLogin =
                 result.outcome == ResolveOutcome.basicGated ||
@@ -985,7 +998,9 @@ class _ServerStep extends HookConsumerWidget {
             state.value == _TestState.searching) {
           return;
         }
-        if (state.value == _TestState.needsLogin) {
+        if (state.value == _TestState.connected) {
+          await completeConnection();
+        } else if (state.value == _TestState.needsLogin) {
           await signIn();
         } else {
           if (urlController.text.trim().isNotEmpty) {
