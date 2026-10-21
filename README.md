@@ -26,7 +26,7 @@ Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-S
 
 ## Screenshots
 
-<img src="./.github/readme-images/phone-series-framed.png" alt="A series page on Android" height="300"/> <img src="flatpak/screenshots/02-series.png" alt="A series page on desktop" height="300"/>
+<img src="./.github/readme-images/phone-series-framed.png" alt="A series page on Android" height="250"/> <img src="flatpak/screenshots/02-series.png" alt="A series page on desktop" height="250"/>
 
 ## Features
 
