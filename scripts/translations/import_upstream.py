@@ -33,11 +33,11 @@ LOCALES = {
     'ar': ('ar', 'ar'), 'de': ('de', 'de'), 'es': ('es', 'es'),
     'fil': ('fil', 'fil'), 'fr': ('fr', 'fr'), 'id': ('id', 'in'),
     'it': ('it', 'it'), 'ja': ('ja', 'ja'), 'ko': ('ko', 'ko'),
-    'nb': ('nb-NO', 'nb-rNO'), 'nb_NO': ('nb-NO', 'nb-rNO'), 'nl': ('nl', 'nl'),
+    'nb': ('nb-NO', 'nb-rNO'), 'nl': ('nl', 'nl'),
     'pt': ('pt', 'pt'), 'pt_BR': ('pt-BR', 'pt-rBR'),
     'ru': ('ru', 'ru'), 'ta': ('ta', 'ta'), 'th': ('th', 'th'),
     'tr': ('tr', 'tr'), 'uk': ('uk', 'uk'), 'vi': ('vi', 'vi'),
-    'zh_Hans': ('zh-Hans', 'zh-rCN'), 'zh_Hant': ('zh-Hant', 'zh-rTW'),
+    'zh': ('zh-Hans', 'zh-rCN'), 'zh_Hant': ('zh-Hant', 'zh-rTW'),
 }
 
 
