@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/app_distribution.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -146,22 +147,23 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                 },
               ),
             ),
-            SettingsHighlightTarget(
-              id: 'notificationsAppUpdates',
-              child: SwitchListTile(
-                title: Text(l10n.notificationsAppUpdates),
-                value: ref
-                    .watch(notificationsAppUpdatesEnabledProvider)
-                    .ifNull(),
-                onChanged: (v) async {
-                  ref
-                      .read(notificationsAppUpdatesEnabledProvider.notifier)
-                      .update(v);
-                  if (v) await controller.requestPermissionAndSync();
-                  await reconcile();
-                },
+            if (!isGooglePlayBuild)
+              SettingsHighlightTarget(
+                id: 'notificationsAppUpdates',
+                child: SwitchListTile(
+                  title: Text(l10n.notificationsAppUpdates),
+                  value: ref
+                      .watch(notificationsAppUpdatesEnabledProvider)
+                      .ifNull(),
+                  onChanged: (v) async {
+                    ref
+                        .read(notificationsAppUpdatesEnabledProvider.notifier)
+                        .update(v);
+                    if (v) await controller.requestPermissionAndSync();
+                    await reconcile();
+                  },
+                ),
               ),
-            ),
             SettingsHighlightTarget(
               id: 'notificationsExtensionUpdates',
               child: SwitchListTile(

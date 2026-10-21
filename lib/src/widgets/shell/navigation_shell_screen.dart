@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import '../../constants/app_distribution.dart';
 import '../../features/about/data/about_repository.dart';
 import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
@@ -72,6 +73,7 @@ class NavigationShellScreen extends HookConsumerWidget {
     final serverHosted = ref.watch(serverHostedWebProvider);
     useEffect(() {
       if (!serverHosted) {
+        if (isGooglePlayBuild) return null;
         Future.microtask(() async {
           await ref.read(startupWebRevisionProvider.future);
           if (!context.mounted || ref.read(serverHostedWebProvider)) return;

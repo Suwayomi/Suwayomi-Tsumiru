@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 
+import '../../../../constants/app_distribution.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../account/data/account_permission.dart';
@@ -405,6 +406,7 @@ mutation NotifEnqueue($ids: [Int!]!) {
   /// The latest Tsumiru release tag + its page, from the public GitHub API (no
   /// auth, no server). Null on any failure.
   Future<({String version, String url})?> fetchLatestRelease() async {
+    if (isGooglePlayBuild) return null;
     try {
       final res = await _http.get(
         Uri.parse(

@@ -14,6 +14,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../constants/app_distribution.dart';
 import '../../../constants/db_keys.dart';
 import '../../../constants/endpoints.dart';
 import '../../../constants/urls.dart';
@@ -50,6 +51,7 @@ class AboutRepository {
       .getData((a) => a.checkForServerUpdates.map((e) => e.toDto).toList());
 
   Future<AsyncValue<Version?>> checkUpdate() async {
+    if (isGooglePlayBuild) return const AsyncData(null);
     if (await isServerHosted?.call() ?? false) return const AsyncData(null);
     final gitResponse = await AsyncValue.guard<Map<String, dynamic>?>(
       () async => json.decode(

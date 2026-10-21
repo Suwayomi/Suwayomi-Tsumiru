@@ -2782,6 +2782,7 @@
   "notificationsErrors": "Error notifications",
   "notificationsErrorsSubtitle": "Failed downloads and library updates",
   "notificationsBackup": "Backup notifications",
+  "privacyPolicy": "Privacy policy",
   "notificationsAppUpdates": "App update notifications",
   "notificationsExtensionUpdates": "Extension update notifications",
   "notificationActionMarkRead": "Mark as read",

@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../constants/app_distribution.dart';
 import '../../offline/data/background/background_token_record.dart';
 import '../domain/new_chapter_detection.dart';
 import 'background/notification_background_client.dart';
@@ -46,7 +47,7 @@ class NotificationWorkerConfig {
     required this.includedCategoryIds,
     required this.excludedCategoryIds,
     required this.hideContent,
-    this.appUpdatesEnabled = false,
+    bool appUpdatesEnabled = false,
     this.extensionUpdatesEnabled = false,
     this.appVersion = '',
     this.wifiOnly = true,
@@ -56,12 +57,13 @@ class NotificationWorkerConfig {
     this.identityEpoch = 0,
     this.verifiedAddress,
     this.sessionFingerprint,
-  });
+  }) : _appUpdatesEnabled = appUpdatesEnabled;
 
   final String serverId;
   final NotificationEndpoint endpoint;
   final bool newChaptersEnabled;
-  final bool appUpdatesEnabled;
+  final bool _appUpdatesEnabled;
+  bool get appUpdatesEnabled => !isGooglePlayBuild && _appUpdatesEnabled;
   final bool extensionUpdatesEnabled;
   final bool wifiOnly;
   final bool chargingOnly;
