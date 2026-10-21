@@ -139,7 +139,7 @@ Future<List<Recommendation>> providerRecommendations(
   final prefs = ref.read(sharedPreferencesProvider);
   final cacheKey = scope == null
       ? null
-      : 'recsCache:v2:${jsonEncode([scope, mangaId, setup.ctx.title, providerKey])}';
+      : 'recsCache:v3:${jsonEncode([scope, mangaId, setup.ctx.title, providerKey])}';
   try {
     final recs = await provider
         .fetch(setup.ctx)

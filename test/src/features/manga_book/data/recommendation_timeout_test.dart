@@ -34,7 +34,7 @@ void main() {
           'serverUrl': 'https://example.test',
           'serverPortToggle': false,
           if (cached)
-            'recsCache:v2:${jsonEncode([
+            'recsCache:v3:${jsonEncode([
               ['server', 'https://example.test', 'none'],
               1,
               'Example',

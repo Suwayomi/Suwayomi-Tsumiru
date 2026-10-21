@@ -154,12 +154,24 @@ void main() {
       expect((await run(user: 2, fail: true)).single.title, 'Saved');
     },
   );
-  test('legacy unscoped cache entries are ignored and retained', () async {
-    final legacy = jsonEncode([_saved.toJson()]);
-    await prefs.setString('recsCache:1:Test|test', legacy);
-    await expectLater(run(fail: true), throwsStateError);
-    expect(prefs.getString('recsCache:1:Test|test'), legacy);
-  });
+  test(
+    'legacy unscoped and v2 cache entries are ignored and retained',
+    () async {
+      final legacy = jsonEncode([_saved.toJson()]);
+      await prefs.setString('recsCache:1:Test|test', legacy);
+      final scopedV2 =
+          'recsCache:v2:${jsonEncode([
+            ['server', 'https://one', 'none'],
+            1,
+            'Example',
+            'Test|test',
+          ])}';
+      await prefs.setString(scopedV2, legacy);
+      await expectLater(run(fail: true), throwsStateError);
+      expect(prefs.getString('recsCache:1:Test|test'), legacy);
+      expect(prefs.getString(scopedV2), legacy);
+    },
+  );
   test(
     'equivalent URLs share a cache and URL credentials never enter its key',
     () async {
@@ -172,7 +184,7 @@ void main() {
       );
       final key = prefs
           .getKeys()
-          .where((key) => key.startsWith('recsCache:v2:'))
+          .where((key) => key.startsWith('recsCache:v3:'))
           .single;
       expect(key, isNot(contains('secret')));
       expect(key, isNot(contains('hidden')));
@@ -207,7 +219,7 @@ void main() {
       expect(
         prefs.getKeys().any(
           (key) =>
-              key.contains('https://two') && key.startsWith('recsCache:v2:'),
+              key.contains('https://two') && key.startsWith('recsCache:v3:'),
         ),
         isFalse,
       );

@@ -8,9 +8,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../library/domain/duplicate_matcher.dart';
 import '../recommendation_provider.dart';
 
-// 1:1 with exh/recs/sources/MangaUpdatesPagingSource.kt.
 const _endpoint = 'https://api.mangaupdates.com/v1';
 
 abstract class _MangaUpdatesProvider extends TrackerRecommendationProvider {
@@ -57,6 +57,8 @@ abstract class _MangaUpdatesProvider extends TrackerRecommendationProvider {
 
   @override
   Future<List<Recommendation>> fetchBySearch(RecommendationContext ctx) async {
+    final title = normalizeTitle(ctx.title);
+    if (title.isEmpty) return const [];
     final response = await ctx.client.post(
       Uri.parse('$_endpoint/series/search'),
       headers: const {'Content-Type': 'application/json'},
@@ -66,10 +68,21 @@ abstract class _MangaUpdatesProvider extends TrackerRecommendationProvider {
       throw RecommendationHttpException(response.statusCode);
     }
     final results = (jsonDecode(response.body)['results'] as List?) ?? const [];
-    if (results.isEmpty) return const [];
-    final seriesId = ((results.first as Map)['record'] as Map?)?['series_id'];
-    if (seriesId == null) return const [];
-    return fetchById(ctx, seriesId.toString());
+    final matches = <String>{};
+    for (final result in results) {
+      final hit = result as Map;
+      final record = hit['record'] as Map?;
+      final titles = [record?['title'], hit['hit_title']];
+      if (!titles.whereType<String>().any(
+        (candidate) => normalizeTitle(candidate) == title,
+      )) {
+        continue;
+      }
+      final seriesId = record?['series_id'];
+      if (seriesId != null) matches.add(seriesId.toString());
+    }
+    if (matches.length != 1) return const [];
+    return fetchById(ctx, matches.single);
   }
 }
 

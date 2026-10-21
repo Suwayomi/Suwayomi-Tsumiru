@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import '../../../../library/domain/duplicate_matcher.dart';
 import '../recommendation_provider.dart';
 
 // Official MyAnimeList API v2 — goes direct to MAL, avoiding Jikan's chronic
@@ -65,19 +66,42 @@ class MyAnimeListProvider extends TrackerRecommendationProvider {
 
   @override
   Future<List<Recommendation>> fetchBySearch(RecommendationContext ctx) async {
+    final title = normalizeTitle(ctx.title);
+    if (title.isEmpty) return const [];
     final response = await ctx.client.get(
-      Uri.parse('$_endpoint/manga')
-          .replace(queryParameters: {'q': ctx.title, 'limit': '1'}),
+      Uri.parse('$_endpoint/manga').replace(
+        queryParameters: {
+          'q': ctx.title,
+          'limit': '10',
+          'fields': 'alternative_titles',
+        },
+      ),
       headers: _headers,
     );
     if (response.statusCode != 200) {
       throw RecommendationHttpException(response.statusCode);
     }
     final data = (jsonDecode(response.body)['data'] as List?) ?? const [];
-    if (data.isEmpty) return const [];
-    final id = ((data.first as Map)['node'] as Map?)?['id'];
-    if (id == null) return const [];
-    return fetchById(ctx, id.toString());
+    final matches = <String>{};
+    for (final result in data) {
+      final node = (result as Map)['node'] as Map?;
+      final alternatives = node?['alternative_titles'] as Map?;
+      final titles = [
+        node?['title'],
+        alternatives?['en'],
+        alternatives?['ja'],
+        ...alternatives?['synonyms'] as List? ?? const [],
+      ];
+      if (!titles.whereType<String>().any(
+        (candidate) => normalizeTitle(candidate) == title,
+      )) {
+        continue;
+      }
+      final id = node?['id'];
+      if (id != null) matches.add(id.toString());
+    }
+    if (matches.length != 1) return const [];
+    return fetchById(ctx, matches.single);
   }
 
   String? _image(Map? pic) {
