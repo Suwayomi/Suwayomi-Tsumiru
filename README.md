@@ -58,7 +58,7 @@ Pull requests are welcome. For larger changes, open an issue first so we can tal
 ## Related projects
 
 - [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server): the server Tsumiru connects to. It runs the sources and extensions and stores your library.
-- [Suwayomi-WebUI](https://github.com/Suwayomi/Suwayomi-WebUI): the web interface bundled with the server.
+- [Suwayomi-Server-docker](https://github.com/Suwayomi/Suwayomi-Server-docker): the official Docker image, the quickest way to run the server on a home server or NAS.
 
 ## Contributors
 
