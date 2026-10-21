@@ -82,3 +82,34 @@ flutter run -d chrome      # web (no native toolchain needed)
 flutter run -d linux       # native Linux desktop (requires cmake/ninja/GTK dev libs)
 flutter build apk --debug  # local Android APK
 ```
+
+## Google Play distribution mode
+
+`lib/src/constants/app_distribution.dart` reads the compile-time boolean
+`TSUMIRU_GOOGLE_PLAY`, which defaults to `false`. Pass the define explicitly to
+build a Play variant. The same constant applies to the UI and headless worker;
+no installer lookup is needed. Dart documents the [compile-time declaration and
+Flutter flag](https://dart.dev/libraries/core/environment-declarations).
+
+After the normal dependency and code-generation steps above:
+
+```bash
+flutter test
+flutter test --dart-define=TSUMIRU_GOOGLE_PLAY=true test/src/features/about/play_distribution_test.dart test/offline/background/background_schedule_test.dart
+flutter build appbundle --release --dart-define=TSUMIRU_GOOGLE_PLAY=true
+```
+
+The AAB command uses the existing Android release signing configuration. Configure
+the intended upload key and complete Play App Signing enrollment separately
+before uploading a bundle. A debug-signed bundle is not a Play release artifact.
+The define does not change the package ID, version or existing GitHub APK workflow.
+
+For side-by-side device testing, the existing Gradle `devBuild` property selects
+Tsumiru Dev (`io.github.aaronbamblett.tsumiru.dev`):
+
+```bash
+ORG_GRADLE_PROJECT_devBuild=1 flutter build apk --debug --dart-define=TSUMIRU_GOOGLE_PLAY=true
+```
+
+Omit the define for ordinary distribution behavior. Rebuild when switching modes;
+the value is fixed at compilation, including in background isolates.

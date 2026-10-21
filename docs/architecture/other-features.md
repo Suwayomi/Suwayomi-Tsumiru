@@ -6,10 +6,14 @@ Smaller features: about, history, migration, offline, quick_open.
 
 App/server version info + update checks.
 
-- `data/about_repository.dart` — **two update paths**: `checkUpdate()` hits the **GitHub Releases REST API** directly; `checkServerUpdate()` uses the server's GraphQL `checkForServerUpdates`. Both use `pub_semver`.
+- `data/about_repository.dart` — **two update paths**: `checkUpdate()` hits the **GitHub Releases REST API** directly in ordinary native/standalone builds; `checkServerUpdate()` uses the server's GraphQL `checkForServerUpdates`. Both use `pub_semver`.
 - `controllers/about_controller.dart` — `aboutProvider` (GraphQL `GetAbout`); `packageInfoProvider` is `throw UnimplementedError()` (overridden in `main.dart`).
 - URLs (all in `lib/src/constants/urls.dart`): `sorayomiGithubUrl` = `github.com/Suwayomi/Suwayomi-Tsumiru`, `sorayomiLatestReleaseUrl`/`...ApiUrl` (releases + GitHub API), `sorayomiWhatsNew` = GitHub releases page, `tachideskHelp` = `tsumiru.app/docs/...`.
-- **Gotcha:** the update check strips the leading `v` from `tag_name` (`Version.parse(tag.substring(1))`) — a tag format change throws. (This was the crash fixed in `33dbd31`.)
+- Release checks accept version tags with or without a leading `v`, then compare versions with `pub_semver`.
+- About includes a localized Privacy policy row linking to `https://tsumiru.app/privacy/` in every distribution.
+- With `--dart-define=TSUMIRU_GOOGLE_PLAY=true`, `isGooglePlayBuild` disables app-version HTTP requests in both `AboutRepository` and `NotificationBackgroundClient`. The shell skips app-update startup work, and the shared dialog suppresses app prompts. Server dialogs use an explicit `isServerUpdate` flag, including when their release URL is absent.
+- Play builds hide the client update row, app-update notification toggle and its settings-search entry. The settings provider ignores stored app-update preferences without overwriting them. `NotificationWorkerConfig.appUpdatesEnabled` is effectively false even for directly constructed or stale JSON configurations, so app-only checks cannot schedule a worker. Server, extension and chapter checks retain their normal behavior. What's New and project/help links remain available.
+- Server-hosted web builds continue to use server-managed web updates. See [repo-build-release.md](repo-build-release.md#google-play-distribution-mode) for build and test commands.
 
 ## history
 

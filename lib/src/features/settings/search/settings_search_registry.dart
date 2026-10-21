@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../constants/app_distribution.dart';
 import '../../../constants/app_theme.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../routes/router_config.dart';
@@ -827,7 +828,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsAppUpdates',
     ).push(c),
-    visible: (_, _) => isAndroidNative,
+    visible: (_, _) => isAndroidNative && !isGooglePlayBuild,
   ),
   SettingsSearchEntry(
     id: 'notificationsExtensionUpdates',

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/app_distribution.dart';
 import '../../../../../constants/brand_icons.dart';
 import '../../../../../constants/urls.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
@@ -23,10 +24,12 @@ void appUpdateDialog({
   required BuildContext context,
   required Toast? toast,
   String? url,
+  bool isServerUpdate = false,
   void Function(bool skip)? onSkipChanged,
 }) {
+  if (!isServerUpdate && isGooglePlayBuild) return;
   if (kIsWeb &&
-      url == null &&
+      !isServerUpdate &&
       ProviderScope.containerOf(context).read(serverHostedWebProvider)) {
     return;
   }
@@ -60,18 +63,19 @@ void appUpdateDialog({
               onPressed: () => Navigator.pop(context),
               child: Text(context.l10n.close),
             ),
-            ElevatedButton.icon(
-              onPressed: () {
-                launchUrlInWeb(
-                  context,
-                  url ?? AppUrls.sorayomiLatestReleaseUrl.url,
-                  toast,
-                );
-                Navigator.pop(context);
-              },
-              icon: const Icon(BrandIcons.github),
-              label: Text(context.l10n.gitHub),
-            ),
+            if (url != null || !isGooglePlayBuild)
+              ElevatedButton.icon(
+                onPressed: () {
+                  launchUrlInWeb(
+                    context,
+                    url ?? AppUrls.sorayomiLatestReleaseUrl.url,
+                    toast,
+                  );
+                  Navigator.pop(context);
+                },
+                icon: const Icon(BrandIcons.github),
+                label: Text(context.l10n.gitHub),
+              ),
           ],
         ),
       );

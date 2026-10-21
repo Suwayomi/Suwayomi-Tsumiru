@@ -10,6 +10,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import '../../../../constants/app_distribution.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/brand_icons.dart';
 import '../../../../constants/urls.dart';
@@ -62,6 +63,7 @@ class AboutScreen extends HookConsumerWidget {
                 context: context,
                 toast: toast,
                 url: newUpdate.url,
+                isServerUpdate: true,
               );
             } else {
               toast?.show(context.l10n.noUpdatesAvailable);
@@ -162,22 +164,28 @@ class AboutScreen extends HookConsumerWidget {
                 );
               },
             ),
-            ListTile(
-              title: Text(
-                serverHosted
-                    ? context.l10n.updatedByYourServer
-                    : context.l10n.checkForUpdates,
+            if (!isGooglePlayBuild)
+              ListTile(
+                title: Text(
+                  serverHosted
+                      ? context.l10n.updatedByYourServer
+                      : context.l10n.checkForUpdates,
+                ),
+                onTap: serverHosted
+                    ? () => const ServerSettingsRoute().push(context)
+                    : () => checkForUpdate(
+                        title: packageInfo.appName,
+                        context: context,
+                        updateCallback: ref
+                            .read(aboutRepositoryProvider)
+                            .checkUpdate,
+                        toast: toast,
+                      ),
               ),
-              onTap: serverHosted
-                  ? () => const ServerSettingsRoute().push(context)
-                  : () => checkForUpdate(
-                      title: packageInfo.appName,
-                      context: context,
-                      updateCallback: ref
-                          .read(aboutRepositoryProvider)
-                          .checkUpdate,
-                      toast: toast,
-                    ),
+            ListTile(
+              title: Text(context.l10n.privacyPolicy),
+              onTap: () =>
+                  launchUrlInWeb(context, AppUrls.privacyPolicy.url, toast),
             ),
             if (about != null) ...[
               const Divider(),
