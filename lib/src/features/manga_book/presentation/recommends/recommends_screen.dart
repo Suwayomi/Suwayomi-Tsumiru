@@ -16,6 +16,8 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/recommendations/recommendation_provider.dart';
 import '../../data/recommendations/recommendation_repository.dart';
 import 'recommendation_card.dart';
+import 'recommendation_error_message.dart';
+import 'recommendation_loading.dart';
 
 /// Komikku's RecommendsScreen: "Similar to {title}", one section per provider,
 /// each loading, erroring, and emptying on its own.
@@ -44,7 +46,7 @@ class RecommendsScreen extends ConsumerWidget {
               title: title,
             ),
       body: setup.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const RecommendationLoading(),
         error: (_, _) => Emoticons(title: context.l10n.errorSomethingWentWrong),
         data: (value) {
           final providers = value?.providers ?? const [];
@@ -133,16 +135,12 @@ class _ProviderSection extends ConsumerWidget {
           loading: () => section(
             child: const SizedBox(
               height: 200,
-              child: Center(child: CircularProgressIndicator()),
+              child: RecommendationLoading(),
             ),
           ),
           error: (e, _) => section(
             child: _SectionMessage(
-              e is RecommendationUnavailableOnWeb
-                  ? context.l10n.recommendationsUnavailableWeb
-                  : e is RecommendationHttpException
-                  ? context.l10n.httpErrorCheckWebView(e.statusCode)
-                  : context.l10n.errorSomethingWentWrong,
+              recommendationErrorMessage(context, e, provider.name),
             ),
           ),
           data: (list) => list.isEmpty
