@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>io.github.aaronbamblett.tsumiru</id>
   <name>Tsumiru</name>
-  <summary>Manga and webtoon reader for your Suwayomi server</summary>
+  <summary>Read manga from a Suwayomi server</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MPL-2.0</project_license>
   <developer id="io.github.aaronbamblett">
@@ -10,18 +10,56 @@
   </developer>
   <description>
     <p>
-      Tsumiru is a client for a Suwayomi (Tachidesk) server. Your sources,
-      extensions, downloads, and library all live on your own server. Tsumiru
-      is the reader you point at it, so the same library is available on every
-      device.
+      Tsumiru reads manga, manhwa and webtoons from your own Suwayomi server.
+      Your library, sources and downloads live on the server, so every device
+      shows the same library and reading progress.
     </p>
     <p>Highlights:</p>
     <ul>
-      <li>A rebuilt continuous reader tuned for long webtoon and manhwa strips, with pinch-to-zoom.</li>
-      <li>A flexible library with custom sorts, filters, and bulk-download presets.</li>
-      <li>Server authentication via simple_login and ui_login.</li>
+      <li>Download chapters to your device and read with no connection</li>
+      <li>A continuous reader for long webtoon strips, with pinch-to-zoom</li>
+      <li>Library categories, sorting and filters</li>
+      <li>Reading progress tracking with AniList and MyAnimeList</li>
+      <li>Also available on Android, iOS, Windows, macOS and the web</li>
     </ul>
   </description>
+  <keywords>
+    <keyword>manga</keyword>
+    <keyword>manhwa</keyword>
+    <keyword>manhua</keyword>
+    <keyword>webtoon</keyword>
+    <keyword>comic</keyword>
+    <keyword>webcomic</keyword>
+    <keyword>reader</keyword>
+    <keyword>offline</keyword>
+    <keyword>self-hosted</keyword>
+    <keyword>Suwayomi</keyword>
+    <keyword>Tachidesk</keyword>
+    <keyword>Tachiyomi</keyword>
+    <keyword>Mihon</keyword>
+  </keywords>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Your whole library at a glance</caption>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/v1.5.1/flatpak/screenshots/01-library.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Series details with chapters saved on your device</caption>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/v1.5.1/flatpak/screenshots/02-series.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>New chapters from across your library</caption>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/v1.5.1/flatpak/screenshots/03-updates.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Chapters saved for offline reading</caption>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/v1.5.1/flatpak/screenshots/04-downloads.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Pick a theme on first launch</caption>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/v1.5.1/flatpak/screenshots/05-onboarding.png</image>
+    </screenshot>
+  </screenshots>
   <launchable type="desktop-id">io.github.aaronbamblett.tsumiru.desktop</launchable>
   <url type="homepage">https://tsumiru.app/</url>
   <url type="bugtracker">https://github.com/Suwayomi/Suwayomi-Tsumiru/issues</url>

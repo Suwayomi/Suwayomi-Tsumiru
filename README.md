@@ -20,9 +20,13 @@
 
 > *Tsumiru* (積みる) takes the 積, "pile up", from *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them. It swaps the "read" for *miru*, "to look".
 
-## What it is
+## About
 
-Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), so you'll need a server running first. Your library and reading progress are stored on the server, and Tsumiru reads them on Android, iOS, Linux, Windows, macOS or the web. Guides and the FAQ are at [tsumiru.app](https://tsumiru.app).
+Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), so [you'll need a server running first](https://github.com/Suwayomi/Suwayomi-Server#downloading-and-running-the-app). Your library and reading progress are stored on the server, and Tsumiru reads them on Android, iOS, Linux, Windows, macOS or the web. Guides and the FAQ are at [tsumiru.app](https://tsumiru.app).
+
+## Screenshots
+
+<img src="./.github/readme-images/phone-series-framed.png" alt="A series page on Android" width="26%"/> <img src="flatpak/screenshots/02-series.png" alt="A series page on desktop" width="71%"/>
 
 ## Features
 
@@ -36,6 +40,9 @@ Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-S
 
 ## Download
 
+<a href="https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"/></a>
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.aaronbamblett.tsumiru%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSuwayomi%2FSuwayomi-Tsumiru%22%2C%22author%22%3A%22Suwayomi%22%2C%22name%22%3A%22Tsumiru%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60"/></a>
+
 Get the latest build from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest). The [download page](https://tsumiru.app/download/) has install steps for each platform.
 
 - **Android:** add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) to get updates straight from GitHub Releases.
@@ -44,21 +51,31 @@ Get the latest build from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumir
 
 You need a running Suwayomi-Server that your device can reach.
 
-## Building
+## Contributing
 
-The Flutter version is pinned in `.fvmrc`.
+Pull requests are welcome. For larger changes, open an issue first so we can talk it through. Build steps are in the [contributing guide](CONTRIBUTING.md).
 
-```bash
-flutter pub get
-flutter gen-l10n
-dart run build_runner build --delete-conflicting-outputs
-flutter build apk            # or: ios / linux / windows / macos / web
-```
+## Related projects
+
+- [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server): the server Tsumiru connects to. It runs the sources and extensions and stores your library.
+- [Suwayomi-Server-docker](https://github.com/Suwayomi/Suwayomi-Server-docker): the official Docker image, the quickest way to run the server on a home server or NAS.
+
+## Contributors
+
+Thank you to everyone who has contributed to Tsumiru and to Tachidesk-Sorayomi before it.
+
+<a href="https://github.com/Suwayomi/Suwayomi-Tsumiru/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Suwayomi/Suwayomi-Tsumiru" alt="Tsumiru contributors" width="800"/>
+</a>
+
+## Disclaimer
+
+Tsumiru hosts no content and has no affiliation with any content provider. It shows what your own Suwayomi server provides.
 
 ## Credits and license
 
 Tsumiru started as a fork of [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi) and depends on [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server). Thanks to everyone who built and maintains both.
 
-The app typeface is [Inter](https://github.com/rsms/inter) by Rasmus Andersson, bundled (Regular, Medium, SemiBold) under the SIL Open Font License 1.1 — see [assets/fonts/inter/OFL.txt](assets/fonts/inter/OFL.txt), also registered with the app's licence list at startup like the Font Awesome licence.
+The app typeface is [Inter](https://github.com/rsms/inter) by Rasmus Andersson, bundled (Regular, Medium, SemiBold) under the SIL Open Font License 1.1. See [assets/fonts/inter/OFL.txt](assets/fonts/inter/OFL.txt). It is also registered with the app's licence list at startup, like the Font Awesome licence.
 
 Licensed under the [Mozilla Public License 2.0](LICENSE). Source files keep their MPL-2.0 headers.

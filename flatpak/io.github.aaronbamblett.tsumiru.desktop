@@ -6,5 +6,5 @@ Icon=io.github.aaronbamblett.tsumiru
 Terminal=false
 Type=Application
 Categories=Graphics;Viewer;
-Keywords=manga;manhwa;webtoon;comic;reader;suwayomi;tachidesk;
+Keywords=manga;manhwa;manhua;webtoon;comic;webcomic;reader;offline;self-hosted;suwayomi;tachidesk;tachiyomi;mihon;
 StartupWMClass=tsumiru
