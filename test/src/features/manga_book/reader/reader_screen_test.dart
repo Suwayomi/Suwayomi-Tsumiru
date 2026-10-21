@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -111,6 +112,76 @@ ChapterPagesDto _chapterPages() => ChapterPagesDto(
   chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
   pages: _localPages(3),
 );
+
+// What a source hands back for a paid chapter that is still locked.
+ChapterPagesDto _emptyChapterPages() => ChapterPagesDto(
+  chapter: ChapterPagesChapterDto(id: 1, pageCount: 0),
+  pages: const [],
+);
+
+// The reader pushed over a home page, so it has a route to go back to.
+Future<void> _openReader(
+  WidgetTester tester, {
+  required FutureOr<ChapterPagesDto?> Function(Ref ref) chapterPages,
+  bool settle = true,
+}) async {
+  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  SharedPreferences.setMockInitialValues(const {});
+  final prefs = await SharedPreferences.getInstance();
+
+  await tester.pumpWidget(
+    ProviderScope(
+      retry: (_, _) => null,
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
+        mangaWithIdProvider(
+          mangaId: 1,
+        ).overrideWith(() => _FakeMangaWithId(_manga())),
+        chapterProvider(chapterId: 1).overrideWithBuild((ref, _) => _chapter()),
+        chapterPagesProvider(chapterId: 1).overrideWith(chapterPages),
+        getNextAndPreviousChaptersProvider(
+          mangaId: 1,
+          chapterId: 1,
+        ).overrideWithValue(null),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ReaderScreen(mangaId: 1, chapterId: 1),
+                ),
+              ),
+              child: const Text('Open reader'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open reader'));
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+  }
+}
+
+Future<void> _goBack(WidgetTester tester) async {
+  await tester.tap(find.byType(BackButton));
+  await tester.pumpAndSettle();
+  expect(find.byType(ReaderScreen), findsNothing);
+  expect(find.text('Open reader'), findsOneWidget);
+}
 
 void main() {
   testWidgets(
@@ -220,5 +291,51 @@ void main() {
     // resume position wiped just by navigating to it.
     expect(find.text('3 / 3'), findsOneWidget);
     expect(repo.putChapterCalls, isEmpty);
+  });
+
+  testWidgets('a chapter with no pages can be backed out of', (tester) async {
+    await _openReader(tester, chapterPages: (ref) => _emptyChapterPages());
+
+    // A locked chapter has no pages, so the reader (and the back button in its
+    // top bar) is never mounted. The no-pages view must offer its own way out.
+    expect(tester.takeException(), isNull);
+    expect(find.byType(PagedReaderViewport), findsNothing);
+    expect(find.text('No pages found'), findsOneWidget);
+    await _goBack(tester);
+  });
+
+  testWidgets('page loading has no app bar and a failed fetch can be retried', (
+    tester,
+  ) async {
+    final firstFetch = Completer<ChapterPagesDto?>();
+    var fetchCount = 0;
+    await _openReader(
+      tester,
+      chapterPages: (ref) {
+        fetchCount++;
+        return fetchCount == 1 ? firstFetch.future : _chapterPages();
+      },
+      settle: false,
+    );
+
+    expect(fetchCount, 1);
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byType(BackButton), findsNothing);
+    expect(find.byType(PagedReaderViewport), findsNothing);
+
+    firstFetch.completeError(Exception('Chapter is locked'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exception: Chapter is locked'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.text('Refresh'), findsOneWidget);
+
+    await tester.tap(find.text('Refresh'));
+    await tester.pumpAndSettle();
+
+    expect(fetchCount, 2);
+    expect(find.text('Exception: Chapter is locked'), findsNothing);
+    expect(find.text('Refresh'), findsNothing);
+    expect(find.byType(PagedReaderViewport), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

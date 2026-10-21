@@ -370,123 +370,34 @@ class ReaderScreen extends HookConsumerWidget {
                 context,
                 (chapterData) {
                   if (chapterData == null) return const SizedBox.shrink();
-                  return chapterPagesView.showUiWhenData(context, (
-                    chapterPagesData,
-                  ) {
-                    if (chapterPagesData == null) {
-                      return const SizedBox.shrink();
-                    }
-                    // A chapter whose page list came back empty (a login-only
-                    // source refusing to hand out pages) has nothing to read.
-                    // Show the same failure state a failed page fetch gets
-                    // instead of mounting the reader with zero pages.
-                    if (chapterPagesData.pages.isEmpty) {
-                      return Emoticons(
-                        title: context.l10n.errorSomethingWentWrong,
-                      );
-                    }
-                    return switch (autoReaderMode ??
-                        data.metaData.readerMode ??
-                        defaultReaderMode) {
-                      ReaderMode.singleVertical => MultiChapterPagedReaderMode(
-                        chapter: chapterData,
-                        manga: data,
-                        onPageChanged: onPageChanged,
-                        scrollDirection: Axis.vertical,
-                        showReaderLayoutAnimation: showReaderLayoutAnimation,
-                        chapterPages: chapterPagesData,
-                        openAtEnd: openAtEnd,
-                        readerScanlatorGroup:
-                            readerScanlatorGroup ??
-                            scanlatorGroupOf(chapterData),
-                      ),
-                      ReaderMode.singleHorizontalRTL =>
-                        MultiChapterPagedReaderMode(
-                          chapter: chapterData,
-                          manga: data,
-                          onPageChanged: onPageChanged,
-                          reverse: true,
-                          showReaderLayoutAnimation: showReaderLayoutAnimation,
-                          chapterPages: chapterPagesData,
-                          openAtEnd: openAtEnd,
-                          readerScanlatorGroup:
-                              readerScanlatorGroup ??
-                              scanlatorGroupOf(chapterData),
-                        ),
-                      ReaderMode.singleHorizontalLTR =>
-                        MultiChapterPagedReaderMode(
-                          chapter: chapterData,
-                          manga: data,
-                          onPageChanged: onPageChanged,
-                          chapterPages: chapterPagesData,
-                          openAtEnd: openAtEnd,
-                          readerScanlatorGroup:
-                              readerScanlatorGroup ??
-                              scanlatorGroupOf(chapterData),
-                        ),
-                      ReaderMode.continuousHorizontalRTL =>
-                        MultiChapterContinuousReaderMode(
-                          chapter: chapterData,
-                          manga: data,
-                          onPageChanged: onPageChanged,
-                          scrollDirection: Axis.horizontal,
-                          reverse: true,
-                          effectiveReaderMode:
-                              ReaderMode.continuousHorizontalRTL,
-                          showReaderLayoutAnimation: showReaderLayoutAnimation,
-                          chapterPages: chapterPagesData,
-                          openAtEnd: openAtEnd,
-                          readerScanlatorGroup:
-                              readerScanlatorGroup ??
-                              scanlatorGroupOf(chapterData),
-                        ),
-                      ReaderMode.continuousHorizontalLTR =>
-                        MultiChapterContinuousReaderMode(
-                          chapter: chapterData,
-                          manga: data,
-                          onPageChanged: onPageChanged,
-                          scrollDirection: Axis.horizontal,
-                          effectiveReaderMode:
-                              ReaderMode.continuousHorizontalLTR,
-                          showReaderLayoutAnimation: showReaderLayoutAnimation,
-                          chapterPages: chapterPagesData,
-                          openAtEnd: openAtEnd,
-                          readerScanlatorGroup:
-                              readerScanlatorGroup ??
-                              scanlatorGroupOf(chapterData),
-                        ),
-                      ReaderMode.continuousVertical =>
-                        MultiChapterContinuousReaderMode(
-                          chapter: chapterData,
-                          manga: data,
-                          onPageChanged: onPageChanged,
-                          effectiveReaderMode: ReaderMode.continuousVertical,
-                          showReaderLayoutAnimation: showReaderLayoutAnimation,
-                          chapterPages: chapterPagesData,
-                          openAtEnd: openAtEnd,
-                          readerScanlatorGroup:
-                              readerScanlatorGroup ??
-                              scanlatorGroupOf(chapterData),
-                        ),
-                      ReaderMode.webtoon => MultiChapterContinuousReaderMode(
-                        chapter: chapterData,
-                        manga: data,
-                        onPageChanged: onPageChanged,
-                        showReaderLayoutAnimation: showReaderLayoutAnimation,
-                        chapterPages: chapterPagesData,
-                        openAtEnd: openAtEnd,
-                        readerScanlatorGroup:
-                            readerScanlatorGroup ??
-                            scanlatorGroupOf(chapterData),
-                      ),
-                      ReaderMode.defaultReader ||
-                      null => switch (defaultReaderMode ??
-                          ReaderMode.singleHorizontalRTL) {
-                        ReaderMode.singleHorizontalLTR =>
+                  return chapterPagesView.showUiWhenData(
+                    context,
+                    (chapterPagesData) {
+                      if (chapterPagesData == null) {
+                        return const SizedBox.shrink();
+                      }
+                      // Empty chapters never mount the reader toolbar, so this view
+                      // needs its own back button.
+                      if (chapterPagesData.pages.isEmpty) {
+                        return Scaffold(
+                          appBar: AppBar(),
+                          body: Emoticons(
+                            title: context.l10n.readerNoPages,
+                            subTitle: context.l10n.readerNoPagesSubtitle,
+                          ),
+                        );
+                      }
+                      return switch (autoReaderMode ??
+                          data.metaData.readerMode ??
+                          defaultReaderMode) {
+                        ReaderMode.singleVertical =>
                           MultiChapterPagedReaderMode(
                             chapter: chapterData,
                             manga: data,
                             onPageChanged: onPageChanged,
+                            scrollDirection: Axis.vertical,
+                            showReaderLayoutAnimation:
+                                showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
                             readerScanlatorGroup:
@@ -499,6 +410,34 @@ class ReaderScreen extends HookConsumerWidget {
                             manga: data,
                             onPageChanged: onPageChanged,
                             reverse: true,
+                            showReaderLayoutAnimation:
+                                showReaderLayoutAnimation,
+                            chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
+                          ),
+                        ReaderMode.singleHorizontalLTR =>
+                          MultiChapterPagedReaderMode(
+                            chapter: chapterData,
+                            manga: data,
+                            onPageChanged: onPageChanged,
+                            chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
+                          ),
+                        ReaderMode.continuousHorizontalRTL =>
+                          MultiChapterContinuousReaderMode(
+                            chapter: chapterData,
+                            manga: data,
+                            onPageChanged: onPageChanged,
+                            scrollDirection: Axis.horizontal,
+                            reverse: true,
+                            effectiveReaderMode:
+                                ReaderMode.continuousHorizontalRTL,
                             showReaderLayoutAnimation:
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
@@ -523,37 +462,6 @@ class ReaderScreen extends HookConsumerWidget {
                                 readerScanlatorGroup ??
                                 scanlatorGroupOf(chapterData),
                           ),
-                        ReaderMode.continuousHorizontalRTL =>
-                          MultiChapterContinuousReaderMode(
-                            chapter: chapterData,
-                            manga: data,
-                            onPageChanged: onPageChanged,
-                            scrollDirection: Axis.horizontal,
-                            reverse: true,
-                            effectiveReaderMode:
-                                ReaderMode.continuousHorizontalRTL,
-                            showReaderLayoutAnimation:
-                                showReaderLayoutAnimation,
-                            chapterPages: chapterPagesData,
-                            openAtEnd: openAtEnd,
-                            readerScanlatorGroup:
-                                readerScanlatorGroup ??
-                                scanlatorGroupOf(chapterData),
-                          ),
-                        ReaderMode.singleVertical =>
-                          MultiChapterPagedReaderMode(
-                            chapter: chapterData,
-                            manga: data,
-                            onPageChanged: onPageChanged,
-                            scrollDirection: Axis.vertical,
-                            showReaderLayoutAnimation:
-                                showReaderLayoutAnimation,
-                            chapterPages: chapterPagesData,
-                            openAtEnd: openAtEnd,
-                            readerScanlatorGroup:
-                                readerScanlatorGroup ??
-                                scanlatorGroupOf(chapterData),
-                          ),
                         ReaderMode.continuousVertical =>
                           MultiChapterContinuousReaderMode(
                             chapter: chapterData,
@@ -568,8 +476,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 readerScanlatorGroup ??
                                 scanlatorGroupOf(chapterData),
                           ),
-                        ReaderMode.webtoon ||
-                        _ => MultiChapterContinuousReaderMode(
+                        ReaderMode.webtoon => MultiChapterContinuousReaderMode(
                           chapter: chapterData,
                           manga: data,
                           onPageChanged: onPageChanged,
@@ -580,9 +487,119 @@ class ReaderScreen extends HookConsumerWidget {
                               readerScanlatorGroup ??
                               scanlatorGroupOf(chapterData),
                         ),
-                      },
-                    };
-                  });
+                        ReaderMode.defaultReader ||
+                        null => switch (defaultReaderMode ??
+                            ReaderMode.singleHorizontalRTL) {
+                          ReaderMode.singleHorizontalLTR =>
+                            MultiChapterPagedReaderMode(
+                              chapter: chapterData,
+                              manga: data,
+                              onPageChanged: onPageChanged,
+                              chapterPages: chapterPagesData,
+                              openAtEnd: openAtEnd,
+                              readerScanlatorGroup:
+                                  readerScanlatorGroup ??
+                                  scanlatorGroupOf(chapterData),
+                            ),
+                          ReaderMode.singleHorizontalRTL =>
+                            MultiChapterPagedReaderMode(
+                              chapter: chapterData,
+                              manga: data,
+                              onPageChanged: onPageChanged,
+                              reverse: true,
+                              showReaderLayoutAnimation:
+                                  showReaderLayoutAnimation,
+                              chapterPages: chapterPagesData,
+                              openAtEnd: openAtEnd,
+                              readerScanlatorGroup:
+                                  readerScanlatorGroup ??
+                                  scanlatorGroupOf(chapterData),
+                            ),
+                          ReaderMode.continuousHorizontalLTR =>
+                            MultiChapterContinuousReaderMode(
+                              chapter: chapterData,
+                              manga: data,
+                              onPageChanged: onPageChanged,
+                              scrollDirection: Axis.horizontal,
+                              effectiveReaderMode:
+                                  ReaderMode.continuousHorizontalLTR,
+                              showReaderLayoutAnimation:
+                                  showReaderLayoutAnimation,
+                              chapterPages: chapterPagesData,
+                              openAtEnd: openAtEnd,
+                              readerScanlatorGroup:
+                                  readerScanlatorGroup ??
+                                  scanlatorGroupOf(chapterData),
+                            ),
+                          ReaderMode.continuousHorizontalRTL =>
+                            MultiChapterContinuousReaderMode(
+                              chapter: chapterData,
+                              manga: data,
+                              onPageChanged: onPageChanged,
+                              scrollDirection: Axis.horizontal,
+                              reverse: true,
+                              effectiveReaderMode:
+                                  ReaderMode.continuousHorizontalRTL,
+                              showReaderLayoutAnimation:
+                                  showReaderLayoutAnimation,
+                              chapterPages: chapterPagesData,
+                              openAtEnd: openAtEnd,
+                              readerScanlatorGroup:
+                                  readerScanlatorGroup ??
+                                  scanlatorGroupOf(chapterData),
+                            ),
+                          ReaderMode.singleVertical =>
+                            MultiChapterPagedReaderMode(
+                              chapter: chapterData,
+                              manga: data,
+                              onPageChanged: onPageChanged,
+                              scrollDirection: Axis.vertical,
+                              showReaderLayoutAnimation:
+                                  showReaderLayoutAnimation,
+                              chapterPages: chapterPagesData,
+                              openAtEnd: openAtEnd,
+                              readerScanlatorGroup:
+                                  readerScanlatorGroup ??
+                                  scanlatorGroupOf(chapterData),
+                            ),
+                          ReaderMode.continuousVertical =>
+                            MultiChapterContinuousReaderMode(
+                              chapter: chapterData,
+                              manga: data,
+                              onPageChanged: onPageChanged,
+                              effectiveReaderMode:
+                                  ReaderMode.continuousVertical,
+                              showReaderLayoutAnimation:
+                                  showReaderLayoutAnimation,
+                              chapterPages: chapterPagesData,
+                              openAtEnd: openAtEnd,
+                              readerScanlatorGroup:
+                                  readerScanlatorGroup ??
+                                  scanlatorGroupOf(chapterData),
+                            ),
+                          ReaderMode.webtoon ||
+                          _ => MultiChapterContinuousReaderMode(
+                            chapter: chapterData,
+                            manga: data,
+                            onPageChanged: onPageChanged,
+                            showReaderLayoutAnimation:
+                                showReaderLayoutAnimation,
+                            chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
+                          ),
+                        },
+                      };
+                    },
+                    refresh: () => ref.refresh(
+                      chapterPagesProvider(chapterId: chapterId).future,
+                    ),
+                    addScaffoldWrapper:
+                        chapterPagesView.hasError &&
+                        !chapterPagesView.isLoading,
+                  );
                 },
                 refresh: () => ref.refresh(chapterProviderWithIndex.future),
                 addScaffoldWrapper: true,

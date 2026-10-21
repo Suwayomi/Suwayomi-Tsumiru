@@ -2463,6 +2463,14 @@
   "readerNavigationLayoutKindlish": "Kindle-ish",
   "readerNavigationLayoutLShaped": "L Shaped",
   "readerNavigationLayoutRightAndLeft": "Right And Left",
+  "readerNoPages": "No pages found",
+  "@readerNoPages": {
+    "description": "Shown instead of the reader when the source returns a chapter with no pages."
+  },
+  "readerNoPagesSubtitle": "This chapter may be locked, or the source may need you to sign in.",
+  "@readerNoPagesSubtitle": {
+    "description": "Explains why a chapter can have no pages, under readerNoPages. Paid chapters that are still locked come back empty."
+  },
   "readerOrientationDefault": "Default",
   "readerOrientationFree": "Free",
   "readerOrientationLandscape": "Landscape",
