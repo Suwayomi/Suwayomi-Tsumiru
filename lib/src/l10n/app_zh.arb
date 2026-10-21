@@ -2777,7 +2777,7 @@
     "@unifiedSearchExamplesSection": {
         "description": "Unified search section header for example queries in the empty state"
     },
-    "unifiedSearchAllSources": "在全部图源中搜索“{query}”",
+    "unifiedSearchAllSources": "在所有来源中搜索 \"{query}\"",
     "@unifiedSearchAllSources": {
         "description": "Row that hands off to global source search",
         "placeholders": {
@@ -3700,5 +3700,210 @@
     "offlineRecoveryPagePosition": "页面位置",
     "offlineRecoveryReadStatus": "阅读状态",
     "offlineRecoveryBookmark": "书签",
-    "offlineRecoveryManualRead": "阅读状态已手动更改"
+    "offlineRecoveryManualRead": "阅读状态已手动更改",
+    "authCredentialsNotSaved": "已登录。此设备无法保存您的登录状态，因此下次启动时需要重新登录。",
+    "@authCredentialsNotSaved": {
+        "description": "Toast shown after signing in when the device refused to save the credentials; the sign-in works for this run only"
+    },
+    "bookmark": "书签",
+    "removeBookmark": "移除书签",
+    "onboardingChooseServer": "选择服务器",
+    "webUnsupportedAuthMode": "此服务器所采用的登录方式在浏览器版本中无法使用。请将服务器的身份验证模式设置为“UI 登录”，或使用 Android、iOS 或桌面端应用程序。",
+    "@webUnsupportedAuthMode": {
+        "description": "Shown on web instead of the generic unreachable message when the server answers but uses Basic auth or Simple login, which a cross-origin page cannot use"
+    },
+    "webServerAuthUnconfirmed": "此服务器未接受浏览器的请求。如果它使用的是“基本身份验证”（Basic auth）或“简单登录”（Simple login），请将其身份验证模式更改为“UI 登录”，或者使用 Android、iOS 或桌面端应用程序。否则，请检查地址是否正确。",
+    "@webServerAuthUnconfirmed": {
+        "description": "Shown on web when the server answers 404 Not Found, which can mean Basic auth or a mistyped subpath"
+    },
+    "webUiLoginOnlyHint": "浏览器版本仅支持通过 UI 登录（服务器设置：server.authMode）。",
+    "@webUiLoginOnlyHint": {
+        "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
+    },
+    "deleteFromServer": "从服务器删除…",
+    "filterShortDownloaded": "已下载",
+    "@filterShortDownloaded": {
+        "description": "Short filter segment heading for the downloaded tri-state"
+    },
+    "filterShortStarted": "已开始",
+    "@filterShortStarted": {
+        "description": "Short filter segment heading for the started tri-state"
+    },
+    "filterShortBookmarked": "已加入书签",
+    "@filterShortBookmarked": {
+        "description": "Short filter segment heading for the bookmarked tri-state"
+    },
+    "filterShortCompleted": "已完结",
+    "@filterShortCompleted": {
+        "description": "Short filter segment heading for the completed tri-state"
+    },
+    "filterShortLewd": "擦边",
+    "@filterShortLewd": {
+        "description": "Short filter segment heading for the lewd tri-state"
+    },
+    "allTags": "所有标签",
+    "@allTags": {
+        "description": "Tags filter row that clears the tag selection"
+    },
+    "anyCategory": "任何类别",
+    "@anyCategory": {
+        "description": "Categories filter summary when no category is included or excluded"
+    },
+    "searchTags": "搜索标签…",
+    "@searchTags": {
+        "description": "Hint in the tags filter search field"
+    },
+    "groupStyleSections": "分节",
+    "@groupStyleSections": {
+        "description": "Group display radio in the desktop Display panel: sections style"
+    },
+    "lockToPortrait": "锁定为纵向",
+    "@lockToPortrait": {
+        "description": "General setting: lock the app to portrait orientation"
+    },
+    "lockToPortraitSubtitle": "禁止应用在手机上旋转为横屏模式",
+    "@lockToPortraitSubtitle": {
+        "description": "Subtitle for the lock-to-portrait general setting"
+    },
+    "missingChapters": "{count, plural, =1{缺失 1 章} other{缺失 {count} 章}}",
+    "@missingChapters": {
+        "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapWarning": "{count, plural, =1{跳过 1 章。该章节可能在源内容中缺失，或已被过滤掉。} other{跳过 {count} 章。这些章节可能在源内容中缺失，或已被过滤。}}",
+    "@readerChapterGapWarning": {
+        "description": "Reader warning before crossing a gap in chapter numbering, including filtered chapters",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapContinue": "继续",
+    "@readerChapterGapContinue": {
+        "description": "Confirm skipping chapters in the reader"
+    },
+    "seriesSeeAll": "查看全部",
+    "seriesTagsMore": "还有 {count} 个",
+    "@seriesTagsMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesNextChapterExpected": "预计下一章 {days, plural, =0{很快} =1{1天内} other{{days} 天内}}",
+    "@seriesNextChapterExpected": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "removeFromDevice": "从设备移除",
+    "download": "下载",
+    "undo": "撤销",
+    "filtered": "已过滤",
+    "unreadCount": "{count, plural, =1{1 条未读} other{{count} 未读}}",
+    "@unreadCount": {
+        "description": "Chapter header subline unread segment",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "6"
+            }
+        }
+    },
+    "onDeviceSize": "设备上的 {size}",
+    "@onDeviceSize": {
+        "description": "Chapter header subline on-device segment",
+        "placeholders": {
+            "size": {
+                "type": "String",
+                "example": "2.1 GB"
+            }
+        }
+    },
+    "openInBrowser": "在浏览器中打开",
+    "pageOfTotal": "第 {current} 页，共 {total} 页",
+    "@pageOfTotal": {
+        "description": "Tooltip on the current chapter's progress line",
+        "placeholders": {
+            "current": {
+                "type": "int",
+                "example": "12"
+            },
+            "total": {
+                "type": "int",
+                "example": "45"
+            }
+        }
+    },
+    "readerNoPages": "未找到页面",
+    "@readerNoPages": {
+        "description": "Shown instead of the reader when the source returns a chapter with no pages."
+    },
+    "readerNoPagesSubtitle": "本章节可能已被锁定，或者访问该资源需要您先登录。",
+    "@readerNoPagesSubtitle": {
+        "description": "Explains why a chapter can have no pages, under readerNoPages. Paid chapters that are still locked come back empty."
+    },
+    "migrationDataUnavailable": "此次迁移未完成恢复。请返回并重新开始。",
+    "select": "选择",
+    "selectAll": "全选",
+    "offlineViewBannerTitle": "您当前处于离线状态",
+    "@offlineViewBannerTitle": {
+        "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
+    },
+    "offlineViewGoOnline": "上线",
+    "@offlineViewGoOnline": {
+        "description": "Banner button that leaves the offline view and loads from the server again"
+    },
+    "cleartextAddressWarning": "此地址使用未加密的 http:// 协议通过互联网传输：您的登录信息和会话数据以明文形式传输，任何人都可以读取。请使用 https:// 协议，例如通过反向代理。",
+    "@cleartextAddressWarning": {
+        "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
+    },
+    "phoneSearchLibraryFor": "在书架中搜索 \"{query}\"",
+    "@phoneSearchLibraryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Library filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchHistoryFor": "搜索 \"{query}\" 的历史记录",
+    "@phoneSearchHistoryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the History filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchSourcesFor": "搜索 \"{query}\" 的相关来源",
+    "@phoneSearchSourcesFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Sources filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchNoResults": "无结果",
+    "@phoneSearchNoResults": {
+        "description": "Phone search: trailing label on the dimmed page row when nothing on the page matches"
+    },
+    "markAsRead": "标记为已读",
+    "chapterSwipeToLeft": "向左滑动查看章节",
+    "chapterSwipeToRight": "向右滑动查看章节",
+    "chapterSwipeDisabled": "禁用",
+    "chapterSwipeBookmarkChapter": "书签章节",
+    "markAsUnread": "标记为未读",
+    "markPreviousAsRead": "将之前的内容标记为已读"
 }
