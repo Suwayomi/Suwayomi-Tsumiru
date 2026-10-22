@@ -1165,7 +1165,8 @@ class _ServerStep extends HookConsumerWidget {
           resolvedUrl.value,
           version.value,
           errorDetail.value,
-          shouldSuggestHttps(urlController.text.trim()),
+          validServerBaseUrl(urlController.text.trim()) != null &&
+              shouldSuggestHttps(urlController.text.trim()),
           unsupportedFromNotFound.value,
         ),
         // Auth sub-form, revealed only when the server needs a login.

@@ -93,6 +93,12 @@ void main() {
 
     expect(find.text('Invalid Server URL'), findsOneWidget);
     expect(find.text('Checking connection…'), findsNothing);
+    expect(
+      find.text(
+        "If it's behind a reverse proxy, try its https address instead.",
+      ),
+      findsNothing,
+    );
 
     await tester.enterText(urlField, '');
     await tester.pumpAndSettle();
