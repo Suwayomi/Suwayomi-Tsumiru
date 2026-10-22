@@ -31,6 +31,7 @@ import 'utils/misc/toast/toast.dart';
 import 'utils/motion/reduce_motion.dart';
 import 'utils/theme/app_theme_builder.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
+import 'widgets/web_page_title.dart';
 
 class Sorayomi extends HookConsumerWidget {
   const Sorayomi({super.key, this.sessionChanging = false});
@@ -123,8 +124,14 @@ class Sorayomi extends HookConsumerWidget {
                     child: TickerMode(
                       enabled: !sessionChanging,
                       child: ReauthBannerHost(
-                        child: _IncognitoNotificationBridge(
-                          child: toastWrapped,
+                        child: ListenableBuilder(
+                          listenable: routes.routerDelegate,
+                          builder: (context, _) => WebPageTitle(
+                            uri: routes.state.uri,
+                            child: _IncognitoNotificationBridge(
+                              child: toastWrapped,
+                            ),
+                          ),
                         ),
                       ),
                     ),
