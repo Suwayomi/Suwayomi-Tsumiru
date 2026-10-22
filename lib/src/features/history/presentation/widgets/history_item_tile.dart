@@ -47,10 +47,13 @@ class HistoryItemTile extends ConsumerWidget {
         vertical: 2,
       ),
       child: WebRouteLink(
-        location: ReaderRoute(
-          mangaId: item.mangaId,
-          chapterId: item.id,
-        ).location,
+        // Completed entries open the next chapter after loading: no fixed link.
+        location: _isChapterCompleted()
+            ? null
+            : ReaderRoute(
+                mangaId: item.mangaId,
+                chapterId: item.id,
+              ).location,
         builder: (context, openInNewTab) => InkWell(
           onTap: () => WebRouteLink.handleTap(
             openInNewTab,
