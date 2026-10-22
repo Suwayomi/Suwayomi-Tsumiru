@@ -12,6 +12,7 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../widgets/download_status_icon.dart';
@@ -225,28 +226,35 @@ class _HeadTile extends StatelessWidget {
                       ),
                     ),
                     if (isGroup)
-                      GestureDetector(
-                        onTap: onToggleExpand,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                context.l10n.updatesGroupingShowMore(tailCount),
-                                style: context.textTheme.labelSmall?.copyWith(
+                      HoverTapTarget(
+                        builder: (context, hovered) => GestureDetector(
+                          onTap: onToggleExpand,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  context.l10n.updatesGroupingShowMore(
+                                    tailCount,
+                                  ),
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.theme.colorScheme.primary,
+                                    decoration: hovered
+                                        ? TextDecoration.underline
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  isExpanded
+                                      ? Icons.expand_less_rounded
+                                      : Icons.expand_more_rounded,
+                                  size: 14,
                                   color: context.theme.colorScheme.primary,
                                 ),
-                              ),
-                              const SizedBox(width: 2),
-                              Icon(
-                                isExpanded
-                                    ? Icons.expand_less_rounded
-                                    : Icons.expand_more_rounded,
-                                size: 14,
-                                color: context.theme.colorScheme.primary,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

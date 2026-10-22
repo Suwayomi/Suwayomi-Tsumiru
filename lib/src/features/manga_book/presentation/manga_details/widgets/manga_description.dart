@@ -21,6 +21,7 @@ import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
+import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../migration/domain/migration_models.dart';
@@ -692,18 +693,32 @@ class _SeriesGenreChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      BrandChip(label: label),
-      Positioned.fill(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: onTap,
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return HoverTapTarget(
+      builder: (context, hovered) => Stack(
+        children: [
+          BrandChip(label: label),
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: context.reduceMotion ? 0 : 120),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: cs.onSurface.withValues(alpha: hovered ? 0.08 : 0),
+              ),
+            ),
           ),
-        ),
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: onTap,
+              ),
+            ),
+          ),
+        ],
       ),
-    ],
-  );
+    );
+  }
 }

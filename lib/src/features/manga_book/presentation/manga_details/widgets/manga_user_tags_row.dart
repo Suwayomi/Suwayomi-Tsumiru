@@ -9,11 +9,15 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/hover_tap_target.dart';
 import '../controller/manga_details_controller.dart';
 import 'tag_actions_menu.dart';
 
 Future<void> _showAddTagDialog(
-    BuildContext context, WidgetRef ref, int mangaId) async {
+  BuildContext context,
+  WidgetRef ref,
+  int mangaId,
+) async {
   final controller = TextEditingController();
   final tag = await showDialog<String>(
     context: context,
@@ -54,16 +58,19 @@ class AddUserTagChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
-    return GestureDetector(
-      onTap: () => _showAddTagDialog(context, ref, mangaId),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: cs.primary.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: cs.primary.withValues(alpha: 0.45)),
+    return HoverTapTarget(
+      builder: (context, hovered) => GestureDetector(
+        onTap: () => _showAddTagDialog(context, ref, mangaId),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: context.reduceMotion ? 0 : 120),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: cs.primary.withValues(alpha: hovered ? 0.22 : 0.14),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: cs.primary.withValues(alpha: 0.45)),
+          ),
+          child: Icon(Icons.add_rounded, size: 16, color: cs.primary),
         ),
-        child: Icon(Icons.add_rounded, size: 16, color: cs.primary),
       ),
     );
   }

@@ -13,6 +13,7 @@ import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/cover_row_section.dart';
+import '../../../../widgets/hover_tap_target.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../browse_center/domain/source/source_model.dart';
@@ -133,45 +134,52 @@ class _PhoneSearchBox extends ConsumerWidget {
     final active = _activeFilter(ref, origin);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: GestureDetector(
-        onTap: onOpen,
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainer,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: cs.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.search_rounded, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  active ?? context.l10n.unifiedSearchHint,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: active == null
-                      ? context.textTheme.bodyMedium?.copyWith(
-                          color: context.theme.hintColor,
-                        )
-                      : context.textTheme.bodyMedium,
-                ),
+      child: HoverTapTarget(
+        cursor: SystemMouseCursors.text,
+        builder: (context, hovered) => GestureDetector(
+          onTap: onOpen,
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainer,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: hovered
+                    ? cs.onSurface.withValues(alpha: 0.18)
+                    : cs.outlineVariant,
               ),
-              if (active != null)
-                IconButton(
-                  tooltip: context.l10n.reset,
-                  iconSize: 20,
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    active ?? context.l10n.unifiedSearchHint,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: active == null
+                        ? context.textTheme.bodyMedium?.copyWith(
+                            color: context.theme.hintColor,
+                          )
+                        : context.textTheme.bodyMedium,
                   ),
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => _clearFilter(ref, origin),
                 ),
-            ],
+                if (active != null)
+                  IconButton(
+                    tooltip: context.l10n.reset,
+                    iconSize: 20,
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => _clearFilter(ref, origin),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

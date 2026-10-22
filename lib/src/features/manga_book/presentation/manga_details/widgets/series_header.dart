@@ -329,6 +329,7 @@ class SeriesHeaderPill extends HookWidget {
                 : .10,
           );
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => hovered.value = true,
       onExit: (_) {
         hovered.value = false;
