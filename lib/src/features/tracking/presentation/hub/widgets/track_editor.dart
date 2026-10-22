@@ -12,6 +12,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/hover_tap_target.dart';
 import '../../../controller/manga_track_records_controller.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
@@ -100,19 +101,24 @@ class TrackEditor extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => launchUrlInWeb(
-                    context,
-                    trackRecord.remoteUrl,
-                    ref.read(toastProvider),
-                  ),
-                  child: Text(
-                    trackRecord.title,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      decoration: TextDecoration.underline,
+                child: HoverTapTarget(
+                  builder: (context, hovered) => GestureDetector(
+                    onTap: () => launchUrlInWeb(
+                      context,
+                      trackRecord.remoteUrl,
+                      ref.read(toastProvider),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    child: Text(
+                      trackRecord.title,
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        decoration: TextDecoration.underline,
+                        color: hovered
+                            ? context.theme.colorScheme.primary
+                            : null,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
@@ -417,21 +423,27 @@ class _DateRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: date ?? DateTime.now(),
-                  firstDate: DateTime(1900),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) onPick(picked);
-              },
-              child: Text(
-                date != null
-                    ? '${date!.year}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}'
-                    : '—',
-                style: context.textTheme.bodyMedium,
+            child: HoverTapTarget(
+              builder: (context, hovered) => GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: date ?? DateTime.now(),
+                    firstDate: DateTime(1900),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) onPick(picked);
+                },
+                child: Text(
+                  date != null
+                      ? '${date!.year}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}'
+                      : '—',
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    decoration: hovered
+                        ? TextDecoration.underline
+                        : TextDecoration.none,
+                  ),
+                ),
               ),
             ),
           ),
@@ -471,13 +483,23 @@ class _ChaptersRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final display =
-        totalChapters > 0 ? '$_readText / $totalChapters' : _readText;
+    final display = totalChapters > 0
+        ? '$_readText / $totalChapters'
+        : _readText;
     return _EditorRow(
       label: label,
-      child: GestureDetector(
-        onTap: () => _edit(context),
-        child: Text(display, style: context.textTheme.bodyMedium),
+      child: HoverTapTarget(
+        builder: (context, hovered) => GestureDetector(
+          onTap: () => _edit(context),
+          child: Text(
+            display,
+            style: context.textTheme.bodyMedium?.copyWith(
+              decoration: hovered
+                  ? TextDecoration.underline
+                  : TextDecoration.none,
+            ),
+          ),
+        ),
       ),
     );
   }

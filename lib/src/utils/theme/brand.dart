@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
 
 import '../../widgets/custom_circular_progress_indicator.dart';
+import '../../widgets/hover_tap_target.dart';
+import '../motion/reduce_motion.dart';
 
 /// Brand visual language — the SINGLE source for the things Flutter's Material
 /// [ThemeData] cannot express (gradients + glow). Gradients come from the
@@ -463,7 +465,27 @@ class BrandChip extends StatelessWidget {
       ),
     );
     if (onTap == null) return chip;
-    return GestureDetector(onTap: onTap, child: chip);
+    return HoverTapTarget(
+      builder: (context, hovered) => GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          children: [
+            chip,
+            Positioned.fill(
+              child: AnimatedContainer(
+                duration: Duration(
+                  milliseconds: context.reduceMotion ? 0 : 120,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: cs.onSurface.withValues(alpha: hovered ? 0.08 : 0),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

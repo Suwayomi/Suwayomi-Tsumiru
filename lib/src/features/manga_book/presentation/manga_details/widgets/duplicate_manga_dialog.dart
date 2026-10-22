@@ -18,6 +18,7 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/cover_row_section.dart';
+import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../../widgets/manga_cover/widgets/manga_badges.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -268,43 +269,52 @@ class _DuplicateCard extends StatelessWidget {
             ),
           ),
           const Gap(4),
-          GestureDetector(
-            onTap: onTap,
-            onLongPress: onLongPress,
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  duplicate.title,
-                  style: context.textTheme.titleSmall,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-                if (author.isNotBlank)
-                  _DetailRow(icon: Icons.person_outline_rounded, text: author!),
-                if (showArtist)
-                  _DetailRow(icon: Icons.brush_rounded, text: artist!),
-                _DetailRow(icon: status.icon, text: status.toLocale(context)),
-                if (isCertain) ...[
+          HoverTapTarget(
+            builder: (context, hovered) => GestureDetector(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    duplicate.title,
+                    style: context.textTheme.titleSmall?.copyWith(
+                      decoration: hovered
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                  if (author.isNotBlank)
+                    _DetailRow(
+                      icon: Icons.person_outline_rounded,
+                      text: author!,
+                    ),
+                  if (showArtist)
+                    _DetailRow(icon: Icons.brush_rounded, text: artist!),
+                  _DetailRow(icon: status.icon, text: status.toLocale(context)),
+                  if (isCertain) ...[
+                    const Gap(4),
+                    _CertainChip(
+                      label: switch (trackerNameOf(_sharedTrackerId ?? -1)) {
+                        final String tracker =>
+                          context.l10n.duplicateSameTrackerEntry(tracker),
+                        null => context.l10n.duplicateSameTrackerEntryGeneric,
+                      },
+                    ),
+                  ],
                   const Gap(4),
-                  _CertainChip(
-                    label: switch (trackerNameOf(_sharedTrackerId ?? -1)) {
-                      final String tracker =>
-                        context.l10n.duplicateSameTrackerEntry(tracker),
-                      null => context.l10n.duplicateSameTrackerEntryGeneric,
-                    },
+                  Text(
+                    sourceName,
+                    style: context.textTheme.labelSmall,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ],
-                const Gap(4),
-                Text(
-                  sourceName,
-                  style: context.textTheme.labelSmall,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ],
+              ),
             ),
           ),
         ],
