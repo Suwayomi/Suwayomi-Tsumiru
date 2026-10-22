@@ -9,9 +9,8 @@ import 'dart:convert';
 /// Returns the full URL to open in the external browser to start OAuth for
 /// [trackerId] / [trackerName], given the tracker's [authUrl] base.
 ///
-/// Builds the `state` JSON param exactly as Suwayomi-WebUI does:
-///   `{ redirectUrl, trackerId, trackerName }`
-/// then appends it URL-encoded to [authUrl].
+/// Preserves the server bridge state fields, adds an optional native nonce,
+/// and appends the URL-encoded JSON to [authUrl].
 ///
 /// [redirectUrl] is the platform callback URL (e.g. `tsumiru://tracker-oauth`
 /// on native, or the web-app origin + route on web).
@@ -20,11 +19,13 @@ String buildTrackerAuthUrl({
   required int trackerId,
   required String trackerName,
   required String redirectUrl,
+  String? nonce,
 }) {
   final state = {
     'redirectUrl': redirectUrl,
     'trackerId': trackerId,
     'trackerName': trackerName,
+    'nonce': ?nonce,
   };
   final encoded = Uri.encodeComponent(jsonEncode(state));
   return '$authUrl&state=$encoded';

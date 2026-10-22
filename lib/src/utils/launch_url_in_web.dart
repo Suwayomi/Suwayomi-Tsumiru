@@ -11,13 +11,18 @@ import 'package:url_launcher/url_launcher.dart';
 import 'extensions/custom_extensions.dart';
 import 'misc/toast/toast.dart';
 
-Future<void> launchUrlInWeb(BuildContext context, String url,
-    [Toast? toast]) async {
+Future<void> launchUrlInWeb(
+  BuildContext context,
+  String url, [
+  Toast? toast,
+  String? failureMessage,
+]) async {
   final uri = Uri.tryParse(url);
   // Restrict to http(s): these URLs come from server/source data, and a
   // malicious source could otherwise trigger arbitrary intents (intent://, tel:, etc).
   final scheme = uri?.scheme.toLowerCase();
-  final launched = uri != null &&
+  final launched =
+      uri != null &&
       (scheme == 'http' || scheme == 'https') &&
       await launchUrl(
         uri,
@@ -26,6 +31,8 @@ Future<void> launchUrlInWeb(BuildContext context, String url,
       );
   if (!launched) {
     await Clipboard.setData(ClipboardData(text: url));
-    if (context.mounted) toast?.showError(context.l10n.errorLaunchURL(url));
+    if (context.mounted) {
+      toast?.showError(failureMessage ?? context.l10n.errorLaunchURL(url));
+    }
   }
 }

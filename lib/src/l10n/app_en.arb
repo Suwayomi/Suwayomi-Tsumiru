@@ -4228,5 +4228,8 @@
   "suggestionsFetching": "Fetching suggestions…",
   "suggestionsFetchingSubtitle": "Checking recommendation services. This may take a moment.",
   "suggestionsEmpty": "No suggestions found for this title.",
-  "suggestionsLoadFailed": "Couldn’t load suggestions. Try again later."
+  "suggestionsLoadFailed": "Couldn’t load suggestions. Try again later.",
+  "trackerOAuthLinkInvalid": "This sign-in link is no longer valid. Start tracker sign-in again.",
+  "trackerOAuthSaveFailed": "Couldn’t save the sign-in request. Try again.",
+  "trackerOAuthBrowserFallback": "Couldn’t open the browser. The sign-in link was copied to the clipboard."
 }

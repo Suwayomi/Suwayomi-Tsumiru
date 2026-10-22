@@ -48,15 +48,16 @@ import 'src/features/settings/presentation/server/widget/client/server_port_tile
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
-import 'src/features/tracking/data/tracker_repository.dart';
-import 'src/features/tracking/domain/tracker_oauth_helpers.dart';
+import 'src/features/tracking/data/native_tracker_oauth.dart';
 import 'src/global_providers/global_providers.dart';
+import 'src/routes/router_config.dart';
 import 'src/sorayomi.dart';
 import 'src/utils/crash/crash_log.dart';
 import 'src/utils/crash/diagnostics.dart';
 import 'src/utils/crash/provider_failure_logger.dart';
 import 'src/utils/crash/redact_tokens.dart';
 import 'src/utils/desktop/desktop_window.dart';
+import 'src/utils/extensions/custom_extensions.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/network/graphql_errors.dart';
@@ -487,37 +488,28 @@ void _onFatalError(Object error, StackTrace stack) {
 /// `tsumiru://tracker-oauth?...&state=...` are handled automatically.
 ///
 /// Checks for an initial link (cold-start) and subscribes to the uriLinkStream
-/// (warm-start). Both paths parse the tracker ID from the `state` query param,
-/// call `loginOAuth`, and invalidate `trackersProvider`.
+/// (warm-start). Both paths use the same pending-request guard.
 void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
   final appLinks = AppLinks();
 
   Future<void> handleUri(Uri uri) async {
     if (uri.scheme != 'tsumiru' || uri.host != 'tracker-oauth') return;
-    final trackerId = parseTrackerIdFromCallback(uri);
-    if (trackerId == null) {
-      debugPrint('tracker-oauth callback: missing/invalid trackerId in state');
-      return;
-    }
     final container = currentContainer();
-    final current = container
-        .read(authCredentialsStoreProvider.notifier)
-        .captureSession();
+    final current = container.read(authCredentialsStoreProvider.notifier).captureSession();
     if (!current()) return;
     try {
-      await container
-          .read(trackerRepositoryProvider)
-          .loginOAuth(trackerId: trackerId, callbackUrl: uri.toString());
+      final toast = container.read(toastProvider);
+      final outcome = await container.read(nativeTrackerOAuthProvider).handleCallback(uri);
       if (!current()) return;
-      container.invalidate(trackersProvider);
-    } catch (e) {
-      if (!current()) return;
-      debugPrint('tracker-oauth loginOAuth failed: $e');
-      try {
-        container.read(toastProvider)?.showError(e.toString());
-      } catch (_) {
-        // toast unavailable before widget binding
+      final context = rootNavigatorKey.currentContext;
+      if (context == null || !context.mounted) return;
+      if (outcome == TrackerOAuthOutcome.rejected) {
+        toast?.showError(context.l10n.trackerOAuthLinkInvalid);
+      } else if (outcome == TrackerOAuthOutcome.failed) {
+        toast?.showError(context.l10n.errorSomethingWentWrong);
       }
+    } catch (_) {
+      debugPrint('Tracker sign-in callback could not be processed');
     }
   }
 
@@ -528,13 +520,13 @@ void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
         if (uri != null) unawaited(handleUri(uri));
       })
       .catchError((e) {
-        debugPrint('AppLinks.getInitialLink error: $e');
+        debugPrint('AppLinks initial link could not be read');
       });
 
   // Warm-start: the app was already running and received a deep link.
   appLinks.uriLinkStream.listen(
     (uri) => unawaited(handleUri(uri)),
-    onError: (e) => debugPrint('AppLinks.uriLinkStream error: $e'),
+    onError: (_) => debugPrint('AppLinks link stream failed'),
   );
 }
 
