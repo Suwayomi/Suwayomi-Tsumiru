@@ -6,7 +6,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class WebSelectionArea extends StatelessWidget {
   const WebSelectionArea({super.key, required this.child, this.enabled = true});
@@ -18,19 +17,6 @@ class WebSelectionArea extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!kIsWeb || !enabled) return child;
     if (SelectionContainer.maybeOf(context) != null) return child;
-    // Web's default text shortcuts swallow copy and select-all, so these must sit closer to the region.
-    return Shortcuts(
-      shortcuts: const {
-        SingleActivator(LogicalKeyboardKey.keyC, control: true):
-            CopySelectionTextIntent.copy,
-        SingleActivator(LogicalKeyboardKey.keyC, meta: true):
-            CopySelectionTextIntent.copy,
-        SingleActivator(LogicalKeyboardKey.keyA, control: true):
-            SelectAllTextIntent(SelectionChangedCause.keyboard),
-        SingleActivator(LogicalKeyboardKey.keyA, meta: true):
-            SelectAllTextIntent(SelectionChangedCause.keyboard),
-      },
-      child: SelectionArea(child: child),
-    );
+    return SelectionArea(child: child);
   }
 }
