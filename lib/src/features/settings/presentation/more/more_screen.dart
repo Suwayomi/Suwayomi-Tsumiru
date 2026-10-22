@@ -36,7 +36,7 @@ class MoreScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authType = ref.watch(authTypeKeyProvider);
     final account = ref.watch(currentAccountProvider);
-    final showAccount = authType == AuthType.uiLogin;
+    final showAccount = ref.watch(showAccountEntryProvider);
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     // Phone searches from the app-bar entry (or the box under the title when
     // the persistent setting is on); tablet and desktop are unchanged.

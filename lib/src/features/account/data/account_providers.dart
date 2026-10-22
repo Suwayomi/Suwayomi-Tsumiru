@@ -127,6 +127,12 @@ final settledAccountAccessProvider = Provider<AccountAccess>((ref) {
       AccountAccess(capability: AccountCapability.unknown);
 });
 
+final showAccountEntryProvider = Provider<bool>((ref) {
+  return ref.watch(authTypeKeyProvider) == AuthType.uiLogin &&
+      ref.watch(settledAccountAccessProvider).capability !=
+          AccountCapability.unsupported;
+});
+
 class _SettledAccessCache {
   String? _key;
   AccountAccess? _access;

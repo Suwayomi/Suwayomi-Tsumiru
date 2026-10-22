@@ -206,4 +206,12 @@ void main() {
     expect(actions.signOuts, 1);
   });
 
+  testWidgets('More hides the Account entry without account support',
+      (tester) async {
+    await pump(tester, more: true, capability: AccountCapability.unsupported);
+    expect(find.widgetWithIcon(ListTile, Icons.person_rounded), findsNothing);
+    await pump(tester, more: true, capability: AccountCapability.unknown);
+    expect(
+        find.widgetWithIcon(ListTile, Icons.person_rounded), findsOneWidget);
+  });
 }

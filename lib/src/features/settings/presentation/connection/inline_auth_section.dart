@@ -23,6 +23,7 @@ import '../../../../utils/platform/web_auth_mode.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../account/data/account_actions.dart';
 import '../../../account/data/account_providers.dart';
+import '../../../account/data/server_account_capability.dart';
 import '../../../account/domain/account_access.dart';
 import '../../../account/presentation/account_code_dialog.dart';
 import '../../../auth/data/auth_session_status.dart';
@@ -56,10 +57,22 @@ class InlineAuthSection extends HookConsumerWidget {
         authType != AuthType.none &&
         ref.watch(hasStoredCredentialsProvider) &&
         !needsReauth;
+    final probeBaseUrl = Endpoints.baseApi(
+      baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+      port: ref.watch(serverPortProvider),
+      addPort: ref.watch(serverPortToggleProvider).ifNull(),
+      appendApiToUrl: false,
+    );
+    final serverAccountCapability = useServerAccountCapability(
+      ref,
+      probeBaseUrl,
+      authType,
+    );
     final showAccountCodes =
         authType == AuthType.uiLogin &&
         ref.watch(settledAccountAccessProvider).capability !=
-            AccountCapability.unsupported;
+            AccountCapability.unsupported &&
+        serverAccountCapability != AccountCapability.unsupported;
 
     final username = useTextEditingController(text: storedUsername ?? '');
     final password = useTextEditingController();
