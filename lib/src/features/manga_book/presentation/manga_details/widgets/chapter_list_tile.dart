@@ -18,6 +18,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/web_route_link.dart';
 import '../../../../offline/presentation/offline_save_button.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/downloads/downloads_model.dart';
@@ -162,89 +163,101 @@ class ChapterListTile extends HookConsumerWidget {
         DBKeys.chapterSwipeToRight.initial as ChapterSwipeAction;
     final queueEntry = ref.watch(downloadsFromIdProvider(chapter.id));
     final canDownload = canDownloadChapters(ref);
-    final row = GestureDetector(
-      key: Key("manga-${manga.id}-chapter-${chapter.id}"),
-      onSecondaryTap: () => toggleSelect(chapter),
-      child: ListTile(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (chapter.isBookmarked.ifNull()) ...[
-              Icon(
-                Icons.bookmark_rounded,
-                color: chapter.isRead.ifNull() ? readColor : context.iconColor,
-                size: 20,
-              ),
-              const Gap(4),
-            ],
-            Expanded(
-              child: Text(
-                showChapterNumber
-                    ? context.l10n.chapterNumber(chapter.formattedChapterNumber)
-                    : chapter.name,
-                style: TextStyle(
-                  color: chapter.isRead.ifNull() ? readColor : null,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        subtitle: Text.rich(
-          TextSpan(
+    final readerLocation = ReaderRoute(
+      mangaId: manga.id,
+      chapterId: chapter.id,
+      showReaderLayoutAnimation: true,
+    ).location;
+    final row = WebRouteLink(
+      location: readerLocation,
+      builder: (context, openInNewTab) => GestureDetector(
+        key: Key("manga-${manga.id}-chapter-${chapter.id}"),
+        onSecondaryTap: () => toggleSelect(chapter),
+        child: ListTile(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextSpan(
-                text: int.tryParse(chapter.uploadDate).toDaysAgo(context),
-                style: TextStyle(
-                  color: chapter.isRead.ifNull() ? readColor : null,
+              if (chapter.isBookmarked.ifNull()) ...[
+                Icon(
+                  Icons.bookmark_rounded,
+                  color: chapter.isRead.ifNull() ? readColor : context.iconColor,
+                  size: 20,
                 ),
-              ),
-              if (!chapter.isRead.ifNull() &&
-                  (chapter.lastPageRead).getValueOnNullOrNegative() != 0)
-                TextSpan(
-                  text:
-                      " • ${context.l10n.page(chapter.lastPageRead.getValueOnNullOrNegative() + 1)}",
+                const Gap(4),
+              ],
+              Expanded(
+                child: Text(
+                  showChapterNumber
+                      ? context.l10n.chapterNumber(chapter.formattedChapterNumber)
+                      : chapter.name,
                   style: TextStyle(
-                    color: context.theme.colorScheme.onSurfaceVariant,
+                    color: chapter.isRead.ifNull() ? readColor : null,
                   ),
-                ),
-              TextSpan(
-                text: " • $scanlator",
-                style: TextStyle(
-                  color: chapter.isRead.ifNull() ? readColor : null,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OfflineSaveButton(chapterId: chapter.id),
-            // Local source: the files are already on the server, so there is
-            // nothing to download there (Komikku parity).
-            if (!manga.isLocalSource)
-              DownloadStatusIcon(
-                updateData: updateData,
-                chapter: chapter,
-                mangaId: manga.id,
-                isDownloaded: chapter.isDownloaded.ifNull(),
-              ),
-          ],
-        ),
-        selectedColor: context.theme.colorScheme.onSurface,
-        selectedTileColor: context.theme.colorScheme.secondaryContainer,
-        selected: isSelected,
-        onTap: canTapSelect
-            ? () => toggleSelect(chapter)
-            : () => ReaderRoute(
+          subtitle: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: int.tryParse(chapter.uploadDate).toDaysAgo(context),
+                  style: TextStyle(
+                    color: chapter.isRead.ifNull() ? readColor : null,
+                  ),
+                ),
+                if (!chapter.isRead.ifNull() &&
+                    (chapter.lastPageRead).getValueOnNullOrNegative() != 0)
+                  TextSpan(
+                    text:
+                        " • ${context.l10n.page(chapter.lastPageRead.getValueOnNullOrNegative() + 1)}",
+                    style: TextStyle(
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                TextSpan(
+                  text: " • $scanlator",
+                  style: TextStyle(
+                    color: chapter.isRead.ifNull() ? readColor : null,
+                  ),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OfflineSaveButton(chapterId: chapter.id),
+              // Local source: the files are already on the server, so there is
+              // nothing to download there (Komikku parity).
+              if (!manga.isLocalSource)
+                DownloadStatusIcon(
+                  updateData: updateData,
+                  chapter: chapter,
+                  mangaId: manga.id,
+                  isDownloaded: chapter.isDownloaded.ifNull(),
+                ),
+            ],
+          ),
+          selectedColor: context.theme.colorScheme.onSurface,
+          selectedTileColor: context.theme.colorScheme.secondaryContainer,
+          selected: isSelected,
+          onTap: () => WebRouteLink.handleTap(openInNewTab, () {
+            if (canTapSelect) {
+              toggleSelect(chapter);
+            } else {
+              ReaderRoute(
                 mangaId: manga.id,
                 chapterId: chapter.id,
                 showReaderLayoutAnimation: true,
-              ).push(context),
-        onLongPress: () => toggleSelect(chapter),
+              ).push(context);
+            }
+          }),
+          onLongPress: () => toggleSelect(chapter),
+        ),
       ),
     );
     return _ChapterSwipeRow(
@@ -322,175 +335,182 @@ class ChapterListTile extends HookConsumerWidget {
         ? (chapter.lastPageRead / chapter.pageCount).clamp(0.0, 1.0)
         : 0.0;
 
-    return GestureDetector(
-      onSecondaryTapDown: (details) =>
-          onSecondaryTapAt?.call(details.globalPosition),
-      child: MouseRegion(
-        onEnter: (_) => hovered.value = true,
-        onExit: (_) => hovered.value = false,
-        child: Material(
-          color: isSelected
-              ? cs.primary.withValues(alpha: 0.16)
-              : isCurrent
-              ? cs.primary.withValues(alpha: 0.10)
-              : Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              final shift =
-                  HardwareKeyboard.instance.logicalKeysPressed.contains(
-                    LogicalKeyboardKey.shiftLeft,
-                  ) ||
-                  HardwareKeyboard.instance.logicalKeysPressed.contains(
-                    LogicalKeyboardKey.shiftRight,
-                  );
-              onRowTap?.call(shift);
-            },
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.only(right: 4),
-              child: Stack(
-                children: [
-                  Row(
-                    children: [
-                      if (selectionMode)
-                        Checkbox(
-                          value: isSelected,
-                          visualDensity: VisualDensity.compact,
-                          onChanged: (_) => toggleSelect(chapter),
-                        )
-                      else
-                        const SizedBox(width: 13),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: read ? readColor : null,
+    return WebRouteLink(
+      location: ReaderRoute(
+        mangaId: manga.id,
+        chapterId: chapter.id,
+        showReaderLayoutAnimation: true,
+      ).location,
+      builder: (context, openInNewTab) => GestureDetector(
+        onSecondaryTapDown: (details) =>
+            onSecondaryTapAt?.call(details.globalPosition),
+        child: MouseRegion(
+          onEnter: (_) => hovered.value = true,
+          onExit: (_) => hovered.value = false,
+          child: Material(
+            color: isSelected
+                ? cs.primary.withValues(alpha: 0.16)
+                : isCurrent
+                ? cs.primary.withValues(alpha: 0.10)
+                : Colors.transparent,
+            child: InkWell(
+              onTap: () => WebRouteLink.handleTap(openInNewTab, () {
+                final shift =
+                    HardwareKeyboard.instance.logicalKeysPressed.contains(
+                      LogicalKeyboardKey.shiftLeft,
+                    ) ||
+                    HardwareKeyboard.instance.logicalKeysPressed.contains(
+                      LogicalKeyboardKey.shiftRight,
+                    );
+                onRowTap?.call(shift);
+              }),
+              child: Container(
+                height: 46,
+                padding: const EdgeInsets.only(right: 4),
+                child: Stack(
+                  children: [
+                    Row(
+                      children: [
+                        if (selectionMode)
+                          Checkbox(
+                            value: isSelected,
+                            visualDensity: VisualDensity.compact,
+                            onChanged: (_) => toggleSelect(chapter),
+                          )
+                        else
+                          const SizedBox(width: 13),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: read ? readColor : null,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      SizedBox(
-                        width: 96,
-                        child: Text(
-                          scanlator,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: read ? readColor : cs.onSurfaceVariant,
+                        SizedBox(
+                          width: 96,
+                          child: Text(
+                            scanlator,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: read ? readColor : cs.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      SizedBox(
-                        width: 92,
-                        child: Text(
-                          int.tryParse(chapter.uploadDate).toDaysAgo(context),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: read ? readColor : cs.onSurfaceVariant,
+                        SizedBox(
+                          width: 92,
+                          child: Text(
+                            int.tryParse(chapter.uploadDate).toDaysAgo(context),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: read ? readColor : cs.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      SizedBox(
-                        width: 32,
-                        child: bookmarked
-                            ? AnimatedScale(
-                                scale: popping.value ? 1.35 : 1.0,
-                                duration: const Duration(milliseconds: 180),
-                                child: IconButton(
-                                  iconSize: 20,
-                                  padding: EdgeInsets.zero,
-                                  tooltip: context.l10n.removeBookmark,
-                                  onPressed: toggleBookmark,
-                                  icon: Icon(
-                                    Icons.bookmark_rounded,
-                                    color: cs.primary,
+                        SizedBox(
+                          width: 32,
+                          child: bookmarked
+                              ? AnimatedScale(
+                                  scale: popping.value ? 1.35 : 1.0,
+                                  duration: const Duration(milliseconds: 180),
+                                  child: IconButton(
+                                    iconSize: 20,
+                                    padding: EdgeInsets.zero,
+                                    tooltip: context.l10n.removeBookmark,
+                                    onPressed: toggleBookmark,
+                                    icon: Icon(
+                                      Icons.bookmark_rounded,
+                                      color: cs.primary,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : showHoverActions
-                            ? AnimatedScale(
-                                scale: popping.value ? 1.35 : 1.0,
-                                duration: const Duration(milliseconds: 180),
-                                child: IconButton(
-                                  iconSize: 20,
-                                  padding: EdgeInsets.zero,
-                                  tooltip: context.l10n.bookmark,
-                                  onPressed: toggleBookmark,
-                                  icon: Icon(
-                                    Icons.bookmark_outline_rounded,
-                                    color: cs.onSurfaceVariant,
+                                )
+                              : showHoverActions
+                              ? AnimatedScale(
+                                  scale: popping.value ? 1.35 : 1.0,
+                                  duration: const Duration(milliseconds: 180),
+                                  child: IconButton(
+                                    iconSize: 20,
+                                    padding: EdgeInsets.zero,
+                                    tooltip: context.l10n.bookmark,
+                                    onPressed: toggleBookmark,
+                                    icon: Icon(
+                                      Icons.bookmark_outline_rounded,
+                                      color: cs.onSurfaceVariant,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : null,
-                      ),
-                      OfflineSaveButton(chapterId: chapter.id),
-                      if (!manga.isLocalSource)
-                        DownloadStatusIcon(
-                          updateData: updateData,
-                          chapter: chapter,
-                          mangaId: manga.id,
-                          isDownloaded: chapter.isDownloaded.ifNull(),
+                                )
+                              : null,
                         ),
-                      SizedBox(
-                        width: 32,
-                        child: Visibility(
-                          visible: showHoverActions,
-                          maintainSize: true,
-                          maintainState: true,
-                          maintainAnimation: true,
-                          child: Focus(
-                            focusNode: optionsFocus,
-                            onFocusChange: (v) => optionsFocused.value = v,
-                            child: IconButton(
-                              key: optionsButtonKey,
-                              iconSize: 20,
-                              padding: EdgeInsets.zero,
-                              tooltip: context.l10n.more,
-                              onPressed: openOptions,
-                              icon: Icon(
-                                Icons.more_vert_rounded,
-                                color: cs.onSurfaceVariant,
+                        OfflineSaveButton(chapterId: chapter.id),
+                        if (!manga.isLocalSource)
+                          DownloadStatusIcon(
+                            updateData: updateData,
+                            chapter: chapter,
+                            mangaId: manga.id,
+                            isDownloaded: chapter.isDownloaded.ifNull(),
+                          ),
+                        SizedBox(
+                          width: 32,
+                          child: Visibility(
+                            visible: showHoverActions,
+                            maintainSize: true,
+                            maintainState: true,
+                            maintainAnimation: true,
+                            child: Focus(
+                              focusNode: optionsFocus,
+                              onFocusChange: (v) => optionsFocused.value = v,
+                              child: IconButton(
+                                key: optionsButtonKey,
+                                iconSize: 20,
+                                padding: EdgeInsets.zero,
+                                tooltip: context.l10n.more,
+                                onPressed: openOptions,
+                                icon: Icon(
+                                  Icons.more_vert_rounded,
+                                  color: cs.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  if (isCurrent &&
-                      chapter.pageCount > 0 &&
-                      chapter.lastPageRead.getValueOnNullOrNegative() != 0)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: Tooltip(
-                        message: context.l10n.pageOfTotal(
-                          chapter.lastPageRead + 1,
-                          chapter.pageCount,
-                        ),
-                        child: ClipRect(
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 3,
-                            backgroundColor: cs.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation(cs.primary),
+                      ],
+                    ),
+                    if (isCurrent &&
+                        chapter.pageCount > 0 &&
+                        chapter.lastPageRead.getValueOnNullOrNegative() != 0)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Tooltip(
+                          message: context.l10n.pageOfTotal(
+                            chapter.lastPageRead + 1,
+                            chapter.pageCount,
+                          ),
+                          child: ClipRect(
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 3,
+                              backgroundColor: cs.surfaceContainerHighest,
+                              valueColor: AlwaysStoppedAnimation(cs.primary),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  if (isCurrent)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 3,
-                      child: ColoredBox(color: cs.primary),
-                    ),
-                ],
+                    if (isCurrent)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 3,
+                        child: ColoredBox(color: cs.primary),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -14,6 +14,7 @@ import '../../../features/browse_center/domain/source/source_model.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../web_route_link.dart';
 import '../grid/manga_cover_grid_tile.dart';
 import '../widgets/manga_badges.dart';
 import '../widgets/manga_chips.dart';
@@ -33,7 +34,9 @@ class MangaCoverDescriptiveListTile extends StatefulWidget {
     this.outlineOnCovers = false,
     this.scale = 1.0,
     this.titleMaxLines = 2,
+    this.linkLocation,
   });
+  final String? linkLocation;
   final MangaDto manga;
   final bool showBadges;
   final bool showCountBadges;
@@ -107,155 +110,173 @@ class _MangaCoverDescriptiveListTileState
       color: widget.selected
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.24)
           : Colors.transparent,
-      child: InkWell(
-        focusNode: _focusNode,
-        hoverColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        focusColor: Colors.transparent,
-        onTapDown: (_) => setState(() => _pointerFocused = true),
-        onHover: (hovered) => setState(() => _hovered = hovered),
-        onFocusChange: (focused) => setState(() {
-          _focused = focused;
-          if (!focused) _pointerFocused = false;
-        }),
-        onTap: widget.onPressed == null
-            ? null
-            : () {
-                _focusNode.requestFocus();
-                widget.onPressed!();
-              },
-        onLongPress: widget.onLongPress,
-        child: Padding(
-        padding: const EdgeInsets.all(kListTilePadding),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: kDescriptiveCoverWidth * widget.scale,
-              height: mangaCoverBoxHeight(
+      child: WebRouteLink(
+        location: widget.linkLocation,
+        builder: (context, openInNewTab) => InkWell(
+          focusNode: _focusNode,
+          hoverColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          onTapDown: (_) => setState(() => _pointerFocused = true),
+          onHover: (hovered) => setState(() => _hovered = hovered),
+          onFocusChange: (focused) => setState(() {
+            _focused = focused;
+            if (!focused) _pointerFocused = false;
+          }),
+          onTap: widget.onPressed == null
+              ? null
+              : () {
+                  _focusNode.requestFocus();
+                  WebRouteLink.handleTap(openInNewTab, widget.onPressed!);
+                },
+          onLongPress: widget.onLongPress,
+          child: Padding(
+            padding: const EdgeInsets.all(kListTilePadding),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: kDescriptiveCoverWidth * widget.scale,
+                  height: mangaCoverBoxHeight(
                   kDescriptiveCoverWidth * widget.scale),
-              child: MangaCoverGridTile(
-                manga: widget.manga,
-                showBadges: false,
-                showTitle: false,
-                showDarkOverlay: false,
-                selected: widget.selected,
-                highlighted: _hovered || _keyboardFocused,
-                onContinueReading: widget.onContinueReading,
-                outlineOnCovers: widget.outlineOnCovers,
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    InkWell(
-                      onTap: widget.onTitleClicked != null
-                          ? () => widget.onTitleClicked!(widget.manga.title)
-                          : null,
-                      // Skia collapses an uncapped ellipsis to one line, so
-                      // uncapped text has to clip instead.
-                      child: Text(
-                        widget.manga.title,
-                        style: context.textTheme.titleLarge,
-                        softWrap: true,
-                        overflow: widget.titleMaxLines == null
-                            ? TextOverflow.clip
-                            : TextOverflow.ellipsis,
-                        maxLines: widget.titleMaxLines,
-                        semanticsLabel: widget.manga.title,
-                      ),
-                    ),
-                    Gap(8),
-                    InkWell(
-                      onTap: widget.onTitleClicked != null &&
-                              widget.manga.author.isNotBlank
-                          ? () => widget.onTitleClicked!(widget.manga.author)
-                          : null,
-                      child: Text(
-                        widget.manga.author ?? context.l10n.unknownAuthor,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textTheme.bodyMedium,
-                      ),
-                    ),
-                    Gap(8),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                  child: MangaCoverGridTile(
+                    manga: widget.manga,
+                    showBadges: false,
+                    showTitle: false,
+                    showDarkOverlay: false,
+                    selected: widget.selected,
+                    highlighted: _hovered || _keyboardFocused,
+                    onContinueReading: widget.onContinueReading,
+                    outlineOnCovers: widget.outlineOnCovers,
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ...[
-                          Icon(
-                            MangaStatus.fromJson(widget.manga.status.name).icon,
-                            size: 16,
-                            color: context.textTheme.bodySmall?.color,
+                        InkWell(
+                          onTap: widget.onTitleClicked != null
+                              ? () => widget.onTitleClicked!(widget.manga.title)
+                              : null,
+                          // Skia collapses an uncapped ellipsis to one line, so
+                          // uncapped text has to clip instead.
+                          child: Text(
+                            widget.manga.title,
+                            style: context.textTheme.titleLarge,
+                            softWrap: true,
+                            overflow: widget.titleMaxLines == null
+                                ? TextOverflow.clip
+                                : TextOverflow.ellipsis,
+                            maxLines: widget.titleMaxLines,
+                            semanticsLabel: widget.manga.title,
                           ),
-                          Text(
-                            " ${MangaStatus.fromJson(widget.manga.status.name).toLocale(context)}",
-                            style: context.textTheme.bodySmall,
+                        ),
+                        Gap(8),
+                        InkWell(
+                          onTap: widget.onTitleClicked != null &&
+                              widget.manga.author.isNotBlank
+                              ? () => widget.onTitleClicked!(widget.manga.author)
+                              : null,
+                          child: Text(
+                            widget.manga.author ?? context.l10n.unknownAuthor,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.bodyMedium,
                           ),
-                        ],
-                        if (widget.manga.source?.displayName != null) ...[
-                          Text(" • "),
-                          InkWell(
-                            onTap: (widget.manga.source?.id).isNotBlank
-                                ? () => SourceTypeRoute(
+                        ),
+                        Gap(8),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            ...[
+                              Icon(
+                                MangaStatus.fromJson(widget.manga.status.name).icon,
+                                size: 16,
+                                color: context.textTheme.bodySmall?.color,
+                              ),
+                              Text(
+                                " ${MangaStatus.fromJson(widget.manga.status.name).toLocale(context)}",
+                                style: context.textTheme.bodySmall,
+                              ),
+                            ],
+                            if (widget.manga.source?.displayName != null) ...[
+                              Text(" • "),
+                              WebRouteLink(
+                                location: (widget.manga.source?.id).isNotBlank
+                                    ? SourceTypeRoute(
                                         sourceId: widget.manga.source!.id,
-                                        sourceType: SourceType.POPULAR)
-                                    .go(context)
-                                : null,
-                            child: Text(
-                              widget.manga.source?.displayName ??
-                                  context.l10n.unknownSource,
-                              style: context.textTheme.bodySmall,
-                            ),
-                          ),
-                        ]
+                                        sourceType: SourceType.POPULAR,
+                                      ).location
+                                    : null,
+                                enabled: widget.linkLocation == null,
+                                builder: (context, openSourceInNewTab) =>
+                                    InkWell(
+                                      onTap:
+                                          (widget.manga.source?.id).isNotBlank
+                                          ? () => WebRouteLink.handleTap(
+                                              openSourceInNewTab,
+                                              () => SourceTypeRoute(
+                                                sourceId:
+                                                    widget.manga.source!.id,
+                                                sourceType: SourceType.POPULAR,
+                                              ).go(context),
+                                            )
+                                          : null,
+                                      child: Text(
+                                        widget.manga.source?.displayName ??
+                                            context.l10n.unknownSource,
+                                        style: context.textTheme.bodySmall,
+                                      ),
+                                    ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (widget.belowStatus != null) ...[
+                          Gap(4),
+                          widget.belowStatus!,
+                        ],
+                        // if (showLastReadChapter) ...[
+                        //   Padding(
+                        //     padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                        //     child: Text(
+                        //       manga.lastChapterRead?.name ?? "",
+                        //       overflow: TextOverflow.ellipsis,
+                        //       style: context.textTheme.bodySmall,
+                        //     ),
+                        //   ),
+                        //   Padding(
+                        //     padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        //     child: Text(
+                        //       manga.lastReadAt.toDaysAgoFromSeconds ?? "",
+                        //       overflow: TextOverflow.ellipsis,
+                        //       style: context.textTheme.bodySmall,
+                        //     ),
+                        //   ),
+                        // ],
+                        if (widget.showBadges)
+                          context.windowSizeClass >= WindowSizeClass.medium
+                              ? MangaChipsRow(
+                                  manga: widget.manga,
+                                  showCountBadges: widget.showCountBadges,
+                                )
+                              : MangaBadgesRow(
+                                  padding: KEdgeInsets.v8.size,
+                                  manga: widget.manga,
+                                  showCountBadges: widget.showCountBadges,
+                                ),
                       ],
                     ),
-                    if (widget.belowStatus != null) ...[
-                      Gap(4),
-                      widget.belowStatus!,
-                    ],
-                    // if (showLastReadChapter) ...[
-                    //   Padding(
-                    //     padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-                    //     child: Text(
-                    //       manga.lastChapterRead?.name ?? "",
-                    //       overflow: TextOverflow.ellipsis,
-                    //       style: context.textTheme.bodySmall,
-                    //     ),
-                    //   ),
-                    //   Padding(
-                    //     padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    //     child: Text(
-                    //       manga.lastReadAt.toDaysAgoFromSeconds ?? "",
-                    //       overflow: TextOverflow.ellipsis,
-                    //       style: context.textTheme.bodySmall,
-                    //     ),
-                    //   ),
-                    // ],
-                    if (widget.showBadges)
-                      context.windowSizeClass >= WindowSizeClass.medium
-                          ? MangaChipsRow(
-                              manga: widget.manga,
-                              showCountBadges: widget.showCountBadges,
-                            )
-                          : MangaBadgesRow(
-                              padding: KEdgeInsets.v8.size,
-                              manga: widget.manga,
-                              showCountBadges: widget.showCountBadges,
-                            ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }

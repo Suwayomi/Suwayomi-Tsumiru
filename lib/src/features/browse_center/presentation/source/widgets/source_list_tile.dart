@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -12,6 +13,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../../widgets/web_route_link.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/source/source_model.dart';
 import '../controller/source_controller.dart';
@@ -23,14 +25,41 @@ class SourceListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      onTap: (() async {
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (source.supportsLatest.ifNull())
+          WebRouteLink(
+            location: SourceTypeRoute(
+              sourceId: source.id,
+              sourceType: SourceType.LATEST,
+            ).location,
+            builder: (context, openLatestInNewTab) => TextButton(
+              onPressed: () {
+                ref.read(sourceLastUsedProvider.notifier).update(source.id);
+                WebRouteLink.handleTap(openLatestInNewTab, () {
+                  SourceTypeRoute(
+                    sourceId: source.id,
+                    sourceType: SourceType.LATEST,
+                  ).go(context);
+                });
+              },
+              child: Text(context.l10n.latest),
+            ),
+          ),
+        _PinButton(source: source),
+      ],
+    );
+    Widget tile(VoidCallback? openInNewTab, Widget? trailing) => ListTile(
+      onTap: () {
         ref.read(sourceLastUsedProvider.notifier).update(source.id);
-        SourceTypeRoute(
-          sourceId: source.id,
-          sourceType: SourceType.POPULAR,
-        ).go(context);
-      }),
+        WebRouteLink.handleTap(openInNewTab, () {
+          SourceTypeRoute(
+            sourceId: source.id,
+            sourceType: SourceType.POPULAR,
+          ).go(context);
+        });
+      },
       leading: ClipRRect(
         borderRadius: KBorderRadius.r8.radius,
         child: ServerImage(
@@ -42,23 +71,23 @@ class SourceListTile extends ConsumerWidget {
       subtitle: (source.language?.displayName).isNotBlank
           ? Text(source.language?.displayName ?? "")
           : null,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (source.supportsLatest.ifNull())
-            TextButton(
-              onPressed: () async {
-                ref.read(sourceLastUsedProvider.notifier).update(source.id);
-                SourceTypeRoute(
-                  sourceId: source.id,
-                  sourceType: SourceType.LATEST,
-                ).go(context);
-              },
-              child: Text(context.l10n.latest),
-            ),
-          _PinButton(source: source),
-        ],
-      ),
+      trailing: trailing,
+    );
+    final popular = WebRouteLink(
+      location: SourceTypeRoute(
+        sourceId: source.id,
+        sourceType: SourceType.POPULAR,
+      ).location,
+      builder: (context, openInNewTab) =>
+          tile(openInNewTab, kIsWeb ? null : actions),
+    );
+    if (!kIsWeb) return popular;
+    // The Latest button cannot sit inside the row link: the anchor would cover it.
+    return Row(
+      children: [
+        Expanded(child: popular),
+        actions,
+      ],
     );
   }
 }

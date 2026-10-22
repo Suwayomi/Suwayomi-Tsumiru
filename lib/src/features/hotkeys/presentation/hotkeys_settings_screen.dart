@@ -10,6 +10,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../widgets/web_selection_area.dart';
 import '../data/hotkey_binding.dart';
 
 class HotkeysSettingsScreen extends StatelessWidget {
@@ -47,10 +48,12 @@ class HotkeysSettingsScreen extends StatelessWidget {
     final title = Text(l.keyboardShortcuts);
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: ListView(padding: const EdgeInsets.only(bottom: 24), children: rows),
+      body: WebSelectionArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(padding: const EdgeInsets.only(bottom: 24), children: rows),
+          ),
         ),
       ),
     );
@@ -87,23 +90,23 @@ class _HotkeyRow extends StatelessWidget {
   final List<List<String>> chords;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(child: Text(label, style: context.textTheme.bodyLarge)),
-            const SizedBox(width: 16),
-            Flexible(
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 12,
-                runSpacing: 6,
-                children: [for (final chord in chords) _Chord(chord)],
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: Text(label, style: context.textTheme.bodyLarge)),
+        const SizedBox(width: 16),
+        Flexible(
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 12,
+            runSpacing: 6,
+            children: [for (final chord in chords) _Chord(chord)],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 // One key combination, e.g. Alt+← rendered as two adjacent caps.

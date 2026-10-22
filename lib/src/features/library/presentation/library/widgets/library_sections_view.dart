@@ -181,6 +181,10 @@ class _Section extends ConsumerWidget {
             mangaId: manga.id,
             categoryId: byCategory ? section.id : null,
           ).push(context),
+          linkLocationFor: (manga) => MangaRoute(
+            mangaId: manga.id,
+            categoryId: byCategory ? section.id : null,
+          ).location,
         ),
       ],
     );

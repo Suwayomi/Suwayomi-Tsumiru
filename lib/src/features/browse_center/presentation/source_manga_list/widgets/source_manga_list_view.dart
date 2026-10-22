@@ -98,6 +98,7 @@ class SourceMangaListView extends ConsumerWidget {
           itemBuilder: (context, item, index) => MangaCoverListTile(
             manga: item,
             selected: selectedIds.contains(item.id),
+            linkLocation: MangaRoute(mangaId: item.id).location,
             onLongPress: () => onToggleSelection(item.id),
             onPressed: () => selecting
                 ? onToggleSelection(item.id)

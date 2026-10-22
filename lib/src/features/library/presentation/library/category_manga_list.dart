@@ -205,6 +205,8 @@ class CategoryMangaList extends HookConsumerWidget {
           selection: selection.value,
           onOpen: open,
           onLongPress: (manga) => toggle(manga.id),
+          linkLocationFor: (manga) =>
+              MangaRoute(mangaId: manga.id, categoryId: categoryId).location,
         );
 
         final list = RefreshIndicator(
