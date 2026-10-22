@@ -104,6 +104,26 @@ void main() {
     expect(container.read(mangaRecommendationsProvider(1)).hasError, isTrue);
   });
 
+  test('all-failed error names every failed provider with its error', () async {
+    await Future<void>.delayed(Duration.zero);
+    await container.pump();
+    const unavailable = RecommendationServiceUnavailable();
+    const httpFailed = RecommendationHttpException(500);
+    first.completeError(unavailable);
+    second.completeError(httpFailed);
+    await Future<void>.delayed(Duration.zero);
+    await container.pump();
+    final error = container.read(mangaRecommendationsProvider(1)).error;
+    expect(error, isA<RecommendationAllFailed>());
+    final failures = (error as RecommendationAllFailed).failures;
+    expect(
+      [for (final failure in failures) failure.name],
+      ['AniList', 'MyAnimeList'],
+    );
+    expect(failures[0].error, same(unavailable));
+    expect(failures[1].error, same(httpFailed));
+  });
+
   test('settled successful empty providers produce an empty result', () async {
     first.complete([]);
     second.complete([]);

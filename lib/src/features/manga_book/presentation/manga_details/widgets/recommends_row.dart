@@ -20,6 +20,7 @@ import '../../../../settings/presentation/server/widget/client/server_url_tile/s
 import '../../../data/recommendations/recommendation_provider.dart';
 import '../../../data/recommendations/recommendation_repository.dart';
 import '../../recommends/recommendation_card.dart';
+import '../../recommends/recommendation_error_message.dart';
 import '../../recommends/recommendation_loading.dart';
 
 class RecommendsRow extends HookConsumerWidget {
@@ -108,7 +109,10 @@ class RecommendsRow extends HookConsumerWidget {
                                 children: [
                                   Text(
                                     recs.hasError
-                                        ? context.l10n.suggestionsLoadFailed
+                                        ? suggestionsRowErrorMessage(
+                                            context,
+                                            recs.error!,
+                                          )
                                         : context.l10n.suggestionsEmpty,
                                     textAlign: TextAlign.center,
                                     style: context.textTheme.bodyMedium,

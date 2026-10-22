@@ -101,8 +101,15 @@ AsyncValue<List<Recommendation>> mangaRecommendations(Ref ref, int mangaId) {
   if (recommendations.isEmpty &&
       results.isNotEmpty &&
       results.every((result) => result.hasError)) {
+    final failures = [
+      for (var i = 0; i < results.length; i++)
+        RecommendationProviderFailure(
+          context.providers[i].name,
+          results[i].error!,
+        ),
+    ];
     final failed = results.firstWhere((result) => result.hasError);
-    return AsyncError(failed.error!, failed.stackTrace!);
+    return AsyncError(RecommendationAllFailed(failures), failed.stackTrace!);
   }
   return AsyncData(recommendations);
 }
