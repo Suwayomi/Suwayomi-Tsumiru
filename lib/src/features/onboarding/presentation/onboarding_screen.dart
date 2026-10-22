@@ -857,6 +857,10 @@ class _ServerStep extends HookConsumerWidget {
         errorDetail.value = context.l10n.invalidProp(context.l10n.serverUrl);
         state.value = _TestState.failed;
         onVerifiedChanged(false);
+        if (context.mounted) {
+          await preferences.setString('onboarding.pendingProbe', '');
+          await preferences.setBool('onboarding.advanceAfterProbe', false);
+        }
         return;
       }
       state.value = _TestState.testing;

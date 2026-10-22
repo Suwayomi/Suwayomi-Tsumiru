@@ -4,13 +4,32 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+
+const _aboutOk =
+    '{"data":{"aboutServer":{"name":"Suwayomi-Server","version":"2.3.2162"}}}';
+const _downloadOk = '{"data":{"downloadStatus":{"state":"STOPPED"}}}';
+
+http.Client _openServerClient() => MockClient.streaming((request, body) async {
+  final q =
+      ((jsonDecode(await body.bytesToString()) as Map)['query'] as String);
+  return http.StreamedResponse(
+    Stream.value(
+      utf8.encode(q.contains('aboutServer') ? _aboutOk : _downloadOk),
+    ),
+    200,
+  );
+});
 
 void main() {
   testWidgets(
@@ -64,7 +83,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          onboardingHttpClientProvider.overrideWithValue(_openServerClient),
+        ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -109,5 +131,23 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Invalid Server URL'), findsNothing);
+
+    await tester.enterText(
+      urlField,
+      'http://127.0.0.1:8092http://192.168.2.5:4569',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Invalid Server URL'), findsOneWidget);
+    expect(sp.getBool('onboarding.advanceAfterProbe'), isNot(true));
+
+    await tester.enterText(urlField, 'http://192.168.2.4:4568');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Test connection'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Connected'), findsOneWidget);
+    expect(find.text('Connect your server'), findsOneWidget);
+    expect(find.text("You're all set"), findsNothing);
   });
 }
