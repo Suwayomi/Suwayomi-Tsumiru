@@ -748,7 +748,13 @@ class _ServerStep extends HookConsumerWidget {
     Future<void> testWeb() async {
       final typed = urlController.text.trim();
       if (typed.isBlank) return;
-      final url = normalisedFallbackUrl(typed);
+      final url = validServerBaseUrl(typed);
+      if (url == null) {
+        errorDetail.value = context.l10n.invalidProp(context.l10n.serverUrl);
+        state.value = _TestState.failed;
+        onVerifiedChanged(false);
+        return;
+      }
       state.value = _TestState.testing;
       version.value = null;
       errorDetail.value = null;
@@ -757,16 +763,17 @@ class _ServerStep extends HookConsumerWidget {
       unsupportedFromNotFound.value = false;
       onVerifiedChanged(false);
       final client = ref.read(onboardingHttpClientProvider)();
-      final graphQl = GraphQLClient(
-        link: HttpLink(
-          graphqlUriFor(url).toString(),
-          httpClient: client,
-          httpResponseDecoder: tsumiruHttpResponseDecoder,
-          defaultHeaders: ref.read(customHttpHeadersProvider).value ?? const {},
-        ),
-        cache: GraphQLCache(store: InMemoryStore()),
-      );
       try {
+        final graphQl = GraphQLClient(
+          link: HttpLink(
+            graphqlUriFor(url).toString(),
+            httpClient: client,
+            httpResponseDecoder: tsumiruHttpResponseDecoder,
+            defaultHeaders:
+                ref.read(customHttpHeadersProvider).value ?? const {},
+          ),
+          cache: GraphQLCache(store: InMemoryStore()),
+        );
         final result = await graphQl.query(
           QueryOptions(
             document: gql(kAboutProbeQuery),
@@ -825,6 +832,11 @@ class _ServerStep extends HookConsumerWidget {
         if (hasCreds) credsRejected.value = true;
         state.value = _TestState.needsLogin;
         onVerifiedChanged(false);
+      } catch (e) {
+        if (!context.mounted) return;
+        errorDetail.value = e.toString();
+        state.value = _TestState.failed;
+        onVerifiedChanged(false);
       } finally {
         client.close();
       }
@@ -837,6 +849,12 @@ class _ServerStep extends HookConsumerWidget {
       final input = urlController.text.trim();
       if (input.isBlank) {
         errorDetail.value = context.l10n.onboardingEnterAddress;
+        state.value = _TestState.failed;
+        onVerifiedChanged(false);
+        return;
+      }
+      if (validServerBaseUrl(input) == null) {
+        errorDetail.value = context.l10n.invalidProp(context.l10n.serverUrl);
         state.value = _TestState.failed;
         onVerifiedChanged(false);
         return;

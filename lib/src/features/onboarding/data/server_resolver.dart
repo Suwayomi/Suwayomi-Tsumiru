@@ -849,6 +849,26 @@ bool shouldSuggestHttps(String rawInput) => !connectionCandidates(
   rawInput,
 ).any((c) => c.toLowerCase().startsWith('https://'));
 
+/// First requestable http/https base URL for [rawInput], or null when it
+/// cannot parse into one; check before any network work.
+String? validServerBaseUrl(String rawInput) {
+  final input = rawInput.trim();
+  if (input.isEmpty) return null;
+  final lower = input.toLowerCase();
+  if (lower.startsWith('http://') || lower.startsWith('https://')) {
+    try {
+      final uri = Uri.parse(input);
+      if ((uri.scheme == 'http' || uri.scheme == 'https') &&
+          uri.host.isNotEmpty) {
+        return input;
+      }
+    } catch (_) {}
+    return null;
+  }
+  final candidates = connectionCandidates(input);
+  return candidates.isEmpty ? null : candidates.first;
+}
+
 /// Best-effort scheme-bearing form of [rawInput] for the "use this address
 /// anyway" escape — guarantees a scheme so we never persist raw schemeless
 /// text. Prefers the first real candidate; otherwise prefixes `http://`.
