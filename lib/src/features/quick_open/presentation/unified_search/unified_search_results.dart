@@ -8,8 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/enum.dart';
-import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
@@ -17,7 +15,6 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../account/data/account_providers.dart';
-import '../../../account/domain/account_access.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/search/settings_search_registry.dart';
@@ -55,10 +52,7 @@ List<GoToTarget> matchingGoToTargets(
   AppLocalizations l,
 ) {
   final extra = _categoryTargets(ref);
-  final includeAccount =
-      ref.watch(authTypeKeyProvider) == AuthType.uiLogin &&
-      ref.watch(settledAccountAccessProvider).capability !=
-          AccountCapability.unsupported;
+  final includeAccount = ref.watch(showAccountEntryProvider);
   if (query.trim().isEmpty) {
     return [
       ...appGoToTargets(

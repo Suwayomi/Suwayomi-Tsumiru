@@ -1,8 +1,11 @@
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../constants/enum.dart';
 import '../../../utils/network/graphql_errors.dart';
+import '../../auth/data/custom_headers_store.dart';
 import '../../onboarding/data/server_resolver.dart';
 import '../domain/account_access.dart';
 import 'graphql/__generated__/account.graphql.dart';
@@ -39,4 +42,34 @@ Future<AccountCapability> probeServerAccountCapability(
   } finally {
     if (client == null) owned.close();
   }
+}
+
+AccountCapability useServerAccountCapability(
+  WidgetRef ref,
+  String baseUrl,
+  AuthType authType,
+) {
+  final capability = useState(AccountCapability.unknown);
+  useEffect(() {
+    capability.value = AccountCapability.unknown;
+    if (authType != AuthType.uiLogin || baseUrl.isEmpty) return null;
+    var alive = true;
+    () async {
+      final probeClient = ref.read(accountProbeHttpClientProvider)();
+      try {
+        final probed = await probeServerAccountCapability(
+          baseUrl,
+          client: probeClient,
+          headers: ref.read(customHttpHeadersProvider).value,
+        );
+        if (alive) capability.value = probed;
+      } finally {
+        probeClient.close();
+      }
+    }();
+    return () {
+      alive = false;
+    };
+  }, [baseUrl, authType]);
+  return capability.value;
 }

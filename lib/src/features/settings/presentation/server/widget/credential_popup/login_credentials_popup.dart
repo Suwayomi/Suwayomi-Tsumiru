@@ -26,7 +26,6 @@ import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/data/server_account_capability.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../../account/presentation/account_code_dialog.dart';
-import '../../../../../auth/data/custom_headers_store.dart';
 import '../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../client/server_port_tile/server_port_tile.dart';
 import '../client/server_url_tile/server_url_tile.dart';
@@ -61,34 +60,17 @@ class LoginCredentialsPopup extends HookConsumerWidget {
       addPort: ref.watch(serverPortToggleProvider).ifNull(),
       appendApiToUrl: false,
     );
-    final serverAccountCapability = useState(AccountCapability.unknown);
-    useEffect(() {
-      serverAccountCapability.value = AccountCapability.unknown;
-      if (authType != AuthType.uiLogin || probeBaseUrl.isEmpty) return null;
-      var alive = true;
-      () async {
-        final probeClient = ref.read(accountProbeHttpClientProvider)();
-        try {
-          final capability = await probeServerAccountCapability(
-            probeBaseUrl,
-            client: probeClient,
-            headers: ref.read(customHttpHeadersProvider).value,
-          );
-          if (alive) serverAccountCapability.value = capability;
-        } finally {
-          probeClient.close();
-        }
-      }();
-      return () {
-        alive = false;
-      };
-    }, [probeBaseUrl, authType]);
+    final serverAccountCapability = useServerAccountCapability(
+      ref,
+      probeBaseUrl,
+      authType,
+    );
     final showAccountCodes =
         authType == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
             ref.watch(settledAccountAccessProvider).capability !=
                 AccountCapability.unsupported) &&
-        serverAccountCapability.value != AccountCapability.unsupported;
+        serverAccountCapability != AccountCapability.unsupported;
 
     Future<void> openCodeDialog(AccountCodeMode mode) async {
       final redeem = ref.read(accountActionsProvider).redeemCode;
