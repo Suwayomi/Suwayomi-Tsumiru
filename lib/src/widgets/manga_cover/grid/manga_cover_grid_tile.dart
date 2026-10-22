@@ -20,6 +20,7 @@ import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/theme/brand.dart';
 import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
+import '../../web_route_link.dart';
 import '../providers/manga_cover_providers.dart';
 import '../widgets/continue_reading_button.dart';
 import '../widgets/manga_badges.dart';
@@ -68,6 +69,7 @@ class MangaCoverGridTile extends StatefulWidget {
     this.outlineOnCovers = false,
     this.limitTitleLines = true,
     this.highlighted = false,
+    this.linkLocation,
   });
   final MangaDto manga;
   final VoidCallback? onPressed;
@@ -109,6 +111,8 @@ class MangaCoverGridTile extends StatefulWidget {
   /// hovering or keyboard-focusing the row outlines the cover the same way as
   /// hovering or focusing the cover itself.
   final bool highlighted;
+
+  final String? linkLocation;
 
   @override
   State<MangaCoverGridTile> createState() => _MangaCoverGridTileState();
@@ -159,107 +163,110 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       outline: widget.outlineOnCovers,
       freeform: freeform,
     );
-    return InkResponse(
-      focusNode: _focusNode,
-      hoverColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      splashColor: Colors.transparent,
-      focusColor: Colors.transparent,
-      onTapDown: (_) => setState(() => _pointerFocused = true),
-      onHover: (hovered) => setState(() => _hovered = hovered),
-      onFocusChange: (focused) => setState(() {
-        _focused = focused;
-        if (!focused) _pointerFocused = false;
-      }),
-      onTap: () {
-        _focusNode.requestFocus();
-        if (widget.onPressed != null) {
-          widget.onPressed!();
-        } else {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              fullscreenDialog: true,
-              opaque: false,
-              pageBuilder: (context, _, _) => MangaThumbnailViewer(
-                imageUrl: widget.manga.thumbnailUrl ?? "",
+    return WebRouteLink(
+      location: widget.linkLocation,
+      builder: (context, openInNewTab) => InkResponse(
+        focusNode: _focusNode,
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        onTapDown: (_) => setState(() => _pointerFocused = true),
+        onHover: (hovered) => setState(() => _hovered = hovered),
+        onFocusChange: (focused) => setState(() {
+          _focused = focused;
+          if (!focused) _pointerFocused = false;
+        }),
+        onTap: () {
+          _focusNode.requestFocus();
+          if (widget.onPressed != null) {
+            WebRouteLink.handleTap(openInNewTab, widget.onPressed!);
+          } else {
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                fullscreenDialog: true,
+                opaque: false,
+                pageBuilder: (context, _, _) => MangaThumbnailViewer(
+                  imageUrl: widget.manga.thumbnailUrl ?? "",
+                ),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                      if (context.reduceMotion) {
+                        return ReducedRouteTransition(
+                          animation: animation,
+                          child: child,
+                        );
+                      }
+
+                      const begin = Offset(-1.0, 0.0);
+                      const end = Offset.zero;
+                      const curve = Curves.ease;
+
+                      final tween = Tween(begin: begin, end: end);
+                      final curvedAnimation = CurvedAnimation(
+                        parent: animation,
+                        curve: curve,
+                      );
+
+                      return SlideTransition(
+                        position: tween.animate(curvedAnimation),
+                        child: child,
+                      );
+                    },
               ),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                if (context.reduceMotion) {
-                  return ReducedRouteTransition(
-                    animation: animation,
-                    child: child,
-                  );
-                }
-
-                const begin = Offset(-1.0, 0.0);
-                const end = Offset.zero;
-                const curve = Curves.ease;
-
-                final tween = Tween(begin: begin, end: end);
-                final curvedAnimation = CurvedAnimation(
-                  parent: animation,
-                  curve: curve,
-                );
-
-                return SlideTransition(
-                  position: tween.animate(curvedAnimation),
-                  child: child,
-                );
-              },
-            ),
-          );
-        }
-      },
-      onLongPress: widget.onLongPress,
-      child: freeform
-          // The tile's height comes from the cover, so nothing may stretch.
-          // Non-uniform bottom-aligns: the aligned grid stretches a row's tiles
-          // to its tallest, so `end` gives the flush baseline.
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
+            );
+          }
+        },
+        onLongPress: widget.onLongPress,
+        child: freeform
+            // The tile's height comes from the cover, so nothing may stretch.
+            // Non-uniform bottom-aligns: the aligned grid stretches a row's tiles
+            // to its tallest, so `end` gives the flush baseline.
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: widget.gridStyle == LibraryGridStyle.nonUniform
-                  ? MainAxisAlignment.end
-                  : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                card,
-                if (widget.titleBelow)
-                  _TitleBlock(
-                    title: widget.manga.title,
-                    limitLines: widget.limitTitleLines,
-                  ),
-              ],
-            )
-          : widget.titleBelow
-              // Uniform + title below: the cover flexes and the title takes a
-              // fixed block, so every cover in a row ends up the same height.
-              ? LayoutBuilder(
-                  builder: (context, constraints) {
-                    final twoLines = _titleBlockHeight(context, 2);
-                    final cap = constraints.hasBoundedHeight
-                        ? constraints.maxHeight * _kMaxTitleShare
-                        : twoLines;
-                    final blockHeight = widget.limitTitleLines
-                        ? min(twoLines, cap)
-                        : cap;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: card),
-                        SizedBox(
-                          height: blockHeight,
-                          child: _TitleBlock(
-                            title: widget.manga.title,
-                            limitLines: widget.limitTitleLines,
-                          ),
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  card,
+                  if (widget.titleBelow)
+                    _TitleBlock(
+                      title: widget.manga.title,
+                      limitLines: widget.limitTitleLines,
+                    ),
+                ],
+              )
+            : widget.titleBelow
+            // Uniform + title below: the cover flexes and the title takes a
+            // fixed block, so every cover in a row ends up the same height.
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  final twoLines = _titleBlockHeight(context, 2);
+                  final cap = constraints.hasBoundedHeight
+                      ? constraints.maxHeight * _kMaxTitleShare
+                      : twoLines;
+                  final blockHeight = widget.limitTitleLines
+                      ? min(twoLines, cap)
+                      : cap;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: card),
+                      SizedBox(
+                        height: blockHeight,
+                        child: _TitleBlock(
+                          title: widget.manga.title,
+                          limitLines: widget.limitTitleLines,
                         ),
-                      ],
-                    );
-                  },
-                )
-              : card,
+                      ),
+                    ],
+                  );
+                },
+              )
+            : card,
+      ),
     );
   }
 

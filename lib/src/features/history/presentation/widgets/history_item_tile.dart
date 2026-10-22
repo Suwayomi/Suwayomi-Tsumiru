@@ -14,6 +14,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../../widgets/web_route_link.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../domain/history_item.dart';
 import '../../domain/history_menu_action.dart';
@@ -45,135 +46,144 @@ class HistoryItemTile extends ConsumerWidget {
         horizontal: 4,
         vertical: 2,
       ),
-      child: InkWell(
-        onTap: onTap ?? () => _navigateToReader(context, ref),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              // Manga cover
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: ServerImage(
-                  imageUrl: item.manga.thumbnailUrl ?? "",
-                  size: const Size(56, 80),
+      child: WebRouteLink(
+        location: ReaderRoute(
+          mangaId: item.mangaId,
+          chapterId: item.id,
+        ).location,
+        builder: (context, openInNewTab) => InkWell(
+          onTap: () => WebRouteLink.handleTap(
+            openInNewTab,
+            onTap ?? () => _navigateToReader(context, ref),
+          ),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // Manga cover
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ServerImage(
+                    imageUrl: item.manga.thumbnailUrl ?? "",
+                    size: const Size(56, 80),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Manga title
-                    Text(
-                      item.manga.title,
-                      style: context.theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Manga title
+                      Text(
+                        item.manga.title,
+                        style: context.theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    // Chapter name
-                    Text(
-                      item.name,
-                      style: context.theme.textTheme.bodyMedium?.copyWith(
-                        color: context.theme.colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 4),
+                      // Chapter name
+                      Text(
+                        item.name,
+                        style: context.theme.textTheme.bodyMedium?.copyWith(
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    // Reading info
-                    Row(
-                      children: [
-                        // Read time
-                        if (timeString.isNotEmpty) ...[
-                          Icon(
-                            Icons.access_time,
-                            size: 14,
-                            color: context.theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            timeString,
-                            style: context.theme.textTheme.labelSmall?.copyWith(
+                      const SizedBox(height: 4),
+                      // Reading info
+                      Row(
+                        children: [
+                          // Read time
+                          if (timeString.isNotEmpty) ...[
+                            Icon(
+                              Icons.access_time,
+                              size: 14,
                               color: context.theme.colorScheme.onSurfaceVariant,
                             ),
-                          ),
-                        ],
-                        // Progress indicator
-                        if (item.lastPageRead > 0 && item.pageCount > 0) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            _isChapterCompleted()
-                                ? Icons.check_circle
-                                : Icons.bookmark,
-                            size: 14,
-                            color: _isChapterCompleted()
-                                ? context.theme.colorScheme.secondary
-                                : context.theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _isChapterCompleted()
-                                ? 'Completed'
-                                : '${item.lastPageRead}/${item.pageCount}',
-                            style: context.theme.textTheme.labelSmall?.copyWith(
+                            const SizedBox(width: 4),
+                            Text(
+                              timeString,
+                              style: context.theme.textTheme.labelSmall?.copyWith(
+                                color: context.theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                          // Progress indicator
+                          if (item.lastPageRead > 0 && item.pageCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Icon(
+                              _isChapterCompleted()
+                                  ? Icons.check_circle
+                                  : Icons.bookmark,
+                              size: 14,
                               color: _isChapterCompleted()
                                   ? context.theme.colorScheme.secondary
                                   : context.theme.colorScheme.primary,
                             ),
-                          ),
-                        ],
-                        // Scanlator
-                        if (item.scanlator.isNotBlank) ...[
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              item.scanlator!,
-                              style:
-                                  context.theme.textTheme.labelSmall?.copyWith(
-                                color:
-                                    context.theme.colorScheme.onSurfaceVariant,
-                                fontStyle: FontStyle.italic,
+                            const SizedBox(width: 4),
+                            Text(
+                              _isChapterCompleted()
+                                  ? 'Completed'
+                                  : '${item.lastPageRead}/${item.pageCount}',
+                              style: context.theme.textTheme.labelSmall?.copyWith(
+                                color: _isChapterCompleted()
+                                    ? context.theme.colorScheme.secondary
+                                    : context.theme.colorScheme.primary,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
+                          ],
+                          // Scanlator
+                          if (item.scanlator.isNotBlank) ...[
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                item.scanlator!,
+                                style:
+                                    context.theme.textTheme.labelSmall?.copyWith(
+                                  color:
+                                      context.theme.colorScheme.onSurfaceVariant,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Actions
-              PopupMenuButton<HistoryMenuAction>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: context.theme.colorScheme.onSurfaceVariant,
-                ),
-                onSelected: (action) {
-                  switch (action) {
-                    case HistoryMenuAction.viewManga:
-                      _navigateToManga(context);
-                      break;
-                  }
-                },
-                itemBuilder: (context) => HistoryMenuAction.values
-                    .map(
-                      (action) => PopupMenuItem(
-                        value: action,
-                        child: Text(action.toLocale(context)),
                       ),
-                    )
-                    .toList(),
-                popUpAnimationStyle: context.motionStyle,
-              ),
-            ],
+                    ],
+                  ),
+                ),
+                // Actions
+                PopupMenuButton<HistoryMenuAction>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
+                  onSelected: (action) {
+                    switch (action) {
+                      case HistoryMenuAction.viewManga:
+                        _navigateToManga(context);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => HistoryMenuAction.values
+                      .map(
+                        (action) => PopupMenuItem(
+                          value: action,
+                          child: Text(action.toLocale(context)),
+                        ),
+                      )
+                      .toList(),
+                  popUpAnimationStyle: context.motionStyle,
+                ),
+              ],
+            ),
           ),
         ),
       ),

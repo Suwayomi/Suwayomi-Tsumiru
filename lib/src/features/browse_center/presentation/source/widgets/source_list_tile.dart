@@ -12,6 +12,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../../widgets/web_route_link.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/source/source_model.dart';
 import '../controller/source_controller.dart';
@@ -23,41 +24,57 @@ class SourceListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      onTap: (() async {
-        ref.read(sourceLastUsedProvider.notifier).update(source.id);
-        SourceTypeRoute(
-          sourceId: source.id,
-          sourceType: SourceType.POPULAR,
-        ).go(context);
-      }),
-      leading: ClipRRect(
-        borderRadius: KBorderRadius.r8.radius,
-        child: ServerImage(
-          imageUrl: source.iconUrl,
-          size: const Size.square(48),
+    return WebRouteLink(
+      location: SourceTypeRoute(
+        sourceId: source.id,
+        sourceType: SourceType.POPULAR,
+      ).location,
+      builder: (context, openInNewTab) => ListTile(
+        onTap: () {
+          ref.read(sourceLastUsedProvider.notifier).update(source.id);
+          WebRouteLink.handleTap(openInNewTab, () {
+            SourceTypeRoute(
+              sourceId: source.id,
+              sourceType: SourceType.POPULAR,
+            ).go(context);
+          });
+        },
+        leading: ClipRRect(
+          borderRadius: KBorderRadius.r8.radius,
+          child: ServerImage(
+            imageUrl: source.iconUrl,
+            size: const Size.square(48),
+          ),
         ),
-      ),
-      title: Text(source.name),
-      subtitle: (source.language?.displayName).isNotBlank
-          ? Text(source.language?.displayName ?? "")
-          : null,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (source.supportsLatest.ifNull())
-            TextButton(
-              onPressed: () async {
-                ref.read(sourceLastUsedProvider.notifier).update(source.id);
-                SourceTypeRoute(
+        title: Text(source.name),
+        subtitle: (source.language?.displayName).isNotBlank
+            ? Text(source.language?.displayName ?? "")
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (source.supportsLatest.ifNull())
+              WebRouteLink(
+                location: SourceTypeRoute(
                   sourceId: source.id,
                   sourceType: SourceType.LATEST,
-                ).go(context);
-              },
-              child: Text(context.l10n.latest),
-            ),
-          _PinButton(source: source),
-        ],
+                ).location,
+                builder: (context, openLatestInNewTab) => TextButton(
+                  onPressed: () {
+                    ref.read(sourceLastUsedProvider.notifier).update(source.id);
+                    WebRouteLink.handleTap(openLatestInNewTab, () {
+                      SourceTypeRoute(
+                        sourceId: source.id,
+                        sourceType: SourceType.LATEST,
+                      ).go(context);
+                    });
+                  },
+                  child: Text(context.l10n.latest),
+                ),
+              ),
+            _PinButton(source: source),
+          ],
+        ),
       ),
     );
   }
