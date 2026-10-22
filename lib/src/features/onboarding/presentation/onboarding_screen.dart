@@ -597,6 +597,7 @@ class _ServerStep extends HookConsumerWidget {
     final unsupportedAfterLogin = useState(false);
     final unsupportedFromNotFound = useState(false);
     final serverAccountCapability = useState(AccountCapability.unknown);
+    final capabilityGeneration = useRef(0);
     final showAccountCodes =
         authChoice.value == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
@@ -623,12 +624,16 @@ class _ServerStep extends HookConsumerWidget {
       http.Client client,
     ) async {
       if (authChoice.value != AuthType.uiLogin) return;
+      final generation = ++capabilityGeneration.value;
       final capability = await probeServerAccountCapability(
         base,
         client: client,
         headers: ref.read(customHttpHeadersProvider).value,
       );
-      if (context.mounted) serverAccountCapability.value = capability;
+      if (!context.mounted) return;
+      if (generation != capabilityGeneration.value) return;
+      if (base != resolvedUrl.value) return;
+      serverAccountCapability.value = capability;
     }
 
     // Persist a resolved/typed base URL as the active server URL.
@@ -771,6 +776,7 @@ class _ServerStep extends HookConsumerWidget {
       credsRejected.value = false;
       unsupportedAfterLogin.value = false;
       unsupportedFromNotFound.value = false;
+      capabilityGeneration.value++;
       serverAccountCapability.value = AccountCapability.unknown;
       onVerifiedChanged(false);
       final client = ref.read(onboardingHttpClientProvider)();
@@ -865,6 +871,7 @@ class _ServerStep extends HookConsumerWidget {
       credsRejected.value = false;
       unsupportedAfterLogin.value = false;
       unsupportedFromNotFound.value = false;
+      capabilityGeneration.value++;
       serverAccountCapability.value = AccountCapability.unknown;
       onVerifiedChanged(false);
       final sessionIsCurrent = ref
@@ -1108,7 +1115,11 @@ class _ServerStep extends HookConsumerWidget {
             border: const OutlineInputBorder(),
             prefixIcon: const Icon(Icons.dns_rounded),
           ),
-          onChanged: (_) => resetToIdle(),
+          onChanged: (_) {
+            capabilityGeneration.value++;
+            serverAccountCapability.value = AccountCapability.unknown;
+            resetToIdle();
+          },
         ),
         // Discover: scan the LAN and fill the address.
         if (!isWeb)
@@ -1208,6 +1219,8 @@ class _ServerStep extends HookConsumerWidget {
                 credsRejected.value = false;
                 unsupportedAfterLogin.value = false;
                 unsupportedFromNotFound.value = false;
+                capabilityGeneration.value++;
+                serverAccountCapability.value = AccountCapability.unknown;
                 final base = resolvedUrl.value;
                 if (m == AuthType.uiLogin &&
                     (state.value == _TestState.needsLogin ||
