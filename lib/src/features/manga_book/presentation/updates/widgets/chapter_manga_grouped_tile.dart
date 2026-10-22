@@ -13,6 +13,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../../widgets/web_route_link.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../widgets/download_status_icon.dart';
 import '../controller/updates_grouping_controller.dart';
@@ -153,114 +154,128 @@ class _HeadTile extends StatelessWidget {
       color: isSelected
           ? context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
-      child: InkWell(
-        onTap: () async {
-          if (canTapSelect) {
-            toggleSelect(chapter);
-          } else {
-            await ReaderRoute(
-              mangaId: manga.id,
-              chapterId: chapter.id,
-              showReaderLayoutAnimation: true,
-            ).push(context);
-            if (!context.mounted) return;
-            await refreshManga();
-          }
-        },
-        onLongPress: () => toggleSelect(chapter),
-        onSecondaryTap: () => toggleSelect(chapter),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              if (manga.thumbnailUrl != null)
-                ClipRRect(
-                  borderRadius: KBorderRadius.r8.radius,
-                  child: InkWell(
-                    onTap: () async {
-                      if (canTapSelect) {
-                        toggleSelect(chapter);
-                        return;
-                      }
-                      await MangaRoute(mangaId: manga.id).push(context);
-                      if (!context.mounted) return;
-                      await refreshManga();
-                    },
-                    child: ServerImage(
-                      imageUrl: manga.thumbnailUrl ?? "",
-                      size: const Size(56, 80),
+      child: WebRouteLink(
+        location: ReaderRoute(
+          mangaId: manga.id,
+          chapterId: chapter.id,
+          showReaderLayoutAnimation: true,
+        ).location,
+        builder: (context, openInNewTab) => InkWell(
+          onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
+            if (canTapSelect) {
+              toggleSelect(chapter);
+            } else {
+              await ReaderRoute(
+                mangaId: manga.id,
+                chapterId: chapter.id,
+                showReaderLayoutAnimation: true,
+              ).push(context);
+              if (!context.mounted) return;
+              await refreshManga();
+            }
+          }),
+          onLongPress: () => toggleSelect(chapter),
+          onSecondaryTap: () => toggleSelect(chapter),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                if (manga.thumbnailUrl != null)
+                  ClipRRect(
+                    borderRadius: KBorderRadius.r8.radius,
+                    child: WebRouteLink(
+                      location: MangaRoute(mangaId: manga.id).location,
+                      enabled: false,
+                      builder: (context, openMangaInNewTab) => InkWell(
+                        onTap: () => WebRouteLink.handleAsyncTap(
+                          openMangaInNewTab,
+                          () async {
+                            if (canTapSelect) {
+                              toggleSelect(chapter);
+                              return;
+                            }
+                            await MangaRoute(mangaId: manga.id).push(context);
+                            if (!context.mounted) return;
+                            await refreshManga();
+                          },
+                        ),
+                        child: ServerImage(
+                          imageUrl: manga.thumbnailUrl ?? "",
+                          size: const Size(56, 80),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        if ((chapter.isBookmarked).ifNull()) ...[
-                          const Icon(Icons.bookmark_rounded, size: 20),
-                          const SizedBox(width: 4),
-                        ],
-                        Expanded(
-                          child: Text(
-                            manga.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: color),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          if ((chapter.isBookmarked).ifNull()) ...[
+                            const Icon(Icons.bookmark_rounded, size: 20),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              manga.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: color),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      chapter.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color:
-                            color ?? context.theme.colorScheme.onSurfaceVariant,
+                        ],
                       ),
-                    ),
-                    if (isGroup)
-                      GestureDetector(
-                        onTap: onToggleExpand,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                context.l10n.updatesGroupingShowMore(tailCount),
-                                style: context.textTheme.labelSmall?.copyWith(
+                      const SizedBox(height: 4),
+                      Text(
+                        chapter.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color:
+                              color ?? context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (isGroup)
+                        GestureDetector(
+                          onTap: onToggleExpand,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  context.l10n.updatesGroupingShowMore(tailCount),
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.theme.colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  isExpanded
+                                      ? Icons.expand_less_rounded
+                                      : Icons.expand_more_rounded,
+                                  size: 14,
                                   color: context.theme.colorScheme.primary,
                                 ),
-                              ),
-                              const SizedBox(width: 2),
-                              Icon(
-                                isExpanded
-                                    ? Icons.expand_less_rounded
-                                    : Icons.expand_more_rounded,
-                                size: 14,
-                                color: context.theme.colorScheme.primary,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              DownloadStatusIcon(
-                isDownloaded: (chapter.isDownloaded).ifNull(),
-                mangaId: manga.id,
-                chapter: chapter,
-                updateData: updatePair,
-              ),
-            ],
+                const SizedBox(width: 8),
+                DownloadStatusIcon(
+                  isDownloaded: (chapter.isDownloaded).ifNull(),
+                  mangaId: manga.id,
+                  chapter: chapter,
+                  updateData: updatePair,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -305,55 +320,62 @@ class _TailTile extends StatelessWidget {
       color: isSelected
           ? context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
-      child: InkWell(
-        onTap: () async {
-          if (canTapSelect) {
-            toggleSelect(chapter);
-          } else {
-            await ReaderRoute(
-              mangaId: manga.id,
-              chapterId: chapter.id,
-              showReaderLayoutAnimation: true,
-            ).push(context);
-            if (!context.mounted) return;
-            await refreshManga();
-          }
-        },
-        onLongPress: () => toggleSelect(chapter),
-        onSecondaryTap: () => toggleSelect(chapter),
-        child: Padding(
-          padding: const EdgeInsets.only(
-            left: leadingIndent,
-            right: 16,
-            top: 6,
-            bottom: 6,
-          ),
-          child: Row(
-            children: [
-              if ((chapter.isBookmarked).ifNull()) ...[
-                const Icon(Icons.bookmark_rounded, size: 16),
-                const SizedBox(width: 4),
-              ],
-              Expanded(
-                child: Text(
-                  chapter.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color:
-                        color ?? context.theme.colorScheme.onSurfaceVariant,
+      child: WebRouteLink(
+        location: ReaderRoute(
+          mangaId: manga.id,
+          chapterId: chapter.id,
+          showReaderLayoutAnimation: true,
+        ).location,
+        builder: (context, openInNewTab) => InkWell(
+          onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
+            if (canTapSelect) {
+              toggleSelect(chapter);
+            } else {
+              await ReaderRoute(
+                mangaId: manga.id,
+                chapterId: chapter.id,
+                showReaderLayoutAnimation: true,
+              ).push(context);
+              if (!context.mounted) return;
+              await refreshManga();
+            }
+          }),
+          onLongPress: () => toggleSelect(chapter),
+          onSecondaryTap: () => toggleSelect(chapter),
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: leadingIndent,
+              right: 16,
+              top: 6,
+              bottom: 6,
+            ),
+            child: Row(
+              children: [
+                if ((chapter.isBookmarked).ifNull()) ...[
+                  const Icon(Icons.bookmark_rounded, size: 16),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(
+                  child: Text(
+                    chapter.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color:
+                          color ?? context.theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              DownloadStatusIcon(
-                isDownloaded: (chapter.isDownloaded).ifNull(),
-                mangaId: manga.id,
-                chapter: chapter,
-                updateData: updatePair,
-              ),
-            ],
+                const SizedBox(width: 8),
+                DownloadStatusIcon(
+                  isDownloaded: (chapter.isDownloaded).ifNull(),
+                  mangaId: manga.id,
+                  chapter: chapter,
+                  updateData: updatePair,
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -65,6 +65,7 @@ class SourceShortSearch extends ConsumerWidget {
                   child: MangaCoverGridTile(
                     manga: manga,
                     showDarkOverlay: manga.inLibrary.ifNull(),
+                    linkLocation: MangaRoute(mangaId: manga.id).location,
                     onPressed: () =>
                         MangaRoute(mangaId: manga.id).push(context),
                   ),

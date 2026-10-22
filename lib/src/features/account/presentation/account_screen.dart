@@ -12,6 +12,7 @@ import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/popup_widgets/pop_button.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../widgets/web_selection_area.dart';
 import '../../auth/data/auth_session_status.dart';
 import '../../settings/presentation/connection/prompt_sign_in.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
@@ -106,88 +107,91 @@ class AccountScreen extends HookConsumerWidget {
               title: title,
               actions: toolbarActions,
             ),
-      body: RefreshIndicator(
-        onRefresh: refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            if (busy.value) const LinearProgressIndicator(),
-            if (!hasCredentials)
-              ListTile(
-                leading: const Icon(Icons.login_rounded),
-                title: Text(context.l10n.onboardingSignIn),
-                onTap: () => showDialog<void>(
-                  context: context,
-                  builder: (_) =>
-                      const LoginCredentialsPopup(authType: AuthType.uiLogin),
-                  animationStyle: context.motionStyle,
-                ),
-              ),
-            if (hasCredentials && !verified)
-              ListTile(subtitle: Text(context.l10n.accountSettingsUnavailable)),
-            if (hasCredentials)
-              ListTile(
-                leading: const Icon(Icons.logout_rounded),
-                title: Text(context.l10n.accountSignOut),
-                enabled: !busy.value,
-                onTap: busy.value ? null : signOut,
-              ),
-            if (hasCredentials && account != null) ...[
-              ListTile(
-                leading: const Icon(Icons.person_rounded),
-                title: Text(account.username),
-                subtitle: Text(roles ?? context.l10n.accountRoleUnknown),
-              ),
-              ListTile(
-                leading: const Icon(Icons.password_rounded),
-                title: Text(context.l10n.accountChangePassword),
-                enabled: canChangePassword,
-                onTap: !canChangePassword
-                    ? null
-                    : () => showDialog<void>(
-                        context: context,
-                        builder: (_) => AccountPasswordDialog(
-                          onSubmit: actions.changePassword,
-                        ),
-                        animationStyle: context.motionStyle,
-                      ),
-              ),
-              if (access.canManageUsers)
+      body: WebSelectionArea(
+        child: RefreshIndicator(
+          onRefresh: refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              if (busy.value) const LinearProgressIndicator(),
+              if (!hasCredentials)
                 ListTile(
-                  leading: const Icon(Icons.manage_accounts_rounded),
-                  title: Text(context.l10n.accountPermissionManageUsers),
-                  onTap: () => const ManageUsersRoute().push(context),
+                  leading: const Icon(Icons.login_rounded),
+                  title: Text(context.l10n.onboardingSignIn),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) =>
+                        const LoginCredentialsPopup(authType: AuthType.uiLogin),
+                    animationStyle: context.motionStyle,
+                  ),
                 ),
-              const Divider(),
-              ExpansionTile(
-                title: Text(context.l10n.accountPermissions),
-                subtitle: Text(
-                  !verified
-                      ? context.l10n.accountPermissionsUnavailable
-                      : allowedCount == permissions.length
-                      ? context.l10n.accountPermissionsFullAccess
-                      : context.l10n.accountPermissionsSummary(
-                          allowedCount,
-                          permissions.length,
+              if (hasCredentials && !verified)
+                ListTile(subtitle: Text(context.l10n.accountSettingsUnavailable)),
+
+              if (hasCredentials)
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded),
+                  title: Text(context.l10n.accountSignOut),
+                  enabled: !busy.value,
+                  onTap: busy.value ? null : signOut,
+                ),
+              if (hasCredentials && account != null) ...[
+                ListTile(
+                  leading: const Icon(Icons.person_rounded),
+                  title: Text(account.username),
+                  subtitle: Text(roles ?? context.l10n.accountRoleUnknown),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.password_rounded),
+                  title: Text(context.l10n.accountChangePassword),
+                  enabled: canChangePassword,
+                  onTap: !canChangePassword
+                      ? null
+                      : () => showDialog<void>(
+                          context: context,
+                          builder: (_) => AccountPasswordDialog(
+                            onSubmit: actions.changePassword,
+                          ),
+                          animationStyle: context.motionStyle,
                         ),
                 ),
-                children: [
-                  for (final entry in permissions.entries)
-                    ListTile(
-                      dense: true,
-                      title: Text(entry.value),
-                      trailing: Text(
-                        !verified
-                            ? context.l10n.accountPermissionsUnavailable
-                            : access.allows(entry.key)
-                            ? context.l10n.accountPermissionAllowed
-                            : context.l10n.accountPermissionRestricted,
+                if (access.canManageUsers)
+                  ListTile(
+                    leading: const Icon(Icons.manage_accounts_rounded),
+                    title: Text(context.l10n.accountPermissionManageUsers),
+                    onTap: () => const ManageUsersRoute().push(context),
+                  ),
+                const Divider(),
+                ExpansionTile(
+                  title: Text(context.l10n.accountPermissions),
+                  subtitle: Text(
+                    !verified
+                        ? context.l10n.accountPermissionsUnavailable
+                        : allowedCount == permissions.length
+                        ? context.l10n.accountPermissionsFullAccess
+                        : context.l10n.accountPermissionsSummary(
+                            allowedCount,
+                            permissions.length,
+                          ),
+                  ),
+                  children: [
+                    for (final entry in permissions.entries)
+                      ListTile(
+                        dense: true,
+                        title: Text(entry.value),
+                        trailing: Text(
+                          !verified
+                              ? context.l10n.accountPermissionsUnavailable
+                              : access.allows(entry.key)
+                              ? context.l10n.accountPermissionAllowed
+                              : context.l10n.accountPermissionRestricted,
+                        ),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

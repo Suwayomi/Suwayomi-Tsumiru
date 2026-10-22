@@ -67,6 +67,7 @@ class SourceMangaGridView extends ConsumerWidget {
             manga: item,
             selected: selectedIds.contains(item.id),
             showDarkOverlay: item.inLibrary.ifNull(),
+            linkLocation: MangaRoute(mangaId: item.id).location,
             onLongPress: () => onToggleSelection(item.id),
             onPressed: () => selecting
                 ? onToggleSelection(item.id)

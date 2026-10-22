@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../constants/app_sizes.dart';
 import '../utils/extensions/custom_extensions.dart';
+import 'web_selection_area.dart';
 
 const errorFaces = [
   '(･o･;)',
@@ -35,42 +36,44 @@ class Emoticons extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final errorFace = useMemoized(() => errorFaces.getRandom!);
-    return Padding(
-      padding: KEdgeInsets.a8.size,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 8,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: iconData != null
-                  ? Icon(iconData, size: context.height * .2)
-                  : Text(
-                      errorFace,
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.displayMedium,
-                    ),
-            ),
-            if (title.isNotBlank)
-              Text(
-                title!,
-                textAlign: TextAlign.center,
-                style: context.textTheme.titleMedium,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 3,
+    return WebSelectionArea(
+      child: Padding(
+        padding: KEdgeInsets.a8.size,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 8,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: iconData != null
+                    ? Icon(iconData, size: context.height * .2)
+                    : Text(
+                        errorFace,
+                        textAlign: TextAlign.center,
+                        style: context.textTheme.displayMedium,
+                      ),
               ),
-            if (subTitle.isNotBlank)
-              Text(
-                subTitle!,
-                textAlign: TextAlign.center,
-                style: context.textTheme.bodySmall,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ?button,
-          ],
+              if (title.isNotBlank)
+                Text(
+                  title!,
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.titleMedium,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 3,
+                ),
+              if (subTitle.isNotBlank)
+                Text(
+                  subTitle!,
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.bodySmall,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ?button,
+            ],
+          ),
         ),
       ),
     );

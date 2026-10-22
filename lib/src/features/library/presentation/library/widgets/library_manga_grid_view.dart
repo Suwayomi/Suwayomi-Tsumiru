@@ -39,6 +39,7 @@ class LibraryMangaGridView extends StatelessWidget {
     required this.onOpen,
     this.onLongPress,
     this.selection = const {},
+    this.linkLocationFor,
   });
 
   final List<MangaDto> items;
@@ -48,17 +49,20 @@ class LibraryMangaGridView extends StatelessWidget {
   /// Ids of the currently multi-selected manga (empty when not selecting).
   final Set<int> selection;
 
+  final String? Function(MangaDto manga)? linkLocationFor;
+
   @override
   Widget build(BuildContext context) => CustomScrollView(
-        slivers: [
-          LibraryMangaSliver(
-            items: items,
-            onOpen: onOpen,
-            onLongPress: onLongPress,
-            selection: selection,
-          ),
-        ],
-      );
+    slivers: [
+      LibraryMangaSliver(
+        items: items,
+        onOpen: onOpen,
+        onLongPress: onLongPress,
+        selection: selection,
+        linkLocationFor: linkLocationFor,
+      ),
+    ],
+  );
 }
 
 /// The sliver that lays [items] out under the active [DisplayMode] and
@@ -74,6 +78,7 @@ class LibraryMangaSliver extends ConsumerWidget {
     required this.onOpen,
     this.onLongPress,
     this.selection = const {},
+    this.linkLocationFor,
   });
 
   final List<MangaDto> items;
@@ -82,6 +87,8 @@ class LibraryMangaSliver extends ConsumerWidget {
 
   /// Ids of the currently multi-selected manga (empty when not selecting).
   final Set<int> selection;
+
+  final String? Function(MangaDto manga)? linkLocationFor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -162,6 +169,9 @@ class LibraryMangaSliver extends ConsumerWidget {
           key: ValueKey<int>(manga.id),
           manga: manga,
           selected: selection.contains(manga.id),
+          linkLocation:
+              linkLocationFor?.call(manga) ??
+              MangaRoute(mangaId: manga.id).location,
           onPressed: () => onOpen(manga),
           onLongPress: onLongPress == null ? null : () => onLongPress!(manga),
           onContinueReading: continueReadingFor(manga),
@@ -240,37 +250,43 @@ class LibraryMangaSliver extends ConsumerWidget {
 
     final sliver = switch (displayMode) {
       DisplayMode.list || null => listSliver(
-          extent: 96 * rowScale,
-          builder: (context, index) => scaled(MangaCoverListTile(
-            key: ValueKey<int>(items[index].id),
-            manga: items[index],
-            selected: selection.contains(items[index].id),
-            onPressed: () => onOpen(items[index]),
-            onLongPress:
-                onLongPress == null ? null : () => onLongPress!(items[index]),
-            onContinueReading: continueReadingFor(items[index]),
-            showCountBadges: true,
-            scale: listScale,
-            limitTitleLines: limitTitleLines,
-          )),
-        ),
+        extent: 96 * rowScale,
+        builder: (context, index) => scaled(MangaCoverListTile(
+          key: ValueKey<int>(items[index].id),
+          manga: items[index],
+          selected: selection.contains(items[index].id),
+          linkLocation:
+              linkLocationFor?.call(items[index]) ??
+              MangaRoute(mangaId: items[index].id).location,
+          onPressed: () => onOpen(items[index]),
+          onLongPress:
+              onLongPress == null ? null : () => onLongPress!(items[index]),
+          onContinueReading: continueReadingFor(items[index]),
+          showCountBadges: true,
+          scale: listScale,
+          limitTitleLines: limitTitleLines,
+        )),
+      ),
       DisplayMode.descriptiveList => listSliver(
-          extent: 176 * rowScale,
-          fixedExtent: false,
-          builder: (context, index) => scaled(MangaCoverDescriptiveListTile(
-            key: ValueKey<int>(items[index].id),
-            manga: items[index],
-            selected: selection.contains(items[index].id),
-            onPressed: () => onOpen(items[index]),
-            onLongPress:
-                onLongPress == null ? null : () => onLongPress!(items[index]),
-            onContinueReading: continueReadingFor(items[index]),
-            showBadges: true,
-            outlineOnCovers: outlineOnCovers,
-            scale: listScale,
-            titleMaxLines: limitTitleLines ? 2 : null,
-          )),
-        ),
+        extent: 176 * rowScale,
+        fixedExtent: false,
+        builder: (context, index) => scaled(MangaCoverDescriptiveListTile(
+          key: ValueKey<int>(items[index].id),
+          manga: items[index],
+          selected: selection.contains(items[index].id),
+          linkLocation:
+              linkLocationFor?.call(items[index]) ??
+              MangaRoute(mangaId: items[index].id).location,
+          onPressed: () => onOpen(items[index]),
+          onLongPress:
+              onLongPress == null ? null : () => onLongPress!(items[index]),
+          onContinueReading: continueReadingFor(items[index]),
+          showBadges: true,
+          outlineOnCovers: outlineOnCovers,
+          scale: listScale,
+          titleMaxLines: limitTitleLines ? 2 : null,
+        )),
+      ),
       DisplayMode.grid => grid(),
       DisplayMode.comfortableGrid => grid(titleBelow: true),
       DisplayMode.coverOnly => grid(showTitle: false),

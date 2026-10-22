@@ -16,6 +16,7 @@ import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/tsumiru_logo.dart';
+import '../../../../widgets/web_selection_area.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
@@ -75,106 +76,108 @@ class MoreScreen extends ConsumerWidget {
                   const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
               ],
             ),
-      body: ListView(
-        children: [
-          TsumiruLogo(size: context.height * .2),
-          const Divider(),
-          Builder(
-            builder: (context) {
-              final host = formatServerHost(
-                ref.watch(serverUrlProvider),
-                ref.watch(serverPortProvider),
-                ref.watch(serverPortToggleProvider).ifNull(),
-              );
-              final statusLabel = switch (connectionAuthStatus(
-                ref.watch(authTypeKeyProvider),
-                ref.watch(needsReauthProvider) ||
-                    ((authType ?? AuthType.none) != AuthType.none &&
-                        !ref.watch(hasStoredCredentialsProvider)),
-              )) {
-                ConnectionAuthStatus.signedIn =>
-                  context.l10n.connectionAuthSignedIn,
-                ConnectionAuthStatus.noAuth => context.l10n.connectionAuthNone,
-                ConnectionAuthStatus.signInNeeded =>
-                  context.l10n.connectionAuthSignInNeeded,
-              };
-              final subtitle = host.isEmpty
-                  ? statusLabel
-                  : '$host · $statusLabel';
-              return ListTile(
-                leading: const Icon(Icons.dns_rounded),
-                title: Text(context.l10n.connection),
-                subtitle: Text(subtitle),
-                onTap: () => const ConnectionRoute().push(context),
-              );
-            },
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.no_accounts_rounded),
-            title: Text(context.l10n.incognitoMode),
-            subtitle: Text(context.l10n.incognitoModeDescription),
-            value: ref.watch(incognitoModeProvider),
-            onChanged: (value) =>
-                ref.read(incognitoModeProvider.notifier).set(value),
-          ),
-          if (showAccount)
+      body: WebSelectionArea(
+        child: ListView(
+          children: [
+            TsumiruLogo(size: context.height * .2),
+            const Divider(),
+            Builder(
+              builder: (context) {
+                final host = formatServerHost(
+                  ref.watch(serverUrlProvider),
+                  ref.watch(serverPortProvider),
+                  ref.watch(serverPortToggleProvider).ifNull(),
+                );
+                final statusLabel = switch (connectionAuthStatus(
+                  ref.watch(authTypeKeyProvider),
+                  ref.watch(needsReauthProvider) ||
+                      ((authType ?? AuthType.none) != AuthType.none &&
+                          !ref.watch(hasStoredCredentialsProvider)),
+                )) {
+                  ConnectionAuthStatus.signedIn =>
+                    context.l10n.connectionAuthSignedIn,
+                  ConnectionAuthStatus.noAuth => context.l10n.connectionAuthNone,
+                  ConnectionAuthStatus.signInNeeded =>
+                    context.l10n.connectionAuthSignInNeeded,
+                };
+                final subtitle = host.isEmpty
+                    ? statusLabel
+                    : '$host · $statusLabel';
+                return ListTile(
+                  leading: const Icon(Icons.dns_rounded),
+                  title: Text(context.l10n.connection),
+                  subtitle: Text(subtitle),
+                  onTap: () => const ConnectionRoute().push(context),
+                );
+              },
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.no_accounts_rounded),
+              title: Text(context.l10n.incognitoMode),
+              subtitle: Text(context.l10n.incognitoModeDescription),
+              value: ref.watch(incognitoModeProvider),
+              onChanged: (value) =>
+                  ref.read(incognitoModeProvider.notifier).set(value),
+            ),
+            if (showAccount)
+              ListTile(
+                leading: const Icon(Icons.person_rounded),
+                title: Text(context.l10n.accountTitle),
+                subtitle: account == null ? null : Text(account.username),
+                onTap: () => const AccountRoute().push(context),
+              ),
             ListTile(
-              leading: const Icon(Icons.person_rounded),
-              title: Text(context.l10n.accountTitle),
-              subtitle: account == null ? null : Text(account.username),
-              onTap: () => const AccountRoute().push(context),
+              title: Text(context.l10n.categories),
+              leading: const Icon(Icons.label_rounded),
+              onTap: () => const EditCategoriesRoute().push(context),
             ),
-          ListTile(
-            title: Text(context.l10n.categories),
-            leading: const Icon(Icons.label_rounded),
-            onTap: () => const EditCategoriesRoute().push(context),
-          ),
-          ListTile(
-            title: Text(context.l10n.history),
-            leading: const Icon(Icons.history_rounded),
-            onTap: () => const HistoryRoute().push(context),
-          ),
-          Builder(
-            builder: (context) {
-              final count = ref.watch(failedUpdateCountProvider).value ?? 0;
-              return ListTile(
-                title: Text(context.l10n.libraryUpdateErrorsCount(count)),
-                leading: const Icon(Icons.error_outline_rounded),
-                onTap: () => const LibraryUpdateErrorsRoute().push(context),
-              );
-            },
-          ),
-          ListTile(
-            title: Text(context.l10n.appearance),
-            leading: const Icon(Icons.color_lens_rounded),
-            onTap: () => const AppearanceSettingsRoute().push(context),
-          ),
-          ListTile(
-            title: Text(context.l10n.backup),
-            leading: const Icon(Icons.settings_backup_restore_rounded),
-            onTap: () => const BackupRoute().push(context),
-          ),
-          const Divider(),
-          ListTile(
-            title: Text(context.l10n.settings),
-            leading: const Icon(Icons.settings_rounded),
-            onTap: () => const SettingsRoute().push(context),
-          ),
-          ListTile(
-            title: Text(context.l10n.about),
-            leading: const Icon(Icons.info_rounded),
-            onTap: () => const AboutRoute().push(context),
-          ),
-          ListTile(
-            title: Text(context.l10n.help),
-            leading: const Icon(Icons.help_rounded),
-            onTap: () => launchUrlInWeb(
-              context,
-              AppUrls.tachideskHelp.url,
-              ref.read(toastProvider),
+            ListTile(
+              title: Text(context.l10n.history),
+              leading: const Icon(Icons.history_rounded),
+              onTap: () => const HistoryRoute().push(context),
             ),
-          ),
-        ],
+            Builder(
+              builder: (context) {
+                final count = ref.watch(failedUpdateCountProvider).value ?? 0;
+                return ListTile(
+                  title: Text(context.l10n.libraryUpdateErrorsCount(count)),
+                  leading: const Icon(Icons.error_outline_rounded),
+                  onTap: () => const LibraryUpdateErrorsRoute().push(context),
+                );
+              },
+            ),
+            ListTile(
+              title: Text(context.l10n.appearance),
+              leading: const Icon(Icons.color_lens_rounded),
+              onTap: () => const AppearanceSettingsRoute().push(context),
+            ),
+            ListTile(
+              title: Text(context.l10n.backup),
+              leading: const Icon(Icons.settings_backup_restore_rounded),
+              onTap: () => const BackupRoute().push(context),
+            ),
+            const Divider(),
+            ListTile(
+              title: Text(context.l10n.settings),
+              leading: const Icon(Icons.settings_rounded),
+              onTap: () => const SettingsRoute().push(context),
+            ),
+            ListTile(
+              title: Text(context.l10n.about),
+              leading: const Icon(Icons.info_rounded),
+              onTap: () => const AboutRoute().push(context),
+            ),
+            ListTile(
+              title: Text(context.l10n.help),
+              leading: const Icon(Icons.help_rounded),
+              onTap: () => launchUrlInWeb(
+                context,
+                AppUrls.tachideskHelp.url,
+                ref.read(toastProvider),
+              ),
+            ),
+          ],
+        ),
       ),
     );
     return topBar

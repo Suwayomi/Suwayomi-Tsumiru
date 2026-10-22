@@ -12,6 +12,7 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../../widgets/web_route_link.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../widgets/download_status_icon.dart';
 
@@ -41,99 +42,114 @@ class ChapterMangaListTile extends StatelessWidget {
     final manga = chapterWithMangaDto.manga;
     // Custom Row (rather than ListTile's height-constrained `leading`) so the
     // cover renders at the standard portrait size used on the History list.
+    final readerLocation = ReaderRoute(
+      mangaId: manga.id,
+      chapterId: chapterWithMangaDto.id,
+      showReaderLayoutAnimation: true,
+    ).location;
     return Material(
       color: isSelected
           ? context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
-      child: InkWell(
-        onTap: () async {
-          if (canTapSelect) {
-            toggleSelect(chapterWithMangaDto);
-          } else {
-            await ReaderRoute(
-              mangaId: manga.id,
-              chapterId: chapterWithMangaDto.id,
-              showReaderLayoutAnimation: true,
-            ).push(context);
-            // Refresh the whole series on return, not just this row — the
-            // reader walks on into the next chapters, and those have rows here
-            // too. Guard mounted: the user may have left Updates while reading.
-            if (!context.mounted) return;
-            await refreshManga();
-          }
-        },
-        onLongPress: () => toggleSelect(chapterWithMangaDto),
-        onSecondaryTap: () => toggleSelect(chapterWithMangaDto),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              if (manga.thumbnailUrl != null)
-                ClipRRect(
-                  borderRadius: KBorderRadius.r8.radius,
-                  child: InkWell(
-                    onTap: () async {
-                      // The cover sits inside the row, so it has to honour
-                      // multi-select too or it navigates away mid-selection.
-                      if (canTapSelect) {
-                        toggleSelect(chapterWithMangaDto);
-                        return;
-                      }
-                      await MangaRoute(mangaId: manga.id).push(context);
-                      if (!context.mounted) return;
-                      // Chapters get read on the details page too, so this row
-                      // is stale the moment we come back.
-                      await refreshManga();
-                    },
-                    child: ServerImage(
-                      imageUrl: manga.thumbnailUrl ?? "",
-                      size: const Size(56, 80),
-                    ),
-                  ),
-                ),
-              const Gap(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        if ((chapterWithMangaDto.isBookmarked).ifNull()) ...[
-                          const Icon(Icons.bookmark_rounded, size: 20),
-                          const Gap(4),
-                        ],
-                        Expanded(
-                          child: Text(
-                            manga.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: color),
-                          ),
+      child: WebRouteLink(
+        location: readerLocation,
+        builder: (context, openInNewTab) => InkWell(
+          onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
+            if (canTapSelect) {
+              toggleSelect(chapterWithMangaDto);
+            } else {
+              await ReaderRoute(
+                mangaId: manga.id,
+                chapterId: chapterWithMangaDto.id,
+                showReaderLayoutAnimation: true,
+              ).push(context);
+              // Refresh the whole series on return, not just this row — the
+              // reader walks on into the next chapters, and those have rows here
+              // too. Guard mounted: the user may have left Updates while reading.
+              if (!context.mounted) return;
+              await refreshManga();
+            }
+          }),
+          onLongPress: () => toggleSelect(chapterWithMangaDto),
+          onSecondaryTap: () => toggleSelect(chapterWithMangaDto),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                if (manga.thumbnailUrl != null)
+                  ClipRRect(
+                    borderRadius: KBorderRadius.r8.radius,
+                    child: WebRouteLink(
+                      location: MangaRoute(mangaId: manga.id).location,
+                      enabled: false,
+                      builder: (context, openMangaInNewTab) => InkWell(
+                        onTap: () => WebRouteLink.handleAsyncTap(
+                          openMangaInNewTab,
+                          () async {
+                            // The cover sits inside the row, so it has to honour
+                            // multi-select too or it navigates away mid-selection.
+                            if (canTapSelect) {
+                              toggleSelect(chapterWithMangaDto);
+                              return;
+                            }
+                            await MangaRoute(mangaId: manga.id).push(context);
+                            if (!context.mounted) return;
+                            // Chapters get read on the details page too, so this row
+                            // is stale the moment we come back.
+                            await refreshManga();
+                          },
                         ),
-                      ],
-                    ),
-                    const Gap(4),
-                    Text(
-                      chapterWithMangaDto.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color:
-                            color ?? context.theme.colorScheme.onSurfaceVariant,
+                        child: ServerImage(
+                          imageUrl: manga.thumbnailUrl ?? "",
+                          size: const Size(56, 80),
+                        ),
                       ),
                     ),
-                  ],
+                  ),
+                const Gap(12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          if ((chapterWithMangaDto.isBookmarked).ifNull()) ...[
+                            const Icon(Icons.bookmark_rounded, size: 20),
+                            const Gap(4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              manga.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: color),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Gap(4),
+                      Text(
+                        chapterWithMangaDto.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color:
+                              color ?? context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Gap(8),
-              DownloadStatusIcon(
-                isDownloaded: (chapterWithMangaDto.isDownloaded).ifNull(),
-                mangaId: manga.id,
-                chapter: chapterWithMangaDto,
-                updateData: updatePair,
-              ),
-            ],
+                const Gap(8),
+                DownloadStatusIcon(
+                  isDownloaded: (chapterWithMangaDto.isDownloaded).ifNull(),
+                  mangaId: manga.id,
+                  chapter: chapterWithMangaDto,
+                  updateData: updatePair,
+                ),
+              ],
+            ),
           ),
         ),
       ),

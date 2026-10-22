@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'constants/app_theme.dart';
@@ -31,6 +32,7 @@ import 'utils/misc/toast/toast.dart';
 import 'utils/motion/reduce_motion.dart';
 import 'utils/theme/app_theme_builder.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
+import 'widgets/web_page_title.dart';
 
 class Sorayomi extends HookConsumerWidget {
   const Sorayomi({super.key, this.sessionChanging = false});
@@ -123,9 +125,14 @@ class Sorayomi extends HookConsumerWidget {
                     child: TickerMode(
                       enabled: !sessionChanging,
                       child: ReauthBannerHost(
-                        child: _IncognitoNotificationBridge(
-                          child: toastWrapped,
-                        ),
+                        child: kIsWeb
+                            ? _WebTitleBridge(
+                                routes: routes,
+                                child: _IncognitoNotificationBridge(
+                                  child: toastWrapped,
+                                ),
+                              )
+                            : _IncognitoNotificationBridge(child: toastWrapped),
                       ),
                     ),
                   ),
@@ -184,6 +191,24 @@ class AccountSessionLoading extends ConsumerWidget {
       child: const Directionality(
         textDirection: TextDirection.ltr,
         child: Material(child: Center(child: CircularProgressIndicator())),
+      ),
+    );
+  }
+}
+
+class _WebTitleBridge extends StatelessWidget {
+  const _WebTitleBridge({required this.routes, required this.child});
+
+  final GoRouter routes;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: routes.routeInformationProvider,
+      builder: (context, _) => WebPageTitle(
+        uri: routes.routeInformationProvider.value.uri,
+        child: child,
       ),
     );
   }
