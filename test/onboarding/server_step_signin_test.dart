@@ -134,6 +134,13 @@ void main() {
                   }
                   final payload = jsonDecode(await body.bytesToString()) as Map;
                   final query = payload['query'] as String;
+                  if (query.contains('AccountCapability')) {
+                    return http.StreamedResponse(
+                      Stream.value(utf8.encode(_authUnauthorized)),
+                      200,
+                      headers: {'content-type': 'application/json'},
+                    );
+                  }
                   if (query.contains('mutation Login')) {
                     loginCalls++;
                     expect(payload['variables']['input']['username'], 'reader');

@@ -17,6 +17,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../account/data/account_providers.dart';
+import '../../../account/domain/account_access.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
@@ -36,7 +37,10 @@ class MoreScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authType = ref.watch(authTypeKeyProvider);
     final account = ref.watch(currentAccountProvider);
-    final showAccount = authType == AuthType.uiLogin;
+    final showAccount =
+        authType == AuthType.uiLogin &&
+        ref.watch(settledAccountAccessProvider).capability !=
+            AccountCapability.unsupported;
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     // Phone searches from the app-bar entry (or the box under the title when
     // the persistent setting is on); tablet and desktop are unchanged.

@@ -23,8 +23,10 @@ import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../../account/data/account_actions.dart';
 import '../../../../../account/data/account_providers.dart';
+import '../../../../../account/data/server_account_capability.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../../account/presentation/account_code_dialog.dart';
+import '../../../../../auth/data/custom_headers_store.dart';
 import '../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../client/server_port_tile/server_port_tile.dart';
 import '../client/server_url_tile/server_url_tile.dart';
@@ -53,11 +55,40 @@ class LoginCredentialsPopup extends HookConsumerWidget {
     final testing = useState(false);
     final testResult = useState<String?>(null);
     final testResultIsError = useState(false);
+    final probeBaseUrl = Endpoints.baseApi(
+      baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+      port: ref.watch(serverPortProvider),
+      addPort: ref.watch(serverPortToggleProvider).ifNull(),
+      appendApiToUrl: false,
+    );
+    final serverAccountCapability = useState(AccountCapability.unknown);
+    useEffect(() {
+      serverAccountCapability.value = AccountCapability.unknown;
+      if (authType != AuthType.uiLogin || probeBaseUrl.isEmpty) return null;
+      var alive = true;
+      () async {
+        final probeClient = ref.read(accountProbeHttpClientProvider)();
+        try {
+          final capability = await probeServerAccountCapability(
+            probeBaseUrl,
+            client: probeClient,
+            headers: ref.read(customHttpHeadersProvider).value,
+          );
+          if (alive) serverAccountCapability.value = capability;
+        } finally {
+          probeClient.close();
+        }
+      }();
+      return () {
+        alive = false;
+      };
+    }, [probeBaseUrl, authType]);
     final showAccountCodes =
         authType == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
             ref.watch(settledAccountAccessProvider).capability !=
-                AccountCapability.unsupported);
+                AccountCapability.unsupported) &&
+        serverAccountCapability.value != AccountCapability.unsupported;
 
     Future<void> openCodeDialog(AccountCodeMode mode) async {
       final redeem = ref.read(accountActionsProvider).redeemCode;

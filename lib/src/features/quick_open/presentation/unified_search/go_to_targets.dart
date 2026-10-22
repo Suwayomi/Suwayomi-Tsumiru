@@ -26,8 +26,12 @@ class GoToTarget {
 }
 
 /// Nav + settings destinations. Closures capture the exact typed-route call,
-/// so this can't be const. `includeHotkeys` mirrors the desktop-only tile.
-List<GoToTarget> appGoToTargets({required bool includeHotkeys}) => [
+/// so this can't be const. `includeHotkeys` mirrors the desktop-only tile,
+/// `includeAccount` mirrors the More screen's Account entry.
+List<GoToTarget> appGoToTargets({
+  required bool includeHotkeys,
+  bool includeAccount = true,
+}) => [
   GoToTarget(
     label: (l) => l.library,
     icon: Icons.collections_bookmark_rounded,
@@ -140,6 +144,13 @@ List<GoToTarget> appGoToTargets({required bool includeHotkeys}) => [
     navigate: (c) => const ConnectionRoute().push(c),
     subtitle: (l) => l.settings,
   ),
+  if (includeAccount)
+    GoToTarget(
+      label: (l) => l.accountTitle,
+      icon: Icons.person_rounded,
+      navigate: (c) => const AccountRoute().push(c),
+      subtitle: (l) => l.settings,
+    ),
   GoToTarget(
     label: (l) => l.categories,
     icon: Icons.label_rounded,
@@ -164,12 +175,16 @@ List<GoToTarget> matchGoToTargets(
   String query,
   AppLocalizations l, {
   required bool includeHotkeys,
+  bool includeAccount = true,
   List<GoToTarget> extra = const [],
 }) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return const [];
   return [
-    ...appGoToTargets(includeHotkeys: includeHotkeys),
+    ...appGoToTargets(
+      includeHotkeys: includeHotkeys,
+      includeAccount: includeAccount,
+    ),
     ...extra,
   ].where((t) => t.label(l).toLowerCase().contains(q)).toList();
 }
