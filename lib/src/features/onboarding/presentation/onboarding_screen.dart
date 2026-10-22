@@ -25,6 +25,7 @@ import '../../../utils/platform/web_auth_mode.dart';
 import '../../../utils/theme/brand.dart';
 import '../../account/data/account_actions.dart';
 import '../../account/data/account_providers.dart';
+import '../../account/data/server_account_capability.dart';
 import '../../account/domain/account_access.dart';
 import '../../account/presentation/account_code_dialog.dart';
 import '../../auth/data/auth_coordinator.dart';
@@ -595,11 +596,14 @@ class _ServerStep extends HookConsumerWidget {
     final credsRejected = useState(false);
     final unsupportedAfterLogin = useState(false);
     final unsupportedFromNotFound = useState(false);
+    final serverAccountCapability = useState(AccountCapability.unknown);
+    final capabilityGeneration = useRef(0);
     final showAccountCodes =
         authChoice.value == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
             ref.watch(settledAccountAccessProvider).capability !=
-                AccountCapability.unsupported);
+                AccountCapability.unsupported) &&
+        serverAccountCapability.value != AccountCapability.unsupported;
 
     void applyDetectedAuth(AuthType? detected) {
       if (!userChangedAuth.value) {
@@ -613,6 +617,23 @@ class _ServerStep extends HookConsumerWidget {
         state.value = _TestState.idle;
         onVerifiedChanged(false);
       }
+    }
+
+    Future<void> refreshServerAccountCapability(
+      String base,
+      http.Client client,
+    ) async {
+      if (authChoice.value != AuthType.uiLogin) return;
+      final generation = ++capabilityGeneration.value;
+      final capability = await probeServerAccountCapability(
+        base,
+        client: client,
+        headers: ref.read(customHttpHeadersProvider).value,
+      );
+      if (!context.mounted) return;
+      if (generation != capabilityGeneration.value) return;
+      if (base != resolvedUrl.value) return;
+      serverAccountCapability.value = capability;
     }
 
     // Persist a resolved/typed base URL as the active server URL.
@@ -761,6 +782,8 @@ class _ServerStep extends HookConsumerWidget {
       credsRejected.value = false;
       unsupportedAfterLogin.value = false;
       unsupportedFromNotFound.value = false;
+      capabilityGeneration.value++;
+      serverAccountCapability.value = AccountCapability.unknown;
       onVerifiedChanged(false);
       final client = ref.read(onboardingHttpClientProvider)();
       try {
@@ -832,6 +855,7 @@ class _ServerStep extends HookConsumerWidget {
         if (hasCreds) credsRejected.value = true;
         state.value = _TestState.needsLogin;
         onVerifiedChanged(false);
+        await refreshServerAccountCapability(url, client);
       } catch (e) {
         if (!context.mounted) return;
         errorDetail.value = e.toString();
@@ -869,6 +893,8 @@ class _ServerStep extends HookConsumerWidget {
       credsRejected.value = false;
       unsupportedAfterLogin.value = false;
       unsupportedFromNotFound.value = false;
+      capabilityGeneration.value++;
+      serverAccountCapability.value = AccountCapability.unknown;
       onVerifiedChanged(false);
       final sessionIsCurrent = ref
           .read(authCredentialsStoreProvider.notifier)
@@ -927,6 +953,7 @@ class _ServerStep extends HookConsumerWidget {
               if (hasCreds) credsRejected.value = true;
               state.value = _TestState.needsLogin;
               onVerifiedChanged(false);
+              await refreshServerAccountCapability(result.baseUrl, client);
             }
         }
       } catch (e) {
@@ -1110,7 +1137,11 @@ class _ServerStep extends HookConsumerWidget {
             border: const OutlineInputBorder(),
             prefixIcon: const Icon(Icons.dns_rounded),
           ),
-          onChanged: (_) => resetToIdle(),
+          onChanged: (_) {
+            capabilityGeneration.value++;
+            serverAccountCapability.value = AccountCapability.unknown;
+            resetToIdle();
+          },
         ),
         // Discover: scan the LAN and fill the address.
         if (!isWeb)
@@ -1211,6 +1242,20 @@ class _ServerStep extends HookConsumerWidget {
                 credsRejected.value = false;
                 unsupportedAfterLogin.value = false;
                 unsupportedFromNotFound.value = false;
+                capabilityGeneration.value++;
+                serverAccountCapability.value = AccountCapability.unknown;
+                final base = resolvedUrl.value;
+                if (m == AuthType.uiLogin &&
+                    (state.value == _TestState.needsLogin ||
+                        state.value == _TestState.signingIn) &&
+                    base != null &&
+                    base.isNotEmpty) {
+                  final probeClient = ref.read(onboardingHttpClientProvider)();
+                  refreshServerAccountCapability(
+                    base,
+                    probeClient,
+                  ).whenComplete(probeClient.close);
+                }
               }
             },
           ),

@@ -1,12 +1,18 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_actions.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
+import 'package:tsumiru/src/features/account/data/server_account_capability.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_status.dart';
@@ -61,6 +67,19 @@ void main() {
           ),
           hasStoredCredentialsProvider.overrideWithValue(stored),
           accountActionsProvider.overrideWith((ref) => actions = _Actions(ref)),
+          accountProbeHttpClientProvider.overrideWithValue(
+            () => MockClient.streaming((request, body) async {
+              return http.StreamedResponse(
+                Stream.value(
+                  utf8.encode(
+                    '{"data":null,"errors":[{"message":"Unauthorized"}]}',
+                  ),
+                ),
+                200,
+                headers: {'content-type': 'application/json'},
+              );
+            }),
+          ),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

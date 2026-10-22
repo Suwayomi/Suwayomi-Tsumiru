@@ -14,6 +14,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../account/data/account_providers.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/search/settings_search_registry.dart';
@@ -51,13 +52,21 @@ List<GoToTarget> matchingGoToTargets(
   AppLocalizations l,
 ) {
   final extra = _categoryTargets(ref);
+  final includeAccount = ref.watch(showAccountEntryProvider);
   if (query.trim().isEmpty) {
-    return [...appGoToTargets(includeHotkeys: isKeyboardRuntime), ...extra];
+    return [
+      ...appGoToTargets(
+        includeHotkeys: isKeyboardRuntime,
+        includeAccount: includeAccount,
+      ),
+      ...extra,
+    ];
   }
   return matchGoToTargets(
     query,
     l,
     includeHotkeys: isKeyboardRuntime,
+    includeAccount: includeAccount,
     extra: extra,
   );
 }

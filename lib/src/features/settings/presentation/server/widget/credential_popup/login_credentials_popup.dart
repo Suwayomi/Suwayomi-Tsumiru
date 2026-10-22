@@ -23,6 +23,7 @@ import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../../account/data/account_actions.dart';
 import '../../../../../account/data/account_providers.dart';
+import '../../../../../account/data/server_account_capability.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../../account/presentation/account_code_dialog.dart';
 import '../../../../../offline/data/background/background_download_controller_shim.dart';
@@ -53,11 +54,23 @@ class LoginCredentialsPopup extends HookConsumerWidget {
     final testing = useState(false);
     final testResult = useState<String?>(null);
     final testResultIsError = useState(false);
+    final probeBaseUrl = Endpoints.baseApi(
+      baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+      port: ref.watch(serverPortProvider),
+      addPort: ref.watch(serverPortToggleProvider).ifNull(),
+      appendApiToUrl: false,
+    );
+    final serverAccountCapability = useServerAccountCapability(
+      ref,
+      probeBaseUrl,
+      authType,
+    );
     final showAccountCodes =
         authType == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
             ref.watch(settledAccountAccessProvider).capability !=
-                AccountCapability.unsupported);
+                AccountCapability.unsupported) &&
+        serverAccountCapability != AccountCapability.unsupported;
 
     Future<void> openCodeDialog(AccountCodeMode mode) async {
       final redeem = ref.read(accountActionsProvider).redeemCode;
