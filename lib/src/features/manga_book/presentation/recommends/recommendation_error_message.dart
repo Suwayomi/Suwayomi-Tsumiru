@@ -10,8 +10,6 @@ String recommendationErrorMessage(
   Object error,
   String provider,
 ) => switch (error) {
-  RecommendationUnavailableOnWeb() =>
-    context.l10n.recommendationsUnavailableWeb,
   RecommendationServiceUnavailable() =>
     context.l10n.recommendationsServiceUnavailable(provider),
   RecommendationHttpException() ||

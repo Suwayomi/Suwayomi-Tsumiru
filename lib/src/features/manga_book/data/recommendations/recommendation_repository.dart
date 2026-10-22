@@ -69,7 +69,7 @@ recommendationSetup(Ref ref, int mangaId) async {
   );
   return (
     ctx: ctx,
-    providers: _allProviders.where((p) => p.appliesTo(ctx)).toList(),
+    providers: _allProviders.where((p) => appliesOnPlatform(p, ctx)).toList(),
   );
 }
 
@@ -98,10 +98,11 @@ AsyncValue<List<Recommendation>> mangaRecommendations(Ref ref, int mangaId) {
   if (recommendations.isEmpty && results.any((result) => result.isLoading)) {
     return const AsyncLoading();
   }
-  if (recommendations.isEmpty) {
-    for (final result in results) {
-      if (result.hasError) return AsyncError(result.error!, result.stackTrace!);
-    }
+  if (recommendations.isEmpty &&
+      results.isNotEmpty &&
+      results.every((result) => result.hasError)) {
+    final failed = results.firstWhere((result) => result.hasError);
+    return AsyncError(failed.error!, failed.stackTrace!);
   }
   return AsyncData(recommendations);
 }

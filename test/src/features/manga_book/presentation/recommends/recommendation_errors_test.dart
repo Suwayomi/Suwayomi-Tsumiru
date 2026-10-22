@@ -18,7 +18,6 @@ void main() {
       const RecommendationHttpException(403),
       TimeoutException("Timed out"),
       const RecommendationServiceUnavailable(),
-      const RecommendationUnavailableOnWeb(),
     ]) {
       testWidgets('${browse ? 'Grid' : 'Sections'} explains $error', (
         tester,
@@ -60,15 +59,12 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final l10n = AppLocalizations.of(
-          tester.element(find.byType(Scaffold)),
-        )!;
         final message = switch (error) {
           RecommendationServiceUnavailable() =>
             'AniList is temporarily unavailable. Try again later.',
           RecommendationHttpException() || TimeoutException() =>
             "Couldn't load recommendations from AniList. Try again later.",
-          _ => l10n.recommendationsUnavailableWeb,
+          _ => throw StateError('unexpected error $error'),
         };
         expect(find.text(message), findsOneWidget);
         expect(find.textContaining('WebView'), findsNothing);

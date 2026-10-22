@@ -36,6 +36,8 @@ class AnilistProvider extends TrackerRecommendationProvider {
   String get category => 'Community recommendations';
   @override
   String get trackerKey => 'anilist';
+  @override
+  bool get supportsWeb => true;
 
   @override
   Future<List<Recommendation>> fetchById(
