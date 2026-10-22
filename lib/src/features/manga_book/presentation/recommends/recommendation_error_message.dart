@@ -19,8 +19,7 @@ String recommendationErrorMessage(
 
 String joinProviderNames(Iterable<String> names) {
   final unique = names.toSet().toList();
-  if (unique.length <= 2) return unique.join(' and ');
-  return '${unique.sublist(0, unique.length - 1).join(', ')} and ${unique.last}';
+  return unique.join(', ');
 }
 
 String suggestionsRowErrorMessage(BuildContext context, Object error) {
@@ -31,9 +30,8 @@ String suggestionsRowErrorMessage(BuildContext context, Object error) {
   final names = joinProviderNames([
     for (final failure in failures) failure.name,
   ]);
-  if (failures.every(
-    (failure) => failure.error is RecommendationServiceUnavailable,
-  )) {
+  if (failures.length == 1 &&
+      failures.single.error is RecommendationServiceUnavailable) {
     return context.l10n.recommendationsServiceUnavailable(names);
   }
   return context.l10n.recommendationsLoadFailed(names);

@@ -242,8 +242,8 @@ void main() {
     await tester.pump();
     expect(
       find.text(
-        'AniList, MangaUpdates and MyAnimeList is temporarily '
-        'unavailable. Try again later.',
+        "Couldn't load recommendations from "
+        'AniList, MangaUpdates, MyAnimeList. Try again later.',
       ),
       findsOneWidget,
     );
@@ -271,7 +271,7 @@ void main() {
     await tester.pump();
     expect(
       find.text(
-        "Couldn't load recommendations from AniList and MyAnimeList. "
+        "Couldn't load recommendations from AniList, MyAnimeList. "
         'Try again later.',
       ),
       findsOneWidget,
