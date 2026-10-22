@@ -205,9 +205,9 @@ class _WebTitleBridge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: routes.routerDelegate,
+      listenable: routes.routeInformationProvider,
       builder: (context, _) => WebPageTitle(
-        uri: routes.routerDelegate.currentConfiguration.uri,
+        uri: routes.routeInformationProvider.value.uri,
         child: child,
       ),
     );
