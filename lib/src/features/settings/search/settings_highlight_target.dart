@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/web_selection_area.dart';
 
 /// Ancestor helper that lets a highlight reach tiles far down a long list.
 ///
@@ -112,8 +113,10 @@ class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      _HighlightScopeBinding(state: this, child: widget.child);
+  Widget build(BuildContext context) => _HighlightScopeBinding(
+    state: this,
+    child: WebSelectionArea(child: widget.child),
+  );
 }
 
 class _HighlightScopeBinding extends InheritedWidget {

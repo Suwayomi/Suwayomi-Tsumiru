@@ -520,6 +520,7 @@ class MangaDescriptionBody extends StatelessWidget {
     final lineHeight = fontSize * (textStyle.height ?? 1.4);
     final markdownBody = MarkdownBody(
       data: description,
+      selectable: kIsWeb,
       onTapLink: (_, href, _) {
         if (href.isNotBlank) onOpenLink?.call(href!);
       },
