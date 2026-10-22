@@ -81,6 +81,7 @@ class ChapterMangaListTile extends StatelessWidget {
                     borderRadius: KBorderRadius.r8.radius,
                     child: WebRouteLink(
                       location: MangaRoute(mangaId: manga.id).location,
+                      enabled: false,
                       builder: (context, openMangaInNewTab) => InkWell(
                         onTap: () => WebRouteLink.handleAsyncTap(
                           openMangaInNewTab,

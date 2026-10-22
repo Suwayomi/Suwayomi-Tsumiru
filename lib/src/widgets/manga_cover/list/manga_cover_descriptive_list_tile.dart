@@ -212,6 +212,7 @@ class _MangaCoverDescriptiveListTileState
                                         sourceType: SourceType.POPULAR,
                                       ).location
                                     : null,
+                                enabled: widget.linkLocation == null,
                                 builder: (context, openSourceInNewTab) =>
                                     InkWell(
                                       onTap:
