@@ -35,6 +35,7 @@ void main() {
       'One Piece: Chapter 5 - Tsumiru',
     );
     expect(webRouteTitle(l10n, Uri.parse('/nope')), 'Tsumiru');
+    expect(webRouteTitle(l10n, Uri()), 'Tsumiru');
   });
 
   testWidgets('web route link passes its child through off the web', (
