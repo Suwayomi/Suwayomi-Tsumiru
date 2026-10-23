@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart';
@@ -9,6 +10,7 @@ import 'package:http/testing.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_chapter_fetch.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/utils/graphql/legacy_user_fields_link.dart';
+import 'package:tsumiru/src/utils/logger/logger_link.dart';
 
 Request request(String source, {Map<String, dynamic> variables = const {}}) =>
     Request(
@@ -46,6 +48,154 @@ Future<Response> legacy(
 }).first;
 
 void main() {
+  for (final modern in [false, true]) {
+    test(
+      modern
+          ? 'modern subscriptions pass through after an HTTP probe'
+          : 'legacy subscriptions use HTTP detection and reshape socket events',
+      () async {
+        final original = request(
+          r'''
+          subscription DownloadStatusChanged($input: DownloadChangedInput!) {
+            downloadStatusChanged(input: $input) { ...DownloadUpdatesDto }
+          }
+          fragment DownloadUpdatesDto on DownloadUpdates {
+            state omittedUpdates
+            initial { ...DownloadDto }
+            updates { type download { ...DownloadDto } }
+          }
+          fragment DownloadDto on DownloadType {
+            chapter { id user { isDownloaded } }
+            manga { id user { downloadCount } }
+            progress state
+          }
+        ''',
+          variables: {'input': <String, dynamic>{}},
+        );
+        Map<String, dynamic> event(bool downloaded, {required bool nested}) {
+          final download = {
+            'chapter': {
+              'id': 1,
+              if (nested)
+                'user': {'isDownloaded': downloaded}
+              else
+                'isDownloaded': downloaded,
+            },
+            'manga': {
+              'id': 2,
+              if (nested)
+                'user': {'downloadCount': downloaded ? 1 : 0}
+              else
+                'downloadCount': downloaded ? 1 : 0,
+            },
+            'progress': downloaded ? 1.0 : 0.5,
+            'state': downloaded ? 'FINISHED' : 'DOWNLOADING',
+          };
+          return {
+            'downloadStatusChanged': {
+              'state': 'STARTED',
+              'omittedUpdates': false,
+              'initial': [download],
+              'updates': [
+                {'type': 'CHANGED', 'download': download},
+              ],
+            },
+          };
+        }
+
+        final detection = LegacyUserFieldsDetection();
+        var probes = 0;
+        final httpTransport = MockClient((incoming) async {
+          expect(incoming.headers['authorization'], 'Bearer test-token');
+          final body = jsonDecode(incoming.body) as Map;
+          final source = body['query'] as String;
+          if (source.contains('__type(')) probes++;
+          return http.Response(
+            jsonEncode({
+              'data': source.contains('__type(')
+                  ? capability(modern).data
+                  : {'chapter': null},
+            }),
+            200,
+          );
+        });
+        addTearDown(httpTransport.close);
+        final httpChain = LoggerLink()
+            .concat(LegacyUserFieldsLink(detection: detection))
+            .concat(AuthLink(getToken: () => 'Bearer test-token'))
+            .concat(
+              HttpLink('http://probe.test/graphql', httpClient: httpTransport),
+            );
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => server.close(force: true));
+        var socketQueries = 0;
+        var subscriptions = 0;
+        server.transform(WebSocketTransformer()).listen((socket) {
+          socket.listen((raw) {
+            final frame = jsonDecode(raw as String) as Map;
+            if (frame['type'] == 'connection_init') {
+              socket.add(jsonEncode({'type': 'connection_ack'}));
+            } else if (frame['type'] == 'subscribe') {
+              final payload = frame['payload'] as Map;
+              final source = payload['query'] as String;
+              if (source.contains('__type(')) {
+                socketQueries++;
+                socket.add(jsonEncode({'type': 'error', 'id': frame['id']}));
+                return;
+              }
+              subscriptions++;
+              expect(source.contains('user {'), modern);
+              if (modern) {
+                expect(source, printNode(original.operation.document));
+              }
+              expect(payload['variables'], original.variables);
+              for (final downloaded in [false, true]) {
+                socket.add(
+                  jsonEncode({
+                    'type': 'next',
+                    'id': frame['id'],
+                    'payload': {'data': event(downloaded, nested: modern)},
+                  }),
+                );
+              }
+              socket.add(jsonEncode({'type': 'complete', 'id': frame['id']}));
+            }
+          });
+        });
+        final socketLink = WebSocketLink(
+          'ws://127.0.0.1:${server.port}',
+          subProtocol: GraphQLProtocol.graphqlTransportWs,
+          config: const SocketClientConfig(autoReconnect: false),
+        );
+        addTearDown(socketLink.dispose);
+        final subscriptionChain = LoggerLink()
+            .concat(
+              LegacyUserFieldsLink(
+                detection: detection,
+                probe: (request) => httpChain.request(request),
+              ),
+            )
+            .concat(socketLink);
+        for (var attempt = 0; attempt < 2; attempt++) {
+          final responses = await subscriptionChain
+              .request(original)
+              .take(2)
+              .toList();
+          expect(responses.map((response) => response.data).toList(), [
+            event(false, nested: true),
+            event(true, nested: true),
+          ]);
+        }
+        await httpChain
+            .request(request('{ chapter { user { isRead } } }'))
+            .first;
+        expect(probes, 1);
+        expect(socketQueries, 0);
+        expect(subscriptions, 2);
+      },
+    );
+  }
+
   group('background POST', () {
     const query = '{ chapter { user { isRead } } }';
     const record = BackgroundTokenRecord(

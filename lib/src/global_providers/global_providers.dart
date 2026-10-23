@@ -96,6 +96,14 @@ Link _sessionLink(bool Function() isCurrentSession) => Link.function((
   }
 });
 
+final _legacyUserFieldsDetectionProvider =
+    Provider.autoDispose<LegacyUserFieldsDetection>((ref) {
+      ref.watch(serverUrlProvider);
+      ref.watch(serverPortProvider);
+      ref.watch(serverPortToggleProvider);
+      return LegacyUserFieldsDetection();
+    });
+
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlClient(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
@@ -263,10 +271,7 @@ GraphQLClient graphQlClient(Ref ref) {
         );
         return await ref
             .read(authCoordinatorProvider.notifier)
-            .refreshUiAccessToken(
-              gqlClient: rawClient,
-              trigger: 'auth-link',
-            );
+            .refreshUiAccessToken(gqlClient: rawClient, trigger: 'auth-link');
       },
       onNeedsReauth: () {
         if (ref.read(hasStoredCredentialsProvider)) {
@@ -320,7 +325,11 @@ GraphQLClient graphQlClient(Ref ref) {
   });
   link = reachabilityLink.concat(link);
 
-  final loggerLink = LoggerLink().concat(LegacyUserFieldsLink());
+  final loggerLink = LoggerLink().concat(
+    LegacyUserFieldsLink(
+      detection: ref.watch(_legacyUserFieldsDetectionProvider),
+    ),
+  );
   return GraphQLClient(
     link: _sessionLink(isCurrentSession).concat(loggerLink).concat(link),
     defaultPolicies: DefaultPolicies(
@@ -416,9 +425,8 @@ bool socketTokenIsLive(String? token, {DateTime? now}) {
 /// The socket resolves its user once, at connect: these lines show what it
 /// was bound with, so an "Unauthorized" subscription later in the session can
 /// be traced to the connect that caused it.
-void _wsAuthLog(String event) => recordDiagnostic(
-      '[${DateTime.now().toIso8601String()}] ws-auth: $event\n',
-    );
+void _wsAuthLog(String event) =>
+    recordDiagnostic('[${DateTime.now().toIso8601String()}] ws-auth: $event\n');
 
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
@@ -485,9 +493,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
             null => 'not-due',
             RefreshSuccess() => 'success',
             RefreshAuthFailure() => 'auth-failure',
-            RefreshTransientFailure(:final error) =>
-              'transient cause=${error.runtimeType}: '
-                  '${error.toString().split('\n').first}',
+            RefreshTransientFailure(:final error) => 'transient cause=${error.runtimeType}: '
+                '${error.toString().split('\n').first}',
           }}',
         );
       },
@@ -548,7 +555,13 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   // is disposed, so a re-auth doesn't leak the old connection.
   ref.onDispose(() => unawaited(wsLink.dispose().catchError((_) {})));
 
-  final loggerLink = LoggerLink().concat(LegacyUserFieldsLink());
+  final loggerLink = LoggerLink().concat(
+    LegacyUserFieldsLink(
+      detection: ref.watch(_legacyUserFieldsDetectionProvider),
+      // Stable servers reject introspection queries over the socket.
+      probe: (request) => ref.read(graphQlClientProvider).link.request(request),
+    ),
+  );
   final timeoutMs =
       ref.watch(serverRequestTimeoutProvider) ??
       DBKeys.serverRequestTimeout.initial as int;

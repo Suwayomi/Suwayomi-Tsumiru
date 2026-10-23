@@ -8,8 +8,7 @@ final _userFieldsProbe = parseString(
   '{ __type(name: "ChapterType") { fields { name } } }',
 );
 
-/// Compatibility with stable servers predating MangaType.user/ChapterType.user.
-class LegacyUserFieldsLink extends Link {
+class LegacyUserFieldsDetection {
   bool? _hasUser;
   Future<bool?>? _probe;
 
@@ -34,10 +33,30 @@ class LegacyUserFieldsLink extends Link {
     }
   }
 
+  Future<bool?> detect(Request request, NextLink forward) async {
+    if (_hasUser != null) return _hasUser;
+    final probe = _probe ??= _detect(request, forward);
+    try {
+      return await probe;
+    } finally {
+      if (identical(_probe, probe)) _probe = null;
+    }
+  }
+}
+
+/// Compatibility with stable servers predating MangaType.user/ChapterType.user.
+class LegacyUserFieldsLink extends Link {
+  LegacyUserFieldsLink({LegacyUserFieldsDetection? detection, NextLink? probe})
+    : _detection = detection ?? LegacyUserFieldsDetection(),
+      _probe = probe;
+
+  final LegacyUserFieldsDetection _detection;
+  final NextLink? _probe;
+
   @override
   Stream<Response> request(Request request, [NextLink? forward]) async* {
     final next = forward!;
-    if (_hasUser == null &&
+    if (_detection._hasUser == null &&
         !_LegacyDocument(
           request.operation.document,
           request.variables,
@@ -45,15 +64,7 @@ class LegacyUserFieldsLink extends Link {
       yield* next(request);
       return;
     }
-    var hasUser = _hasUser;
-    if (hasUser == null) {
-      final probe = _probe ??= _detect(request, next);
-      try {
-        hasUser = await probe;
-      } finally {
-        if (identical(_probe, probe)) _probe = null;
-      }
-    }
+    final hasUser = await _detection.detect(request, _probe ?? next);
     if (hasUser != false) {
       yield* next(request);
       return;
