@@ -13,6 +13,7 @@
 [![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Suwayomi/Suwayomi-Tsumiru?label=download)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Suwayomi/Suwayomi-Tsumiru/total?label=downloads)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
 [![Translation status](https://hosted.weblate.org/widget/suwayomi/suwayomi-tsumiru/svg-badge.svg)](https://hosted.weblate.org/engage/suwayomi/)
 
 </div>
@@ -42,15 +43,18 @@ Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-S
 ## Download
 
 <a href="https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"/></a>
-<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.aaronbamblett.tsumiru%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSuwayomi%2FSuwayomi-Tsumiru%22%2C%22author%22%3A%22Suwayomi%22%2C%22name%22%3A%22Tsumiru%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60"/></a>
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.aaronbamblett.tsumiru%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSuwayomi%2FSuwayomi-Tsumiru%22%2C%22author%22%3A%22Suwayomi%22%2C%22name%22%3A%22Tsumiru%22%7D"><img src=".github/readme-images/badge_obtainium.png" alt="Get it on Obtainium" height="60"/></a>
+<a href="https://tsumiru.app/open.html?r=sidestore%3A%2F%2Fsource%3Furl%3Dhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/add-to-sidestore.png" alt="Add to SideStore" height="60"/></a>
+<a href="https://tsumiru.app/open.html?r=altstore%3A%2F%2Fsource%3Furl%3Dhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/add-to-altstore.png" alt="Add to AltStore" height="60"/></a>
+<a href="https://tsumiru.app/open.html?r=feather%3A%2F%2Fsource%2Fhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/add-to-feather.png" alt="Add to Feather" height="60"/></a>
 
 Get the latest build from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest). The [download page](https://tsumiru.app/download/) has install steps for each platform.
 
 - **Android:** add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) to get updates straight from GitHub Releases.
 - **Linux:** the Flatpak from our own repo updates itself. An AppImage is also on Releases.
-- **iOS:** the build is unsigned, so it has to be sideloaded.
+- **iOS:** the build is unsigned, so it has to be sideloaded. The buttons above add the Tsumiru source to SideStore, AltStore or Feather; see the [iOS guide](https://tsumiru.app/docs/guides/install-ios).
 
-You need a running Suwayomi-Server that your device can reach.
+You need a running [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) that your device can reach.
 
 ## Translations
 
