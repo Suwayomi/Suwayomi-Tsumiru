@@ -12,10 +12,6 @@
     "@addToLibrary": {
         "description": "Button text to add Manga to Library in Manga Details Screen"
     },
-    "allScanlators": "Все сканлейты",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "appLanguage": "Язык приложения",
     "@appLanguage": {
         "description": "Popup title and Button text to change App Language"
@@ -140,10 +136,6 @@
             }
         }
     },
-    "createBackupDescription": "Резервная копия библиотеки как резервная копия Tachidesk",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
-    },
     "createBackupTitle": "Создать резервную копию",
     "@createBackupTitle": {
         "description": "Button text to create backup"
@@ -151,10 +143,6 @@
     "credentials": "Учетные данные",
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"
-    },
-    "current": "Текущий",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
     },
     "daysAgo": "{days} дней назад",
     "@daysAgo": {
@@ -260,10 +248,6 @@
     "@installingExtension": {
         "description": "Toast text to show that the extension is installing"
     },
-    "isTrueBlack": "Истинно черный",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
-    },
     "languages": "Языки",
     "@languages": {
         "description": "Popup title to filter extensions based on language"
@@ -283,10 +267,6 @@
     "mangaGridSize": "Размер сетки манги",
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
-    },
-    "mangaMissingSources": "Пропавшие источники манги",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "mangaSortAlphabetical": "По алфавиту",
     "@mangaSortAlphabetical": {
@@ -399,17 +379,9 @@
         "description": "Screen title and Button text of Reader screen"
     },
     "readerOverlaySubtitle": "Отображение заголовка и быстрых настроек при открытии главы",
-    "readerVolumeTapSubtitle": "Навигация при помощи клавиш громкости",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
-    },
     "reset": "Сброс",
     "@reset": {
         "description": "Button text of reset button in source filters"
-    },
-    "restoreBackupDescription": "Восстановить Tachidesk из резервной копии",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "searchingForUpdates": "Поиск обновлений",
     "@searchingForUpdates": {
@@ -471,10 +443,6 @@
     "@quickSearch": {
         "description": "Screen title and Button text of Quick Search screen"
     },
-    "previousChapter": "Предыдущая: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
     "readerNavigationLayoutKindlish": "Kindle-ish",
     "@readerNavigationLayoutKindlish": {
         "description": "Radio button text for Reader Navigation Layout - Kindle-ish"
@@ -494,10 +462,6 @@
     "readerModeSingleVertical": "Одиночный вертикальный",
     "@readerModeSingleVertical": {
         "description": "Radio button text for Reader Mode Type - Single Vertical"
-    },
-    "nsfwInfo": "Это не мешает неофициальным или потенциально неверно отмеченным расширениям показывать NSFW(18+) контент в приложении",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
     },
     "numSelected": "{num} Выбрано",
     "@numSelected": {
@@ -530,10 +494,6 @@
     "pause": "Пауза",
     "@pause": {
         "description": "Button text to pause downloads"
-    },
-    "missingTrackers": "Пропавшие трекеры",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
     },
     "more": "Ещё",
     "@more": {
@@ -687,10 +647,6 @@
     "@readerVolumeTapInvert": {
         "description": "Switch button text to invert Volume Tap "
     },
-    "reddit": "Reddit",
-    "@reddit": {
-        "description": "Reddit app title"
-    },
     "refresh": "Обновить",
     "@refresh": {
         "description": "Refresh button text"
@@ -759,10 +715,6 @@
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
     },
-    "serverPortHintText": "Введите порт сервера",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
-    },
     "serverUrl": "URL-адрес сервера",
     "@serverUrl": {
         "description": "Popup title and Button text to update Server Url"
@@ -802,10 +754,6 @@
     "unknownAuthor": "Неизвестный автор",
     "@unknownAuthor": {
         "description": "Text to show unknown author in Manga details screen"
-    },
-    "unknownManga": "Неизвестная манга",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
     },
     "unknownSource": "Неизвестный источник",
     "@unknownSource": {
@@ -857,10 +805,6 @@
     "@webView": {
         "description": "Button text to open manga website"
     },
-    "nextChapter": "Далее: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
-    },
     "noCategoriesFound": "У вас нет никаких категорий. \n(Совет: Нажмите кнопку \"Плюс\", чтобы создать категорию для организации библиотеки)",
     "@noCategoriesFound": {
         "description": "Hint text to add new Category when category list is empty"
@@ -882,7 +826,6 @@
     "imageScaleTypeOriginalSize": "Исходный размер",
     "imageScaleTypeSmartFit": "Умное",
     "imageScaleTypeStretch": "Растянуть",
-    "landscapeZoom": "Автоматически увеличивать широкие изображения",
     "navigateToPan": "Панорамирование широких изображений",
     "pageLayoutSinglePage": "Одинарная страница",
     "readerForThisSeries": "Для этой серии",
@@ -929,7 +872,6 @@
     "showHiddenCategories": "Показать скрытые категории",
     "smallerTapZones": "Меньшие зоны для нажатия",
     "autoScroll": "Авто прокручивание",
-    "tabs": "Вкладки",
     "continueReadingButton": "Кнопка «Продолжить чтение»",
     "languageBadge": "Язык",
     "sourceBadge": "Иконка источника",
@@ -951,7 +893,6 @@
     "setCategories": "Добавить в категории",
     "ok": "ОК",
     "deleteChaptersConfirm": "Вы уверены, что хотите удалить выбранные главы?",
-    "deleteChapters": "Удалять главы",
     "deleteChapterAfterManuallyMarkedRead": "Удаление главы после ручной пометки ее как прочитанной",
     "deleteFinishedChaptersWhileReading": "Удаление законченных глав во время чтения",
     "allowDeletingBookmarkedChapters": "Удалять главы с закладками",
@@ -972,7 +913,6 @@
     "filterOptionFinished": "Законченно",
     "filterHeaderLibrary": "Библиотека",
     "filterOptionInLibrary": "Добавлено",
-    "filterOptionCompleted": "Завершено",
     "unreadBadgeModeHidden": "Скрыть",
     "groupStyleTabs": "Вкладки",
     "downloadAllChapters": "Все",
@@ -1020,7 +960,6 @@
     "mangaSortRandom": "Случайно",
     "mangaSortTrackerScore": "Оценка сервиса отслеживания",
     "mangaSortTotalChapters": "Количество глав",
-    "misc": "Разное",
     "soon": "Скоро",
     "smartUpdate": "Умное обновление",
     "suggestions": "Предложения",
@@ -1066,14 +1005,11 @@
     "migrationAvailableHeader": "Доступно",
     "migrationDataToMigrateHeader": "Какие данные перенести",
     "migrationObsoleteSource": "Устаревшее",
-    "migrationSelectAll": "Выбрать всё",
     "migrationInvertSelection": "Инвертировать",
-    "migrationRetry": "Повторить",
     "migrationActionMigrate": "Перенести",
     "migrationActionCopy": "Копировать",
     "libraryUpdateErrors": "Ошибки обновления библиотеки",
     "notificationDownloadsPausedTitle": "Загрузки приостановлены",
-    "notificationBackupFailedTitle": "Не удалось создать резервную копию",
     "notificationAppUpdateTitle": "Доступно обновление",
     "notificationExtensionUpdateTitle": "Обновления расширений",
     "notificationIncognitoTitle": "Режим инкогнито",
@@ -1082,8 +1018,6 @@
     "notificationActionDownload": "Загрузить",
     "notificationsHideContent": "Скрыть содержимое уведомлений",
     "noResultsFound": "Нет результатов",
-    "startMigration": "Начать миграцию",
-    "customMigration": "Собственный",
     "webtoonScaleTypeFitScreen": "Уместить в экран",
     "webtoonScaleTypeOriginalSize": "Исходный размер",
     "restore": "Восстановить",
@@ -1097,7 +1031,6 @@
     "socksProxy": "Прокси SOCKS",
     "socksUserName": "Имя пользователя SOCKS",
     "socksVersion": "Версия SOCKS",
-    "started": "Начато",
     "systemTrayIcon": "Показывать иконку в трее",
     "thatHaventBeenStarted": "Не начатое",
     "upcoming": "Предстоящее",
@@ -1107,10 +1040,8 @@
     "recentlyRead": "Недавно прочитанные",
     "history": "История",
     "offlineDownloadsSection": "Загрузки",
-    "keepOfflineOff": "Выключено",
     "downloadsServerTab": "Сервер",
     "tracking": "Отслеживание",
-    "searchForSources": "Поиск источника",
     "copyToClipboard": "Копировать в буфер обмена",
     "copiedToClipboard": "Скопировано в буфер обмена",
     "updateProgressAfterReading": "Обновлять прогресс после прочтения",
@@ -1128,7 +1059,6 @@
     "trackMarkPublic": "Отслеживать публично",
     "filterTracked": "Отслеживается",
     "copyImageToClipboard": "Копировать",
-    "zoomStart": "Стартовая позиция увеличения",
     "zoomStartAutomatic": "Автоматически",
     "zoomStartCenter": "По центру",
     "zoomStartLeft": "Слева",
@@ -1156,7 +1086,6 @@
     "duplicateSkipAll": "Пропустить все",
     "actionShowEntry": "Показать серию",
     "duplicatedEntries": "Повторяющиеся записи",
-    "duplicatedEntriesSubtitle": "Показать все дублирующиеся записи в вашей библиотеке",
     "checkDescription": "Описание",
     "offlineChaptersScreenTitle": "Загруженные главы",
     "offlineChaptersDownloadedSection": "Загружено",
@@ -1185,7 +1114,6 @@
     "notificationChaptersMultiple": "Главы {numbers}",
     "smartUpdateExpected": "Выход новых глав ожидается примерно через {predicted}, следующая проверка будет через {interval}.",
     "removeExtensionStoreBody": "Вы хотите удалить хранилище расширений \"{name}\" ({url})?",
-    "httpErrorCheckWebView": "HTTP {statusCode}, проверьте сайт в WebView",
     "trackRemoveAlsoOnRemote": "Также удалить из {trackerName}",
     "libraryLastUpdated": "Последнее обновление библиотеки: {time}",
     "libraryUpdateErrorsCount": "Ошибки обновления библиотеки ({count})",
@@ -1196,7 +1124,6 @@
     "showUpdateProgressBanner": "Показывать баннер прогресса обновления",
     "migrationHideUnmatched": "Скрывать серии без совпадений",
     "migrationHideWithoutUpdates": "Скрывать серии без новых глав",
-    "notificationRestoreCompleteTitle": "Восстановление завершено",
     "offlineStorageUsage": "Использование хранилища",
     "updateProgressManualMarkRead": "Обновлять прогресс, когда отмечено как «Прочитано»",
     "noMoreChaptersAhead": "Следующей главы нет"

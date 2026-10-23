@@ -72,10 +72,6 @@
     "@buildTime": {
         "description": "Text title to show build time of Server in About Screen"
     },
-    "allScanlators": "Tất cả nhóm dịch",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "appTitle": "Sorayomi",
     "@appTitle": {
         "description": "Name of the app (Tachidesk Sorayomi in native script)"
@@ -129,10 +125,6 @@
     "close": "Đóng",
     "@close": {
         "description": "Text for close button"
-    },
-    "createBackupDescription": "Sao lưu thư viện bằng định dạng Tachiyomi",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "createBackupTitle": "Tạo bản sao lưu",
     "@createBackupTitle": {
@@ -252,10 +244,6 @@
     "@finished": {
         "description": "Text to show the Currently Finished reading chapter in Reader Screen"
     },
-    "current": "Hiện hành",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
-    },
     "general": "Tổng quan",
     "@general": {
         "description": "Screen title and Button text of General setting screen"
@@ -288,10 +276,6 @@
     "@installingExtension": {
         "description": "Toast text to show that the extension is installing"
     },
-    "isTrueBlack": "Đen tuyền",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
-    },
     "languages": "Ngôn ngữ",
     "@languages": {
         "description": "Popup title to filter extensions based on language"
@@ -311,10 +295,6 @@
     "mangaGridSize": "Kích thước lưới",
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
-    },
-    "mangaMissingSources": "Truyện thiếu nguồn",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "mangaSortAlphabetical": "Theo bảng chữ cái",
     "@mangaSortAlphabetical": {
@@ -360,10 +340,6 @@
     "@missingExtension": {
         "description": "Group title to show the Missing Extensions when restoring Backup"
     },
-    "missingTrackers": "Thiếu trình theo dõi",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
-    },
     "moveToBottom": "Di chuyển xuống dưới cùng",
     "@moveToBottom": {
         "description": "Button text to move download/category to the bottom of list"
@@ -385,10 +361,6 @@
     "newUpdateAvailable": "Đã có bản cập nhật mới",
     "@newUpdateAvailable": {
         "description": "Popup title to show that the App/Server has and update"
-    },
-    "nextChapter": "Chương kế tiếp:{chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
     },
     "noCategoriesFound": "Bạn không có bất kỳ Danh mục nào. \n(Mẹo: Nhấn vào nút Dấu cộng để tạo một nút để sắp xếp thư viện của bạn)",
     "@noCategoriesFound": {
@@ -483,10 +455,6 @@
     "pause": "Tạm dừng",
     "@pause": {
         "description": "Button text to pause downloads"
-    },
-    "previousChapter": "Chương trước đó: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
     },
     "quickSearch": "Tìm kiếm nhanh",
     "@quickSearch": {
@@ -589,14 +557,6 @@
     "@readerVolumeTapInvert": {
         "description": "Switch button text to invert Volume Tap "
     },
-    "readerVolumeTapSubtitle": "Điều hướng bằng phím âm lượng",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
-    },
-    "reddit": "Reddit",
-    "@reddit": {
-        "description": "Reddit app title"
-    },
     "refresh": "Làm mới",
     "@refresh": {
         "description": "Refresh button text"
@@ -616,10 +576,6 @@
     "reset": "Đặt lại",
     "@reset": {
         "description": "Button text of reset button in source filters"
-    },
-    "restoreBackupDescription": "Khôi phục Suwayomi từ bản sao lưu",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "restoreBackupTitle": "Khôi phục bản sao lưu",
     "@restoreBackupTitle": {
@@ -672,10 +628,6 @@
     "serverPort": "Cổng máy chủ",
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
-    },
-    "serverPortHintText": "Cổng máy chủ",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
     },
     "serverUrl": "URL máy chủ",
     "@serverUrl": {
@@ -807,10 +759,6 @@
     "@moveToTop": {
         "description": "Button text to move download/category to the top of list"
     },
-    "nsfwInfo": "Điều này không ngăn các phần mở rộng không chính thức hoặc có khả năng gắn cờ không chính xác hiển thị nội dung NSFW(18+) trong ứng dụng",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
-    },
     "pinchToZoom": "Chụm để thu phóng",
     "@pinchToZoom": {
         "description": "Switch title to enable pinch to zoom in reader screen"
@@ -832,10 +780,6 @@
     "updates": "Cập nhật",
     "@updates": {
         "description": "Screen title and Button text of Updates screen"
-    },
-    "unknownManga": "Truyện tranh không xác định",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
     },
     "unread": "Chưa đọc",
     "@unread": {
@@ -926,14 +870,6 @@
     "@errorBackupRestore": {
         "description": "toast to show that backup restoration failed"
     },
-    "extensionRepository": "Kho lưu trữ mở rộng",
-    "@extensionRepository": {
-        "description": "Screen title text for Extension repository settings screen"
-    },
-    "extensionRepositoryDescription": "Thêm kho lưu trữ mà phần mở rộng có thể được cài đặt",
-    "@extensionRepositoryDescription": {
-        "description": "Subtitle text for Extension repository settings property"
-    },
     "flareSolverr": "FlareSolverr",
     "@flareSolverr": {
         "description": "Toggle title to enable FlareSolverr"
@@ -966,10 +902,6 @@
     "@includeChapters": {
         "description": "Check box text to include chapters during create backup"
     },
-    "invalidPort": "Cổng không hợp lệ",
-    "@invalidPort": {
-        "description": "Error when Submitted invalid Port Number"
-    },
     "ip": "Địa chỉ IP",
     "@ip": {
         "description": "Option title for Server IP Address in Server settings"
@@ -978,10 +910,6 @@
     "localSourceLocation": "Vị trí nguồn cục bộ",
     "@localSourceLocation": {
         "description": "Text for Local Source Location settings property"
-    },
-    "misc": "Khác",
-    "@misc": {
-        "description": "Section title for misc settings"
     },
     "nChapters": "{n, plural, =0{None} =1{1 Chương} other{{n} Chương}}",
     "@nChapters": {
@@ -1047,10 +975,6 @@
     },
     "socksUserName": "Tên người dùng SOCKS",
     "socksPort": "Cổng SOCKS",
-    "updateFailed": "Không cập nhật được {property}",
-    "@updateFailed": {
-        "description": "Failed to update Text"
-    },
     "withUnreadChapter": "Với chương chưa đọc",
     "@withUnreadChapter": {
         "description": "Setting option Text for Skip updating entries to toggle With unread chapter(s)"
@@ -1075,10 +999,6 @@
     "@copied": {
         "description": "Copied Text"
     },
-    "openFlareSolverr": "Kiểm tra FlareSolverr để biết thông tin về cách thiết lập",
-    "@openFlareSolverr": {
-        "description": "Text for link to Open Flare Solverr setup documentation"
-    },
     "thatHaventBeenStarted": "Chưa bắt đầu đọc",
     "@thatHaventBeenStarted": {
         "description": "Setting option Text for Skip updating entries to toggle That haven't been started"
@@ -1086,10 +1006,6 @@
     "excludeEntryWithUnreadChapters": "Không tự động tải chương các truyện đang có chương chưa đọc",
     "@excludeEntryWithUnreadChapters": {
         "description": "Toggle's title to change Toggle Exclude Entry With Unread Chapters setting"
-    },
-    "gqlDebugLogsHint": "Điều này bao gồm các bản ghi có thông tin không an toàn về quyền riêng tư",
-    "@gqlDebugLogsHint": {
-        "description": "Switch subTitle for Graphql Debug logs in settings"
     },
     "advanced": "Nâng cao",
     "@advanced": {
@@ -1123,10 +1039,6 @@
     "@withCompletedStatus": {
         "description": "Setting option Text for Skip updating entries to toggle With Completed status"
     },
-    "hideEmptyCategory": "Ẩn danh mục trống",
-    "@hideEmptyCategory": {
-        "description": "Switch button text to Hide empty category in library"
-    },
     "saveAsCBZArchive": "Lưu bằng định dạng nén CBZ",
     "@saveAsCBZArchive": {
         "description": "Settings toggle label for Save as CBZ archive"
@@ -1134,10 +1046,6 @@
     "validating": "Xác thực",
     "@validating": {
         "description": "toast to show backup validation is in progress"
-    },
-    "gqlDebugLogs": "Nhật ký gỡ lỗi Graphql",
-    "@gqlDebugLogs": {
-        "description": "Switch title for Graphql Debug logs in settings"
     },
     "localSourceLocationDescription": "Đường dẫn đến thư mục trên máy chủ nơi các tệp nguồn cục bộ được lưu trong",
     "@localSourceLocationDescription": {
@@ -1155,78 +1063,26 @@
     "@socksProxy": {
         "description": "Section title for SOCKS Proxy settings"
     },
-    "nRepo": "{n, plural, =1{1 Kho lưu trữ} other{{n} Kho lưu trữ}}",
-    "@nRepo": {
-        "description": "Text to show n repo as subtitle"
-    },
     "mangaSortLastUpdated": "Lần cuối cập nhật",
     "@mangaSortLastUpdated": {
         "description": "Radio button text for Manga sort Type - Last Updated"
     },
     "migrate": "Di chuyển",
-    "migrationSelectTargetSource": "Chọn nguồn đích",
-    "migrationSearchInSource": "Tìm kiếm trong {sourceName}",
-    "migrationPreview": "Xem trước di chuyển",
-    "migrationInProgress": "Đang tiến hành di chuyển",
-    "migrationComplete": "Di chuyển đã hoàn tất",
-    "migrationFailed": "Di chuyển không thành công",
-    "migrationCancelled": "Di chuyển đã bị hủy bỏ",
     "migrateChapters": "Di chuyển chương",
-    "migrateChaptersDescription": "Sao chép trạng thái đã đọc chương sang nguồn mới",
     "migrateCategories": "Di chuyển danh mục",
-    "migrateCategoriesDescription": "Sao chép danh mục Manga vào nguồn mới",
     "migrateDownloads": "Di chuyển tải xuống",
-    "migrateDownloadsDescription": "Di chuyển các chương được tải xuống sang nguồn mới",
     "migrateTracking": "Di chuyển theo dõi",
-    "migrationOptions": "Tùy chọn di chuyển",
     "migrationSettings": "Cài đặt di chuyển",
-    "selectTargetSource": "Chọn Nguồn Đích",
-    "noSourcesAvailable": "Không có nguồn nào có sẵn để di chuyển",
-    "checkSourceConfiguration": "Vui lòng kiểm tra cấu hình nguồn của bạn",
-    "noAlternativeSources": "Không có nguồn thay thế nào có sẵn",
-    "installMoreSources": "Cài đặt nhiều nguồn hơn để cho phép di chuyển",
-    "errorLoadingSources": "Lỗi tải nguồn",
     "errorGettingMigrationSources": "Không nhận được nguồn di chuyển",
     "errorSearchingMangaInSource": "Không thể tìm kiếm manga trong nguồn",
     "errorFetchingSourceManga": "Không lấy được manga nguồn",
     "errorSourceMangaNotFound": "Nguồn manga không tìm thấy",
-    "searchManga": "Tìm kiếm manga...",
-    "searchForManga": "Tìm kiếm manga trong nguồn đích",
-    "enterSearchTerm": "Nhập để tìm kiếm để tìm manga",
     "errorFetchingTargetManga": "Không lấy được manga đích",
     "errorTargetMangaNotFound": "Không tìm thấy manga đích",
     "noResultsFound": "Không tìm thấy kết quả nào",
-    "tryDifferentSearch": "Hãy thử từ khóa tìm kiếm khác",
-    "searchError": "Lỗi tìm kiếm",
-    "importantNotice": "Thông báo quan trọng",
-    "migrationWarning": "Thao tác này sẽ di chuyển vĩnh viễn dữ liệu manga của bạn. Không thể hoàn tác hành động này.",
-    "deleteSourceWarning": "Manga gốc sẽ bị xóa khỏi thư viện của bạn sau khi di chuyển.",
-    "confirmMigration": "Xác nhận di chuyển",
-    "migrationConfirmationMessage": "Bạn có chắc chắn muốn di chuyển manga này không? Hành động này không thể hoàn tác.",
-    "startMigration": "Bắt đầu di chuyển",
-    "preparingMigration": "Đang chuẩn bị di chuyển...",
-    "migrationCompleted": "Quá trình di chuyển đã hoàn tất!",
-    "migrationSuccessMessage": "Manga của bạn đã được di chuyển thành công sang nguồn mới.",
-    "migrationCancelledMessage": "Quá trình di chuyển đã bị hủy. Không có thay đổi nào được thực hiện.",
-    "cancelMigration": "Hủy bỏ di chuyển",
-    "cancelMigrationConfirmation": "Bạn có chắc chắn muốn hủy quá trình di chuyển không? Hành động này không thể hoàn tác.",
-    "quickPresets": "Cài đặt nhanh",
-    "quickMigration": "Nhanh",
-    "fullMigration": "Đầy đủ",
-    "customMigration": "Tùy chỉnh",
-    "deleteSourceManga": "Xóa Nguồn Manga",
-    "deleteSourceMangaDescription": "Xóa manga gốc khỏi thư viện sau khi di chuyển",
-    "done": "Xong",
     "yes": "Có",
     "no": "Không",
-    "from": "Từ",
-    "to": "Đến",
-    "migrationDetails": "Chi tiết di chuyển",
     "searchAllSources": "Tìm kiếm tất cả các nguồn",
-    "deleteSourceAfterMigration": "Xóa manga nguồn sau khi di chuyển",
-    "searchingAllSources": "Đang tìm kiếm trên tất cả các nguồn có sẵn...",
-    "noMatchingMangaFound": "Không tìm thấy manga phù hợp trong bất kỳ nguồn nào",
-    "migrateTrackingDescription": "Sao chép thông tin theo dõi vào nguồn mới",
     "tryDifferentSearchTerm": "Hãy thử một từ khóa tìm kiếm khác",
     "recentlyRead": "Đọc gần đây",
     "@recentlyRead": {
@@ -1235,7 +1091,6 @@
     "history": "Lịch sử",
     "searchHistory": "Tìm kiếm lịch sử...",
     "noHistoryFound": "Không tìm thấy lịch sử đọc",
-    "startReadingToSeeHistory": "Bắt đầu đọc truyện để xem lịch sử của bạn tại đây",
     "noSearchResults": "Không có kết quả tìm kiếm",
     "errorOccurred": "Đã xảy ra lỗi",
     "viewManga": "Xem truyện",
@@ -1254,7 +1109,6 @@
     "imageScaleTypeOriginalSize": "Kích thước gốc",
     "imageScaleTypeSmartFit": "Tùy chỉnh thông minh",
     "imageScaleTypeStretch": "Kéo dãn",
-    "landscapeZoom": "Tự động phóng ảnh rộng",
     "navigateToPan": "Xoay ảnh rộng",
     "pageLayoutSinglePage": "Trang đơn",
     "readerForThisSeries": "Dành cho phần truyện này",
@@ -1293,7 +1147,6 @@
     "showHiddenCategories": "Hiện các danh mục ẩn",
     "smallerTapZones": "Khu vực nhấn nhỏ hơn",
     "autoScroll": "Tự động cuộn",
-    "tabs": "Mục",
     "continueReadingButton": "Nút tiếp tục đọc",
     "languageBadge": "Ngôn ngữ",
     "sourceBadge": "Biểu tượng nguồn",
@@ -1311,7 +1164,6 @@
     "alwaysAsk": "Luôn hỏi",
     "setCategories": "Đặt danh mục",
     "deleteChaptersConfirm": "Bạn có chắc muốn xóa các chương đã chọn?",
-    "deleteChapters": "Xóa chương",
     "deleteChapterAfterManuallyMarkedRead": "Xóa chương sau khi được đánh dấu là đã đọc",
     "deleteFinishedChaptersWhileReading": "Xóa chương khi đọc xong",
     "allowDeletingBookmarkedChapters": "Cho phép xóa các chương đã đánh dấu",
@@ -1333,7 +1185,6 @@
     "filterOptionFinished": "Hoàn thành",
     "filterHeaderLibrary": "Thư viện",
     "filterOptionInLibrary": "Trong thư viện",
-    "filterOptionCompleted": "Đã hoàn thành",
     "unreadBadgeModeHidden": "Ẩn",
     "groupStyleTabs": "Mục",
     "downloadAllChapters": "Tất cả",
@@ -1406,15 +1257,11 @@
     "migrationAvailableHeader": "Có sẵn",
     "migrationDataToMigrateHeader": "Dữ liệu để di chuyển",
     "migrationObsoleteSource": "Lỗi thời",
-    "migrationSelectAll": "Chọn tất cả",
     "migrationInvertSelection": "Đảo màu",
-    "migrationGroupDone": "Xong",
-    "migrationRetry": "Thử lại",
     "migrationActionMigrate": "Chuyển nguồn",
     "migrationActionCopy": "Sao chép",
     "libraryUpdateErrors": "Lỗi cập nhật thư viện",
     "notificationDownloadsPausedTitle": "Tải xuống đã tạm dừng",
-    "notificationBackupFailedTitle": "Sao lưu thất bại",
     "notificationAppUpdateTitle": "Có bản cập nhật mới",
     "notificationExtensionUpdateTitle": "Cập nhật tiện ích mở rộng",
     "notificationIncognitoTitle": "Chế độ ẩn danh",
@@ -1425,15 +1272,12 @@
     "webtoonScaleTypeFitScreen": "Vừa màn hình",
     "webtoonScaleTypeOriginalSize": "Kích thước gốc",
     "serverAddress": "Địa chỉ máy chủ",
-    "started": "Đang tiến hành",
     "upcoming": "Sắp tới",
     "unifiedSearchLibrarySection": "Thư viện",
     "updatesGroupingModeDisabled": "Đã vô hiệu hóa",
     "offlineDownloadsSection": "Tải xuống",
-    "keepOfflineOff": "Tắt",
     "downloadsServerTab": "Máy chủ",
     "tracking": "Theo dõi",
-    "searchForSources": "Tìm kiếm nguồn",
     "copyToClipboard": "Sao chép vào bảng tạm",
     "copiedToClipboard": "Đã sao chép vào bảng tạm",
     "updateProgressAfterReading": "Cập nhật tiến trình sau khi đọc",
@@ -1451,7 +1295,6 @@
     "trackMarkPublic": "Theo dõi công khai",
     "filterTracked": "Đã theo dõi",
     "copyImageToClipboard": "Sao chép",
-    "zoomStart": "Vị trí bắt đầu phóng to",
     "zoomStartAutomatic": "Tự động",
     "zoomStartCenter": "Giữa",
     "zoomStartLeft": "Trái",
@@ -1479,7 +1322,6 @@
     "duplicateSkipAll": "Bỏ qua tất cả",
     "actionShowEntry": "Hiển thị truyện",
     "duplicatedEntries": "Mục trùng lặp",
-    "duplicatedEntriesSubtitle": "Hiển thị tất cả các mục trùng lặp trong thư viện",
     "checkDescription": "Kiểm tra mô tả",
     "offlineChaptersScreenTitle": "Các chương đã tải",
     "offlineChaptersDownloadedSection": "Đã tải xuống",
@@ -1506,7 +1348,6 @@
     "notificationChaptersMultiple": "Chương {numbers}",
     "smartUpdateExpected": "Các chương mới được dự đoán sẽ phát hành trong khoảng {predicted}, kiểm tra mỗi {interval}.",
     "removeExtensionStoreBody": "Bạn có muốn xóa cửa hàng phần mở rộng \"{name}\" ({url}) không?",
-    "httpErrorCheckWebView": "HTTP {statusCode}, kiểm tra trang web trong WebView",
     "trackRemoveAlsoOnRemote": "Đồng thời xóa khỏi {trackerName}",
     "libraryLastUpdated": "Thư viện lần cuối được cập nhật:{time}",
     "libraryUpdateErrorsCount": "Lỗi cập nhật thư viện ({count})",
@@ -1520,7 +1361,6 @@
     "showUpdateProgressBanner": "Hiển thị biểu ngữ tiến trình cập nhật",
     "migrationHideUnmatched": "Ẩn các truyện không khớp",
     "migrationHideWithoutUpdates": "Ẩn các truyện không có chương mới hơn",
-    "notificationRestoreCompleteTitle": "Khôi phục hoàn tất",
     "offlineStorageUsage": "Số liệu sử dụng kho lưu trữ",
     "updateProgressManualMarkRead": "Cập nhật tiến trình khi được đánh dấu là đã đọc",
     "downloadNextChaptersN": "{n, plural, other{{n} Chương tiếp theo}}",

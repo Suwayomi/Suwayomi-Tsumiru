@@ -29,10 +29,8 @@
     "clientVersion": "Versión del cliente",
     "close": "Cerrar",
     "copyMsg": "'{msg}' ¡Copiado!",
-    "createBackupDescription": "Copia de seguridad de biblioteca como copia de seguridad de Tachidesk",
     "createBackupTitle": "Crear copia de seguridad",
     "credentials": "Credenciales",
-    "current": "Actual",
     "defaultCategory": "Categoría predeterminada al añadir un nuevo manga a la biblioteca",
     "delete": "Eliminar",
     "deleteCategoryDescription": "¡Esto quitará todos los mangas de esta categoría y los añadirá en predeterminado!",
@@ -73,7 +71,6 @@
     "latest": "Reciente",
     "library": "Biblioteca",
     "manga": "Manga",
-    "mangaMissingSources": "Fuentes del manga faltantes",
     "mangaSortAlphabetical": "Alfabético",
     "mangaSortDateAdded": "Fecha añadida",
     "mangaSortUnread": "No leído",
@@ -86,7 +83,6 @@
     "mangaStatusPublishingFinished": "Serie terminada",
     "mangaStatusUnknown": "Desconocido",
     "missingExtension": "Extensiones faltantes",
-    "missingTrackers": "Rastreadores faltantes",
     "more": "Más",
     "moveToBottom": "Mover al fondo",
     "moveToTop": "Mover al principio",
@@ -105,7 +101,6 @@
     "noUpdatesFound": "Sin actualizaciones",
     "nsfw": "Mostrar fuentes y extensiones NSFW",
     "nsfw18": "18+",
-    "nsfwInfo": "Esto no evita que extensiones no oficiales o marcadas potencialmente de forma incorrecta muestren contenido para adultos (18+) en la aplicación",
     "numSelected": "{num} seleccionado",
     "obsolete": "Obsoleta",
     "page": "Página: {number}",
@@ -129,10 +124,8 @@
     "readerNavigationLayoutKindlish": "Estilo Kindle",
     "readerNavigationLayoutLShaped": "En forma de L",
     "readerNavigationLayoutRightAndLeft": "Derecha e Izquierda",
-    "reddit": "Reddit",
     "refresh": "Refrescar",
     "reset": "Restablecer",
-    "restoreBackupDescription": "Restaurar Tachidesk desde copia de seguridad",
     "restoreBackupTitle": "Restaurar copia de seguridad",
     "restored": "¡Copia de seguridad restaurada!",
     "restoring": "Restaurando la copia de seguridad",
@@ -159,7 +152,6 @@
     "uninstall": "Desinstalar",
     "uninstalling": "Desinstalando",
     "unknownAuthor": "Autor desconocido",
-    "unknownManga": "Manga desconocido",
     "unknownSource": "Fuente desconocida",
     "unread": "Sin leer",
     "update": "Actualizar",
@@ -203,10 +195,6 @@
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
     },
-    "serverPortHintText": "Puerto del servidor",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
-    },
     "noServerFound": "No se ha encontrado ningún servidor en tu red local",
     "@noServerFound": {
         "description": "Text to show that no Server found in locale network"
@@ -214,10 +202,6 @@
     "scanlators": "Scans",
     "@scanlators": {
         "description": "Title text for Scanlators"
-    },
-    "allScanlators": "Todos los escáneres",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
     },
     "today": "Hoy",
     "@today": {
@@ -247,14 +231,6 @@
     "@reload": {
         "description": "Reload button text"
     },
-    "previousChapter": "Anterior: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
-    "nextChapter": "Siguiente: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
-    },
     "selectInBetween": "Seleccionar entre",
     "@selectInBetween": {
         "description": "Toast Text for selecting chapters in between first and last Chapters"
@@ -276,10 +252,6 @@
     "@readerVolumeTap": {
         "description": "Switch button text for Reader Page Navigation with Volume Tap"
     },
-    "readerVolumeTapSubtitle": "Navegar con los botones de volumen",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
-    },
     "removeFromLibrary": "¿Quitar de la biblioteca?",
     "@removeFromLibrary": {
         "description": "Remove From Library Popup text"
@@ -295,10 +267,6 @@
     "quickSearch": "Búsqueda rápida",
     "@quickSearch": {
         "description": "Screen title and Button text of Quick Search screen"
-    },
-    "isTrueBlack": "Negro verdadero",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
     },
     "advanced": "Avanzado",
     "animatePageTransitions": "Transiciones de página animadas",
@@ -317,7 +285,6 @@
     "imageScaleTypeOriginalSize": "Tamaño original",
     "imageScaleTypeSmartFit": "Ajuste inteligente",
     "imageScaleTypeStretch": "Estirar la imagen",
-    "landscapeZoom": "Acercar la vista en horizontal",
     "navigateToPan": "Desplazarse por el resto de la página antes de cambiar",
     "pageLayoutSinglePage": "Página simple",
     "readerForThisSeries": "Para esta serie",
@@ -363,7 +330,6 @@
     "categoryTabs": "Mostrar pestañas de categorías",
     "showHiddenCategories": "Mostrar categorías ocultas",
     "autoScroll": "Desplazamiento automático",
-    "tabs": "Pestañas",
     "continueReadingButton": "Mostrar el botón de seguir leyendo",
     "languageBadge": "Idioma",
     "sourceBadge": "Icono de fuente",
@@ -385,7 +351,6 @@
     "setCategories": "Asignar categorías",
     "ok": "Aceptar",
     "deleteChaptersConfirm": "¿Seguro que quieres eliminar los capítulos seleccionados?",
-    "deleteChapters": "Borrar los capítulos",
     "deleteChapterAfterManuallyMarkedRead": "Borrar el capítulo después de marcarlo manualmente como leído",
     "deleteFinishedChaptersWhileReading": "Borrar los capítulos terminados mientras se lee",
     "allowDeletingBookmarkedChapters": "Permitir el borrado de capítulos marcados como favoritos",
@@ -407,7 +372,6 @@
     "filterOptionFinished": "Finalizado",
     "filterHeaderLibrary": "Biblioteca",
     "filterOptionInLibrary": "En biblioteca",
-    "filterOptionCompleted": "Completados",
     "unreadBadgeModeHidden": "Ocultar",
     "groupStyleTabs": "Pestañas",
     "downloadAllChapters": "Todos",
@@ -454,7 +418,6 @@
     "mangaSortRandom": "Al azar",
     "mangaSortTrackerScore": "Por puntuación en el servicio de seguimiento",
     "mangaSortTotalChapters": "Por número de capítulos publicados",
-    "misc": "Varios",
     "soon": "Pronto",
     "smartUpdate": "Actualizaciones inteligentes",
     "suggestions": "Sugerencias",
@@ -484,7 +447,6 @@
     "readerTapInvertNone": "No invertir",
     "readerKeepScreenOn": "Mantener la pantalla encendida",
     "migrate": "Migrar",
-    "migrationFailed": "Migración fallida",
     "migrationListTitle": "Migrar",
     "migrationListNoMatch": "No se han encontrado coincidencias",
     "migrationSearchManually": "Búsqueda manual",
@@ -499,15 +461,11 @@
     "migrationAvailableHeader": "Disponibles",
     "migrationDataToMigrateHeader": "Datos que migrar",
     "migrationObsoleteSource": "Obsoleto",
-    "migrationSelectAll": "Seleccionar todo",
     "migrationInvertSelection": "Invertir",
-    "migrationGroupDone": "Hecho",
-    "migrationRetry": "Reintentar",
     "migrationActionMigrate": "Migrar",
     "migrationActionCopy": "Copiar",
     "libraryUpdateErrors": "Error de actualización de la biblioteca",
     "notificationDownloadsPausedTitle": "Descarga pausada",
-    "notificationBackupFailedTitle": "No se han podido respaldar los datos",
     "notificationAppUpdateTitle": "Actualización disponible",
     "notificationExtensionUpdateTitle": "Actualizaciones de extensiones",
     "notificationIncognitoTitle": "Modo incógnito",
@@ -516,9 +474,6 @@
     "notificationActionDownload": "Descargar",
     "notificationsHideContent": "Ocultar el contenido de las notificaciones",
     "noResultsFound": "No se han encontrado resultados",
-    "startMigration": "Iniciar migración",
-    "customMigration": "Personalizado",
-    "done": "Hecho",
     "webtoonScaleTypeFitScreen": "Ajustar al tamaño de pantalla",
     "webtoonScaleTypeOriginalSize": "Tamaño original",
     "restore": "Restaurar",
@@ -532,7 +487,6 @@
     "socksProxy": "Proxy SOCKS",
     "socksUserName": "Usuario de SOCKS",
     "socksVersion": "Versión de SOCKS",
-    "started": "Empezados",
     "systemTrayIcon": "Mostrar el icono en la bandeja del sistema",
     "thatHaventBeenStarted": "Que no se han iniciado",
     "upcoming": "Próximamente",
@@ -542,10 +496,8 @@
     "recentlyRead": "Leído recientemente",
     "history": "Historial",
     "offlineDownloadsSection": "Descargas",
-    "keepOfflineOff": "No",
     "downloadsServerTab": "Servidor",
     "tracking": "Seguimiento",
-    "searchForSources": "Buscar fuentes",
     "copyToClipboard": "Copiar al portapapeles",
     "copiedToClipboard": "Se ha copiado al portapapeles",
     "updateProgressAfterReading": "Actualizar progreso al terminar un capítulo",
@@ -563,7 +515,6 @@
     "trackMarkPublic": "Seguir públicamente",
     "filterTracked": "En seguimiento",
     "copyImageToClipboard": "Copiar",
-    "zoomStart": "Ampliación inicial",
     "zoomStartAutomatic": "Automática",
     "zoomStartCenter": "Centrada",
     "zoomStartLeft": "Hacia la izquierda",
@@ -591,7 +542,6 @@
     "duplicateSkipAll": "Saltar todo",
     "actionShowEntry": "Ver la obra",
     "duplicatedEntries": "Buscar mangas duplicados",
-    "duplicatedEntriesSubtitle": "Muestra todos los mangas duplicados en la biblioteca",
     "checkDescription": "Comprobar descripción",
     "offlineChaptersScreenTitle": "Capítulos descargados",
     "offlineChaptersDownloadedSection": "Descargados",
@@ -622,7 +572,6 @@
     "notificationChaptersMultiple": "Capítulos {numbers}",
     "smartUpdateExpected": "Se espera que el siguiente número salga en aproximadamente {predicted}, la aplicación busca actualizaciones cada {interval}.",
     "removeExtensionStoreBody": "¿Seguro que quieres quitar el listado de extensiones «{name}» ({url})?",
-    "httpErrorCheckWebView": "HTTP {statusCode}, prueba abriendo la página web en WebView",
     "trackRemoveAlsoOnRemote": "Quitar también de {trackerName}",
     "libraryLastUpdated": "La biblioteca se actualizó: {time}",
     "libraryUpdateErrorsCount": "Errores de actualización de la biblioteca ({count})",
@@ -634,7 +583,6 @@
     "showUpdateProgressBanner": "Mostrar banner de progreso de actualización",
     "migrationHideUnmatched": "Ocultar los títulos que no coincidan",
     "migrationHideWithoutUpdates": "Ocultar si no tiene capítulos nuevos",
-    "notificationRestoreCompleteTitle": "Restauración completada",
     "offlineStorageUsage": "Almacenamiento utilizado",
     "updateProgressManualMarkRead": "Actualizar el progreso al marcarlo como leído",
     "downloadNextChaptersN": "{n, plural, one{Siguiente capítulo} many{Siguientes {n} capítulos} other{Siguientes {n} capítulos}}",

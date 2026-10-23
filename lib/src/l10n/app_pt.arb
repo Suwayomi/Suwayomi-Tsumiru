@@ -29,10 +29,8 @@
     "clientVersion": "Versão do Cliente",
     "close": "Fechar",
     "copyMsg": "'{msg}' Copiado para área de transferência!",
-    "createBackupDescription": "Salvar a biblioteca como um backup do Tachidesk",
     "createBackupTitle": "Criar Backup",
     "credentials": "Credenciais",
-    "current": "Atuais",
     "defaultCategory": "Categoria predefinida quando um novo mangá é adicionado à biblioteca",
     "delete": "Remover",
     "deleteCategoryDescription": "Isto mesclará todos os mangás desta categoria para predefinidos!",
@@ -73,7 +71,6 @@
     "latest": "Mais recente",
     "library": "Biblioteca",
     "manga": "Manga",
-    "mangaMissingSources": "Fontes do manga em falta",
     "mangaSortAlphabetical": "Ordem alfabética",
     "mangaSortDateAdded": "Data adicionada",
     "mangaSortUnread": "Não lido",
@@ -86,7 +83,6 @@
     "mangaStatusPublishingFinished": "Publicação concluída",
     "mangaStatusUnknown": "Desconhecido",
     "missingExtension": "Extensões em falta",
-    "missingTrackers": "Rasteadores em falta",
     "more": "Mais",
     "moveToBottom": "Mover para baixo",
     "moveToTop": "Mover para cima",
@@ -105,7 +101,6 @@
     "noUpdatesFound": "Nenhuma atualização encontrada",
     "nsfw": "Mostrar extensões e fontes NSFW",
     "nsfw18": "18+",
-    "nsfwInfo": "Isto não impede extensões não oficiais ou incorretamente marcadas de mostrarem conteúdo NSFW (18+) dentro da aplicação",
     "numSelected": "{num} Selecionado",
     "obsolete": "Obsoleta",
     "page": "Página: {number}",
@@ -129,10 +124,8 @@
     "readerNavigationLayoutKindlish": "Formato Kindle-ish",
     "readerNavigationLayoutLShaped": "Formato L",
     "readerNavigationLayoutRightAndLeft": "Direita para Esquerda",
-    "reddit": "Reddit",
     "refresh": "Recarregar",
     "reset": "Reiniciar",
-    "restoreBackupDescription": "Restaurar Tachidesk pela cópia de segurança",
     "restoreBackupTitle": "Restaurar cópia de segurança",
     "restored": "Cópia de segurança restaurada!",
     "restoring": "Restaurando backup",
@@ -159,7 +152,6 @@
     "uninstall": "Desinstalar",
     "uninstalling": "A Desinstalar",
     "unknownAuthor": "Autor Desconhecido",
-    "unknownManga": "Manga Desconhecido",
     "unknownSource": "Fonte Desconhecida",
     "unread": "Não lida",
     "update": "Atualização",
@@ -182,10 +174,6 @@
     "serverPort": "Porta do servidor",
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
-    },
-    "serverPortHintText": "Porta do servidor",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
     },
     "findServer": "Procurar",
     "@findServer": {
@@ -211,10 +199,6 @@
     "@scanlators": {
         "description": "Title text for Scanlators"
     },
-    "allScanlators": "Todas as Scans",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "mangaGridSize": "Tamanho da tela do mangá",
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
@@ -239,10 +223,6 @@
     "@readerSwipeChapterToggleDescription": {
         "description": "Switch tile description for, toggle `swipe to change chapter` in reader screen"
     },
-    "previousChapter": "Anterior: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
     "reload": "Recarregar",
     "@reload": {
         "description": "Reload button text"
@@ -250,14 +230,6 @@
     "readerOverlay": "Sobreposição inicial do leitor",
     "@readerOverlay": {
         "description": "Toggle subtile text for Initial Reader Overlay"
-    },
-    "isTrueBlack": "Preto puro",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
-    },
-    "nextChapter": "Próximo: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
     },
     "pinchToZoom": "Aperte para ampliar",
     "@pinchToZoom": {
@@ -279,10 +251,6 @@
     "readerVolumeTap": "Botões de volume",
     "@readerVolumeTap": {
         "description": "Switch button text for Reader Page Navigation with Volume Tap"
-    },
-    "readerVolumeTapSubtitle": "Navegue com botões de volume",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
     },
     "readerVolumeTapInvert": "inverter botões de volume",
     "@readerVolumeTapInvert": {
@@ -351,14 +319,6 @@
     "errorBackupRestore": "Falha ao restaurar Backup!",
     "@errorBackupRestore": {
         "description": "toast to show that backup restoration failed"
-    },
-    "extensionRepository": "Repositório de extensões",
-    "@extensionRepository": {
-        "description": "Screen title text for Extension repository settings screen"
-    },
-    "extensionRepositoryDescription": "Adicione repositórios de onde as extensões podem ser instaladas",
-    "@extensionRepositoryDescription": {
-        "description": "Subtitle text for Extension repository settings property"
     },
     "excludeEntryWithUnreadChapters": "Ignorar downloads automáticos de capítulos para entradas com capítulos não lidos",
     "@excludeEntryWithUnreadChapters": {
@@ -437,18 +397,6 @@
     "@flareSolverrSessionTTL": {
         "description": "Title text for FlareSolverr Session TTL property"
     },
-    "gqlDebugLogs": "Logs de depuração do Graphql",
-    "@gqlDebugLogs": {
-        "description": "Switch title for Graphql Debug logs in settings"
-    },
-    "gqlDebugLogsHint": "Isso inclui registros com informações não seguras de privacidade",
-    "@gqlDebugLogsHint": {
-        "description": "Switch subTitle for Graphql Debug logs in settings"
-    },
-    "hideEmptyCategory": "Ocultar categoria vazia",
-    "@hideEmptyCategory": {
-        "description": "Switch button text to Hide empty category in library"
-    },
     "includeCategories": "Categorias",
     "@includeCategories": {
         "description": "Check box text to include categories during create backup"
@@ -456,10 +404,6 @@
     "includeChapters": "Capítulos",
     "@includeChapters": {
         "description": "Check box text to include chapters during create backup"
-    },
-    "invalidPort": "Porta inválida",
-    "@invalidPort": {
-        "description": "Error when Submitted invalid Port Number"
     },
     "invalidProp": "inválida {property}",
     "@invalidProp": {
@@ -481,10 +425,6 @@
     "none": "Nenhum",
     "@none": {
         "description": "Text for None"
-    },
-    "openFlareSolverr": "Consulte o FlareSolverr para obter informações sobre como configurá-lo",
-    "@openFlareSolverr": {
-        "description": "Text for link to Open Flare Solverr setup documentation"
     },
     "openInWeb": "Abrir na Web",
     "@openInWeb": {
@@ -538,10 +478,6 @@
     "@thatHaventBeenStarted": {
         "description": "Setting option Text for Skip updating entries to toggle That haven't been started"
     },
-    "updateFailed": "Falha ao atualizar {property}",
-    "@updateFailed": {
-        "description": "Failed to update Text"
-    },
     "validating": "Validando",
     "@validating": {
         "description": "toast to show backup validation is in progress"
@@ -549,10 +485,6 @@
     "withCompletedStatus": "Com status Concluído",
     "@withCompletedStatus": {
         "description": "Setting option Text for Skip updating entries to toggle With Completed status"
-    },
-    "misc": "Diversos",
-    "@misc": {
-        "description": "Section title for misc settings"
     },
     "history": "Histórico",
     "searchHistory": "Pesquisar histórico...",
@@ -563,10 +495,6 @@
     "nHours": "{n, plural, =1{1 hour} other{{n} hours}}",
     "@nHours": {
         "description": "Text to represent 'n' hours"
-    },
-    "nRepo": "{n, plural, =1{1 Repo} other{{n} Repos}}",
-    "@nRepo": {
-        "description": "Text to show n repo as subtitle"
     },
     "nChapters": "{n, plural, =0{None} =1{1 Chapter} other{{n} Chapters}}",
     "@nChapters": {
@@ -581,50 +509,15 @@
         "description": "Template text to say No value for property found"
     },
     "migrate": "Migrar",
-    "migrationPreview": "Pré-visualizar migração",
-    "migrationSelectTargetSource": "Selecione a fonte de destino",
-    "migrationSearchInSource": "Pesquisar em {sourceName}",
-    "migrationInProgress": "Migração em Progresso",
-    "migrationFailed": "Migração Falhou",
     "migrateChapters": "Migrar capítulos",
-    "migrationCancelled": "Migração cancelada",
-    "migrateChaptersDescription": "Copie o status do capítulo lido para nova fonte",
-    "selectTargetSource": "Selecione a fonte de destino",
     "migrationSettings": "Configurações de migração",
     "errorGettingMigrationSources": "Falha ao obter fontes de migração",
-    "deleteSourceWarning": "O mangá original será removido de sua biblioteca após a migração.",
-    "confirmMigration": "Confirme a migração",
-    "startMigration": "Iniciar migração",
-    "migrationWarning": "Isso irá mover permanentemente seus dados de mangá. Esta ação não pode ser desfeita.",
-    "migrationConfirmationMessage": "Tem certeza de que quer migrar este mangá? Esta ação não pode ser desfeita.",
-    "preparingMigration": "Preparando a migração...",
-    "migrationCompleted": "Migração concluída!",
-    "deleteSourceAfterMigration": "Excluir mangá origem após a migração",
-    "migrationComplete": "Migração concluída com sucesso",
-    "errorLoadingSources": "Erro ao carregar fontes",
     "errorSearchingMangaInSource": "Falha ao procurar mangá na fonte",
     "errorFetchingSourceManga": "Falha ao buscar mangá de origem",
-    "migrateTrackingDescription": "Copiar informações de rastreamento para nova fonte",
-    "migrationOptions": "Opções de migração",
-    "noSourcesAvailable": "Não existem fontes disponíveis para migração",
-    "checkSourceConfiguration": "Por favor, verifique a configuração da sua fonte",
-    "noAlternativeSources": "Não existem fontes alternativas disponíveis",
-    "installMoreSources": "Instale mais fontes para habilitar a migração",
-    "tryDifferentSearch": "Experimente um termo de pesquisa diferente",
-    "deleteSourceManga": "Deletar mangá fonte",
-    "quickMigration": "Rápido",
-    "fullMigration": "Total",
-    "customMigration": "Personalizado",
-    "done": "Feito",
-    "to": "Para",
-    "migrationDetails": "Detalhes da migração",
     "searchAllSources": "Pesquisar todas as fontes",
-    "searchingAllSources": "Procurando em todas as fontes disponíveis...",
-    "noMatchingMangaFound": "Nenhum mangá correspondente encontrado em qualquer fonte",
     "errorOccurred": "Um erro ocorreu",
     "viewManga": "Ver Mangá",
     "noSearchResults": "Sem resultados de pesquisa",
-    "startReadingToSeeHistory": "Comece a ler mangás para ver seu histórico aqui",
     "tryDifferentSearchTerm": "Experimente um termo de pesquisa diferente",
     "readerLastPageSwipeToggle": "Gesto na última página",
     "@readerLastPageSwipeToggle": {
@@ -638,28 +531,15 @@
     "@readerIgnoreSafeAreaToggle": {
         "description": "Toggle text to ignore safe area in reader"
     },
-    "migrateCategoriesDescription": "Copiar categorias do mangá para nova fonte",
-    "migrateDownloadsDescription": "Mover capítulos baixados para nova fonte",
     "migrateCategories": "Migrar categorias",
     "migrateDownloads": "Migrar Downloads",
     "migrateTracking": "Migrar Rastreadores",
     "errorTargetMangaNotFound": "Mangá alvo não encontrado",
-    "searchManga": "Procurar mangá...",
-    "enterSearchTerm": "Digite um termo de pesquisa para encontrar mangá",
     "noResultsFound": "Nenhum resultado encontrado",
-    "searchError": "Erro de pesquisa",
-    "importantNotice": "Aviso Importante",
-    "migrationSuccessMessage": "Seu mangá foi migrado com sucesso para a nova fonte.",
-    "cancelMigration": "Cancelar migração",
-    "cancelMigrationConfirmation": "Tem certeza de que quer cancelar a migração? Esta ação não pode ser desfeita.",
-    "quickPresets": "Presets rápidos",
-    "deleteSourceMangaDescription": "Remova o mangá original da biblioteca após a migração",
     "yes": "Sim",
     "no": "Não",
     "errorSourceMangaNotFound": "Mangá de origem não encontrado",
     "errorFetchingTargetManga": "Falha ao buscar mangá destino",
-    "searchForManga": "Procurar mangá na fonte destino",
-    "from": "A partir de",
     "withUnreadChapter": "Com capítulo(s) não lido(s)",
     "@withUnreadChapter": {
         "description": "Setting option Text for Skip updating entries to toggle With unread chapter(s)"
@@ -669,8 +549,6 @@
         "description": "Recently Read Text to show reading history grouping"
     },
     "noHistoryFound": "Nenhum histórico de leitura encontrado",
-    "timeoutSettings": "Configurações de timeout",
-    "serverRequestTimeoutDescription": "Tempo para esperar por respostas do servidor (em segundos)",
     "autoRefreshOnTimeout": "Auto-refresh no Timeout",
     "@autoRefreshOnTimeout": {
         "description": "Toggle automatic retry on timeout"
@@ -691,7 +569,6 @@
     "@nDays": {
         "description": "to show Number of days with plural"
     },
-    "migrationCancelledMessage": "O processo de migração foi cancelado. Não foram feitas alterações.",
     "animatePageTransitions": "Animar transições de página",
     "authTypeSimpleLogin": "Login Simples",
     "authLogout": "Sair",
@@ -705,7 +582,6 @@
     "imageScaleTypeOriginalSize": "Tamanho original",
     "imageScaleTypeSmartFit": "Ajuste inteligente",
     "imageScaleTypeStretch": "Esticar",
-    "landscapeZoom": "Ampliar imagem horizontal",
     "navigateToPan": "Imagens panorâmicas",
     "pageLayoutSinglePage": "Página única",
     "readerForThisSeries": "Para esta série",
@@ -744,7 +620,6 @@
     "showHiddenCategories": "Mostrar categorias ocultas",
     "smallerTapZones": "Zonas de toque menores",
     "autoScroll": "Scroll automático",
-    "tabs": "Abas",
     "continueReadingButton": "Botão de continuar a ler",
     "languageBadge": "Idioma",
     "sourceBadge": "Ícone de origem",
@@ -762,7 +637,6 @@
     "alwaysAsk": "Perguntar sempre",
     "setCategories": "Definir categorias",
     "deleteChaptersConfirm": "Tem certeza de que deseja eliminar os capítulos selecionados?",
-    "deleteChapters": "Eliminar capítulos",
     "deleteChapterAfterManuallyMarkedRead": "Eliminar o capítulo após marcá-lo manualmente como lido",
     "deleteFinishedChaptersWhileReading": "Exclua capítulos concluídos durante a leitura",
     "allowDeletingBookmarkedChapters": "Permitir a eliminação de capítulos marcados",
@@ -783,7 +657,6 @@
     "filterOptionFinished": "Finalizado",
     "filterHeaderLibrary": "Biblioteca",
     "filterOptionInLibrary": "Na biblioteca",
-    "filterOptionCompleted": "Completo",
     "unreadBadgeModeHidden": "Esconder",
     "groupStyleTabs": "Abas",
     "downloadAllChapters": "Tudo",
@@ -855,14 +728,11 @@
     "migrationAvailableHeader": "Disponível",
     "migrationDataToMigrateHeader": "Dados para migrar",
     "migrationObsoleteSource": "Obsoleta",
-    "migrationSelectAll": "Selecionar tudo",
     "migrationInvertSelection": "Inverter",
-    "migrationRetry": "Tentar novamente",
     "migrationActionMigrate": "Migrar",
     "migrationActionCopy": "Copiar",
     "libraryUpdateErrors": "Erro ao atualizar biblioteca",
     "notificationDownloadsPausedTitle": "Transferências em pausa",
-    "notificationBackupFailedTitle": "Cópia de segurança falhou",
     "notificationAppUpdateTitle": "Actualização disponível",
     "notificationExtensionUpdateTitle": "Atualizações de extensão",
     "notificationIncognitoTitle": "Modo incógnito",
@@ -873,15 +743,12 @@
     "webtoonScaleTypeFitScreen": "Ajustar ao ecrã",
     "webtoonScaleTypeOriginalSize": "Tamanho original",
     "serverAddress": "Endereço do servidor",
-    "started": "Começado",
     "upcoming": "A seguir",
     "unifiedSearchLibrarySection": "Biblioteca",
     "updatesGroupingModeDisabled": "Desativado",
     "offlineDownloadsSection": "Transferências",
-    "keepOfflineOff": "Desligado",
     "downloadsServerTab": "Servidor",
     "tracking": "Listas",
-    "searchForSources": "Pesquisar fonte",
     "copyToClipboard": "Copiar para a área de transferência",
     "copiedToClipboard": "Copiado para a área de transferência",
     "updateProgressAfterReading": "Atualizar progresso após a leitura",
@@ -899,7 +766,6 @@
     "trackMarkPublic": "Rastrear publicamente",
     "filterTracked": "Monitorizado",
     "copyImageToClipboard": "Copiar",
-    "zoomStart": "Posição de zoom inicial",
     "zoomStartAutomatic": "Automático",
     "zoomStartCenter": "Centro",
     "zoomStartLeft": "Esquerda",
@@ -920,7 +786,6 @@
     "duplicateSkipAll": "Pular tudo",
     "actionShowEntry": "Mostrar entrada",
     "duplicatedEntries": "Entradas duplicadas",
-    "duplicatedEntriesSubtitle": "Mostrar todas as entradas duplicadas em sua biblioteca",
     "checkDescription": "Verifica a descrição",
     "offlineChaptersScreenTitle": "Capítulos descarregados",
     "offlineChaptersDownloadedSection": "Transferido",
@@ -949,7 +814,6 @@
     "notificationChapterSingleAndMore": "Capítulo {number} e {count} mais",
     "notificationChaptersMultiple": "Capítulos {numbers}",
     "smartUpdateExpected": "Novos capítulos com previsão de serem lançados em torno de {predicted}, verificando em torno de cada {interval}.",
-    "httpErrorCheckWebView": "HTTP {statusCode}, verifique o site na WebView",
     "trackRemoveAlsoOnRemote": "Também remover do {trackerName}",
     "libraryLastUpdated": "Última atualização da biblioteca: {time}",
     "libraryUpdateErrorsCount": "Erros de atualização da biblioteca ({count})",
@@ -961,7 +825,6 @@
     "showUpdateProgressBanner": "Mostrar atualização de progresso de banner",
     "migrationHideUnmatched": "Ocultar entradas sem correspondência",
     "migrationHideWithoutUpdates": "Ocultar entradas sem capítulos mais recentes",
-    "notificationRestoreCompleteTitle": "Restauro completo",
     "offlineStorageUsage": "Uso de armazenamento",
     "updateProgressManualMarkRead": "Atualizar progresso quando for marcado como lido",
     "accountPermissionDenied": "A sua conta não tem permissão para esta ação.",
@@ -1029,20 +892,12 @@
     "onboardingWelcomeSubtitle": "Um leitor para a sua biblioteca Suwayomi.",
     "onboardingChooseTheme": "Escolha o tema",
     "onboardingServerTitle": "Ligue o seu servidor",
-    "onboardingServerSubtitle": "O Tsumiru lê a partir do seu servidor Suwayomi.",
     "onboardingServerPortHint": "O Suwayomi usa a porta 4567 por padrão.",
     "onboardingServerStepLabel": "PASSO 2 DE 3",
-    "onboardingServerOnNetwork": "Nesta rede",
-    "onboardingServerRemote": "Remoto",
-    "onboardingServerNone": "Ainda não tenho servidor",
-    "onboardingNoServerHelp": "Sem problema. Pode configurar um servidor Suwayomi e ligá-lo mais tarde em Definições.",
     "onboardingNoServerLink": "Como configurar um servidor",
     "onboardingTestConnection": "Testar ligação",
-    "onboardingFindServer": "Procurar servidor",
     "onboardingResolvedAddress": "Servidor encontrado em {url}",
     "onboardingFoundAt": "em {address}",
-    "onboardingResolvedNoAuth": "Este servidor está pronto. Não é necessário iniciar sessão.",
-    "onboardingResolvedNeedsAuth": "Este servidor exige início de sessão. Introduza o nome de utilizador e a senha abaixo.",
     "onboardingSearchNetwork": "Pesquisar na minha rede",
     "onboardingCheckingConnection": "A verificar a ligação…",
     "onboardingSigningIn": "A iniciar sessão…",
@@ -1054,14 +909,10 @@
     "onboardingCredsRejected": "As credenciais não foram aceites. Verifique o nome de utilizador, a senha e o método de início de sessão.",
     "onboardingNotReachedHttpsHint": "Se estiver atrás de um proxy inverso, tente usar o endereço HTTPS.",
     "onboardingAuthMode": "Método de início de sessão",
-    "onboardingAuthModeAuto": "Utilizador e senha (automático)",
     "onboardingAuthModeBasic": "Autenticação Básica",
-    "onboardingResolvedBasicGated": "Houve uma resposta em {url}, mas está protegida por um início de sessão que impede a verificação. Escolha «Utilizador e senha» e introduza as credenciais.",
     "onboardingResolvedUnconfirmed": "Foi possível contactar {url}, mas não respondeu como servidor Suwayomi. Pode ser um router ou outra aplicação. Verifique o endereço e a porta, ou use-o mesmo assim.",
     "onboardingNotReached": "Não foi possível contactar um servidor nesse endereço. Verifique se está a funcionar e acessível a partir deste dispositivo.",
-    "onboardingUseAddressAnyway": "Usar este endereço mesmo assim",
     "onboardingConnected": "Ligado ao Suwayomi v{version}",
-    "onboardingConnectFailed": "Não foi possível contactar esse servidor. Verifique o endereço e, se necessário, as credenciais.",
     "onboardingDoneTitle": "Está tudo pronto",
     "onboardingDoneSubtitle": "Explore as fontes para começar a adicionar manga à biblioteca.",
     "minutesAgo": "{minutes, plural, =0{Há 0 minutos} =1{Há 1 minuto} other{Há {minutes} minutos}}",
@@ -1093,11 +944,6 @@
     "filterHeaderSeries": "Séries",
     "filterOptionUnfinished": "Leitura por terminar",
     "filterOptionNotInLibrary": "Fora da biblioteca",
-    "filterHeaderPublicationStatus": "Estado da publicação",
-    "filterOptionNotCompleted": "Não concluída",
-    "filterHeaderContentRating": "Classificação de conteúdo",
-    "filterOptionLewd": "Conteúdo adulto",
-    "filterOptionNotLewd": "Sem conteúdo adulto",
     "limitTitleLines": "Limitar títulos a 2 linhas",
     "longStripWidthLimit": "Largura máxima",
     "longStripWidthLimitFullWidth": "Largura total",
@@ -1129,7 +975,6 @@
     "customColor": "Cor personalizada",
     "customHeaders": "Cabeçalhos HTTP personalizados",
     "onboardingCustomHeadersHint": "Necessários apenas para alguns proxies e gateways de acesso.",
-    "customHeadersDescription": "Enviados em cada pedido ao servidor. Só são necessários se o servidor estiver atrás de um gateway de autenticação, proteção Zero Trust ou proxy inverso que exija cabeçalhos adicionais.",
     "customHeaderEmpty": "Sem cabeçalhos personalizados. Adicione um se o servidor estiver atrás de um gateway de autenticação ou proxy inverso que exija cabeçalhos adicionais.",
     "customHeaderName": "Nome do cabeçalho",
     "customHeaderValue": "Valor do cabeçalho",
@@ -1137,7 +982,6 @@
     "customHeaderNameInvalid": "Nome de cabeçalho inválido. Não use espaços nem dois-pontos.",
     "customHeaderExists": "Já existe um cabeçalho com este nome.",
     "pureBlackAmoled": "Preto puro (AMOLED)",
-    "lewd": "Conteúdo adulto",
     "libraryColumnsLandscape": "Colunas (horizontal)",
     "libraryColumnsPortrait": "Colunas (vertical)",
     "mangaSortLastUpdate": "Última atualização",
@@ -1165,9 +1009,6 @@
     "readerModeChipLegacyContinuous": "Horizontal contínuo (antigo)",
     "readerFeedbackToasts": "Mensagens durante a leitura",
     "readerFeedbackToastsSubtitle": "Mostrar mensagens como «a carregar o próximo capítulo» e «não há mais capítulos»",
-    "chapterSeparator": "Separador de capítulos",
-    "lastChapterNotification": "Este é o último capítulo",
-    "firstChapterNotification": "Este é o primeiro capítulo",
     "loadingNextChapter": "A carregar o próximo capítulo…",
     "loadingPreviousChapter": "A carregar o capítulo anterior…",
     "noMoreChaptersAhead": "Não há próximo capítulo",
@@ -1178,18 +1019,10 @@
     "failedToLoadPreviousChapter": "Não foi possível carregar o capítulo anterior",
     "chapterCompleted": "Capítulo concluído",
     "readerTapInvertVertical": "Vertical",
-    "readerKeepScreenOnSubtitle": "Impedir que o ecrã entre em suspensão durante a leitura",
     "readerIgnoreSafeAreaToggleDescription": "Permitir que o conteúdo ocupe as áreas do recorte e do indicador de início",
     "migrateReaderSettings": "Definições do leitor",
     "migrateOfflineSettings": "Regra de retenção offline",
     "bulkMigrationTitle": "Migrar fontes",
-    "targetSourcesPriority": "Fontes de destino",
-    "targetSourcesPriorityHint": "Cada série é procurada nestas fontes por ordem, de cima para baixo. Arraste para reordenar.",
-    "availableSources": "Fontes disponíveis",
-    "noTargetSourcesSelected": "Adicione pelo menos uma fonte de destino para pesquisar.",
-    "searchManually": "Escolher cada correspondência manualmente",
-    "searchManuallyDescription": "Rever e escolher cada destino em vez de o selecionar automaticamente.",
-    "migrationPausedReauth": "Em pausa. Inicie sessão novamente para continuar.",
     "migrationSelectSourcesTitle": "Selecionar fontes",
     "migrationListTitleProgress": "Migrar ({done}/{total})",
     "migrationLatestChapter": "Capítulo mais recente: {chapter}",
@@ -1202,22 +1035,7 @@
     "migrationFilterObsolete": "Mostrar apenas obsoletas",
     "migrationSortMode": "Critério de ordenação",
     "migrationSortDirection": "Sentido da ordenação",
-    "migrationNeedsMigration": "Precisa de migração",
-    "migrationOtherSources": "Outras fontes",
-    "migrationSourceSeriesCount": "{count, plural, =0{0 séries} =1{1 série} other{{count} séries}}",
     "migrationNoLibrarySources": "A biblioteca está vazia. Não há nada para migrar.",
-    "migrationGroupNeedsReview": "Precisa de revisão",
-    "migrationGroupNoMatch": "Sem correspondência",
-    "migrationGroupFailed": "Falhou",
-    "migrationGroupReady": "Pronto",
-    "migrationGroupInProgress": "Em curso",
-    "migrationGroupDone": "Concluído",
-    "migrationGroupSkipped": "Ignorado",
-    "migrationFindManually": "Procurar manualmente",
-    "migrationOverwriteTracking": "Substituir as associações do destino",
-    "migrationKeepTargetTracking": "Esta série já tem associações a serviços de acompanhamento no destino. Mantenha-as ou substitua-as pelas da origem.",
-    "migrationLargeBatchWarning": "O lote é grande. Pode demorar e gerar muitos pedidos às fontes.",
-    "migrationTrackerCollisionSummary": "{count, plural, =0{0 séries já têm associações no destino. São mantidas, a menos que escolha substituí-las.} =1{1 série já tem associações no destino. São mantidas, a menos que escolha substituí-las.} other{{count} séries já têm associações no destino. São mantidas, a menos que escolha substituí-las.}}",
     "migrationActionMigrateDescription": "Mover cada série para a nova fonte e remover a original da biblioteca.",
     "migrationActionCopyDescription": "Adicionar cada série da nova fonte e manter a original na biblioteca.",
     "migrateSeriesCount": "Migrar {count} séries",
@@ -1229,7 +1047,6 @@
     "notificationChaptersGeneric": "{count} novos capítulos",
     "notificationChaptersMultipleAndMore": "Capítulos {numbers} e mais {count}",
     "libraryUpdateErrorsEmpty": "Sem erros de atualização",
-    "libraryUpdateErrorsEmptyDetail": "As séries que não forem atualizadas aparecem aqui",
     "notificationLibraryErrorTitle": "Falha na atualização da biblioteca",
     "notificationLibraryErrorBody": "Não foi possível atualizar {count} séries",
     "notificationDownloadErrorTitle": "Falha na transferência",
@@ -1239,14 +1056,9 @@
     "notificationDownloadsPausedService": "Não foi possível iniciar as transferências. Toque em «Tentar novamente» na gestão de transferências.",
     "notificationDownloadsPausedNoServer": "Sem ligação. Serão retomadas quando a ligação voltar.",
     "notificationDownloadsPausedWifi": "À espera de Wi-Fi.",
-    "notificationBackupCompleteTitle": "Cópia de segurança concluída",
-    "notificationRestoreFailedTitle": "Falha no restauro",
     "notificationAppUpdateBody": "O Tsumiru {version} está disponível",
     "notificationExtensionUpdateBody": "Há atualizações para {count} extensões",
     "notificationIncognitoBody": "As atualizações do histórico e do progresso estão em pausa",
-    "notificationsErrors": "Notificações de erro",
-    "notificationsErrorsSubtitle": "Falhas nas transferências e nas atualizações da biblioteca",
-    "notificationsBackup": "Notificações de cópias de segurança",
     "notificationsAppUpdates": "Notificações de atualização da aplicação",
     "notificationsExtensionUpdates": "Notificações de atualização de extensões",
     "notificationDownloadsCompleteTitle": "Transferências concluídas",
@@ -1264,8 +1076,6 @@
     "retryAll": "Tentar tudo novamente",
     "searchLibraryHint": "Pesquisar título, autor, fonte…",
     "selectBelow": "Selecionar os itens abaixo",
-    "serverOwnSettingsCaption": "Estas definições alteram o próprio servidor Suwayomi, não a forma como esta aplicação se liga a ele.",
-    "serverSettingsSubtitle": "Configurar o próprio servidor Suwayomi.",
     "serverSignedOutTitle": "Sessão terminada",
     "serverSignedOutSubtitle": "O servidor não aceitou estas credenciais. Inicie sessão novamente nas definições de ligação.",
     "serverUnreachableTitle": "Não é possível contactar o servidor",
@@ -1278,7 +1088,6 @@
     "crashLogCopied": "Registo de depuração copiado para a área de transferência",
     "noCrashLog": "Nenhum registo de depuração encontrado",
     "addLocalNetworkAddress": "Adicionar um endereço da rede local",
-    "serverExternalUrl": "URL externo / remoto",
     "serverLanUrl": "URL interno / LAN",
     "serverLanUrlOptional": "Opcional",
     "serverLanUrlHintText": "http://192.168.1.100:4567",
@@ -1307,12 +1116,9 @@
     "serverRequestTimeout": "Tempo limite dos pedidos ao servidor",
     "autoRefreshOnTimeoutDescription": "Repetir automaticamente os pedidos que excedam o tempo limite",
     "autoRefreshRetryDelay": "Intervalo entre novas tentativas automáticas",
-    "autoRefreshRetryDelayDescription": "Espera entre tentativas automáticas, em segundos",
-    "offline": "Offline",
     "offlineStorageSection": "Armazenamento",
     "offlineRemoveAllDownloads": "Remover todas as transferências",
     "offlineRemoveAllConfirm": "Remover deste dispositivo todos os capítulos transferidos? A biblioteca do servidor não será alterada.",
-    "offlineSafetyNets": "Proteções",
     "downloadOverWifiOnly": "Transferir apenas por Wi-Fi",
     "downloadNewChaptersInBackground": "Transferir novos capítulos em segundo plano",
     "downloadNewChaptersInBackgroundDescription": "Obter novos capítulos das séries mantidas offline, sem abrir a aplicação",
@@ -1336,11 +1142,8 @@
     "offlineSheetTitle": "Leitura offline",
     "viewOffline": "Ver offline",
     "offlineSheetSubtitle": "Manter capítulos neste dispositivo, repondo-os automaticamente à medida que lê. É independente das transferências do servidor, no ícone de nuvem acima.",
-    "offlineDownloadAll": "Transferir todos os capítulos",
     "offlineRemoveSeries": "Remover tudo desta série",
     "offlineDownloadingToast": "A transferir para este dispositivo…",
-    "manageDownloads": "Gerir transferências",
-    "manageDownloadsEmpty": "Ainda não há regras de transferência automática",
     "manageDownloadsNothingYet": "Ainda não foi transferido nada",
     "offlineManualOnly": "Apenas manual",
     "manageDownloadsChangeRule": "Alterar regra",
@@ -1358,7 +1161,6 @@
     "addTag": "Adicionar etiqueta",
     "tags": "Etiquetas",
     "searchForExtensions": "Pesquisar extensões",
-    "noTagsYet": "Ainda não há etiquetas na biblioteca",
     "searchTips": "Dicas de pesquisa",
     "updateProgressManualMarkReadDesc": "Não se aplica ao marcar vários capítulos como lidos de uma vez",
     "reLogin": "O token expirou. Inicie sessão novamente.",
@@ -1379,7 +1181,6 @@
     "groupByStatus": "Por estado",
     "groupUngrouped": "Sem grupo",
     "groupByTrackStatus": "Por estado no serviço",
-    "copyPageLink": "Copiar ligação da página",
     "copiedImage": "Imagem copiada",
     "shareImage": "Partilhar imagem",
     "saveToGallery": "Guardar na galeria",
@@ -1461,7 +1262,6 @@
     "accountRoleUnknown": "Função desconhecida",
     "accountSignOut": "Terminar sessão",
     "accountSignOutConfirmation": "Terminar sessão nesta conta? Os capítulos transferidos ficarão neste dispositivo.",
-    "accountBuiltInPassword": "A senha desta conta é gerida nas definições do servidor.",
     "accountPermissionInstallExtensions": "Instalar extensões",
     "accountPermissionInstallExternalExtensions": "Instalar ficheiros de extensões",
     "accountPermissionUninstallExtensions": "Desinstalar extensões",
@@ -1497,7 +1297,6 @@
     "accountCatalogueRemoveTitle": "Remover transferências da conta?",
     "accountCatalogueRemoveConfirm": "Remover deste dispositivo os capítulos transferidos e a biblioteca offline de «{account}» em {server}? Os dados do servidor não serão alterados.",
     "accountCatalogueRemoveFailed": "Não foi possível remover as transferências da conta. Podem estar em uso.",
-    "recommendationsUnavailableWeb": "Estas recomendações não estão disponíveis na aplicação web.",
     "offlineRecoveryRunning": "A recuperar transferências. Pode continuar a usar a aplicação.",
     "offlineRecoveryFailed": "A recuperação das transferências parou. Os ficheiros existentes foram mantidos. Tente novamente para continuar.",
     "offlineRecoveryUnavailable": "Os capítulos guardados estão temporariamente indisponíveis durante a recuperação das transferências.",

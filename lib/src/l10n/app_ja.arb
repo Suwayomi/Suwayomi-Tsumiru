@@ -42,10 +42,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme Mode"
     },
-    "allScanlators": "全てのScanlator",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "authType": "認証タイプ",
     "@authType": {
         "description": "Popup title and Button text to change App Authentication"
@@ -116,10 +112,6 @@
     "@checkForUpdates": {
         "description": "Button text to check for App Updates"
     },
-    "createBackupDescription": "Tachideskのバックアップとしてライブラリをバックアップ",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
-    },
     "createBackupTitle": "バックアップの作成",
     "@createBackupTitle": {
         "description": "Button text to create backup"
@@ -127,10 +119,6 @@
     "credentials": "資格情報",
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"
-    },
-    "current": "現在の位置",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
     },
     "daysAgo": "{days} 日前",
     "@daysAgo": {
@@ -310,10 +298,6 @@
     "@missingExtension": {
         "description": "Group title to show the Missing Extensions when restoring Backup"
     },
-    "missingTrackers": "トラッカーが見つからない",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
-    },
     "more": "もっと",
     "@more": {
         "description": "Screen title and Navigation text of More screen"
@@ -333,10 +317,6 @@
     "noDownloads": "ダウンロードがありません",
     "@noDownloads": {
         "description": "Text to show that there is no active downloads in Downloads Screen"
-    },
-    "nsfwInfo": "これは非公式の拡張機能、または誤ってフラグが立てられた可能性のある拡張機能がアプリ内で NSFW(18+) コンテンツを表示することを防ぐものではありません",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
     },
     "password": "パスワード",
     "@password": {
@@ -415,10 +395,6 @@
     "mangaGridSize": "マンガグリッドサイズ",
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
-    },
-    "mangaMissingSources": "ソースを失ったマンガ",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "noChaptersFound": "章が見つかりません",
     "@noChaptersFound": {
@@ -600,10 +576,6 @@
     "@uninstall": {
         "description": "Button text to Uninstall the extension"
     },
-    "nextChapter": "次へ: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
-    },
     "nsfw": "NSFWな拡張機能とソースを表示する",
     "@nsfw": {
         "description": "Switch text to show/hide the nsfw extensions"
@@ -622,10 +594,6 @@
             }
         }
     },
-    "previousChapter": "前: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
     "readerModeContinuousHorizontalLTR": "横方向に連続（左から右）",
     "@readerModeContinuousHorizontalLTR": {
         "description": "Radio button text for Reader Mode Type - Continuous Horizontal (LTR)"
@@ -637,10 +605,6 @@
     "unread": "未読",
     "@unread": {
         "description": "Checkbox text to unread bookmarked manga/chapters across app"
-    },
-    "isTrueBlack": "漆黒",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
     },
     "moveToBottom": "下部に移動",
     "@moveToBottom": {
@@ -675,10 +639,6 @@
     "@readerVolumeTapInvert": {
         "description": "Switch button text to invert Volume Tap "
     },
-    "readerVolumeTapSubtitle": "ボリュームキーでナビゲート",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
-    },
     "reload": "リロード",
     "@reload": {
         "description": "Reload button text"
@@ -694,10 +654,6 @@
     "reset": "リセット",
     "@reset": {
         "description": "Button text of reset button in source filters"
-    },
-    "restoreBackupDescription": "バックアップからTachideskを復元する",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "restoreBackupTitle": "バックアップから復元する",
     "@restoreBackupTitle": {
@@ -723,10 +679,6 @@
     "@server": {
         "description": "Text title for the server in About screen"
     },
-    "serverPortHintText": "サーバーポート",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
-    },
     "serverUrl": "サーバー URL",
     "@serverUrl": {
         "description": "Popup title and Button text to update Server Url"
@@ -750,10 +702,6 @@
     "unknownAuthor": "未知の著者",
     "@unknownAuthor": {
         "description": "Text to show unknown author in Manga details screen"
-    },
-    "unknownManga": "未知のマンガ",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
     },
     "update": "更新",
     "@update": {
@@ -794,10 +742,6 @@
     "readerPadding": "リーダーのパディング",
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
-    },
-    "reddit": "Reddit",
-    "@reddit": {
-        "description": "Reddit app title"
     },
     "themeModeLight": "ライト",
     "@themeModeLight": {
@@ -928,14 +872,6 @@
     "@errorFilePickUnknownExtension": {
         "description": "Error Description to show when user selected unknown extension file"
     },
-    "extensionRepository": "拡張機能リポジトリ",
-    "@extensionRepository": {
-        "description": "Screen title text for Extension repository settings screen"
-    },
-    "extensionRepositoryDescription": "拡張機能をインストールできるリポジトリを追加する",
-    "@extensionRepositoryDescription": {
-        "description": "Subtitle text for Extension repository settings property"
-    },
     "flareSolverrRequestTimeout": "FlareSolverrリクエストタイムアウト",
     "@flareSolverrRequestTimeout": {
         "description": "Title text for FlareSolverr Request Timeout property"
@@ -952,14 +888,6 @@
     "@gitHub": {
         "description": "GitHub app title"
     },
-    "gqlDebugLogs": "Graphql デバッグログ",
-    "@gqlDebugLogs": {
-        "description": "Switch title for Graphql Debug logs in settings"
-    },
-    "gqlDebugLogsHint": "このログはプライバシーにかかわる情報を含みます",
-    "@gqlDebugLogsHint": {
-        "description": "Switch subTitle for Graphql Debug logs in settings"
-    },
     "includeCategories": "カテゴリー",
     "@includeCategories": {
         "description": "Check box text to include categories during create backup"
@@ -967,10 +895,6 @@
     "includeChapters": "章",
     "@includeChapters": {
         "description": "Check box text to include chapters during create backup"
-    },
-    "invalidPort": "無効なポート",
-    "@invalidPort": {
-        "description": "Error when Submitted invalid Port Number"
     },
     "invalidProp": "無効： {property}",
     "@invalidProp": {
@@ -981,10 +905,6 @@
     "@localSourceLocation": {
         "description": "Text for Local Source Location settings property"
     },
-    "misc": "その他",
-    "@misc": {
-        "description": "Section title for misc settings"
-    },
     "noPropFound": "{prop}が見つかりませんでした",
     "@noPropFound": {
         "description": "Template text to say No value for property found"
@@ -992,10 +912,6 @@
     "none": "なし",
     "@none": {
         "description": "Text for None"
-    },
-    "openFlareSolverr": "設定方法に関する情報は、FlareSolverrを確認してください",
-    "@openFlareSolverr": {
-        "description": "Text for link to Open Flare Solverr setup documentation"
     },
     "openInWeb": "Webで開く",
     "@openInWeb": {
@@ -1041,10 +957,6 @@
     "@systemTrayIcon": {
         "description": "Switch title to Show icon in system tray in settings"
     },
-    "updateFailed": "{property} の更新に失敗しました",
-    "@updateFailed": {
-        "description": "Failed to update Text"
-    },
     "validating": "検証中",
     "@validating": {
         "description": "toast to show backup validation is in progress"
@@ -1068,10 +980,6 @@
     "flareSolverrServerUrl": "FlareSolverrサーバーURL",
     "@flareSolverrServerUrl": {
         "description": "Title text for FlareSolverr Server Url property"
-    },
-    "hideEmptyCategory": "空のカテゴリを隠す",
-    "@hideEmptyCategory": {
-        "description": "Switch button text to Hide empty category in library"
     },
     "downloadLocationHint": "ダウンロードしたファイルが保存されるサーバーのディレクトリへのパス",
     "@downloadLocationHint": {
@@ -1121,10 +1029,6 @@
     "@nMinutes": {
         "description": "Text to represent 'n' Minutes"
     },
-    "nRepo": "{n, plural, =1{1リポジトリ} other{{n}リポジトリ}}",
-    "@nRepo": {
-        "description": "Text to show n repo as subtitle"
-    },
     "nSeconds": "{n, plural, =1{1秒} other{{n}秒}}",
     "@nSeconds": {
         "description": "Text to represent 'n' seconds"
@@ -1164,69 +1068,21 @@
         "description": "Description for ignore safe area toggle in reader settings"
     },
     "migrate": "移行",
-    "migrationSelectTargetSource": "移行先ソースを選択",
-    "migrationSearchInSource": "{sourceName}内を検索",
-    "migrationPreview": "移行プレビュー",
-    "migrationInProgress": "移行中",
-    "migrationComplete": "移行が正常に完了しました",
-    "migrationFailed": "移行に失敗しました",
-    "migrationCancelled": "移行がキャンセルされました",
     "migrateChapters": "章の移行",
-    "migrateChaptersDescription": "章の読書状況を新しいソースにコピーする",
     "migrateCategories": "カテゴリの移行",
-    "migrateCategoriesDescription": "漫画のカテゴリを新しいソースにコピーする",
     "migrateDownloads": "ダウンロードの移行",
-    "migrateDownloadsDescription": "ダウンロード済みの章を新しいソースに移動する",
     "migrateTracking": "トラッキングの移行",
-    "migrateTrackingDescription": "トラッキング情報を新しいソースにコピーする",
-    "migrationOptions": "移行オプション",
     "migrationSettings": "移行設定",
-    "selectTargetSource": "移行先ソースを選択",
-    "noSourcesAvailable": "移行可能なソースがありません",
-    "checkSourceConfiguration": "ソースの設定を確認してください",
-    "noAlternativeSources": "代替のソースがありません",
-    "installMoreSources": "移行を有効にするには、ソースを追加してください",
-    "errorLoadingSources": "ソースの読み込みエラー",
     "errorGettingMigrationSources": "移行用ソースの取得に失敗しました",
     "errorSearchingMangaInSource": "ソース内の漫画検索に失敗しました",
     "errorFetchingSourceManga": "ソースの漫画取得に失敗しました",
     "errorSourceMangaNotFound": "ソースの漫画が見つかりません",
     "errorFetchingTargetManga": "移行先の漫画取得に失敗しました",
     "errorTargetMangaNotFound": "移行先の漫画が見つかりません",
-    "searchManga": "漫画を検索…",
-    "searchForManga": "移行先ソースで漫画を検索",
-    "enterSearchTerm": "漫画を探すための検索語を入力してください",
     "noResultsFound": "検索結果が見つかりません",
-    "tryDifferentSearch": "別の検索語を試してください",
-    "searchError": "検索エラー",
-    "importantNotice": "重要なお知らせ",
-    "migrationWarning": "これにより漫画データが完全に移動されます。この操作は取り消せません。",
-    "deleteSourceWarning": "移行後、元の漫画はライブラリから削除されます。",
-    "confirmMigration": "移行の確認",
-    "migrationConfirmationMessage": "この漫画を移行してもよろしいですか？この操作は取り消せません。",
-    "startMigration": "移行を開始",
-    "preparingMigration": "移行を準備しています…",
-    "migrationCompleted": "移行が完了しました！",
-    "migrationSuccessMessage": "漫画が新しいソースへ正常に移行されました。",
-    "migrationCancelledMessage": "移行処理はキャンセルされました。変更は行われていません。",
-    "cancelMigration": "移行をキャンセル",
-    "cancelMigrationConfirmation": "移行をキャンセルしてもよろしいですか？この操作は取り消せません。",
-    "quickPresets": "クイックプリセット",
-    "quickMigration": "クイック",
-    "fullMigration": "フル",
-    "customMigration": "カスタム",
-    "deleteSourceManga": "元の漫画を削除",
-    "deleteSourceMangaDescription": "移行後、元の漫画をライブラリから削除します",
-    "done": "完了",
     "yes": "はい",
     "no": "いいえ",
-    "from": "から",
-    "to": "へ",
-    "migrationDetails": "移行の詳細",
     "searchAllSources": "全てのソースを検索",
-    "searchingAllSources": "利用可能なすべてのソースを検索しています…",
-    "noMatchingMangaFound": "どのソースにも該当する漫画が見つかりません",
-    "deleteSourceAfterMigration": "移行後に元の漫画を削除する",
     "recentlyRead": "最近読んだ",
     "@recentlyRead": {
         "description": "Recently Read Text to show reading history grouping"
@@ -1234,17 +1090,14 @@
     "history": "履歴",
     "searchHistory": "履歴を検索…",
     "noHistoryFound": "読書履歴が見つかりません",
-    "startReadingToSeeHistory": "読書を始めるとここに履歴が表示されます",
     "noSearchResults": "検索結果がありません",
     "tryDifferentSearchTerm": "別の検索語を試してください",
     "errorOccurred": "エラーが発生しました",
     "viewManga": "漫画を見る",
-    "timeoutSettings": "タイムアウト設定",
     "serverRequestTimeout": "サーバーリクエストのタイムアウト",
     "@serverRequestTimeout": {
         "description": "Controls how long to wait for server responses"
     },
-    "serverRequestTimeoutDescription": "サーバー応答を待つ時間（秒）",
     "autoRefreshOnTimeout": "タイムアウト時の自動再試行",
     "@autoRefreshOnTimeout": {
         "description": "Toggle automatic retry on timeout"
@@ -1254,7 +1107,6 @@
     "@autoRefreshRetryDelay": {
         "description": "Delay between auto retry attempts in seconds"
     },
-    "autoRefreshRetryDelayDescription": "自動再試行の間隔（秒）",
     "readerOverlay": "リーダー初期オーバーレイ",
     "@readerOverlay": {
         "description": "Toggle subtile text for Initial Reader Overlay"
@@ -1283,7 +1135,6 @@
     "imageScaleTypeOriginalSize": "オリジナルサイズ",
     "imageScaleTypeSmartFit": "スマートフィット",
     "imageScaleTypeStretch": "ストレッチ",
-    "landscapeZoom": "横長の画像に自動でズームイン",
     "navigateToPan": "幅広い画像を左右に移動",
     "pageLayoutSinglePage": "単一ページ",
     "readerForThisSeries": "このシリーズでは",
@@ -1322,7 +1173,6 @@
     "showHiddenCategories": "非表示のカテゴリを表示",
     "smallerTapZones": "タップ領域を縮小",
     "autoScroll": "自動スクロール",
-    "tabs": "タブ",
     "continueReadingButton": "続きを読むボタン",
     "languageBadge": "言語",
     "sourceBadge": "ソースアイコン",
@@ -1338,7 +1188,6 @@
     "alwaysAsk": "毎回尋ねる",
     "setCategories": "カテゴリーを設定",
     "deleteChaptersConfirm": "選択した章を削除してもよろしいですか？",
-    "deleteChapters": "章を削除",
     "deleteChapterAfterManuallyMarkedRead": "手動で既読にした後に章を削除",
     "deleteFinishedChaptersWhileReading": "読書中に読み終えた章を削除",
     "allowDeletingBookmarkedChapters": "ブックマークした章の削除を許可",
@@ -1359,7 +1208,6 @@
     "filterOptionFinished": "完成しました",
     "filterHeaderLibrary": "ライブラリ",
     "filterOptionInLibrary": "ライブラリ内",
-    "filterOptionCompleted": "完結済み",
     "unreadBadgeModeHidden": "非表示",
     "groupStyleTabs": "タブ",
     "downloadAllChapters": "すべて",
@@ -1433,14 +1281,11 @@
     "migrationAvailableHeader": "利用可能",
     "migrationDataToMigrateHeader": "移行するデータ",
     "migrationObsoleteSource": "廃止済",
-    "migrationSelectAll": "すべて選択",
     "migrationInvertSelection": "反転",
-    "migrationRetry": "再試行",
     "migrationActionMigrate": "移行",
     "migrationActionCopy": "コピー",
     "libraryUpdateErrors": "ライブラリの更新エラー",
     "notificationDownloadsPausedTitle": "ダウンロード一時停止済み",
-    "notificationBackupFailedTitle": "バックアップできませんでした",
     "notificationAppUpdateTitle": "アップデートが利用可能",
     "notificationExtensionUpdateTitle": "拡張機能の更新",
     "notificationIncognitoTitle": "シークレットモード",
@@ -1451,15 +1296,12 @@
     "webtoonScaleTypeFitScreen": "画面サイズに合わせる",
     "webtoonScaleTypeOriginalSize": "オリジナルサイズ",
     "serverAddress": "サーバーアドレス",
-    "started": "開始済み",
     "upcoming": "近々公開",
     "unifiedSearchLibrarySection": "ライブラリ",
     "updatesGroupingModeDisabled": "無効",
     "offlineDownloadsSection": "ダウンロード",
-    "keepOfflineOff": "オフ",
     "downloadsServerTab": "サーバー",
     "tracking": "同期",
-    "searchForSources": "ソースを検索",
     "copyToClipboard": "クリップボードにコピー",
     "copiedToClipboard": "クリップボードにコピーしました",
     "updateProgressAfterReading": "読んだ後に読書進捗を更新",
@@ -1477,7 +1319,6 @@
     "trackMarkPublic": "公開で追跡する",
     "filterTracked": "登録済み",
     "copyImageToClipboard": "コピー",
-    "zoomStart": "ズーム開始位置",
     "zoomStartAutomatic": "自動",
     "zoomStartCenter": "中央",
     "zoomStartLeft": "左",
@@ -1505,7 +1346,6 @@
     "duplicateSkipAll": "すべてスキップ",
     "actionShowEntry": "項目を表示",
     "duplicatedEntries": "重複したエントリ",
-    "duplicatedEntriesSubtitle": "ライブラリ内の重複したエントリをすべて表示する",
     "checkDescription": "説明を確認",
     "offlineChaptersScreenTitle": "ダウンロードした章の数",
     "offlineChaptersDownloadedSection": "ダウンロード済み",
@@ -1533,7 +1373,6 @@
     "notificationChaptersMultiple": "第 {numbers} 章",
     "smartUpdateExpected": "新しい章はおよそ {predicted} 後に公開されると予測されており、およそ {interval} ごとにチェックされます。",
     "removeExtensionStoreBody": "拡張機能ストア「{name}」（{url}）を削除しますか？",
-    "httpErrorCheckWebView": "HTTP {statusCode}、WebView でウェブサイトを確認してください",
     "trackRemoveAlsoOnRemote": "{trackerName} からも削除",
     "libraryLastUpdated": "前回のライブラリ更新: {time}",
     "libraryUpdateErrorsCount": "ライブラリの更新エラー ({count})",
@@ -1547,7 +1386,6 @@
     "showUpdateProgressBanner": "更新中のバナーを表示",
     "migrationHideUnmatched": "一致しない項目を非表示",
     "migrationHideWithoutUpdates": "新しい章がない項目を非表示",
-    "notificationRestoreCompleteTitle": "復元が完了しました",
     "offlineStorageUsage": "使用中のストレージ領域",
     "updateProgressManualMarkRead": "既読としてマークされた場合の更新の進行状況",
     "downloadNextChaptersN": "{n, plural, other{次の {n} 章}}",
@@ -1616,20 +1454,12 @@
     "onboardingWelcomeSubtitle": "Suwayomi のライブラリを読むためのリーダー。",
     "onboardingChooseTheme": "テーマを選択",
     "onboardingServerTitle": "サーバーに接続",
-    "onboardingServerSubtitle": "Tsumiru は Suwayomi サーバーから作品を読み込みます。",
     "onboardingServerPortHint": "Suwayomi の既定のポートは 4567 です。",
     "onboardingServerStepLabel": "ステップ 2 / 3",
-    "onboardingServerOnNetwork": "このネットワーク内",
-    "onboardingServerRemote": "リモート",
-    "onboardingServerNone": "サーバーがまだない",
-    "onboardingNoServerHelp": "後からでも大丈夫です。Suwayomi サーバーを用意して、設定画面から接続できます。",
     "onboardingNoServerLink": "サーバーの設定方法",
     "onboardingTestConnection": "接続をテスト",
-    "onboardingFindServer": "サーバーを検索",
     "onboardingResolvedAddress": "{url} にサーバーが見つかりました",
     "onboardingFoundAt": "アドレス：{address}",
-    "onboardingResolvedNoAuth": "このサーバーは使用できます。ログインは不要です。",
-    "onboardingResolvedNeedsAuth": "このサーバーにはログインが必要です。下にユーザー名とパスワードを入力してください。",
     "onboardingSearchNetwork": "ネットワーク内を検索",
     "onboardingCheckingConnection": "接続を確認中…",
     "onboardingSigningIn": "ログイン中…",
@@ -1641,16 +1471,12 @@
     "onboardingCredsRejected": "認証情報が受け付けられませんでした。ユーザー名、パスワード、ログイン方法を確認してください。",
     "onboardingNotReachedHttpsHint": "リバースプロキシを使用している場合は、HTTPS のアドレスを試してください。",
     "onboardingAuthMode": "ログイン方法",
-    "onboardingAuthModeAuto": "ユーザー名とパスワード（自動）",
     "onboardingAuthModeBasic": "BASIC認証",
     "onboardingAuthModeSimple": "シンプルログイン",
     "onboardingAuthModeUi": "UI Login",
-    "onboardingResolvedBasicGated": "{url} から応答がありましたが、ログインが必要なため内容を確認できません。「ユーザー名とパスワード」を選び、認証情報を入力してください。",
     "onboardingResolvedUnconfirmed": "{url} に接続できましたが、Suwayomi サーバーとしての応答がありませんでした。ルーターや別のアプリの可能性があります。アドレスとポートを確認するか、そのまま使用してください。",
     "onboardingNotReached": "このアドレスのサーバーに接続できませんでした。サーバーが起動していて、この端末から接続できるか確認してください。",
-    "onboardingUseAddressAnyway": "このアドレスをそのまま使用",
     "onboardingConnected": "接続済み：Suwayomi v{version}",
-    "onboardingConnectFailed": "サーバーに接続できませんでした。アドレスと、必要な場合はログイン情報を確認してください。",
     "onboardingDoneTitle": "準備ができました",
     "onboardingDoneSubtitle": "ソースを参照して、ライブラリに漫画を追加しましょう。",
     "minutesAgo": "{minutes, plural, =1{1分前} other{{minutes}分前}}",
@@ -1683,11 +1509,6 @@
     "filterHeaderSeries": "作品",
     "filterOptionUnfinished": "読み終えていない",
     "filterOptionNotInLibrary": "ライブラリに未登録",
-    "filterHeaderPublicationStatus": "連載状況",
-    "filterOptionNotCompleted": "未完結",
-    "filterHeaderContentRating": "年齢区分",
-    "filterOptionLewd": "成人向け",
-    "filterOptionNotLewd": "成人向け以外",
     "limitTitleLines": "タイトルを2行までに制限",
     "longStripWidthLimit": "最大幅",
     "longStripWidthLimitFullWidth": "全幅",
@@ -1718,7 +1539,6 @@
     "customColor": "カスタムカラー",
     "customHeaders": "カスタム HTTP ヘッダー",
     "onboardingCustomHeadersHint": "一部のプロキシやアクセスゲートウェイでのみ必要です。",
-    "customHeadersDescription": "サーバーへのすべてのリクエストに送信されます。認証ゲートウェイ、ゼロトラストの保護機能、リバースプロキシなどが追加のヘッダーを要求する場合にのみ必要です。",
     "customHeaderEmpty": "カスタムヘッダーはありません。サーバーの前段にある認証ゲートウェイやリバースプロキシが追加のヘッダーを要求する場合に追加してください。",
     "customHeaderName": "ヘッダー名",
     "customHeaderValue": "ヘッダーの値",
@@ -1726,7 +1546,6 @@
     "customHeaderNameInvalid": "無効なヘッダー名です。空白やコロンは使用できません。",
     "customHeaderExists": "同じ名前のヘッダーが既にあります。",
     "pureBlackAmoled": "完全な黒（AMOLED）",
-    "lewd": "成人向け",
     "libraryColumnsLandscape": "列数（横向き）",
     "libraryColumnsPortrait": "列数（縦向き）",
     "mangaSortLastUpdate": "最終更新",
@@ -1753,9 +1572,6 @@
     "readerModeChipLegacyContinuous": "連続横スクロール（旧方式）",
     "readerFeedbackToasts": "読書中の状態メッセージ",
     "readerFeedbackToastsSubtitle": "「次の章を読み込み中」や「これより後の章はありません」などを表示します",
-    "chapterSeparator": "章の区切り",
-    "lastChapterNotification": "最後の章です",
-    "firstChapterNotification": "最初の章です",
     "loadingNextChapter": "次の章を読み込み中…",
     "loadingPreviousChapter": "前の章を読み込み中…",
     "noMoreChaptersAhead": "次の章がありません",
@@ -1765,17 +1581,9 @@
     "failedToLoadNextChapter": "次の章を読み込めませんでした",
     "failedToLoadPreviousChapter": "前の章を読み込めませんでした",
     "chapterCompleted": "章を読み終えました",
-    "readerKeepScreenOnSubtitle": "読書中に画面がスリープしないようにします",
     "migrateReaderSettings": "リーダー設定",
     "migrateOfflineSettings": "オフライン保持ルール",
     "bulkMigrationTitle": "ソースを移行",
-    "targetSourcesPriority": "移行先のソース",
-    "targetSourcesPriorityHint": "各作品を上から順にこれらのソースで検索します。ドラッグで並べ替えられます。",
-    "availableSources": "利用できるソース",
-    "noTargetSourcesSelected": "検索する移行先のソースを1つ以上追加してください。",
-    "searchManually": "各候補を手動で選択",
-    "searchManuallyDescription": "自動で対応付けず、移行先を1件ずつ確認して選びます。",
-    "migrationPausedReauth": "一時停止中です。再度ログインすると続行できます。",
     "migrationSelectSourcesTitle": "ソースを選択",
     "migrationListTitleProgress": "移行（{done}/{total}）",
     "migrationLatestChapter": "最新の章：{chapter}",
@@ -1788,22 +1596,7 @@
     "migrationFilterObsolete": "古いソースのみ表示",
     "migrationSortMode": "並べ替え方法",
     "migrationSortDirection": "並べ替え方向",
-    "migrationNeedsMigration": "移行が必要",
-    "migrationOtherSources": "その他のソース",
-    "migrationSourceSeriesCount": "{count, plural, =1{1作品} other{{count}作品}}",
     "migrationNoLibrarySources": "ライブラリが空のため、移行する作品がありません。",
-    "migrationGroupNeedsReview": "確認が必要",
-    "migrationGroupNoMatch": "候補なし",
-    "migrationGroupFailed": "失敗",
-    "migrationGroupReady": "準備完了",
-    "migrationGroupInProgress": "処理中",
-    "migrationGroupDone": "完了",
-    "migrationGroupSkipped": "スキップ済み",
-    "migrationFindManually": "手動で検索",
-    "migrationOverwriteTracking": "移行先のトラッカー連携を上書き",
-    "migrationKeepTargetTracking": "移行先の作品は既にトラッカーと連携しています。その連携を保持するか、移行元の連携で上書きしてください。",
-    "migrationLargeBatchWarning": "対象の作品数が多いため、時間がかかり、ソースへのリクエスト数も多くなる場合があります。",
-    "migrationTrackerCollisionSummary": "{count, plural, =1{1作品は移行先で既にトラッカーと連携しています。上書きを選ばない限り、その連携を保持します。} other{{count}作品は移行先で既にトラッカーと連携しています。上書きを選ばない限り、その連携を保持します。}}",
     "migrationActionMigrateDescription": "各作品を新しいソースに移し、元の作品をライブラリから削除します。",
     "migrationActionCopyDescription": "各作品を新しいソースから追加し、元の作品もライブラリに残します。",
     "migrateSeriesCount": "{count}作品を移行",
@@ -1815,7 +1608,6 @@
     "notificationChaptersGeneric": "新しい章が {count} 章",
     "notificationChaptersMultipleAndMore": "第 {numbers} 章と、ほか {count} 章",
     "libraryUpdateErrorsEmpty": "更新エラーはありません",
-    "libraryUpdateErrorsEmptyDetail": "更新できなかった作品がここに表示されます",
     "notificationLibraryErrorTitle": "ライブラリの更新に失敗",
     "notificationLibraryErrorBody": "{count}作品を更新できませんでした",
     "notificationDownloadErrorTitle": "ダウンロードに失敗",
@@ -1825,14 +1617,9 @@
     "notificationDownloadsPausedService": "ダウンロードを開始できませんでした。「ダウンロード」で「再試行」をタップしてください。",
     "notificationDownloadsPausedNoServer": "接続がありません。接続が戻ると再開します。",
     "notificationDownloadsPausedWifi": "Wi-Fi 接続を待っています。",
-    "notificationBackupCompleteTitle": "バックアップ完了",
-    "notificationRestoreFailedTitle": "復元に失敗",
     "notificationAppUpdateBody": "Tsumiru {version} が利用できます",
     "notificationExtensionUpdateBody": "{count}件の拡張機能に更新があります",
     "notificationIncognitoBody": "履歴と読書の進捗の更新を停止しています",
-    "notificationsErrors": "エラー通知",
-    "notificationsErrorsSubtitle": "ダウンロードやライブラリ更新の失敗",
-    "notificationsBackup": "バックアップ通知",
     "notificationsAppUpdates": "アプリの更新通知",
     "notificationsExtensionUpdates": "拡張機能の更新通知",
     "notificationDownloadsCompleteTitle": "ダウンロード完了",
@@ -1850,8 +1637,6 @@
     "retryAll": "すべて再試行",
     "searchLibraryHint": "タイトル、作者、ソースを検索…",
     "selectBelow": "下の項目をすべて選択",
-    "serverOwnSettingsCaption": "ここでは Suwayomi サーバー自体を変更します。このアプリからサーバーへの接続設定ではありません。",
-    "serverSettingsSubtitle": "Suwayomi サーバー自体を設定します。",
     "serverSignedOutTitle": "ログアウトしました",
     "serverSignedOutSubtitle": "サーバーが認証情報を受け付けませんでした。接続設定から再度ログインしてください。",
     "serverUnreachableTitle": "サーバーに接続できません",
@@ -1864,7 +1649,6 @@
     "crashLogCopied": "デバッグログをクリップボードにコピーしました",
     "noCrashLog": "デバッグログがありません",
     "addLocalNetworkAddress": "ローカルネットワークのアドレスを追加",
-    "serverExternalUrl": "外部・リモート URL",
     "serverLanUrl": "内部・LAN URL",
     "serverLanUrlOptional": "任意",
     "serverLanUrlHintText": "http://192.168.1.100:4567",
@@ -1890,11 +1674,9 @@
     "updatesGroupingModeExpanded": "展開する",
     "updatesGroupingShowMore": "ほか {count} 件",
     "updatingLibraryProgress": "ライブラリを更新中（{percent}%・{checked}/{total}）",
-    "offline": "オフライン",
     "offlineStorageSection": "ストレージ",
     "offlineRemoveAllDownloads": "すべてのダウンロードを削除",
     "offlineRemoveAllConfirm": "この端末にダウンロードしたすべての章を削除しますか？サーバーのライブラリには影響しません。",
-    "offlineSafetyNets": "保護設定",
     "downloadOverWifiOnly": "Wi-Fi 接続時のみダウンロード",
     "downloadNewChaptersInBackground": "新しい章をバックグラウンドでダウンロード",
     "downloadNewChaptersInBackgroundDescription": "アプリを開かずに、オフラインで保持する作品の新しい章を取得します",
@@ -1918,11 +1700,8 @@
     "offlineSheetTitle": "オフラインで読む",
     "viewOffline": "オフラインで表示",
     "offlineSheetSubtitle": "この端末に章を保存し、読み進めると自動で補充します。上部の雲アイコンから行うサーバーのダウンロードとは別です。",
-    "offlineDownloadAll": "すべての章をダウンロード",
     "offlineRemoveSeries": "この作品の保存分をすべて削除",
     "offlineDownloadingToast": "この端末にダウンロード中…",
-    "manageDownloads": "ダウンロードを管理",
-    "manageDownloadsEmpty": "自動ダウンロードの登録はまだありません",
     "manageDownloadsNothingYet": "まだダウンロードしていません",
     "offlineManualOnly": "手動のみ",
     "manageDownloadsChangeRule": "ルールを変更",
@@ -1940,7 +1719,6 @@
     "addTag": "タグを追加",
     "tags": "タグ",
     "searchForExtensions": "拡張機能を検索",
-    "noTagsYet": "ライブラリにタグはまだありません",
     "searchTips": "検索のヒント",
     "updateProgressManualMarkReadDesc": "複数の章をまとめて既読にする場合には適用しません",
     "reLogin": "トークンの有効期限が切れました。再度ログインしてください",
@@ -1961,7 +1739,6 @@
     "groupByStatus": "状態別",
     "groupUngrouped": "グループなし",
     "groupByTrackStatus": "トラッカーの状態別",
-    "copyPageLink": "ページのリンクをコピー",
     "copiedImage": "画像をコピーしました",
     "shareImage": "画像を共有",
     "saveToGallery": "ギャラリーに保存",
@@ -2035,7 +1812,6 @@
     "accountRoleUnknown": "不明な役割",
     "accountSignOut": "ログアウト",
     "accountSignOutConfirmation": "このアカウントからログアウトしますか？ダウンロード済みの章は、この端末に残ります。",
-    "accountBuiltInPassword": "このアカウントのパスワードはサーバー設定で管理されています。",
     "accountPermissionInstallExtensions": "拡張機能をインストール",
     "accountPermissionInstallExternalExtensions": "拡張機能ファイルをインストール",
     "accountPermissionUninstallExtensions": "拡張機能をアンインストール",
@@ -2071,7 +1847,6 @@
     "accountCatalogueRemoveTitle": "アカウントのダウンロードを削除しますか？",
     "accountCatalogueRemoveConfirm": "{server} の「{account}」に属するダウンロード済みの章とオフラインライブラリを、この端末から削除しますか？サーバーのデータは変更されません。",
     "accountCatalogueRemoveFailed": "アカウントのダウンロードを削除できませんでした。使用中の可能性があります。",
-    "recommendationsUnavailableWeb": "このおすすめ機能はウェブ版では利用できません。",
     "offlineRecoveryRunning": "ダウンロードを復元中です。アプリは引き続き利用できます。",
     "offlineRecoveryFailed": "ダウンロードの復元が停止しました。既存のファイルは保持されています。再試行すると続行できます。",
     "offlineRecoveryUnavailable": "ダウンロードの復元中は、保存済みの章を一時的に利用できません。",

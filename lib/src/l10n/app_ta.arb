@@ -159,10 +159,6 @@
             }
         }
     },
-    "createBackupDescription": "டச்சிடெச்க் காப்புப்பிரதியாக காப்பு நூலகம்",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
-    },
     "createBackupTitle": "காப்புப்பிரதியை உருவாக்கவும்",
     "@createBackupTitle": {
         "description": "Button text to create backup"
@@ -170,10 +166,6 @@
     "credentials": "நற்சான்றிதழ்கள்",
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"
-    },
-    "current": "மின்னோட்ட்ம், ஓட்டம்",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
     },
     "daysAgo": "{days} சில நாட்களுக்கு முன்பு",
     "@daysAgo": {
@@ -297,14 +289,6 @@
     "@extensionListEmpty": {
         "description": "Description to show that Extension list is empty in Extension list tab of Browse screen"
     },
-    "extensionRepository": "நீட்டிப்பு களஞ்சியம்",
-    "@extensionRepository": {
-        "description": "Screen title text for Extension repository settings screen"
-    },
-    "extensionRepositoryDescription": "நீட்டிப்புகளை நிறுவக்கூடிய களஞ்சியங்களைச் சேர்க்கவும்",
-    "@extensionRepositoryDescription": {
-        "description": "Subtitle text for Extension repository settings property"
-    },
     "extensions": "நீட்டிப்புகள்",
     "@extensions": {
         "description": "Extension list Tab title in Browse Screen"
@@ -349,10 +333,6 @@
     "@help": {
         "description": "Button text of help in about screen"
     },
-    "hideEmptyCategory": "வெற்று வகையை மறைக்கவும்",
-    "@hideEmptyCategory": {
-        "description": "Switch button text to Hide empty category in library"
-    },
     "inLibrary": "நூலகத்தில்",
     "@inLibrary": {
         "description": "Button and Chip text to show that the manga is in Library"
@@ -368,10 +348,6 @@
     "installingExtension": "நீட்டிப்பை நிறுவுதல்",
     "@installingExtension": {
         "description": "Toast text to show that the extension is installing"
-    },
-    "invalidPort": "தவறான துறைமுகம்",
-    "@invalidPort": {
-        "description": "Error when Submitted invalid Port Number"
     },
     "invalidProp": "தவறான {property}",
     "@invalidProp": {
@@ -390,10 +366,6 @@
         "description": "Button text to show that the extension is installing"
     },
     "ipHintText": "சேவையக பிணைப்பு ஐபி முகவரியை உள்ளிடவும்",
-    "isTrueBlack": "உண்மையான கருப்பு",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
-    },
     "languages": "மொழிகள்",
     "@languages": {
         "description": "Popup title to filter extensions based on language"
@@ -421,10 +393,6 @@
     "mangaGridSize": "மங்கா கட்டம் அளவு",
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
-    },
-    "mangaMissingSources": "மங்கா காணாமல் போன ஆதாரங்கள்",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "mangaSortLastRead": "கடைசியாக படியுங்கள்",
     "@mangaSortLastRead": {
@@ -474,10 +442,6 @@
     "@missingExtension": {
         "description": "Group title to show the Missing Extensions when restoring Backup"
     },
-    "missingTrackers": "காணாமல் போன டிராக்கர்கள்",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
-    },
     "more": "மேலும்",
     "@more": {
         "description": "Screen title and Navigation text of More screen"
@@ -506,10 +470,6 @@
     "@nMinutes": {
         "description": "Text to represent 'n' Minutes"
     },
-    "nRepo": "{n, plural, =1{1 Repo} other{{n} repos}}",
-    "@nRepo": {
-        "description": "Text to show n repo as subtitle"
-    },
     "nSeconds": "{n, plural, =1{1 second} other{{n} விநாடிகள்}}",
     "@nSeconds": {
         "description": "Text to represent 'n' seconds"
@@ -535,10 +495,6 @@
     "newUpdateAvailable": "புதிய புதுப்பிப்பு கிடைக்கிறது",
     "@newUpdateAvailable": {
         "description": "Popup title to show that the App/Server has and update"
-    },
-    "nextChapter": "அடுத்து: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
     },
     "noCategoriesFound": "உங்களிடம் எந்த வகைகளும் இல்லை.\n (உதவிக்குறிப்பு: உங்கள் நூலகத்தை ஒழுங்கமைக்க ஒன்றை உருவாக்க பிளச் பொத்தானைத் தட்டவும்)",
     "@noCategoriesFound": {
@@ -610,10 +566,6 @@
     "@nsfw18": {
         "description": "18+ tag Text to show in extensions list"
     },
-    "nsfwInfo": "இது பயன்பாட்டில் NSFW (18+) உள்ளடக்கத்தை வெளிப்படுத்துவதிலிருந்து அதிகாரப்பூர்வமற்ற அல்லது தவறான கொடிய நீட்டிப்புகளைத் தடுக்காது",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
-    },
     "numSelected": "{num} தேர்ந்தெடுக்கப்பட்டது",
     "@numSelected": {
         "description": "Title text to show the number of chapters selected in the Manga details screen and Updates screen",
@@ -627,10 +579,6 @@
     "obsolete": "வழக்கற்றுப்போன",
     "@obsolete": {
         "description": "Text to show that the extension has become Obsolete"
-    },
-    "openFlareSolverr": "அதை எவ்வாறு அமைப்பது என்பது குறித்த தகவலுக்கு Fectout Flaresolverr",
-    "@openFlareSolverr": {
-        "description": "Text for link to Open Flare Solverr setup documentation"
     },
     "openInWeb": "வலையில் திறந்திருக்கும்",
     "@openInWeb": {
@@ -657,10 +605,6 @@
     "pinchToZoom": "பெரிதாக்க கிள்ளுதல்",
     "@pinchToZoom": {
         "description": "Switch title to enable pinch to zoom in reader screen"
-    },
-    "previousChapter": "முந்தைய: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
     },
     "quickSearch": "விரைவான தேடல்",
     "@quickSearch": {
@@ -759,14 +703,6 @@
     "@readerVolumeTapInvert": {
         "description": "Switch button text to invert Volume Tap "
     },
-    "readerVolumeTapSubtitle": "தொகுதி விசைகளுடன் செல்லவும்",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
-    },
-    "reddit": "ரெடிட்",
-    "@reddit": {
-        "description": "Reddit app title"
-    },
     "refresh": "புதுப்பிப்பு",
     "@refresh": {
         "description": "Refresh button text"
@@ -790,10 +726,6 @@
     "restore": "மீட்டமை",
     "@restore": {
         "description": "Button Text to create backup"
-    },
-    "restoreBackupDescription": "காப்புப்பிரதியிலிருந்து டச்சிடெச்கை மீட்டெடுக்கவும்",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "restoreBackupTitle": "காப்புப்பிரதியை மீட்டமைக்கவும்",
     "@restoreBackupTitle": {
@@ -846,10 +778,6 @@
     "serverPort": "சேவையகம் துறைமுகம்",
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
-    },
-    "serverPortHintText": "சேவையக துறைமுகம்",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
     },
     "serverUrl": "சேவையக முகவரி",
     "@serverUrl": {
@@ -939,10 +867,6 @@
     "@unknownAuthor": {
         "description": "Text to show unknown author in Manga details screen"
     },
-    "unknownManga": "தெரியாத மங்கா",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
-    },
     "unknownSource": "தெரியாத சான்று",
     "@unknownSource": {
         "description": "Text to show unknown Source in Manga details screen"
@@ -958,10 +882,6 @@
     "updateCompleted": "புதுப்பிப்பு முடிந்தது",
     "@updateCompleted": {
         "description": "Button text to show that extension update is completed"
-    },
-    "updateFailed": "{property} புதுப்பிக்கத் தவறிவிட்டது",
-    "@updateFailed": {
-        "description": "Failed to update Text"
     },
     "updates": "புதுப்பிப்புகள்",
     "@updates": {
@@ -1033,10 +953,6 @@
     "@advanced": {
         "description": "Section title Text for Advanced Section"
     },
-    "allScanlators": "அனைத்து ச்கேன்லேட்டர்களும்",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "autoDownloadNewChapters": "புதிய அத்தியாயங்களைப் பதிவிறக்கவும்",
     "@autoDownloadNewChapters": {
         "description": "Toggle's title to change Auto Download New Chapters settings"
@@ -1107,18 +1023,6 @@
     "@globalUpdate": {
         "description": "Button text of Global Manga Update"
     },
-    "gqlDebugLogs": "கிராஃபிக்யூஎல் பிழைத்திருத்த பதிவுகள்",
-    "@gqlDebugLogs": {
-        "description": "Switch title for Graphql Debug logs in settings"
-    },
-    "gqlDebugLogsHint": "தனியுரிமை அல்லாத பாதுகாப்பான தகவல்களுடன் பதிவுகள் இதில் அடங்கும்",
-    "@gqlDebugLogsHint": {
-        "description": "Switch subTitle for Graphql Debug logs in settings"
-    },
-    "misc": "இதர",
-    "@misc": {
-        "description": "Section title for misc settings"
-    },
     "password": "கடவுச்சொல்",
     "@password": {
         "description": "Title text for password field"
@@ -1159,39 +1063,15 @@
     "@themeModeSystem": {
         "description": "Radio button text for App theme - System"
     },
-    "migrationFailed": "இடம்பெயர்வு தோல்வியடைந்தது",
     "migrateChapters": "அத்தியாயங்கள் இடம்பெயர்",
-    "migrateChaptersDescription": "புதிய மூலத்திற்கு அத்தியாயத்தை படிக்கவும்",
     "migrateCategories": "இடம்பெயர் வகைகள்",
-    "migrateCategoriesDescription": "மங்கா வகைகளை புதிய மூலத்திற்கு நகலெடுக்கவும்",
     "migrateDownloads": "பதிவிறக்கங்களை மாற்றவும்",
     "migrationSettings": "இடம்பெயர்வு அமைப்புகள்",
-    "migrateTrackingDescription": "கண்காணிப்பு தகவல்களை புதிய மூலத்திற்கு நகலெடுக்கவும்",
-    "checkSourceConfiguration": "உங்கள் மூல உள்ளமைவை சரிபார்க்கவும்",
-    "noAlternativeSources": "மாற்று ஆதாரங்கள் எதுவும் கிடைக்கவில்லை",
-    "installMoreSources": "இடம்பெயர்வு செயல்படுத்த கூடுதல் ஆதாரங்களை நிறுவவும்",
     "errorFetchingSourceManga": "மூல மங்காவைப் பெறுவதில் தோல்வி",
     "errorSourceMangaNotFound": "மூல மங்கா கண்டுபிடிக்கப்படவில்லை",
-    "importantNotice": "முக்கியமான அறிவிப்பு",
-    "migrationWarning": "இது உங்கள் மங்கா தரவை நிரந்தரமாக நகர்த்தும். இந்த செயலை செயல்தவிர்க்க முடியாது.",
-    "migrationConfirmationMessage": "இந்த மங்காவை நீங்கள் நிச்சயமாக மாற்ற விரும்புகிறீர்களா? இந்த செயலை செயல்தவிர்க்க முடியாது.",
-    "deleteSourceWarning": "இடம்பெயர்வுக்குப் பிறகு அசல் மங்கா உங்கள் நூலகத்திலிருந்து அகற்றப்படும்.",
-    "preparingMigration": "இடம்பெயர்வு தயாரித்தல் ...",
-    "cancelMigration": "இடம்பெயர்வு நீக்கறல்",
-    "migrationCancelledMessage": "இடம்பெயர்வு செயல்முறை ரத்து செய்யப்பட்டுள்ளது. எந்த மாற்றங்களும் செய்யப்படவில்லை.",
-    "cancelMigrationConfirmation": "இடம்பெயர்வுகளை ரத்து செய்ய விரும்புகிறீர்களா? இந்த செயலை செயல்தவிர்க்க முடியாது.",
-    "deleteSourceManga": "மூல மங்காவை நீக்கு",
-    "deleteSourceMangaDescription": "இடம்பெயர்வுக்குப் பிறகு நூலகத்திலிருந்து அசல் மங்காவை அகற்றவும்",
-    "done": "முடிந்தது",
     "yes": "ஆம்",
     "no": "இல்லை",
-    "from": "இருந்து",
-    "to": "பெறுநர்",
-    "migrationDetails": "இடம்பெயர்வு விவரங்கள்",
     "searchAllSources": "அனைத்து ஆதாரங்களையும் தேடுங்கள்",
-    "noMatchingMangaFound": "எந்தவொரு மூலத்திலும் பொருந்தக்கூடிய மங்கா இல்லை",
-    "searchingAllSources": "கிடைக்கக்கூடிய அனைத்து ஆதாரங்களிலும் தேடுகிறது ...",
-    "deleteSourceAfterMigration": "இடம்பெயர்வுக்குப் பிறகு மூல மங்காவை நீக்கு",
     "tryDifferentSearchTerm": "வேறு தேடல் காலத்தை முயற்சிக்கவும்",
     "errorOccurred": "பிழை ஏற்பட்டது",
     "viewManga": "மங்காவைக் காண்க",
@@ -1202,43 +1082,18 @@
     "history": "வரலாறு",
     "searchHistory": "தேடல் வரலாறு ...",
     "noHistoryFound": "வாசிப்பு வரலாறு எதுவும் கிடைக்கவில்லை",
-    "startReadingToSeeHistory": "உங்கள் வரலாற்றை இங்கே காண மங்காவைப் படிக்கத் தொடங்குங்கள்",
     "noSearchResults": "தேடல் முடிவுகள் இல்லை",
     "mangaSortLastUpdated": "கடைசியாக புதுப்பிக்கப்பட்டது",
     "@mangaSortLastUpdated": {
         "description": "Radio button text for Manga sort Type - Last Updated"
     },
     "migrate": "இடம்பெயர்வு",
-    "migrationSelectTargetSource": "இலக்கு மூலத்தைத் தேர்ந்தெடுக்கவும்",
-    "migrationPreview": "இடம்பெயர்வு முன்னோட்டம்",
-    "migrationInProgress": "இடம்பெயர்வு முன்னேற்றம்",
-    "migrationComplete": "இடம்பெயர்வு வெற்றிகரமாக முடிந்தது",
-    "migrationSearchInSource": "{sourceName} இல் தேடு",
-    "migrationCancelled": "இடம்பெயர்வு ரத்து செய்யப்பட்டது",
-    "migrateDownloadsDescription": "பதிவிறக்கம் செய்யப்பட்ட அத்தியாயங்களை புதிய மூலத்திற்கு நகர்த்தவும்",
-    "migrationOptions": "இடம்பெயர்வு விருப்பங்கள்",
     "migrateTracking": "கண்காணிப்பு இடம்பெயர்",
-    "selectTargetSource": "இலக்கு மூலத்தைத் தேர்ந்தெடுக்கவும்",
-    "noSourcesAvailable": "இடம்பெயர்வுக்கு ஆதாரங்கள் எதுவும் கிடைக்கவில்லை",
-    "errorLoadingSources": "ஆதாரங்களை ஏற்றுவதில் பிழை",
     "errorGettingMigrationSources": "Failed பெறுநர் get குடிபெயர்வு மூலங்கள்",
     "errorSearchingMangaInSource": "மங்காவை மூலத்தில் தேடத் தவறிவிட்டது",
     "errorFetchingTargetManga": "இலக்கு மங்காவைப் பெறுவதில் தோல்வி",
     "errorTargetMangaNotFound": "இலக்கு மங்கா கிடைக்கவில்லை",
-    "searchManga": "மங்காவைத் தேடுங்கள் ...",
-    "searchForManga": "இலக்கு மூலத்தில் மங்காவைத் தேடுங்கள்",
-    "enterSearchTerm": "மங்காவைக் கண்டுபிடிக்க ஒரு தேடல் காலத்தை உள்ளிடவும்",
     "noResultsFound": "முடிவுகள் எதுவும் கிடைக்கவில்லை",
-    "tryDifferentSearch": "வேறு தேடல் காலத்தை முயற்சிக்கவும்",
-    "searchError": "தேடல் பிழை",
-    "confirmMigration": "இடம்பெயர்வு உறுதிப்படுத்தவும்",
-    "startMigration": "இடம்பெயர்வு தொடங்கவும்",
-    "migrationCompleted": "இடம்பெயர்வு முடிந்தது!",
-    "migrationSuccessMessage": "உங்கள் மங்கா வெற்றிகரமாக புதிய மூலத்திற்கு இடம்பெயர்ந்துள்ளது.",
-    "quickPresets": "விரைவான முன்னமைவுகள்",
-    "quickMigration": "விரைவான",
-    "fullMigration": "முழு",
-    "customMigration": "தனிப்பயன்",
     "animatePageTransitions": "பக்க மாற்றங்களை உயிரூட்டவும்",
     "authLogout": "விடுபதிகை",
     "autoDownloadCategories": "வகைகள்",
@@ -1251,7 +1106,6 @@
     "imageScaleTypeOriginalSize": "அசல் அளவு",
     "imageScaleTypeSmartFit": "அறிவுள்ள பொருத்தம்",
     "imageScaleTypeStretch": "நீட்டிக்க",
-    "landscapeZoom": "தானாகவே பரந்த படங்களாக பெரிதாக்கவும்",
     "navigateToPan": "பரந்த படங்களை பான்",
     "pageLayoutSinglePage": "ஒற்றை பக்கம்",
     "readerForThisSeries": "இந்த தொடருக்கு",
@@ -1288,7 +1142,6 @@
     "categoryNumberOfItems": "பொருட்களின் எண்ணிக்கையைக் காட்டு",
     "categoryTabs": "வகை தாவல்களைக் காட்டு",
     "autoScroll": "ஆட்டோ ச்க்ரோல்",
-    "tabs": "தாவல்கள்",
     "continueReadingButton": "படிப்பு பொத்தானைத் தொடரவும்",
     "languageBadge": "மொழி",
     "chapterDisplayChapterNumber": "அத்தியாயம் எண்",
@@ -1304,7 +1157,6 @@
     "setCategories": "வகைகளை அமைக்கவும்",
     "ok": "சரி",
     "deleteChaptersConfirm": "தேர்ந்தெடுக்கப்பட்ட அத்தியாயங்களை நீக்க விரும்புகிறீர்களா?",
-    "deleteChapters": "அத்தியாயங்களை நீக்கு",
     "deleteChapterAfterManuallyMarkedRead": "அத்தியாயத்தை கைமுறையாக வாசித்தபின் நீக்கு",
     "deleteFinishedChaptersWhileReading": "படிக்கும் போது முடிக்கப்பட்ட அத்தியாயங்களை நீக்கு",
     "allowDeletingBookmarkedChapters": "புக்மார்க்கு செய்யப்பட்ட அத்தியாயங்களை நீக்க அனுமதிக்கவும்",
@@ -1325,7 +1177,6 @@
     "filterOptionFinished": "முடிந்தது",
     "filterHeaderLibrary": "நூலகம்",
     "filterOptionInLibrary": "நூலகத்தில்",
-    "filterOptionCompleted": "முடிந்தது",
     "unreadBadgeModeHidden": "மறை",
     "groupStyleTabs": "தாவல்கள்",
     "downloadAllChapters": "அனைத்தும்",
@@ -1398,13 +1249,10 @@
     "migrationAvailableHeader": "கிடைக்கிறது",
     "migrationDataToMigrateHeader": "இடம்பெயர தரவு",
     "migrationObsoleteSource": "வழக்கற்றுப்போன",
-    "migrationSelectAll": "அனைத்தையும் தெரிவுசெய்",
     "migrationInvertSelection": "தலைகீழ்",
-    "migrationRetry": "மீண்டும் முயற்சிக்கவும்",
     "migrationActionMigrate": "இடம்பெயர்வு",
     "migrationActionCopy": "நகலெடு",
     "notificationDownloadsPausedTitle": "பதிவிறக்கங்கள் இடைநிறுத்தப்பட்டன",
-    "notificationBackupFailedTitle": "காப்புப்பிரதி தோல்வியடைந்தது",
     "notificationAppUpdateTitle": "புதுப்பிப்பு கிடைக்கிறது",
     "notificationExtensionUpdateTitle": "நீட்டிப்பு புதுப்பிப்புகள்",
     "notificationIncognitoTitle": "மறைநிலை பயன்முறை",
@@ -1415,15 +1263,12 @@
     "webtoonScaleTypeFitScreen": "திரை பொருத்தம்",
     "webtoonScaleTypeOriginalSize": "அசல் அளவு",
     "serverAddress": "சேவையக முகவரி",
-    "started": "தொடங்கியது",
     "upcoming": "வரவிருக்கும்",
     "unifiedSearchLibrarySection": "நூலகம்",
     "updatesGroupingModeDisabled": "முடக்கப்பட்டது",
     "offlineDownloadsSection": "பதிவிறக்கங்கள்",
-    "keepOfflineOff": "அணை",
     "downloadsServerTab": "சேவையகம்",
     "tracking": "கண்காணிப்பு",
-    "searchForSources": "ஆதாரங்களைத் தேடுங்கள்",
     "copyToClipboard": "இடைநிலைப்பலகைக்கு நகலெடுக்கவும்",
     "copiedToClipboard": "இடைநிலைப்பலகைக்கு நகலெடுக்கப்பட்டது",
     "updateProgressAfterReading": "படித்த பிறகு முன்னேற்றத்தைப் புதுப்பிக்கவும்",
@@ -1441,7 +1286,6 @@
     "trackMarkPublic": "பகிரங்கமாக கண்காணிக்கவும்",
     "filterTracked": "கண்காணிக்கப்பட்டது",
     "copyImageToClipboard": "நகலெடு",
-    "zoomStart": "சூம் தொடக்க நிலை",
     "zoomStartAutomatic": "தானியங்கி",
     "zoomStartCenter": "நடுவண்",
     "zoomStartLeft": "இடது",
@@ -1461,7 +1305,6 @@
     "duplicateSkipAll": "அனைத்தையும் தவிர்க்கவும்",
     "actionShowEntry": "நுழைவு காட்டு",
     "duplicatedEntries": "நகல் உள்ளீடுகள்",
-    "duplicatedEntriesSubtitle": "உங்கள் நூலகத்தில் அனைத்து நகல் உள்ளீடுகளையும் காட்டுங்கள்",
     "checkDescription": "விளக்கத்தை சரிபார்க்கவும்",
     "offlineChaptersScreenTitle": "பதிவிறக்கம் செய்யப்பட்ட அத்தியாயங்கள்",
     "offlineChaptersDownloadedSection": "பதிவிறக்கம்",
@@ -1486,7 +1329,6 @@
     "notificationChapterSingleAndMore": "அத்தியாயம் {number} மற்றும் {count} மேலும்",
     "notificationChaptersMultiple": "அத்தியாயங்கள் {numbers}",
     "smartUpdateExpected": "புதிய அத்தியாயங்கள் சுமார் {predicted} இல் வெளியிடப்படும் என்று கணிக்கப்பட்டுள்ளது, ஒவ்வொரு {interval} ஐச் சுற்றி உள்ளது.",
-    "httpErrorCheckWebView": "Http {statusCode}, வெப்வியூவில் வலைத்தளத்தைப் பாருங்கள்",
     "trackRemoveAlsoOnRemote": "{trackerName} இலிருந்து அகற்றவும்",
     "libraryLastUpdated": "கடைசியாக புதுப்பிக்கப்பட்டது: {time}",
     "invertSplitPagesPlacement": "பிளவு பக்க வேலைவாய்ப்பு தலைகீழ்",
@@ -1494,7 +1336,6 @@
     "unreadBadgeMode": "படிக்காத பேட்ச்கள்",
     "migrationHideUnmatched": "போட்டி இல்லாமல் உள்ளீடுகளை மறைக்கவும்",
     "migrationHideWithoutUpdates": "புதிய அத்தியாயங்கள் இல்லாமல் உள்ளீடுகளை மறைக்கவும்",
-    "notificationRestoreCompleteTitle": "மீட்டமை முடிந்தது",
     "offlineStorageUsage": "சேமிப்பக பயன்பாடு",
     "updateProgressManualMarkRead": "படிக்கும்போது முன்னேற்றத்தைப் புதுப்பிக்கவும்",
     "noMoreChaptersAhead": "அடுத்த அத்தியாயம் இல்லை"
