@@ -179,80 +179,6 @@ class LibrarySettingsScreen extends ConsumerWidget {
                         ],
                       ),
                       // HideEmptyCategoryTile(),
-                      SettingsGroupHeading(
-                        label: context.l10n.settingsSectionBehavior,
-                      ),
-                      Builder(
-                        builder: (context) {
-                          final swipeLeft =
-                              ref.watch(chapterSwipeToLeftProvider) ??
-                              DBKeys.chapterSwipeToLeft.initial
-                                  as ChapterSwipeAction;
-                          final swipeRight =
-                              ref.watch(chapterSwipeToRightProvider) ??
-                              DBKeys.chapterSwipeToRight.initial
-                                  as ChapterSwipeAction;
-                          void pickSwipe({
-                            required String title,
-                            required ChapterSwipeAction value,
-                            required ValueChanged<ChapterSwipeAction> onChange,
-                          }) => showDialog<void>(
-                            context: context,
-                            builder: (context) =>
-                                RadioListPopup<ChapterSwipeAction>(
-                                  title: title,
-                                  optionList: ChapterSwipeAction.values,
-                                  value: value,
-                                  getOptionTitle: (v) => v.toLocale(context),
-                                  onChange: (v) {
-                                    onChange(v);
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                            animationStyle: context.motionStyle,
-                          );
-                          return SettingsGroupCard(
-                            children: [
-                              SettingsHighlightTarget(
-                                id: 'chapterSwipeToLeft',
-                                child: ListTile(
-                                  title: Text(context.l10n.chapterSwipeToLeft),
-                                  subtitle: Text(swipeLeft.toLocale(context)),
-                                  onTap: () => pickSwipe(
-                                    title: context.l10n.chapterSwipeToLeft,
-                                    value: swipeLeft,
-                                    onChange: (v) => ref
-                                        .read(
-                                          chapterSwipeToLeftProvider.notifier,
-                                        )
-                                        .update(v),
-                                  ),
-                                ),
-                              ),
-                              SettingsHighlightTarget(
-                                id: 'chapterSwipeToRight',
-                                child: ListTile(
-                                  title: Text(context.l10n.chapterSwipeToRight),
-                                  subtitle: Text(swipeRight.toLocale(context)),
-                                  onTap: () => pickSwipe(
-                                    title: context.l10n.chapterSwipeToRight,
-                                    value: swipeRight,
-                                    onChange: (v) => ref
-                                        .read(
-                                          chapterSwipeToRightProvider.notifier,
-                                        )
-                                        .update(v),
-                                  ),
-                                ),
-                              ),
-                              const SettingsHighlightTarget(
-                                id: 'refreshChaptersFromSource',
-                                child: RefreshChaptersFromSourceTile(),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
                       SettingsGroupHeading(label: context.l10n.globalUpdate),
                       SettingsGroupCard(
                         children: [
@@ -383,6 +309,80 @@ class LibrarySettingsScreen extends ConsumerWidget {
                           ),
                           const ShowUpdateProgressBannerTile(),
                         ],
+                      ),
+                      SettingsGroupHeading(
+                        label: context.l10n.settingsSectionBehavior,
+                      ),
+                      Builder(
+                        builder: (context) {
+                          final swipeLeft =
+                              ref.watch(chapterSwipeToLeftProvider) ??
+                              DBKeys.chapterSwipeToLeft.initial
+                                  as ChapterSwipeAction;
+                          final swipeRight =
+                              ref.watch(chapterSwipeToRightProvider) ??
+                              DBKeys.chapterSwipeToRight.initial
+                                  as ChapterSwipeAction;
+                          void pickSwipe({
+                            required String title,
+                            required ChapterSwipeAction value,
+                            required ValueChanged<ChapterSwipeAction> onChange,
+                          }) => showDialog<void>(
+                            context: context,
+                            builder: (context) =>
+                                RadioListPopup<ChapterSwipeAction>(
+                                  title: title,
+                                  optionList: ChapterSwipeAction.values,
+                                  value: value,
+                                  getOptionTitle: (v) => v.toLocale(context),
+                                  onChange: (v) {
+                                    onChange(v);
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                            animationStyle: context.motionStyle,
+                          );
+                          return SettingsGroupCard(
+                            children: [
+                              SettingsHighlightTarget(
+                                id: 'chapterSwipeToLeft',
+                                child: ListTile(
+                                  title: Text(context.l10n.chapterSwipeToLeft),
+                                  subtitle: Text(swipeLeft.toLocale(context)),
+                                  onTap: () => pickSwipe(
+                                    title: context.l10n.chapterSwipeToLeft,
+                                    value: swipeLeft,
+                                    onChange: (v) => ref
+                                        .read(
+                                          chapterSwipeToLeftProvider.notifier,
+                                        )
+                                        .update(v),
+                                  ),
+                                ),
+                              ),
+                              SettingsHighlightTarget(
+                                id: 'chapterSwipeToRight',
+                                child: ListTile(
+                                  title: Text(context.l10n.chapterSwipeToRight),
+                                  subtitle: Text(swipeRight.toLocale(context)),
+                                  onTap: () => pickSwipe(
+                                    title: context.l10n.chapterSwipeToRight,
+                                    value: swipeRight,
+                                    onChange: (v) => ref
+                                        .read(
+                                          chapterSwipeToRightProvider.notifier,
+                                        )
+                                        .update(v),
+                                  ),
+                                ),
+                              ),
+                              const SettingsHighlightTarget(
+                                id: 'refreshChaptersFromSource',
+                                child: RefreshChaptersFromSourceTile(),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       // SectionTitle(title: context.l10n.advanced),
                     ],
