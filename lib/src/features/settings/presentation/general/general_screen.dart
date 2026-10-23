@@ -17,6 +17,8 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
+import '../library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'widgets/force_portrait_tile.dart';
 
@@ -32,46 +34,63 @@ class GeneralScreen extends ConsumerWidget {
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
       body: SettingsHighlightScope(
-        child: ListView(
-          children: [
-            SettingsHighlightTarget(
-              id: 'appLanguage',
-              child: ListTile(
-                leading: const Icon(Icons.translate_rounded),
-                title: Text(context.l10n.appLanguage),
-                subtitle: Text(
-                  getLanguageNameFormLocale(context.currentLocale),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              children: [
+                const SizedBox(height: 16),
+                SettingsGroupCard(
+                  children: [
+                    SettingsHighlightTarget(
+                      id: 'appLanguage',
+                      child: ListTile(
+                        title: Text(context.l10n.appLanguage),
+                        subtitle: Text(
+                          getLanguageNameFormLocale(context.currentLocale),
+                        ),
+                        onTap: () => showDialog(
+                          context: context,
+                          builder: (context) => RadioListPopup<Locale>(
+                            title: context.l10n.appLanguage,
+                            optionList: AppLocalizations.supportedLocales,
+                            value: context.currentLocale,
+                            onChange: (locale) {
+                              ref.read(l10nProvider.notifier).update(locale);
+                              Navigator.pop(context);
+                            },
+                            getOptionTitle: getLanguageNameFormLocale,
+                            getOptionSubtitle: getLanguageNameInEnFormLocale,
+                          ),
+                          animationStyle: context.motionStyle,
+                        ),
+                      ),
+                    ),
+                    const SettingsHighlightTarget(
+                      id: 'lockToPortrait',
+                      child: ForcePortraitTile(),
+                    ),
+                    // Moved here from Library: it changes the header of every
+                    // page, so it is an app setting, not a library one. Same
+                    // provider and tile, just a new home.
+                    const SettingsHighlightTarget(
+                      id: 'persistentSearchBar',
+                      child: PersistentSearchBarTile(),
+                    ),
+                    // A keyboard shortcut is the only way to open quick
+                    // search, so on a touch device this switch turned on
+                    // something unreachable. Same gate the Keyboard shortcuts
+                    // entry already uses.
+                    if (isKeyboardRuntime)
+                      const SettingsHighlightTarget(
+                        id: 'quickSearch',
+                        child: QuickSearchToggleTile(),
+                      ),
+                  ],
                 ),
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (context) => RadioListPopup<Locale>(
-                    title: context.l10n.appLanguage,
-                    optionList: AppLocalizations.supportedLocales,
-                    value: context.currentLocale,
-                    onChange: (locale) {
-                      ref.read(l10nProvider.notifier).update(locale);
-                      Navigator.pop(context);
-                    },
-                    getOptionTitle: getLanguageNameFormLocale,
-                    getOptionSubtitle: getLanguageNameInEnFormLocale,
-                  ),
-                  animationStyle: context.motionStyle,
-                ),
-              ),
+              ],
             ),
-            // A keyboard shortcut is the only way to open quick search, so on a
-            // touch device this switch turned on something unreachable. Same
-            // gate the Keyboard shortcuts entry already uses.
-            if (isKeyboardRuntime)
-              const SettingsHighlightTarget(
-                id: 'quickSearch',
-                child: QuickSearchToggleTile(),
-              ),
-            const SettingsHighlightTarget(
-              id: 'lockToPortrait',
-              child: ForcePortraitTile(),
-            ),
-          ],
+          ),
         ),
       ),
     );

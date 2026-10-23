@@ -10,10 +10,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_theme.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/section_title.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
 import 'widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
@@ -26,6 +26,8 @@ class AppearanceScreen extends ConsumerWidget {
   @override
   Widget build(context, ref) {
     final themeMode = ref.watch(appThemeModeProvider);
+    final theme = ref.watch(appThemeKeyProvider);
+    final showRecommendations = ref.watch(showRecommendationsProvider);
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
     final topBar = showsMergedTopBar(context);
@@ -33,47 +35,60 @@ class AppearanceScreen extends ConsumerWidget {
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
       body: SettingsHighlightScope(
-        child: ListView(
-          children: [
-          const SettingsHighlightTarget(
-            id: 'appThemeMode',
-            child: AppThemeModeTile(),
-          ),
-          if (themeMode != ThemeMode.light)
-            const SettingsHighlightTarget(
-              id: 'pureBlack',
-              child: IsTrueBlackTile(),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              children: [
+                SettingsGroupHeading(
+                  label: context.l10n.appThemeTitle,
+                  first: true,
+                ),
+                SettingsGroupCard(
+                  children: [
+                    const SettingsHighlightTarget(
+                      id: 'appThemeMode',
+                      child: AppThemeModeTile(),
+                    ),
+                    // The card heading already names the theme section, so the
+                    // picker renders without its own title row.
+                    const SettingsHighlightTarget(
+                      id: 'theme',
+                      child: ThemeSelector(),
+                    ),
+                    if (theme == AppTheme.custom)
+                      const SettingsHighlightTarget(
+                        id: 'customColor',
+                        child: CustomColorTile(),
+                      ),
+                    if (themeMode != ThemeMode.light)
+                      const SettingsHighlightTarget(
+                        id: 'pureBlack',
+                        child: IsTrueBlackTile(),
+                      ),
+                  ],
+                ),
+                SettingsGroupHeading(label: context.l10n.display),
+                SettingsGroupCard(
+                  children: [
+                    const SettingsHighlightTarget(
+                      id: 'mangaGridSize',
+                      child: GridCoverWidthSlider(),
+                    ),
+                    const SettingsHighlightTarget(
+                      id: 'showRecommendations',
+                      child: ShowRecommendationsTile(),
+                    ),
+                    if (showRecommendations.ifNull(true))
+                      const SettingsHighlightTarget(
+                        id: 'recommendsInOverflow',
+                        child: RecommendsInOverflowTile(),
+                      ),
+                  ],
+                ),
+              ],
             ),
-          SettingsHighlightTarget(
-            id: 'theme',
-            child: ThemeSelector(
-              title: SectionTitle(title: context.l10n.appThemeTitle),
-            ),
           ),
-          SettingsHighlightTarget(
-            id: 'customColor',
-            child: Consumer(
-              builder: (context, ref, _) {
-                final theme = ref.watch(appThemeKeyProvider);
-                return theme == AppTheme.custom
-                    ? const CustomColorTile()
-                    : const SizedBox.shrink();
-              },
-            ),
-          ),
-          const SettingsHighlightTarget(
-            id: 'mangaGridSize',
-            child: GridCoverWidthSlider(),
-          ),
-          const SettingsHighlightTarget(
-            id: 'showRecommendations',
-            child: ShowRecommendationsTile(),
-          ),
-            const SettingsHighlightTarget(
-              id: 'recommendsInOverflow',
-              child: RecommendsInOverflowTile(),
-            ),
-          ],
         ),
       ),
     );
