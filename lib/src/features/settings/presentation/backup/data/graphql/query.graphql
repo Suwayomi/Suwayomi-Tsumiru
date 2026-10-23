@@ -37,8 +37,8 @@ query RestoreStatus($restoreId: String!) {
   }
 }
 
-mutation RestoreBackup($backup: Upload!) {
-  restoreBackup(input: { backup: $backup }) {
+mutation RestoreBackup($backup: Upload!, $flags: PartialBackupFlagsInput) {
+  restoreBackup(input: { backup: $backup, flags: $flags }) {
     clientMutationId
     id
     status {
@@ -47,27 +47,34 @@ mutation RestoreBackup($backup: Upload!) {
   }
 }
 
-mutation CreateBackup(
-  $includeCategories: Boolean = true
-  $includeChapters: Boolean = true
-  $includeHistory: Boolean = true
-  $includeTracking: Boolean = true
-  $includeClientData: Boolean = true
-) {
-  createBackup(
-    input: {
-      flags: {
-        includeManga: true
-        includeCategories: $includeCategories
-        includeChapters: $includeChapters
-        includeHistory: $includeHistory
-        includeTracking: $includeTracking
-        includeClientData: $includeClientData
-      }
-    }
-  ) {
+mutation CreateBackup($flags: PartialBackupFlagsInput) {
+  createBackup(input: { flags: $flags }) {
     clientMutationId
     url
+  }
+}
+
+fragment AutoBackupFlagsDto on SettingsType {
+  autoBackupIncludeManga
+  autoBackupIncludeCategories
+  autoBackupIncludeChapters
+  autoBackupIncludeTracking
+  autoBackupIncludeHistory
+  autoBackupIncludeClientData
+  autoBackupIncludeServerSettings
+}
+
+query AutoBackupFlags {
+  settings {
+    ...AutoBackupFlagsDto
+  }
+}
+
+mutation UpdateAutoBackupFlags($settings: PartialSettingsTypeInput!) {
+  setSettings(input: { settings: $settings }) {
+    settings {
+      ...AutoBackupFlagsDto
+    }
   }
 }
 

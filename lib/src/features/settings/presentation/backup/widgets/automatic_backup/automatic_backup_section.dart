@@ -14,6 +14,8 @@ import '../../../../controller/server_controller.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../../../search/settings_search_registry.dart';
 import '../../data/backup_settings_repository.dart';
+import '../backup_flags/backup_flags.dart';
+import '../backup_flags/backup_flags_dialog.dart';
 
 class AutomaticBackupSection extends ConsumerWidget {
   const AutomaticBackupSection({super.key});
@@ -56,6 +58,76 @@ class AutomaticBackupSection extends ConsumerWidget {
                 onChanged: canManage ? repository.updateBackupLocation : null,
               ),
             ),
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final autoFlags = ref.watch(autoBackupFlagsProvider).value;
+              if (autoFlags == null) return const SizedBox.shrink();
+              final summary = summarizeBackupFlags(
+                entries: [
+                  (context.l10n.includeManga, autoFlags.autoBackupIncludeManga),
+                  (
+                    context.l10n.includeChapters,
+                    autoFlags.autoBackupIncludeChapters,
+                  ),
+                  (
+                    context.l10n.includeTracking,
+                    autoFlags.autoBackupIncludeTracking,
+                  ),
+                  (
+                    context.l10n.includeHistory,
+                    autoFlags.autoBackupIncludeHistory,
+                  ),
+                  (
+                    context.l10n.includeCategories,
+                    autoFlags.autoBackupIncludeCategories,
+                  ),
+                  (
+                    context.l10n.includeClientData,
+                    autoFlags.autoBackupIncludeClientData,
+                  ),
+                  (
+                    context.l10n.includeServerSettings,
+                    autoFlags.autoBackupIncludeServerSettings,
+                  ),
+                ],
+                all: context.l10n.all,
+                none: context.l10n.none,
+              );
+              return SettingsHighlightTarget(
+                id: 'backupData',
+                child: ListTile(
+                  leading: const Icon(Icons.storage_rounded),
+                  title: Text(context.l10n.backupData),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.syncYomiSyncDataInclude(summary.include),
+                      ),
+                      Text(context.l10n.backupDataExclude(summary.exclude)),
+                    ],
+                  ),
+                  onTap: canManage
+                      ? () async {
+                          final flags = await showBackupFlagsDialog(
+                            context,
+                            title: context.l10n.backupData,
+                            initial: BackupFlags.fromAuto(autoFlags),
+                          );
+                          if (flags == null || !context.mounted) return;
+                          final result = await AppUtils.guard(
+                            () => repository.updateAutoBackupFlags(flags),
+                            ref.read(toastProvider),
+                          );
+                          if (result != null && context.mounted) {
+                            ref.invalidate(autoBackupFlagsProvider);
+                          }
+                        }
+                      : null,
+                ),
+              );
+            },
           ),
           SettingsHighlightTarget(
             id: 'backupTime',

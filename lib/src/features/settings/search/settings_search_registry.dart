@@ -25,6 +25,7 @@ import '../../offline/data/offline_repository.dart';
 import '../controller/server_controller.dart';
 import '../presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
+import '../presentation/backup/data/backup_settings_repository.dart';
 import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../presentation/downloads/data/downloads_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
@@ -873,6 +874,15 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'backupLocation').push(c),
     visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'backupData',
+    title: (l) => l.backupData,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'backupData').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(autoBackupFlagsProvider).value != null,
   ),
   SettingsSearchEntry(
     id: 'backupTime',
