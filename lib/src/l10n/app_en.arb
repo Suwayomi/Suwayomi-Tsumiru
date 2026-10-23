@@ -1469,6 +1469,17 @@
   "backupLocation": "Backup Location",
   "backupLocationDescription": "Folder on the server where automatic backups are saved.",
   "backupTime": "Backup Time",
+  "backupData": "Backup data",
+  "@backupData": {
+    "description": "Title for the automatic backup contents row"
+  },
+  "backupDataExclude": "Exclude: {list}",
+  "@backupDataExclude": {
+    "description": "Automatic backup contents summary, excluded kinds comma separated",
+    "placeholders": {
+      "list": { "type": "String" }
+    }
+  },
   "badges": "Badges",
   "bookmarked": "Bookmarked",
   "bookmark": "Bookmark",
@@ -1570,6 +1581,10 @@
   "copyMsg": "'{msg}' Copied!",
   "createBackupDescription": "Backup library as a Tachidesk backup",
   "createBackupTitle": "Create Backup",
+  "createBackup": "Create backup",
+  "@createBackup": {
+    "description": "Title of the create-backup flags dialog"
+  },
   "credentials": "Credentials",
   "back": "Back",
   "next": "Next",
@@ -1691,6 +1706,10 @@
   "alwaysAsk": "Always ask",
   "setCategories": "Set categories",
   "ok": "OK",
+  "okButton": "Ok",
+  "@okButton": {
+    "description": "Backup flags dialog confirmation button"
+  },
   "delete": "Delete",
   "deleteChaptersConfirm": "Are you sure you want to delete the selected chapters?",
   "deleteCategoryDescription": "This will merge all Mangas in this Category to Default!",
@@ -2083,8 +2102,12 @@
   "@includeHistory": {},
   "includeTracking": "Tracking",
   "@includeTracking": {},
-  "includeClientData": "App settings",
+  "includeClientData": "Client data",
   "@includeClientData": {},
+  "includeManga": "Library entries",
+  "@includeManga": {},
+  "includeServerSettings": "Server settings",
+  "@includeServerSettings": {},
   "install": "Install",
   "installing": "Installing",
   "installingExtension": "Installing Extension",
