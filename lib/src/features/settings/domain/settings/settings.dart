@@ -1,8 +1,10 @@
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../presentation/backup/data/graphql/__generated__/query.graphql.dart';
 import 'graphql/__generated__/fragment.graphql.dart';
 
 typedef SettingsDto = Fragment$SettingsDto;
 typedef AutomaticBackupSettingsDto = Fragment$AutomaticBackupSettingsDto;
+typedef AutoBackupFlagsDto = Fragment$AutoBackupFlagsDto;
 typedef BrowserSettingsDto = Fragment$BrowserSettingsDto;
 typedef CloudFlareBypassDto = Fragment$CloudFlareBypassDto;
 typedef DownloadsSettingsDto = Fragment$DownloadsSettingsDto;

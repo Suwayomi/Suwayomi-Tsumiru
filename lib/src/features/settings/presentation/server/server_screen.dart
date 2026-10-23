@@ -18,10 +18,19 @@ import '../../controller/server_controller.dart';
 import '../../search/settings_search_registry.dart';
 import 'data/web_interface_repository.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
+import 'widget/database/data/database_repository.dart';
+import 'widget/database/database_section.dart';
+import 'widget/images/data/images_repository.dart';
+import 'widget/images/images_section.dart';
+import 'widget/misc_settings/data/misc_logs_repository.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
+import 'widget/opds/data/opds_repository.dart';
+import 'widget/opds/opds_section.dart';
 import 'widget/server_binding/server_binding_section.dart';
 import 'widget/socks_proxy/socks_proxy_section.dart';
 import 'widget/web_interface/web_interface_section.dart';
+import 'widget/webview/data/webview_repository.dart';
+import 'widget/webview/webview_section.dart';
 
 class ServerScreen extends ConsumerWidget {
   const ServerScreen({super.key});
@@ -36,6 +45,14 @@ class ServerScreen extends ConsumerWidget {
       ref.invalidate(webInterfaceSettingsProvider);
       ref.invalidate(webInterfaceFlavorsProvider);
       ref.invalidate(installedWebInterfaceProvider);
+      ref.invalidate(opdsSettingsProvider);
+      ref.invalidate(databaseSettingsProvider);
+      ref.invalidate(miscLogsSettingsProvider);
+      ref.invalidate(webViewSettingsProvider);
+      ref.invalidate(clearCookiesAndCacheSupportProvider);
+      ref.invalidate(imagesDownloadSettingsProvider);
+      ref.invalidate(serveConversionsProvider);
+      ref.invalidate(clearCachedImagesSupportProvider);
       ref.invalidate(settingsProvider);
       await ref.read(settingsProvider.future);
     }
@@ -104,6 +121,10 @@ class ServerScreen extends ConsumerWidget {
                   ServerBindingSection(serverBindingDto: serverSettings.value!),
                   SocksProxySection(socksProxyDto: serverSettings.value!),
                   CloudFlareSection(cloudFlareDto: serverSettings.value!),
+                  const OpdsSection(),
+                  const DatabaseSection(),
+                  const WebViewSection(),
+                  const ImagesSection(),
                   MiscSettingsSection(miscSettingsDto: serverSettings.value!),
                 ],
               ],

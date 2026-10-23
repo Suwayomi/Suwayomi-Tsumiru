@@ -25,15 +25,23 @@ import '../../offline/data/offline_repository.dart';
 import '../controller/server_controller.dart';
 import '../presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
+import '../presentation/backup/data/backup_settings_repository.dart';
 import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
+import '../presentation/downloads/data/downloads_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
+import '../presentation/server/data/server_settings_repository.dart';
 import '../presentation/server/data/web_interface_repository.dart';
 import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../presentation/server/widget/database/data/database_repository.dart';
+import '../presentation/server/widget/images/data/images_repository.dart';
+import '../presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
+import '../presentation/server/widget/opds/data/opds_repository.dart';
+import '../presentation/server/widget/webview/data/webview_repository.dart';
 import '../presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import '../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'settings_search_entry.dart';
@@ -872,6 +880,15 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
     visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
+    id: 'backupData',
+    title: (l) => l.backupData,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'backupData').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(autoBackupFlagsProvider).value != null,
+  ),
+  SettingsSearchEntry(
     id: 'backupTime',
     title: (l) => l.backupTime,
     breadcrumb: (l) => l.backup,
@@ -926,6 +943,20 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     open: (c) =>
         const DownloadsSettingsRoute(highlight: 'saveAsCbz', tab: 0).push(c),
     visible: (ref, _) => _serverReachable(ref),
+    tabIndex: 0,
+  ),
+  // Same highlight id as the Server › Images row: both open the same editor.
+  SettingsSearchEntry(
+    id: 'imageDownloadProcessing',
+    title: (l) => l.imageDownloadProcessing,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'imageDownloadProcessing',
+      tab: 0,
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(imagesDownloadSettingsProvider).value != null,
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -992,6 +1023,19 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       tab: 0,
     ).push(c),
     visible: (ref, _) => _serverReachable(ref),
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'ignoreReuploadedChapters',
+    title: (l) => l.ignoreReuploadedChapters,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'ignoreReuploadedChapters',
+      tab: 0,
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(autoDownloadIgnoreReUploadsProvider).value != null,
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -1197,11 +1241,40 @@ bool _webInterfaceVisible(WidgetRef ref) =>
 List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceFlavor',
-    title: (l) => l.webInterfaceFlavor,
+    title: (l) => l.webInterfaceInterface,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
         const ServerSettingsRoute(highlight: 'webInterfaceFlavor').push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'initialOpenInBrowserEnabled',
+    title: (l) => l.initialOpenInBrowserEnabled,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'initialOpenInBrowserEnabled',
+    ).push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'webInterfaceInterface',
+    title: (l) => l.webInterfaceOpenWith,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'webInterfaceInterface',
+    ).push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'electronPath',
+    title: (l) => l.electronPath,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'electronPath').push(c),
+    visible: (ref, _) =>
+        _webInterfaceVisible(ref) &&
+        ref.watch(webInterfaceSettingsProvider).value?.webUIInterface ==
+            Enum$WebUIInterface.ELECTRON,
   ),
   SettingsSearchEntry(
     id: 'webInterfaceChannel',
@@ -1342,6 +1415,214 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
         ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
   ),
   SettingsSearchEntry(
+    id: 'flareSolverrResponseFallback',
+    title: (l) => l.responseFallback,
+    subtitle: (l) => l.responseFallbackDescription,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'flareSolverrResponseFallback',
+    ).push(c),
+    visible: (ref, _) =>
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false) &&
+        ref.watch(flareSolverrFallbackProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsBinaryFileSize',
+    title: (l) => l.opdsBinaryFileSize,
+    subtitle: (l) => l.opdsBinaryFileSizeDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsBinaryFileSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsItemsPerPage',
+    title: (l) => l.opdsItemsPerPage,
+    subtitle: (l) => l.opdsItemsPerPageDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsItemsPerPage').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsEnablePageReadProgress',
+    title: (l) => l.opdsEnablePageReadProgress,
+    subtitle: (l) => l.opdsEnablePageReadProgressDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsEnablePageReadProgress',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsMarkAsReadOnDownload',
+    title: (l) => l.opdsMarkAsReadOnDownload,
+    subtitle: (l) => l.opdsMarkAsReadOnDownloadDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsMarkAsReadOnDownload',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsShowOnlyUnreadChapters',
+    title: (l) => l.opdsShowOnlyUnreadChapters,
+    subtitle: (l) => l.opdsShowOnlyUnreadChaptersDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsShowOnlyUnreadChapters',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsShowOnlyDownloadedChapters',
+    title: (l) => l.opdsShowOnlyDownloadedChapters,
+    subtitle: (l) => l.opdsShowOnlyDownloadedChaptersDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsShowOnlyDownloadedChapters',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsSkipChapterMetadataFeed',
+    title: (l) => l.opdsSkipChapterMetadataFeed,
+    subtitle: (l) => l.opdsSkipChapterMetadataFeedDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsSkipChapterMetadataFeed',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsChapterSortOrder',
+    title: (l) => l.opdsChapterSortOrder,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsChapterSortOrder').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsCbzMimetype',
+    title: (l) => l.opdsCbzMimeType,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsCbzMimetype').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseType',
+    title: (l) => l.databaseType,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databaseType').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseUrl',
+    title: (l) => l.databaseUrl,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databaseUrl').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseUsername',
+    title: (l) => l.databaseUsername,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databaseUsername').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databasePassword',
+    title: (l) => l.databasePassword,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databasePassword').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'hikariConnectionPool',
+    title: (l) => l.hikariConnectionPool,
+    subtitle: (l) => l.hikariConnectionPoolDescription,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'hikariConnectionPool',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'webview',
+    title: (l) => l.kcefWebView,
+    subtitle: (l) => l.kcefWebViewDescription,
+    breadcrumb: (l) => '${l.server} › ${l.kcefWebView}',
+    open: (c) => const ServerSettingsRoute(highlight: 'webview').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(webViewSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'clearWebViewCache',
+    title: (l) => l.clearCookiesAndCache,
+    breadcrumb: (l) => '${l.server} › ${l.kcefWebView}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'clearWebViewCache').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        (ref.watch(clearCookiesAndCacheSupportProvider).value ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'imagesClearCache',
+    title: (l) => l.imageProcessingClearCache,
+    breadcrumb: (l) => '${l.server} › ${l.images}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'imagesClearCache').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        (ref.watch(clearCachedImagesSupportProvider).value ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'imageDownloadProcessing',
+    title: (l) => l.imageDownloadProcessing,
+    breadcrumb: (l) => '${l.server} › ${l.images}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'imageDownloadProcessing',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(imagesDownloadSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'imageServeProcessing',
+    title: (l) => l.imageServeProcessing,
+    breadcrumb: (l) => '${l.server} › ${l.images}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'imageServeProcessing').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(serveConversionsProvider).value != null,
+  ),
+  SettingsSearchEntry(
     id: 'debugLogs',
     title: (l) => l.debugLogs,
     breadcrumb: (l) => '${l.server} › ${l.misc}',
@@ -1354,6 +1635,38 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     breadcrumb: (l) => '${l.server} › ${l.misc}',
     open: (c) => const ServerSettingsRoute(highlight: 'systemTrayIcon').push(c),
     visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'logFileCleanup',
+    title: (l) => l.logFileCleanup,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'logFileCleanup').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(miscLogsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'maxLogFileSize',
+    title: (l) => l.maxLogFileSize,
+    subtitle: (l) => l.logSizeExamples,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'maxLogFileSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(miscLogsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'maxLogFolderSize',
+    title: (l) => l.maxLogFolderSize,
+    subtitle: (l) => l.logSizeExamples,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'maxLogFolderSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(miscLogsSettingsProvider).value != null,
   ),
 ];
 

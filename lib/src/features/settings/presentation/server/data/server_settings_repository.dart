@@ -1,9 +1,11 @@
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../account/data/account_permission.dart';
 import '../../../domain/settings/settings.dart';
 import 'graphql/__generated__/query.graphql.dart';
@@ -209,6 +211,36 @@ class ServerSettingsRepository {
         )
         .getData((data) => data.setSettings.settings),
   );
+
+  Future<Fragment$FlareSolverrFallbackSettingsDto?>
+  flareSolverrFallbackSettings() async {
+    try {
+      return await ferryClient
+          .query$FlareSolverrFallbackSettings(
+            Options$Query$FlareSolverrFallbackSettings(
+              fetchPolicy: FetchPolicy.noCache,
+            ),
+          )
+          .getData((data) => data.settings);
+    } on OperationMessageException catch (error) {
+      if (onlyUndefinedFieldErrors(error, type: 'SettingsType')) return null;
+      rethrow;
+    }
+  }
+
+  Future<Fragment$FlareSolverrFallbackSettingsDto?>
+  toggleFlareSolverrAsResponseFallback(bool value) => permissions.run(
+    Enum$UserPermission.MANAGE_SETTINGS,
+    () => ferryClient
+        .mutate$ToggleFlareSolverrAsResponseFallback(
+          Options$Mutation$ToggleFlareSolverrAsResponseFallback(
+            variables: Variables$Mutation$ToggleFlareSolverrAsResponseFallback(
+              flareSolverrAsResponseFallback: value,
+            ),
+          ),
+        )
+        .getData((data) => data.setSettings.settings),
+  );
 }
 
 @riverpod
@@ -217,3 +249,10 @@ ServerSettingsRepository serverSettingsRepository(Ref ref) =>
       ref.watch(graphQlClientProvider),
       permissions: ref.watch(accountPermissionGuardProvider),
     );
+
+final flareSolverrFallbackProvider = FutureProvider.autoDispose<bool?>(
+  (ref) => ref
+      .watch(serverSettingsRepositoryProvider)
+      .flareSolverrFallbackSettings()
+      .then((value) => value?.flareSolverrAsResponseFallback),
+);

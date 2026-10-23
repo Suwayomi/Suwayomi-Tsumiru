@@ -6,6 +6,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
+import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../../about/data/about_repository.dart';
@@ -154,6 +156,12 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     Enum$WebUIFlavor.$unknown => context.l10n.webInterfaceUnknown,
   };
 
+  String _interfaceName(Enum$WebUIInterface value) => switch (value) {
+    Enum$WebUIInterface.BROWSER => context.l10n.webInterfaceBrowser,
+    Enum$WebUIInterface.ELECTRON => context.l10n.webInterfaceElectron,
+    Enum$WebUIInterface.$unknown => context.l10n.webInterfaceUnknown,
+  };
+
   String _channelName(Enum$WebUIChannel channel) => switch (channel) {
     Enum$WebUIChannel.BUNDLED => context.l10n.webInterfaceBundled,
     Enum$WebUIChannel.STABLE => context.l10n.webInterfaceStable,
@@ -241,12 +249,17 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         if (canManage && data != null) ...[
           SettingsHighlightTarget(
             id: 'webInterfaceFlavor',
-            child: ListTile(
-              title: Text(context.l10n.webInterfaceFlavor),
-              subtitle: Text(_flavorName(data.webUIFlavor)),
+            // Same merge guard as the OPDS rows: without it the engine folds
+            // this row into a neighbouring switch row.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: ListTile(
+                title: Text(context.l10n.webInterfaceInterface),
+                subtitle: Text(_flavorName(data.webUIFlavor)),
               onTap: enabled && flavors.hasValue && flavors.value!.isNotEmpty
                   ? () => _pick(
-                      title: context.l10n.webInterfaceFlavor,
+                      title: context.l10n.webInterfaceInterface,
                       value: data.webUIFlavor,
                       options: flavors.value!,
                       name: _flavorName,
@@ -259,62 +272,150 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                       },
                     )
                   : null,
+              ),
             ),
           ),
           SettingsHighlightTarget(
-            id: 'webInterfaceChannel',
-            child: ListTile(
-              title: Text(context.l10n.webInterfaceChannel),
-              subtitle: Text(
-                data.webUIChannel == Enum$WebUIChannel.BUNDLED &&
-                        !bundledAllowed
-                    ? '${_channelName(data.webUIChannel)}\n${context.l10n.webInterfaceBundledOnly}'
-                    : _channelName(data.webUIChannel),
-              ),
-              onTap: enabled && !custom
-                  ? () => _pick(
-                      title: context.l10n.webInterfaceChannel,
-                      value: data.webUIChannel,
-                      options: [
-                        if (bundledAllowed) Enum$WebUIChannel.BUNDLED,
-                        Enum$WebUIChannel.STABLE,
-                        Enum$WebUIChannel.PREVIEW,
-                      ],
-                      name: _channelName,
-                      description: _channelDescription,
-                      write: (value) => _write(
-                        Input$PartialSettingsTypeInput(webUIChannel: value),
+            id: 'initialOpenInBrowserEnabled',
+            child: SwitchListTile(
+              title: Text(context.l10n.initialOpenInBrowserEnabled),
+              value: data.initialOpenInBrowserEnabled,
+              onChanged: enabled
+                  ? (value) => _write(
+                      Input$PartialSettingsTypeInput(
+                        initialOpenInBrowserEnabled: value,
                       ),
                     )
                   : null,
+            ),
+          ),
+          SettingsHighlightTarget(
+            id: 'webInterfaceInterface',
+            // Same merge guard as the OPDS rows: without it the engine folds
+            // this row into a neighbouring switch row.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: ListTile(
+                title: Text(context.l10n.webInterfaceOpenWith),
+                subtitle: Text(_interfaceName(data.webUIInterface)),
+                onTap: enabled
+                    ? () => _pick(
+                        title: context.l10n.webInterfaceOpenWith,
+                        value: data.webUIInterface,
+                        options: const [
+                          Enum$WebUIInterface.BROWSER,
+                          Enum$WebUIInterface.ELECTRON,
+                        ],
+                        name: _interfaceName,
+                        description: (value) =>
+                            context.l10n.webInterfaceLaunchDescription,
+                        write: (value) => _write(
+                          Input$PartialSettingsTypeInput(
+                            webUIInterface: value,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          if (data.webUIInterface == Enum$WebUIInterface.ELECTRON)
+            SettingsHighlightTarget(
+              id: 'electronPath',
+              // Same merge guard as the OPDS rows: without it the engine
+              // folds this row into a neighbouring switch row.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: SettingsPropTile(
+                  title: context.l10n.electronPath,
+                  subtitle: data.electronPath.isNotEmpty
+                      ? data.electronPath
+                      : context.l10n.electronPathDefault,
+                  description: context.l10n.electronPathDescription,
+                  type: SettingsPropType.textField(
+                    hintText: context.l10n.enterProp(
+                      context.l10n.electronPath,
+                    ),
+                    value: data.electronPath,
+                    onChanged: enabled
+                        ? (value) => _write(
+                            Input$PartialSettingsTypeInput(
+                              electronPath: value,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          SettingsHighlightTarget(
+            id: 'webInterfaceChannel',
+            // Same merge guard as the OPDS rows: without it the engine folds
+            // this row into a neighbouring switch row.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: ListTile(
+                title: Text(context.l10n.webInterfaceChannel),
+                subtitle: Text(
+                  data.webUIChannel == Enum$WebUIChannel.BUNDLED &&
+                          !bundledAllowed
+                      ? '${_channelName(data.webUIChannel)}\n${context.l10n.webInterfaceBundledOnly}'
+                      : _channelName(data.webUIChannel),
+                ),
+                onTap: enabled && !custom
+                    ? () => _pick(
+                        title: context.l10n.webInterfaceChannel,
+                        value: data.webUIChannel,
+                        options: [
+                          if (bundledAllowed) Enum$WebUIChannel.BUNDLED,
+                          Enum$WebUIChannel.STABLE,
+                          Enum$WebUIChannel.PREVIEW,
+                        ],
+                        name: _channelName,
+                        description: _channelDescription,
+                        write: (value) => _write(
+                          Input$PartialSettingsTypeInput(webUIChannel: value),
+                        ),
+                      )
+                    : null,
+              ),
             ),
           ),
           SettingsHighlightTarget(
             id: 'webInterfaceAutomaticUpdates',
-            child: ListTile(
-              title: Text(context.l10n.webInterfaceAutomaticUpdates),
-              subtitle: Text(
-                data.webUIUpdateCheckInterval == 0
-                    ? context.l10n.webInterfaceOff
-                    : context.l10n.webInterfaceHours(
-                        data.webUIUpdateCheckInterval.toInt(),
-                      ),
-              ),
-              onTap: enabled && !custom
-                  ? () => _pick(
-                      title: context.l10n.webInterfaceAutomaticUpdates,
-                      value: data.webUIUpdateCheckInterval.toInt(),
-                      options: List.generate(24, (index) => index),
-                      name: (value) => value == 0
-                          ? context.l10n.webInterfaceOff
-                          : context.l10n.webInterfaceHours(value),
-                      write: (value) => _write(
-                        Input$PartialSettingsTypeInput(
-                          webUIUpdateCheckInterval: value.toDouble(),
+            // Same merge guard as the OPDS rows: without it the engine folds
+            // this row into a neighbouring switch row.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: ListTile(
+                title: Text(context.l10n.webInterfaceAutomaticUpdates),
+                subtitle: Text(
+                  data.webUIUpdateCheckInterval == 0
+                      ? context.l10n.webInterfaceOff
+                      : context.l10n.webInterfaceHours(
+                          data.webUIUpdateCheckInterval.toInt(),
                         ),
-                      ),
-                    )
-                  : null,
+                ),
+                onTap: enabled && !custom
+                    ? () => _pick(
+                        title: context.l10n.webInterfaceAutomaticUpdates,
+                        value: data.webUIUpdateCheckInterval.toInt(),
+                        options: List.generate(24, (index) => index),
+                        name: (value) => value == 0
+                            ? context.l10n.webInterfaceOff
+                            : context.l10n.webInterfaceHours(value),
+                        write: (value) => _write(
+                          Input$PartialSettingsTypeInput(
+                            webUIUpdateCheckInterval: value.toDouble(),
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
             ),
           ),
         ],
@@ -330,8 +431,13 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         if (authenticated && !custom) ...[
           SettingsHighlightTarget(
             id: 'webInterfaceCheckUpdate',
-            child: ListTile(
-              title: Text(context.l10n.webInterfaceCheckUpdate),
+            // Same merge guard as the OPDS rows: without it the engine folds
+            // this row into a neighbouring switch row.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: ListTile(
+                title: Text(context.l10n.webInterfaceCheckUpdate),
               subtitle: updateText == null && !_busy
                   ? null
                   : Column(
@@ -382,6 +488,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                       }
                     })
                   : null,
+              ),
             ),
           ),
         ],

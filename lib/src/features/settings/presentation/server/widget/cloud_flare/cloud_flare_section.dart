@@ -129,6 +129,31 @@ class CloudFlareSection extends ConsumerWidget {
               ),
             ),
           ),
+          if (ref.watch(flareSolverrFallbackProvider).value != null)
+            SettingsHighlightTarget(
+              id: 'flareSolverrResponseFallback',
+              child: SettingsPropTile(
+                title: context.l10n.responseFallback,
+                description: context.l10n.responseFallbackDescription,
+                type: SettingsPropType.switchTile(
+                  value: ref.watch(flareSolverrFallbackProvider).value ?? false,
+                  onChanged: canManage
+                      ? (isEnabled) async {
+                          final value = await AppUtils.guard(
+                            () =>
+                                repository.toggleFlareSolverrAsResponseFallback(
+                                  isEnabled,
+                                ),
+                            ref.read(toastProvider),
+                          );
+                          if (value != null && context.mounted) {
+                            ref.invalidate(flareSolverrFallbackProvider);
+                          }
+                        }
+                      : null,
+                ),
+              ),
+            ),
         ],
       ],
     );

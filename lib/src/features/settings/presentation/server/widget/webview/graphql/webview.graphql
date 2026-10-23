@@ -1,0 +1,23 @@
+fragment WebViewSettingsDto on SettingsType {
+  kcefEnabled
+}
+
+query WebViewSettings {
+  settings {
+    ...WebViewSettingsDto
+  }
+}
+
+mutation SetWebViewSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: {settings: $settings}) {
+    settings {
+      ...WebViewSettingsDto
+    }
+  }
+}
+
+mutation ClearWebViewCookiesAndCache {
+  clearCookiesAndCache {
+    clientMutationId
+  }
+}

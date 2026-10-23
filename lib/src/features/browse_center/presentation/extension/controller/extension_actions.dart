@@ -55,6 +55,9 @@ class ExtensionActions {
   Future<void> update(String pkgName) =>
       _refreshAfter((_) => _repository.updateExtension(pkgName));
 
+  Future<void> updateAll(List<String> pkgNames) =>
+      _refreshAfter((_) => _repository.updateAllExtensions(pkgNames));
+
   Future<void> uninstall(String pkgName) =>
       _refreshAfter((_) => _repository.uninstallExtension(pkgName));
 

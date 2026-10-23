@@ -40,9 +40,12 @@ import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/appearance_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/data/backup_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/browse/browse_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/connection/connection_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/downloads/data/downloads_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/downloads_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/general_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
@@ -57,9 +60,20 @@ import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/data/graphql/__generated__/web_interface.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/data/server_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/database/data/database_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/database/graphql/__generated__/database.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/images/data/images_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/images/graphql/__generated__/images.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/images/image_conversions.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/graphql/__generated__/misc_logs.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/data/webview_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/graphql/__generated__/webview.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
@@ -76,6 +90,28 @@ class _FixedSettings extends Settings {
   @override
   Future<SettingsDto?> build() async => _serverSettings();
 }
+
+Fragment$AutoBackupFlagsDto _autoBackupFlags() => Fragment$AutoBackupFlagsDto(
+  autoBackupIncludeManga: true,
+  autoBackupIncludeCategories: true,
+  autoBackupIncludeChapters: true,
+  autoBackupIncludeTracking: true,
+  autoBackupIncludeHistory: true,
+  autoBackupIncludeClientData: true,
+  autoBackupIncludeServerSettings: true,
+);
+
+OpdsSettings _opdsSettings() => (
+  useBinaryFileSizes: true,
+  itemsPerPage: 50,
+  enablePageReadProgress: true,
+  markAsReadOnDownload: true,
+  showOnlyUnreadChapters: false,
+  showOnlyDownloadedChapters: false,
+  skipChapterMetadataFeed: false,
+  chapterSortOrder: Enum$SortOrder.ASC,
+  cbzMimetype: Enum$CbzMediaType.MODERN,
+);
 
 /// Reachable server with SOCKS and FlareSolverr switched on, so every
 /// conditional Server row renders.
@@ -353,6 +389,9 @@ void main() {
             settledAccountAccessProvider.overrideWithValue(
               AccountAccess(capability: AccountCapability.unsupported),
             ),
+            autoBackupFlagsProvider.overrideWith(
+              (ref) async => _autoBackupFlags(),
+            ),
           ],
         ),
         const BackupScreen(),
@@ -395,6 +434,17 @@ void main() {
             deleteChaptersSettingsControllerProvider.overrideWith(
               _FixedDeleteChapters.new,
             ),
+            // The live ignore-reuploads read hits the network the same way,
+            // so the row only renders with the gate satisfied.
+            autoDownloadIgnoreReUploadsProvider.overrideWith(
+              (ref) async => true,
+            ),
+            // Same gate for the image-processing row WebUI links from here.
+            imagesDownloadSettingsProvider.overrideWith(
+              (ref) async => Fragment$ImagesDownloadSettingsDto(
+                downloadConversions: const [],
+              ),
+            ),
             offlineEnabledProvider.overrideWithValue(true),
             offlineUsageBytesProvider.overrideWith((ref) async => 0),
           ],
@@ -431,6 +481,9 @@ void main() {
                 webUIFlavor: Enum$WebUIFlavor.WEBUI,
                 webUIChannel: Enum$WebUIChannel.STABLE,
                 webUIUpdateCheckInterval: 12,
+                initialOpenInBrowserEnabled: true,
+                webUIInterface: Enum$WebUIInterface.ELECTRON,
+                electronPath: '',
               ),
             ),
             webInterfaceFlavorsProvider.overrideWith(
@@ -440,6 +493,56 @@ void main() {
               ],
             ),
             installedWebInterfaceProvider.overrideWith((ref) async => null),
+            // The gated rows only render with their gates satisfied, like
+            // every other conditional row in this fixture.
+            flareSolverrFallbackProvider.overrideWith((ref) async => true),
+            opdsSettingsProvider.overrideWith(
+              (ref) async => _opdsSettings(),
+            ),
+            databaseSettingsProvider.overrideWith(
+              (ref) async => Fragment$DatabaseSettingsDto(
+                databaseType: Enum$DatabaseType.POSTGRESQL,
+                databaseUrl: 'postgresql://localhost:5432/suwayomi',
+                databaseUsername: 'suwayomi',
+                databasePassword: 'secret',
+                useHikariConnectionPool: true,
+              ),
+            ),
+            miscLogsSettingsProvider.overrideWith(
+              (ref) async => Fragment$MiscLogsSettingsDto(
+                maxLogFiles: 7,
+                maxLogFileSize: '1MB',
+                maxLogFolderSize: '10MB',
+              ),
+            ),
+            webViewSettingsProvider.overrideWith(
+              (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
+            ),
+            clearCookiesAndCacheSupportProvider.overrideWith(
+              (ref) async => true,
+            ),
+            imagesDownloadSettingsProvider.overrideWith(
+              (ref) async => Fragment$ImagesDownloadSettingsDto(
+                downloadConversions: [
+                  Fragment$ImagesDownloadSettingsDto$downloadConversions(
+                    mimeType: 'image/jpeg',
+                    target: 'image/webp',
+                    compressionLevel: 0.8,
+                  ),
+                ],
+              ),
+            ),
+            serveConversionsProvider.overrideWith(
+              (ref) async => [
+                ServerConversion(
+                  mimeType: 'image/png',
+                  target: 'https://converter.example/process',
+                ),
+              ],
+            ),
+            clearCachedImagesSupportProvider.overrideWith(
+              (ref) async => true,
+            ),
           ],
         ),
         const ServerScreen(),

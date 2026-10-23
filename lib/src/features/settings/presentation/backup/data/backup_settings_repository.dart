@@ -6,14 +6,17 @@
 
 import 'package:flutter/material.dart';
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' show MultipartFile;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../account/data/account_permission.dart';
 import '../../../domain/settings/settings.dart';
+import '../widgets/backup_flags/backup_flags.dart';
 import './graphql/__generated__/query.graphql.dart';
 
 part 'backup_settings_repository.g.dart';
@@ -25,13 +28,45 @@ class BackupSettingsRepository {
 
   final GraphQLClient ferryClient;
 
-  Future<String?> restoreBackup(MultipartFile file) => ferryClient
-      .mutate$RestoreBackup(
-        Options$Mutation$RestoreBackup(
-          variables: Variables$Mutation$RestoreBackup(backup: file),
-        ),
-      )
-      .getData((data) => data.restoreBackup.id);
+  Future<String?> restoreBackup(MultipartFile file, BackupFlags flags) =>
+      ferryClient
+          .mutate$RestoreBackup(
+            Options$Mutation$RestoreBackup(
+              variables: Variables$Mutation$RestoreBackup(
+                backup: file,
+                flags: flags.toPartialInput(),
+              ),
+            ),
+          )
+          .getData((data) => data.restoreBackup.id);
+
+  Future<Fragment$AutoBackupFlagsDto?> autoBackupFlags() async {
+    try {
+      return await ferryClient
+          .query$AutoBackupFlags(
+            Options$Query$AutoBackupFlags(fetchPolicy: FetchPolicy.noCache),
+          )
+          .getData((data) => data.settings);
+    } on OperationMessageException catch (error) {
+      if (onlyUndefinedFieldErrors(error, type: 'SettingsType')) return null;
+      rethrow;
+    }
+  }
+
+  Future<Fragment$AutoBackupFlagsDto?> updateAutoBackupFlags(
+    BackupFlags flags,
+  ) => permissions.run(
+    Enum$UserPermission.MANAGE_SETTINGS,
+    () => ferryClient
+        .mutate$UpdateAutoBackupFlags(
+          Options$Mutation$UpdateAutoBackupFlags(
+            variables: Variables$Mutation$UpdateAutoBackupFlags(
+              settings: flags.toAutoInput(),
+            ),
+          ),
+        )
+        .getData((data) => data.setSettings.settings),
+  );
 
   Future<Set<String>?> validateBackup(MultipartFile file) => ferryClient
       .query$ValidateBackup(
@@ -53,21 +88,11 @@ class BackupSettingsRepository {
       )
       .getData((data) => data.restoreStatus);
 
-  Future<String?> createBackup({
-    required bool includeCategories,
-    required bool includeChapters,
-    required bool includeHistory,
-    required bool includeTracking,
-    required bool includeClientData,
-  }) => ferryClient
+  Future<String?> createBackup(BackupFlags flags) => ferryClient
       .mutate$CreateBackup(
         Options$Mutation$CreateBackup(
           variables: Variables$Mutation$CreateBackup(
-            includeCategories: includeCategories,
-            includeChapters: includeChapters,
-            includeHistory: includeHistory,
-            includeTracking: includeTracking,
-            includeClientData: includeClientData,
+            flags: flags.toPartialInput(),
           ),
         ),
       )
@@ -132,4 +157,9 @@ BackupSettingsRepository backupSettingsRepository(Ref ref) =>
     BackupSettingsRepository(
       ref.watch(graphQlClientProvider),
       permissions: ref.watch(accountPermissionGuardProvider),
+    );
+
+final autoBackupFlagsProvider =
+    FutureProvider.autoDispose<Fragment$AutoBackupFlagsDto?>(
+      (ref) => ref.watch(backupSettingsRepositoryProvider).autoBackupFlags(),
     );

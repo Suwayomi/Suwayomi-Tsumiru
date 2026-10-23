@@ -2,6 +2,9 @@ fragment WebInterfaceSettingsDto on SettingsType {
   webUIFlavor
   webUIChannel
   webUIUpdateCheckInterval
+  initialOpenInBrowserEnabled
+  webUIInterface
+  electronPath
 }
 
 query WebInterfaceSettings {

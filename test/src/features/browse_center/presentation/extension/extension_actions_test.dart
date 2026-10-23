@@ -5,6 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gql/ast.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
@@ -69,6 +71,32 @@ void main() {
     return sources.listCalls - before;
   }
 
+  test(
+    'update-all sends every id in the update group in one mutation',
+    () async {
+      final sentNames = <String>[];
+      final sentVariables = <Map<String, dynamic>>[];
+      final repository = ExtensionRepository(
+        GraphQLClient(
+          link: _UpdateAllLink(sentNames, sentVariables),
+          cache: GraphQLCache(),
+        ),
+        permissions: legacyAccountPermissions,
+      );
+      await repository.updateAllExtensions(const [
+        'com.example.a',
+        'com.example.b',
+      ]);
+      expect(sentNames, ['UpdateExtensions']);
+      expect(sentVariables, [
+        {
+          'ids': ['com.example.a', 'com.example.b'],
+          'update': true,
+        },
+      ]);
+    },
+  );
+
   test('reinstalling removes the extension before putting it back', () async {
     final actions = container.read(extensionActionsProvider);
     final refetches = await sourceFetchesAfter(
@@ -85,6 +113,36 @@ void main() {
       reason: 'the rebuilt extension re-registers its sources server-side',
     );
   });
+}
+
+class _UpdateAllLink extends Link {
+  _UpdateAllLink(this.names, this.variables);
+
+  final List<String> names;
+  final List<Map<String, dynamic>> variables;
+
+  @override
+  Stream<Response> request(Request request, [NextLink? forward]) async* {
+    names.add(
+      request.operation.document.definitions
+          .whereType<OperationDefinitionNode>()
+          .single
+          .name!
+          .value,
+    );
+    variables.add(Map<String, dynamic>.from(request.variables));
+    yield Response(
+      response: {},
+      data: {
+        '__typename': 'Mutation',
+        'updateExtensions': {
+          '__typename': 'UpdateExtensionsPayload',
+          'clientMutationId': null,
+          'extensions': [],
+        },
+      },
+    );
+  }
 }
 
 class ActionTestCredentials extends AuthCredentialsStore {

@@ -98,6 +98,17 @@ class ExtensionRepository {
       )
       .getData((data) {});
 
+  Future<void> updateAllExtensions(List<String> ids) => client
+      .mutate$UpdateExtensions(
+        Options$Mutation$UpdateExtensions(
+          variables: Variables$Mutation$UpdateExtensions(
+            ids: ids,
+            update: true,
+          ),
+        ),
+      )
+      .getData((data) {});
+
   /// How many installed extensions have an update waiting.
   ///
   /// A plain query, unlike [getExtensionListStream] — that one is a mutation

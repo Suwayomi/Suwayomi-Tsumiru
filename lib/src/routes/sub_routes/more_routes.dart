@@ -217,6 +217,28 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
       detailNavigationPage(context, state, _screen);
 }
 
+class ImageProcessingRoute extends GoRouteData with $ImageProcessingRoute {
+  const ImageProcessingRoute({this.type = 'download'});
+
+  /// Which conversion map the editor opens: `download` or `serve`.
+  final String type;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => ImageProcessingScreen(
+    kind: type == 'serve'
+        ? ImageProcessingKind.serve
+        : ImageProcessingKind.download,
+  );
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
   const DownloadsSettingsRoute({this.highlight, this.tab});
 

@@ -39,3 +39,17 @@ mutation ToggleAutoDownloadNewChapters($autoDownloadNewChapters: Boolean = false
     }
   }
 }
+
+query AutoDownloadIgnoreReUploadsLegacy {
+  settings {
+    autoDownloadIgnoreReUploads
+  }
+}
+
+mutation ToggleAutoDownloadIgnoreReUploads($autoDownloadIgnoreReUploads: Boolean = false) {
+  setSettings(input: {settings: {autoDownloadIgnoreReUploads: $autoDownloadIgnoreReUploads}}) {
+    settings {
+      ...SettingsDto
+    }
+  }
+}

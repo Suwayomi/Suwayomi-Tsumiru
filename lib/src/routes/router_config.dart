@@ -55,6 +55,8 @@ import '../features/settings/presentation/notifications/notifications_settings_s
 import '../features/settings/presentation/reader/reader_settings_screen.dart';
 import '../features/settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../features/settings/presentation/server/server_screen.dart';
+import '../features/settings/presentation/server/widget/images/image_conversions.dart';
+import '../features/settings/presentation/server/widget/images/image_processing_screen.dart';
 import '../features/settings/presentation/settings/settings_screen.dart';
 import '../features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
@@ -115,6 +117,7 @@ abstract class Routes {
   static const generalSettings = 'general';
   static const backup = 'backup';
   static const serverSettings = 'server';
+  static const imageProcessing = 'image-processing';
   static const downloadsSettings = 'downloads';
   static const offlineSettings = 'offline';
   static const notificationsSettings = 'notifications';
@@ -264,6 +267,11 @@ GoRouter routerConfig(Ref ref) {
                     ),
                     TypedGoRoute<ServerSettingsRoute>(
                       path: Routes.serverSettings,
+                      routes: [
+                        TypedGoRoute<ImageProcessingRoute>(
+                          path: Routes.imageProcessing,
+                        ),
+                      ],
                     ),
                     TypedGoRoute<ReaderSettingsRoute>(
                       path: Routes.readerSettings,

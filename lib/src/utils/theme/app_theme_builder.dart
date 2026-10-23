@@ -46,10 +46,20 @@ ThemeData buildAppTheme({
   final brightPrimary = brandBrightAccent(scheme);
 
   ButtonStyle filledLike() => ButtonStyle(
-    backgroundColor: WidgetStatePropertyAll(primary),
-    foregroundColor: WidgetStatePropertyAll(scheme.onPrimary),
+    backgroundColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled)
+          ? scheme.onSurface.withValues(alpha: 0.12)
+          : primary,
+    ),
+    foregroundColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled)
+          ? scheme.onSurface.withValues(alpha: 0.38)
+          : scheme.onPrimary,
+    ),
     shadowColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.6)),
-    elevation: const WidgetStatePropertyAll(6),
+    elevation: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled) ? 0 : 6,
+    ),
     shape: WidgetStatePropertyAll(
       RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),

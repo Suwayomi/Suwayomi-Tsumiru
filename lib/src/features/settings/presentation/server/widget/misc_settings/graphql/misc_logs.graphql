@@ -1,0 +1,15 @@
+fragment MiscLogsSettingsDto on SettingsType {
+  maxLogFiles
+  maxLogFileSize
+  maxLogFolderSize
+}
+
+query MiscLogsSettings {
+  settings { ...MiscLogsSettingsDto }
+}
+
+mutation SetMiscLogsSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: {settings: $settings}) {
+    settings { ...MiscLogsSettingsDto }
+  }
+}
