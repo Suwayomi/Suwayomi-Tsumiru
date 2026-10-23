@@ -26,7 +26,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
   Future<void> createBackupFile(WidgetRef ref, BuildContext context) async {
     final flags = await showBackupFlagsDialog(
       context,
-      title: context.l10n.createBackup,
+      title: context.l10n.createBackupTitle,
     );
     if (flags == null || !context.mounted) return;
     final toast = ref.read(toastProvider);

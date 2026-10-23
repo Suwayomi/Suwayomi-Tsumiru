@@ -103,7 +103,7 @@ class AutomaticBackupSection extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        context.l10n.syncYomiSyncDataInclude(summary.include),
+                        context.l10n.backupDataInclude(summary.include),
                       ),
                       Text(context.l10n.backupDataExclude(summary.exclude)),
                     ],

@@ -1480,6 +1480,13 @@
       "list": { "type": "String" }
     }
   },
+  "backupDataInclude": "Include: {list}",
+  "@backupDataInclude": {
+    "description": "Automatic backup contents summary, included kinds comma separated",
+    "placeholders": {
+      "list": { "type": "String" }
+    }
+  },
   "badges": "Badges",
   "bookmarked": "Bookmarked",
   "bookmark": "Bookmark",
@@ -1581,10 +1588,6 @@
   "copyMsg": "'{msg}' Copied!",
   "createBackupDescription": "Backup library as a Tachidesk backup",
   "createBackupTitle": "Create Backup",
-  "createBackup": "Create backup",
-  "@createBackup": {
-    "description": "Title of the create-backup flags dialog"
-  },
   "credentials": "Credentials",
   "back": "Back",
   "next": "Next",
@@ -1706,10 +1709,6 @@
   "alwaysAsk": "Always ask",
   "setCategories": "Set categories",
   "ok": "OK",
-  "okButton": "Ok",
-  "@okButton": {
-    "description": "Backup flags dialog confirmation button"
-  },
   "delete": "Delete",
   "deleteChaptersConfirm": "Are you sure you want to delete the selected chapters?",
   "deleteCategoryDescription": "This will merge all Mangas in this Category to Default!",
@@ -2427,6 +2426,30 @@
     }
   },
   "openFlareSolverr": "Checkout FlareSolverr for information on how to set it up",
+  "opds": "OPDS",
+  "opdsBinaryFileSize": "Binary file size",
+  "opdsBinaryFileSizeDescription": "Display file sizes in binary (KiB, MiB, GiB) instead of decimal (KB, MB, GB)",
+  "opdsItemsPerPage": "Items per page",
+  "opdsItemsPerPageDescription": "Number of items per page in OPDS feeds (e.g., Library History, Manga Chapters).\nHigher values may affect client performance.",
+  "opdsEnablePageReadProgress": "Enable page read progress",
+  "opdsEnablePageReadProgressDescription": "Track and update your reading progress by page for each chapter during page streaming",
+  "opdsMarkAsReadOnDownload": "Mark chapters as read on download",
+  "opdsMarkAsReadOnDownloadDescription": "Automatically mark chapters as read when you download them.",
+  "opdsShowOnlyUnreadChapters": "Show only unread chapters",
+  "opdsShowOnlyUnreadChaptersDescription": "Filter manga feed to display only chapters you haven’t read yet.",
+  "opdsShowOnlyDownloadedChapters": "Show only downloaded chapters",
+  "opdsShowOnlyDownloadedChaptersDescription": "Filter manga feed to display only chapters you have downloaded.",
+  "opdsSkipChapterMetadataFeed": "Skip chapter metadata feed",
+  "opdsSkipChapterMetadataFeedDescription": "When enabled, download and streaming links are provided directly in the chapter list. KoSync strategies are applied, but PROMPT conflicts are ignored (treating local progress as priority)",
+  "opdsChapterSortOrder": "Chapter sort order",
+  "opdsChapterSortOrderDescription": "Choose the order in which chapters are displayed.",
+  "opdsSortAscending": "Ascending",
+  "opdsSortDescending": "Descending",
+  "opdsCbzMimeType": "CBZ MIME-Type",
+  "opdsCbzMimeTypeDescription": "Controls the MimeType that Suwayomi sends in OPDS entries for CBZ archives. Also affects global CBZ download.\nModern follows recent IANA standard (2017), while LEGACY (deprecated mimetype for .cbz) and COMPATIBLE (deprecated mimetype for all comic archives) might be more compatible with older clients.",
+  "opdsCbzLegacy": "Legacy",
+  "opdsCbzModern": "Modern",
+  "opdsCbzCompatible": "Compatible",
   "openInWeb": "Open In Web",
   "openSourceInBrowser": "Open source page",
   "openInBrowser": "Open in browser",

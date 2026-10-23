@@ -77,7 +77,7 @@ void main() {
     await tester.tap(find.text('Tracking'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Ok'));
+    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
     expect(

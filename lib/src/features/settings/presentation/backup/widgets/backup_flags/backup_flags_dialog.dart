@@ -98,7 +98,7 @@ class BackupFlagsDialog extends HookWidget {
         PopButton(popText: context.l10n.cancel),
         ElevatedButton(
           onPressed: () => Navigator.pop(context, flags.value),
-          child: Text(context.l10n.okButton),
+          child: Text(context.l10n.ok),
         ),
       ],
     );
