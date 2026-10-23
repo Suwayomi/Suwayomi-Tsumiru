@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/anilist_provider.dart';
+import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/comick_provider.dart';
+import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/mangadex_provider.dart';
+import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/mangaupdates_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/myanimelist_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_repository.dart';
@@ -80,14 +83,45 @@ void main() {
     expect(container.read(mangaRecommendationsProvider(1)).isLoading, isTrue);
   });
 
-  test('settled empty and failed providers report a failure', () async {
+  test('an empty provider beside a failed one produces empty data', () async {
     await Future<void>.delayed(Duration.zero);
     await container.pump();
     first.complete([]);
     second.completeError(StateError('Unavailable'));
     await Future<void>.delayed(Duration.zero);
     await container.pump();
+    expect(container.read(mangaRecommendationsProvider(1)).value, isEmpty);
+    expect(container.read(mangaRecommendationsProvider(1)).hasError, isFalse);
+  });
+
+  test('all providers failing reports an error', () async {
+    await Future<void>.delayed(Duration.zero);
+    await container.pump();
+    first.completeError(StateError('First down'));
+    second.completeError(StateError('Second down'));
+    await Future<void>.delayed(Duration.zero);
+    await container.pump();
     expect(container.read(mangaRecommendationsProvider(1)).hasError, isTrue);
+  });
+
+  test('all-failed error names every failed provider with its error', () async {
+    await Future<void>.delayed(Duration.zero);
+    await container.pump();
+    const unavailable = RecommendationServiceUnavailable();
+    const httpFailed = RecommendationHttpException(500);
+    first.completeError(unavailable);
+    second.completeError(httpFailed);
+    await Future<void>.delayed(Duration.zero);
+    await container.pump();
+    final error = container.read(mangaRecommendationsProvider(1)).error;
+    expect(error, isA<RecommendationAllFailed>());
+    final failures = (error as RecommendationAllFailed).failures;
+    expect(
+      [for (final failure in failures) failure.name],
+      ['AniList', 'MyAnimeList'],
+    );
+    expect(failures[0].error, same(unavailable));
+    expect(failures[1].error, same(httpFailed));
   });
 
   test('settled successful empty providers produce an empty result', () async {
@@ -157,6 +191,45 @@ void main() {
     expect(
       setupContainer.read(mangaRecommendationsProvider(1)).error,
       same(error),
+    );
+  });
+
+  test('web keeps only AniList; native keeps every applicable provider', () {
+    final client = http.Client();
+    addTearDown(client.close);
+    final ctx = RecommendationContext(
+      title: 'Example',
+      remoteIdByTracker: const {},
+      sourceName: 'Comick MangaDex',
+      mangaUrl: '/comic/abc#',
+      client: client,
+    );
+    const all = [
+      AnilistProvider(),
+      MangaUpdatesCommunityProvider(),
+      MangaUpdatesSimilarProvider(),
+      MyAnimeListProvider(),
+      MangaDexProvider(),
+      ComickProvider(),
+    ];
+    final web = [
+      for (final p in all)
+        if (appliesOnPlatform(p, ctx, isWeb: true)) p.key,
+    ];
+    expect(web, [const AnilistProvider().key]);
+    final native = [
+      for (final p in all)
+        if (appliesOnPlatform(p, ctx, isWeb: false)) p.key,
+    ];
+    expect(
+      native,
+      containsAll([
+        const AnilistProvider().key,
+        const MangaUpdatesCommunityProvider().key,
+        const MangaUpdatesSimilarProvider().key,
+        const MangaDexProvider().key,
+        const ComickProvider().key,
+      ]),
     );
   });
 

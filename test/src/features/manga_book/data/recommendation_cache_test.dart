@@ -327,7 +327,6 @@ void main() {
   for (final error in [
     const RecommendationHttpException(403),
     const RecommendationServiceUnavailable(),
-    const RecommendationUnavailableOnWeb(),
   ]) {
     test(
       'terminal $error settles once under default Riverpod retry policy',

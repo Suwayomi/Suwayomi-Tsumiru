@@ -6,8 +6,6 @@
 
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-
 import '../../../../library/domain/duplicate_matcher.dart';
 import '../recommendation_provider.dart';
 
@@ -23,11 +21,6 @@ abstract class _MangaUpdatesProvider extends TrackerRecommendationProvider {
 
   /// "recommendations" (community) vs "category_recommendations" (similar).
   String get recommendationsKey;
-
-  @override
-  Future<List<Recommendation>> fetch(RecommendationContext ctx) => kIsWeb
-      ? Future.error(const RecommendationUnavailableOnWeb())
-      : super.fetch(ctx);
 
   @override
   Future<List<Recommendation>> fetchById(

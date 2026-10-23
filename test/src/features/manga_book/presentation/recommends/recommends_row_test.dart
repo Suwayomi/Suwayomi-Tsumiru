@@ -202,6 +202,82 @@ void main() {
     );
     expect(find.text('Retry'), findsOneWidget);
   });
+  testWidgets('a lone unavailable provider names itself', (tester) async {
+    await pump(
+      tester,
+      fetch: () async {
+        throw const RecommendationServiceUnavailable();
+      },
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Test service is temporarily unavailable. Try again later.'),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
+  });
+  testWidgets('every provider unavailable names them all', (tester) async {
+    await pump(tester);
+    container
+        .read(_results.notifier)
+        .set(
+          AsyncError<List<Recommendation>>(
+            const RecommendationAllFailed([
+              RecommendationProviderFailure(
+                'AniList',
+                RecommendationServiceUnavailable(),
+              ),
+              RecommendationProviderFailure(
+                'MangaUpdates',
+                RecommendationServiceUnavailable(),
+              ),
+              RecommendationProviderFailure(
+                'MyAnimeList',
+                RecommendationServiceUnavailable(),
+              ),
+            ]),
+            StackTrace.current,
+          ),
+        );
+    await tester.pump();
+    expect(
+      find.text(
+        "Couldn't load recommendations from "
+        'AniList, MangaUpdates, MyAnimeList. Try again later.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
+  });
+  testWidgets('mixed provider failures name every provider', (tester) async {
+    await pump(tester);
+    container
+        .read(_results.notifier)
+        .set(
+          AsyncError<List<Recommendation>>(
+            const RecommendationAllFailed([
+              RecommendationProviderFailure(
+                'AniList',
+                RecommendationServiceUnavailable(),
+              ),
+              RecommendationProviderFailure(
+                'MyAnimeList',
+                RecommendationHttpException(403),
+              ),
+            ]),
+            StackTrace.current,
+          ),
+        );
+    await tester.pump();
+    expect(
+      find.text(
+        "Couldn't load recommendations from AniList, MyAnimeList. "
+        'Try again later.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
+  });
   testWidgets('first visible cards do not change after later results', (
     tester,
   ) async {

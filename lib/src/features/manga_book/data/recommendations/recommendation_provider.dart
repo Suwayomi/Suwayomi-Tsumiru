@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 /// One recommended title. Mirrors the fields Komikku's SManga recommendations
@@ -62,12 +63,19 @@ class RecommendationContext {
   final http.Client client;
 }
 
-class RecommendationUnavailableOnWeb implements Exception {
-  const RecommendationUnavailableOnWeb();
-}
-
 class RecommendationServiceUnavailable implements Exception {
   const RecommendationServiceUnavailable();
+}
+
+class RecommendationProviderFailure {
+  const RecommendationProviderFailure(this.name, this.error);
+  final String name;
+  final Object error;
+}
+
+class RecommendationAllFailed implements Exception {
+  const RecommendationAllFailed(this.failures);
+  final List<RecommendationProviderFailure> failures;
 }
 
 /// A provider's HTTP call returned a non-200. Surfaced per-section as an error
@@ -92,8 +100,17 @@ abstract class RecommendationProvider {
   /// providers apply everywhere.
   bool appliesTo(RecommendationContext ctx) => true;
 
+  /// True only for providers reachable from browsers (CORS allows AniList).
+  bool get supportsWeb => false;
+
   Future<List<Recommendation>> fetch(RecommendationContext ctx);
 }
+
+bool appliesOnPlatform(
+  RecommendationProvider provider,
+  RecommendationContext ctx, {
+  bool isWeb = kIsWeb,
+}) => (!isWeb || provider.supportsWeb) && provider.appliesTo(ctx);
 
 /// Base for providers backed by a tracker: query by the manga's remote id when
 /// it's tracked there, otherwise search by title (Komikku's id-or-search rule).
