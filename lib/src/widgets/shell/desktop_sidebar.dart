@@ -207,7 +207,7 @@ class DesktopSidebar extends ConsumerWidget {
     }
 
     Widget incognitoRow(bool showExpanded) {
-      final label = context.l10n.incognitoMode;
+      final label = context.l10n.incognitoShort;
       final rowGap = showExpanded ? _rowGap : _collapsedRowGap;
       return shellRow(
         showExpanded: showExpanded,

@@ -207,15 +207,36 @@ class _WebTitleBridge extends StatelessWidget {
     // Follow the delegate (the logical route), not the engine's route
     // information: imperative pops (dismissing the settings window) update
     // the match list without reporting a new route, which left the tab
-    // title stuck on the closed page.
+    // title stuck on the closed page. Pushes need the provider too: a push
+    // lands as an [ImperativeRouteMatch] whose location the match list's
+    // own uri ignores, while the provider carries the pushed uri.
     return ListenableBuilder(
-      listenable: routes.routerDelegate,
-      builder: (context, _) => WebPageTitle(
-        uri: routes.routerDelegate.currentConfiguration.uri,
-        child: child,
-      ),
+      listenable: Listenable.merge([
+        routes.routerDelegate,
+        routes.routeInformationProvider,
+      ]),
+      builder: (context, _) =>
+          WebPageTitle(uri: _titleUri(routes), child: child),
     );
   }
+}
+
+/// The uri the tab title follows. The delegate's configuration uri ignores
+/// imperative matches, so a pushed page's location comes from the innermost
+/// imperative match — the same source the browser URL uses. Before the first
+/// route the configuration is empty and [GoRouter.state] throws, so the
+/// provider's value is the only safe read there.
+Uri _titleUri(GoRouter routes) {
+  final configuration = routes.routerDelegate.currentConfiguration;
+  if (configuration.isEmpty) {
+    return routes.routeInformationProvider.value.uri;
+  }
+  RouteMatchBase route = configuration.matches.last;
+  while (route is ShellRouteMatch && route.matches.isNotEmpty) {
+    route = route.matches.last;
+  }
+  if (route is ImperativeRouteMatch) return route.matches.uri;
+  return configuration.uri;
 }
 
 /// Must live below [MaterialApp] — `context.l10n` is null above it, which

@@ -2001,6 +2001,10 @@
   },
   "incognitoMode": "Incognito mode",
   "incognitoModeDescription": "Pauses reading history",
+  "incognitoShort": "Incognito",
+  "@incognitoShort": {
+    "description": "Short Incognito label for the desktop sidebar foot row and its collapsed tooltip"
+  },
   "emptyCategory": "Category name can't be empty",
   "enableSocksProxy": "Use SOCKS proxy",
   "enterProp": "Enter {prop}",

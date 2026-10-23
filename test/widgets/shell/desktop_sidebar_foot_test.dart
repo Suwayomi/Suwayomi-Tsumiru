@@ -69,7 +69,7 @@ void main() {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text(l10n.more), findsNothing);
-    expect(find.text(l10n.incognitoMode), findsOneWidget);
+    expect(find.text(l10n.incognitoShort), findsOneWidget);
     expect(find.text(l10n.settings), findsOneWidget);
     expect(find.byType(Switch), findsOneWidget);
 
@@ -78,7 +78,7 @@ void main() {
       tester.element(find.byType(DesktopSidebar)),
     );
     expect(container.read(incognitoModeProvider), isFalse);
-    await tester.tap(find.text(l10n.incognitoMode));
+    await tester.tap(find.text(l10n.incognitoShort));
     await tester.pumpAndSettle();
     expect(container.read(incognitoModeProvider), isTrue);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
