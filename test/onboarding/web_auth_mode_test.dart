@@ -66,4 +66,73 @@ void main() {
       isTrue,
     );
   });
+
+  group('isSameOriginServer', () {
+    test('same host and explicit same port', () {
+      expect(
+        isSameOriginServer(
+          pageOrigin: 'http://example.com:4567',
+          serverAddress: 'http://example.com:4567',
+        ),
+        isTrue,
+      );
+    });
+
+    test('missing port matches the scheme default', () {
+      expect(
+        isSameOriginServer(
+          pageOrigin: 'https://example.com',
+          serverAddress: 'https://example.com:443',
+        ),
+        isTrue,
+      );
+    });
+
+    test('different port', () {
+      expect(
+        isSameOriginServer(
+          pageOrigin: 'http://example.com:4567',
+          serverAddress: 'http://example.com:4568',
+        ),
+        isFalse,
+      );
+    });
+
+    test('different host', () {
+      expect(
+        isSameOriginServer(
+          pageOrigin: 'http://example.com:4567',
+          serverAddress: 'http://other.com:4567',
+        ),
+        isFalse,
+      );
+    });
+
+    test('unparseable address', () {
+      expect(
+        isSameOriginServer(
+          pageOrigin: 'http://example.com:4567',
+          serverAddress: 'http://[::1',
+        ),
+        isFalse,
+      );
+    });
+
+    test('host comparison is case-insensitive', () {
+      expect(
+        isSameOriginServer(
+          pageOrigin: 'http://Example.COM:4567',
+          serverAddress: 'http://example.com:4567',
+        ),
+        isTrue,
+      );
+    });
+
+    test('null page origin is not same-origin', () {
+      expect(
+        isSameOriginServer(pageOrigin: null, serverAddress: 'http://x'),
+        isFalse,
+      );
+    });
+  });
 }

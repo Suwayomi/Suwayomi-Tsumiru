@@ -19,6 +19,7 @@ import 'emoticons.dart';
 final webAuthBlockedProvider = Provider<bool>(
   (ref) =>
       ref.watch(isWebProvider) &&
+      !ref.watch(webSameOriginProvider) &&
       isWebUnsupportedAuthMode(
         ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial,
       ),
