@@ -140,6 +140,35 @@ void main() {
       );
     });
 
+    test('duplicate query keys are kept and flagged invalid (WebUI)', () {
+      final params = extractSearchParams(
+        'https://converter.example/process?a=1&a=2&b=3',
+      );
+      expect(
+        params.map((p) => (p.name, p.value)).toList(),
+        [('a', '1'), ('a', '2'), ('b', '3')],
+      );
+      final editor = editorConversionsFromServer([
+        ServerConversion(
+          mimeType: 'image/png',
+          target: 'https://converter.example/process?a=1&a=2',
+        ),
+      ]);
+      expect(imageConversionsAreInvalid(editor), isTrue);
+    });
+
+    test('unparsable compression/timeout text is invalid', () {
+      expect(isValidCompressionText(''), isTrue);
+      expect(isValidCompressionText('0.5'), isTrue);
+      expect(isValidCompressionText('abc'), isFalse);
+      expect(isValidCompressionText('1.5'), isFalse);
+      expect(isValidTimeoutText(''), isTrue);
+      expect(isValidTimeoutText('30'), isTrue);
+      expect(isValidTimeoutText('1.5'), isFalse);
+      expect(isValidTimeoutText('abc'), isFalse);
+      expect(isValidTimeoutText('5'), isFalse);
+    });
+
     testWidgets('images section hides when the fields are undefined', (
       tester,
     ) async {

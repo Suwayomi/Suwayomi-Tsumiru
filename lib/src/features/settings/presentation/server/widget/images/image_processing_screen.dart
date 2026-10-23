@@ -12,6 +12,7 @@ import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../data/user_settings.dart';
 import 'data/images_repository.dart';
+import 'graphql/__generated__/images.graphql.dart';
 import 'image_conversions.dart';
 
 /// Full-screen editor for one conversion map, used for both WebUI rows:
@@ -53,6 +54,13 @@ class _RuleState {
   bool showSearchParams = false;
   bool showHeaders = false;
 
+  /// Non-empty compression/timeout text that does not parse (or parses out
+  /// of range) is invalid and blocks Save instead of being silently dropped.
+  bool get hasInvalidNumericInput =>
+      !isValidCompressionText(compression.text) ||
+      !isValidTimeoutText(callTimeout.text) ||
+      !isValidTimeoutText(connectTimeout.text);
+
   void dispose() {
     mime.dispose();
     target.dispose();
@@ -84,24 +92,35 @@ class _ImageProcessingScreenState
       final inputs = toServerConversionInputs(
         _rules!.map((r) => r.rule).toList(),
       );
+      // Await the refreshed server value before rebuilding: invalidating and
+      // clearing `_rules` in the same setState rebuilds from the stale list
+      // (Riverpod still hands out the old data while refreshing), so the
+      // editor would revert to the pre-save values.
+      final List<ServerConversion>? records;
       if (_isDownload) {
         await ref
             .read(imagesRepositoryProvider)
             .writeDownload(
               Input$PartialSettingsTypeInput(downloadConversions: inputs),
             );
-        ref.invalidate(imagesDownloadSettingsProvider);
+        final fresh = await ref.refresh(imagesDownloadSettingsProvider.future);
+        records = fresh == null ? null : _downloadRecords(fresh);
       } else {
         await ref.read(serveConversionsRepositoryProvider).write(inputs);
-        ref.invalidate(serveConversionsProvider);
+        records = await ref.refresh(serveConversionsProvider.future);
       }
       if (mounted) {
         setState(() {
           for (final rule in _rules!) {
             rule.dispose();
           }
-          _rules = null;
-          _baseline = null;
+          if (records == null) {
+            _rules = null;
+            _baseline = null;
+          } else {
+            _baseline = editorConversionsFromServer(records);
+            _rules = _baseline!.map((c) => _RuleState(c.copy())).toList();
+          }
           _saving = false;
         });
       }
@@ -152,29 +171,7 @@ class _ImageProcessingScreenState
                 error: (error, _) => _loadError(context, ref, error),
                 data: (dto) {
                   if (dto == null) return const SizedBox.shrink();
-                  return _editorBody(
-                    context,
-                    dto.downloadConversions
-                        .map(
-                          (c) => ServerConversion(
-                            mimeType: c.mimeType,
-                            target: c.target,
-                            compressionLevel: c.compressionLevel,
-                            callTimeout: c.callTimeout,
-                            connectTimeout: c.connectTimeout,
-                            headers: c.headers
-                                ?.map(
-                                  (h) => ServerConversionHeader(
-                                    name: h.name,
-                                    value: h.value,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        )
-                        .toList(),
-                    canEdit,
-                  );
+                  return _editorBody(context, _downloadRecords(dto), canEdit);
                 },
               )
             : ref.watch(serveConversionsProvider).when(
@@ -213,7 +210,9 @@ class _ImageProcessingScreenState
   ) {
     _ensureLoaded(records);
             final rules = _rules!.map((r) => r.rule).toList();
-            final invalid = imageConversionsAreInvalid(rules);
+            final invalid =
+                imageConversionsAreInvalid(rules) ||
+                _rules!.any((r) => r.hasInvalidNumericInput);
             final changed = imageConversionsChanged(_baseline!, rules);
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -328,6 +327,27 @@ class _ImageProcessingScreenState
     setState(() {});
   }
 }
+
+/// Server map from the download DTO, shared by the build mapping and the
+/// post-save rebuild so the editor shows exactly what the server now holds.
+List<ServerConversion> _downloadRecords(
+  Fragment$ImagesDownloadSettingsDto dto,
+) => dto.downloadConversions
+    .map(
+      (c) => ServerConversion(
+        mimeType: c.mimeType,
+        target: c.target,
+        compressionLevel: c.compressionLevel,
+        callTimeout: c.callTimeout,
+        connectTimeout: c.connectTimeout,
+        headers: c.headers
+            ?.map(
+              (h) => ServerConversionHeader(name: h.name, value: h.value),
+            )
+            .toList(),
+      ),
+    )
+    .toList();
 
 List<ConversionKeyValue> _retainSearchParamIds(
   String url,
@@ -475,7 +495,8 @@ class _RuleCard extends StatelessWidget {
                   ),
                   decoration: InputDecoration(
                     labelText: l10n.imageProcessingCompressionLevel,
-                    errorText: !isValidCompressionLevel(rule.compressionLevel)
+                    errorText:
+                        !isValidCompressionText(state.compression.text)
                         ? l10n.imageProcessingInvalidInput
                         : null,
                   ),
@@ -497,7 +518,7 @@ class _RuleCard extends StatelessWidget {
                   decoration: InputDecoration(
                     labelText: l10n.imageProcessingCallTimeout,
                     suffixText: l10n.imageProcessingSecond,
-                    errorText: !isValidCallTimeoutSetting(rule.callTimeout)
+                    errorText: !isValidTimeoutText(state.callTimeout.text)
                         ? l10n.imageProcessingInvalidInput
                         : null,
                   ),
@@ -521,9 +542,7 @@ class _RuleCard extends StatelessWidget {
                   decoration: InputDecoration(
                     labelText: l10n.imageProcessingConnectTimeout,
                     suffixText: l10n.imageProcessingSecond,
-                    errorText: !isValidConnectTimeoutSetting(
-                      rule.connectTimeout,
-                    )
+                    errorText: !isValidTimeoutText(state.connectTimeout.text)
                         ? l10n.imageProcessingInvalidInput
                         : null,
                   ),

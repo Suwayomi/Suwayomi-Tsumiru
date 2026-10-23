@@ -244,12 +244,33 @@ ImageConversionTargetMode getTargetMode(String target) {
 }
 
 /// Query pairs embedded in a URL-mode target, as `Name`/`Value` rows.
+/// Repeated keys are kept (flattened, in order) so a duplicated name shows
+/// up and is flagged invalid, as in WebUI.
 List<({String name, String value})> extractSearchParams(String url) {
   final parsed = Uri.tryParse(url);
   if (parsed == null) return const [];
-  return parsed.queryParameters.entries
-      .map((e) => (name: e.key, value: e.value))
+  return parsed.queryParametersAll.entries
+      .expand((e) => e.value.map((v) => (name: e.key, value: v)))
       .toList();
+}
+
+/// Raw editor text for the compression field: empty means unset, anything
+/// else must parse to an in-range level. Unparsable text is invalid (and
+/// blocks Save) instead of being silently dropped.
+bool isValidCompressionText(String text) {
+  if (text.isEmpty) return true;
+  final value = double.tryParse(text);
+  return value != null && isValidCompressionLevel(value);
+}
+
+/// Raw editor text for a timeout field (whole seconds): empty means unset,
+/// anything else must parse to an in-range whole number.
+bool isValidTimeoutText(String text) {
+  if (text.isEmpty) return true;
+  final value = int.tryParse(text);
+  return value != null &&
+      value >= conversionTimeoutMinSeconds &&
+      value <= conversionTimeoutMaxSeconds;
 }
 
 List<ConversionKeyValue> _withStableIds(
