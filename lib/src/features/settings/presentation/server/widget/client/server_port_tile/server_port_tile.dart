@@ -12,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../../../constants/db_keys.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../../../widgets/compact_switch.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
@@ -79,7 +80,7 @@ class ServerPortTile extends ConsumerWidget {
       title: context.l10n.serverPort,
       subtitle: serverToggle ? serverPort.toString() : null,
       leading: const Icon(Icons.dns_rounded),
-      trailing: Switch(
+      trailing: CompactSwitch(
         value: serverToggle,
         onChanged: (value) async {
           await ref.read(serverPortToggleProvider.notifier).update(value);

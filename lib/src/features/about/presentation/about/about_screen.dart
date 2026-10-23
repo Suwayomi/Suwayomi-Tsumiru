@@ -22,6 +22,7 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../../widgets/web_selection_area.dart';
+import '../../../settings/presentation/settings/settings_pane_scope.dart';
 import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/about_repository.dart';
 import '../../domain/about/about_dto.dart';
@@ -140,17 +141,55 @@ class AboutScreen extends HookConsumerWidget {
     // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.about);
+    // Inside the settings window the About page trades the large centred
+    // logo for a compact left-aligned header under the pane title.
+    final inSettingsWindow = SettingsPaneScope.maybeOf(context) != null;
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: WebSelectionArea(
         child: RefreshIndicator(
           onRefresh: () => ref.refresh(aboutProvider.future),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: settingsPageConstraints(context),
               child: ListView(
+                padding: settingsPagePadding(context),
                 children: [
-                  TsumiruLogo(size: context.height * .2),
+                  if (inSettingsWindow)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 8, 16, 0),
+                      child: Row(
+                        children: [
+                          const TsumiruLogo(size: 48),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.l10n.appTitle,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'v${packageInfo.version}',
+                                style: context.textTheme.bodyMedium?.copyWith(
+                                  color: context
+                                      .theme
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (inSettingsWindow) const SizedBox(height: 12),
+                  if (!inSettingsWindow) TsumiruLogo(size: context.height * .2),
                   SettingsGroupHeading(label: context.l10n.client, first: true),
                   SettingsGroupCard(
                     children: [

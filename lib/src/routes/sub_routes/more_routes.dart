@@ -11,22 +11,11 @@ class MoreRoute extends GoRouteData with $MoreRoute {
       const NoTransitionPage(child: MoreScreen());
 }
 
-// Everything below opens above the bottom nav, the way Mihon and Komikku push
-// settings out of the tab system. Keeping them inside the More branch left the
-// nav bar on screen, made the tab restore whatever screen you were last on,
-// and forced a second Back out of the branch stack.
-//
-// The key is the quick-open shell's, not rootNavigatorKey: GlobalShortcutHost
-// lives inside that shell, so a root-navigator page would be its sibling and
-// lose every global shortcut. ReaderRoute and GlobalSearchRoute do the same.
-//
-// Each screen is wrapped in DetailNavigationShellScreen so the sidebar stays
-// visible on tablet/desktop. It returns the child unchanged on phone.
+// A shared navigator keeps nested settings pages inside the desktop window.
+// It stays under the quick-open shell so global shortcuts remain available.
 
 class AboutRoute extends GoRouteData with $AboutRoute {
   const AboutRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const AboutScreen();
 
@@ -40,8 +29,6 @@ class AboutRoute extends GoRouteData with $AboutRoute {
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {
   const SettingsRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const SettingsScreen();
 
@@ -60,8 +47,6 @@ class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const LibrarySettingsScreen();
 
   @override
@@ -74,8 +59,6 @@ class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
 
 class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
   const EditCategoriesRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const EditCategoryScreen();
 
@@ -93,8 +76,6 @@ class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ReaderSettingsScreen();
 
@@ -114,8 +95,6 @@ class AppearanceSettingsRoute extends GoRouteData
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const AppearanceScreen();
 
   @override
@@ -132,8 +111,6 @@ class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const GeneralScreen();
 
@@ -152,8 +129,6 @@ class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const BrowseSettingsScreen();
 
   @override
@@ -166,8 +141,6 @@ class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
 
 class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
   const ExtensionStoreRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ExtensionStoreScreen();
 
@@ -186,8 +159,6 @@ class BackupRoute extends GoRouteData with $BackupRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const BackupScreen();
 
   @override
@@ -200,8 +171,6 @@ class BackupRoute extends GoRouteData with $BackupRoute {
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
   const ServerSettingsRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ServerScreen();
 
@@ -219,8 +188,6 @@ class ServerNetworkRoute extends GoRouteData with $ServerNetworkRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ServerNetworkScreen();
 
@@ -240,8 +207,6 @@ class ServerWebInterfaceRoute extends GoRouteData
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const ServerWebInterfaceScreen();
 
   @override
@@ -258,8 +223,6 @@ class ServerOpdsRoute extends GoRouteData with $ServerOpdsRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ServerOpdsScreen();
 
@@ -278,8 +241,6 @@ class ServerImagesRoute extends GoRouteData with $ServerImagesRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const ServerImagesScreen();
 
   @override
@@ -296,8 +257,6 @@ class ServerDatabaseRoute extends GoRouteData with $ServerDatabaseRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ServerDatabaseScreen();
 
@@ -316,8 +275,6 @@ class ServerLogsRoute extends GoRouteData with $ServerLogsRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const ServerLogsScreen();
 
   @override
@@ -334,8 +291,6 @@ class SyncRoute extends GoRouteData with $SyncRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const SyncScreen();
 
@@ -354,8 +309,6 @@ class AdvancedRoute extends GoRouteData with $AdvancedRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const AdvancedScreen();
 
   @override
@@ -371,8 +324,6 @@ class ImageProcessingRoute extends GoRouteData with $ImageProcessingRoute {
 
   /// Which conversion map the editor opens: `download` or `serve`.
   final String type;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => ImageProcessingScreen(
     kind: type == 'serve'
@@ -400,8 +351,6 @@ class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
   /// reuse this `highlight` + `tab` pair; the entry's `tabIndex` carries it.
   final int? tab;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => DownloadsSettingsScreen(initialTab: tab ?? 0);
 
   @override
@@ -414,8 +363,6 @@ class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
 
 class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
   const OfflineSettingsRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const OfflineSettingsScreen();
 
@@ -435,8 +382,6 @@ class NotificationsSettingsRoute extends GoRouteData
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const NotificationsSettingsScreen();
 
   @override
@@ -453,8 +398,6 @@ class ConnectionRoute extends GoRouteData with $ConnectionRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const ConnectionScreen();
 
@@ -473,8 +416,6 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const TrackingSettingsScreen();
 
   @override
@@ -491,8 +432,6 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   // The SyncYomi page merged into the Sync page, so the old link lands here.
   Widget get _screen => const SyncScreen();
@@ -513,8 +452,6 @@ class KoreaderSyncSettingsRoute extends GoRouteData
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   // The KOReader Sync page merged into the Sync page, so the old link lands here.
   Widget get _screen => const SyncScreen();
 
@@ -528,8 +465,6 @@ class KoreaderSyncSettingsRoute extends GoRouteData
 
 class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
   const HotkeysSettingsRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   Widget get _screen => const HotkeysSettingsScreen();
 
@@ -545,8 +480,6 @@ class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
 class AccountRoute extends GoRouteData with $AccountRoute {
   const AccountRoute();
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   // The Account page folded into Connection; the old link lands there.
   Widget get _screen => const ConnectionScreen();
 
@@ -561,8 +494,6 @@ class AccountRoute extends GoRouteData with $AccountRoute {
 class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
   const ManageUsersRoute();
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const ManageUsersScreen();
 
   @override
@@ -576,8 +507,6 @@ class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
 class AccountCodesRoute extends GoRouteData with $AccountCodesRoute {
   const AccountCodesRoute();
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   Widget get _screen => const AccountCodesScreen();
 
   @override
@@ -586,4 +515,31 @@ class AccountCodesRoute extends GoRouteData with $AccountCodesRoute {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       detailNavigationPage(context, state, _screen);
+}
+
+class SettingsWindowShellRoute extends ShellRouteData {
+  const SettingsWindowShellRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  @override
+  Page<void> pageBuilder(context, state, navigator) =>
+      CustomTransitionPage<void>(
+        key: state.pageKey,
+        opaque: false,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            child,
+        child: SettingsWindow(child: navigator),
+      );
+}
+
+class SettingsLibraryDuplicatesRoute extends GoRouteData
+    with $SettingsLibraryDuplicatesRoute {
+  const SettingsLibraryDuplicatesRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, const LibraryDuplicatesScreen());
 }

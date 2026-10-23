@@ -101,6 +101,7 @@ class ConnectionScreen extends HookConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
+              leading: detailNavigationBackButton(context),
               title: title,
               actions: [
                 if (showAccount)
@@ -120,8 +121,9 @@ class ConnectionScreen extends HookConsumerWidget {
         child: SettingsHighlightScope(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: settingsPageConstraints(context),
               child: ListView(
+                padding: settingsPagePadding(context),
                 children: [
                   // Surfaced here (where the server is changed) and kept visible even
                   // after dismissal, so it doubles as the "clear to re-enable offline"

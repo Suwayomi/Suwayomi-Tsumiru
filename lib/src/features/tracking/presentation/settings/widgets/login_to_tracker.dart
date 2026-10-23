@@ -12,6 +12,8 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../settings/presentation/settings/settings_pane_scope.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/native_tracker_oauth.dart';
 import '../../../data/tracker_repository.dart';
@@ -80,30 +82,58 @@ Future<void> loginToTracker(WidgetRef ref, Fragment$TrackerDto tracker) async {
       });
     }
   } else {
-    // Credentials flow
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => TrackerCredentialsSheet(
-        trackerName: tracker.name,
-        onSubmit: (username, password) async {
-          Navigator.of(ctx).pop();
-          try {
-            await repo.loginCredentials(
-              trackerId: tracker.id,
-              username: username,
-              password: password,
-            );
-            if (context.mounted) {
-              ref.invalidate(trackersProvider);
-              toast?.show(context.l10n.trackerLoginSuccess(tracker.name));
-            }
-          } catch (e) {
-            toast?.showError(e.toString());
+    final pane = SettingsPaneScope.maybeOf(context);
+    Widget credentials(BuildContext ctx) => TrackerCredentialsSheet(
+      trackerName: tracker.name,
+      showTitle: pane == null,
+      onSubmit: (username, password) async {
+        Navigator.of(ctx).pop();
+        try {
+          await repo.loginCredentials(
+            trackerId: tracker.id,
+            username: username,
+            password: password,
+          );
+          if (context.mounted) {
+            ref.invalidate(trackersProvider);
+            toast?.show(context.l10n.trackerLoginSuccess(tracker.name));
           }
-        },
-      ),
-      sheetAnimationStyle: context.motionStyle,
+        } catch (e) {
+          toast?.showError(e.toString());
+        }
+      },
     );
+    if (pane != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (ctx) => SettingsPaneScope(
+            nested: true,
+            width: pane.width,
+            onClose: pane.onClose,
+            onBack: () => Navigator.of(ctx).pop(),
+            child: Builder(
+              builder: (ctx) => titleTopBarSlot(
+                topBar: true,
+                leading: const BackButton(),
+                title: Text(tracker.name),
+                child: Scaffold(
+                  body: SingleChildScrollView(
+                    padding: settingsPagePadding(ctx),
+                    child: credentials(ctx),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: credentials,
+        sheetAnimationStyle: context.motionStyle,
+      );
+    }
   }
 }

@@ -11,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../../widgets/compact_switch.dart';
 
 part 'show_recommendations_tile.g.dart';
 
@@ -32,7 +33,7 @@ class ShowRecommendationsTile extends ConsumerWidget {
   const ShowRecommendationsTile({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       title: Text(context.l10n.showRecommendations),
       subtitle: Text(context.l10n.showRecommendationsSubtitle),
@@ -49,8 +50,9 @@ class RecommendsInOverflowTile extends ConsumerWidget {
     if (!ref.watch(showRecommendationsProvider).ifNull(true)) {
       return const SizedBox.shrink();
     }
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
+      contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
       title: Text(context.l10n.recommendsInOverflow),
       subtitle: Text(context.l10n.recommendsInOverflowSubtitle),
       onChanged: ref.read(recommendsInOverflowProvider.notifier).update,

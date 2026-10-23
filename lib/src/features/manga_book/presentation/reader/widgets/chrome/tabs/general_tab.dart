@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../../widgets/compact_switch.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
@@ -30,10 +31,12 @@ class GeneralTab extends ConsumerWidget {
     final settings = ref.watch(readerSettingsModelProvider(mangaId));
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
     // Pre-existing globals not folded into the settings model.
-    final forceHorizontal =
-        ref.watch(forceHorizontalSeekbarProvider).ifNull(false);
-    final leftHanded =
-        ref.watch(leftHandedVerticalSeekbarProvider).ifNull(false);
+    final forceHorizontal = ref
+        .watch(forceHorizontalSeekbarProvider)
+        .ifNull(false);
+    final leftHanded = ref
+        .watch(leftHandedVerticalSeekbarProvider)
+        .ifNull(false);
     final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(true);
     final autoWebtoon = ref.watch(autoWebtoonModeProvider).ifNull(true);
 
@@ -59,13 +62,13 @@ class GeneralTab extends ConsumerWidget {
               ),
           ],
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.showPageNumber),
           value: settings.showPageNumber,
           onChanged: model.setShowPageNumber,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.forceHorizontalSeekbar),
           value: forceHorizontal,
@@ -80,11 +83,12 @@ class GeneralTab extends ConsumerWidget {
           _SubSwitchTile(
             title: context.l10n.leftHandedVerticalSeekbar,
             value: leftHanded,
-            onChanged:
-                ref.read(leftHandedVerticalSeekbarProvider.notifier).update,
+            onChanged: ref
+                .read(leftHandedVerticalSeekbarProvider.notifier)
+                .update,
           ),
         ],
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.readerFullscreen),
           value: settings.readerFullscreen,
@@ -96,25 +100,25 @@ class GeneralTab extends ConsumerWidget {
             value: settings.drawUnderCutout,
             onChanged: model.setDrawUnderCutout,
           ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.readerKeepScreenOn),
           value: keepScreenOn,
           onChanged: ref.read(keepScreenOnProvider.notifier).update,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.showActionsOnLongTap),
           value: settings.readWithLongTap,
           onChanged: model.setReadWithLongTap,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.alwaysShowChapterTransition),
           value: settings.alwaysShowChapterTransition,
           onChanged: model.setAlwaysShowChapterTransition,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.flashOnPageChange),
           value: settings.flashOnPageChange,
@@ -133,8 +137,9 @@ class GeneralTab extends ConsumerWidget {
           ),
           IntSliderTile(
             title: context.l10n.flashEvery,
-            valueLabel:
-                context.l10n.flashEveryPages(settings.flashPageInterval),
+            valueLabel: context.l10n.flashEveryPages(
+              settings.flashPageInterval,
+            ),
             value: settings.flashPageInterval,
             min: 1,
             max: 10,
@@ -153,7 +158,7 @@ class GeneralTab extends ConsumerWidget {
             ],
           ),
         ],
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.autoWebtoonMode),
           subtitle: Text(context.l10n.autoWebtoonModeSubtitle),
@@ -179,7 +184,7 @@ class _SubSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
       title: Text(title),
@@ -221,11 +226,7 @@ class _ChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: children,
-      ),
+      child: Wrap(spacing: 8, runSpacing: 4, children: children),
     );
   }
 }

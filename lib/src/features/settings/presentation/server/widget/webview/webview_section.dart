@@ -6,6 +6,7 @@ import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../search/settings_search_registry.dart';
 import '../../../../widgets/settings_group_card/settings_group_card.dart';
@@ -35,7 +36,7 @@ class WebViewSection extends HookConsumerWidget {
             if (data != null)
               SettingsHighlightTarget(
                 id: 'webview',
-                child: SwitchListTile(
+                child: CompactSwitchListTile(
                   title: Text(context.l10n.kcefWebView),
                   subtitle: Text(context.l10n.kcefWebViewDescription),
                   value: data.kcefEnabled,

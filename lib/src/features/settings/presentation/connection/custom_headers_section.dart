@@ -89,15 +89,14 @@ class CustomHeadersSection extends HookConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!compact) SettingsGroupHeading(label: context.l10n.customHeaders),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(28, 0, 16, 4),
-          child: Text(
-            compact
-                ? context.l10n.onboardingCustomHeadersHint
-                : context.l10n.customHeadersDescription,
-            style: Theme.of(context).textTheme.bodySmall,
+        if (compact)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 0, 16, 4),
+            child: Text(
+              context.l10n.onboardingCustomHeadersHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
-        ),
         if (compact) ...[
           if (entries.isEmpty)
             Padding(
@@ -124,17 +123,7 @@ class CustomHeadersSection extends HookConsumerWidget {
         ] else
           SettingsGroupCard(
             children: [
-              if (entries.isEmpty)
-                ListTile(
-                  title: Text(
-                    context.l10n.customHeaderEmpty,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                )
-              else
-                for (final entry in entries) headerRow(entry),
+              for (final entry in entries) headerRow(entry),
               SettingsHighlightTarget(
                 id: 'customHeaders',
                 child: ListTile(

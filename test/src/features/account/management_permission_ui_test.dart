@@ -11,6 +11,7 @@ import 'package:tsumiru/src/features/settings/presentation/browse/browse_setting
 import 'package:tsumiru/src/features/settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/compact_switch.dart';
 
 import '../settings/data/user_settings_routing_test.dart' show FixedSettings;
 
@@ -49,8 +50,8 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final localSwitch = tester.widget<SwitchListTile>(
-          find.byType(SwitchListTile),
+        final localSwitch = tester.widget<CompactSwitchListTile>(
+          find.byType(CompactSwitchListTile),
         );
         expect(localSwitch.onChanged, isNotNull);
         localSwitch.onChanged!(true);

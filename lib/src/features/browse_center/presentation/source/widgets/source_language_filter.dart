@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/language_list.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/compact_switch.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../domain/language/language_model.dart';
 import '../controller/source_controller.dart';
@@ -45,7 +46,7 @@ class SourceLanguageFilter extends HookConsumerWidget {
           itemBuilder: (context, index) {
             final String languageCode = languageCodes.value[index];
             final Language? language = languageMap[languageCode];
-            return SwitchListTile(
+            return CompactSwitchListTile(
               value: languageCodesMap[languageCode].ifNull(),
               onChanged: (value) {
                 ref
@@ -55,7 +56,8 @@ class SourceLanguageFilter extends HookConsumerWidget {
               title: Text(
                 language?.nativeName ?? language?.name ?? languageCode,
               ),
-              subtitle: (language?.name).isNotBlank &&
+              subtitle:
+                  (language?.name).isNotBlank &&
                       language?.nativeName != language?.name
                   ? Text(language!.name!)
                   : null,

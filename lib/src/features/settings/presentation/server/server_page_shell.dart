@@ -64,7 +64,9 @@ class ServerSettingsPageShell extends ConsumerWidget {
 
     final topBar = showsMergedTopBar(context);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
@@ -76,8 +78,9 @@ class ServerSettingsPageShell extends ConsumerWidget {
           child: SettingsHighlightScope(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
+                constraints: settingsPageConstraints(context),
                 child: ListView(
+                  padding: settingsPagePadding(context),
                   children: [
                     if (serverSettings.isLoading && !serverSettings.hasValue)
                       const Padding(

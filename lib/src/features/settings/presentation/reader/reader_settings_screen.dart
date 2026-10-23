@@ -16,6 +16,7 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
@@ -72,12 +73,15 @@ class ReaderSettingsScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.reader);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: SettingsHighlightScope(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: settingsPageConstraints(context),
             child: ListView(
+              padding: settingsPagePadding(context),
               children: [
                 // Group order follows Komikku's reader settings: ungrouped
                 // basics first, then Display, E-Ink, Reading, Paged,
@@ -748,7 +752,7 @@ class _BoolTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       contentPadding: indent
           ? const EdgeInsetsDirectional.only(start: 32, end: 16)

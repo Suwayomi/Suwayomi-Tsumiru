@@ -11,6 +11,7 @@ import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 import 'account_permission_labels.dart';
@@ -174,118 +175,178 @@ class AccountCodesScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.accountCodes);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: !admitted
           ? Center(child: Text(context.l10n.accountSettingsUnavailable))
-          : Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.add_rounded),
-                  title: Text(context.l10n.accountIssueRegistrationCode),
-                  onTap: busy.value
-                      ? null
-                      : () => issueAccountCode(context, ref),
-                ),
-                if (busy.value) const LinearProgressIndicator(),
-                Expanded(
-                  child: codes!.showUiWhenData(
-                    context,
-                    (data) => ListView(
-                      children: [
-                        if (data.isEmpty)
-                          ListTile(title: Text(context.l10n.accountNoCodes)),
-                        for (final code in data)
+          : Center(
+              child: ConstrainedBox(
+                constraints: settingsPageConstraints(context),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: settingsPagePadding(context) ?? EdgeInsets.zero,
+                      child: SettingsGroupCard(
+                        children: [
                           ListTile(
+                            leading: Icon(
+                              Icons.add_outlined,
+                              color: context.theme.colorScheme.onSurfaceVariant,
+                            ),
                             title: Text(
-                              code.purpose == Enum$UserCodePurpose.RECOVERY
-                                  ? context.l10n.accountRecoveryCode
-                                  : context.l10n.accountRegistrationCode,
+                              context.l10n.accountIssueRegistrationCode,
                             ),
-                            subtitle: Text(
-                              [
-                                if (code.user != null) code.user!.username,
-                                accountCodeExpiry(context, code.expiresAt),
-                                if (codePermissions?[code.id]
-                                    case final permissions?)
-                                  permissions.isEmpty
-                                      ? context.l10n.none
-                                      : accountPermissionLabels(context).entries
-                                            .where(
-                                              (entry) => permissions.contains(
-                                                entry.key,
-                                              ),
-                                            )
-                                            .map((entry) => entry.value)
-                                            .join(', '),
-                              ].join('\n'),
-                            ),
-                            trailing: TextButton(
-                              onPressed: busy.value
-                                  ? null
-                                  : () async {
-                                      final confirmed = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text(
-                                            context.l10n.accountRevokeCode,
-                                          ),
-                                          content: Text(
-                                            context
-                                                .l10n
-                                                .accountRevokeCodeConfirmation,
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: Text(context.l10n.cancel),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              child: Text(
-                                                context.l10n.accountRevokeCode,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        animationStyle: context.motionStyle,
-                                      );
-                                      if (confirmed != true ||
-                                          !context.mounted) {
-                                        return;
-                                      }
-                                      busy.value = true;
-                                      try {
-                                        await AppUtils.guard(
-                                          () => ref
-                                              .read(accountRepositoryProvider)
-                                              .revokeCode(
-                                                Input$RevokeUserCodeInput(
-                                                  id: code.id,
-                                                ),
-                                              ),
-                                          ref.read(toastProvider),
-                                        );
-                                        if (context.mounted) {
-                                          ref.invalidate(accountCodesProvider);
-                                          ref.invalidate(
-                                            accountCodePermissionsProvider,
-                                          );
-                                        }
-                                      } finally {
-                                        if (context.mounted) busy.value = false;
-                                      }
-                                    },
-                              child: Text(context.l10n.accountRevokeCode),
-                            ),
+                            onTap: busy.value
+                                ? null
+                                : () => issueAccountCode(context, ref),
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                    refresh: () => ref.invalidate(accountCodesProvider),
-                  ),
+                    const SizedBox(height: 16),
+                    if (busy.value) const LinearProgressIndicator(),
+                    Expanded(
+                      child: codes!.showUiWhenData(
+                        context,
+                        (data) => ListView(
+                          padding: settingsPagePadding(context),
+                          children: [
+                            SettingsGroupCard(
+                              children: [
+                                if (data.isEmpty)
+                                  ListTile(
+                                    title: Text(context.l10n.accountNoCodes),
+                                  )
+                                else
+                                  for (final code in data)
+                                    ListTile(
+                                      title: Text(
+                                        code.purpose ==
+                                                Enum$UserCodePurpose.RECOVERY
+                                            ? context.l10n.accountRecoveryCode
+                                            : context
+                                                  .l10n
+                                                  .accountRegistrationCode,
+                                      ),
+                                      subtitle: Text(
+                                        [
+                                          if (code.user != null)
+                                            code.user!.username,
+                                          accountCodeExpiry(
+                                            context,
+                                            code.expiresAt,
+                                          ),
+                                          if (codePermissions?[code.id]
+                                              case final permissions?)
+                                            permissions.isEmpty
+                                                ? context.l10n.none
+                                                : accountPermissionLabels(
+                                                        context,
+                                                      ).entries
+                                                      .where(
+                                                        (entry) => permissions
+                                                            .contains(
+                                                              entry.key,
+                                                            ),
+                                                      )
+                                                      .map(
+                                                        (entry) => entry.value,
+                                                      )
+                                                      .join(', '),
+                                        ].join('\n'),
+                                      ),
+                                      trailing: TextButton(
+                                        onPressed: busy.value
+                                            ? null
+                                            : () async {
+                                                final confirmed = await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    title: Text(
+                                                      context
+                                                          .l10n
+                                                          .accountRevokeCode,
+                                                    ),
+                                                    content: Text(
+                                                      context
+                                                          .l10n
+                                                          .accountRevokeCodeConfirmation,
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                              context,
+                                                            ),
+                                                        child: Text(
+                                                          context.l10n.cancel,
+                                                        ),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                              context,
+                                                              true,
+                                                            ),
+                                                        child: Text(
+                                                          context
+                                                              .l10n
+                                                              .accountRevokeCode,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  animationStyle:
+                                                      context.motionStyle,
+                                                );
+                                                if (confirmed != true ||
+                                                    !context.mounted) {
+                                                  return;
+                                                }
+                                                busy.value = true;
+                                                try {
+                                                  await AppUtils.guard(
+                                                    () => ref
+                                                        .read(
+                                                          accountRepositoryProvider,
+                                                        )
+                                                        .revokeCode(
+                                                          Input$RevokeUserCodeInput(
+                                                            id: code.id,
+                                                          ),
+                                                        ),
+                                                    ref.read(toastProvider),
+                                                  );
+                                                  if (context.mounted) {
+                                                    ref.invalidate(
+                                                      accountCodesProvider,
+                                                    );
+                                                    ref.invalidate(
+                                                      accountCodePermissionsProvider,
+                                                    );
+                                                  }
+                                                } finally {
+                                                  if (context.mounted) {
+                                                    busy.value = false;
+                                                  }
+                                                }
+                                              },
+                                        child: Text(
+                                          context.l10n.accountRevokeCode,
+                                        ),
+                                      ),
+                                    ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        refresh: () => ref.invalidate(accountCodesProvider),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
     );
     return titleTopBarSlot(

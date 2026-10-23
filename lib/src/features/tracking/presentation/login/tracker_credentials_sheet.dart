@@ -17,9 +17,11 @@ class TrackerCredentialsSheet extends StatefulWidget {
     super.key,
     required this.trackerName,
     required this.onSubmit,
+    this.showTitle = true,
   });
 
   final String trackerName;
+  final bool showTitle;
   final void Function(String username, String password) onSubmit;
 
   @override
@@ -53,16 +55,12 @@ class _TrackerCredentialsSheetState extends State<TrackerCredentialsSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.trackerName,
-            style: context.textTheme.titleLarge,
-          ),
+          if (widget.showTitle)
+            Text(widget.trackerName, style: context.textTheme.titleLarge),
           const SizedBox(height: 16),
           TextField(
             controller: _usernameController,
-            decoration: InputDecoration(
-              labelText: l10n.userName,
-            ),
+            decoration: InputDecoration(labelText: l10n.userName),
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.username],
           ),
@@ -87,10 +85,7 @@ class _TrackerCredentialsSheetState extends State<TrackerCredentialsSheet> {
             onSubmitted: (_) => _submit(),
           ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _submit,
-            child: Text(l10n.logIn),
-          ),
+          FilledButton(onPressed: _submit, child: Text(l10n.logIn)),
           const SizedBox(height: 8),
         ],
       ),
@@ -102,9 +97,6 @@ class _TrackerCredentialsSheetState extends State<TrackerCredentialsSheet> {
         _passwordController.text.isEmpty) {
       return;
     }
-    widget.onSubmit(
-      _usernameController.text.trim(),
-      _passwordController.text,
-    );
+    widget.onSubmit(_usernameController.text.trim(), _passwordController.text);
   }
 }

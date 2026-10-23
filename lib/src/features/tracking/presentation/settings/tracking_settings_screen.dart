@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../settings/search/settings_search_registry.dart';
@@ -40,19 +41,25 @@ class TrackingSettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: topBar ? null : AppBar(title: title),
+        appBar: topBar
+            ? null
+            : AppBar(
+                leading: detailNavigationBackButton(context),
+                title: title,
+              ),
         body: SettingsHighlightScope(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: settingsPageConstraints(context),
               child: ListView(
+                padding: settingsPagePadding(context),
                 children: [
                   const SizedBox(height: 16),
                   SettingsGroupCard(
                     children: [
                       SettingsHighlightTarget(
                         id: 'updateProgressAfterReading',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(context.l10n.updateProgressAfterReading),
                           value: updateAfterReading,
                           onChanged: (value) => ref
@@ -62,7 +69,7 @@ class TrackingSettingsScreen extends ConsumerWidget {
                       ),
                       SettingsHighlightTarget(
                         id: 'updateProgressManualMarkRead',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(
                             context.l10n.updateProgressManualMarkRead,
                           ),

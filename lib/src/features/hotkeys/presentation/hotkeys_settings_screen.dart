@@ -11,6 +11,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../widgets/web_selection_area.dart';
+import '../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../data/hotkey_binding.dart';
 
 class HotkeysSettingsScreen extends StatelessWidget {
@@ -35,24 +36,41 @@ class HotkeysSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final rows = [
-      _SectionHeader(l.hotkeysGlobalSection),
-      for (final r in _globalRows(l)) _HotkeyRow(label: r.label, chords: r.chords),
-      _SectionHeader(l.hotkeysReaderSection),
-      for (final h in readerHotkeyDisplays)
-        _HotkeyRow(label: h.label(l), chords: [h.displayKeys]),
+    final children = [
+      SettingsGroupHeading(label: l.hotkeysGlobalSection, first: true),
+      SettingsGroupCard(
+        children: [
+          for (final r in _globalRows(l))
+            _HotkeyRow(label: r.label, chords: r.chords),
+        ],
+      ),
+      SettingsGroupHeading(label: l.hotkeysReaderSection),
+      SettingsGroupCard(
+        children: [
+          for (final h in readerHotkeyDisplays)
+            _HotkeyRow(label: h.label(l), chords: [h.displayKeys]),
+        ],
+      ),
     ];
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l.keyboardShortcuts);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: WebSelectionArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(padding: const EdgeInsets.only(bottom: 24), children: rows),
+            constraints: settingsPageConstraints(context, maxWidth: 640),
+            child: ListView(
+              padding: settingsPagePadding(
+                context,
+                const EdgeInsets.only(bottom: 24),
+              ),
+              children: children,
+            ),
           ),
         ),
       ),
@@ -70,18 +88,6 @@ class _Row {
   _Row(this.label, this.chords);
   final String label;
   final List<List<String>> chords;
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-        child: Text(text,
-            style: context.textTheme.titleSmall
-                ?.copyWith(color: context.colorScheme.primary)),
-      );
 }
 
 class _HotkeyRow extends StatelessWidget {
@@ -114,10 +120,8 @@ class _Chord extends StatelessWidget {
   const _Chord(this.keys);
   final List<String> keys;
   @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: 4,
-        children: [for (final k in keys) _KeyCap(k)],
-      );
+  Widget build(BuildContext context) =>
+      Wrap(spacing: 4, children: [for (final k in keys) _KeyCap(k)]);
 }
 
 class _KeyCap extends StatelessWidget {
@@ -125,12 +129,12 @@ class _KeyCap extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: context.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: context.colorScheme.outlineVariant),
-        ),
-        child: Text(label, style: context.textTheme.labelMedium),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: context.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: context.colorScheme.outlineVariant),
+    ),
+    child: Text(label, style: context.textTheme.labelMedium),
+  );
 }

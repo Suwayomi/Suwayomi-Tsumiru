@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/platform/is_android_native.dart';
+import '../../../widgets/compact_switch.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../widgets/input_popup/settings_prop_tile.dart';
@@ -144,7 +145,7 @@ class SubSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
       title: Text(title),
@@ -456,11 +457,19 @@ class OfflineSettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: topBar ? null : AppBar(title: title),
+        appBar: topBar
+            ? null
+            : AppBar(
+                leading: detailNavigationBackButton(context),
+                title: title,
+              ),
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(children: buildOnDeviceStorageTiles(context, ref)),
+            constraints: settingsPageConstraints(context),
+            child: ListView(
+              padding: settingsPagePadding(context),
+              children: buildOnDeviceStorageTiles(context, ref),
+            ),
           ),
         ),
       ),

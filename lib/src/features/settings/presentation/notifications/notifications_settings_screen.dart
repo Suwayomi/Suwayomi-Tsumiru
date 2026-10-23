@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_distribution.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../notifications/controller/notification_settings_providers.dart';
@@ -42,12 +43,15 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.notifications);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: SettingsHighlightScope(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: settingsPageConstraints(context),
             child: ListView(
+              padding: settingsPagePadding(context),
               children: [
                 SettingsGroupHeading(
                   label: l10n.notificationsSectionNewChapters,
@@ -57,7 +61,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                   children: [
                     SettingsHighlightTarget(
                       id: 'notificationsNewChapters',
-                      child: SwitchListTile(
+                      child: CompactSwitchListTile(
                         title: Text(l10n.notificationsNewChapters),
                         subtitle: Text(l10n.notificationsNewChaptersSubtitle),
                         value: newChapters,
@@ -104,7 +108,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                       ),
                       SettingsHighlightTarget(
                         id: 'notificationsWifiOnly',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(l10n.notificationsWifiOnly),
                           value: wifiOnly,
                           onChanged: (v) async {
@@ -117,7 +121,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                       ),
                       SettingsHighlightTarget(
                         id: 'notificationsChargingOnly',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(l10n.notificationsChargingOnly),
                           value: chargingOnly,
                           onChanged: (v) async {
@@ -145,7 +149,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                   children: [
                     SettingsHighlightTarget(
                       id: 'notificationsDownloadsComplete',
-                      child: SwitchListTile(
+                      child: CompactSwitchListTile(
                         title: Text(l10n.notificationsDownloadsComplete),
                         value: downloads,
                         onChanged: (v) async {
@@ -161,7 +165,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                     if (!isGooglePlayBuild)
                       SettingsHighlightTarget(
                         id: 'notificationsAppUpdates',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(l10n.notificationsAppUpdates),
                           value: ref
                               .watch(notificationsAppUpdatesEnabledProvider)
@@ -180,7 +184,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                       ),
                     SettingsHighlightTarget(
                       id: 'notificationsExtensionUpdates',
-                      child: SwitchListTile(
+                      child: CompactSwitchListTile(
                         title: Text(l10n.notificationsExtensionUpdates),
                         value: ref
                             .watch(notificationsExtensionUpdatesEnabledProvider)
@@ -204,7 +208,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                   children: [
                     SettingsHighlightTarget(
                       id: 'notificationsHideContent',
-                      child: SwitchListTile(
+                      child: CompactSwitchListTile(
                         title: Text(l10n.notificationsHideContent),
                         subtitle: Text(l10n.notificationsHideContentSubtitle),
                         value: hideContent,

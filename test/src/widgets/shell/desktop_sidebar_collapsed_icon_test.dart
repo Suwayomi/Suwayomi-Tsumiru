@@ -75,18 +75,20 @@ void main() {
       of: find.byType(DesktopSidebar),
       matching: find.byType(AnimatedNavIcon),
     );
-    expect(icons, findsNWidgets(6));
-    for (var i = 0; i < 6; i++) {
+    // Five destinations: More left the desktop sidebar for the foot below.
+    expect(icons, findsNWidgets(5));
+    for (var i = 0; i < 5; i++) {
       expect(
         tester.getSize(icons.at(i)),
         const Size(24, 24),
         reason: 'collapsed destination icon $i must not be squashed',
       );
     }
-    // Collapsed rows carry none of the expanded layout's 12 px padding.
+    // Collapsed rows carry none of the expanded layout's 12 px padding:
+    // five destinations plus the Incognito and Settings foot rows.
     final rows = _rowContainers(44);
-    expect(rows, findsNWidgets(6));
-    for (var i = 0; i < 6; i++) {
+    expect(rows, findsNWidgets(7));
+    for (var i = 0; i < 7; i++) {
       expect(
         tester.widget<Container>(rows.at(i)).padding,
         isNot(const EdgeInsets.symmetric(horizontal: 12)),

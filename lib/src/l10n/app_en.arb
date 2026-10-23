@@ -1,4 +1,5 @@
 {
+  "settingsSearchHint": "Search settings",
   "accountPermissionDenied": "Your account does not have permission for this action.",
   "migrationIdentityUnavailable": "Connect to your server and sign in before migrating.",
   "accountSettingsUnavailable": "Account settings could not be verified. Reconnect and try again.",
@@ -801,9 +802,6 @@
   },
   "@nsfw18": {
     "description": "18+ tag Text to show in extensions list"
-  },
-  "@nsfwInfo": {
-    "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
   },
   "@numSelected": {
     "description": "Title text to show the number of chapters selected in the Manga details screen and Updates screen",
@@ -2000,6 +1998,10 @@
   },
   "incognitoMode": "Incognito mode",
   "incognitoModeDescription": "Pauses reading history",
+  "incognitoShort": "Incognito",
+  "@incognitoShort": {
+    "description": "Short Incognito label for the desktop sidebar foot row and its collapsed tooltip"
+  },
   "emptyCategory": "Category name can't be empty",
   "enableSocksProxy": "Use SOCKS proxy",
   "enterProp": "Enter {prop}",
@@ -2086,10 +2088,6 @@
     "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
   },
   "onboardingCustomHeadersHint": "Only needed for some proxies and access gateways.",
-  "customHeadersDescription": "Sent with every request to your server.",
-  "@customHeadersDescription": {
-    "description": "Explanation under the Custom HTTP headers section"
-  },
   "customHeaderEmpty": "No custom headers.",
   "@customHeaderEmpty": {
     "description": "Empty state for the custom headers list"
@@ -2307,7 +2305,6 @@
   "none": "None",
   "nsfw": "Show NSFW extensions and sources",
   "nsfw18": "18+",
-  "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
   "numSelected": "{num} selected",
   "removeFromDevice": "Remove from device",
   "download": "Download",
@@ -3523,7 +3520,7 @@
   "@recommendsInOverflow": {
     "description": "Setting to move the recommendations button into the overflow menu"
   },
-  "recommendsInOverflowSubtitle": "Move recommendations to the overflow menu instead of showing the row on the manga page",
+  "recommendsInOverflowSubtitle": "Show them from the ⋮ menu instead of as a row on the manga page",
   "@recommendsInOverflowSubtitle": {
     "description": "Subtitle for the recommendations-in-overflow setting"
   },

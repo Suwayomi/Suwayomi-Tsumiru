@@ -13,6 +13,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/cover_row_section.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
@@ -111,9 +112,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
       final message = removed.length < ids.length
           ? context.l10n.duplicatesRemovedPartial(removed.length, ids.length)
           : context.l10n.duplicatesRemoved(removed.length);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
         snackBarAnimationStyle: context.snackBarMotionStyle,
       );
@@ -125,7 +124,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
           _OfflineBanner(
             onReconnect: () => const ConnectionRoute().push(context),
           ),
-        SwitchListTile(
+        CompactSwitchListTile(
           title: Text(context.l10n.checkDescription),
           value: checkDescriptions,
           onChanged: offline

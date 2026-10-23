@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
@@ -64,7 +65,12 @@ class LibrarySettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: topBar ? null : AppBar(title: title),
+        appBar: topBar
+            ? null
+            : AppBar(
+                leading: detailNavigationBackButton(context),
+                title: title,
+              ),
         body: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(userSettingsProvider);
@@ -118,8 +124,9 @@ class LibrarySettingsScreen extends ConsumerWidget {
             return SettingsHighlightScope(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
+                  constraints: settingsPageConstraints(context),
                   child: ListView(
+                    padding: settingsPagePadding(context),
                     children: [
                       SettingsGroupHeading(
                         label: context.l10n.categories,
@@ -198,7 +205,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                                           .toInt(),
                                     )
                                   : null,
-                              trailing: Switch(
+                              trailing: CompactSwitch(
                                 value: librarySettingsDto
                                     .globalUpdateInterval
                                     .isNotZero,
@@ -304,7 +311,14 @@ class LibrarySettingsScreen extends ConsumerWidget {
                             child: ListTile(
                               title: Text(context.l10n.duplicatedEntries),
                               onTap: () =>
-                                  const LibraryDuplicatesRoute().push(context),
+                                  context.windowSizeClass >=
+                                      WindowSizeClass.expanded
+                                  ? const SettingsLibraryDuplicatesRoute().push(
+                                      context,
+                                    )
+                                  : const LibraryDuplicatesRoute().push(
+                                      context,
+                                    ),
                             ),
                           ),
                           const ShowUpdateProgressBannerTile(),

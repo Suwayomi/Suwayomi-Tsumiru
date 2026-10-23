@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/compact_switch.dart';
 import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../controller/manga_details_controller.dart';
 import '../controller/scanlator_dedup.dart';
@@ -19,12 +20,15 @@ class MangaChapterFilter extends ConsumerWidget {
   final int mangaId;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scanlatorList =
-        ref.watch(mangaScanlatorListProvider(mangaId: mangaId));
-    final preferred =
-        ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
-    final showAll =
-        ref.watch(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
+    final scanlatorList = ref.watch(
+      mangaScanlatorListProvider(mangaId: mangaId),
+    );
+    final preferred = ref.watch(
+      mangaPreferredScanlatorsProvider(mangaId: mangaId),
+    );
+    final showAll = ref.watch(
+      mangaShowAllScanlatorVersionsProvider(mangaId: mangaId),
+    );
     return ListView(
       children: [
         TriStateFilterTile(
@@ -37,16 +41,18 @@ class MangaChapterFilter extends ConsumerWidget {
         TriStateFilterTile(
           header: context.l10n.filterHeaderBookmarks,
           provider: mangaChapterFilterBookmarkedProvider,
-          onChanged:
-              ref.read(mangaChapterFilterBookmarkedProvider.notifier).update,
+          onChanged: ref
+              .read(mangaChapterFilterBookmarkedProvider.notifier)
+              .update,
           includedLabel: context.l10n.filterOptionBookmarked,
           excludedLabel: context.l10n.filterOptionNotBookmarked,
         ),
         TriStateFilterTile(
           header: context.l10n.filterHeaderDownloadStatus,
           provider: mangaChapterFilterDownloadedProvider,
-          onChanged:
-              ref.read(mangaChapterFilterDownloadedProvider.notifier).update,
+          onChanged: ref
+              .read(mangaChapterFilterDownloadedProvider.notifier)
+              .update,
           includedLabel: context.l10n.filterOptionDownloaded,
           excludedLabel: context.l10n.filterOptionNotDownloaded,
         ),
@@ -66,10 +72,12 @@ class MangaChapterFilter extends ConsumerWidget {
               preferred.isEmpty
                   ? context.l10n.noGroupPreference
                   : preferred
-                      .map((g) => g == kUnknownScanlatorGroup
-                          ? context.l10n.unknownScanlator
-                          : g)
-                      .join(', '),
+                        .map(
+                          (g) => g == kUnknownScanlatorGroup
+                              ? context.l10n.unknownScanlator
+                              : g,
+                        )
+                        .join(', '),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -79,16 +87,18 @@ class MangaChapterFilter extends ConsumerWidget {
               animationStyle: context.motionStyle,
             ),
           ),
-          SwitchListTile(
+          CompactSwitchListTile(
             title: Text(context.l10n.showAllChapterVersions),
             value: showAll,
             onChanged: preferred.isEmpty
                 ? null
                 : ref
-                    .read(mangaShowAllScanlatorVersionsProvider(
-                            mangaId: mangaId)
-                        .notifier)
-                    .update,
+                      .read(
+                        mangaShowAllScanlatorVersionsProvider(
+                          mangaId: mangaId,
+                        ).notifier,
+                      )
+                      .update,
           ),
         ],
       ],

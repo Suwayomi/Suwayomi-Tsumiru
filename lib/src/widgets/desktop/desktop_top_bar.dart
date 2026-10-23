@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../features/settings/presentation/settings/settings_pane_scope.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
@@ -37,7 +38,8 @@ const double kTopBarSearchMinWidth = 200;
 /// tablets. A landscape phone keeps its icon rail and its own app bars. The
 /// single gate for the shells, [DesktopWindowScaffold], the slot wiring and
 /// the page AppBar suppression, so they cannot disagree.
-bool showsMergedTopBar(BuildContext context) => context.usesDesktopShell;
+bool showsMergedTopBar(BuildContext context) =>
+    SettingsPaneScope.maybeOf(context) != null || context.usesDesktopShell;
 
 /// The current route's matched location, or null outside a router (plain
 /// widget tests that pump the bar on its own).
@@ -157,6 +159,27 @@ double searchTopBarSlotMinWidth(int actionCount, [bool hasLeading = false]) =>
     actionCount * (48.0 + kDesktopTopBarGap) +
     kDesktopTopBarGap;
 
+BoxConstraints settingsPageConstraints(
+  BuildContext context, {
+  double maxWidth = 720,
+}) => BoxConstraints(
+  maxWidth: SettingsPaneScope.maybeOf(context) == null
+      ? maxWidth
+      : double.infinity,
+);
+
+EdgeInsets? settingsPagePadding(
+  BuildContext context, [
+  EdgeInsetsGeometry? padding,
+]) {
+  final pane = SettingsPaneScope.maybeOf(context);
+  if (pane == null) return padding?.resolve(Directionality.of(context));
+  return EdgeInsets.only(
+    left: 20,
+    right: (pane.width - 740).clamp(0, double.infinity),
+  ).add(padding ?? EdgeInsets.zero).resolve(Directionality.of(context));
+}
+
 /// Wraps a standard back-arrow title page for the desktop top bar: without
 /// the merged bar [child] is returned unchanged; with it the page's AppBar
 /// must be null and its toolbar shows in the shell bar instead. The page
@@ -170,17 +193,59 @@ Widget titleTopBarSlot({
   List<Widget> actions = const [],
   double? minWidth,
   required Widget child,
-}) => topBar
-    ? TopBarSlot(
-        content: DesktopTitleSlot(
-          leading: leading,
-          title: title,
-          actions: actions,
-        ),
-        minWidth: minWidth ?? titleTopBarSlotMinWidth(actions.length),
-        child: child,
-      )
-    : child;
+}) => Builder(
+  builder: (context) {
+    final pane = SettingsPaneScope.maybeOf(context);
+    if (pane != null) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+            child: SizedBox(
+              height: 48,
+              child: Row(
+                children: [
+                  if (pane.nested)
+                    leading ?? BackButton(onPressed: pane.onBack),
+                  Expanded(
+                    child: DefaultTextStyle(
+                      style: Theme.of(context).textTheme.titleLarge!,
+                      child: pane.tabs != null && !pane.nested
+                          ? Text(context.l10n.server)
+                          : title,
+                    ),
+                  ),
+                  ...actions,
+                  CloseButton(onPressed: pane.onClose),
+                ],
+              ),
+            ),
+          ),
+          if (pane.tabs != null) pane.tabs!,
+          // The window's own bottom spacing, applied once here so every
+          // page ends 24 px below its last card without per-page padding.
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: child,
+            ),
+          ),
+        ],
+      );
+    }
+    return topBar
+        ? TopBarSlot(
+            content: DesktopTitleSlot(
+              leading: leading,
+              title: title,
+              actions: actions,
+            ),
+            minWidth: minWidth ?? titleTopBarSlotMinWidth(actions.length),
+            child: child,
+          )
+        : child;
+  },
+);
 
 /// The toolbar row for a search page: the search box left-aligned at up to
 /// 720 px with the page's actions after it, matching the AppBar layout.
@@ -476,7 +541,14 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   /// a bare mount count would keep hiding the standalone strip there.
   bool _isBarVisible() {
     final route = ModalRoute.of(context);
-    return (route?.isCurrent ?? true) &&
+    final pages = route?.navigator?.widget.pages ?? const <Page>[];
+    final index = pages.indexWhere((page) => identical(page, route?.settings));
+    final visibleThroughOverlay =
+        index >= 0 &&
+        pages
+            .skip(index + 1)
+            .every((page) => page is CustomTransitionPage && !page.opaque);
+    return ((route?.isCurrent ?? true) || visibleThroughOverlay) &&
         TickerMode.valuesOf(context).enabled;
   }
 

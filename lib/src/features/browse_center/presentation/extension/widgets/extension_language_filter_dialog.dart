@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/language_list.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/compact_switch.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../domain/language/language_model.dart';
 import '../controller/extension_controller.dart';
@@ -32,16 +33,17 @@ class ExtensionLanguageFilterDialog extends ConsumerWidget {
           itemBuilder: (context, index) {
             final String languageCode = languageCodes[index].toLowerCase();
             final Language? language = languageMap[languageCode];
-            final enabledLanguagesIndex =
-                enabledLanguages?.indexOf(languageCode);
-            return SwitchListTile(
+            final enabledLanguagesIndex = enabledLanguages?.indexOf(
+              languageCode,
+            );
+            return CompactSwitchListTile(
               key: Key(languageCode),
               value: enabledLanguagesIndex != -1,
               onChanged: (value) {
                 if (value) {
-                  ref.read(extensionLanguageFilterProvider.notifier).update(
-                        {...?enabledLanguages, languageCode}.toList(),
-                      );
+                  ref
+                      .read(extensionLanguageFilterProvider.notifier)
+                      .update({...?enabledLanguages, languageCode}.toList());
                 } else {
                   if (!((enabledLanguagesIndex?.isNegative).ifNull(true))) {
                     final updatedEnabledLanguages = [...?enabledLanguages]
@@ -55,7 +57,8 @@ class ExtensionLanguageFilterDialog extends ConsumerWidget {
               title: Text(
                 language?.nativeName ?? language?.name ?? languageCode,
               ),
-              subtitle: (language?.name).isNotBlank &&
+              subtitle:
+                  (language?.name).isNotBlank &&
                       language?.nativeName != language?.name
                   ? Text(language!.name!)
                   : null,
