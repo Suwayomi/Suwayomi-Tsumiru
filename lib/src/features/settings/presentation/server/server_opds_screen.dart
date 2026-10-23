@@ -17,6 +17,7 @@ class ServerOpdsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ServerSettingsPageShell(
       title: Text(context.l10n.opds),
+      showPermissionNotice: false,
       whenData: (_) => const [OpdsSection()],
     );
   }

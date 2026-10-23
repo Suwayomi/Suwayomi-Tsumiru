@@ -17,6 +17,7 @@ class ServerImagesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ServerSettingsPageShell(
       title: Text(context.l10n.images),
+      showPermissionNotice: false,
       whenData: (_) => const [ImagesSection()],
     );
   }

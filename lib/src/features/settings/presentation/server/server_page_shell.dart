@@ -32,11 +32,13 @@ class ServerSettingsPageShell extends ConsumerWidget {
     required this.title,
     this.always = const [],
     this.whenData = _noSections,
+    this.showPermissionNotice = true,
   });
 
   final Widget title;
   final List<Widget> always;
   final List<Widget> Function(SettingsDto data) whenData;
+  final bool showPermissionNotice;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -98,7 +100,7 @@ class ServerSettingsPageShell extends ConsumerWidget {
                       );
                     },
                   ),
-                if (!canManage)
+                if (!canManage && showPermissionNotice)
                   ListTile(
                     subtitle: Text(
                       context.l10n.manageSettingsPermissionRequired,
