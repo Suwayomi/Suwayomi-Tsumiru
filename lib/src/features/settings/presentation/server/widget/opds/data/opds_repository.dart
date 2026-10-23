@@ -29,15 +29,10 @@ typedef OpdsSettings = ({
 });
 
 class OpdsSettingsRepository {
-  const OpdsSettingsRepository(
-    this.client, {
-    required this.routing,
-    required this.updated,
-  });
+  const OpdsSettingsRepository(this.client, {required this.routing});
 
   final GraphQLClient client;
   final UserSettingsRouting routing;
-  final void Function() updated;
 
   /// Null when the server predates OPDS: the query itself is rejected.
   Future<Fragment$OpdsSettingsDto?> legacySettings() async {
@@ -170,6 +165,10 @@ class OpdsSettingsRepository {
     ),
   );
 
+  /// The section re-reads [opdsSettingsProvider] from its own ref after an
+  /// awaited write (same as the downloads re-upload row): invalidating
+  /// from this repository's ref would throw a circular-dependency error on
+  /// the legacy path, where [opdsSettingsProvider] watches this provider.
   Future<bool> _write(
     Input$PartialUserSettingsTypeInput patch,
     Future<void> Function() legacy,
@@ -181,7 +180,6 @@ class OpdsSettingsRepository {
         return null;
       }),
     );
-    updated();
     return true;
   }
 
@@ -195,7 +193,6 @@ final Provider<OpdsSettingsRepository> opdsSettingsRepositoryProvider =
   (ref) => OpdsSettingsRepository(
     ref.watch(graphQlClientProvider),
     routing: ref.watch(userSettingsRoutingProvider),
-    updated: () => ref.invalidate(opdsSettingsProvider),
   ),
 );
 

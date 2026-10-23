@@ -126,11 +126,7 @@ void main() {
   });
 
   test('reader writes OPDS settings only through userSettings', () async {
-    final opds = OpdsSettingsRepository(
-      client,
-      routing: routing,
-      updated: () {},
-    );
+    final opds = OpdsSettingsRepository(client, routing: routing);
     await opds.updateShowOnlyUnreadChapters(true);
     expect(link.operations, ['SetAccountSettings']);
     expect(link.patches, [

@@ -77,10 +77,14 @@ class OpdsSection extends ConsumerWidget {
         .allows(Enum$UserPermission.MANAGE_SETTINGS);
     final repository = ref.watch(opdsSettingsRepositoryProvider);
     final settings = ref.watch(opdsSettingsProvider);
+    if (settings.hasError) return const SizedBox.shrink();
     final data = settings.value;
     if (data == null) return const SizedBox.shrink();
     Future<void> save(Future<bool> Function() action) async {
-      await AppUtils.guard(action, ref.read(toastProvider));
+      final result = await AppUtils.guard(action, ref.read(toastProvider));
+      if (result != null && context.mounted) {
+        ref.invalidate(opdsSettingsProvider);
+      }
     }
 
     return Column(
