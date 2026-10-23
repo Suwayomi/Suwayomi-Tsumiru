@@ -47,7 +47,6 @@ class CloudFlareSection extends ConsumerWidget {
                 ),
               ],
             ),
-            subtitle: context.l10n.openFlareSolverr,
             type: SettingsPropType.switchTile(
               value: cloudFlareDto.flareSolverrEnabled,
               onChanged: canManage

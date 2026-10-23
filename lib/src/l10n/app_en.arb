@@ -817,9 +817,6 @@
   "@obsolete": {
     "description": "Text to show that the extension has become Obsolete"
   },
-  "@openFlareSolverr": {
-    "description": "Text for link to Open Flare Solverr setup documentation"
-  },
   "@openInWeb": {
     "description": "Button title text for open the url in web"
   },
@@ -2348,7 +2345,6 @@
       }
     }
   },
-  "openFlareSolverr": "See FlareSolverr for information on how to set it up",
   "opds": "OPDS",
   "opdsBinaryFileSize": "Binary file size",
   "opdsBinaryFileSizeDescription": "Display file sizes in binary (KiB, MiB, GiB) instead of decimal (KB, MB, GB)",

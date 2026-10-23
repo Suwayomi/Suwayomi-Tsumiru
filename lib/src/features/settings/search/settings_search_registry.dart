@@ -1364,7 +1364,6 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'flareSolverr',
     title: (l) => l.flareSolverr,
-    subtitle: (l) => l.openFlareSolverr,
     breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
     open: (c) => const ServerSettingsRoute(highlight: 'flareSolverr').push(c),
     visible: (ref, _) => _serverReachable(ref),
