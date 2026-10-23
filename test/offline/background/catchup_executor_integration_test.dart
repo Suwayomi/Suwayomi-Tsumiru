@@ -19,6 +19,7 @@ import 'package:tsumiru/src/features/offline/data/offline_server_identity.dart';
 import 'package:tsumiru/src/features/offline/data/offline_types.dart';
 import 'package:workmanager_android/workmanager_android.dart';
 
+import '../../helpers/modern_user_fields_probe.dart';
 import '../../helpers/offline_test_db.dart';
 
 class _RealHttpOverrides extends HttpOverrides {}
@@ -98,7 +99,10 @@ void main() {
         final body = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
         final query = body['query'] as String;
         final Object data;
-        if (query.contains('OfflineServerIdentity')) {
+        final probeData = modernUserFieldsProbeData(query);
+        if (probeData != null) {
+          data = probeData;
+        } else if (query.contains('OfflineServerIdentity')) {
           data = {
             'metas': {
               'nodes': [
