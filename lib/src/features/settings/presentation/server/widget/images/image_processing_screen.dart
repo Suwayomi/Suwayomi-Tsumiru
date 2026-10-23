@@ -49,10 +49,19 @@ class _RuleState {
   bool showHeaders = false;
 
   /// Unparsable text is invalid and blocks Save instead of being silently dropped.
-  bool get hasInvalidNumericInput =>
-      !isValidCompressionText(compression.text) ||
-      !isValidTimeoutText(callTimeout.text) ||
-      !isValidTimeoutText(connectTimeout.text);
+  /// Only fields visible for the current target mode count: hidden fields keep
+  /// their stale text but must not block Save after a mode switch.
+  bool get hasInvalidNumericInput {
+    switch (rule.mode) {
+      case ImageConversionTargetMode.disabled:
+        return false;
+      case ImageConversionTargetMode.image:
+        return !isValidCompressionText(compression.text);
+      case ImageConversionTargetMode.url:
+        return !isValidTimeoutText(callTimeout.text) ||
+            !isValidTimeoutText(connectTimeout.text);
+    }
+  }
 
   void dispose() {
     mime.dispose();
@@ -218,7 +227,7 @@ class _ImageProcessingScreenState
                     state: _rules![i],
                     index: i,
                     rules: rules,
-                    canEdit: canEdit,
+                    canEdit: canEdit && !_saving,
                     onChanged: () => setState(() {}),
                     onDelete: () => setState(() => _removeRule(i)),
                     onModeChanged: (mode) => _setMode(_rules![i], mode),
@@ -343,20 +352,24 @@ List<ServerConversion> _downloadRecords(
 List<ConversionKeyValue> _retainSearchParamIds(
   String url,
   List<ConversionKeyValue> existing,
-) => extractSearchParams(url).map((param) {
-  ConversionKeyValue? match;
-  for (final item in existing) {
-    if (item.name == param.name) {
-      match = item;
-      break;
+) {
+  final unused = existing.toList();
+  return extractSearchParams(url).map((param) {
+    ConversionKeyValue? match;
+    for (final item in unused) {
+      if (item.name == param.name) {
+        match = item;
+        unused.remove(item);
+        break;
+      }
     }
-  }
-  return ConversionKeyValue(
-    id: match?.id ?? freshEditorId(),
-    name: param.name,
-    value: param.value,
-  );
-}).toList();
+    return ConversionKeyValue(
+      id: match?.id ?? freshEditorId(),
+      name: param.name,
+      value: param.value,
+    );
+  }).toList();
+}
 
 String _modeName(BuildContext context, ImageConversionTargetMode mode) {
   final l10n = context.l10n;

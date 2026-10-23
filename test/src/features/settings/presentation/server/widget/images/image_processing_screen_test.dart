@@ -177,4 +177,79 @@ void main() {
     expect(find.text('Invalid input', skipOffstage: false), findsOneWidget);
     expect(_saveEnabled(tester), isFalse);
   });
+
+  testWidgets(
+    'invalid compression does not block Save after switching to Disabled',
+    (tester) async {
+      final stored = [
+        ServerConversion(mimeType: 'image/jpeg', target: 'image/webp'),
+      ];
+      await _pumpEditor(tester, () => stored, (_) {});
+      expect(tester.takeException(), isNull);
+
+      await _editRuleCompression(tester, 'abc');
+      expect(_saveEnabled(tester), isFalse);
+
+      // Switch the jpeg rule (last card) to Disabled; its hidden compression
+      // text must no longer block Save.
+      final modeTile = find.byType(ListTile, skipOffstage: false).last;
+      await tester.ensureVisible(modeTile);
+      await tester.pumpAndSettle();
+      await tester.tap(modeTile);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Disabled'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      expect(
+        find.text('Invalid input', skipOffstage: false),
+        findsNothing,
+      );
+      expect(_saveEnabled(tester), isTrue);
+    },
+  );
+
+  testWidgets('duplicate query params open the search editor as Invalid input', (
+    tester,
+  ) async {
+    final stored = [
+      ServerConversion(
+        mimeType: 'image/jpeg',
+        target: 'https://example.com/convert?a=1&a=2',
+      ),
+    ];
+    await _pumpEditor(tester, () => stored, (_) {});
+    expect(tester.takeException(), isNull);
+
+    final paramsButton = find.widgetWithText(
+      OutlinedButton,
+      'Search parameters (2)',
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(paramsButton);
+    await tester.pumpAndSettle();
+    await tester.tap(paramsButton);
+    await tester.pumpAndSettle();
+
+    // Re-enter the same target so ids are re-retained through _setTarget:
+    // each `a` occurrence must keep its own id instead of sharing one.
+    final targetField = find
+        .byWidgetPredicate(
+          (widget) =>
+              widget is TextField &&
+              widget.decoration?.labelText == 'MIME-Type target',
+          skipOffstage: false,
+        )
+        .last;
+    await tester.ensureVisible(targetField);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      targetField,
+      'https://example.com/convert?a=1&a=2',
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+
+    expect(find.text('Invalid input', skipOffstage: false), findsOneWidget);
+  });
 }
