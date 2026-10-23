@@ -223,9 +223,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                     IconButton(
                       tooltip: l10n.migrationActionMigrate,
                       icon: Icon(
-                        single
-                            ? Icons.done_outlined
-                            : Icons.done_all_outlined,
+                        single ? Icons.done_outlined : Icons.done_all_outlined,
                       ),
                       onPressed: complete
                           ? () => _confirm(context, r, deleteSource: true)
@@ -285,7 +283,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                         !(hideWithoutUpdates.value && _noUpdates(e)))
                       e,
                 ];
-                return ListView.builder(
+                final list = ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: visible.length,
                   itemBuilder: (context, i) => _Row(
@@ -303,6 +301,17 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                       visible[i].fromMangaId,
                       deleteSource: deleteSource,
                     ),
+                  ),
+                );
+                if (context.windowSizeClass < WindowSizeClass.large) {
+                  return list;
+                }
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    // Keep the 5:1:5 flex ratio plus the menu and row insets.
+                    width: kShortSearchCoverWidth * 11 / 5 + 40 + 24,
+                    child: list,
                   ),
                 );
               },
@@ -581,6 +590,7 @@ class _ResultCard extends StatelessWidget {
           child: Center(child: CircularProgressIndicator()),
         );
       case BulkEntryPhase.noMatch:
+      case BulkEntryPhase.failed when entry.toMangaId == null:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

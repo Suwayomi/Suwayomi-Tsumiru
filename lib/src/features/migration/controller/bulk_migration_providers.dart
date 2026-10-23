@@ -30,6 +30,7 @@ import '../../offline/data/offline_repository.dart';
 import '../../offline/data/offline_runtime_storage.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
+import '../../settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../data/bulk_migration_runner.dart';
 import '../data/migration_journal.dart';
 import '../data/migration_repository.dart';
@@ -317,6 +318,11 @@ BulkMigrationRunner buildBulkMigrationRunner({
   final current = _captureSession(container);
   final journal = _accountJournal(container);
   final repo = container.read(migrationRepositoryProvider);
+  final searchTimeout = Duration(
+    milliseconds:
+        container.read(serverRequestTimeoutProvider) ??
+        DBKeys.serverRequestTimeout.initial as int,
+  );
   final rateLimiter = RateLimiter(
     minInterval: const Duration(milliseconds: 250),
   );
@@ -329,7 +335,9 @@ BulkMigrationRunner buildBulkMigrationRunner({
     sourceNames: sourceNames,
     engine: SmartSearchEngine(extraSearchParams: extraSearchQuery),
     search: (sourceId, query) async {
-      final results = await repo.searchMangaInSource(sourceId, query);
+      final results = await repo
+          .searchMangaInSource(sourceId, query)
+          .timeout(searchTimeout, onTimeout: () => []);
       return [
         for (final m in results ?? const [])
           (id: m.id, title: m.title, thumbnailUrl: m.thumbnailUrl),
