@@ -15,12 +15,6 @@ import 'data/images_repository.dart';
 import 'graphql/__generated__/images.graphql.dart';
 import 'image_conversions.dart';
 
-/// Full-screen editor for one conversion map, used for both WebUI rows:
-/// `Image download processing` (global map) and `Image serve processing`
-/// (per-user map). Copies `ImageProcessingSetting.tsx` and `Processing.tsx`:
-/// the intro text, the rule list, `Add`/`Save`, per-rule fields, WebUI's
-/// validation with `Invalid input`, and one whole-map write on Save.
-/// Leaving the screen discards unsaved edits, as in WebUI.
 class ImageProcessingScreen extends ConsumerStatefulWidget {
   const ImageProcessingScreen({super.key, required this.kind});
 
@@ -54,8 +48,7 @@ class _RuleState {
   bool showSearchParams = false;
   bool showHeaders = false;
 
-  /// Non-empty compression/timeout text that does not parse (or parses out
-  /// of range) is invalid and blocks Save instead of being silently dropped.
+  /// Unparsable text is invalid and blocks Save instead of being silently dropped.
   bool get hasInvalidNumericInput =>
       !isValidCompressionText(compression.text) ||
       !isValidTimeoutText(callTimeout.text) ||
@@ -328,8 +321,6 @@ class _ImageProcessingScreenState
   }
 }
 
-/// Server map from the download DTO, shared by the build mapping and the
-/// post-save rebuild so the editor shows exactly what the server now holds.
 List<ServerConversion> _downloadRecords(
   Fragment$ImagesDownloadSettingsDto dto,
 ) => dto.downloadConversions
@@ -376,7 +367,6 @@ String _modeName(BuildContext context, ImageConversionTargetMode mode) {
   };
 }
 
-/// WebUI's descriptions from `Settings.constants.ts`; Disabled has none.
 String _modeDescription(BuildContext context, ImageConversionTargetMode mode) =>
     switch (mode) {
       ImageConversionTargetMode.disabled => '',
@@ -385,7 +375,6 @@ String _modeDescription(BuildContext context, ImageConversionTargetMode mode) =>
       ImageConversionTargetMode.url => context.l10n.imageProcessingUrlDescription,
     };
 
-/// One rule card, mirroring WebUI's `Processing` component.
 class _RuleCard extends StatelessWidget {
   const _RuleCard({
     super.key,
@@ -656,7 +645,6 @@ class _RuleCard extends StatelessWidget {
   }
 }
 
-/// WebUI's `KeyValueItems`: the collapsible `Name`/`Value` list with `Add`.
 class _KeyValueList extends StatelessWidget {
   const _KeyValueList({
     required this.title,
@@ -719,7 +707,6 @@ class _KeyValueList extends StatelessWidget {
   }
 }
 
-/// One `Name`/`Value` row, mirroring WebUI's `KeyValueItem`.
 class _KeyValueRow extends StatefulWidget {
   const _KeyValueRow({
     super.key,

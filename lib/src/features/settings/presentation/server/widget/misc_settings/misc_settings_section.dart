@@ -21,8 +21,7 @@ import 'graphql/__generated__/misc_logs.graphql.dart';
 
 final _logSizePattern = RegExp(r'^[0-9]+(|kb|KB|mb|MB|gb|GB)$');
 
-/// WebUI's log-size check (`ServerSettings.tsx`): digits with an optional
-/// kb/mb/gb suffix. Anything else is rejected before anything is sent.
+/// Digits with an optional kb/mb/gb suffix; anything else is rejected before sending.
 bool isValidLogSize(String value) => _logSizePattern.hasMatch(value);
 
 class _LogSizeDialog extends HookWidget {

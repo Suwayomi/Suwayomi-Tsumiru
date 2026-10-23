@@ -160,10 +160,7 @@ class OpdsSettingsRepository {
     ),
   );
 
-  /// The section re-reads [opdsSettingsProvider] from its own ref after an
-  /// awaited write (same as the downloads re-upload row): invalidating
-  /// from this repository's ref would throw a circular-dependency error on
-  /// the legacy path, where [opdsSettingsProvider] watches this provider.
+  /// Re-reads from the section's own ref to avoid a circular-dependency error on the legacy path.
   Future<bool> _write(
     Input$PartialUserSettingsTypeInput patch,
     Future<void> Function() legacy,

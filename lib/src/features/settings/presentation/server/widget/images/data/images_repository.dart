@@ -51,8 +51,6 @@ class ImagesRepository {
         .getData((data) => data.setSettings.settings),
   );
 
-  /// Same arguments WebUI's Images settings sends: cached pages and cached
-  /// thumbnails, nothing else.
   Future<void> clearCachedImages() => permissions.run(
     Enum$UserPermission.MANAGE_SETTINGS,
     () => client
@@ -110,16 +108,14 @@ final clearCachedImagesSupportProvider = FutureProvider.autoDispose<bool>(
   (ref) => ref.watch(imagesRepositoryProvider).supportsClearCachedImages(),
 );
 
-/// Serve conversions are per-user (`UserSettingsType`), read and written
-/// through [UserSettingsRouting] like the OPDS settings.
+/// Serve conversions are per-user, read and written through [UserSettingsRouting].
 class ServeConversionsRepository {
   const ServeConversionsRepository(this.client, {required this.routing});
 
   final GraphQLClient client;
   final UserSettingsRouting routing;
 
-  /// Null when the server predates serve processing: the query itself is
-  /// rejected.
+  /// Null when the server predates serve processing: the query is rejected.
   Future<Fragment$ImagesServeLegacySettingsDto?> legacySettings() async {
     try {
       return await client
@@ -135,7 +131,7 @@ class ServeConversionsRepository {
     }
   }
 
-  /// Saves the whole map in one write, like WebUI's editor does.
+  /// Saves the whole map in one write.
   Future<void> write(
     List<Input$SettingsDownloadConversionTypeInput> conversions,
   ) async {

@@ -220,8 +220,7 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
 class ImageProcessingRoute extends GoRouteData with $ImageProcessingRoute {
   const ImageProcessingRoute({this.type = 'download'});
 
-  /// Which conversion map the editor opens: `download` (global
-  /// `downloadConversions`) or `serve` (per-user `serveConversions`).
+  /// Which conversion map the editor opens: `download` or `serve`.
   final String type;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;

@@ -31,8 +31,6 @@ String _cbzMimetypeLabel(BuildContext context, Enum$CbzMediaType value) =>
       _ => value.name,
     };
 
-/// Radio dialog with the setting's description above the options, matching
-/// how WebUI's select shows its dialog description.
 Future<void> _pickOpds<T>(
   BuildContext context, {
   required String title,

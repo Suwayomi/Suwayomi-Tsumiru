@@ -6,14 +6,10 @@
 
 import '../../../../../../graphql/__generated__/schema.graphql.dart';
 
-/// Which server map an editor edits: the global `downloadConversions` map or
-/// the per-user `serveConversions` map.
+/// Which server map an editor edits: global download or per-user serve.
 enum ImageProcessingKind { download, serve }
 
-/// WebUI's "Target mode" (`Settings.constants.ts`): an editor convenience
-/// over the server shape, where a target starting with `http://` or
-/// `https://` sends the image to an external converter service and any other
-/// target is a MIME type the server converts to itself.
+/// A target starting with http(s):// uses an external converter service.
 enum ImageConversionTargetMode { disabled, image, url }
 
 const String defaultMimeType = 'default';
@@ -23,17 +19,13 @@ const String targetDisabled = 'none';
 const double compressionMin = 0;
 const double compressionMax = 1;
 
-/// Bounds from `Settings.constants.ts` (`IMAGE_PROCESSING_CALL_TIMEOUT` and
-/// `IMAGE_PROCESSING_CONNECT_TIMEOUT`): 10 seconds to 10 minutes.
 const int conversionTimeoutMinSeconds = 10;
 const int conversionTimeoutMaxSeconds = 600;
 
 int _nextId = 0;
 
-/// Fresh stable id for rules and key/value rows added in the editor.
 int freshEditorId() => _nextId++;
 
-/// One `Name`/`Value` row of WebUI's `Search parameters` / `Headers` lists.
 class ConversionKeyValue {
   ConversionKeyValue({required this.id, required this.name, required this.value});
 
@@ -45,10 +37,6 @@ class ConversionKeyValue {
       ConversionKeyValue(id: id, name: name, value: value);
 }
 
-/// One server conversion, as the fragments deliver it. The three GraphQL
-/// sources (download fragment, account `serveConversions`, legacy serve
-/// fragment) share this shape, so the repositories map to it first and the
-/// editor mapping below only exists once.
 class ServerConversion {
   ServerConversion({
     required this.mimeType,
@@ -74,7 +62,6 @@ class ServerConversionHeader {
   final String value;
 }
 
-/// One editable rule, mirroring WebUI's `TSettingsDownloadConversion`.
 class ImageConversion {
   ImageConversion({
     required this.id,
@@ -94,7 +81,7 @@ class ImageConversion {
   ImageConversionTargetMode mode;
   double? compressionLevel;
 
-  /// ISO-8601 durations, exactly as the server sends them (`PT30S`).
+  /// ISO-8601 durations, exactly as the server sends them.
   String? callTimeout;
   String? connectTimeout;
   List<ConversionKeyValue>? headers;
@@ -143,9 +130,7 @@ bool isDuplicateKeyValueItem(String name, int index, List<ConversionKeyValue>? i
 bool _isValidNumberSetting(num? value, num min, num max) =>
     value == null || (value >= min && value <= max);
 
-/// Seconds of an ISO-8601 duration (`PT30S`, `PT10M`, `PT1H30M`), null when
-/// absent or unparsable (unparsable counts as unset, like WebUI's koration
-/// parse falling back to null through the number check).
+/// Seconds of an ISO-8601 duration, null when absent or unparsable.
 int? isoDurationSeconds(String? timeout) {
   if (timeout == null || timeout.isEmpty) return null;
   final match = RegExp(
@@ -192,10 +177,6 @@ bool _isInvalidTarget(
   return mode == ImageConversionTargetMode.url && !isUrlTargetMode(target);
 }
 
-/// Mirrors WebUI's `containsInvalidConversion` item predicate: an unset
-/// rule, a non-URL target in URL mode, an out-of-range compression or
-/// timeout, a duplicate MIME type, or duplicate header/search-param names
-/// blocks Save.
 bool imageConversionIsInvalid(
   ImageConversion conversion,
   int index,
@@ -243,9 +224,7 @@ ImageConversionTargetMode getTargetMode(String target) {
   return ImageConversionTargetMode.image;
 }
 
-/// Query pairs embedded in a URL-mode target, as `Name`/`Value` rows.
-/// Repeated keys are kept (flattened, in order) so a duplicated name shows
-/// up and is flagged invalid, as in WebUI.
+/// Repeated keys are kept so duplicate names are flagged invalid.
 List<({String name, String value})> extractSearchParams(String url) {
   final parsed = Uri.tryParse(url);
   if (parsed == null) return const [];
@@ -254,17 +233,14 @@ List<({String name, String value})> extractSearchParams(String url) {
       .toList();
 }
 
-/// Raw editor text for the compression field: empty means unset, anything
-/// else must parse to an in-range level. Unparsable text is invalid (and
-/// blocks Save) instead of being silently dropped.
+/// Empty means unset; unparsable text is invalid instead of silently dropped.
 bool isValidCompressionText(String text) {
   if (text.isEmpty) return true;
   final value = double.tryParse(text);
   return value != null && isValidCompressionLevel(value);
 }
 
-/// Raw editor text for a timeout field (whole seconds): empty means unset,
-/// anything else must parse to an in-range whole number.
+/// Empty means unset; anything else must parse to an in-range whole number.
 bool isValidTimeoutText(String text) {
   if (text.isEmpty) return true;
   final value = int.tryParse(text);
@@ -279,8 +255,6 @@ List<ConversionKeyValue> _withStableIds(
     .map((item) => ConversionKeyValue(id: _nextId++, name: item.name, value: item.value))
     .toList();
 
-/// Mirrors `addStableIdToConversions`: editor ids plus the mode and the
-/// search params derived from the target.
 List<ImageConversion> conversionsFromServer(List<ServerConversion> conversions) =>
     conversions
         .map(
@@ -306,8 +280,6 @@ List<ImageConversion> conversionsFromServer(List<ServerConversion> conversions) 
         )
         .toList();
 
-/// The editor's working copy of a loaded map, mirroring WebUI's
-/// `normalizeConversions(maybeAddDefault(addStableIdToConversions(...)))`.
 List<ImageConversion> editorConversionsFromServer(
   List<ServerConversion> conversions,
 ) => normalizeConversions(maybeAddDefault(conversionsFromServer(conversions)));
@@ -324,8 +296,7 @@ String _toValidServerMimeType(String mimeType) => isDefaultMimeType(mimeType)
     ? defaultMimeType
     : '$mimeTypePrefix$mimeType';
 
-/// Mirrors `toValidServerConversions`: drops unset rules, qualifies MIME
-/// targets, keeps URL targets whole, strips editor ids.
+/// Drops unset rules and editor ids; qualifies MIME targets, keeps URLs whole.
 List<Input$SettingsDownloadConversionTypeInput> toServerConversionInputs(
   List<ImageConversion> conversions,
 ) => conversions
@@ -351,7 +322,7 @@ List<Input$SettingsDownloadConversionTypeInput> toServerConversionInputs(
     )
     .toList();
 
-/// Mirrors `maybeAddDefault`: the editor always shows a `default` rule.
+/// The editor always shows a `default` rule.
 List<ImageConversion> maybeAddDefault(List<ImageConversion> conversions) {
   if (conversions.any((c) => isDefaultMimeType(c.mimeType))) return conversions;
   return [
@@ -368,8 +339,6 @@ List<ImageConversion> maybeAddDefault(List<ImageConversion> conversions) {
 List<ConversionKeyValue>? _normalizeHeaders(List<ConversionKeyValue>? headers) =>
     headers?.where((h) => h.name.isNotEmpty).toList();
 
-/// Mirrors `didUpdateConversions`: whether the editor differs from the
-/// loaded map, deciding if Save is enabled.
 bool imageConversionsChanged(
   List<ImageConversion> conversions,
   List<ImageConversion> tmpConversions,
