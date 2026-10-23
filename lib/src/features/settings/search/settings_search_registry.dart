@@ -37,6 +37,7 @@ import '../presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_
 import '../presentation/server/data/server_settings_repository.dart';
 import '../presentation/server/data/web_interface_repository.dart';
 import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../presentation/server/widget/opds/data/opds_repository.dart';
 import '../presentation/server/widget/webview/data/webview_repository.dart';
 import '../presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import '../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
@@ -1378,6 +1379,99 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     visible: (ref, _) =>
         (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false) &&
         ref.watch(flareSolverrFallbackProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsBinaryFileSize',
+    title: (l) => l.opdsBinaryFileSize,
+    subtitle: (l) => l.opdsBinaryFileSizeDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsBinaryFileSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsItemsPerPage',
+    title: (l) => l.opdsItemsPerPage,
+    subtitle: (l) => l.opdsItemsPerPageDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsItemsPerPage').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsEnablePageReadProgress',
+    title: (l) => l.opdsEnablePageReadProgress,
+    subtitle: (l) => l.opdsEnablePageReadProgressDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsEnablePageReadProgress',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsMarkAsReadOnDownload',
+    title: (l) => l.opdsMarkAsReadOnDownload,
+    subtitle: (l) => l.opdsMarkAsReadOnDownloadDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsMarkAsReadOnDownload',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsShowOnlyUnreadChapters',
+    title: (l) => l.opdsShowOnlyUnreadChapters,
+    subtitle: (l) => l.opdsShowOnlyUnreadChaptersDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsShowOnlyUnreadChapters',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsShowOnlyDownloadedChapters',
+    title: (l) => l.opdsShowOnlyDownloadedChapters,
+    subtitle: (l) => l.opdsShowOnlyDownloadedChaptersDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsShowOnlyDownloadedChapters',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsSkipChapterMetadataFeed',
+    title: (l) => l.opdsSkipChapterMetadataFeed,
+    subtitle: (l) => l.opdsSkipChapterMetadataFeedDescription,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'opdsSkipChapterMetadataFeed',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsChapterSortOrder',
+    title: (l) => l.opdsChapterSortOrder,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsChapterSortOrder').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'opdsCbzMimetype',
+    title: (l) => l.opdsCbzMimeType,
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'opdsCbzMimetype').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
     id: 'webview',

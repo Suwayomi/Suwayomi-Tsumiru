@@ -9,6 +9,7 @@ import 'package:tsumiru/src/features/settings/data/user_settings.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/downloads_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/data/library_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 class SettingsLink extends Link {
@@ -121,6 +122,19 @@ void main() {
     expect(link.operations, ['SetAccountSettings']);
     expect(link.patches, [
       {'autoDownloadIgnoreReUploads': true},
+    ]);
+  });
+
+  test('reader writes OPDS settings only through userSettings', () async {
+    final opds = OpdsSettingsRepository(
+      client,
+      routing: routing,
+      updated: () {},
+    );
+    await opds.updateShowOnlyUnreadChapters(true);
+    expect(link.operations, ['SetAccountSettings']);
+    expect(link.patches, [
+      {'opdsShowOnlyUnreadChapters': true},
     ]);
   });
 }

@@ -19,6 +19,8 @@ import '../../search/settings_search_registry.dart';
 import 'data/web_interface_repository.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
+import 'widget/opds/data/opds_repository.dart';
+import 'widget/opds/opds_section.dart';
 import 'widget/server_binding/server_binding_section.dart';
 import 'widget/socks_proxy/socks_proxy_section.dart';
 import 'widget/web_interface/web_interface_section.dart';
@@ -38,6 +40,7 @@ class ServerScreen extends ConsumerWidget {
       ref.invalidate(webInterfaceSettingsProvider);
       ref.invalidate(webInterfaceFlavorsProvider);
       ref.invalidate(installedWebInterfaceProvider);
+      ref.invalidate(opdsSettingsProvider);
       ref.invalidate(webViewSettingsProvider);
       ref.invalidate(clearCookiesAndCacheSupportProvider);
       ref.invalidate(settingsProvider);
@@ -108,6 +111,7 @@ class ServerScreen extends ConsumerWidget {
                   ServerBindingSection(serverBindingDto: serverSettings.value!),
                   SocksProxySection(socksProxyDto: serverSettings.value!),
                   CloudFlareSection(cloudFlareDto: serverSettings.value!),
+                  const OpdsSection(),
                   const WebViewSection(),
                   MiscSettingsSection(miscSettingsDto: serverSettings.value!),
                 ],

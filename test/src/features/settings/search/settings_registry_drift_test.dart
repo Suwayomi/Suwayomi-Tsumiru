@@ -64,6 +64,7 @@ import 'package:tsumiru/src/features/settings/presentation/server/data/server_se
 import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/data/webview_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/graphql/__generated__/webview.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
@@ -91,6 +92,18 @@ Fragment$AutoBackupFlagsDto _autoBackupFlags() => Fragment$AutoBackupFlagsDto(
   autoBackupIncludeHistory: true,
   autoBackupIncludeClientData: true,
   autoBackupIncludeServerSettings: true,
+);
+
+OpdsSettings _opdsSettings() => (
+  useBinaryFileSizes: true,
+  itemsPerPage: 50,
+  enablePageReadProgress: true,
+  markAsReadOnDownload: true,
+  showOnlyUnreadChapters: false,
+  showOnlyDownloadedChapters: false,
+  skipChapterMetadataFeed: false,
+  chapterSortOrder: Enum$SortOrder.ASC,
+  cbzMimetype: Enum$CbzMediaType.MODERN,
 );
 
 /// Reachable server with SOCKS and FlareSolverr switched on, so every
@@ -467,6 +480,9 @@ void main() {
             // The gated rows only render with their gates satisfied, like
             // every other conditional row in this fixture.
             flareSolverrFallbackProvider.overrideWith((ref) async => true),
+            opdsSettingsProvider.overrideWith(
+              (ref) async => _opdsSettings(),
+            ),
             webViewSettingsProvider.overrideWith(
               (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
             ),

@@ -1,0 +1,123 @@
+fragment OpdsSettingsDto on SettingsType {
+  opdsUseBinaryFileSizes
+  opdsItemsPerPage
+  opdsEnablePageReadProgress
+  opdsMarkAsReadOnDownload
+  opdsShowOnlyUnreadChapters
+  opdsShowOnlyDownloadedChapters
+  opdsSkipChapterMetadataFeed
+  opdsChapterSortOrder
+  opdsCbzMimetype
+}
+
+query OpdsLegacySettings {
+  settings {
+    ...OpdsSettingsDto
+  }
+}
+
+mutation UpdateOpdsUseBinaryFileSizes($opdsUseBinaryFileSizes: Boolean!) {
+  setSettings(
+    input: { settings: { opdsUseBinaryFileSizes: $opdsUseBinaryFileSizes } }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsItemsPerPage($opdsItemsPerPage: Int!) {
+  setSettings(input: { settings: { opdsItemsPerPage: $opdsItemsPerPage } }) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsEnablePageReadProgress(
+  $opdsEnablePageReadProgress: Boolean!
+) {
+  setSettings(
+    input: { settings: { opdsEnablePageReadProgress: $opdsEnablePageReadProgress } }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsMarkAsReadOnDownload(
+  $opdsMarkAsReadOnDownload: Boolean!
+) {
+  setSettings(
+    input: { settings: { opdsMarkAsReadOnDownload: $opdsMarkAsReadOnDownload } }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsShowOnlyUnreadChapters(
+  $opdsShowOnlyUnreadChapters: Boolean!
+) {
+  setSettings(
+    input: {
+      settings: { opdsShowOnlyUnreadChapters: $opdsShowOnlyUnreadChapters }
+    }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsShowOnlyDownloadedChapters(
+  $opdsShowOnlyDownloadedChapters: Boolean!
+) {
+  setSettings(
+    input: {
+      settings: {
+        opdsShowOnlyDownloadedChapters: $opdsShowOnlyDownloadedChapters
+      }
+    }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsSkipChapterMetadataFeed(
+  $opdsSkipChapterMetadataFeed: Boolean!
+) {
+  setSettings(
+    input: {
+      settings: { opdsSkipChapterMetadataFeed: $opdsSkipChapterMetadataFeed }
+    }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsChapterSortOrder(
+  $opdsChapterSortOrder: SortOrder!
+) {
+  setSettings(
+    input: { settings: { opdsChapterSortOrder: $opdsChapterSortOrder } }
+  ) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
+
+mutation UpdateOpdsCbzMimetype($opdsCbzMimetype: CbzMediaType!) {
+  setSettings(input: { settings: { opdsCbzMimetype: $opdsCbzMimetype } }) {
+    settings {
+      ...OpdsSettingsDto
+    }
+  }
+}
