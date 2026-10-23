@@ -15,7 +15,7 @@ import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../utils/mixin/state_provider_mixin.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/auth_state.dart';
-import '../../browse_center/presentation/source/controller/source_controller.dart';
+import '../../browse_center/domain/source/source_model.dart';
 import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
@@ -312,6 +312,7 @@ BulkMigrationRunner buildBulkMigrationRunner({
   required List<BulkMigrationEntry> entries,
   required List<String> targetSourceIds,
   required MigrationOption options,
+  List<SourceDto> sources = const [],
   String? extraSearchQuery,
   Future<void> Function(int fromMangaId)? onSourceRemoved,
 }) {
@@ -326,9 +327,7 @@ BulkMigrationRunner buildBulkMigrationRunner({
   final rateLimiter = RateLimiter(
     minInterval: const Duration(milliseconds: 250),
   );
-  final allSources =
-      container.read(searchableSourcesProvider).value ?? const [];
-  final sourceNames = {for (final s in allSources) s.id: s.displayName};
+  final sourceNames = {for (final s in sources) s.id: s.displayName};
   final matcher = buildSmartMatcher(
     targetSourceIds: targetSourceIds,
     rateLimiter: rateLimiter,

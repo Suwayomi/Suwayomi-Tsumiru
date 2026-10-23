@@ -122,7 +122,7 @@ BulkMatcher buildSmartMatcher({
           toMangaId: result.mangaId,
           toTitle: result.title,
           toThumbnailUrl: result.thumbnailUrl,
-          toSourceName: sourceNames[sourceId] ?? sourceId,
+          toSourceName: sourceNames[sourceId],
           confidence: result.confidence,
         );
       }
