@@ -58,40 +58,46 @@ class EditCategoryScreen extends HookConsumerWidget {
         } else {
           return RefreshIndicator(
             onRefresh: () => ref.refresh(categoryControllerProvider.future),
-            child: ReorderableListView.builder(
-              padding: settingsPagePadding(context),
-              // Custom drag handles live in CategoryTile (and the default
-              // category has none), so suppress the built-in trailing ones.
-              buildDefaultDragHandles: false,
-              itemCount: data!.length,
-              itemBuilder: (context, index) {
-                final category = data[index];
-                return CategoryTile(
-                  key: ValueKey(category.id),
-                  index: index,
-                  category: category,
-                );
-              },
-              onReorderItem: (oldIndex, newIndex) {
-                if (defaultId == null || data[oldIndex].id == defaultId) return;
-                final protectedIndex = data.indexWhere(
-                  (category) => category.id == defaultId,
-                );
-                if (newIndex == protectedIndex) {
-                  newIndex += oldIndex > protectedIndex ? 1 : -1;
-                }
-                if (newIndex < 0 || newIndex >= data.length) return;
-                if (newIndex == oldIndex) return;
-                final moved = data[oldIndex];
-                // reorderCategory takes the server `order` value, not the raw
-                // list index — use the order of whatever currently occupies
-                // the drop slot.
-                final targetOrder = data[newIndex].order
-                    .getValueOnNullOrNegative();
-                ref
-                    .read(categoryControllerProvider.notifier)
-                    .reorderCategory(moved.id, targetOrder);
-              },
+            child: Center(
+              child: ConstrainedBox(
+                constraints: settingsPageConstraints(context),
+                child: ReorderableListView.builder(
+                  padding: settingsPagePadding(context),
+                  // Custom drag handles live in CategoryTile (and the default
+                  // category has none), so suppress the built-in trailing ones.
+                  buildDefaultDragHandles: false,
+                  itemCount: data!.length,
+                  itemBuilder: (context, index) {
+                    final category = data[index];
+                    return CategoryTile(
+                      key: ValueKey(category.id),
+                      index: index,
+                      category: category,
+                    );
+                  },
+                  onReorderItem: (oldIndex, newIndex) {
+                    if (defaultId == null || data[oldIndex].id == defaultId)
+                      return;
+                    final protectedIndex = data.indexWhere(
+                      (category) => category.id == defaultId,
+                    );
+                    if (newIndex == protectedIndex) {
+                      newIndex += oldIndex > protectedIndex ? 1 : -1;
+                    }
+                    if (newIndex < 0 || newIndex >= data.length) return;
+                    if (newIndex == oldIndex) return;
+                    final moved = data[oldIndex];
+                    // reorderCategory takes the server `order` value, not the raw
+                    // list index — use the order of whatever currently occupies
+                    // the drop slot.
+                    final targetOrder = data[newIndex].order
+                        .getValueOnNullOrNegative();
+                    ref
+                        .read(categoryControllerProvider.notifier)
+                        .reorderCategory(moved.id, targetOrder);
+                  },
+                ),
+              ),
             ),
           );
         }

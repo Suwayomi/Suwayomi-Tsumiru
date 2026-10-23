@@ -72,8 +72,7 @@ class _RuleState {
   }
 }
 
-class _ImageProcessingScreenState
-    extends ConsumerState<ImageProcessingScreen> {
+class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
   List<ImageConversion>? _baseline;
   List<_RuleState>? _rules;
   bool _saving = false;
@@ -129,9 +128,7 @@ class _ImageProcessingScreenState
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
-        ref
-            .read(toastProvider)
-            ?.show(context.l10n.imageProcessingFailedToSave);
+        ref.read(toastProvider)?.show(context.l10n.imageProcessingFailedToSave);
       }
     }
   }
@@ -166,24 +163,39 @@ class _ImageProcessingScreenState
       leading: detailNavigationBackButton(context),
       title: title,
       child: Scaffold(
-        appBar: topBar ? null : AppBar(leading: detailNavigationBackButton(context), title: title),
-        body: _isDownload
-            ? ref.watch(imagesDownloadSettingsProvider).when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => _loadError(context, ref, error),
-                data: (dto) {
-                  if (dto == null) return const SizedBox.shrink();
-                  return _editorBody(context, _downloadRecords(dto), canEdit);
-                },
-              )
-            : ref.watch(serveConversionsProvider).when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => _loadError(context, ref, error),
-                data: (records) {
-                  if (records == null) return const SizedBox.shrink();
-                  return _editorBody(context, records, canEdit);
-                },
+        appBar: topBar
+            ? null
+            : AppBar(
+                leading: detailNavigationBackButton(context),
+                title: title,
               ),
+        body: _isDownload
+            ? ref
+                  .watch(imagesDownloadSettingsProvider)
+                  .when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => _loadError(context, ref, error),
+                    data: (dto) {
+                      if (dto == null) return const SizedBox.shrink();
+                      return _editorBody(
+                        context,
+                        _downloadRecords(dto),
+                        canEdit,
+                      );
+                    },
+                  )
+            : ref
+                  .watch(serveConversionsProvider)
+                  .when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => _loadError(context, ref, error),
+                    data: (records) {
+                      if (records == null) return const SizedBox.shrink();
+                      return _editorBody(context, records, canEdit);
+                    },
+                  ),
       ),
     );
   }
@@ -211,51 +223,55 @@ class _ImageProcessingScreenState
     bool canEdit,
   ) {
     _ensureLoaded(records);
-            final rules = _rules!.map((r) => r.rule).toList();
-            final invalid =
-                imageConversionsAreInvalid(rules) ||
-                _rules!.any((r) => r.hasInvalidNumericInput);
-            final changed = imageConversionsChanged(_baseline!, rules);
-            return ListView(
-              padding: settingsPagePadding(context, const EdgeInsets.all(16)),
+    final rules = _rules!.map((r) => r.rule).toList();
+    final invalid =
+        imageConversionsAreInvalid(rules) ||
+        _rules!.any((r) => r.hasInvalidNumericInput);
+    final changed = imageConversionsChanged(_baseline!, rules);
+    return Center(
+      child: ConstrainedBox(
+        constraints: settingsPageConstraints(context),
+        child: ListView(
+          padding: settingsPagePadding(context, const EdgeInsets.all(16)),
+          children: [
+            Text(context.l10n.imageProcessingIntro),
+            const SizedBox(height: 16),
+            for (var i = 0; i < _rules!.length; i++)
+              _RuleCard(
+                key: ValueKey(_rules![i].rule.id),
+                state: _rules![i],
+                index: i,
+                rules: rules,
+                canEdit: canEdit && !_saving,
+                onChanged: () => setState(() {}),
+                onDelete: () => setState(() => _removeRule(i)),
+                onModeChanged: (mode) => _setMode(_rules![i], mode),
+                onTargetChanged: (value) => _setTarget(_rules![i], value),
+                onSearchParamsChanged: (params) =>
+                    _setSearchParams(_rules![i], params),
+              ),
+            const SizedBox(height: 16),
+            Row(
               children: [
-                Text(context.l10n.imageProcessingIntro),
-                const SizedBox(height: 16),
-                for (var i = 0; i < _rules!.length; i++)
-                  _RuleCard(
-                    key: ValueKey(_rules![i].rule.id),
-                    state: _rules![i],
-                    index: i,
-                    rules: rules,
-                    canEdit: canEdit && !_saving,
-                    onChanged: () => setState(() {}),
-                    onDelete: () => setState(() => _removeRule(i)),
-                    onModeChanged: (mode) => _setMode(_rules![i], mode),
-                    onTargetChanged: (value) => _setTarget(_rules![i], value),
-                    onSearchParamsChanged: (params) =>
-                        _setSearchParams(_rules![i], params),
-                  ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    OutlinedButton(
-                      onPressed: canEdit && !_saving
-                          ? () => setState(_addRule)
-                          : null,
-                      child: Text(context.l10n.add),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed:
-                          canEdit && !_saving && changed && !invalid
-                          ? _save
-                          : null,
-                      child: Text(context.l10n.save),
-                    ),
-                  ],
+                OutlinedButton(
+                  onPressed: canEdit && !_saving
+                      ? () => setState(_addRule)
+                      : null,
+                  child: Text(context.l10n.add),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: canEdit && !_saving && changed && !invalid
+                      ? _save
+                      : null,
+                  child: Text(context.l10n.save),
                 ),
               ],
-            );
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _addRule() {
@@ -341,9 +357,7 @@ List<ServerConversion> _downloadRecords(
         callTimeout: c.callTimeout,
         connectTimeout: c.connectTimeout,
         headers: c.headers
-            ?.map(
-              (h) => ServerConversionHeader(name: h.name, value: h.value),
-            )
+            ?.map((h) => ServerConversionHeader(name: h.name, value: h.value))
             .toList(),
       ),
     )
@@ -385,7 +399,8 @@ String _modeDescription(BuildContext context, ImageConversionTargetMode mode) =>
       ImageConversionTargetMode.disabled => '',
       ImageConversionTargetMode.image =>
         context.l10n.imageProcessingImageDescription,
-      ImageConversionTargetMode.url => context.l10n.imageProcessingUrlDescription,
+      ImageConversionTargetMode.url =>
+        context.l10n.imageProcessingUrlDescription,
     };
 
 class _RuleCard extends StatelessWidget {
@@ -497,8 +512,7 @@ class _RuleCard extends StatelessWidget {
                   ),
                   decoration: InputDecoration(
                     labelText: l10n.imageProcessingCompressionLevel,
-                    errorText:
-                        !isValidCompressionText(state.compression.text)
+                    errorText: !isValidCompressionText(state.compression.text)
                         ? l10n.imageProcessingInvalidInput
                         : null,
                   ),
@@ -525,9 +539,7 @@ class _RuleCard extends StatelessWidget {
                         : null,
                   ),
                   onChanged: (value) {
-                    final seconds = value.isEmpty
-                        ? null
-                        : int.tryParse(value);
+                    final seconds = value.isEmpty ? null : int.tryParse(value);
                     rule.callTimeout = seconds == null
                         ? null
                         : isoDuration(seconds);
@@ -549,9 +561,7 @@ class _RuleCard extends StatelessWidget {
                         : null,
                   ),
                   onChanged: (value) {
-                    final seconds = value.isEmpty
-                        ? null
-                        : int.tryParse(value);
+                    final seconds = value.isEmpty ? null : int.tryParse(value);
                     rule.connectTimeout = seconds == null
                         ? null
                         : isoDuration(seconds);
@@ -579,9 +589,7 @@ class _RuleCard extends StatelessWidget {
                             ),
                           )
                         : OutlinedButton(
-                            onPressed:
-                                canEdit &&
-                                    isUrlTargetMode(rule.target)
+                            onPressed: canEdit && isUrlTargetMode(rule.target)
                                 ? () {
                                     state.showSearchParams = true;
                                     onChanged();
@@ -684,11 +692,7 @@ class _KeyValueList extends StatelessWidget {
             _KeyValueRow(
               key: ValueKey(items[i].id),
               item: items[i],
-              isDuplicate: isDuplicateKeyValueItem(
-                items[i].name,
-                i,
-                items,
-              ),
+              isDuplicate: isDuplicateKeyValueItem(items[i].name, i, items),
               canEdit: canEdit,
               onChanged: (updated) {
                 final next = items.map((e) => e).toList();
@@ -802,9 +806,7 @@ class _KeyValueRowState extends State<_KeyValueRow> {
             child: TextField(
               controller: _value,
               enabled: widget.canEdit,
-              decoration: InputDecoration(
-                labelText: l10n.imageProcessingValue,
-              ),
+              decoration: InputDecoration(labelText: l10n.imageProcessingValue),
               onChanged: (value) => widget.onChanged(
                 ConversionKeyValue(
                   id: widget.item.id,
