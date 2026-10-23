@@ -23,6 +23,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../auth/data/auth_credentials_store.dart';
+import '../../../browse_center/presentation/source/controller/source_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
@@ -46,6 +47,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final library = ref.watch(libraryMangaListProvider);
+    final sources = ref.watch(searchableSourcesProvider);
     final runner = useState<BulkMigrationRunner?>(null);
     final unavailable = useState(false);
     final startupError = useState<String?>(null);
@@ -86,6 +88,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
 
     final startupKeys = [
       library,
+      sources,
       retry.value,
       sameSession,
       authState.value?.sessionEpoch,
@@ -109,6 +112,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
       }
       final mangas = library.value;
       if (mangas == null) return null;
+      if (sources.isLoading) return null;
       final byId = {for (final m in mangas) m.id: m};
       final entries = [
         for (final id in data.mangaIds)
@@ -128,6 +132,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
           entries: entries,
           targetSourceIds: data.targetSourceIds,
           options: data.options,
+          sources: sources.value ?? const [],
           extraSearchQuery: data.extraSearchQuery,
           onSourceRemoved: (id) => reconcileMangaContainer(container, id),
         );
@@ -223,9 +228,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                     IconButton(
                       tooltip: l10n.migrationActionMigrate,
                       icon: Icon(
-                        single
-                            ? Icons.done_outlined
-                            : Icons.done_all_outlined,
+                        single ? Icons.done_outlined : Icons.done_all_outlined,
                       ),
                       onPressed: complete
                           ? () => _confirm(context, r, deleteSource: true)
@@ -285,7 +288,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                         !(hideWithoutUpdates.value && _noUpdates(e)))
                       e,
                 ];
-                return ListView.builder(
+                final list = ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: visible.length,
                   itemBuilder: (context, i) => _Row(
@@ -303,6 +306,17 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                       visible[i].fromMangaId,
                       deleteSource: deleteSource,
                     ),
+                  ),
+                );
+                if (context.windowSizeClass < WindowSizeClass.large) {
+                  return list;
+                }
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    // Keep the 5:1:5 flex ratio plus the menu and row insets.
+                    width: kShortSearchCoverWidth * 11 / 5 + 40 + 24,
+                    child: list,
                   ),
                 );
               },
@@ -581,6 +595,7 @@ class _ResultCard extends StatelessWidget {
           child: Center(child: CircularProgressIndicator()),
         );
       case BulkEntryPhase.noMatch:
+      case BulkEntryPhase.failed when entry.toMangaId == null:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -611,7 +626,7 @@ class _ResultCard extends StatelessWidget {
         return _MangaCard(
           title: entry.toTitle ?? '',
           thumbnailUrl: entry.toThumbnailUrl,
-          source: entry.toSourceName,
+          source: entry.toSourceName ?? context.l10n.unknownSource,
           chapterCount: entry.toChapterCount,
           latestChapter: entry.toLatestChapter,
         );

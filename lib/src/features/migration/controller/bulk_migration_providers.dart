@@ -15,7 +15,7 @@ import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../utils/mixin/state_provider_mixin.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/auth_state.dart';
-import '../../browse_center/presentation/source/controller/source_controller.dart';
+import '../../browse_center/domain/source/source_model.dart';
 import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
@@ -30,6 +30,7 @@ import '../../offline/data/offline_repository.dart';
 import '../../offline/data/offline_runtime_storage.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
+import '../../settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../data/bulk_migration_runner.dart';
 import '../data/migration_journal.dart';
 import '../data/migration_repository.dart';
@@ -311,25 +312,31 @@ BulkMigrationRunner buildBulkMigrationRunner({
   required List<BulkMigrationEntry> entries,
   required List<String> targetSourceIds,
   required MigrationOption options,
+  List<SourceDto> sources = const [],
   String? extraSearchQuery,
   Future<void> Function(int fromMangaId)? onSourceRemoved,
 }) {
   final current = _captureSession(container);
   final journal = _accountJournal(container);
   final repo = container.read(migrationRepositoryProvider);
+  final searchTimeout = Duration(
+    milliseconds:
+        container.read(serverRequestTimeoutProvider) ??
+        DBKeys.serverRequestTimeout.initial as int,
+  );
   final rateLimiter = RateLimiter(
     minInterval: const Duration(milliseconds: 250),
   );
-  final allSources =
-      container.read(searchableSourcesProvider).value ?? const [];
-  final sourceNames = {for (final s in allSources) s.id: s.displayName};
+  final sourceNames = {for (final s in sources) s.id: s.displayName};
   final matcher = buildSmartMatcher(
     targetSourceIds: targetSourceIds,
     rateLimiter: rateLimiter,
     sourceNames: sourceNames,
     engine: SmartSearchEngine(extraSearchParams: extraSearchQuery),
     search: (sourceId, query) async {
-      final results = await repo.searchMangaInSource(sourceId, query);
+      final results = await repo
+          .searchMangaInSource(sourceId, query)
+          .timeout(searchTimeout, onTimeout: () => []);
       return [
         for (final m in results ?? const [])
           (id: m.id, title: m.title, thumbnailUrl: m.thumbnailUrl),
