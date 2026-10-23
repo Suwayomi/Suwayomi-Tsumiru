@@ -7,14 +7,11 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:gql/language.dart';
-import 'package:graphql/client.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/app_distribution.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../utils/crash/diagnostics.dart';
-import '../../../../utils/graphql/legacy_user_fields_link.dart';
 import '../../../account/data/account_permission.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_endpoint.dart';
@@ -150,33 +147,9 @@ class NotificationBackgroundClient {
   static const Object _authError = gqlAuthError;
   static const Object _networkError = gqlNetworkError;
 
-  final _legacyUserFields = LegacyUserFieldsLink();
-
-  Future<Map<String, Object?>?> _post(
-    String query,
-    Map<String, Object?> variables, {
-    bool downloadOperation = false,
-  }) async {
-    final response = await _legacyUserFields.request(
-      Request(
-        operation: Operation(document: parseString(query)),
-        variables: variables,
-      ),
-      (request) async* {
-        final data = await _postAuthenticated(
-          printNode(request.operation.document),
-          request.variables,
-          downloadOperation: downloadOperation,
-        );
-        yield Response(data: data, response: const {});
-      },
-    ).first;
-    return response.data;
-  }
-
   /// One raw GraphQL POST, retrying once through the broker on a ui_login 401.
   /// Returns the `data` map, or null on auth-dead / network / server error.
-  Future<Map<String, Object?>?> _postAuthenticated(
+  Future<Map<String, Object?>?> _post(
     String query,
     Map<String, Object?> variables, {
     bool downloadOperation = false,

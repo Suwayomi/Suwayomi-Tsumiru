@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart';
 import 'package:graphql/client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_chapter_fetch.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/utils/graphql/legacy_user_fields_link.dart';
 
 Request request(String source, {Map<String, dynamic> variables = const {}}) =>
@@ -41,6 +46,164 @@ Future<Response> legacy(
 }).first;
 
 void main() {
+  group('background POST', () {
+    const query = '{ chapter { user { isRead } } }';
+    const record = BackgroundTokenRecord(
+      gen: 0,
+      authType: 'uiLogin',
+      accessToken: 'stored',
+    );
+
+    Future<Object?> post(String host, http.Client client) =>
+        postBackgroundGraphql(
+          target: BackgroundServerTarget(
+            serverBase: 'https://$host.test',
+            port: null,
+            addPort: false,
+            client: client,
+          ),
+          record: record,
+          accessToken: 'override',
+          query: query,
+          variables: const {},
+        );
+
+    for (final modern in [false, true]) {
+      test(
+        modern ? 'modern pass-through' : 'legacy rewrite and reshape',
+        () async {
+          var probes = 0;
+          var requests = 0;
+          final client = MockClient((request) async {
+            expect(request.headers['authorization'], 'Bearer override');
+            final body = jsonDecode(request.body) as Map;
+            final source = body['query'] as String;
+            if (source.contains('__type(')) {
+              probes++;
+              expect(body['variables'], isEmpty);
+              return http.Response(
+                jsonEncode({'data': capability(modern).data}),
+                200,
+              );
+            }
+            requests++;
+            if (modern) {
+              expect(source, query);
+            } else {
+              expect(source, isNot(contains('user {')));
+              expect(source, contains('isRead'));
+            }
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'chapter': modern
+                      ? {
+                          'user': {'isRead': true},
+                        }
+                      : {'isRead': true},
+                },
+              }),
+              200,
+            );
+          });
+          for (var i = 0; i < 2; i++) {
+            expect(await post('background-$modern', client), {
+              'chapter': {
+                'user': {'isRead': true},
+              },
+            });
+          }
+          expect(probes, 1);
+          expect(requests, 2);
+        },
+      );
+    }
+
+    test('cache is per endpoint and concurrent calls share a probe', () async {
+      final gate = Completer<void>();
+      final started = Completer<void>();
+      final probes = <String, int>{};
+      final client = MockClient((request) async {
+        final source = (jsonDecode(request.body) as Map)['query'] as String;
+        if (source.contains('__type(')) {
+          probes.update(
+            request.url.host,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+          if (!started.isCompleted) started.complete();
+          await gate.future;
+          return http.Response(
+            jsonEncode({
+              'data': capability(request.url.host.contains('modern')).data,
+            }),
+            200,
+          );
+        }
+        expect(source.contains('user {'), request.url.host.contains('modern'));
+        return http.Response(
+          jsonEncode({
+            'data': {'chapter': null},
+          }),
+          200,
+        );
+      });
+      final first = post('cache-legacy', client);
+      await started.future;
+      final second = post('cache-legacy', client);
+      gate.complete();
+      await Future.wait([first, second]);
+      await post('cache-legacy', client);
+      await post('cache-modern', client);
+      await post('cache-modern', client);
+      expect(probes, {'cache-legacy.test': 1, 'cache-modern.test': 1});
+    });
+
+    test(
+      'auth sentinel from probe is not cached and forwards unchanged',
+      () async {
+        var probes = 0;
+        var requests = 0;
+        final client = MockClient((request) async {
+          expect(request.headers['authorization'], 'Bearer override');
+          final source = (jsonDecode(request.body) as Map)['query'] as String;
+          if (source.contains('__type(')) {
+            probes++;
+            if (probes == 1) return http.Response('', 401);
+            return http.Response(
+              jsonEncode({'data': capability(false).data}),
+              200,
+            );
+          }
+          requests++;
+          if (requests == 1) {
+            expect(source, query);
+            return http.Response('', 401);
+          }
+          expect(source, isNot(contains('user {')));
+          return http.Response(
+            jsonEncode({
+              'data': {
+                'chapter': {'isRead': false},
+              },
+            }),
+            200,
+          );
+        });
+        expect(await post('retry-auth', client), same(gqlAuthError));
+        for (var i = 0; i < 2; i++) {
+          expect(await post('retry-auth', client), {
+            'chapter': {
+              'user': {'isRead': false},
+            },
+          });
+        }
+        expect(probes, 2);
+        expect(requests, 3);
+      },
+    );
+  });
+
   test(
     'modern server forwards the identical request and caches the probe',
     () async {

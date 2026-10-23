@@ -4,6 +4,10 @@ import 'package:gql/ast.dart';
 import 'package:gql/language.dart';
 import 'package:graphql/client.dart';
 
+final _userFieldsProbe = parseString(
+  '{ __type(name: "ChapterType") { fields { name } } }',
+);
+
 /// Compatibility with stable servers predating MangaType.user/ChapterType.user.
 class LegacyUserFieldsLink extends Link {
   bool? _hasUser;
@@ -13,11 +17,7 @@ class LegacyUserFieldsLink extends Link {
     try {
       final response = await forward(
         Request(
-          operation: Operation(
-            document: parseString(
-              '{ __type(name: "ChapterType") { fields { name } } }',
-            ),
-          ),
+          operation: Operation(document: _userFieldsProbe),
           context: request.context,
         ),
       ).first;
@@ -78,6 +78,51 @@ class LegacyUserFieldsLink extends Link {
       );
     }
   }
+}
+
+final _backgroundLinks = <String, LegacyUserFieldsLink>{};
+
+Future<Object?> postWithLegacyUserFields({
+  required String endpoint,
+  required String query,
+  required Map<String, Object?> variables,
+  required Future<Object?> Function(
+    String query,
+    Map<String, Object?> variables,
+    bool probe,
+  )
+  post,
+}) async {
+  final DocumentNode document;
+  try {
+    document = parseString(query);
+  } catch (_) {
+    return post(query, variables, false);
+  }
+  final original = Request(
+    operation: Operation(document: document),
+    variables: variables,
+  );
+  Object? result;
+  final response = await (_backgroundLinks[endpoint] ??= LegacyUserFieldsLink())
+      .request(original, (outgoing) async* {
+        final probe = identical(outgoing.operation.document, _userFieldsProbe);
+        result = await post(
+          identical(outgoing.operation.document, original.operation.document)
+              ? query
+              : printNode(outgoing.operation.document),
+          outgoing.variables,
+          probe,
+        );
+        yield Response(
+          data: result is Map<String, Object?>
+              ? (result as Map<String, Object?>).cast<String, dynamic>()
+              : null,
+          response: const {},
+        );
+      })
+      .first;
+  return result is Map<String, Object?> ? response.data : result;
 }
 
 const _mangaFields = {
