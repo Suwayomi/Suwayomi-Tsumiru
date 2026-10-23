@@ -304,7 +304,14 @@ class LibrarySettingsScreen extends ConsumerWidget {
                             child: ListTile(
                               title: Text(context.l10n.duplicatedEntries),
                               onTap: () =>
-                                  const LibraryDuplicatesRoute().push(context),
+                                  context.windowSizeClass >=
+                                      WindowSizeClass.expanded
+                                  ? const SettingsLibraryDuplicatesRoute().push(
+                                      context,
+                                    )
+                                  : const LibraryDuplicatesRoute().push(
+                                      context,
+                                    ),
                             ),
                           ),
                           const ShowUpdateProgressBannerTile(),

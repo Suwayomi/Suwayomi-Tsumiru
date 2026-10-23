@@ -23,7 +23,9 @@ Page<void> detailNavigationPage(
   return _detailNavigationPage(
     context,
     state,
-    DetailNavigationShellScreen(child: child),
+    SettingsPaneScope.maybeOf(context) == null
+        ? DetailNavigationShellScreen(child: child)
+        : SettingsWindowPageBody(child: child),
   );
 }
 

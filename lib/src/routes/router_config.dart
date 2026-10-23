@@ -63,7 +63,9 @@ import '../features/settings/presentation/server/server_screen.dart';
 import '../features/settings/presentation/server/server_web_interface_screen.dart';
 import '../features/settings/presentation/server/widget/images/image_conversions.dart';
 import '../features/settings/presentation/server/widget/images/image_processing_screen.dart';
+import '../features/settings/presentation/settings/settings_pane_scope.dart';
 import '../features/settings/presentation/settings/settings_screen.dart';
+import '../features/settings/presentation/settings/settings_window.dart';
 import '../features/settings/presentation/sync/sync_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
@@ -261,91 +263,106 @@ GoRouter routerConfig(Ref ref) {
             TypedGoRoute<MoreRoute>(
               path: Routes.more,
               routes: [
-                TypedGoRoute<AboutRoute>(path: Routes.about),
-                TypedGoRoute<ConnectionRoute>(path: Routes.connection),
-                TypedGoRoute<AccountRoute>(
-                  path: Routes.account,
-                  routes: [
-                    TypedGoRoute<ManageUsersRoute>(
-                      path: 'users',
-                      routes: [TypedGoRoute<AccountCodesRoute>(path: 'codes')],
-                    ),
-                  ],
-                ),
                 TypedGoRoute<HistoryRoute>(path: Routes.history),
-                TypedGoRoute<SettingsRoute>(
-                  path: Routes.settings,
+                TypedShellRoute<SettingsWindowShellRoute>(
                   routes: [
-                    TypedGoRoute<LibrarySettingsRoute>(
-                      path: Routes.librarySettings,
+                    TypedGoRoute<AboutRoute>(path: Routes.about),
+                    TypedGoRoute<ConnectionRoute>(path: Routes.connection),
+                    TypedGoRoute<AccountRoute>(
+                      path: Routes.account,
                       routes: [
-                        TypedGoRoute<EditCategoriesRoute>(
-                          path: Routes.editCategories,
+                        TypedGoRoute<ManageUsersRoute>(
+                          path: 'users',
+                          routes: [
+                            TypedGoRoute<AccountCodesRoute>(path: 'codes'),
+                          ],
                         ),
                       ],
                     ),
-                    TypedGoRoute<ServerSettingsRoute>(
-                      path: Routes.serverSettings,
+                    TypedGoRoute<SettingsRoute>(
+                      path: Routes.settings,
                       routes: [
-                        TypedGoRoute<ImageProcessingRoute>(
-                          path: Routes.imageProcessing,
+                        TypedGoRoute<LibrarySettingsRoute>(
+                          path: Routes.librarySettings,
+                          routes: [
+                            TypedGoRoute<EditCategoriesRoute>(
+                              path: Routes.editCategories,
+                            ),
+                            TypedGoRoute<SettingsLibraryDuplicatesRoute>(
+                              path: 'duplicates',
+                            ),
+                          ],
                         ),
-                        TypedGoRoute<ServerNetworkRoute>(
-                          path: Routes.serverNetwork,
+                        TypedGoRoute<ServerSettingsRoute>(
+                          path: Routes.serverSettings,
+                          routes: [
+                            TypedGoRoute<ImageProcessingRoute>(
+                              path: Routes.imageProcessing,
+                            ),
+                            TypedGoRoute<ServerNetworkRoute>(
+                              path: Routes.serverNetwork,
+                            ),
+                            TypedGoRoute<ServerWebInterfaceRoute>(
+                              path: Routes.serverWebInterface,
+                            ),
+                            TypedGoRoute<ServerOpdsRoute>(
+                              path: Routes.serverOpds,
+                            ),
+                            TypedGoRoute<ServerImagesRoute>(
+                              path: Routes.serverImages,
+                            ),
+                            TypedGoRoute<ServerDatabaseRoute>(
+                              path: Routes.serverDatabase,
+                            ),
+                            TypedGoRoute<ServerLogsRoute>(
+                              path: Routes.serverLogs,
+                            ),
+                          ],
                         ),
-                        TypedGoRoute<ServerWebInterfaceRoute>(
-                          path: Routes.serverWebInterface,
+                        TypedGoRoute<SyncRoute>(path: Routes.syncSettings),
+                        TypedGoRoute<AdvancedRoute>(
+                          path: Routes.advancedSettings,
                         ),
-                        TypedGoRoute<ServerOpdsRoute>(path: Routes.serverOpds),
-                        TypedGoRoute<ServerImagesRoute>(
-                          path: Routes.serverImages,
+                        TypedGoRoute<ReaderSettingsRoute>(
+                          path: Routes.readerSettings,
                         ),
-                        TypedGoRoute<ServerDatabaseRoute>(
-                          path: Routes.serverDatabase,
+                        TypedGoRoute<AppearanceSettingsRoute>(
+                          path: Routes.appearanceSettings,
                         ),
-                        TypedGoRoute<ServerLogsRoute>(path: Routes.serverLogs),
+                        TypedGoRoute<GeneralSettingsRoute>(
+                          path: Routes.generalSettings,
+                        ),
+                        TypedGoRoute<BrowseSettingsRoute>(
+                          path: Routes.browseSettings,
+                          routes: [
+                            TypedGoRoute<ExtensionStoreRoute>(
+                              path: Routes.extensionStoreSettings,
+                            ),
+                          ],
+                        ),
+                        TypedGoRoute<BackupRoute>(path: Routes.backup),
+                        TypedGoRoute<DownloadsSettingsRoute>(
+                          path: Routes.downloadsSettings,
+                        ),
+                        TypedGoRoute<OfflineSettingsRoute>(
+                          path: Routes.offlineSettings,
+                        ),
+                        TypedGoRoute<NotificationsSettingsRoute>(
+                          path: Routes.notificationsSettings,
+                        ),
+                        TypedGoRoute<TrackingSettingsRoute>(
+                          path: Routes.trackingSettings,
+                        ),
+                        TypedGoRoute<SyncYomiSettingsRoute>(
+                          path: Routes.syncyomiSettings,
+                        ),
+                        TypedGoRoute<KoreaderSyncSettingsRoute>(
+                          path: Routes.koreaderSyncSettings,
+                        ),
+                        TypedGoRoute<HotkeysSettingsRoute>(
+                          path: Routes.hotkeysSettings,
+                        ),
                       ],
-                    ),
-                    TypedGoRoute<SyncRoute>(path: Routes.syncSettings),
-                    TypedGoRoute<AdvancedRoute>(path: Routes.advancedSettings),
-                    TypedGoRoute<ReaderSettingsRoute>(
-                      path: Routes.readerSettings,
-                    ),
-                    TypedGoRoute<AppearanceSettingsRoute>(
-                      path: Routes.appearanceSettings,
-                    ),
-                    TypedGoRoute<GeneralSettingsRoute>(
-                      path: Routes.generalSettings,
-                    ),
-                    TypedGoRoute<BrowseSettingsRoute>(
-                      path: Routes.browseSettings,
-                      routes: [
-                        TypedGoRoute<ExtensionStoreRoute>(
-                          path: Routes.extensionStoreSettings,
-                        ),
-                      ],
-                    ),
-                    TypedGoRoute<BackupRoute>(path: Routes.backup),
-                    TypedGoRoute<DownloadsSettingsRoute>(
-                      path: Routes.downloadsSettings,
-                    ),
-                    TypedGoRoute<OfflineSettingsRoute>(
-                      path: Routes.offlineSettings,
-                    ),
-                    TypedGoRoute<NotificationsSettingsRoute>(
-                      path: Routes.notificationsSettings,
-                    ),
-                    TypedGoRoute<TrackingSettingsRoute>(
-                      path: Routes.trackingSettings,
-                    ),
-                    TypedGoRoute<SyncYomiSettingsRoute>(
-                      path: Routes.syncyomiSettings,
-                    ),
-                    TypedGoRoute<KoreaderSyncSettingsRoute>(
-                      path: Routes.koreaderSyncSettings,
-                    ),
-                    TypedGoRoute<HotkeysSettingsRoute>(
-                      path: Routes.hotkeysSettings,
                     ),
                   ],
                 ),

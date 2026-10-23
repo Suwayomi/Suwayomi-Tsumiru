@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../features/settings/presentation/settings/settings_pane_scope.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
@@ -37,7 +38,8 @@ const double kTopBarSearchMinWidth = 200;
 /// tablets. A landscape phone keeps its icon rail and its own app bars. The
 /// single gate for the shells, [DesktopWindowScaffold], the slot wiring and
 /// the page AppBar suppression, so they cannot disagree.
-bool showsMergedTopBar(BuildContext context) => context.usesDesktopShell;
+bool showsMergedTopBar(BuildContext context) =>
+    SettingsPaneScope.maybeOf(context) != null || context.usesDesktopShell;
 
 /// The current route's matched location, or null outside a router (plain
 /// widget tests that pump the bar on its own).
@@ -170,17 +172,58 @@ Widget titleTopBarSlot({
   List<Widget> actions = const [],
   double? minWidth,
   required Widget child,
-}) => topBar
-    ? TopBarSlot(
-        content: DesktopTitleSlot(
-          leading: leading,
-          title: title,
-          actions: actions,
-        ),
-        minWidth: minWidth ?? titleTopBarSlotMinWidth(actions.length),
-        child: child,
-      )
-    : child;
+}) => Builder(
+  builder: (context) {
+    final pane = SettingsPaneScope.maybeOf(context);
+    if (pane != null) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+            child: SizedBox(
+              height: 48,
+              child: Row(
+                children: [
+                  if (pane.nested)
+                    leading ?? BackButton(onPressed: pane.onBack),
+                  Expanded(
+                    child: DefaultTextStyle(
+                      style: Theme.of(context).textTheme.titleLarge!,
+                      child: title,
+                    ),
+                  ),
+                  ...actions,
+                  CloseButton(onPressed: pane.onClose),
+                ],
+              ),
+            ),
+          ),
+          if (pane.tabs != null) pane.tabs!,
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: child,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return topBar
+        ? TopBarSlot(
+            content: DesktopTitleSlot(
+              leading: leading,
+              title: title,
+              actions: actions,
+            ),
+            minWidth: minWidth ?? titleTopBarSlotMinWidth(actions.length),
+            child: child,
+          )
+        : child;
+  },
+);
 
 /// The toolbar row for a search page: the search box left-aligned at up to
 /// 720 px with the page's actions after it, matching the AppBar layout.
@@ -476,7 +519,14 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   /// a bare mount count would keep hiding the standalone strip there.
   bool _isBarVisible() {
     final route = ModalRoute.of(context);
-    return (route?.isCurrent ?? true) &&
+    final pages = route?.navigator?.widget.pages ?? const <Page>[];
+    final index = pages.indexWhere((page) => identical(page, route?.settings));
+    final visibleThroughOverlay =
+        index >= 0 &&
+        pages
+            .skip(index + 1)
+            .every((page) => page is CustomTransitionPage && !page.opaque);
+    return ((route?.isCurrent ?? true) || visibleThroughOverlay) &&
         TickerMode.valuesOf(context).enabled;
   }
 

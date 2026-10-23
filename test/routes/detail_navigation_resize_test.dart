@@ -14,6 +14,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,7 @@ import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.d
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/settings/settings_window.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -287,4 +289,70 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
   });
+
+  testWidgets('settings page list fits at 1000 by 720 without scrolling', (
+    tester,
+  ) async {
+    final router = await _pumpRouter(tester, withDesktopScaffold: true);
+    tester.view.physicalSize = const Size(1000, 720);
+    router.push(const SettingsRoute().location);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('settingsWindow'))),
+      const Size(936, 672),
+    );
+    final list = find.byKey(const ValueKey('settingsWindowPageList'));
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: list, matching: find.byType(Scrollable)).first,
+    );
+    expect(scrollable.position.maxScrollExtent, 0);
+    expect(scrollable.position.viewportDimension, 616);
+    final viewport = tester.renderObject<RenderViewport>(
+      find.descendant(of: list, matching: find.byType(Viewport)),
+    );
+    final contentHeight = viewport.firstChild!.geometry!.scrollExtent;
+    expect(contentHeight, 576);
+    debugPrint(
+      'Settings list: content $contentHeight, viewport ${scrollable.position.viewportDimension}, maxScrollExtent ${scrollable.position.maxScrollExtent}',
+    );
+    expect(find.byType(SettingsWindowPageList), findsOneWidget);
+  });
+
+  testWidgets(
+    'settings Esc and close restore the previous route after nested navigation',
+    (tester) async {
+      final router = await _pumpRouter(tester);
+      final previous = tester.element(find.byType(NavigationShellScreen));
+      final previousRoute = ModalRoute.of(previous);
+      final previousLocation = router.state.uri;
+      for (final escape in [false, true]) {
+        router.push(const LibrarySettingsRoute().location);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        router.push(const EditCategoriesRoute().location);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(SettingsWindowPageList), findsOneWidget);
+        expect(find.byType(BackButton), findsWidgets);
+        if (escape) {
+          await tester.tap(find.byType(TextField).first);
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        } else {
+          await tester.tap(find.byType(CloseButton));
+        }
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(tester.takeException(), isNull);
+        expect(router.state.uri, previousLocation);
+        expect(find.byType(SettingsWindowPageList), findsNothing);
+        expect(
+          tester.element(find.byType(NavigationShellScreen)),
+          same(previous),
+        );
+        expect(ModalRoute.of(previous), same(previousRoute));
+      }
+    },
+  );
 }

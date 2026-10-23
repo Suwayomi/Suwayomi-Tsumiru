@@ -56,6 +56,7 @@ String webRouteTitle(
     ['more', 'settings'] => l10n.settings,
     ['more', 'settings', 'library', 'edit-categories'] => l10n.categories,
     ['more', 'settings', 'library'] => l10n.library,
+    ['more', 'settings', 'library', 'duplicates'] => l10n.duplicatedEntries,
     ['more', 'settings', 'browse', 'extension-store'] => l10n.extensionStores,
     ['more', 'settings', 'browse'] => l10n.browse,
     ['more', 'settings', 'reader'] => l10n.reader,

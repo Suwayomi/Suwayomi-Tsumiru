@@ -1,4 +1,5 @@
 {
+  "settingsSearchHint": "Search settings",
   "accountPermissionDenied": "Your account does not have permission for this action.",
   "migrationIdentityUnavailable": "Connect to your server and sign in before migrating.",
   "accountSettingsUnavailable": "Account settings could not be verified. Reconnect and try again.",
