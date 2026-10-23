@@ -20,6 +20,8 @@ import 'data/web_interface_repository.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/database/data/database_repository.dart';
 import 'widget/database/database_section.dart';
+import 'widget/images/data/images_repository.dart';
+import 'widget/images/images_section.dart';
 import 'widget/misc_settings/data/misc_logs_repository.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
 import 'widget/opds/data/opds_repository.dart';
@@ -48,6 +50,9 @@ class ServerScreen extends ConsumerWidget {
       ref.invalidate(miscLogsSettingsProvider);
       ref.invalidate(webViewSettingsProvider);
       ref.invalidate(clearCookiesAndCacheSupportProvider);
+      ref.invalidate(imagesDownloadSettingsProvider);
+      ref.invalidate(serveConversionsProvider);
+      ref.invalidate(clearCachedImagesSupportProvider);
       ref.invalidate(settingsProvider);
       await ref.read(settingsProvider.future);
     }
@@ -119,6 +124,7 @@ class ServerScreen extends ConsumerWidget {
                   const OpdsSection(),
                   const DatabaseSection(),
                   const WebViewSection(),
+                  const ImagesSection(),
                   MiscSettingsSection(miscSettingsDto: serverSettings.value!),
                 ],
               ],

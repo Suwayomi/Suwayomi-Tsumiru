@@ -1,0 +1,64 @@
+fragment ImagesDownloadSettingsDto on SettingsType {
+  downloadConversions {
+    callTimeout
+    compressionLevel
+    connectTimeout
+    headers {
+      name
+      value
+    }
+    mimeType
+    target
+  }
+}
+
+query ImagesDownloadSettings {
+  settings {
+    ...ImagesDownloadSettingsDto
+  }
+}
+
+mutation SetImagesDownloadSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: { settings: $settings }) {
+    settings {
+      ...ImagesDownloadSettingsDto
+    }
+  }
+}
+
+mutation ClearCachedImages($input: ClearCachedImagesInput!) {
+  clearCachedImages(input: $input) {
+    cachedPages
+    cachedThumbnails
+  }
+}
+
+fragment ImagesServeLegacySettingsDto on SettingsType {
+  serveConversions {
+    callTimeout
+    compressionLevel
+    connectTimeout
+    headers {
+      name
+      value
+    }
+    mimeType
+    target
+  }
+}
+
+query ImagesServeLegacySettings {
+  settings {
+    ...ImagesServeLegacySettingsDto
+  }
+}
+
+mutation UpdateServeConversions(
+  $serveConversions: [SettingsDownloadConversionTypeInput!]
+) {
+  setSettings(input: { settings: { serveConversions: $serveConversions } }) {
+    settings {
+      ...ImagesServeLegacySettingsDto
+    }
+  }
+}

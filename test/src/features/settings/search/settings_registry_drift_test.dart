@@ -66,6 +66,9 @@ import 'package:tsumiru/src/features/settings/presentation/server/server_screen.
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/database/data/database_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/database/graphql/__generated__/database.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/images/data/images_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/images/graphql/__generated__/images.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/images/image_conversions.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/graphql/__generated__/misc_logs.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
@@ -436,6 +439,12 @@ void main() {
             autoDownloadIgnoreReUploadsProvider.overrideWith(
               (ref) async => true,
             ),
+            // Same gate for the image-processing row WebUI links from here.
+            imagesDownloadSettingsProvider.overrideWith(
+              (ref) async => Fragment$ImagesDownloadSettingsDto(
+                downloadConversions: const [],
+              ),
+            ),
             offlineEnabledProvider.overrideWithValue(true),
             offlineUsageBytesProvider.overrideWith((ref) async => 0),
           ],
@@ -510,6 +519,28 @@ void main() {
               (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
             ),
             clearCookiesAndCacheSupportProvider.overrideWith(
+              (ref) async => true,
+            ),
+            imagesDownloadSettingsProvider.overrideWith(
+              (ref) async => Fragment$ImagesDownloadSettingsDto(
+                downloadConversions: [
+                  Fragment$ImagesDownloadSettingsDto$downloadConversions(
+                    mimeType: 'image/jpeg',
+                    target: 'image/webp',
+                    compressionLevel: 0.8,
+                  ),
+                ],
+              ),
+            ),
+            serveConversionsProvider.overrideWith(
+              (ref) async => [
+                ServerConversion(
+                  mimeType: 'image/png',
+                  target: 'https://converter.example/process',
+                ),
+              ],
+            ),
+            clearCachedImagesSupportProvider.overrideWith(
               (ref) async => true,
             ),
           ],
