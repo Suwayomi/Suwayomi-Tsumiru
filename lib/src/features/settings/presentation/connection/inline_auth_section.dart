@@ -107,7 +107,7 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
           Padding(padding: const EdgeInsets.all(16), child: dropdown)
         else
           dropdown,
-        if (isWeb)
+        if (isWeb && !ref.watch(webSameOriginProvider))
           Padding(
             padding: inCard
                 ? const EdgeInsets.fromLTRB(16, 0, 16, 16)

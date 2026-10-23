@@ -1254,7 +1254,15 @@ class _ServerStep extends HookConsumerWidget {
               }
             },
           ),
-          if (isWeb)
+          if (isWeb &&
+              !isSameOriginServer(
+                pageOrigin: Uri.base.origin,
+                serverAddress:
+                    (resolvedUrl.value != null &&
+                        resolvedUrl.value!.isNotEmpty)
+                    ? resolvedUrl.value!
+                    : urlController.text.trim(),
+              ))
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
