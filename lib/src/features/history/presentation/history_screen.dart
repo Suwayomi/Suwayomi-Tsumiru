@@ -15,6 +15,7 @@ import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/server_image.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../quick_open/presentation/unified_search/unified_search_results.dart';
@@ -108,6 +109,7 @@ class HistoryScreen extends ConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
+              leading: detailNavigationBackButton(context),
               // Desktop uses the one search box: it filters the list live
               // AND opens the unified dropdown with History first. The
               // sidebar names the page.
