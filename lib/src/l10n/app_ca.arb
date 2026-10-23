@@ -855,7 +855,6 @@
     "koreaderSyncChecksumBinary": "Binari",
     "koreaderSyncChecksumFilename": "Nom del fitxer",
     "koreaderSyncPercentageToleranceDescription": "La sincronització no s'activarà si la diferència de progrés està dins d'aquesta tolerància.",
-    "webInterfaceFlavor": "Interfície",
     "webInterfaceWebUI": "WebUI",
     "webInterfaceWebUIDescription": "Utilitza la WebUI predeterminada",
     "webInterfaceVUI": "VUI",
@@ -4258,5 +4257,29 @@
     "bookmarked": "Amb marcador",
     "@bookmarked": {
         "description": "Checkbox text to filter bookmarked manga chapters in Manga Details screen"
-    }
+    },
+    "privacyPolicy": "Política de privadesa",
+    "recommendationsLoadFailed": "No s'han pogut carregar les recomanacions de {provider}. Torneu-ho a provar més tard.",
+    "@recommendationsLoadFailed": {
+        "placeholders": {
+            "provider": {
+                "type": "String"
+            }
+        }
+    },
+    "recommendationsServiceUnavailable": "{provider} no està disponible temporalment. Torneu-ho a provar més tard.",
+    "@recommendationsServiceUnavailable": {
+        "placeholders": {
+            "provider": {
+                "type": "String"
+            }
+        }
+    },
+    "suggestionsFetching": "S'estan obtenint els suggeriments…",
+    "suggestionsFetchingSubtitle": "S'estan comprovant els serveis de recomanació. Això pot trigar una estona.",
+    "suggestionsEmpty": "No s'ha trobat cap suggeriment per a aquest títol.",
+    "suggestionsLoadFailed": "No s'han pogut carregar els suggeriments. Torneu-ho a provar més tard.",
+    "trackerOAuthLinkInvalid": "Aquest enllaç d'inici de sessió ja no és vàlid. Torneu a iniciar la sessió al servei de seguiment.",
+    "trackerOAuthSaveFailed": "No s'ha pogut desar la sol·licitud d'inici de sessió. Torneu-ho a provar.",
+    "trackerOAuthBrowserFallback": "No s'ha pogut obrir el navegador. L'enllaç d'inici de sessió s'ha copiat al porta-retalls."
 }
