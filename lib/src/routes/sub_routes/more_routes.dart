@@ -420,3 +420,18 @@ class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       detailNavigationPage(context, state, _screen);
 }
+
+class AccountCodesRoute extends GoRouteData with $AccountCodesRoute {
+  const AccountCodesRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const AccountCodesScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
