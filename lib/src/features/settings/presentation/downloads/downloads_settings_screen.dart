@@ -263,9 +263,7 @@ class _ServerDownloadsTab extends ConsumerWidget {
                 id: 'downloadLocation',
                 child: SettingsPropTile(
                   title: context.l10n.downloadLocation,
-                  description: canManage
-                      ? context.l10n.downloadLocationHint
-                      : context.l10n.manageSettingsPermissionRequired,
+                  description: context.l10n.downloadLocationHint,
                   type: SettingsPropType.textField(
                     hintText: context.l10n.enterProp(
                       context.l10n.downloadLocation,
@@ -275,9 +273,11 @@ class _ServerDownloadsTab extends ConsumerWidget {
                         ? repository.updateDownloadsLocation
                         : null,
                   ),
-                  subtitle: canManage
+                  subtitle: !canManage
+                      ? context.l10n.manageSettingsPermissionRequired
+                      : downloadsSettingsDto.downloadsPath.isNotBlank
                       ? downloadsSettingsDto.downloadsPath
-                      : context.l10n.manageSettingsPermissionRequired,
+                      : context.l10n.defaultFolderPath,
                 ),
               ),
               SettingsHighlightTarget(
