@@ -33,6 +33,7 @@ import '../presentation/reader/widgets/reader_force_horizontal_seekbar_tile/read
 import '../presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
+import '../presentation/server/data/server_settings_repository.dart';
 import '../presentation/server/data/web_interface_repository.dart';
 import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../presentation/server/widget/webview/data/webview_repository.dart';
@@ -1355,6 +1356,18 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
         const ServerSettingsRoute(highlight: 'flareSolverrSessionTTL').push(c),
     visible: (ref, _) =>
         ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrResponseFallback',
+    title: (l) => l.responseFallback,
+    subtitle: (l) => l.responseFallbackDescription,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'flareSolverrResponseFallback',
+    ).push(c),
+    visible: (ref, _) =>
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false) &&
+        ref.watch(flareSolverrFallbackProvider).value != null,
   ),
   SettingsSearchEntry(
     id: 'webview',

@@ -58,6 +58,7 @@ import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/data/graphql/__generated__/web_interface.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/data/server_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -448,6 +449,9 @@ void main() {
               ],
             ),
             installedWebInterfaceProvider.overrideWith((ref) async => null),
+            // The gated rows only render with their gates satisfied, like
+            // every other conditional row in this fixture.
+            flareSolverrFallbackProvider.overrideWith((ref) async => true),
             webViewSettingsProvider.overrideWith(
               (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
             ),

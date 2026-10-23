@@ -119,3 +119,21 @@ mutation ToggleDebugLogs($debugLogsEnabled: Boolean = false) {
     }
   }
 }
+
+fragment FlareSolverrFallbackSettingsDto on SettingsType {
+  flareSolverrAsResponseFallback
+}
+
+query FlareSolverrFallbackSettings {
+  settings {
+    ...FlareSolverrFallbackSettingsDto
+  }
+}
+
+mutation ToggleFlareSolverrAsResponseFallback($flareSolverrAsResponseFallback: Boolean = false) {
+  setSettings(input: {settings: {flareSolverrAsResponseFallback: $flareSolverrAsResponseFallback}}) {
+    settings {
+      ...FlareSolverrFallbackSettingsDto
+    }
+  }
+}
