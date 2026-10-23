@@ -64,7 +64,7 @@ class SourceShortSearch extends ConsumerWidget {
                   height: mangaCoverBoxHeight(kShortSearchCoverWidth),
                   child: MangaCoverGridTile(
                     manga: manga,
-                    showDarkOverlay: manga.inLibrary.ifNull(),
+                    showDarkOverlay: manga.user.inLibrary.ifNull(),
                     linkLocation: MangaRoute(mangaId: manga.id).location,
                     onPressed: () =>
                         MangaRoute(mangaId: manga.id).push(context),

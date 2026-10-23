@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 
 void main() {
   group('ChapterExtension.hasReadingProgress', () {
@@ -24,11 +25,6 @@ ChapterDto _chapter({
   chapterNumber: 1,
   fetchedAt: '0',
   id: 1,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: isRead,
-  lastPageRead: lastPageRead,
-  lastReadAt: lastReadAt,
   mangaId: 1,
   name: 'Chapter 1',
   pageCount: 1,
@@ -36,4 +32,11 @@ ChapterDto _chapter({
   uploadDate: '0',
   url: '/chapter/1',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: isRead,
+    lastPageRead: lastPageRead,
+    lastReadAt: lastReadAt,
+  ),
 );

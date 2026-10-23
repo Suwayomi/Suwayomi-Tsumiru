@@ -6,6 +6,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/updates/updates_grouping.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -13,16 +14,18 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 Fragment$MangaBaseDto _manga(int id) => Fragment$MangaBaseDto(
   genre: const [],
   id: id,
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   title: 'Manga $id',
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: 'manga/$id',
+  user: Fragment$MangaBaseDto$user(
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 /// A minimal fixture chapter. [day] is a distinct calendar day expressed as
@@ -36,11 +39,6 @@ ChapterWithMangaDto _chapter({
   chapterNumber: id.toDouble(),
   fetchedAt: '${day * 86400}',
   id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: mangaId,
   name: 'Chapter $id',
   pageCount: 10,
@@ -49,6 +47,13 @@ ChapterWithMangaDto _chapter({
   url: 'chapter/$id',
   meta: const [],
   manga: _manga(mangaId),
+  user: Fragment$ChapterWithMangaDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 void main() {

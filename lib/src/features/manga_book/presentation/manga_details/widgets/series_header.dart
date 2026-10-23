@@ -75,8 +75,8 @@ class SeriesHeader extends ConsumerWidget {
     final next = desktop
         ? ref.watch(firstUnreadInFilteredChapterListProvider(mangaId: manga.id))
         : null;
-    final inLibrary = manga.inLibrary.ifNull();
-    final resumeLabel = manga.lastReadChapter?.hasReadingProgress == true
+    final inLibrary = manga.user.inLibrary.ifNull();
+    final resumeLabel = manga.user.lastReadChapter?.hasReadingProgress == true
         ? context.l10n.resume
         : context.l10n.start;
     final libraryLabel = inLibrary

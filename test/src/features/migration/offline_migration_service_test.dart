@@ -25,21 +25,23 @@ import '../../../helpers/offline_test_db.dart';
 MangaDto mangaDto(int id) => Fragment$MangaDto(
   id: id,
   title: 'M$id',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 ChapterDto chapterDto(int id, int mangaId, double number) =>
@@ -49,16 +51,18 @@ ChapterDto chapterDto(int id, int mangaId, double number) =>
       name: 'c$number',
       chapterNumber: number,
       sourceOrder: id,
-      isRead: false,
-      isBookmarked: false,
-      isDownloaded: false,
-      lastPageRead: 0,
       pageCount: 2,
       fetchedAt: '0',
       uploadDate: '0',
-      lastReadAt: '0',
       url: '',
       meta: const <Fragment$ChapterDto$meta>[],
+      user: Fragment$ChapterDto$user(
+        isRead: false,
+        isBookmarked: false,
+        isDownloaded: false,
+        lastPageRead: 0,
+        lastReadAt: '0',
+      ),
     );
 
 void main() {
@@ -231,5 +235,4 @@ void main() {
       expect((await db.chapterById(201))!.pinned, isTrue);
     },
   );
-
 }

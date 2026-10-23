@@ -116,7 +116,7 @@ class MangaDescription extends HookConsumerWidget {
 
     final cs = context.theme.colorScheme;
     final surface = context.theme.scaffoldBackgroundColor;
-    final inLibrary = manga.inLibrary.ifNull();
+    final inLibrary = manga.user.inLibrary.ifNull();
     final moreKey = useMemoized(
       () => GlobalKey<PopupMenuButtonState<String>>(),
     );

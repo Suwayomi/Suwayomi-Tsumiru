@@ -15,7 +15,7 @@ typedef HistoryItemDto = Fragment$HistoryChapterDto;
 
 extension HistoryItemExtension on HistoryItemDto {
   /// Get the read timestamp as DateTime
-  DateTime? get readAt => lastReadAt.parseTimestamp;
+  DateTime? get readAt => user.lastReadAt.parseTimestamp;
 
   /// Check if this item was read today
   bool get isReadToday {

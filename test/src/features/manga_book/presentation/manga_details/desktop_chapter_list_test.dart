@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
@@ -44,11 +45,6 @@ ChapterDto _chapter({
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
   id: id,
-  isBookmarked: bookmarked,
-  isDownloaded: downloaded,
-  isRead: read,
-  lastPageRead: lastPageRead,
-  lastReadAt: read ? '1' : '0',
   mangaId: 1,
   name: 'Chapter $id',
   pageCount: pageCount,
@@ -58,6 +54,13 @@ ChapterDto _chapter({
   uploadDate: '0',
   url: '',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: bookmarked,
+    isDownloaded: downloaded,
+    isRead: read,
+    lastPageRead: lastPageRead,
+    lastReadAt: read ? '1' : '0',
+  ),
 );
 
 final _chapters = [
@@ -84,27 +87,33 @@ final _manga = MangaDto.fromJson({
   'id': 1,
   'title': 'Test series',
   'author': 'An author',
-  'bookmarkCount': 0,
-  'chapters': {'totalCount': 6, '__typename': 'ChapterNodeList'},
-  'downloadCount': 0,
-  'genre': ['Action'],
-  'inLibrary': true,
-  'inLibraryAt': '0',
-  'initialized': true,
-  // Reading progress, so the header offers Resume rather than Start.
-  'lastReadChapter': {
-    'id': 2,
-    'isRead': false,
-    'lastPageRead': 4,
-    'lastReadAt': '1',
-    '__typename': 'ChapterType',
+  'user': {
+    '__typename': 'MangaUserType',
+    'bookmarkCount': 0,
+    'downloadCount': 0,
+    'inLibrary': true,
+    'inLibraryAt': '0',
+    'unreadCount': 5,
+    // Reading progress, so the header offers Resume rather than Start.
+    'lastReadChapter': {
+      'id': 2,
+      'user': {
+        'isRead': false,
+        'lastPageRead': 4,
+        'lastReadAt': '1',
+        '__typename': 'ChapterUserType',
+      },
+      '__typename': 'ChapterType',
+    },
   },
+  'chapters': {'totalCount': 6, '__typename': 'ChapterNodeList'},
+  'genre': ['Action'],
+  'initialized': true,
   'meta': [],
   'sourceId': '0',
   'status': 'ONGOING',
   'categories': {'nodes': [], '__typename': 'CategoryNodeList'},
   'trackRecords': {'nodes': [], '__typename': 'TrackRecordNodeList'},
-  'unreadCount': 5,
   'updateStrategy': 'ALWAYS_UPDATE',
   'url': '',
 });

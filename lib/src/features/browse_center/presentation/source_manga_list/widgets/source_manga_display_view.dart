@@ -44,7 +44,8 @@ class SourceMangaDisplayView extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final DisplayMode displayMode = ref.watch(sourceDisplayModeProvider) ??
+    final DisplayMode displayMode =
+        ref.watch(sourceDisplayModeProvider) ??
         DBKeys.sourceDisplayMode.initial;
 
     // Multi-select: long-press a cover to start selecting, tap to add/remove,
@@ -70,13 +71,16 @@ class SourceMangaDisplayView extends HookConsumerWidget {
     Future<int> addAndReflect(List<int> ids) async {
       if (ids.isEmpty) return 0;
       final result = await AsyncValue.guard(
-        () => container.read(mangaBookRepositoryProvider).addMangasToLibrary(ids),
+        () =>
+            container.read(mangaBookRepositoryProvider).addMangasToLibrary(ids),
       );
       if (result is! AsyncData<List<int>>) return 0;
       final addedIds = result.value;
       final idSet = addedIds.toSet();
       controller.mapItems(
-        (m) => idSet.contains(m.id) ? m.copyWith(inLibrary: true) : m,
+        (m) => idSet.contains(m.id)
+            ? m.copyWith(user: m.user.copyWith(inLibrary: true))
+            : m,
       );
       container.invalidate(libraryMangaListProvider);
       return addedIds.length;
@@ -187,34 +191,33 @@ class SourceMangaDisplayView extends HookConsumerWidget {
 
     final display = switch (displayMode) {
       DisplayMode.grid => SourceMangaGridView(
-          sourceId: sourceId,
-          sourceType: sourceType,
-          controller: controller,
-          source: source,
-          selectedIds: selection.value,
-          selecting: selecting,
-          onToggleSelection: toggleSelection,
-        ),
+        sourceId: sourceId,
+        sourceType: sourceType,
+        controller: controller,
+        source: source,
+        selectedIds: selection.value,
+        selecting: selecting,
+        onToggleSelection: toggleSelection,
+      ),
       DisplayMode.list || DisplayMode.descriptiveList => SourceMangaListView(
-          controller: controller,
-          source: source,
-          selectedIds: selection.value,
-          selecting: selecting,
-          onToggleSelection: toggleSelection,
-        ),
+        controller: controller,
+        source: source,
+        selectedIds: selection.value,
+        selecting: selecting,
+        onToggleSelection: toggleSelection,
+      ),
       // comfortableGrid isn't offered in the source display picker; map it to
       // the grid so the exhaustive switch stays safe.
       DisplayMode.coverOnly ||
-      DisplayMode.comfortableGrid =>
-        SourceMangaGridView(
-          sourceId: sourceId,
-          sourceType: sourceType,
-          controller: controller,
-          source: source,
-          selectedIds: selection.value,
-          selecting: selecting,
-          onToggleSelection: toggleSelection,
-        ),
+      DisplayMode.comfortableGrid => SourceMangaGridView(
+        sourceId: sourceId,
+        sourceType: sourceType,
+        controller: controller,
+        source: source,
+        selectedIds: selection.value,
+        selecting: selecting,
+        onToggleSelection: toggleSelection,
+      ),
     };
 
     // While selecting, swallow the system back to clear the selection first,
@@ -240,8 +243,10 @@ class SourceMangaDisplayView extends HookConsumerWidget {
                     icon: const Icon(Icons.close_rounded),
                     onPressed: () => selection.value = const {},
                   ),
-                  Text('${selection.value.length}',
-                      style: context.textTheme.titleMedium),
+                  Text(
+                    '${selection.value.length}',
+                    style: context.textTheme.titleMedium,
+                  ),
                 ],
                 actions: [
                   IconButton(

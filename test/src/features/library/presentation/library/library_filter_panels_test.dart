@@ -52,12 +52,8 @@ Fragment$MangaDto$source _mangaSource() => Fragment$MangaDto$source(
 Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
   id: id,
   title: 'Manga $id',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: genre,
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   source: _mangaSource(),
@@ -65,9 +61,15 @@ Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: 'https://example.com/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 /// Pumps the real [LibraryScreen] with two empty categories and two tagged

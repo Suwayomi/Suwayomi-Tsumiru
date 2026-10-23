@@ -24,16 +24,18 @@ ChapterDto _ch(int id, {required int sourceOrder, bool isRead = false}) =>
       chapterNumber: id.toDouble(),
       sourceOrder: sourceOrder,
       scanlator: null,
-      isRead: isRead,
-      isBookmarked: false,
-      isDownloaded: true,
-      lastPageRead: 0,
       pageCount: 10,
       fetchedAt: '0',
       uploadDate: '0',
-      lastReadAt: '0',
       url: '',
       meta: const <Fragment$ChapterDto$meta>[],
+      user: Fragment$ChapterDto$user(
+        isRead: isRead,
+        isBookmarked: false,
+        isDownloaded: true,
+        lastPageRead: 0,
+        lastReadAt: '0',
+      ),
     );
 
 class _FixedChapterList extends MangaChapterList {

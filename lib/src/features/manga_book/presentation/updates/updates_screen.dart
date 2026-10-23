@@ -124,9 +124,11 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       (row) => row.id != item.id
           ? row
           : row.copyWith(
-              isRead: (chapter?.isRead ?? false) || row.isRead,
-              isDownloaded: chapter?.isDownloaded,
-              lastPageRead: chapter?.lastPageRead,
+              user: row.user.copyWith(
+                isRead: (chapter?.user.isRead ?? false) || row.user.isRead,
+                isDownloaded: chapter?.user.isDownloaded,
+                lastPageRead: chapter?.user.lastPageRead,
+              ),
             ),
     );
   }
@@ -486,10 +488,7 @@ class UpdatesScreen extends HookConsumerWidget {
       appBar: selecting
           ? (topBar
                 ? null
-                : AppBar(
-                    leading: closeSelection,
-                    title: selectionTitle,
-                  ))
+                : AppBar(leading: closeSelection, title: selectionTitle))
           : topBar
           ? null
           : AppBar(

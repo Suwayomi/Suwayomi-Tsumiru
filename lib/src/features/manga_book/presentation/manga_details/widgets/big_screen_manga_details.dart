@@ -85,7 +85,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
     final rawChapters = ref.watch(mangaChapterListProvider(mangaId: mangaId));
     final totalCount = rawChapters.value?.length ?? 0;
     final unreadCount =
-        rawChapters.value?.where((c) => !c.isRead.ifNull()).length ?? 0;
+        rawChapters.value?.where((c) => !c.user.isRead.ifNull()).length ?? 0;
     final onDeviceBytes =
         ref.watch(offlineMangaBytesProvider(mangaId: mangaId)).value ?? 0;
     final filterCount =
@@ -520,9 +520,10 @@ class _ChapterSelectionHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
     final allRead =
-        selected.isNotEmpty && selected.every((c) => c.isRead.ifNull());
+        selected.isNotEmpty && selected.every((c) => c.user.isRead.ifNull());
     final allBookmarked =
-        selected.isNotEmpty && selected.every((c) => c.isBookmarked.ifNull());
+        selected.isNotEmpty &&
+        selected.every((c) => c.user.isBookmarked.ifNull());
     final anchor =
         selected.where((c) => c.id == anchorId).firstOrNull ?? selected.last;
 
@@ -643,7 +644,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
           PopupMenuItem(
             onTap: () => onSelect({
               for (final c in ordered)
-                if (!c.isRead.ifNull()) c.id: c,
+                if (!c.user.isRead.ifNull()) c.id: c,
             }, anchor.id),
             child: ChapterMenuRow(
               icon: Icons.filter_list_rounded,

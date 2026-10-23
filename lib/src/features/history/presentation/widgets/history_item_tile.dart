@@ -20,19 +20,15 @@ import '../../domain/history_item.dart';
 import '../../domain/history_menu_action.dart';
 
 class HistoryItemTile extends ConsumerWidget {
-  const HistoryItemTile({
-    super.key,
-    required this.item,
-    this.onTap,
-  });
+  const HistoryItemTile({super.key, required this.item, this.onTap});
 
   final HistoryItemDto item;
   final VoidCallback? onTap;
 
   bool _isChapterCompleted() {
-    final isFullyRead = item.isRead == true;
+    final isFullyRead = item.user.isRead == true;
     final hasFinishedChapter =
-        item.pageCount > 0 && item.lastPageRead >= (item.pageCount - 1);
+        item.pageCount > 0 && item.user.lastPageRead >= (item.pageCount - 1);
     return isFullyRead || hasFinishedChapter;
   }
 
@@ -42,18 +38,12 @@ class HistoryItemTile extends ConsumerWidget {
     final timeString = readDate != null ? DateFormat.Hm().format(readDate) : '';
 
     return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 4,
-        vertical: 2,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: WebRouteLink(
         // Completed entries open the next chapter after loading: no fixed link.
         location: _isChapterCompleted()
             ? null
-            : ReaderRoute(
-                mangaId: item.mangaId,
-                chapterId: item.id,
-              ).location,
+            : ReaderRoute(mangaId: item.mangaId, chapterId: item.id).location,
         builder: (context, openInNewTab) => InkWell(
           onTap: () => WebRouteLink.handleTap(
             openInNewTab,
@@ -111,13 +101,18 @@ class HistoryItemTile extends ConsumerWidget {
                             const SizedBox(width: 4),
                             Text(
                               timeString,
-                              style: context.theme.textTheme.labelSmall?.copyWith(
-                                color: context.theme.colorScheme.onSurfaceVariant,
-                              ),
+                              style: context.theme.textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: context
+                                        .theme
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                             ),
                           ],
                           // Progress indicator
-                          if (item.lastPageRead > 0 && item.pageCount > 0) ...[
+                          if (item.user.lastPageRead > 0 &&
+                              item.pageCount > 0) ...[
                             const SizedBox(width: 8),
                             Icon(
                               _isChapterCompleted()
@@ -132,12 +127,13 @@ class HistoryItemTile extends ConsumerWidget {
                             Text(
                               _isChapterCompleted()
                                   ? 'Completed'
-                                  : '${item.lastPageRead}/${item.pageCount}',
-                              style: context.theme.textTheme.labelSmall?.copyWith(
-                                color: _isChapterCompleted()
-                                    ? context.theme.colorScheme.secondary
-                                    : context.theme.colorScheme.primary,
-                              ),
+                                  : '${item.user.lastPageRead}/${item.pageCount}',
+                              style: context.theme.textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: _isChapterCompleted()
+                                        ? context.theme.colorScheme.secondary
+                                        : context.theme.colorScheme.primary,
+                                  ),
                             ),
                           ],
                           // Scanlator
@@ -146,10 +142,12 @@ class HistoryItemTile extends ConsumerWidget {
                             Flexible(
                               child: Text(
                                 item.scanlator!,
-                                style:
-                                    context.theme.textTheme.labelSmall?.copyWith(
-                                  color:
-                                      context.theme.colorScheme.onSurfaceVariant,
+                                style: context.theme.textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: context
+                                          .theme
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                       fontStyle: FontStyle.italic,
                                     ),
                                 maxLines: 1,
@@ -193,7 +191,6 @@ class HistoryItemTile extends ConsumerWidget {
     );
   }
 
-
   /// Ensures all preference providers required for chapter filtering/sorting are initialized
   void _ensurePreferenceProvidersInitialized(WidgetRef ref) {
     ref.read(mangaChapterSortProvider);
@@ -211,15 +208,14 @@ class HistoryItemTile extends ConsumerWidget {
       _navigateToNextChapterAfterLoading(context, ref);
     } else {
       // Chapter not fully read, continue from where the user left off.
-      ReaderRoute(
-        mangaId: item.mangaId,
-        chapterId: item.id,
-      ).push(context);
+      ReaderRoute(mangaId: item.mangaId, chapterId: item.id).push(context);
     }
   }
 
   Future<void> _navigateToNextChapterAfterLoading(
-      BuildContext context, WidgetRef ref) async {
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     // Use a completer to await the result from the listener.
     final completer = Completer<void>();
     ProviderSubscription? subscription;
@@ -230,10 +226,7 @@ class HistoryItemTile extends ConsumerWidget {
 
       // Ensure the widget is still mounted before navigating.
       if (context.mounted) {
-        ReaderRoute(
-          mangaId: item.mangaId,
-          chapterId: chapterId,
-        ).push(context);
+        ReaderRoute(mangaId: item.mangaId, chapterId: chapterId).push(context);
       }
       // Cleanup: cancel subscription, complete future.
       subscription?.close();
@@ -278,7 +271,7 @@ class HistoryItemTile extends ConsumerWidget {
         if (!completer.isCompleted) {
           navigateAndCleanup(item.id);
         }
-      })
+      }),
     ]);
   }
 

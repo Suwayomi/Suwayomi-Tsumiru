@@ -45,7 +45,8 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
 
     final selected = selectedChapterDtos;
     final allBookmarked =
-        selected.isNotEmpty && selected.every((c) => c.isBookmarked.ifNull());
+        selected.isNotEmpty &&
+        selected.every((c) => c.user.isBookmarked.ifNull());
 
     return SelectionActionBar(
       clearsSystemNav: true,

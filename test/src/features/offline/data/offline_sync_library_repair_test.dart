@@ -23,12 +23,8 @@ Fragment$MangaDto _serverManga(
 }) => Fragment$MangaDto(
   id: id,
   title: 'Manga $id',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: inLibrary,
-  inLibraryAt: inLibraryAt,
   initialized: true,
   meta: const [],
   source: null,
@@ -36,9 +32,15 @@ Fragment$MangaDto _serverManga(
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: inLibrary,
+    inLibraryAt: inLibraryAt,
+    unreadCount: 0,
+  ),
 );
 
 void main() {
@@ -75,7 +77,6 @@ void main() {
 
       expect(await inLibraryAtOf(1), '1699000000000');
     });
-
   });
 
   group('libraryManga() after repair', () {});

@@ -2,37 +2,42 @@ fragment MangaDto on MangaType {
   age
   artist
   author
-  bookmarkCount
+  user {
+    bookmarkCount
+    downloadCount
+    # Only the library's "continue reading" button reads this, by id, and that
+    # button is off by default. Selecting it costs the server a ranking over
+    # every chapter of every series returned, so the library asks for it only
+    # when the button is on; every other operation keeps the default.
+    firstUnreadChapter @include(if: $withFirstUnread) {
+      id
+    }
+    inLibrary
+    inLibraryAt
+    # This fragment carries every series of the library list (~1.5 MB for 360
+    # series), so the chapters and source below keep only the fields read off
+    # them: a full ChapterDto per chapter was ~440 B, a full SourceDto ~530 B.
+    # Sort and offline mirror read these timestamps; the page shows progress.
+    lastReadChapter {
+      id
+      user {
+        isRead
+        lastPageRead
+        lastReadAt
+      }
+    }
+    unreadCount
+  }
   chapters {
     totalCount
   }
   chaptersAge
   chaptersLastFetchedAt
   description
-  downloadCount
-  # Only the library's "continue reading" button reads this, by id, and that
-  # button is off by default. Selecting it costs the server a ranking over
-  # every chapter of every series returned, so the library asks for it only
-  # when the button is on; every other operation keeps the default.
-  firstUnreadChapter @include(if: $withFirstUnread) {
-    id
-  }
   genre
   id
-  inLibrary
-  inLibraryAt
   initialized
   lastFetchedAt
-  # This fragment carries every series of the library list (~1.5 MB for 360
-  # series), so the chapters and source below keep only the fields read off
-  # them: a full ChapterDto per chapter was ~440 B, a full SourceDto ~530 B.
-  # Sort and offline mirror read these timestamps; the page shows progress.
-  lastReadChapter {
-    id
-    isRead
-    lastPageRead
-    lastReadAt
-  }
   latestFetchedChapter {
     id
     fetchedAt
@@ -70,7 +75,6 @@ fragment MangaDto on MangaType {
   trackRecords {
     nodes { id trackerId remoteId status score title }
   }
-  unreadCount
   updateStrategy
   url
 }
@@ -90,8 +94,11 @@ fragment MangaBaseDto on MangaType {
   description
   genre
   id
-  inLibrary
-  inLibraryAt
+  user {
+    inLibrary
+    inLibraryAt
+    unreadCount
+  }
   initialized
   lastFetchedAt
   meta {
@@ -104,7 +111,6 @@ fragment MangaBaseDto on MangaType {
   thumbnailUrl
   thumbnailUrlLastFetched
   title
-  unreadCount
   updateStrategy
   url
 }

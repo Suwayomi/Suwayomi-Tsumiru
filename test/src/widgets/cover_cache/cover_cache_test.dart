@@ -117,21 +117,23 @@ MangaDto _manga(int id, {String? thumbnailUrl}) => MangaDto(
   id: id,
   title: 'Manga $id',
   thumbnailUrl: thumbnailUrl,
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 1),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 void main() {

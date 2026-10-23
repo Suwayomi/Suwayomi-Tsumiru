@@ -55,8 +55,8 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final groupingMode = ref.watch(updatesGroupingModeProvider) ??
-        UpdatesGroupingMode.disabled;
+    final groupingMode =
+        ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.disabled;
 
     // Each group starts expanded or collapsed based on the persisted setting.
     // The user can toggle independently of the global default.
@@ -92,8 +92,9 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
           isGroup: isGroup,
           tailCount: tail.length,
           isExpanded: isExpanded.value,
-          onToggleExpand:
-              isGroup ? () => isExpanded.value = !isExpanded.value : null,
+          onToggleExpand: isGroup
+              ? () => isExpanded.value = !isExpanded.value
+              : null,
           updatePair: updatePairFor(head),
           refreshManga: refreshManga,
           isSelected: isSelectedFor(head),
@@ -146,7 +147,7 @@ class _HeadTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Mihon parity: a read chapter is drawn at 38% of the normal colour.
-    final color = (chapter.isRead).ifNull()
+    final color = (chapter.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapter.manga;
@@ -215,7 +216,7 @@ class _HeadTile extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          if ((chapter.isBookmarked).ifNull()) ...[
+                          if ((chapter.user.isBookmarked).ifNull()) ...[
                             const Icon(Icons.bookmark_rounded, size: 20),
                             const SizedBox(width: 4),
                           ],
@@ -236,7 +237,8 @@ class _HeadTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color:
-                              color ?? context.theme.colorScheme.onSurfaceVariant,
+                              color ??
+                              context.theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       if (isGroup)
@@ -279,7 +281,7 @@ class _HeadTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 DownloadStatusIcon(
-                  isDownloaded: (chapter.isDownloaded).ifNull(),
+                  isDownloaded: (chapter.user.isDownloaded).ifNull(),
                   mangaId: manga.id,
                   chapter: chapter,
                   updateData: updatePair,
@@ -317,7 +319,7 @@ class _TailTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Mihon parity: a read chapter is drawn at 38% of the normal colour.
-    final color = (chapter.isRead).ifNull()
+    final color = (chapter.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapter.manga;
@@ -361,7 +363,7 @@ class _TailTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                if ((chapter.isBookmarked).ifNull()) ...[
+                if ((chapter.user.isBookmarked).ifNull()) ...[
                   const Icon(Icons.bookmark_rounded, size: 16),
                   const SizedBox(width: 4),
                 ],
@@ -379,7 +381,7 @@ class _TailTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 DownloadStatusIcon(
-                  isDownloaded: (chapter.isDownloaded).ifNull(),
+                  isDownloaded: (chapter.user.isDownloaded).ifNull(),
                   mangaId: manga.id,
                   chapter: chapter,
                   updateData: updatePair,

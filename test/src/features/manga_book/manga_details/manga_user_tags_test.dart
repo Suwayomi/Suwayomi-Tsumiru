@@ -39,12 +39,8 @@ class _TaggedManga extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => Fragment$MangaDto(
     id: mangaId,
     title: 'M',
-    bookmarkCount: 0,
     chapters: Fragment$MangaDto$chapters(totalCount: 0),
-    downloadCount: 0,
     genre: const [],
-    inLibrary: true,
-    inLibraryAt: '0',
     initialized: true,
     meta: [
       Fragment$MangaDto$meta(key: 'flutter_tags', value: jsonEncode(tags)),
@@ -53,9 +49,15 @@ class _TaggedManga extends MangaWithId {
     status: Enum$MangaStatus.ONGOING,
     categories: Fragment$MangaDto$categories(nodes: const []),
     trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-    unreadCount: 0,
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '/manga/$mangaId',
+    user: Fragment$MangaDto$user(
+      bookmarkCount: 0,
+      downloadCount: 0,
+      inLibrary: true,
+      inLibraryAt: '0',
+      unreadCount: 0,
+    ),
   );
 }
 
@@ -89,7 +91,9 @@ void main() {
 
       final repo2 = _RecordingRepo();
       final removed = await seeded(repo2, ['a', 'b']);
-      await removed.read(mangaUserTagsProvider(mangaId: 1).notifier).remove('a');
+      await removed
+          .read(mangaUserTagsProvider(mangaId: 1).notifier)
+          .remove('a');
       expect(repo2.patched, contains((1, 'flutter_tags', '["b"]')));
     });
   });

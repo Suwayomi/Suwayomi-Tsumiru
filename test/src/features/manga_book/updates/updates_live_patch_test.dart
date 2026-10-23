@@ -13,28 +13,25 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 Fragment$MangaBaseDto _manga() => Fragment$MangaBaseDto(
   id: 1,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   thumbnailUrl: '/thumb/1',
   title: 'Series',
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/1',
+  user: Fragment$MangaBaseDto$user(
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 Fragment$ChapterWithMangaDto _chapter(int id) => Fragment$ChapterWithMangaDto(
   id: id,
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: 1,
   name: 'Chapter $id',
   pageCount: 10,
@@ -43,6 +40,13 @@ Fragment$ChapterWithMangaDto _chapter(int id) => Fragment$ChapterWithMangaDto(
   url: '/c/$id',
   meta: const [],
   manga: _manga(),
+  user: Fragment$ChapterWithMangaDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 void main() {

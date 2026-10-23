@@ -92,11 +92,11 @@ List<MangaDto> applyLibraryFilterSort(
   bool filter(MangaDto manga) {
     if (mangaIds != null && !mangaIds.contains(manga.id)) return false;
     if (mangaFilterUnread != null &&
-        (mangaFilterUnread ^ manga.unreadCount.isGreaterThan(0))) {
+        (mangaFilterUnread ^ manga.user.unreadCount.isGreaterThan(0))) {
       return false;
     }
     if (mangaFilterDownloaded != null &&
-        (mangaFilterDownloaded ^ manga.downloadCount.isGreaterThan(0))) {
+        (mangaFilterDownloaded ^ manga.user.downloadCount.isGreaterThan(0))) {
       return false;
     }
     if (mangaFilterCompleted != null &&
@@ -111,7 +111,7 @@ List<MangaDto> applyLibraryFilterSort(
       return false;
     }
     if (mangaFilterBookmarked != null &&
-        (mangaFilterBookmarked ^ manga.bookmarkCount.isGreaterThan(0))) {
+        (mangaFilterBookmarked ^ manga.user.bookmarkCount.isGreaterThan(0))) {
       return false;
     }
     if (mangaFilterOffline != null &&
@@ -198,8 +198,8 @@ List<MangaDto> applyLibraryFilterSort(
     // Zero-unread must sort last in both directions, so it's checked before
     // the direction toggle — else descending would lead with finished series.
     if (sortedBy == MangaSort.unread) {
-      final u1 = m1.unreadCount.getValueOnNullOrNegative();
-      final u2 = m2.unreadCount.getValueOnNullOrNegative();
+      final u1 = m1.user.unreadCount.getValueOnNullOrNegative();
+      final u2 = m2.user.unreadCount.getValueOnNullOrNegative();
       if (u1 == u2) return 0;
       if (u1 == 0) return 1;
       if (u2 == 0) return -1;
@@ -210,8 +210,8 @@ List<MangaDto> applyLibraryFilterSort(
           // unread is handled above; this arm is unreachable.
           MangaSort.unread => 0,
           MangaSort.dateAdded =>
-            (m1.inLibraryAt.getValueOnNullOrNegative()).compareTo(
-              m2.inLibraryAt.getValueOnNullOrNegative(),
+            (m1.user.inLibraryAt.getValueOnNullOrNegative()).compareTo(
+              m2.user.inLibraryAt.getValueOnNullOrNegative(),
             ),
           MangaSort.lastUpdated =>
             (int.tryParse(m1.latestFetchedChapter?.fetchedAt ?? '0') ?? 0)
@@ -243,9 +243,12 @@ List<MangaDto> applyLibraryFilterSort(
           // swapped, which inverted our arrows — our "ascending" showed
           // newest first.)
           MangaSort.lastRead =>
-            (int.tryParse(m1.lastReadChapter?.lastReadAt ?? '0') ?? 0)
+            (int.tryParse(m1.user.lastReadChapter?.user.lastReadAt ?? '0') ?? 0)
                 .compareTo(
-                  int.tryParse(m2.lastReadChapter?.lastReadAt ?? '0') ?? 0,
+                  int.tryParse(
+                        m2.user.lastReadChapter?.user.lastReadAt ?? '0',
+                      ) ??
+                      0,
                 ),
           // random is handled above; this arm is unreachable.
           MangaSort.random => randomKey(

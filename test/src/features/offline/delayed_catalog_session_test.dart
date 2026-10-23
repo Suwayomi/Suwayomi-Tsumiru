@@ -106,21 +106,23 @@ class _Covers extends OfflineCoverWarmer {
 MangaDto _manga() => MangaDto(
   id: 1,
   title: 'First account',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 1),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 1,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/1',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 1,
+  ),
 );
 
 void main() {

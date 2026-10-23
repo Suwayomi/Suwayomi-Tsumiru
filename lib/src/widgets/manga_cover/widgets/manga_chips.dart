@@ -33,7 +33,7 @@ class MangaChipsRow extends ConsumerWidget {
       padding: KEdgeInsets.v8.size,
       child: Wrap(
         children: [
-          if (!showCountBadges && (manga.inLibrary.ifNull()))
+          if (!showCountBadges && (manga.user.inLibrary.ifNull()))
             MangaChip(
               text: context.l10n.inLibrary,
               color: context.theme.colorScheme.primary,
@@ -43,19 +43,20 @@ class MangaChipsRow extends ConsumerWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (manga.unreadCount.isGreaterThan(0) && unreadBadge)
+                if (manga.user.unreadCount.isGreaterThan(0) && unreadBadge)
                   MangaChip(
                     text: context.l10n.nameCountDisplay(
-                      manga.unreadCount.getValueOnNullOrNegative(),
+                      manga.user.unreadCount.getValueOnNullOrNegative(),
                       context.l10n.unread,
                     ),
                     color: context.theme.colorScheme.primary,
                     textColor: context.theme.colorScheme.onPrimary,
                   ),
-                if (manga.downloadCount.isGreaterThan(0) && downloadedBadge)
+                if (manga.user.downloadCount.isGreaterThan(0) &&
+                    downloadedBadge)
                   MangaChip(
                     text: context.l10n.nameCountDisplay(
-                      manga.downloadCount.getValueOnNullOrNegative(),
+                      manga.user.downloadCount.getValueOnNullOrNegative(),
                       context.l10n.downloaded,
                     ),
                     color: context.theme.colorScheme.tertiary,

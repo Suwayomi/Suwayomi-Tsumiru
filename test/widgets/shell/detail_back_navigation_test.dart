@@ -20,6 +20,7 @@ import 'package:tsumiru/src/features/hotkeys/presentation/global_shortcut_host.d
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_repository.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
@@ -38,11 +39,6 @@ ChapterDto _chapter({required int id, bool read = false}) => ChapterDto(
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
   id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: read,
-  lastPageRead: 0,
-  lastReadAt: read ? '1' : '0',
   mangaId: 1,
   name: 'Chapter $id',
   pageCount: 20,
@@ -52,6 +48,13 @@ ChapterDto _chapter({required int id, bool read = false}) => ChapterDto(
   uploadDate: '0',
   url: '',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: read,
+    lastPageRead: 0,
+    lastReadAt: read ? '1' : '0',
+  ),
 );
 
 final _chapters = [
@@ -65,19 +68,22 @@ final _manga = MangaDto.fromJson({
   'id': 1,
   'title': 'Test series',
   'author': 'An author',
-  'bookmarkCount': 0,
+  'user': {
+    '__typename': 'MangaUserType',
+    'bookmarkCount': 0,
+    'downloadCount': 0,
+    'inLibrary': true,
+    'inLibraryAt': '0',
+    'unreadCount': 2,
+  },
   'chapters': {'totalCount': 3, '__typename': 'ChapterNodeList'},
-  'downloadCount': 0,
   'genre': ['Action'],
-  'inLibrary': true,
-  'inLibraryAt': '0',
   'initialized': true,
   'meta': [],
   'sourceId': '0',
   'status': 'ONGOING',
   'categories': {'nodes': [], '__typename': 'CategoryNodeList'},
   'trackRecords': {'nodes': [], '__typename': 'TrackRecordNodeList'},
-  'unreadCount': 2,
   'updateStrategy': 'ALWAYS_UPDATE',
   'url': '',
 });

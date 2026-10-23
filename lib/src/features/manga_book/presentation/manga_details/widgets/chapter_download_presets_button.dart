@@ -47,8 +47,8 @@ class ChapterDownloadPresetsButton extends HookConsumerWidget {
         ChapterDownloadCandidate(
           id: c.id,
           chapterNumber: c.chapterNumber,
-          isRead: c.isRead,
-          isDownloaded: c.isDownloaded,
+          isRead: c.user.isRead,
+          isDownloaded: c.user.isDownloaded,
         ),
     ];
 

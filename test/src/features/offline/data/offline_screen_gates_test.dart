@@ -70,32 +70,29 @@ class _Session extends AuthCredentialsStore {
 MangaDto _serverManga() => Fragment$MangaDto(
   id: 1,
   title: 'FreshManga',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 1),
-  downloadCount: 1,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   meta: const [],
   url: '/manga/1',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 1,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 ChapterDto _serverChapter() => Fragment$ChapterDto(
   chapterNumber: 5,
   fetchedAt: '0',
   id: 99,
-  isBookmarked: false,
-  isDownloaded: true,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: 1,
   name: 'Fresh Chapter',
   pageCount: 1,
@@ -103,6 +100,13 @@ ChapterDto _serverChapter() => Fragment$ChapterDto(
   uploadDate: '0',
   url: '/chapter/99',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: true,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 Future<ProviderContainer> _container(

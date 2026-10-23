@@ -299,7 +299,7 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) {
           mangaBookRepositoryProvider,
         ).getChapter(chapterId: chapterId);
         if (!current()) return;
-        serverHasIt = fresh?.isDownloaded ?? serverHasIt;
+        serverHasIt = fresh?.user.isDownloaded ?? serverHasIt;
       }
       if (!serverHasIt) {
         await verifyDownloadPermission(read);
@@ -1017,8 +1017,8 @@ Future<void> _deleteServerCopyIfDeletable(
     final idx = chapters?.indexWhere((e) => e.id == chapterId) ?? -1;
     if (chapters == null || idx < 0) return;
     final c = chapters[idx];
-    if (!c.isDownloaded) return;
-    var isBookmarked = c.isBookmarked;
+    if (!c.user.isDownloaded) return;
+    var isBookmarked = c.user.isBookmarked;
     if (read(offlineActiveProvider)) {
       final row = await read(offlineRepositoryProvider).chapterById(chapterId);
       if (!current()) return;
@@ -1085,7 +1085,7 @@ Future<void> _pushPendingProgress(
       )).asData?.value;
       if (!current()) return;
       if (server != null) {
-        final serverRead = server.isRead.ifNull();
+        final serverRead = server.user.isRead.ifNull();
         final serverAhead = serverRead
             ? !c
                   .isRead // server finished it; our push would un-finish it
@@ -1093,7 +1093,8 @@ Future<void> _pushPendingProgress(
             // We finished it; a server partial position never outranks a
             // completion (marking read leaves lastPageRead low).
             ? false
-            : server.lastPageRead.getValueOnNullOrNegative() > c.lastPageRead;
+            : server.user.lastPageRead.getValueOnNullOrNegative() >
+                  c.lastPageRead;
         if (serverAhead) {
           pushProgress = false;
           pushReadState = false;
@@ -1105,7 +1106,8 @@ Future<void> _pushPendingProgress(
             expectedIsRead: c.isRead,
             expectedLastPageRead: c.lastPageRead,
             serverIsRead: serverRead,
-            serverLastPageRead: server.lastPageRead.getValueOnNullOrNegative(),
+            serverLastPageRead: server.user.lastPageRead
+                .getValueOnNullOrNegative(),
           );
         }
       }

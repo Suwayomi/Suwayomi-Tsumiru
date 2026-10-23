@@ -15,32 +15,35 @@ const _totalChapters = 5;
 
 /// [readChapters] drives the server's unread count; [lastPageRead] is progress
 /// inside the chapter currently being read, which is not the same thing.
-MangaDto _manga(int id, {required int readChapters}) =>
-    Fragment$MangaDto(
-      id: id,
-      title: 'M$id',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: _totalChapters),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-      unreadCount: _totalChapters - readChapters,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/$id',
-      lastReadChapter: Fragment$MangaDto$lastReadChapter(
-        id: id * 100,
+MangaDto _manga(int id, {required int readChapters}) => Fragment$MangaDto(
+  id: id,
+  title: 'M$id',
+  chapters: Fragment$MangaDto$chapters(totalCount: _totalChapters),
+  genre: const [],
+  initialized: true,
+  meta: const [],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: _totalChapters - readChapters,
+    lastReadChapter: Fragment$MangaDto$user$lastReadChapter(
+      id: id * 100,
+      user: Fragment$MangaDto$user$lastReadChapter$user(
         isRead: readChapters > 0,
         lastPageRead: 0,
         lastReadAt: readChapters > 0 ? '1700000000' : '0',
       ),
-    );
+    ),
+  ),
+);
 
 List<MangaDto> _run(List<MangaDto> input, {required bool? started}) =>
     applyLibraryFilterSort(

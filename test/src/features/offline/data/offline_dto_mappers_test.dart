@@ -24,18 +24,19 @@ void main() {
     expect(dto.id, 7);
     expect(dto.title, 'Solo');
     expect(dto.thumbnailUrl, '/t.jpg');
-    expect(dto.inLibrary, true);
-    expect(dto.unreadCount, 0);
-    expect(dto.downloadCount, 0);
+    expect(dto.user.inLibrary, true);
+    expect(dto.user.unreadCount, 0);
+    expect(dto.user.downloadCount, 0);
     expect(dto.chapters.totalCount, 12);
 
     expect(
-      offlineMangaToDto(m, lastReadAt: '1700000000000')
-          .lastReadChapter
-          ?.lastReadAt,
+      offlineMangaToDto(
+        m,
+        lastReadAt: '1700000000000',
+      ).user.lastReadChapter?.user.lastReadAt,
       '1700000000000',
     );
-    expect(offlineMangaToDto(m).lastReadChapter, isNull);
+    expect(offlineMangaToDto(m).user.lastReadChapter, isNull);
 
     // A null warning (pre-rating row) must not resolve to SAFE, or an
     // adult-tagged series leaks past the offline content filter.

@@ -20,19 +20,20 @@ typedef MangaDto = Fragment$MangaDto;
 typedef MangaBaseDto = Fragment$MangaBaseDto;
 
 /// A series' last read chapter carries only what reading progress needs.
-extension LastReadChapterProgress on Fragment$MangaDto$lastReadChapter {
+extension LastReadChapterProgress on Fragment$MangaDto$user$lastReadChapter {
   /// Same rule as the full chapter's `hasReadingProgress`.
   bool get hasReadingProgress =>
-      isRead || lastPageRead > 0 || lastReadAt != '0';
+      user.isRead || user.lastPageRead > 0 || user.lastReadAt != '0';
 }
 
 extension MangaExtensions on MangaDto {
-  MangaMeta get metaData => MangaMeta.fromJson(
-      {for (final metaItem in meta) metaItem.key: metaItem.value});
+  MangaMeta get metaData => MangaMeta.fromJson({
+    for (final metaItem in meta) metaItem.key: metaItem.value,
+  });
 
   /// Chapters finished. The server reports the total and the unread count, not
   /// this, so it has to be derived.
-  int get readChapterCount => chapters.totalCount - unreadCount;
+  int get readChapterCount => chapters.totalCount - user.unreadCount;
 
   /// Suwayomi's Local source has the fixed id "0". Its files already live on
   /// the server, so server-download actions don't apply (Komikku hides them
@@ -57,8 +58,8 @@ extension MangaExtensions on MangaDto {
       author: author,
       artist: artist,
       genres: genre.toList(),
-      unreadCount: unreadCount,
-      downloadCount: downloadCount,
+      unreadCount: user.unreadCount,
+      downloadCount: user.downloadCount,
       rating: m.rating,
       userTags: m.userTags ?? const [],
       status: status.name,
@@ -126,13 +127,12 @@ abstract class MangaMeta with _$MangaMeta {
     if (val is! String || val.isEmpty) return null;
     try {
       final decoded = jsonDecode(val);
-      return decoded is List
-          ? decoded.map((e) => e.toString()).toList()
-          : null;
+      return decoded is List ? decoded.map((e) => e.toString()).toList() : null;
     } catch (_) {
       return null;
     }
   }
+
   factory MangaMeta.fromJson(Map<String, dynamic> json) =>
       _$MangaMetaFromJson(json);
 }
@@ -164,8 +164,7 @@ enum MangaMetaKeys {
   // Tsumiru-only chapter sort mode with no WebUI equivalent — see
   // webui_chapter_sort_meta.dart, which deliberately does NOT route the
   // webUI_sortBy/webUI_reverse keys through this enum (foreign namespace).
-  chapterSortAlphabetical("flutter_chapterSortIsAlphabetical"),
-  ;
+  chapterSortAlphabetical("flutter_chapterSortIsAlphabetical");
 
   const MangaMetaKeys(this.key);
   final String key;

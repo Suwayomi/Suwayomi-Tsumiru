@@ -48,9 +48,9 @@ const double _kMaxTitleShare = .45;
 /// Height of a [maxLines]-line title block at the current platform text scale.
 double _titleBlockHeight(BuildContext context, int maxLines) =>
     MediaQuery.textScalerOf(context).scale(_kTitleFontSize) *
-            _kTitleLineFactor *
-            maxLines +
-        _kTitlePadding * 2;
+        _kTitleLineFactor *
+        maxLines +
+    _kTitlePadding * 2;
 
 class MangaCoverGridTile extends StatefulWidget {
   const MangaCoverGridTile({
@@ -225,7 +225,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
             // to its tallest, so `end` gives the flush baseline.
             ? Column(
                 mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: widget.gridStyle == LibraryGridStyle.nonUniform
+                mainAxisAlignment:
+                    widget.gridStyle == LibraryGridStyle.nonUniform
                     ? MainAxisAlignment.end
                     : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -282,16 +283,13 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
         side: widget.selected
             ? BorderSide(color: context.theme.colorScheme.primary, width: 3)
             : _hovered || _keyboardFocused || widget.highlighted
-                ? BorderSide(
-                    color: context.theme.colorScheme.primary,
-                    width: 2,
-                  )
-                : outline
-                    ? BorderSide(
-                        color: context.theme.colorScheme.outlineVariant,
-                        width: 1,
-                      )
-                    : BorderSide.none,
+            ? BorderSide(color: context.theme.colorScheme.primary, width: 2)
+            : outline
+            ? BorderSide(
+                color: context.theme.colorScheme.outlineVariant,
+                width: 1,
+              )
+            : BorderSide.none,
       ),
       // A flat Stack, not a GridTile: GridTile lays its child out with
       // Positioned.fill, which leaves the Stack nothing to size itself from —
@@ -339,8 +337,9 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
             Positioned(
               right: 6,
               bottom: 6,
-              child:
-                  ContinueReadingButton(onPressed: widget.onContinueReading!),
+              child: ContinueReadingButton(
+                onPressed: widget.onContinueReading!,
+              ),
             ),
           if (widget.showBadges)
             Positioned(
@@ -355,32 +354,32 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
   }
 
   Widget _overlayTitleBar(BuildContext context) => ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        dense: true,
-        title: Text(
-          widget.manga.title,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 2,
-          // Drawn on the cover art, not the theme surface: always white over
-          // the black scrim, shadowed for light covers (Komikku's
-          // CoverTextOverlay values).
-          style: const TextStyle(
-            color: OnImage.text,
-            fontSize: 12,
-            height: 1.5,
-            shadows: [Shadow(color: OnImage.shadow, blurRadius: 4)],
-          ),
-        ),
-        // The button shares the footer row: the title takes the remaining
-        // width, so it can never sit under the button.
-        trailing: widget.onContinueReading != null
-            ? ContinueReadingButton(
-                onPressed: widget.onContinueReading!,
-                size: 28,
-                iconSize: 16,
-              )
-            : null,
-      );
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+    dense: true,
+    title: Text(
+      widget.manga.title,
+      overflow: TextOverflow.ellipsis,
+      maxLines: 2,
+      // Drawn on the cover art, not the theme surface: always white over
+      // the black scrim, shadowed for light covers (Komikku's
+      // CoverTextOverlay values).
+      style: const TextStyle(
+        color: OnImage.text,
+        fontSize: 12,
+        height: 1.5,
+        shadows: [Shadow(color: OnImage.shadow, blurRadius: 4)],
+      ),
+    ),
+    // The button shares the footer row: the title takes the remaining
+    // width, so it can never sit under the button.
+    trailing: widget.onContinueReading != null
+        ? ContinueReadingButton(
+            onPressed: widget.onContinueReading!,
+            size: 28,
+            iconSize: 16,
+          )
+        : null,
+  );
 
   Widget _cover(BuildContext context, {required bool freeform}) {
     if (widget.manga.thumbnailUrl.isBlank) {
@@ -400,15 +399,12 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
 
     final Widget image = Container(
       foregroundDecoration: BoxDecoration(
-        border: Border.all(
-          width: 0,
-          color: context.theme.canvasColor,
-        ),
+        border: Border.all(width: 0, color: context.theme.canvasColor),
         boxShadow: widget.showDarkOverlay
             ? [
                 BoxShadow(
                   color: context.theme.canvasColor.withValues(alpha: .5),
-                )
+                ),
               ]
             : null,
         // Theme-independent scrim (Komikku: transparent → 67% black over the
@@ -418,10 +414,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
             ? const LinearGradient(
                 begin: Alignment(0, 1 / 3),
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  OnImage.scrim,
-                ],
+                colors: [Colors.transparent, OnImage.scrim],
               )
             : null,
       ),
@@ -432,10 +425,9 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
         builder: (context, constraints) => ServerImage(
           imageUrl: widget.manga.thumbnailUrl ?? "",
           memCacheWidth: constraints.hasBoundedWidth
-              ? (constraints.maxWidth *
-                      MediaQuery.devicePixelRatioOf(context))
-                  .round()
-                  .clamp(1, 1 << 16)
+              ? (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(1, 1 << 16)
               : null,
           // A freeform tile is only as tall as its cover, so a screen-relative
           // shimmer would make the grid lurch once the art lands.
@@ -453,8 +445,9 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width =
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 0.0;
+          final width = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 0.0;
           return ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: width * _kFreeformMinHeightFactor,
@@ -488,13 +481,12 @@ class _TitleBlock extends StatelessWidget {
   /// Skia collapses `ellipsis + maxLines: null` to one line, so uncapped text
   /// has to ask to wrap rather than to ellipsize.
   static Widget _text(String title, int? maxLines) => Text(
-        title,
-        maxLines: maxLines,
-        softWrap: true,
-        overflow:
-            maxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
-        style: _style,
-      );
+    title,
+    maxLines: maxLines,
+    softWrap: true,
+    overflow: maxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
+    style: _style,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -510,7 +502,7 @@ class _TitleBlock extends StatelessWidget {
                 }
                 final lineHeight =
                     MediaQuery.textScalerOf(context).scale(_kTitleFontSize) *
-                        _kTitleLineFactor;
+                    _kTitleLineFactor;
                 return _text(
                   title,
                   max(1, (constraints.maxHeight / lineHeight).floor()),
@@ -528,15 +520,18 @@ class _FreeformCoverPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const AspectRatio(
-        aspectRatio: _kBookAspectRatio,
-        child: Center(child: SorayomiShimmerIndicator()),
-      );
+    aspectRatio: _kBookAspectRatio,
+    child: Center(child: SorayomiShimmerIndicator()),
+  );
 }
 
 /// Fraction (0..1] of a series that's been read, or null when there's nothing
 /// to show (no chapters, or none read yet). Clamps defensively so odd counts
 /// (unread > total) never produce an out-of-range or negative bar.
-double? coverReadFraction({required int totalChapters, required int unreadCount}) {
+double? coverReadFraction({
+  required int totalChapters,
+  required int unreadCount,
+}) {
   if (totalChapters <= 0) return null;
   final read = (totalChapters - unreadCount).clamp(0, totalChapters);
   return read <= 0 ? null : read / totalChapters;
@@ -557,7 +552,7 @@ class _CoverReadProgressBar extends ConsumerWidget {
     }
     final fraction = coverReadFraction(
       totalChapters: manga.chapters.totalCount,
-      unreadCount: manga.unreadCount.getValueOnNullOrNegative(),
+      unreadCount: manga.user.unreadCount.getValueOnNullOrNegative(),
     );
     if (fraction == null) return const SizedBox.shrink();
     return LinearProgressIndicator(

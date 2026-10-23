@@ -14,13 +14,16 @@ int readerInitialPageIndex({
   required bool openAtEnd,
 }) {
   final loadedCount = chapterPages.pages.length;
-  final pageCount =
-      loadedCount > 0 ? loadedCount : chapterPages.chapter.pageCount;
+  final pageCount = loadedCount > 0
+      ? loadedCount
+      : chapterPages.chapter.pageCount;
   final lastIndex = pageCount > 0 ? pageCount - 1 : 0;
   if (openAtEnd) return lastIndex;
-  if (chapter.isRead.ifNull()) return 0;
+  if (chapter.user.isRead.ifNull()) return 0;
   return _clampPageIndex(
-      chapter.lastPageRead.getValueOnNullOrNegative(), lastIndex);
+    chapter.user.lastPageRead.getValueOnNullOrNegative(),
+    lastIndex,
+  );
 }
 
 int _clampPageIndex(int index, int lastIndex) {

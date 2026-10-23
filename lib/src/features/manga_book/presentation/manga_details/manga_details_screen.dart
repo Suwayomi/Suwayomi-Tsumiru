@@ -406,7 +406,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       selectedChapters.value.isEmpty
                   ? BrandFab(
                       label: Text(
-                        data?.lastReadChapter?.hasReadingProgress == true
+                        data?.user.lastReadChapter?.hasReadingProgress == true
                             ? context.l10n.resume
                             : context.l10n.start,
                       ),
@@ -570,7 +570,7 @@ class MultiSelectPopupButton extends StatelessWidget {
 
             selectedChapters.value = ({
               for (ChapterDto i in chapterList)
-                if (!i.isRead.ifNull()) i.id: i,
+                if (!i.user.isRead.ifNull()) i.id: i,
             });
           },
           child: Text(context.l10n.selectUnread),

@@ -254,12 +254,12 @@ class _DuplicateCard extends StatelessWidget {
                     textColor: context.theme.colorScheme.onSecondary,
                   ),
                 ),
-                if (duplicate.unreadCount > 0)
+                if (duplicate.user.unreadCount > 0)
                   Positioned(
                     right: 4,
                     top: 4,
                     child: MangaBadge(
-                      text: '${duplicate.unreadCount}',
+                      text: '${duplicate.user.unreadCount}',
                       color: context.theme.colorScheme.primary,
                       textColor: context.theme.colorScheme.onPrimary,
                       side: BadgeSide.right,

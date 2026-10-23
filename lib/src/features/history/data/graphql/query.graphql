@@ -9,8 +9,10 @@ fragment HistoryChapterDto on ChapterType {
     title
     thumbnailUrl
     author
-    inLibrary
-    unreadCount
+    user {
+      inLibrary
+      unreadCount
+    }
   }
 }
 

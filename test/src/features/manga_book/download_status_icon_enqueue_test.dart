@@ -37,16 +37,18 @@ ChapterDto _chapter() => Fragment$ChapterDto(
   name: 'c1',
   chapterNumber: 1,
   sourceOrder: 1,
-  isRead: false,
-  isBookmarked: false,
-  isDownloaded: false,
-  lastPageRead: 0,
   pageCount: 20,
   fetchedAt: '0',
   uploadDate: '0',
-  lastReadAt: '0',
   url: '',
   meta: const <Fragment$ChapterDto$meta>[],
+  user: Fragment$ChapterDto$user(
+    isRead: false,
+    isBookmarked: false,
+    isDownloaded: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 void main() {
@@ -76,20 +78,21 @@ void main() {
     return repo;
   }
 
-  testWidgets('tapping download shows progress, restored when the queue fails', (
-    tester,
-  ) async {
-    final repo = await pump(tester);
+  testWidgets(
+    'tapping download shows progress, restored when the queue fails',
+    (tester) async {
+      final repo = await pump(tester);
 
-    await tester.tap(find.byIcon(Icons.cloud_download_outlined));
-    await tester.pump();
+      await tester.tap(find.byIcon(Icons.cloud_download_outlined));
+      await tester.pump();
 
-    expect(find.byType(MiniCircularProgressIndicator), findsOneWidget);
-    expect(find.byIcon(Icons.cloud_download_outlined), findsNothing);
+      expect(find.byType(MiniCircularProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.cloud_download_outlined), findsNothing);
 
-    repo.enqueue.completeError(Exception('offline'));
-    await tester.pump();
+      repo.enqueue.completeError(Exception('offline'));
+      await tester.pump();
 
-    expect(find.byIcon(Icons.cloud_download_outlined), findsOneWidget);
-  });
+      expect(find.byIcon(Icons.cloud_download_outlined), findsOneWidget);
+    },
+  );
 }

@@ -48,16 +48,18 @@ class _MangaRepository extends MangaBookRepository {
       name: 'c1',
       chapterNumber: 1,
       sourceOrder: 1,
-      isRead: false,
-      isBookmarked: false,
-      isDownloaded: true,
-      lastPageRead: 0,
       pageCount: 1,
       fetchedAt: '0',
       uploadDate: '0',
-      lastReadAt: '0',
       url: '',
       meta: const [],
+      user: Fragment$ChapterDto$user(
+        isRead: false,
+        isBookmarked: false,
+        isDownloaded: true,
+        lastPageRead: 0,
+        lastReadAt: '0',
+      ),
     );
   }
 }

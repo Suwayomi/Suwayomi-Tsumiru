@@ -128,10 +128,12 @@ void main() {
                   'name': 'Chapter ${index + 1}',
                   'sourceOrder': index,
                   'chapterNumber': index + 1,
-                  'isRead': false,
-                  'isBookmarked': false,
-                  'isDownloaded':
-                      serverDownloaded && !serverMissing.contains(index + 1),
+                  'user': {
+                    'isRead': false,
+                    'isBookmarked': false,
+                    'isDownloaded':
+                        serverDownloaded && !serverMissing.contains(index + 1),
+                  },
                   'pageCount': 1,
                 },
               ),

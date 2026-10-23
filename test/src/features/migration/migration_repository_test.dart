@@ -21,10 +21,13 @@ void main() {
       () async {
         final calls = <String>[];
         final source = testManga();
-        final target = source.copyWith(id: 2, inLibrary: false);
-        final oldChapter = testChapter().copyWith(
-          isRead: true,
-          lastPageRead: 2,
+        final target = source.copyWith(
+          id: 2,
+          user: source.user.copyWith(inLibrary: false),
+        );
+        final oldChapterBase = testChapter();
+        final oldChapter = oldChapterBase.copyWith(
+          user: oldChapterBase.user.copyWith(isRead: true, lastPageRead: 2),
         );
         final newChapter = testChapter(id: 20).copyWith(mangaId: 2);
         final client = GraphQLClient(
@@ -112,7 +115,9 @@ void main() {
                     '__typename': 'Mutation',
                     'updateManga': {
                       '__typename': 'UpdateMangaPayload',
-                      'manga': target.copyWith(inLibrary: true).toJson(),
+                      'manga': target
+                          .copyWith(user: target.user.copyWith(inLibrary: true))
+                          .toJson(),
                     },
                   },
                 );

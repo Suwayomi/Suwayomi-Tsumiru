@@ -30,16 +30,18 @@ ChapterDto _ch(
   chapterNumber: number,
   sourceOrder: sourceOrder,
   scanlator: scanlator,
-  isRead: isRead,
-  isBookmarked: false,
-  isDownloaded: isDownloaded,
-  lastPageRead: 0,
   pageCount: 10,
   fetchedAt: '0',
   uploadDate: '0',
-  lastReadAt: '0',
   url: '',
   meta: const <Fragment$ChapterDto$meta>[],
+  user: Fragment$ChapterDto$user(
+    isRead: isRead,
+    isBookmarked: false,
+    isDownloaded: isDownloaded,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 class _PreferAlpha extends MangaPreferredScanlators {

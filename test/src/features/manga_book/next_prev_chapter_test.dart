@@ -19,11 +19,6 @@ ChapterDto _chapter({
   chapterNumber: number,
   fetchedAt: '0',
   id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: 1,
   name: name,
   pageCount: 0,
@@ -32,6 +27,13 @@ ChapterDto _chapter({
   url: '',
   scanlator: scanlator,
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 class _FakeChapterList extends MangaChapterList {

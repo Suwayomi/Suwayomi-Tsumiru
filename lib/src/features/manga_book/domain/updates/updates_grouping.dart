@@ -36,8 +36,9 @@ List<UpdatesGroupedEntry> groupUpdatesForDisplay(
     final last = runs.lastOrNull;
     if (last != null &&
         last.first.mangaId == item.mangaId &&
-        int.tryParse(item.fetchedAt)
-            .isSameDayAs(int.tryParse(last.first.fetchedAt))) {
+        int.tryParse(
+          item.fetchedAt,
+        ).isSameDayAs(int.tryParse(last.first.fetchedAt))) {
       last.add(item);
     } else {
       runs.add([item]);
@@ -50,7 +51,10 @@ UpdatesGroupedEntry _closeRun(List<ChapterWithMangaDto> run) {
   final head = pickGroupHead(run);
   return UpdatesGroupedEntry(
     head: head,
-    tail: [for (final c in run) if (c.id != head.id) c],
+    tail: [
+      for (final c in run)
+        if (c.id != head.id) c,
+    ],
   );
 }
 
@@ -66,11 +70,12 @@ UpdatesGroupedEntry _closeRun(List<ChapterWithMangaDto> run) {
 /// chapter as the headline instead of the newest.
 ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
   assert(chapters.isNotEmpty);
-  final unread = [for (final c in chapters) if (!c.isRead) c];
+  final unread = [
+    for (final c in chapters)
+      if (!c.user.isRead) c,
+  ];
   final candidates = unread.isNotEmpty ? unread : chapters;
-  return candidates.reduce(
-    (a, b) => _releasedAfter(b, a) ? b : a,
-  );
+  return candidates.reduce((a, b) => _releasedAfter(b, a) ? b : a);
 }
 
 /// True when [a] was released strictly after [b] — by [fetchedAt], falling
@@ -78,8 +83,9 @@ ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
 /// offline_download_providers.dart's `inReadingOrder` sort) to break ties
 /// within the same fetch batch.
 bool _releasedAfter(ChapterWithMangaDto a, ChapterWithMangaDto b) {
-  final fetchedCompare = (int.tryParse(a.fetchedAt) ?? 0)
-      .compareTo(int.tryParse(b.fetchedAt) ?? 0);
+  final fetchedCompare = (int.tryParse(a.fetchedAt) ?? 0).compareTo(
+    int.tryParse(b.fetchedAt) ?? 0,
+  );
   if (fetchedCompare != 0) return fetchedCompare > 0;
   return a.sourceOrder.compareTo(b.sourceOrder) > 0;
 }
@@ -104,9 +110,9 @@ Set<int> dateHeaderIndices(List<ChapterWithMangaDto> items) {
   for (var i = 0; i < items.length; i++) {
     final fetchedAt = int.tryParse(items[i].fetchedAt);
     if (fetchedAt == null) continue;
-    final dayKey = DateTime.fromMillisecondsSinceEpoch(fetchedAt * 1000)
-        .startOfDay
-        .millisecondsSinceEpoch;
+    final dayKey = DateTime.fromMillisecondsSinceEpoch(
+      fetchedAt * 1000,
+    ).startOfDay.millisecondsSinceEpoch;
     if (seenDays.add(dayKey)) headerIndices.add(i);
   }
   return headerIndices;
