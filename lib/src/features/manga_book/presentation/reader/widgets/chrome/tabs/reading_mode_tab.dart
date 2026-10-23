@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../../widgets/compact_switch.dart';
 import '../../../../../../settings/presentation/reader/widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
@@ -52,17 +53,17 @@ class ReadingModeTab extends ConsumerWidget {
             genres: manga.genre,
             sourceName: manga.source?.name,
           );
-    final resolvedMode = autoMode ??
+    final resolvedMode =
+        autoMode ??
         (settings.readerMode == ReaderMode.defaultReader
             ? (ref.watch(readerModeKeyProvider) ??
-                ReaderMode.singleHorizontalRTL)
+                  ReaderMode.singleHorizontalRTL)
             : settings.readerMode);
     final isLongStrip = switch (resolvedMode) {
       ReaderMode.webtoon ||
       ReaderMode.continuousVertical ||
       ReaderMode.continuousHorizontalLTR ||
-      ReaderMode.continuousHorizontalRTL =>
-        true,
+      ReaderMode.continuousHorizontalRTL => true,
       _ => false,
     };
     // The stored mode's chip; null for the legacy continuous-horizontal
@@ -129,10 +130,8 @@ class ReadingModeTab extends ConsumerWidget {
                 selected: settings.navigationLayout == layout,
                 showCheckmark: false,
                 label: Text(layout.toLocale(context)),
-                onSelected: (_) => model.setNavigationLayout(
-                  layout,
-                  perSeries: perSeries,
-                ),
+                onSelected: (_) =>
+                    model.setNavigationLayout(layout, perSeries: perSeries),
               ),
           ],
         ),
@@ -147,10 +146,8 @@ class ReadingModeTab extends ConsumerWidget {
                   selected: settings.tapInvert == invert,
                   showCheckmark: false,
                   label: Text(invert.toLocale(context)),
-                  onSelected: (_) => model.setTapInvert(
-                    invert,
-                    perSeries: perSeries,
-                  ),
+                  onSelected: (_) =>
+                      model.setTapInvert(invert, perSeries: perSeries),
                 ),
             ],
           ),
@@ -163,9 +160,11 @@ class ReadingModeTab extends ConsumerWidget {
               model.setSidePadding(value, perSeries: perSeries),
         ),
         // ── Viewer defaults (global, apply to every series) ──
-        _GroupHeading(isLongStrip
-            ? context.l10n.readerGroupWebtoonViewer
-            : context.l10n.readerGroupPagerViewer),
+        _GroupHeading(
+          isLongStrip
+              ? context.l10n.readerGroupWebtoonViewer
+              : context.l10n.readerGroupPagerViewer,
+        ),
         AnimatedSwitcher(
           duration: context.reduceMotion
               ? Duration.zero
@@ -177,10 +176,7 @@ class ReadingModeTab extends ConsumerWidget {
                   showGapsSettings:
                       resolvedMode == ReaderMode.continuousVertical,
                 )
-              : _PagedSection(
-                  key: const ValueKey('paged'),
-                  mangaId: mangaId,
-                ),
+              : _PagedSection(key: const ValueKey('paged'), mangaId: mangaId),
         ),
       ],
     );
@@ -241,20 +237,21 @@ class _PagedSection extends ConsumerWidget {
         ),
         IntSliderTile(
           title: context.l10n.autoAdvanceInterval,
-          valueLabel: context.l10n
-              .autoScrollSeconds(settings.autoAdvanceIntervalSeconds),
+          valueLabel: context.l10n.autoScrollSeconds(
+            settings.autoAdvanceIntervalSeconds,
+          ),
           value: settings.autoAdvanceIntervalSeconds,
           min: 1,
           max: 30,
           onChanged: model.setAutoAdvanceIntervalSeconds,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.smallerTapZones),
           value: settings.smallerTapZones,
           onChanged: model.setSmallerTapZones,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.cropBorders),
           value: settings.cropBorders,
@@ -262,7 +259,7 @@ class _PagedSection extends ConsumerWidget {
         ),
         // Landscape auto-zoom stays out of paged mode; wide manga spreads
         // should open fitted and let the reader choose when to zoom.
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.splitWidePages),
           value: settings.dualPageSplitPaged,
@@ -274,7 +271,7 @@ class _PagedSection extends ConsumerWidget {
             value: settings.dualPageInvertPaged,
             onChanged: model.setDualPageInvertPaged,
           ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.rotateWidePagesToFit),
           value: settings.rotateWidePages,
@@ -286,49 +283,49 @@ class _PagedSection extends ConsumerWidget {
             value: settings.rotateWideInvert,
             onChanged: model.setRotateWideInvert,
           ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.animatePageTransitions),
           value: settings.animatePageTransitions,
           onChanged: model.setAnimatePageTransitions,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.invertDoublePages),
           value: settings.invertDoublePages,
           onChanged: model.setInvertDoublePages,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.dualPageSpreadInLandscape),
           value: settings.trueDualPageSpread,
           onChanged: model.setTrueDualPageSpread,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
           value: settings.pagedDoubleTapToZoom,
           onChanged: model.setPagedDoubleTapToZoom,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
           value: settings.pagedPinchToZoom,
           onChanged: model.setPagedPinchToZoom,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomIn),
           value: settings.disableZoomIn,
           onChanged: model.setDisableZoomIn,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomOut),
           value: settings.pagedDisableZoomOut,
           onChanged: model.setPagedDisableZoomOut,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.navigateToPan),
           value: settings.navigateToPan,
@@ -381,19 +378,19 @@ class _LongStripSection extends ConsumerWidget {
           onPercentCommitted: model.setLongStripWidthLimitPercent,
           onPxCommitted: model.setLongStripWidthLimitPx,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.smallerTapZones),
           value: settings.smallerTapZones,
           onChanged: model.setSmallerTapZones,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.cropBorders),
           value: settings.cropBordersWebtoon,
           onChanged: model.setCropBordersWebtoon,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.smoothAutoScroll),
           value: settings.smoothAutoScroll,
@@ -401,8 +398,9 @@ class _LongStripSection extends ConsumerWidget {
         ),
         IntSliderTile(
           title: context.l10n.autoScrollInterval,
-          valueLabel: context.l10n
-              .autoScrollSeconds(settings.autoScrollIntervalSeconds),
+          valueLabel: context.l10n.autoScrollSeconds(
+            settings.autoScrollIntervalSeconds,
+          ),
           value: settings.autoScrollIntervalSeconds,
           min: 1,
           max: 30,
@@ -420,25 +418,25 @@ class _LongStripSection extends ConsumerWidget {
               ),
           ],
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.animatePageTransitions),
           value: settings.animatePageTransitions,
           onChanged: model.setAnimatePageTransitions,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
           value: settings.longStripDoubleTapToZoom,
           onChanged: model.setLongStripDoubleTapToZoom,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
           value: settings.longStripPinchToZoom,
           onChanged: model.setLongStripPinchToZoom,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomOut),
           value: settings.longStripDisableZoomOut,
@@ -448,7 +446,7 @@ class _LongStripSection extends ConsumerWidget {
         // needs a page-list remap in the frozen webtoon engine; see reader.md.
         if (showGapsSettings) ...[
           _SectionLabel(context.l10n.readerModeChipLongStripGaps),
-          SwitchListTile(
+          CompactSwitchListTile(
             controlAffinity: ListTileControlAffinity.trailing,
             title: Text(context.l10n.cropBorders),
             value: settings.cropBordersGaps,
@@ -474,7 +472,7 @@ class _SubSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
       title: Text(title),
@@ -546,11 +544,7 @@ class _ChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: children,
-      ),
+      child: Wrap(spacing: 8, runSpacing: 4, children: children),
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../account/data/account_providers.dart';
@@ -147,7 +148,7 @@ class MiscSettingsSection extends ConsumerWidget {
           children: [
             SettingsHighlightTarget(
               id: 'debugLogs',
-              child: SwitchListTile(
+              child: CompactSwitchListTile(
                 title: Text(context.l10n.debugLogs),
                 value: miscSettingsDto.debugLogsEnabled,
                 onChanged: canManage
@@ -215,7 +216,7 @@ class MiscSettingsSection extends ConsumerWidget {
           children: [
             SettingsHighlightTarget(
               id: 'systemTrayIcon',
-              child: SwitchListTile(
+              child: CompactSwitchListTile(
                 title: Text(context.l10n.systemTrayIcon),
                 subtitle: Text(context.l10n.systemTrayIconDescription),
                 value: miscSettingsDto.systemTrayEnabled,

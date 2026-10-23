@@ -12,6 +12,7 @@ import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/theme/brand.dart';
+import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../controller/auto_scroll_controller.dart';
 
@@ -46,15 +47,18 @@ class ReaderUtilsBar extends ConsumerWidget {
     // Vertical glide vs page-flip: same toggle, different label and a different
     // stored interval. Smooth-vs-jump is a set-once preference and lives in
     // reader settings only, never here.
-    final isScrollMode = readerMode == ReaderMode.webtoon ||
+    final isScrollMode =
+        readerMode == ReaderMode.webtoon ||
         readerMode == ReaderMode.continuousVertical;
 
     final int interval;
     if (isScrollMode) {
-      interval = ref.watch(autoScrollIntervalSecondsProvider) ??
+      interval =
+          ref.watch(autoScrollIntervalSecondsProvider) ??
           DBKeys.autoScrollIntervalSeconds.initial as int;
     } else {
-      interval = ref.watch(autoAdvanceIntervalSecondsProvider) ??
+      interval =
+          ref.watch(autoAdvanceIntervalSecondsProvider) ??
           DBKeys.autoAdvanceIntervalSeconds.initial as int;
     }
 
@@ -88,11 +92,13 @@ class ReaderUtilsBar extends ConsumerWidget {
               child: !isOpen
                   ? const SizedBox(width: double.infinity, height: 0)
                   : Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       child: Row(
                         children: [
-                          Switch(
+                          CompactSwitch(
                             value: active,
                             activeThumbColor: cs.primary,
                             onChanged: (_) => ref

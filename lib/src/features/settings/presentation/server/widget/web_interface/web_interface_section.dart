@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
@@ -346,7 +347,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                 ),
               SettingsHighlightTarget(
                 id: 'initialOpenInBrowserEnabled',
-                child: SwitchListTile(
+                child: CompactSwitchListTile(
                   title: Text(context.l10n.initialOpenInBrowserEnabled),
                   value: data.initialOpenInBrowserEnabled,
                   onChanged: enabled

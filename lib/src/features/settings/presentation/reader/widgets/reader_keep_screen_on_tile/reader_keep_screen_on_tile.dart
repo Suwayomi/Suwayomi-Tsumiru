@@ -11,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../../widgets/compact_switch.dart';
 
 part 'reader_keep_screen_on_tile.g.dart';
 
@@ -28,7 +29,7 @@ class ReaderKeepScreenOnTile extends HookConsumerWidget {
   const ReaderKeepScreenOnTile({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       title: Text(context.l10n.readerKeepScreenOn),
       onChanged: ref.read(keepScreenOnProvider.notifier).update,

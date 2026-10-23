@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../widgets/compact_switch.dart';
 
 Map<Enum$UserPermission, String> accountPermissionLabels(
   BuildContext context,
@@ -39,7 +40,7 @@ class AccountPermissionPicker extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       for (final entry in accountPermissionLabels(context).entries)
-        SwitchListTile(
+        CompactSwitchListTile(
           dense: true,
           title: Text(entry.value),
           value: permissions.contains(entry.key),

@@ -19,6 +19,7 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/compact_switch.dart';
 
 class _FixedUnreachable extends ServerUnreachable {
   @override
@@ -91,7 +92,9 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      final toggle = tester.widget<SwitchListTile>(find.byType(SwitchListTile));
+      final toggle = tester.widget<CompactSwitchListTile>(
+        find.byType(CompactSwitchListTile),
+      );
       expect(toggle.value, isFalse);
       expect(toggle.onChanged, isNull);
       expect(find.text('Offline: matching by title only'), findsOneWidget);

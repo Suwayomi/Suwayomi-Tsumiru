@@ -10,6 +10,7 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/op
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/compact_switch.dart';
 
 class _UndefinedOpdsLink extends Link {
   @override
@@ -90,11 +91,11 @@ void main() {
 
     // Binary file size sits in the third card now; target it by label.
     final binarySwitch = find.widgetWithText(
-      SwitchListTile,
+      CompactSwitchListTile,
       'Binary file size',
     );
     expect(binarySwitch, findsOneWidget);
-    expect(tester.widget<SwitchListTile>(binarySwitch).value, isFalse);
+    expect(tester.widget<CompactSwitchListTile>(binarySwitch).value, isFalse);
     final queriesBefore = link.legacyQueries;
 
     await tester.scrollUntilVisible(
@@ -108,7 +109,7 @@ void main() {
     expect(link.mutations, 1);
     expect(link.state.opdsUseBinaryFileSizes, isTrue);
     expect(link.legacyQueries, greaterThan(queriesBefore));
-    expect(tester.widget<SwitchListTile>(binarySwitch).value, isTrue);
+    expect(tester.widget<CompactSwitchListTile>(binarySwitch).value, isTrue);
     expect(tester.takeException(), isNull);
   });
 }

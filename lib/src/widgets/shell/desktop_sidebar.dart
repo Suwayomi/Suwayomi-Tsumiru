@@ -16,6 +16,7 @@ import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
+import '../compact_switch.dart';
 import '../desktop/desktop_brand.dart';
 import '../desktop/desktop_top_bar.dart';
 import 'animated_nav_icon.dart';
@@ -217,7 +218,10 @@ class DesktopSidebar extends ConsumerWidget {
           incognito ? Icons.visibility_outlined : Icons.visibility_off_outlined,
           color: cs.onSurface,
         ),
-        trailing: Switch(value: incognito, onChanged: (_) => toggleIncognito()),
+        trailing: CompactSwitch(
+          value: incognito,
+          onChanged: (_) => toggleIncognito(),
+        ),
         onTap: toggleIncognito,
         gapBelow: rowGap,
       );

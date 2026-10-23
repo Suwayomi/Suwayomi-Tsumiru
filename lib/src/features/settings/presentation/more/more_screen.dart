@@ -14,6 +14,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../../widgets/web_selection_area.dart';
@@ -155,7 +156,7 @@ class MoreScreen extends ConsumerWidget {
                       icon: Icons.visibility_off_outlined,
                       title: context.l10n.incognitoMode,
                       subtitle: context.l10n.incognitoModeDescription,
-                      trailing: Switch(
+                      trailing: CompactSwitch(
                         value: incognito,
                         onChanged: (value) =>
                             ref.read(incognitoModeProvider.notifier).set(value),

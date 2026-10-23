@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
@@ -198,7 +199,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                                           .toInt(),
                                     )
                                   : null,
-                              trailing: Switch(
+                              trailing: CompactSwitch(
                                 value: librarySettingsDto
                                     .globalUpdateInterval
                                     .isNotZero,

@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../../widgets/compact_switch.dart';
 import '../../../controller/reader_preview_channel.dart';
 import '../../../controller/reader_settings_model.dart';
 
@@ -22,8 +23,8 @@ int _withArgbChannel(int argb, int shift, int value) =>
 /// shows immediately; the user can then dial Alpha back for subtlety.
 int _ensureVisibleAlpha(int argb, int shift) =>
     (shift != 24 && _argbChannel(argb, 24) == 0)
-        ? _withArgbChannel(argb, 24, 255)
-        : argb;
+    ? _withArgbChannel(argb, 24, 255)
+    : argb;
 
 /// Custom-filter tab: custom brightness,
 /// RGBA color filter + blend mode, grayscale, inverted colors. Sliders
@@ -43,7 +44,7 @@ class CustomFilterTab extends ConsumerWidget {
     return ListView(
       primary: false,
       children: [
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.customBrightness),
           value: settings.customBrightness,
@@ -62,7 +63,7 @@ class CustomFilterTab extends ConsumerWidget {
               readerBrightnessPreview.value = null;
             },
           ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.customColorFilter),
           value: settings.customColorFilter,
@@ -83,23 +84,28 @@ class CustomFilterTab extends ConsumerWidget {
               channel: readerColorFilterPreview,
               valueOf: (draft) =>
                   _argbChannel(draft ?? settings.colorFilterValue, shift),
-              onDrag: (v) => readerColorFilterPreview.value = _ensureVisibleAlpha(
-                _withArgbChannel(
-                  readerColorFilterPreview.value ?? settings.colorFilterValue,
-                  shift,
-                  v,
-                ),
-                shift,
-              ),
-              onCommit: (v) {
-                model.setColorFilterValue(_ensureVisibleAlpha(
-                  _withArgbChannel(
-                    readerColorFilterPreview.value ?? settings.colorFilterValue,
+              onDrag: (v) =>
+                  readerColorFilterPreview.value = _ensureVisibleAlpha(
+                    _withArgbChannel(
+                      readerColorFilterPreview.value ??
+                          settings.colorFilterValue,
+                      shift,
+                      v,
+                    ),
                     shift,
-                    v,
                   ),
-                  shift,
-                ));
+              onCommit: (v) {
+                model.setColorFilterValue(
+                  _ensureVisibleAlpha(
+                    _withArgbChannel(
+                      readerColorFilterPreview.value ??
+                          settings.colorFilterValue,
+                      shift,
+                      v,
+                    ),
+                    shift,
+                  ),
+                );
                 readerColorFilterPreview.value = null;
               },
             ),
@@ -116,13 +122,13 @@ class CustomFilterTab extends ConsumerWidget {
             ],
           ),
         ],
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.grayscale),
           value: settings.grayscale,
           onChanged: model.setGrayscale,
         ),
-        SwitchListTile(
+        CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.invertedColors),
           value: settings.invertedColors,
@@ -220,11 +226,7 @@ class _ChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: children,
-      ),
+      child: Wrap(spacing: 8, runSpacing: 4, children: children),
     );
   }
 }

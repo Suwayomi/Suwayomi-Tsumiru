@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../settings/search/settings_search_registry.dart';
@@ -52,7 +53,7 @@ class TrackingSettingsScreen extends ConsumerWidget {
                     children: [
                       SettingsHighlightTarget(
                         id: 'updateProgressAfterReading',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(context.l10n.updateProgressAfterReading),
                           value: updateAfterReading,
                           onChanged: (value) => ref
@@ -62,7 +63,7 @@ class TrackingSettingsScreen extends ConsumerWidget {
                       ),
                       SettingsHighlightTarget(
                         id: 'updateProgressManualMarkRead',
-                        child: SwitchListTile(
+                        child: CompactSwitchListTile(
                           title: Text(
                             context.l10n.updateProgressManualMarkRead,
                           ),

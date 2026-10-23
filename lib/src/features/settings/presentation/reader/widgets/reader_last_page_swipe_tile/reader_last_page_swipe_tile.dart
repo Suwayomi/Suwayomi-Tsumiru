@@ -11,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../../widgets/compact_switch.dart';
 import '../reader_swipe_toggle_tile/reader_swipe_chapter_toggle_tile.dart';
 
 part 'reader_last_page_swipe_tile.g.dart';
@@ -35,7 +36,7 @@ class ReaderLastPageSwipeTile extends HookConsumerWidget {
 
     if (!showTile) return const SizedBox.shrink();
 
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       title: Text(context.l10n.readerLastPageSwipeToggle),
       subtitle: Text(context.l10n.readerLastPageSwipeToggleDescription),

@@ -6,6 +6,7 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/timeout_constants.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../widgets/compact_switch.dart';
 import '../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../search/settings_search_registry.dart';
@@ -90,7 +91,7 @@ class TimeoutSettingsSection extends ConsumerWidget {
             // Auto-refresh on Timeout toggle
             SettingsHighlightTarget(
               id: 'autoRefreshOnTimeout',
-              child: SwitchListTile(
+              child: CompactSwitchListTile(
                 controlAffinity: ListTileControlAffinity.trailing,
                 title: Text(context.l10n.autoRefreshOnTimeout),
                 subtitle: Text(context.l10n.autoRefreshOnTimeoutDescription),

@@ -11,6 +11,7 @@ import 'package:tsumiru/src/features/account/presentation/account_admin_dialogs.
 import 'package:tsumiru/src/features/account/presentation/account_codes_screen.dart';
 import 'package:tsumiru/src/features/account/presentation/account_permission_labels.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/compact_switch.dart';
 
 import 'account_administration_test.dart' show AdminLink, adminAccess;
 
@@ -107,10 +108,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AccountPermissionPicker), findsOneWidget);
     final external = find.widgetWithText(
-      SwitchListTile,
+      CompactSwitchListTile,
       'Install extension files',
     );
-    expect(tester.widget<SwitchListTile>(external).value, isTrue);
+    expect(tester.widget<CompactSwitchListTile>(external).value, isTrue);
     await tester.tap(external);
     await tester.tap(find.byType(ElevatedButton));
     await tester.pumpAndSettle();

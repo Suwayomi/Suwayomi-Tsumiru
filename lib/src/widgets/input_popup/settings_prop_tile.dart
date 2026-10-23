@@ -7,6 +7,7 @@ import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/app_utils.dart';
 import '../../utils/misc/toast/toast.dart';
 import '../../utils/motion/reduce_motion.dart';
+import '../compact_switch.dart';
 import 'domain/settings_prop_type.dart';
 import 'settings_prop_pop_up.dart';
 
@@ -95,7 +96,7 @@ class SwitchSettingsPropTile extends ConsumerWidget {
 
   @override
   Widget build(context, ref) {
-    return SwitchListTile(
+    return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: leading,
       title: titleWidget ?? Text(title!),

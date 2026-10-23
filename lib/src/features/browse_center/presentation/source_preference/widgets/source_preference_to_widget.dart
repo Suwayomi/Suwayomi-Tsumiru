@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../../../../constants/app_constants.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/compact_switch.dart';
 import '../../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../widgets/popup_widgets/text_field_popup.dart';
@@ -34,8 +35,8 @@ class SourcePreferenceToWidget extends StatelessWidget {
   Key? _keyFor(String? key) => key != null
       ? Key(key)
       : index != null
-          ? ValueKey('Source-preference-$index')
-          : null;
+      ? ValueKey('Source-preference-$index')
+      : null;
 
   String _titleFor(String? title, String? key) => title ?? key ?? "";
 
@@ -72,7 +73,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
         switchDefaultValue: bool defaultValue,
         switchValue: bool? currentValue,
       ) =>
-        SwitchListTile(
+        CompactSwitchListTile(
           key: _keyFor(key),
           title: Text(_titleFor(title, key)),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
