@@ -42,19 +42,37 @@ Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-S
 
 ## Download
 
-<a href="https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"/></a>
+You need a running [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) that your device can reach. The [download page](https://tsumiru.app/download/) has install steps for each platform.
+
+### Android
+
 <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.aaronbamblett.tsumiru%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FSuwayomi%2FSuwayomi-Tsumiru%22%2C%22author%22%3A%22Suwayomi%22%2C%22name%22%3A%22Tsumiru%22%7D"><img src=".github/readme-images/badge_obtainium.png" alt="Get it on Obtainium" height="60"/></a>
-<a href="https://tsumiru.app/open.html?r=sidestore%3A%2F%2Fsource%3Furl%3Dhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/add-to-sidestore.png" alt="Add to SideStore" height="60"/></a>
-<a href="https://tsumiru.app/open.html?r=altstore%3A%2F%2Fsource%3Furl%3Dhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/add-to-altstore.png" alt="Add to AltStore" height="60"/></a>
-<a href="https://tsumiru.app/open.html?r=feather%3A%2F%2Fsource%2Fhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/add-to-feather.png" alt="Add to Feather" height="60"/></a>
+<a href="https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"/></a>
 
-Get the latest build from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest). The [download page](https://tsumiru.app/download/) has install steps for each platform.
+Obtainium installs new releases straight from GitHub. Or grab the APK from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest).
 
-- **Android:** add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) to get updates straight from GitHub Releases.
-- **Linux:** the Flatpak from our own repo updates itself. An AppImage is also on Releases.
-- **iOS:** the build is unsigned, so it has to be sideloaded. The buttons above add the Tsumiru source to SideStore, AltStore or Feather; see the [iOS guide](https://tsumiru.app/docs/guides/install-ios).
+### iOS
 
-You need a running [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) that your device can reach.
+<a href="https://tsumiru.app/open.html?r=sidestore%3A%2F%2Fsource%3Furl%3Dhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/get-it-on-sidestore.png" alt="Get it on SideStore" height="60"/></a>
+<a href="https://tsumiru.app/open.html?r=altstore%3A%2F%2Fsource%3Furl%3Dhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/get-it-on-altstore.png" alt="Get it on AltStore" height="60"/></a>
+<a href="https://tsumiru.app/open.html?r=feather%3A%2F%2Fsource%2Fhttps%3A%2F%2Ftsumiru.app%2Fapps.json"><img src=".github/readme-images/get-it-on-feather.png" alt="Get it on Feather" height="60"/></a>
+
+The build is unsigned, so it has to be sideloaded. Each badge adds the Tsumiru source to that app, so new releases show up there. For TrollStore, grab the .ipa from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest). See the [iOS guide](https://tsumiru.app/docs/guides/install-ios).
+
+### Linux
+
+```bash
+flatpak remote-add --if-not-exists tsumiru https://suwayomi.github.io/Suwayomi-Tsumiru/index.flatpakrepo
+flatpak install tsumiru io.github.aaronbamblett.tsumiru
+```
+
+The Flatpak updates itself. An AppImage is also on [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest).
+
+### Windows, macOS and web
+
+<a href="https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"/></a>
+
+Download the build for your platform from Releases.
 
 ## Translations
 
