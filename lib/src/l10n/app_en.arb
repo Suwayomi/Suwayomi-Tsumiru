@@ -2183,7 +2183,6 @@
   "mangaStatusOngoing": "Ongoing",
   "mangaStatusPublishingFinished": "Publishing finished",
   "mangaStatusUnknown": "Unknown",
-  "misc": "Misc",
   "missingExtension": "Missing extensions",
   "more": "More",
   "moveToBottom": "Move to bottom",
@@ -2704,6 +2703,7 @@
       }
     }
   },
+  "network": "Network",
   "notifications": "Notifications",
   "notificationsNewChapters": "New chapter notifications",
   "notificationsNewChaptersSubtitle": "Notify when followed series get new chapters",
@@ -2757,6 +2757,7 @@
   "selectNext10": "Select next 10",
   "selectUnread": "Select unread",
   "server": "Server",
+  "serverAdmin": "Server admin",
   "serverAddress": "Server address",
   "serverBindings": "Server bindings",
   "serverPort": "Server port",
@@ -2808,6 +2809,7 @@
     "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
   },
   "serverVersion": "Server version",
+  "settingsGroupApp": "App",
   "settings": "Settings",
   "skipThisVersion": "Don't remind me about this version",
   "skipUpdatingEntries": "Skip updating entries",
@@ -2939,7 +2941,7 @@
   "tryDifferentSearchTerm": "Try a different search term",
   "errorOccurred": "An error occurred",
   "viewManga": "View manga",
-  "timeoutSettings": "Timeout settings",
+  "timeouts": "Timeouts",
   "serverRequestTimeout": "Server request timeout",
   "@serverRequestTimeout": {
     "description": "Controls how long to wait for server responses"
@@ -3083,6 +3085,7 @@
     "description": "Snackbar shown after starting a series download"
   },
   "markAsRead": "Mark as read",
+  "chapterSwipe": "Chapter swipe",
   "chapterSwipeToLeft": "Chapter on swipe to left",
   "chapterSwipeToRight": "Chapter on swipe to right",
   "chapterSwipeDisabled": "Disabled",
@@ -3823,6 +3826,7 @@
       "preset": { "type": "String" }
     }
   },
+  "sync": "Sync",
   "syncyomi": "SyncYomi",
   "@syncyomi": {
     "description": "Settings entry and screen title for the SyncYomi library sync server"
@@ -4014,6 +4018,7 @@
   "databasePassword": "Password",
   "hikariConnectionPool": "Reuse database connections",
   "hikariConnectionPoolDescription": "Faster, but can cause read errors on some setups.",
+  "logs": "Logs",
   "logFileCleanup": "Log file cleanup",
   "maxLogFileSize": "Maximum log file size",
   "maxLogFolderSize": "Maximum size of all log files",
