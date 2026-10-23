@@ -222,7 +222,14 @@ Widget titleTopBarSlot({
             ),
           ),
           if (pane.tabs != null) pane.tabs!,
-          Expanded(child: child),
+          // The window's own bottom spacing, applied once here so every
+          // page ends 24 px below its last card without per-page padding.
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: child,
+            ),
+          ),
         ],
       );
     }
