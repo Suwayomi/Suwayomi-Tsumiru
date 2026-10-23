@@ -54,10 +54,7 @@ class WebViewRepository {
         .getData((data) => data),
   );
 
-  /// Only a definitive answer is cached: a returned `__type` whose field
-  /// list lacks `clearCookiesAndCache` is false. Any error (transport
-  /// failure or GraphQL exception) throws, so nothing is cached and the
-  /// next refresh retries the probe.
+  /// Only caches definitive answers; errors throw and retry next refresh.
   Future<bool> supportsClearCookiesAndCache() async {
     final cached = _clearCookiesAndCacheSupport[client];
     if (cached != null) return cached;
@@ -69,9 +66,7 @@ class WebViewRepository {
   Future<bool> _introspectClearSupport() async {
     final result = await client.query(
       QueryOptions(
-        document: gql(
-          'query { __type(name: "Mutation") { fields { name } } }',
-        ),
+        document: gql('query { __type(name: "Mutation") { fields { name } } }'),
         fetchPolicy: FetchPolicy.cacheFirst,
       ),
     );
