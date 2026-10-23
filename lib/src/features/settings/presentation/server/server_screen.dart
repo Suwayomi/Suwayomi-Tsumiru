@@ -74,15 +74,6 @@ class ServerScreen extends ConsumerWidget {
           child: SettingsHighlightScope(
             child: ListView(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Text(
-                    context.l10n.serverOwnSettingsCaption,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
                 if (serverSettings.isLoading && !serverSettings.hasValue)
                   const Padding(
                     padding: EdgeInsets.all(24),
