@@ -1304,7 +1304,6 @@
   "addCategory": "Add category",
   "addToLibrary": "Add to library",
   "advanced": "Advanced",
-  "allScanlators": "All Scanlators",
   "animatePageTransitions": "Animate page transitions",
   "appLanguage": "App language",
   "appTheme": "Theme mode",
@@ -1397,7 +1396,6 @@
   "invertDoublePages": "Invert double pages",
   "invertSplitPagesPlacement": "Invert split pages placement",
   "invertWidePageRotation": "Invert rotation of wide pages",
-  "landscapeZoom": "Automatically zoom into wide images",
   "navigateToPan": "Pan wide images",
   "pageLayout": "Page layout",
   "pageLayoutAutomatic": "Automatic",
@@ -1545,10 +1543,6 @@
       }
     }
   },
-  "tabs": "Tabs",
-  "@tabs": {
-    "description": "Library Display sheet section heading for tab-related toggles"
-  },
   "continueReadingButton": "Continue reading button",
   "languageBadge": "Language",
   "sourceBadge": "Source icon",
@@ -1598,13 +1592,8 @@
   "onboardingServerTitle": "Connect your server",
   "onboardingServerPortHint": "Suwayomi runs on port 4567 by default.",
   "onboardingServerStepLabel": "STEP 2 OF 3",
-  "onboardingServerOnNetwork": "On this network",
-  "onboardingServerRemote": "Remote",
-  "onboardingServerNone": "No server yet",
-  "onboardingNoServerHelp": "No problem — you can set up a Suwayomi server and connect it later in Settings.",
   "onboardingNoServerLink": "How to set up a server",
   "onboardingTestConnection": "Test connection",
-  "onboardingFindServer": "Find server",
   "onboardingResolvedAddress": "Found your server at {url}",
   "@onboardingResolvedAddress": {
     "placeholders": {
@@ -1621,8 +1610,6 @@
       }
     }
   },
-  "onboardingResolvedNoAuth": "This server is ready — no sign-in needed.",
-  "onboardingResolvedNeedsAuth": "This server needs a sign-in. Add your username and password below.",
   "onboardingSearchNetwork": "Search my network",
   "onboardingCheckingConnection": "Checking connection…",
   "onboardingSigningIn": "Signing in…",
@@ -1635,18 +1622,9 @@
   "onboardingCredsRejected": "Those credentials didn't work. Double-check your username, password, and sign-in method.",
   "onboardingNotReachedHttpsHint": "If it's behind a reverse proxy, try its https address instead.",
   "onboardingAuthMode": "Sign-in method",
-  "onboardingAuthModeAuto": "Username & password (auto)",
   "onboardingAuthModeBasic": "Basic auth",
   "onboardingAuthModeSimple": "Simple login",
   "onboardingAuthModeUi": "UI login",
-  "onboardingResolvedBasicGated": "Something answered at {url} but it's behind a sign-in we can't read past. Pick 'Username & password' and enter your credentials.",
-  "@onboardingResolvedBasicGated": {
-    "placeholders": {
-      "url": {
-        "type": "String"
-      }
-    }
-  },
   "onboardingResolvedUnconfirmed": "Reached {url}, but it didn't respond as a Suwayomi server. Check the address and port.",
   "@onboardingResolvedUnconfirmed": {
     "placeholders": {
@@ -1668,7 +1646,6 @@
   "@webUiLoginOnlyHint": {
     "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
   },
-  "onboardingUseAddressAnyway": "Use this address anyway",
   "onboardingConnected": "Connected to Suwayomi v{version}",
   "@onboardingConnected": {
     "placeholders": {
@@ -1677,10 +1654,8 @@
       }
     }
   },
-  "onboardingConnectFailed": "Couldn't reach that server. Check the address (and login, if it needs one).",
   "onboardingDoneTitle": "You're all set",
   "onboardingDoneSubtitle": "Browse sources to start adding manga to your library.",
-  "current": "Current",
   "daysAgo": "{days, plural, =1{1 day ago} other{{days} days ago}}",
   "justNow": "Just now",
   "minutesAgo": "{minutes, plural, =1{1 minute ago} other{{minutes} minutes ago}}",
@@ -1711,7 +1686,6 @@
   "deleteChaptersConfirm": "Are you sure you want to delete the selected chapters?",
   "deleteCategoryDescription": "Move all manga in this category to Default.",
   "deleteCategoryTitle": "Delete category",
-  "deleteChapters": "Delete chapters",
   "deleteFromServer": "Delete from server…",
   "deleteOnDeviceDownloads": "Delete on-device downloads",
   "deleteOnDeviceDownloadsDescription": "Your server keeps its copy.",
@@ -1855,30 +1829,6 @@
   "filterOptionNotInLibrary": "Not in library",
   "@filterOptionNotInLibrary": {
     "description": "Library filter chip: only entries not saved to the library"
-  },
-  "filterHeaderPublicationStatus": "Publication Status",
-  "@filterHeaderPublicationStatus": {
-    "description": "Section label for the completed filter chip row"
-  },
-  "filterOptionCompleted": "Completed",
-  "@filterOptionCompleted": {
-    "description": "Publication-status filter chip: only entries the source marked completed"
-  },
-  "filterOptionNotCompleted": "Not Completed",
-  "@filterOptionNotCompleted": {
-    "description": "Publication-status filter chip: only entries not marked completed"
-  },
-  "filterHeaderContentRating": "Content Rating",
-  "@filterHeaderContentRating": {
-    "description": "Section label for the lewd filter chip row"
-  },
-  "filterOptionLewd": "Lewd",
-  "@filterOptionLewd": {
-    "description": "Content-rating filter chip: only entries the source marked NSFW"
-  },
-  "filterOptionNotLewd": "Not Lewd",
-  "@filterOptionNotLewd": {
-    "description": "Content-rating filter chip: only entries not marked NSFW"
   },
   "filterShortDownloaded": "Downloaded",
   "@filterShortDownloaded": {
@@ -2071,8 +2021,6 @@
   "ignoreReuploadedChapters": "Ignore re-uploaded chapters",
   "extensionInstalled": "Extension installed",
   "extensionListEmpty": "No extensions found",
-  "extensionRepository": "Extension Repository",
-  "extensionRepositoryDescription": "Add repositories from which extensions can be installed",
   "extensions": "Extensions",
   "filter": "Filter",
   "findServer": "Find",
@@ -2088,10 +2036,7 @@
   "gitHub": "GitHub",
   "globalSearch": "Global search",
   "globalUpdate": "Global update",
-  "gqlDebugLogs": "Graphql debug logs",
-  "gqlDebugLogsHint": "This includes logs with non privacy safe information",
   "help": "Help",
-  "hideEmptyCategory": "Hide Empty Category",
   "inLibrary": "In library",
   "includeCategories": "Categories",
   "includeChapters": "Chapters",
@@ -2108,11 +2053,9 @@
   "install": "Install",
   "installing": "Installing",
   "installingExtension": "Installing extension",
-  "invalidPort": "Invalid Port",
   "invalidProp": "Invalid {property}",
   "ip": "IP address",
   "ipHintText": "Enter server binding IP address",
-  "isTrueBlack": "True Black",
   "appThemeTitle": "Theme",
   "@appThemeTitle": {
     "description": "Header for the color theme picker"
@@ -2210,10 +2153,6 @@
   },
   "languages": "Languages",
   "latest": "Latest",
-  "lewd": "Lewd",
-  "@lewd": {
-    "description": "Library filter label: NSFW/lewd manga from adult sources"
-  },
   "library": "Library",
   "libraryColumnsLandscape": "Columns (landscape)",
   "@libraryColumnsLandscape": {
@@ -2228,7 +2167,6 @@
   "lockToPortrait": "Lock to portrait",
   "manga": "Manga",
   "mangaGridSize": "Manga grid size",
-  "mangaMissingSources": "Manga Missing Sources",
   "mangaSortAlphabetical": "Alphabetical",
   "mangaSortDateAdded": "Date added",
   "mangaSortLastChapterDate": "Latest chapter",
@@ -2250,7 +2188,6 @@
   "mangaStatusUnknown": "Unknown",
   "misc": "Misc",
   "missingExtension": "Missing extensions",
-  "missingTrackers": "Missing Trackers",
   "more": "More",
   "moveToBottom": "Move to bottom",
   "moveToTop": "Move to top",
@@ -2288,12 +2225,10 @@
   },
   "nHours": "{n, plural, =1{1 hour} other{{n} hours}}",
   "nMinutes": "{n, plural, =1{1 minute} other{{n} minutes}}",
-  "nRepo": "{n, plural, =1{1 Repo} other{{n} Repos}}",
   "nSeconds": "{n, plural, =1{1 second} other{{n} seconds}}",
   "nSources": "{n, plural, =1{1 source} other{{n} sources}}",
   "nameCountDisplay": "{name}: {count}",
   "newUpdateAvailable": "New update available",
-  "nextChapter": "Next: {chapterTitle}",
   "nothingToDownload": "Nothing to download",
   "@nothingToDownload": {
     "description": "Toast shown when a bulk-download preset would queue zero chapters."
@@ -2347,15 +2282,6 @@
     "placeholders": {
       "title": {
         "type": "String"
-      }
-    }
-  },
-  "httpErrorCheckWebView": "HTTP {statusCode}, check website in WebView",
-  "@httpErrorCheckWebView": {
-    "description": "Per-provider error on the recommendations screen when its API returns a non-200",
-    "placeholders": {
-      "statusCode": {
-        "type": "int"
       }
     }
   },
@@ -2481,7 +2407,6 @@
   "disableZoomOut": "Disable zoom out",
   "disableZoomIn": "Disable zoom in",
   "unpinSource": "Unpin source",
-  "previousChapter": "Previous: {chapterTitle}",
   "queued": "Queued",
   "quickSearch": "Quick search",
   "reader": "Reader",
@@ -2538,9 +2463,6 @@
   "readerSwipeChapterToggleDescription": "Swipe to change chapter in reader",
   "readerLastPageSwipeToggle": "Last page swipe",
   "readerLastPageSwipeToggleDescription": "Swipe to next chapter only at last page",
-  "chapterSeparator": "Chapter separator",
-  "lastChapterNotification": "This is the last chapter",
-  "firstChapterNotification": "This is the first chapter",
   "loadingNextChapter": "Loading next chapter...",
   "loadingPreviousChapter": "Loading previous chapter...",
   "noMoreChaptersAhead": "There's no next chapter",
@@ -2559,36 +2481,16 @@
   "readerKeepScreenOn": "Keep screen on",
   "readerIgnoreSafeAreaToggle": "Ignore safe area",
   "readerIgnoreSafeAreaToggleDescription": "Allow content to extend into notch and home indicator areas",
-  "reddit": "Reddit",
   "refresh": "Refresh",
   "migrate": "Migrate",
-  "migrationSelectTargetSource": "Select Target Source",
-  "migrationSearchInSource": "Search in {sourceName}",
-  "migrationPreview": "Migration Preview",
-  "migrationInProgress": "Migration in Progress",
-  "migrationComplete": "Migration completed successfully",
-  "migrationFailed": "Migration Failed",
-  "migrationCancelled": "Migration Cancelled",
   "migrateChapters": "Migrate chapters",
-  "migrateChaptersDescription": "Copy chapter read status to new source",
   "migrateCategories": "Migrate categories",
-  "migrateCategoriesDescription": "Copy manga categories to new source",
   "migrateDownloads": "Migrate downloads",
-  "migrateDownloadsDescription": "Move downloaded chapters to new source",
   "migrateTracking": "Migrate tracking",
-  "migrateTrackingDescription": "Copy tracking information to new source",
   "migrateReaderSettings": "Reader settings",
   "migrateOfflineSettings": "Keep-offline rule",
-  "migrationOptions": "Migration Options",
   "migrationSettings": "Migration settings",
   "bulkMigrationTitle": "Migrate sources",
-  "targetSourcesPriority": "Target sources",
-  "targetSourcesPriorityHint": "Each series is matched against these sources in order, top first. Drag to reorder.",
-  "availableSources": "Available sources",
-  "noTargetSourcesSelected": "Add at least one target source to search.",
-  "searchManually": "Choose each match manually",
-  "searchManuallyDescription": "Review and pick every target instead of auto-matching.",
-  "migrationPausedReauth": "Paused — sign in again to continue.",
   "migrationSelectSourcesTitle": "Select sources",
   "migrationListTitle": "Migrate",
   "migrationListTitleProgress": "Migrate ({done}/{total})",
@@ -2635,39 +2537,8 @@
   "migrationSortMode": "Sort mode",
   "migrationSortDirection": "Sort direction",
   "migrationObsoleteSource": "Obsolete",
-  "migrationNeedsMigration": "Needs migration",
-  "migrationOtherSources": "Other sources",
-  "migrationSourceSeriesCount": "{count, plural, =1{1 series} other{{count} series}}",
-  "@migrationSourceSeriesCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "migrationNoLibrarySources": "Your library is empty — nothing to migrate.",
-  "migrationSelectAll": "Select all",
   "migrationInvertSelection": "Invert",
-  "migrationGroupNeedsReview": "Needs review",
-  "migrationGroupNoMatch": "No match",
-  "migrationGroupFailed": "Failed",
-  "migrationGroupReady": "Ready",
-  "migrationGroupInProgress": "In progress",
-  "migrationGroupDone": "Done",
-  "migrationGroupSkipped": "Skipped",
-  "migrationRetry": "Retry",
-  "migrationFindManually": "Find manually",
-  "migrationOverwriteTracking": "Overwrite the target's tracking",
-  "migrationKeepTargetTracking": "This series is already tracked on the target. Keep its tracking, or overwrite with the source's.",
-  "migrationLargeBatchWarning": "That's a large batch. It may take a while and make many source requests.",
-  "migrationTrackerCollisionSummary": "{count, plural, =1{1 series is already tracked on its target — its tracking is kept unless you choose overwrite.} other{{count} series are already tracked on their targets — their tracking is kept unless you choose overwrite.}}",
-  "@migrationTrackerCollisionSummary": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "migrationActionMigrate": "Migrate",
   "migrationActionCopy": "Copy",
   "migrationActionMigrateDescription": "Move each series to the new source and remove the original.",
@@ -2802,10 +2673,6 @@
       }
     }
   },
-  "notificationBackupCompleteTitle": "Backup complete",
-  "notificationRestoreCompleteTitle": "Restore complete",
-  "notificationBackupFailedTitle": "Backup failed",
-  "notificationRestoreFailedTitle": "Restore failed",
   "notificationAppUpdateTitle": "Update available",
   "notificationAppUpdateBody": "Tsumiru {version} is available",
   "@notificationAppUpdateBody": {
@@ -2826,9 +2693,6 @@
   },
   "notificationIncognitoTitle": "Incognito mode",
   "notificationIncognitoBody": "History and progress updates are paused",
-  "notificationsErrors": "Error notifications",
-  "notificationsErrorsSubtitle": "Failed downloads and library updates",
-  "notificationsBackup": "Backup notifications",
   "privacyPolicy": "Privacy policy",
   "notificationsAppUpdates": "App update notifications",
   "notificationsExtensionUpdates": "Extension update notifications",
@@ -2855,43 +2719,13 @@
   "notificationsHideContentSubtitle": "Show only a count, not titles or covers",
   "notificationsCheckNow": "Check now",
   "notificationsReliabilityNote": "Checks run periodically, not instantly. Some devices restrict background updates.",
-  "selectTargetSource": "Select Target Source",
-  "noSourcesAvailable": "No sources available for migration",
-  "checkSourceConfiguration": "Please check your source configuration",
-  "noAlternativeSources": "No alternative sources available",
-  "installMoreSources": "Install more sources to enable migration",
-  "errorLoadingSources": "Error loading sources",
   "errorGettingMigrationSources": "Failed to get migration sources",
   "errorSearchingMangaInSource": "Failed to search manga in source",
   "errorFetchingSourceManga": "Failed to fetch source manga",
   "errorSourceMangaNotFound": "Source manga not found",
   "errorFetchingTargetManga": "Failed to fetch target manga",
   "errorTargetMangaNotFound": "Target manga not found",
-  "searchManga": "Search manga...",
-  "searchForManga": "Search for manga in the target source",
-  "enterSearchTerm": "Enter a search term to find manga",
   "noResultsFound": "No results found",
-  "tryDifferentSearch": "Try a different search term",
-  "searchError": "Search error",
-  "importantNotice": "Important Notice",
-  "migrationWarning": "This will permanently move your manga data. This action cannot be undone.",
-  "deleteSourceWarning": "The original manga will be removed from your library after migration.",
-  "confirmMigration": "Confirm Migration",
-  "migrationConfirmationMessage": "Are you sure you want to migrate this manga? This action cannot be undone.",
-  "startMigration": "Start Migration",
-  "preparingMigration": "Preparing migration...",
-  "migrationCompleted": "Migration Completed!",
-  "migrationSuccessMessage": "Your manga has been successfully migrated to the new source.",
-  "migrationCancelledMessage": "The migration process has been cancelled. No changes were made.",
-  "cancelMigration": "Cancel Migration",
-  "cancelMigrationConfirmation": "Are you sure you want to cancel the migration? This action cannot be undone.",
-  "quickPresets": "Quick Presets",
-  "quickMigration": "Quick",
-  "fullMigration": "Full",
-  "customMigration": "Custom",
-  "deleteSourceManga": "Delete Source Manga",
-  "deleteSourceMangaDescription": "Remove the original manga from library after migration",
-  "done": "Done",
   "webtoonScaleType": "Long strip scale",
   "webtoonScaleTypeFitScreen": "Fit screen",
   "webtoonScaleTypeOriginalSize": "Original size",
@@ -2901,14 +2735,8 @@
   "webtoonScaleTypeRatio4to3": "4:3",
   "yes": "Yes",
   "no": "No",
-  "from": "From",
-  "to": "To",
   "source": "Source",
-  "migrationDetails": "Migration Details",
   "searchAllSources": "Search all sources",
-  "searchingAllSources": "Searching across all available sources...",
-  "noMatchingMangaFound": "No matching manga found in any source",
-  "deleteSourceAfterMigration": "Delete source manga after migration",
   "reload": "Reload",
   "remove": "Remove",
   "removeFromLibrary": "Remove from library",
@@ -2936,7 +2764,6 @@
   "serverAddress": "Server address",
   "serverBindings": "Server bindings",
   "serverPort": "Server port",
-  "serverPortHintText": "Server port",
   "serverSignedOutTitle": "Signed out",
   "@serverSignedOutTitle": {
     "description": "Title shown when the server rejects the app's credentials."
@@ -2974,7 +2801,6 @@
   "serverUrl": "Server URL",
   "serverUrlHintText": "Server URL",
   "addLocalNetworkAddress": "Add a local network address",
-  "serverExternalUrl": "External / Remote URL",
   "serverLanUrl": "Internal / LAN URL",
   "serverLanUrlOptional": "Optional",
   "serverLanUrlHintText": "http://192.168.1.100:4567",
@@ -3001,7 +2827,6 @@
   "sourceTypePopular": "Popular",
   "sources": "Sources",
   "start": "Start",
-  "started": "Started",
   "systemTrayIcon": "Show icon in system tray",
   "systemTrayIconDescription": "This icon will be shown on the system that is running the server",
   "thatHaventBeenStarted": "That haven't been started",
@@ -3059,14 +2884,12 @@
   },
   "reinstalling": "Reinstalling",
   "unknownAuthor": "Unknown author",
-  "unknownManga": "Unknown Manga",
   "unknownSource": "Unknown source",
   "unread": "Unread",
   "readProgressBar": "Read progress bar",
   "update": "Update",
   "updateAll": "Update all",
   "updateCompleted": "Update completed",
-  "updateFailed": "Failed to update {property}",
   "updates": "Updates",
   "updatesGroupingLabel": "Chapter grouping",
   "updatesGroupingHint": "Stack consecutive chapters from the same series into one foldable entry.",
@@ -3133,10 +2956,6 @@
   "autoRefreshRetryDelay": "Auto-refresh retry delay",
   "@autoRefreshRetryDelay": {
     "description": "Delay between auto retry attempts in seconds"
-  },
-  "offline": "Offline",
-  "@offline": {
-    "description": "Settings entry and screen title for offline downloads"
   },
   "offlineStorageSection": "Storage",
   "@offlineStorageSection": {
@@ -3228,10 +3047,6 @@
   "@keepOffline": {
     "description": "Tooltip for the per-series keep-offline popup button in manga details"
   },
-  "keepOfflineOff": "Off",
-  "@keepOfflineOff": {
-    "description": "Keep-offline rule: disabled"
-  },
   "keepOfflineNextUnread": "Keep next {count} unread",
   "@keepOfflineNextUnread": {
     "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
@@ -3263,10 +3078,6 @@
     "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
   },
   "offlineSheetSubtitle": "Keep chapters downloaded on this device, topped up automatically as you read.",
-  "offlineDownloadAll": "Download all chapters",
-  "@offlineDownloadAll": {
-    "description": "Series offline action: download every chapter to this device"
-  },
   "offlineRemoveSeries": "Remove downloads",
   "@offlineRemoveSeries": {
     "description": "Series offline action: remove this series' downloads from the device"
@@ -3302,11 +3113,6 @@
       }
     }
   },
-  "manageDownloads": "Manage downloads",
-  "@manageDownloads": {
-    "description": "Title/entry for the page listing on-device keep-rule subscriptions"
-  },
-  "manageDownloadsEmpty": "No download subscriptions yet",
   "manageDownloadsNothingYet": "Nothing downloaded yet",
   "offlineManualOnly": "Manual only",
   "manageDownloadsChangeRule": "Change rule",
@@ -3377,7 +3183,6 @@
   "yourRating": "Your rating",
   "addTag": "Add tag",
   "tags": "Tags",
-  "searchForSources": "Search for sources",
   "searchForExtensions": "Search for extensions",
   "searchSourcesHint": "Search sources...",
   "@searchSourcesHint": {
@@ -3387,7 +3192,6 @@
   "@searchExtensionsHint": {
     "description": "Placeholder in the desktop Browse search box on the Extensions tab"
   },
-  "noTagsYet": "No tags in your library yet",
   "copyToClipboard": "Copy to clipboard",
   "copiedToClipboard": "Copied to clipboard",
   "searchTips": "Search tips",
@@ -3566,10 +3370,6 @@
   "@filterTracked": {
     "description": "Filter section heading shown when at least one tracker is logged in"
   },
-  "copyPageLink": "Copy page link",
-  "@copyPageLink": {
-    "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
-  },
   "copyImageToClipboard": "Copy",
   "@copyImageToClipboard": {
     "description": "Reader page-actions sheet: copy the current page image itself to the clipboard"
@@ -3626,7 +3426,6 @@
   "@savedToGallery": {
     "description": "Toast shown after the current page image was saved to the device gallery"
   },
-  "zoomStart": "Zoom start position",
   "zoomStartAutomatic": "Automatic",
   "zoomStartCenter": "Center",
   "zoomStartLeft": "Left",
@@ -3954,7 +3753,6 @@
   "accountRoleUnknown": "Unknown role",
   "accountSignOut": "Sign out",
   "accountSignOutConfirmation": "Sign out of this account? Your downloaded chapters will stay on this device.",
-  "accountBuiltInPassword": "This account’s password is managed in the server settings.",
   "accountPermissionInstallExtensions": "Install extensions",
   "accountPermissionInstallExternalExtensions": "Install extension files",
   "accountPermissionUninstallExtensions": "Uninstall extensions",
@@ -3993,7 +3791,6 @@
   "accountCatalogueRemoveConfirm": "Remove the downloaded chapters and offline library for {account} on {server} from this device? Server data will stay unchanged.",
   "@accountCatalogueRemoveConfirm": {"placeholders": {"account": {"type": "String"}, "server": {"type": "String"}}},
   "accountCatalogueRemoveFailed": "Account downloads could not be removed. They may be in use.",
-  "recommendationsUnavailableWeb": "These recommendations are not available in the web app.",
   "offlineRecoveryRunning": "Recovering downloads. You can keep using the app.",
   "offlineRecoveryFailed": "Download recovery stopped. Existing files have been kept. Retry to continue.",
   "offlineRecoveryUnavailable": "Saved chapters are temporarily unavailable while downloads are recovered.",
