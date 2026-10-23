@@ -9,9 +9,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/section_title.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../settings/search/settings_search_registry.dart';
+import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/tracking_settings_providers.dart';
 import 'widgets/settings_tracker_tile.dart';
@@ -42,39 +42,57 @@ class TrackingSettingsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: topBar ? null : AppBar(title: title),
         body: SettingsHighlightScope(
-          child: ListView(
-            children: [
-              SettingsHighlightTarget(
-                id: 'updateProgressAfterReading',
-                child: SwitchListTile(
-                  title: Text(context.l10n.updateProgressAfterReading),
-                  value: updateAfterReading,
-                  onChanged: (value) => ref
-                      .read(updateProgressAfterReadingProvider.notifier)
-                      .update(value),
-                ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView(
+                children: [
+                  const SizedBox(height: 16),
+                  SettingsGroupCard(
+                    children: [
+                      SettingsHighlightTarget(
+                        id: 'updateProgressAfterReading',
+                        child: SwitchListTile(
+                          title: Text(context.l10n.updateProgressAfterReading),
+                          value: updateAfterReading,
+                          onChanged: (value) => ref
+                              .read(updateProgressAfterReadingProvider.notifier)
+                              .update(value),
+                        ),
+                      ),
+                      SettingsHighlightTarget(
+                        id: 'updateProgressManualMarkRead',
+                        child: SwitchListTile(
+                          title: Text(
+                            context.l10n.updateProgressManualMarkRead,
+                          ),
+                          subtitle: Text(
+                            context.l10n.updateProgressManualMarkReadDesc,
+                          ),
+                          value: updateManualMarkRead,
+                          onChanged: (value) => ref
+                              .read(
+                                updateProgressManualMarkReadProvider.notifier,
+                              )
+                              .update(value),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SettingsGroupHeading(label: context.l10n.trackers),
+                  trackersAsync.showUiWhenData(
+                    context,
+                    (trackers) => trackers.isEmpty
+                        ? const SizedBox.shrink()
+                        : SettingsGroupCard(
+                            children: trackers
+                                .map((t) => SettingsTrackerTile(tracker: t))
+                                .toList(),
+                          ),
+                  ),
+                ],
               ),
-              SettingsHighlightTarget(
-                id: 'updateProgressManualMarkRead',
-                child: SwitchListTile(
-                  title: Text(context.l10n.updateProgressManualMarkRead),
-                  subtitle: Text(context.l10n.updateProgressManualMarkReadDesc),
-                  value: updateManualMarkRead,
-                  onChanged: (value) => ref
-                      .read(updateProgressManualMarkReadProvider.notifier)
-                      .update(value),
-                ),
-              ),
-              SectionTitle(title: context.l10n.trackers),
-              trackersAsync.showUiWhenData(
-                context,
-                (trackers) => Column(
-                  children: trackers
-                      .map((t) => SettingsTrackerTile(tracker: t))
-                      .toList(),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
