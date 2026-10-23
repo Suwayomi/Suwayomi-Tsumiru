@@ -3520,7 +3520,7 @@
   "@recommendsInOverflow": {
     "description": "Setting to move the recommendations button into the overflow menu"
   },
-  "recommendsInOverflowSubtitle": "Move recommendations to the overflow menu instead of showing the row on the manga page",
+  "recommendsInOverflowSubtitle": "Show them from the ⋮ menu instead of as a row on the manga page",
   "@recommendsInOverflowSubtitle": {
     "description": "Subtitle for the recommendations-in-overflow setting"
   },

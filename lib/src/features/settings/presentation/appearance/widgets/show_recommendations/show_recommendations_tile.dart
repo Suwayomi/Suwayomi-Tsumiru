@@ -52,6 +52,7 @@ class RecommendsInOverflowTile extends ConsumerWidget {
     }
     return CompactSwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
+      contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
       title: Text(context.l10n.recommendsInOverflow),
       subtitle: Text(context.l10n.recommendsInOverflowSubtitle),
       onChanged: ref.read(recommendsInOverflowProvider.notifier).update,
