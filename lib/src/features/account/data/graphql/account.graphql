@@ -189,3 +189,10 @@ query AccountCapability {
     id
   }
 }
+
+query AccountCodePermissions {
+  userCodes {
+    id
+    permissions
+  }
+}

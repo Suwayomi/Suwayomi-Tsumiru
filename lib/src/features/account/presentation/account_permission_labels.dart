@@ -23,3 +23,38 @@ Map<Enum$UserPermission, String> accountPermissionLabels(
       context.l10n.accountPermissionManageSourcePreferences,
   Enum$UserPermission.MANAGE_CACHE: context.l10n.accountPermissionManageCache,
 };
+
+class AccountPermissionPicker extends StatelessWidget {
+  const AccountPermissionPicker({
+    super.key,
+    required this.permissions,
+    this.onChanged,
+  });
+
+  final Set<Enum$UserPermission> permissions;
+  final ValueChanged<Set<Enum$UserPermission>>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final entry in accountPermissionLabels(context).entries)
+        SwitchListTile(
+          dense: true,
+          title: Text(entry.value),
+          value: permissions.contains(entry.key),
+          onChanged: onChanged == null
+              ? null
+              : (allowed) {
+                  final updated = {...permissions};
+                  if (allowed) {
+                    updated.add(entry.key);
+                  } else {
+                    updated.remove(entry.key);
+                  }
+                  onChanged!(updated);
+                },
+        ),
+    ],
+  );
+}

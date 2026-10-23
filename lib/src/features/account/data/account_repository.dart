@@ -25,6 +25,55 @@ class AccountRepository {
 
   final GraphQLClient client;
 
+  Future<({bool registration, bool user, bool codes})>
+  creationPermissionCapability() => _admin(() async {
+    Future<bool> hasField(String type, String collection, String field) async {
+      final result = await client.query(
+        QueryOptions(
+          document: gql(
+            'query AccountPermissionCapability { '
+            '__type(name: "$type") { $collection { name } } }',
+          ),
+          fetchPolicy: FetchPolicy.noCache,
+        ),
+      );
+      if (result.hasException) {
+        throw OperationMessageException(result.exception!);
+      }
+      final fields = result.data?['__type']?[collection] as List<dynamic>?;
+      return fields?.any((entry) => entry['name'] == field) ?? false;
+    }
+
+    return (
+      registration: await hasField(
+        'CreateRegistrationCodeInput',
+        'inputFields',
+        'permissions',
+      ),
+      user: await hasField('RegisterInput', 'inputFields', 'userPermissions'),
+      codes: await hasField('UserCodeType', 'fields', 'permissions'),
+    );
+  });
+
+  Future<Map<int, List<Enum$UserPermission>?>> codePermissions() =>
+      _admin(() async {
+        final permissions = await client
+            .query$AccountCodePermissions(
+              Options$Query$AccountCodePermissions(
+                fetchPolicy: FetchPolicy.networkOnly,
+              ),
+            )
+            .getData(
+              (data) => {
+                for (final code in data.userCodes) code.id: code.permissions,
+              },
+            );
+        if (permissions == null) {
+          throw StateError('Missing code permissions response');
+        }
+        return permissions;
+      });
+
   /// [stillWanted] tells whether the caller still uses the answer. An endpoint
   /// switch replaces the GraphQL client and rebuilds the provider asking, and
   /// the superseded build's query dies with the old client ("Cannot use the

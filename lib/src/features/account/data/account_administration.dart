@@ -39,3 +39,24 @@ Input$UpdateUserInput accountPermissionUpdate({
   permissions: permissions,
   role: canEditRoles ? role : null,
 );
+
+final accountCreationPermissionsProvider = FutureProvider((ref) async {
+  if (!ref.watch(settledAccountAccessProvider).canManageUsers) {
+    return (registration: false, user: false, codes: false);
+  }
+  return ref.watch(accountRepositoryProvider).creationPermissionCapability();
+});
+
+final accountCodePermissionsProvider = FutureProvider.autoDispose((ref) async {
+  final repository = ref.watch(accountRepositoryProvider);
+  final capability = await ref.watch(accountCreationPermissionsProvider.future);
+  if (!capability.codes) return <int, List<Enum$UserPermission>?>{};
+  return repository.codePermissions();
+});
+
+const defaultAccountPermissions = {
+  Enum$UserPermission.DOWNLOAD_CHAPTERS,
+  Enum$UserPermission.INSTALL_EXTENSIONS,
+  Enum$UserPermission.INSTALL_EXTERNAL_EXTENSIONS,
+  Enum$UserPermission.UNINSTALL_EXTENSIONS,
+};
