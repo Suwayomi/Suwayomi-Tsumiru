@@ -5,10 +5,10 @@ import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import '../../data/server_settings_repository.dart';
 
 class SocksProxySection extends ConsumerWidget {
@@ -23,84 +23,96 @@ class SocksProxySection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.socksProxy),
-        SettingsHighlightTarget(
-          id: 'enableSocksProxy',
-          child: SettingsPropTile(
-            title: context.l10n.enableSocksProxy,
-            type: SettingsPropType<SettingsDto>.switchTile(
-              value: socksProxyDto.socksProxyEnabled,
-              onChanged: canManage ? repository.toggleSocksProxy : null,
+        SettingsGroupHeading(label: context.l10n.socksProxy),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'enableSocksProxy',
+              child: SettingsPropTile(
+                title: context.l10n.enableSocksProxy,
+                type: SettingsPropType<SettingsDto>.switchTile(
+                  value: socksProxyDto.socksProxyEnabled,
+                  onChanged: canManage ? repository.toggleSocksProxy : null,
+                ),
+              ),
             ),
-          ),
+            if (socksProxyDto.socksProxyEnabled) ...[
+              SettingsHighlightTarget(
+                id: 'socksVersion',
+                child: SettingsPropTile(
+                  title: context.l10n.socksVersion,
+                  subtitle: socksProxyDto.socksProxyVersion.toString(),
+                  type: SettingsPropType.numberPicker(
+                    min: 4,
+                    max: 5,
+                    value: socksProxyDto.socksProxyVersion,
+                    onChanged: canManage ? repository.updateSocksVersion : null,
+                  ),
+                ),
+              ),
+              SettingsHighlightTarget(
+                id: 'socksHost',
+                child: SettingsPropTile(
+                  title: context.l10n.socksHost,
+                  type: SettingsPropType.textField(
+                    hintText: context.l10n.enterProp(context.l10n.socksHost),
+                    value: socksProxyDto.socksProxyHost,
+                    onChanged: canManage ? repository.updateSocksHost : null,
+                  ),
+                  subtitle: socksProxyDto.socksProxyHost,
+                ),
+              ),
+              SettingsHighlightTarget(
+                id: 'socksPort',
+                child: SettingsPropTile(
+                  title: context.l10n.socksPort,
+                  subtitle: socksProxyDto.socksProxyPort.toString(),
+                  type: SettingsPropType.numberPicker(
+                    min: 0,
+                    max: 65535,
+                    value: int.tryParse(socksProxyDto.socksProxyPort),
+                    onChanged: canManage
+                        ? (port) async =>
+                              repository.updateSocksPort(port.toString())
+                        : null,
+                  ),
+                ),
+              ),
+              SettingsHighlightTarget(
+                id: 'socksUserName',
+                child: SettingsPropTile(
+                  title: context.l10n.socksUserName,
+                  type: SettingsPropType.textField(
+                    hintText: context.l10n.enterProp(
+                      context.l10n.socksUserName,
+                    ),
+                    value: socksProxyDto.socksProxyUsername,
+                    onChanged: canManage
+                        ? repository.updateSocksUserName
+                        : null,
+                  ),
+                  subtitle: socksProxyDto.socksProxyUsername,
+                ),
+              ),
+              SettingsHighlightTarget(
+                id: 'socksPassword',
+                child: SettingsPropTile(
+                  title: context.l10n.socksPassword,
+                  type: SettingsPropType.textField(
+                    canObscure: true,
+                    hintText: context.l10n.enterProp(
+                      context.l10n.socksPassword,
+                    ),
+                    value: socksProxyDto.socksProxyPassword,
+                    onChanged: canManage
+                        ? repository.updateSocksPassword
+                        : null,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
-        if (socksProxyDto.socksProxyEnabled) ...[
-          SettingsHighlightTarget(
-            id: 'socksVersion',
-            child: SettingsPropTile(
-              title: context.l10n.socksVersion,
-              subtitle: socksProxyDto.socksProxyVersion.toString(),
-              type: SettingsPropType.numberPicker(
-                min: 4,
-                max: 5,
-                value: socksProxyDto.socksProxyVersion,
-                onChanged: canManage ? repository.updateSocksVersion : null,
-              ),
-            ),
-          ),
-          SettingsHighlightTarget(
-            id: 'socksHost',
-            child: SettingsPropTile(
-              title: context.l10n.socksHost,
-              type: SettingsPropType.textField(
-                hintText: context.l10n.enterProp(context.l10n.socksHost),
-                value: socksProxyDto.socksProxyHost,
-                onChanged: canManage ? repository.updateSocksHost : null,
-              ),
-              subtitle: socksProxyDto.socksProxyHost,
-            ),
-          ),
-          SettingsHighlightTarget(
-            id: 'socksPort',
-            child: SettingsPropTile(
-              title: context.l10n.socksPort,
-              subtitle: socksProxyDto.socksProxyPort.toString(),
-              type: SettingsPropType.numberPicker(
-                min: 0,
-                max: 65535,
-                value: int.tryParse(socksProxyDto.socksProxyPort),
-                onChanged: canManage
-                    ? (port) async =>
-                          repository.updateSocksPort(port.toString())
-                    : null,
-              ),
-            ),
-          ),
-          SettingsHighlightTarget(
-            id: 'socksUserName',
-            child: SettingsPropTile(
-              title: context.l10n.socksUserName,
-              type: SettingsPropType.textField(
-                hintText: context.l10n.enterProp(context.l10n.socksUserName),
-                value: socksProxyDto.socksProxyUsername,
-                onChanged: canManage ? repository.updateSocksUserName : null,
-              ),
-              subtitle: socksProxyDto.socksProxyUsername,
-            ),
-          ),
-          SettingsHighlightTarget(
-            id: 'socksPassword',
-            child: SettingsPropTile(
-              title: context.l10n.socksPassword,
-              type: SettingsPropType.textField(
-                canObscure: true,
-                hintText: context.l10n.enterProp(context.l10n.socksPassword),
-                value: socksProxyDto.socksProxyPassword,
-                onChanged: canManage ? repository.updateSocksPassword : null,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

@@ -23,7 +23,6 @@ class CopyCrashLogTile extends ConsumerWidget {
     return ListTile(
       title: Text(context.l10n.copyCrashLog),
       subtitle: Text(context.l10n.copyCrashLogSubtitle),
-      leading: const Icon(Icons.bug_report_rounded),
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline_rounded),
         tooltip: context.l10n.clearCrashLog,

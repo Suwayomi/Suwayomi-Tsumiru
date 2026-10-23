@@ -8,10 +8,10 @@ import '../../../../../../routes/router_config.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/cover_cache/cover_cache.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/images_repository.dart';
 
 class ImagesSection extends HookConsumerWidget {
@@ -37,80 +37,95 @@ class ImagesSection extends HookConsumerWidget {
     if (downloadData == null && serveData == null && !canClear) {
       return const SizedBox.shrink();
     }
+    final showProcessingCard =
+        (showAdminRows && downloadData != null) || serveData != null;
+    final showClearCard = showAdminRows && canClear;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.images),
-        if (showAdminRows && canClear)
-          SettingsHighlightTarget(
-            id: 'imagesClearCache',
-            // Explicit boundary: without it the engine folds this tappable
-            // row into a neighbouring switch row (same guard as the OPDS,
-            // WebView and Misc rows).
-            child: Semantics(
-              container: true,
-              explicitChildNodes: true,
-              child: ListTile(
-                title: Text(context.l10n.imageProcessingClearCache),
-                onTap: canManage && !clearing.value
-                    ? () async {
-                        clearing.value = true;
-                        try {
-                          await repository.clearCachedImages();
-                          await DefaultCacheManager().emptyCache();
-                          await ref
-                              .read(coverCacheManagerProvider)
-                              .emptyCache();
-                          if (context.mounted) {
-                            ref
-                                .read(toastProvider)
-                                ?.show(
-                                  context.l10n.imageProcessingClearedCache,
-                                );
-                          }
-                        } catch (_) {
-                          if (context.mounted) {
-                            ref
-                                .read(toastProvider)
-                                ?.show(
-                                  context
-                                      .l10n
-                                      .imageProcessingCouldNotClearCache,
-                                );
-                          }
-                        } finally {
-                          if (context.mounted) clearing.value = false;
-                        }
-                      }
-                    : null,
-              ),
-            ),
+        const SizedBox(height: 16),
+        if (showProcessingCard)
+          SettingsGroupCard(
+            children: [
+              if (showAdminRows && downloadData != null)
+                SettingsHighlightTarget(
+                  id: 'imageDownloadProcessing',
+                  child: Semantics(
+                    container: true,
+                    explicitChildNodes: true,
+                    child: ListTile(
+                      title: Text(context.l10n.imageDownloadProcessing),
+                      onTap: () => const ImageProcessingRoute(
+                        type: 'download',
+                      ).push(context),
+                    ),
+                  ),
+                ),
+              if (serveData != null)
+                SettingsHighlightTarget(
+                  id: 'imageServeProcessing',
+                  child: Semantics(
+                    container: true,
+                    explicitChildNodes: true,
+                    child: ListTile(
+                      title: Text(context.l10n.imageServeProcessing),
+                      onTap: () => const ImageProcessingRoute(
+                        type: 'serve',
+                      ).push(context),
+                    ),
+                  ),
+                ),
+            ],
           ),
-        if (showAdminRows && downloadData != null)
-          SettingsHighlightTarget(
-            id: 'imageDownloadProcessing',
-            child: Semantics(
-              container: true,
-              explicitChildNodes: true,
-              child: ListTile(
-                title: Text(context.l10n.imageDownloadProcessing),
-                onTap: () =>
-                    const ImageProcessingRoute(type: 'download').push(context),
+        if (showProcessingCard && showClearCard) const SizedBox(height: 16),
+        if (showClearCard)
+          SettingsGroupCard(
+            children: [
+              SettingsHighlightTarget(
+                id: 'imagesClearCache',
+                // Explicit boundary: without it the engine folds this tappable
+                // row into a neighbouring switch row (same guard as the OPDS,
+                // WebView and Misc rows).
+                child: Semantics(
+                  container: true,
+                  explicitChildNodes: true,
+                  child: ListTile(
+                    title: Text(context.l10n.imageProcessingClearCache),
+                    onTap: canManage && !clearing.value
+                        ? () async {
+                            clearing.value = true;
+                            try {
+                              await repository.clearCachedImages();
+                              await DefaultCacheManager().emptyCache();
+                              await ref
+                                  .read(coverCacheManagerProvider)
+                                  .emptyCache();
+                              if (context.mounted) {
+                                ref
+                                    .read(toastProvider)
+                                    ?.show(
+                                      context.l10n.imageProcessingClearedCache,
+                                    );
+                              }
+                            } catch (_) {
+                              if (context.mounted) {
+                                ref
+                                    .read(toastProvider)
+                                    ?.show(
+                                      context
+                                          .l10n
+                                          .imageProcessingCouldNotClearCache,
+                                    );
+                              }
+                            } finally {
+                              if (context.mounted) clearing.value = false;
+                            }
+                          }
+                        : null,
+                  ),
+                ),
               ),
-            ),
-          ),
-        if (serveData != null)
-          SettingsHighlightTarget(
-            id: 'imageServeProcessing',
-            child: Semantics(
-              container: true,
-              explicitChildNodes: true,
-              child: ListTile(
-                title: Text(context.l10n.imageServeProcessing),
-                onTap: () =>
-                    const ImageProcessingRoute(type: 'serve').push(context),
-              ),
-            ),
+            ],
           ),
       ],
     );

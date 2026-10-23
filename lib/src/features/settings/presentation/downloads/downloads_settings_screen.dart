@@ -182,7 +182,7 @@ class _ServerDownloadsTab extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // Image download processing lives on Server admin › Images
+                  // Image download processing lives on Server › Images
                   // only now; the same editor used to be linked from here too.
                   // Server downloads (shared with the web interface).
                   // Default off.

@@ -74,42 +74,47 @@ class ServerSettingsPageShell extends ConsumerWidget {
             ),
           ),
           child: SettingsHighlightScope(
-            child: ListView(
-              children: [
-                if (serverSettings.isLoading && !serverSettings.hasValue)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (serverSettings.hasError && !serverSettings.hasValue)
-                  Builder(
-                    builder: (context) {
-                      final error = serverSettings.error!;
-                      final unwrapped = error is OperationMessageException
-                          ? error.exception
-                          : error;
-                      if (isConnectionError(unwrapped)) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          child: ServerUnreachableView(onRetry: onRefresh),
-                        );
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(child: Text(error.toString())),
-                      );
-                    },
-                  ),
-                if (!canManage && showPermissionNotice)
-                  ListTile(
-                    subtitle: Text(
-                      context.l10n.manageSettingsPermissionRequired,
-                    ),
-                  ),
-                ...always,
-                if (serverSettings.value != null)
-                  ...whenData(serverSettings.value!),
-              ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: ListView(
+                  children: [
+                    if (serverSettings.isLoading && !serverSettings.hasValue)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    if (serverSettings.hasError && !serverSettings.hasValue)
+                      Builder(
+                        builder: (context) {
+                          final error = serverSettings.error!;
+                          final unwrapped = error is OperationMessageException
+                              ? error.exception
+                              : error;
+                          if (isConnectionError(unwrapped)) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: ServerUnreachableView(onRetry: onRefresh),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Center(child: Text(error.toString())),
+                          );
+                        },
+                      ),
+                    if (!canManage && showPermissionNotice)
+                      ListTile(
+                        subtitle: Text(
+                          context.l10n.manageSettingsPermissionRequired,
+                        ),
+                      ),
+                    ...always,
+                    if (serverSettings.value != null)
+                      ...whenData(serverSettings.value!),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

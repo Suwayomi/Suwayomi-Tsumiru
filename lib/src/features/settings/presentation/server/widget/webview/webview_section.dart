@@ -6,9 +6,9 @@ import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/webview_repository.dart';
 
 class WebViewSection extends HookConsumerWidget {
@@ -29,72 +29,78 @@ class WebViewSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.kcefWebView),
-        if (data != null)
-          SettingsHighlightTarget(
-            id: 'webview',
-            child: SwitchListTile(
-              title: Text(context.l10n.kcefWebView),
-              subtitle: Text(context.l10n.kcefWebViewDescription),
-              value: data.kcefEnabled,
-              onChanged: canManage
-                  ? (isEnabled) async {
-                      final value = await AppUtils.guard(
-                        () => repository.write(
-                          Input$PartialSettingsTypeInput(
-                            kcefEnabled: isEnabled,
-                          ),
-                        ),
-                        ref.read(toastProvider),
-                      );
-                      if (value != null && context.mounted) {
-                        ref.invalidate(webViewSettingsProvider);
-                      }
-                    }
-                  : null,
-            ),
-          ),
-        if (canClear)
-          SettingsHighlightTarget(
-            id: 'clearWebViewCache',
-            // Explicit boundary: without it the web engine folds this row
-            // into the switch row above, exposing the whole section as one
-            // button with a nested switch instead of two controls.
-            child: Semantics(
-              container: true,
-              explicitChildNodes: true,
-              child: ListTile(
-                title: Text(context.l10n.clearCookiesAndCache),
-                onTap: canManage && !clearing.value
-                  ? () async {
-                      clearing.value = true;
-                      try {
-                        await repository.clearCookiesAndCache();
-                        if (context.mounted) {
-                          ref
-                              .read(toastProvider)
-                              ?.show(
-                                context.l10n.clearedWebViewCookiesAndCache,
-                              );
+        SettingsGroupHeading(label: context.l10n.kcefWebView),
+        SettingsGroupCard(
+          children: [
+            if (data != null)
+              SettingsHighlightTarget(
+                id: 'webview',
+                child: SwitchListTile(
+                  title: Text(context.l10n.kcefWebView),
+                  subtitle: Text(context.l10n.kcefWebViewDescription),
+                  value: data.kcefEnabled,
+                  onChanged: canManage
+                      ? (isEnabled) async {
+                          final value = await AppUtils.guard(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                kcefEnabled: isEnabled,
+                              ),
+                            ),
+                            ref.read(toastProvider),
+                          );
+                          if (value != null && context.mounted) {
+                            ref.invalidate(webViewSettingsProvider);
+                          }
                         }
-                      } catch (_) {
-                        if (context.mounted) {
-                          ref
-                              .read(toastProvider)
-                              ?.show(
-                                context
-                                    .l10n
-                                    .couldNotClearWebViewCookiesAndCache,
-                              );
-                        }
-                      } finally {
-                        if (context.mounted) clearing.value = false;
-                      }
-                    }
-                  : null,
+                      : null,
+                ),
               ),
-            ),
-          ),
+            if (canClear)
+              SettingsHighlightTarget(
+                id: 'clearWebViewCache',
+                // Explicit boundary: without it the web engine folds this row
+                // into the switch row above, exposing the whole section as one
+                // button with a nested switch instead of two controls.
+                child: Semantics(
+                  container: true,
+                  explicitChildNodes: true,
+                  child: ListTile(
+                    title: Text(context.l10n.clearCookiesAndCache),
+                    onTap: canManage && !clearing.value
+                        ? () async {
+                            clearing.value = true;
+                            try {
+                              await repository.clearCookiesAndCache();
+                              if (context.mounted) {
+                                ref
+                                    .read(toastProvider)
+                                    ?.show(
+                                      context
+                                          .l10n
+                                          .clearedWebViewCookiesAndCache,
+                                    );
+                              }
+                            } catch (_) {
+                              if (context.mounted) {
+                                ref
+                                    .read(toastProvider)
+                                    ?.show(
+                                      context
+                                          .l10n
+                                          .couldNotClearWebViewCookiesAndCache,
+                                    );
+                              }
+                            } finally {
+                              if (context.mounted) clearing.value = false;
+                            }
+                          }
+                        : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

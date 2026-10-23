@@ -14,6 +14,7 @@ import '../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'copy_crash_log_tile.dart';
 
 class AdvancedScreen extends ConsumerWidget {
@@ -26,27 +27,40 @@ class AdvancedScreen extends ConsumerWidget {
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
       body: SettingsHighlightScope(
-        child: ListView(
-          children: [
-            SettingsHighlightTarget(
-              id: 'clearCache',
-              child: ListTile(
-                leading: const Icon(Icons.cleaning_services_rounded),
-                title: Text(context.l10n.clearCache),
-                onTap: () async {
-                  // The GraphQL cache is in-memory (and bypassed by noCache),
-                  // so "clear cache" now means the image caches: pages and
-                  // covers.
-                  await DefaultCacheManager().emptyCache();
-                  await ref.read(coverCacheManagerProvider).emptyCache();
-                  if (context.mounted) {
-                    ref.read(toastProvider)?.show(context.l10n.cacheCleared);
-                  }
-                },
-              ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              children: [
+                const SizedBox(height: 16),
+                SettingsGroupCard(
+                  children: [
+                    SettingsHighlightTarget(
+                      id: 'clearCache',
+                      child: ListTile(
+                        title: Text(context.l10n.clearCache),
+                        onTap: () async {
+                          // The GraphQL cache is in-memory (and bypassed by noCache),
+                          // so "clear cache" now means the image caches: pages and
+                          // covers.
+                          await DefaultCacheManager().emptyCache();
+                          await ref
+                              .read(coverCacheManagerProvider)
+                              .emptyCache();
+                          if (context.mounted) {
+                            ref
+                                .read(toastProvider)
+                                ?.show(context.l10n.cacheCleared);
+                          }
+                        },
+                      ),
+                    ),
+                    const CopyCrashLogTile(),
+                  ],
+                ),
+              ],
             ),
-            const CopyCrashLogTile(),
-          ],
+          ),
         ),
       ),
     );

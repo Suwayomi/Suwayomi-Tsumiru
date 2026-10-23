@@ -20,6 +20,7 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/koreader_sync_repository.dart';
 import 'domain/koreader_sync_domain.dart';
 import 'widgets/koreader_sync_dialog.dart';
@@ -112,7 +113,7 @@ class KoreaderSyncSettingsBody extends ConsumerWidget {
           refresh: refresh,
           skipLoadingOnReload: true,
           (status) {
-            return Column(
+            return SettingsGroupCard(
               children: [
                 SettingsHighlightTarget(
                   id: 'koreaderSyncStatus',
