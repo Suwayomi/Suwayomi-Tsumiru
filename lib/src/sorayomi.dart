@@ -204,12 +204,14 @@ class _WebTitleBridge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Follow the delegate (the logical route), not the engine's route
+    // information: imperative pops (dismissing the settings window) update
+    // the match list without reporting a new route, which left the tab
+    // title stuck on the closed page.
     return ListenableBuilder(
-      listenable: routes.routeInformationProvider,
-      builder: (context, _) => WebPageTitle(
-        uri: routes.routeInformationProvider.value.uri,
-        child: child,
-      ),
+      listenable: routes.routerDelegate,
+      builder: (context, _) =>
+          WebPageTitle(uri: routes.state.uri, child: child),
     );
   }
 }

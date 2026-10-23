@@ -90,6 +90,43 @@ class NavigationBarData {
     ),
   ];
 
+  // Static list for the desktop sidebar (More lives in the sidebar foot as
+  // Settings instead). Same order as the shell branches, so a branch index
+  // needs no translation: Library(0), Updates(1), History(2), Browse(3),
+  // Downloads(4).
+  static final desktopNavList = [
+    NavigationBarData(
+      icon: Icons.collections_bookmark_outlined,
+      activeIcon: Icons.collections_bookmark_rounded,
+      animatedIcon: AnimatedNavVectors.library,
+      label: (context) => context.l10n.library,
+    ),
+    NavigationBarData(
+      icon: Icons.new_releases_outlined,
+      activeIcon: Icons.new_releases_rounded,
+      animatedIcon: AnimatedNavVectors.updates,
+      label: (context) => context.l10n.updates,
+    ),
+    NavigationBarData(
+      icon: Icons.history_outlined,
+      activeIcon: Icons.history_rounded,
+      animatedIcon: AnimatedNavVectors.history,
+      label: (context) => context.l10n.history,
+    ),
+    NavigationBarData(
+      icon: Icons.explore_outlined,
+      activeIcon: Icons.explore_rounded,
+      animatedIcon: AnimatedNavVectors.browse,
+      label: (context) => context.l10n.browse,
+    ),
+    NavigationBarData(
+      icon: Icons.download_outlined,
+      activeIcon: Icons.download_rounded,
+      animatedIcon: AnimatedNavVectors.downloads,
+      label: (context) => context.l10n.downloads,
+    ),
+  ];
+
   // Dynamic navigation list based on context
   static List<NavigationBarData> getNavList(BuildContext context) {
     return context.windowSizeClass >= WindowSizeClass.medium

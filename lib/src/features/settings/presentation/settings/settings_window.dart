@@ -34,7 +34,25 @@ class SettingsWindow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (context.windowSizeClass < WindowSizeClass.expanded) return child;
     final router = GoRouter.of(context);
-    void close() => Navigator.of(context).pop();
+    void close() {
+      // One pop of the window page dismisses every page pushed inside it.
+      // Navigator.of (not router.pop, which would only step back one inner
+      // page) targets the branch navigator above the window's own.
+      if (router.canPop()) {
+        Navigator.of(context).pop();
+        // A close that unwinds to the retired More screen (opened by URL
+        // with no earlier screen: deep link, typed address, reload) lands
+        // on Library on the desktop shell instead. Closes from a screen
+        // already returned there through the pop above.
+        if (context.usesDesktopShell &&
+            router.state.uri.path == const MoreRoute().location) {
+          const LibraryRoute(categoryId: 0).go(context);
+        }
+        return;
+      }
+      const LibraryRoute(categoryId: 0).go(context);
+    }
+
     return ListenableBuilder(
       listenable: router.routerDelegate,
       builder: (context, _) {

@@ -198,6 +198,13 @@ GoRouter routerConfig(Ref ref) {
         _pendingRouteAfterIdentityChange = null;
         if (state.matchedLocation != pending) return pending;
       }
+      // Desktop dropped the More tab: an exact /more (deep link, typed
+      // address, stale bookmark) lands on Library instead. Pages that live
+      // under More (settings, history, about, connection, ...) keep working.
+      if (state.matchedLocation == const MoreRoute().location &&
+          context.usesDesktopShell) {
+        return const LibraryRoute(categoryId: 0).location;
+      }
       return null;
     },
   );
