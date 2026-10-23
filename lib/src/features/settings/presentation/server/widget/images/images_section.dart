@@ -10,6 +10,7 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
+import '../../../../../account/domain/account_access.dart';
 import '../../../../search/settings_search_registry.dart';
 import 'data/images_repository.dart';
 
@@ -18,9 +19,10 @@ class ImagesSection extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final access = ref.watch(settledAccountAccessProvider);
+    final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final showAdminRows =
+        access.capability != AccountCapability.supported || canManage;
     final repository = ref.watch(imagesRepositoryProvider);
     final download = ref.watch(imagesDownloadSettingsProvider);
     final serve = ref.watch(serveConversionsProvider);
@@ -39,7 +41,7 @@ class ImagesSection extends HookConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(title: context.l10n.images),
-        if (canClear)
+        if (showAdminRows && canClear)
           SettingsHighlightTarget(
             id: 'imagesClearCache',
             // Explicit boundary: without it the engine folds this tappable
@@ -84,7 +86,7 @@ class ImagesSection extends HookConsumerWidget {
               ),
             ),
           ),
-        if (downloadData != null)
+        if (showAdminRows && downloadData != null)
           SettingsHighlightTarget(
             id: 'imageDownloadProcessing',
             child: Semantics(
@@ -92,9 +94,8 @@ class ImagesSection extends HookConsumerWidget {
               explicitChildNodes: true,
               child: ListTile(
                 title: Text(context.l10n.imageDownloadProcessing),
-                onTap: () => const ImageProcessingRoute(
-                  type: 'download',
-                ).push(context),
+                onTap: () =>
+                    const ImageProcessingRoute(type: 'download').push(context),
               ),
             ),
           ),

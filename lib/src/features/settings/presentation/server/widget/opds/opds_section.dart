@@ -13,6 +13,8 @@ import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
+import '../../../../../account/domain/account_access.dart';
+import '../../../../data/user_settings.dart';
 import '../../../../search/settings_search_registry.dart';
 import 'data/opds_repository.dart';
 
@@ -70,9 +72,12 @@ class OpdsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final access = ref.watch(settledAccountAccessProvider);
+    final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final personalState = ref.watch(personalSettingsStateProvider);
+    final canEdit = access.capability == AccountCapability.supported
+        ? personalState == PersonalSettingsState.ready
+        : canManage;
     final repository = ref.watch(opdsSettingsRepositoryProvider);
     final settings = ref.watch(opdsSettingsProvider);
     if (settings.hasError) return const SizedBox.shrink();
@@ -96,10 +101,9 @@ class OpdsSection extends ConsumerWidget {
             description: context.l10n.opdsBinaryFileSizeDescription,
             type: SettingsPropType.switchTile(
               value: data.useBinaryFileSizes,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateUseBinaryFileSizes(value),
-                    )
+              onChanged: canEdit
+                  ? (value) =>
+                        save(() => repository.updateUseBinaryFileSizes(value))
                   : null,
             ),
           ),
@@ -120,7 +124,7 @@ class OpdsSection extends ConsumerWidget {
                 min: 10,
                 max: 5000,
                 value: data.itemsPerPage.clamp(10, 5000),
-                onChanged: canManage
+                onChanged: canEdit
                     ? (value) =>
                           save(() => repository.updateItemsPerPage(value))
                     : null,
@@ -135,7 +139,7 @@ class OpdsSection extends ConsumerWidget {
             description: context.l10n.opdsEnablePageReadProgressDescription,
             type: SettingsPropType.switchTile(
               value: data.enablePageReadProgress,
-              onChanged: canManage
+              onChanged: canEdit
                   ? (value) => save(
                       () => repository.updateEnablePageReadProgress(value),
                     )
@@ -150,10 +154,9 @@ class OpdsSection extends ConsumerWidget {
             description: context.l10n.opdsMarkAsReadOnDownloadDescription,
             type: SettingsPropType.switchTile(
               value: data.markAsReadOnDownload,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateMarkAsReadOnDownload(value),
-                    )
+              onChanged: canEdit
+                  ? (value) =>
+                        save(() => repository.updateMarkAsReadOnDownload(value))
                   : null,
             ),
           ),
@@ -165,7 +168,7 @@ class OpdsSection extends ConsumerWidget {
             description: context.l10n.opdsShowOnlyUnreadChaptersDescription,
             type: SettingsPropType.switchTile(
               value: data.showOnlyUnreadChapters,
-              onChanged: canManage
+              onChanged: canEdit
                   ? (value) => save(
                       () => repository.updateShowOnlyUnreadChapters(value),
                     )
@@ -177,11 +180,10 @@ class OpdsSection extends ConsumerWidget {
           id: 'opdsShowOnlyDownloadedChapters',
           child: SettingsPropTile(
             title: context.l10n.opdsShowOnlyDownloadedChapters,
-            description:
-                context.l10n.opdsShowOnlyDownloadedChaptersDescription,
+            description: context.l10n.opdsShowOnlyDownloadedChaptersDescription,
             type: SettingsPropType.switchTile(
               value: data.showOnlyDownloadedChapters,
-              onChanged: canManage
+              onChanged: canEdit
                   ? (value) => save(
                       () => repository.updateShowOnlyDownloadedChapters(value),
                     )
@@ -196,7 +198,7 @@ class OpdsSection extends ConsumerWidget {
             description: context.l10n.opdsSkipChapterMetadataFeedDescription,
             type: SettingsPropType.switchTile(
               value: data.skipChapterMetadataFeed,
-              onChanged: canManage
+              onChanged: canEdit
                   ? (value) => save(
                       () => repository.updateSkipChapterMetadataFeed(value),
                     )
@@ -213,21 +215,16 @@ class OpdsSection extends ConsumerWidget {
             child: ListTile(
               title: Text(context.l10n.opdsChapterSortOrder),
               subtitle: Text(_sortOrderLabel(context, data.chapterSortOrder)),
-              onTap: canManage
+              onTap: canEdit
                   ? () => _pickOpds<Enum$SortOrder>(
                       context,
                       title: context.l10n.opdsChapterSortOrder,
-                      description:
-                          context.l10n.opdsChapterSortOrderDescription,
+                      description: context.l10n.opdsChapterSortOrderDescription,
                       value: data.chapterSortOrder,
-                      options: const [
-                        Enum$SortOrder.ASC,
-                        Enum$SortOrder.DESC,
-                      ],
+                      options: const [Enum$SortOrder.ASC, Enum$SortOrder.DESC],
                       name: (value) => _sortOrderLabel(context, value),
-                      write: (value) => save(
-                        () => repository.updateChapterSortOrder(value),
-                      ),
+                      write: (value) =>
+                          save(() => repository.updateChapterSortOrder(value)),
                     )
                   : null,
             ),
@@ -242,7 +239,7 @@ class OpdsSection extends ConsumerWidget {
             child: ListTile(
               title: Text(context.l10n.opdsCbzMimeType),
               subtitle: Text(_cbzMimetypeLabel(context, data.cbzMimetype)),
-              onTap: canManage
+              onTap: canEdit
                   ? () => _pickOpds<Enum$CbzMediaType>(
                       context,
                       title: context.l10n.opdsCbzMimeType,
