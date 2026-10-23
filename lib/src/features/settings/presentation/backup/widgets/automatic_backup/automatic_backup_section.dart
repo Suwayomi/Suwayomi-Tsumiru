@@ -46,7 +46,9 @@ class AutomaticBackupSection extends ConsumerWidget {
               // description, and value are all the backup path.
               title: context.l10n.backupLocation,
               leading: const Icon(Icons.folder_rounded),
-              subtitle: data.backupPath,
+              subtitle: data.backupPath.isNotBlank
+                  ? data.backupPath
+                  : context.l10n.defaultFolderPath,
               description: context.l10n.backupLocationDescription,
               type: SettingsPropType.textField(
                 hintText: context.l10n.enterProp(context.l10n.backupLocation),

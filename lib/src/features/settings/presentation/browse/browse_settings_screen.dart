@@ -121,7 +121,9 @@ class BrowseSettingsScreen extends ConsumerWidget {
                             : null,
                       ),
                       description: context.l10n.localSourceLocationDescription,
-                      subtitle: browseSettings?.localSourcePath,
+                      subtitle: (browseSettings?.localSourcePath).isNotBlank
+                          ? browseSettings?.localSourcePath
+                          : context.l10n.defaultFolderPath,
                     ),
                   ),
                   SettingsHighlightTarget(
