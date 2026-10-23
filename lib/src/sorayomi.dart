@@ -210,8 +210,10 @@ class _WebTitleBridge extends StatelessWidget {
     // title stuck on the closed page.
     return ListenableBuilder(
       listenable: routes.routerDelegate,
-      builder: (context, _) =>
-          WebPageTitle(uri: routes.state.uri, child: child),
+      builder: (context, _) => WebPageTitle(
+        uri: routes.routerDelegate.currentConfiguration.uri,
+        child: child,
+      ),
     );
   }
 }
