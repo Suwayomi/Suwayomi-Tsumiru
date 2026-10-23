@@ -1325,8 +1325,8 @@
   "authInsecureTransportTitle": "Insecure connection",
   "authInsecureTransportWarning": "Your username and password will be sent unencrypted over HTTP. Use HTTPS unless you trust the network entirely.",
   "authInsecureTransportContinue": "I understand, continue",
-  "authLogout": "Log out",
-  "authLogoutConfirm": "Log out and clear stored credentials? You'll need to sign in again to use this server.",
+  "authLogout": "Sign out",
+  "authLogoutConfirm": "Sign out and clear stored credentials? You'll need to sign in again to use this server.",
   "authImageUrlLogWarning": "With UI Login, image URLs include your access token, which may appear in server access logs.",
   "authTypeNone": "None",
   "authentication": "Authentication",
@@ -2765,7 +2765,6 @@
   "selectNext10": "Select next 10",
   "selectUnread": "Select unread",
   "server": "Server",
-  "serverAdmin": "Server admin",
   "serverAddress": "Server address",
   "serverBindings": "Server bindings",
   "serverPort": "Server port",
@@ -2817,7 +2816,15 @@
     "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
   },
   "serverVersion": "Server version",
+  "serverUsers": "Users",
+  "@serverUsers": {
+    "description": "Server hub entry that opens user management"
+  },
   "settingsGroupApp": "App",
+  "settingsGroupSuwayomi": "Suwayomi",
+  "@settingsGroupSuwayomi": {
+    "description": "Group header for Suwayomi server settings"
+  },
   "settings": "Settings",
   "skipThisVersion": "Don't remind me about this version",
   "skipUpdatingEntries": "Skip updating entries",
