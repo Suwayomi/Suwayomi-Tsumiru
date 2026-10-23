@@ -1,0 +1,480 @@
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gql/language.dart';
+import 'package:graphql/client.dart';
+import 'package:tsumiru/src/utils/graphql/legacy_user_fields_link.dart';
+
+Request request(String source, {Map<String, dynamic> variables = const {}}) =>
+    Request(
+      operation: Operation(document: parseString(source)),
+      variables: variables,
+    );
+
+bool isProbe(Request request) => printNode(
+  request.operation.document,
+).contains('__type(name: "ChapterType")');
+
+Response capability(bool modern) => Response(
+  data: {
+    '__type': {
+      'fields': [
+        {'name': 'id'},
+        if (modern) {'name': 'user'},
+      ],
+    },
+  },
+  response: const {},
+);
+
+Future<Response> legacy(
+  Request original,
+  Map<String, dynamic> data, {
+  void Function(Request)? inspect,
+}) => LegacyUserFieldsLink().request(original, (outgoing) async* {
+  if (isProbe(outgoing)) {
+    yield capability(false);
+  } else {
+    inspect?.call(outgoing);
+    yield Response(data: data, response: const {});
+  }
+}).first;
+
+void main() {
+  test(
+    'modern server forwards the identical request and caches the probe',
+    () async {
+      final link = LegacyUserFieldsLink();
+      final original = request('{ chapter { user { isRead } } }');
+      var probes = 0;
+      final response = Response(
+        data: const {'chapter': null},
+        response: const {},
+      );
+      Stream<Response> forward(Request outgoing) async* {
+        if (isProbe(outgoing)) {
+          probes++;
+          yield capability(true);
+        } else {
+          expect(identical(outgoing, original), isTrue);
+          expect(
+            identical(outgoing.operation.document, original.operation.document),
+            isTrue,
+          );
+          yield response;
+        }
+      }
+
+      expect(
+        identical(await link.request(original, forward).first, response),
+        isTrue,
+      );
+      await link.request(original, forward).first;
+      expect(probes, 1);
+    },
+  );
+
+  test(
+    'ChapterDto fragments hoist fields and restore lists and nulls',
+    () async {
+      final original = request('''
+      query Chapters { chapters { nodes { ...ChapterDto } } }
+      fragment ChapterDto on ChapterType {
+        __typename id
+        user { __typename chapterId isRead isBookmarked isDownloaded lastPageRead lastReadAt }
+      }
+    ''');
+      final result = await legacy(
+        original,
+        {
+          'chapters': {
+            'nodes': [
+              {
+                '__typename': 'ChapterType',
+                'id': 1,
+                'chapterId': 1,
+                'isRead': true,
+                'isBookmarked': false,
+                'isDownloaded': true,
+                'lastPageRead': 4,
+                'lastReadAt': null,
+              },
+              null,
+            ],
+          },
+        },
+        inspect: (outgoing) {
+          final source = printNode(outgoing.operation.document);
+          expect(source, isNot(contains('user {')));
+          expect(source, contains('chapterId: id'));
+          expect(source, contains('fragment ChapterDto on ChapterType'));
+        },
+      );
+      expect(result.data, {
+        'chapters': {
+          'nodes': [
+            {
+              '__typename': 'ChapterType',
+              'id': 1,
+              'user': {
+                '__typename': 'ChapterUserType',
+                'chapterId': 1,
+                'isRead': true,
+                'isBookmarked': false,
+                'isDownloaded': true,
+                'lastPageRead': 4,
+                'lastReadAt': null,
+              },
+            },
+            null,
+          ],
+        },
+      });
+    },
+  );
+
+  test(
+    'MangaDto restores nested chapter users and inline manga fields',
+    () async {
+      final result = await legacy(
+        request('''
+      query { chapter { manga { ...MangaDto user { inLibrary unreadCount } } } }
+      fragment MangaDto on MangaType {
+        id user {
+          mangaId __typename inLibraryAt bookmarkCount downloadCount
+          firstUnreadChapter { id }
+          lastReadChapter { id user { __typename isRead } }
+          latestReadChapter { id user { lastPageRead } }
+        }
+      }
+    '''),
+        {
+          'chapter': {
+            'manga': {
+              '__typename': 'MangaType',
+              'id': 2,
+              'mangaId': 2,
+              'inLibrary': true,
+              'unreadCount': 3,
+              'inLibraryAt': '123',
+              'bookmarkCount': 1,
+              'downloadCount': 2,
+              'firstUnreadChapter': null,
+              'lastReadChapter': {
+                '__typename': 'ChapterType',
+                'id': 8,
+                'isRead': true,
+              },
+              'latestReadChapter': {'id': 9, 'lastPageRead': 2},
+            },
+          },
+        },
+        inspect: (outgoing) {
+          expect(
+            printNode(outgoing.operation.document),
+            isNot(contains('user {')),
+          );
+        },
+      );
+      expect(result.data, {
+        'chapter': {
+          'manga': {
+            'id': 2,
+            'user': {
+              'mangaId': 2,
+              '__typename': 'MangaUserType',
+              'inLibraryAt': '123',
+              'bookmarkCount': 1,
+              'downloadCount': 2,
+              'firstUnreadChapter': null,
+              'lastReadChapter': {
+                'id': 8,
+                'user': {'__typename': 'ChapterUserType', 'isRead': true},
+              },
+              'latestReadChapter': {
+                'id': 9,
+                'user': {'lastPageRead': 2},
+              },
+              'inLibrary': true,
+              'unreadCount': 3,
+            },
+          },
+        },
+      });
+    },
+  );
+
+  test(
+    'aliases, child arguments and include directives survive hoisting',
+    () async {
+      final original = request(
+        r'''
+      query Test($withFirst: Boolean!) {
+        manga {
+          state: user {
+            library: inLibrary
+            first: firstUnreadChapter(offset: 1) @include(if: $withFirst) { id }
+          }
+        }
+      }
+    ''',
+        variables: {'withFirst': true},
+      );
+      final result = await legacy(
+        original,
+        {
+          'manga': {
+            'library': true,
+            'first': {'id': 7},
+          },
+        },
+        inspect: (outgoing) {
+          final source = printNode(outgoing.operation.document);
+          expect(source, contains('library: inLibrary'));
+          expect(
+            source,
+            contains(
+              r'first: firstUnreadChapter(offset: 1) @include(if: $withFirst)',
+            ),
+          );
+          expect(outgoing.variables, same(original.variables));
+          expect(outgoing.context, same(original.context));
+        },
+      );
+      expect(result.data, {
+        'manga': {
+          'state': {
+            'library': true,
+            'first': {'id': 7},
+          },
+        },
+      });
+    },
+  );
+
+  test('account user selections pass through untouched', () async {
+    final original = request(
+      '{ user { id username } manga { user { id username } } }',
+    );
+    final data = {
+      'user': {'id': 1, 'username': 'reader'},
+      'manga': null,
+    };
+    final result = await legacy(
+      original,
+      data,
+      inspect: (outgoing) {
+        expect(outgoing.operation.document, original.operation.document);
+      },
+    );
+    expect(result.data, data);
+  });
+
+  test(
+    'inline fragments and directly selected keys remain on the parent',
+    () async {
+      final result = await legacy(
+        request('''
+      { chapter { ... on ChapterType { isRead user { isRead lastPageRead } } } }
+    '''),
+        {
+          'chapter': {'isRead': true, 'lastPageRead': 5},
+        },
+      );
+      expect(result.data, {
+        'chapter': {
+          'isRead': true,
+          'user': {'isRead': true, 'lastPageRead': 5},
+        },
+      });
+    },
+  );
+
+  test(
+    'subscription events without typename are reshaped independently',
+    () async {
+      final original = request('''
+      subscription Updates { update { chapters { user { isRead } manga { user { inLibrary } } } } }
+    ''');
+      final responses = await LegacyUserFieldsLink().request(original, (
+        outgoing,
+      ) async* {
+        if (isProbe(outgoing)) {
+          yield capability(false);
+        } else {
+          for (final read in [true, false]) {
+            yield Response(
+              data: {
+                'update': {
+                  'chapters': [
+                    {
+                      'isRead': read,
+                      'manga': {'inLibrary': true},
+                    },
+                    null,
+                  ],
+                },
+              },
+              response: const {},
+            );
+          }
+        }
+      }).toList();
+      expect(responses.map((response) => response.data).toList(), [
+        for (final read in [true, false])
+          {
+            'update': {
+              'chapters': [
+                {
+                  'user': {'isRead': read},
+                  'manga': {
+                    'user': {'inLibrary': true},
+                  },
+                },
+                null,
+              ],
+            },
+          },
+      ]);
+    },
+  );
+
+  test('typename and ids infer the user type from the parent', () async {
+    final result = await legacy(
+      request('{ manga { user { __typename key: mangaId } } }'),
+      {
+        'manga': {'__typename': 'MangaType', 'key': 4},
+      },
+      inspect: (outgoing) {
+        expect(printNode(outgoing.operation.document), contains('key: id'));
+      },
+    );
+    expect(result.data, {
+      'manga': {
+        'user': {'__typename': 'MangaUserType', 'key': 4},
+      },
+    });
+  });
+
+  test(
+    'mutation errors and response metadata pass through unchanged',
+    () async {
+      final errors = [const GraphQLError(message: 'partial failure')];
+      final raw = <String, dynamic>{
+        'extensions': {'trace': 1},
+      };
+      final context = Context();
+      final result = await LegacyUserFieldsLink().request(
+        request('mutation { updateChapter { user { isRead } } }'),
+        (outgoing) async* {
+          if (isProbe(outgoing)) {
+            yield capability(false);
+          } else {
+            yield Response(
+              data: {'updateChapter': null},
+              errors: errors,
+              response: raw,
+              context: context,
+            );
+          }
+        },
+      ).first;
+      expect(result.errors, same(errors));
+      expect(result.response, same(raw));
+      expect(result.context, same(context));
+      expect(result.data, {'updateChapter': null});
+    },
+  );
+
+  for (final failure in ['network', 'graphql', 'missing fields']) {
+    test(
+      '$failure probe failure forwards unchanged and retries next time',
+      () async {
+        final link = LegacyUserFieldsLink();
+        final original = request('{ chapter { user { isRead } } }');
+        var probes = 0;
+        var requests = 0;
+        Stream<Response> forward(Request outgoing) async* {
+          if (isProbe(outgoing)) {
+            probes++;
+            if (probes > 1) {
+              yield capability(false);
+            } else if (failure == 'network') {
+              throw StateError('offline');
+            } else if (failure == 'graphql') {
+              yield Response(
+                data: capability(false).data,
+                errors: [const GraphQLError(message: 'denied')],
+                response: const {},
+              );
+            } else {
+              yield const Response(data: {'__type': null}, response: {});
+            }
+          } else {
+            requests++;
+            if (requests == 1) {
+              expect(outgoing, same(original));
+            } else {
+              expect(
+                printNode(outgoing.operation.document),
+                isNot(contains('user {')),
+              );
+            }
+            yield const Response(data: {'chapter': null}, response: {});
+          }
+        }
+
+        for (var i = 0; i < 3; i++) {
+          await link.request(original, forward).first;
+        }
+        expect(probes, 2);
+        expect(requests, 3);
+      },
+    );
+  }
+
+  test(
+    'concurrent operations share an in-flight probe and cache success',
+    () async {
+      final link = LegacyUserFieldsLink();
+      final gate = Completer<Response>();
+      final started = Completer<void>();
+      var probes = 0;
+      Stream<Response> forward(Request outgoing) async* {
+        if (isProbe(outgoing)) {
+          probes++;
+          if (!started.isCompleted) started.complete();
+          yield await gate.future;
+        } else {
+          yield const Response(data: {'chapter': null}, response: {});
+        }
+      }
+
+      final original = request('{ chapter { user { isRead } } }');
+      final first = link.request(original, forward).first;
+      final second = link.request(original, forward).first;
+      await started.future;
+      gate.complete(capability(false));
+      await Future.wait([first, second]);
+      await link.request(original, forward).first;
+      expect(probes, 1);
+    },
+  );
+
+  test('operation exceptions are not swallowed', () async {
+    final error = StateError('operation failed');
+    await expectLater(
+      LegacyUserFieldsLink().request(
+        request('{ chapter { user { isRead } } }'),
+        (outgoing) async* {
+          if (isProbe(outgoing)) {
+            yield capability(false);
+          } else {
+            throw error;
+          }
+        },
+      ).first,
+      throwsA(same(error)),
+    );
+  });
+}

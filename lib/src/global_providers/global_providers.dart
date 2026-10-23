@@ -33,6 +33,7 @@ import '../features/settings/presentation/server/widget/client/server_url_tile/s
 import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../utils/crash/diagnostics.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/graphql/legacy_user_fields_link.dart';
 import '../utils/logger/logger_link.dart';
 import '../utils/mixin/shared_preferences_client_mixin.dart';
 import '../utils/network/graphql_errors.dart';
@@ -319,7 +320,7 @@ GraphQLClient graphQlClient(Ref ref) {
   });
   link = reachabilityLink.concat(link);
 
-  final loggerLink = LoggerLink();
+  final loggerLink = LoggerLink().concat(LegacyUserFieldsLink());
   return GraphQLClient(
     link: _sessionLink(isCurrentSession).concat(loggerLink).concat(link),
     defaultPolicies: DefaultPolicies(
@@ -547,7 +548,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   // is disposed, so a re-auth doesn't leak the old connection.
   ref.onDispose(() => unawaited(wsLink.dispose().catchError((_) {})));
 
-  final loggerLink = LoggerLink();
+  final loggerLink = LoggerLink().concat(LegacyUserFieldsLink());
   final timeoutMs =
       ref.watch(serverRequestTimeoutProvider) ??
       DBKeys.serverRequestTimeout.initial as int;
