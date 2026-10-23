@@ -84,7 +84,9 @@ class SettingsWindow extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: ModalBarrier(
-                      color: Colors.black.withValues(alpha: .45),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.scrim.withValues(alpha: .45),
                     ),
                   ),
                   Center(
