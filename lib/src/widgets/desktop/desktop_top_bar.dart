@@ -151,8 +151,9 @@ double titleTopBarSlotMinWidth(int actionCount) =>
 
 /// Minimum width of a search-field toolbar: a usable search box, one 48 px
 /// slot per action and the gaps between the controls.
-double searchTopBarSlotMinWidth(int actionCount) =>
+double searchTopBarSlotMinWidth(int actionCount, [bool hasLeading = false]) =>
     kTopBarSearchMinWidth +
+    (hasLeading ? 48.0 + kDesktopTopBarGap : 0) +
     actionCount * (48.0 + kDesktopTopBarGap) +
     kDesktopTopBarGap;
 
@@ -184,10 +185,12 @@ Widget titleTopBarSlot({
 /// The toolbar row for a search page: the search box left-aligned at up to
 /// 720 px with the page's actions after it, matching the AppBar layout.
 Widget desktopSearchSlotContent({
+  Widget? leading,
   required Widget search,
   required List<Widget> actions,
 }) => Row(
   children: [
+    leading ?? const SizedBox.shrink(),
     Expanded(
       child: Align(
         alignment: Alignment.centerLeft,

@@ -105,11 +105,12 @@ class HistoryScreen extends ConsumerWidget {
         icon: const Icon(Icons.refresh),
       ),
     ];
+    final backButton = detailNavigationBackButton(context);
     final scaffold = Scaffold(
       appBar: topBar
           ? null
           : AppBar(
-              leading: detailNavigationBackButton(context),
+              leading: backButton,
               // Desktop uses the one search box: it filters the list live
               // AND opens the unified dropdown with History first. The
               // sidebar names the page.
@@ -198,8 +199,15 @@ class HistoryScreen extends ConsumerWidget {
     );
     return topBar
         ? TopBarSlot(
-            content: desktopSearchSlotContent(search: search, actions: actions),
-            minWidth: searchTopBarSlotMinWidth(actions.length),
+            content: desktopSearchSlotContent(
+              leading: backButton,
+              search: search,
+              actions: actions,
+            ),
+            minWidth: searchTopBarSlotMinWidth(
+              actions.length,
+              backButton != null,
+            ),
             child: scaffold,
           )
         : scaffold;
