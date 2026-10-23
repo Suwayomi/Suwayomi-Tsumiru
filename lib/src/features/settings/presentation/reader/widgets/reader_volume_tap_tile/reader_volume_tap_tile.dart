@@ -32,7 +32,6 @@ class ReaderVolumeTapTile extends HookConsumerWidget {
         child: const Icon(Icons.switch_left_rounded),
       ),
       title: Text(context.l10n.readerVolumeTap),
-      subtitle: Text(context.l10n.readerVolumeTapSubtitle),
       onChanged: ref.read(volumeTapProvider.notifier).update,
       value: ref.watch(volumeTapProvider).ifNull(),
     );

@@ -393,7 +393,6 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'keepScreenOn',
     title: (l) => l.readerKeepScreenOn,
-    subtitle: (l) => l.readerKeepScreenOnSubtitle,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
     open: (c) => const ReaderSettingsRoute(highlight: 'keepScreenOn').push(c),
     visible: (_, _) => !kIsWeb && (isAndroidRuntime || Platform.isIOS),
@@ -682,7 +681,6 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'volumeTap',
     title: (l) => l.readerVolumeTap,
-    subtitle: (l) => l.readerVolumeTapSubtitle,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupNavigation}',
     open: (c) => const ReaderSettingsRoute(highlight: 'volumeTap').push(c),
     visible: (_, _) => !kIsWeb && isAndroidRuntime,
