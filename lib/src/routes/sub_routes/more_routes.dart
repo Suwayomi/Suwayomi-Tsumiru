@@ -199,7 +199,22 @@ class BackupRoute extends GoRouteData with $BackupRoute {
 }
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
-  const ServerSettingsRoute({this.highlight});
+  const ServerSettingsRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const ServerScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ServerNetworkRoute extends GoRouteData with $ServerNetworkRoute {
+  const ServerNetworkRoute({this.highlight});
 
   /// Id of the setting to scroll to and pulse after navigation, matching a
   /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
@@ -207,7 +222,141 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
-  Widget get _screen => const ServerScreen();
+  Widget get _screen => const ServerNetworkScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ServerWebInterfaceRoute extends GoRouteData
+    with $ServerWebInterfaceRoute {
+  const ServerWebInterfaceRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const ServerWebInterfaceScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ServerOpdsRoute extends GoRouteData with $ServerOpdsRoute {
+  const ServerOpdsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const ServerOpdsScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ServerImagesRoute extends GoRouteData with $ServerImagesRoute {
+  const ServerImagesRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const ServerImagesScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ServerDatabaseRoute extends GoRouteData with $ServerDatabaseRoute {
+  const ServerDatabaseRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const ServerDatabaseScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ServerLogsRoute extends GoRouteData with $ServerLogsRoute {
+  const ServerLogsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const ServerLogsScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class SyncRoute extends GoRouteData with $SyncRoute {
+  const SyncRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const SyncScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class AdvancedRoute extends GoRouteData with $AdvancedRoute {
+  const AdvancedRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  Widget get _screen => const AdvancedScreen();
 
   @override
   Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
@@ -345,7 +494,8 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
-  Widget get _screen => const SyncYomiSettingsScreen();
+  // The SyncYomi page merged into the Sync page, so the old link lands here.
+  Widget get _screen => const SyncScreen();
 
   @override
   Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
@@ -365,7 +515,8 @@ class KoreaderSyncSettingsRoute extends GoRouteData
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
-  Widget get _screen => const KoreaderSyncSettingsScreen();
+  // The KOReader Sync page merged into the Sync page, so the old link lands here.
+  Widget get _screen => const SyncScreen();
 
   @override
   Widget build(context, state) => DetailNavigationShellScreen(child: _screen);

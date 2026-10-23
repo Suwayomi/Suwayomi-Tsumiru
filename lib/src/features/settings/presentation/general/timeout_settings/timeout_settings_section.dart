@@ -66,7 +66,7 @@ class TimeoutSettingsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.timeoutSettings),
+        SectionTitle(title: context.l10n.timeouts),
         // Server Request Timeout
         SettingsHighlightTarget(
           id: 'serverRequestTimeout',

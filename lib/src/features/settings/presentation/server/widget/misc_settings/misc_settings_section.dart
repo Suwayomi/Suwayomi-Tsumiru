@@ -134,11 +134,7 @@ class MiscSettingsSection extends ConsumerWidget {
           title: Text(title),
           subtitle: Text(current),
           onTap: canManage
-              ? () => editLogSize(
-                  title: title,
-                  current: current,
-                  patch: patch,
-                )
+              ? () => editLogSize(title: title, current: current, patch: patch)
               : null,
         ),
       ),
@@ -146,7 +142,7 @@ class MiscSettingsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.misc),
+        SectionTitle(title: context.l10n.logs),
         SettingsHighlightTarget(
           id: 'debugLogs',
           child: SwitchListTile(

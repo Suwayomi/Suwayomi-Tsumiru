@@ -1,0 +1,54 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/cover_cache/cover_cache.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../search/settings_search_registry.dart';
+import 'copy_crash_log_tile.dart';
+
+class AdvancedScreen extends ConsumerWidget {
+  const AdvancedScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final topBar = showsMergedTopBar(context);
+    final title = Text(context.l10n.advanced);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
+      body: SettingsHighlightScope(
+        child: ListView(
+          children: [
+            SettingsHighlightTarget(
+              id: 'clearCache',
+              child: ListTile(
+                leading: const Icon(Icons.cleaning_services_rounded),
+                title: Text(context.l10n.clearCache),
+                onTap: () async {
+                  // The GraphQL cache is in-memory (and bypassed by noCache),
+                  // so "clear cache" now means the image caches: pages and
+                  // covers.
+                  await DefaultCacheManager().emptyCache();
+                  await ref.read(coverCacheManagerProvider).emptyCache();
+                  if (context.mounted) {
+                    ref.read(toastProvider)?.show(context.l10n.cacheCleared);
+                  }
+                },
+              ),
+            ),
+            const CopyCrashLogTile(),
+          ],
+        ),
+      ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
+    );
+  }
+}

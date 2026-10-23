@@ -1,36 +1,12 @@
-// Copyright (c) 2022 Contributors to the Suwayomi project
-//
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/network/graphql_errors.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/server_unreachable_view.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
-import '../../controller/server_controller.dart';
-import '../../search/settings_search_registry.dart';
-import 'data/web_interface_repository.dart';
-import 'widget/cloud_flare/cloud_flare_section.dart';
-import 'widget/database/data/database_repository.dart';
-import 'widget/database/database_section.dart';
-import 'widget/images/data/images_repository.dart';
-import 'widget/images/images_section.dart';
-import 'widget/misc_settings/data/misc_logs_repository.dart';
-import 'widget/misc_settings/misc_settings_section.dart';
-import 'widget/opds/data/opds_repository.dart';
-import 'widget/opds/opds_section.dart';
-import 'widget/server_binding/server_binding_section.dart';
-import 'widget/socks_proxy/socks_proxy_section.dart';
-import 'widget/web_interface/web_interface_section.dart';
-import 'widget/webview/data/webview_repository.dart';
-import 'widget/webview/webview_section.dart';
 
 class ServerScreen extends ConsumerWidget {
   const ServerScreen({super.key});
@@ -40,86 +16,54 @@ class ServerScreen extends ConsumerWidget {
     final canManage = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.MANAGE_SETTINGS);
-    final serverSettings = ref.watch(settingsProvider);
-    Future<void> onRefresh() async {
-      ref.invalidate(webInterfaceSettingsProvider);
-      ref.invalidate(webInterfaceFlavorsProvider);
-      ref.invalidate(installedWebInterfaceProvider);
-      ref.invalidate(opdsSettingsProvider);
-      ref.invalidate(databaseSettingsProvider);
-      ref.invalidate(miscLogsSettingsProvider);
-      ref.invalidate(webViewSettingsProvider);
-      ref.invalidate(clearCookiesAndCacheSupportProvider);
-      ref.invalidate(imagesDownloadSettingsProvider);
-      ref.invalidate(serveConversionsProvider);
-      ref.invalidate(clearCachedImagesSupportProvider);
-      ref.invalidate(settingsProvider);
-      await ref.read(settingsProvider.future);
-    }
+    final List<Widget> rows = [
+      _HubRow(
+        icon: Icons.dns_outlined,
+        title: context.l10n.network,
+        onTap: () => const ServerNetworkRoute().push(context),
+      ),
+      if (canManage)
+        _HubRow(
+          icon: Icons.web_outlined,
+          title: context.l10n.webInterface,
+          onTap: () => const ServerWebInterfaceRoute().push(context),
+        ),
+      _HubRow(
+        icon: Icons.rss_feed_outlined,
+        title: context.l10n.opds,
+        onTap: () => const ServerOpdsRoute().push(context),
+      ),
+      _HubRow(
+        icon: Icons.image_outlined,
+        title: context.l10n.images,
+        onTap: () => const ServerImagesRoute().push(context),
+      ),
+      if (canManage)
+        _HubRow(
+          icon: Icons.storage_outlined,
+          title: context.l10n.database,
+          onTap: () => const ServerDatabaseRoute().push(context),
+        ),
+      if (canManage)
+        _HubRow(
+          icon: Icons.receipt_long_outlined,
+          title: context.l10n.logs,
+          onTap: () => const ServerLogsRoute().push(context),
+        ),
+    ];
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
-    final title = Text(context.l10n.server);
+    final title = Text(context.l10n.serverAdmin);
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
-      body: RefreshIndicator(
-        onRefresh: onRefresh,
-        child: ListTileTheme(
-          data: ListTileThemeData(
-            subtitleTextStyle: TextStyle(
-              color: context.theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          child: SettingsHighlightScope(
-            child: ListView(
-              children: [
-                if (serverSettings.isLoading && !serverSettings.hasValue)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                // On error these settings can't load (they live on the server).
-                // A connection failure gets the "can't reach server" view with a
-                // path to Connection settings, instead of a blank page.
-                if (serverSettings.hasError && !serverSettings.hasValue)
-                  Builder(
-                    builder: (context) {
-                      final error = serverSettings.error!;
-                      final unwrapped = error is OperationMessageException
-                          ? error.exception
-                          : error;
-                      if (isConnectionError(unwrapped)) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          child: ServerUnreachableView(onRetry: onRefresh),
-                        );
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(child: Text(error.toString())),
-                      );
-                    },
-                  ),
-                if (!canManage)
-                  ListTile(
-                    subtitle: Text(
-                      context.l10n.manageSettingsPermissionRequired,
-                    ),
-                  ),
-                const WebInterfaceSection(),
-                if (serverSettings.value != null) ...[
-                  ServerBindingSection(serverBindingDto: serverSettings.value!),
-                  SocksProxySection(socksProxyDto: serverSettings.value!),
-                  CloudFlareSection(cloudFlareDto: serverSettings.value!),
-                  const OpdsSection(),
-                  const DatabaseSection(),
-                  const WebViewSection(),
-                  const ImagesSection(),
-                  MiscSettingsSection(miscSettingsDto: serverSettings.value!),
-                ],
-              ],
-            ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemBuilder: (context, index) => rows[index],
+            separatorBuilder: (context, index) => const Divider(),
+            itemCount: rows.length,
           ),
         ),
       ),
@@ -129,6 +73,24 @@ class ServerScreen extends ConsumerWidget {
       leading: detailNavigationBackButton(context),
       title: title,
       child: scaffold,
+    );
+  }
+}
+
+class _HubRow extends StatelessWidget {
+  const _HubRow({required this.icon, required this.title, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: context.theme.colorScheme.onSurfaceVariant),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
     );
   }
 }

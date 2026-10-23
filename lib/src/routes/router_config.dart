@@ -43,23 +43,29 @@ import '../features/offline/presentation/offline_settings_screen.dart';
 import '../features/onboarding/data/onboarding_complete.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/quick_open/presentation/search_stack/search_stack_screen.dart';
+import '../features/settings/presentation/advanced/advanced_screen.dart';
 import '../features/settings/presentation/appearance/appearance_screen.dart';
 import '../features/settings/presentation/backup/backup_screen.dart';
 import '../features/settings/presentation/browse/browse_settings_screen.dart';
 import '../features/settings/presentation/connection/connection_screen.dart';
 import '../features/settings/presentation/downloads/downloads_settings_screen.dart';
 import '../features/settings/presentation/general/general_screen.dart';
-import '../features/settings/presentation/koreader_sync/koreader_sync_settings_screen.dart';
 import '../features/settings/presentation/library/library_settings_screen.dart';
 import '../features/settings/presentation/more/more_screen.dart';
 import '../features/settings/presentation/notifications/notifications_settings_screen.dart';
 import '../features/settings/presentation/reader/reader_settings_screen.dart';
 import '../features/settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
+import '../features/settings/presentation/server/server_database_screen.dart';
+import '../features/settings/presentation/server/server_images_screen.dart';
+import '../features/settings/presentation/server/server_logs_screen.dart';
+import '../features/settings/presentation/server/server_network_screen.dart';
+import '../features/settings/presentation/server/server_opds_screen.dart';
 import '../features/settings/presentation/server/server_screen.dart';
+import '../features/settings/presentation/server/server_web_interface_screen.dart';
 import '../features/settings/presentation/server/widget/images/image_conversions.dart';
 import '../features/settings/presentation/server/widget/images/image_processing_screen.dart';
 import '../features/settings/presentation/settings/settings_screen.dart';
-import '../features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
+import '../features/settings/presentation/sync/sync_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
@@ -118,6 +124,14 @@ abstract class Routes {
   static const generalSettings = 'general';
   static const backup = 'backup';
   static const serverSettings = 'server';
+  static const serverNetwork = 'network';
+  static const serverWebInterface = 'web-interface';
+  static const serverOpds = 'opds';
+  static const serverImages = 'images';
+  static const serverDatabase = 'database';
+  static const serverLogs = 'logs';
+  static const syncSettings = 'sync';
+  static const advancedSettings = 'advanced';
   static const imageProcessing = 'image-processing';
   static const downloadsSettings = 'downloads';
   static const offlineSettings = 'offline';
@@ -277,8 +291,24 @@ GoRouter routerConfig(Ref ref) {
                         TypedGoRoute<ImageProcessingRoute>(
                           path: Routes.imageProcessing,
                         ),
+                        TypedGoRoute<ServerNetworkRoute>(
+                          path: Routes.serverNetwork,
+                        ),
+                        TypedGoRoute<ServerWebInterfaceRoute>(
+                          path: Routes.serverWebInterface,
+                        ),
+                        TypedGoRoute<ServerOpdsRoute>(path: Routes.serverOpds),
+                        TypedGoRoute<ServerImagesRoute>(
+                          path: Routes.serverImages,
+                        ),
+                        TypedGoRoute<ServerDatabaseRoute>(
+                          path: Routes.serverDatabase,
+                        ),
+                        TypedGoRoute<ServerLogsRoute>(path: Routes.serverLogs),
                       ],
                     ),
+                    TypedGoRoute<SyncRoute>(path: Routes.syncSettings),
+                    TypedGoRoute<AdvancedRoute>(path: Routes.advancedSettings),
                     TypedGoRoute<ReaderSettingsRoute>(
                       path: Routes.readerSettings,
                     ),

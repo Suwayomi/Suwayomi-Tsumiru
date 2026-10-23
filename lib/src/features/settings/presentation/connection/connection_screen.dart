@@ -22,6 +22,7 @@ import '../../../../widgets/section_title.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../search/settings_search_registry.dart';
+import '../general/timeout_settings/timeout_settings_section.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import 'custom_headers_section.dart';
@@ -87,70 +88,71 @@ class ConnectionScreen extends HookConsumerWidget {
         child: SettingsHighlightScope(
           child: ListView(
             children: [
-            // Surfaced here (where the server is changed) and kept visible even
-            // after dismissal, so it doubles as the "clear to re-enable offline"
-            // recovery affordance for this server.
-            const OfflineServerMismatchBanner(showAfterDismissal: true),
-            SectionTitle(title: context.l10n.serverAddress),
-            const SettingsHighlightTarget(
-              id: 'serverUrl',
-              child: ServerUrlTile(),
-            ),
-            if (showLanAddress.value || lanUrl != null)
+              // Surfaced here (where the server is changed) and kept visible even
+              // after dismissal, so it doubles as the "clear to re-enable offline"
+              // recovery affordance for this server.
+              const OfflineServerMismatchBanner(showAfterDismissal: true),
+              SectionTitle(title: context.l10n.serverAddress),
               const SettingsHighlightTarget(
-                id: 'serverLanUrl',
-                child: ServerLanUrlTile(),
-              )
-            else
-              ListTile(
-                leading: const Icon(Icons.add_home_work_outlined),
-                title: Text(context.l10n.addLocalNetworkAddress),
-                onTap: () => showLanAddress.value = true,
+                id: 'serverUrl',
+                child: ServerUrlTile(),
               ),
-            if (lanUrl != null)
-              ListTile(
-                leading: const Icon(Icons.wifi_rounded),
-                title: Text(context.l10n.serverActiveUrl),
-                trailing: Chip(
-                  label: Text(
-                    usesLan
-                        ? context.l10n.serverUsingLanUrl
-                        : context.l10n.serverUsingExternalUrl,
+              if (showLanAddress.value || lanUrl != null)
+                const SettingsHighlightTarget(
+                  id: 'serverLanUrl',
+                  child: ServerLanUrlTile(),
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.add_home_work_outlined),
+                  title: Text(context.l10n.addLocalNetworkAddress),
+                  onTap: () => showLanAddress.value = true,
+                ),
+              if (lanUrl != null)
+                ListTile(
+                  leading: const Icon(Icons.wifi_rounded),
+                  title: Text(context.l10n.serverActiveUrl),
+                  trailing: Chip(
+                    label: Text(
+                      usesLan
+                          ? context.l10n.serverUsingLanUrl
+                          : context.l10n.serverUsingExternalUrl,
+                    ),
                   ),
                 ),
-              ),
-            if (cleartext)
-              ListTile(
-                leading: Icon(
-                  Icons.lock_open_rounded,
-                  color: context.theme.colorScheme.error,
+              if (cleartext)
+                ListTile(
+                  leading: Icon(
+                    Icons.lock_open_rounded,
+                    color: context.theme.colorScheme.error,
+                  ),
+                  subtitle: Text(
+                    context.l10n.cleartextAddressWarning,
+                    style: TextStyle(color: context.theme.colorScheme.error),
+                  ),
                 ),
-                subtitle: Text(
-                  context.l10n.cleartextAddressWarning,
-                  style: TextStyle(color: context.theme.colorScheme.error),
+              const InlineAuthSection(),
+              const CustomHeadersSection(),
+              if (!kIsWeb)
+                SettingsHighlightTarget(
+                  id: 'openInWeb',
+                  child: ListTile(
+                    leading: const Icon(Icons.web_rounded),
+                    title: Text(context.l10n.webUI),
+                    onTap: () {
+                      final url = Endpoints.baseApi(
+                        baseUrl: ref.read(serverUrlProvider),
+                        port: ref.read(serverPortProvider),
+                        addPort: ref.read(serverPortToggleProvider).ifNull(),
+                        appendApiToUrl: false,
+                      );
+                      if (url.isNotBlank) {
+                        launchUrlInWeb(context, url, ref.read(toastProvider));
+                      }
+                    },
+                  ),
                 ),
-              ),
-            const InlineAuthSection(),
-            const CustomHeadersSection(),
-            if (!kIsWeb)
-              SettingsHighlightTarget(
-                id: 'openInWeb',
-                child: ListTile(
-                  leading: const Icon(Icons.web_rounded),
-                  title: Text(context.l10n.webUI),
-                  onTap: () {
-                    final url = Endpoints.baseApi(
-                      baseUrl: ref.read(serverUrlProvider),
-                      port: ref.read(serverPortProvider),
-                      addPort: ref.read(serverPortToggleProvider).ifNull(),
-                      appendApiToUrl: false,
-                    );
-                    if (url.isNotBlank) {
-                      launchUrlInWeb(context, url, ref.read(toastProvider));
-                    }
-                  },
-                ),
-              ),
+              const TimeoutSettingsSection(),
             ],
           ),
         ),
