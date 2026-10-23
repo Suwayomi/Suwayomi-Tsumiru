@@ -15,6 +15,7 @@ import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/server_image.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../quick_open/presentation/unified_search/unified_search_results.dart';
@@ -104,10 +105,12 @@ class HistoryScreen extends ConsumerWidget {
         icon: const Icon(Icons.refresh),
       ),
     ];
+    final backButton = detailNavigationBackButton(context);
     final scaffold = Scaffold(
       appBar: topBar
           ? null
           : AppBar(
+              leading: backButton,
               // Desktop uses the one search box: it filters the list live
               // AND opens the unified dropdown with History first. The
               // sidebar names the page.
@@ -196,8 +199,15 @@ class HistoryScreen extends ConsumerWidget {
     );
     return topBar
         ? TopBarSlot(
-            content: desktopSearchSlotContent(search: search, actions: actions),
-            minWidth: searchTopBarSlotMinWidth(actions.length),
+            content: desktopSearchSlotContent(
+              leading: backButton,
+              search: search,
+              actions: actions,
+            ),
+            minWidth: searchTopBarSlotMinWidth(
+              actions.length,
+              backButton != null,
+            ),
             child: scaffold,
           )
         : scaffold;

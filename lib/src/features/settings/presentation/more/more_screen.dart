@@ -79,8 +79,10 @@ class MoreScreen extends ConsumerWidget {
       body: WebSelectionArea(
         child: ListView(
           children: [
-            TsumiruLogo(size: context.height * .2),
-            const Divider(),
+            if (!context.usesDesktopShell) ...[
+              TsumiruLogo(size: context.height * .2),
+              const Divider(),
+            ],
             Builder(
               builder: (context) {
                 final host = formatServerHost(
