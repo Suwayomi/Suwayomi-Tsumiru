@@ -26,6 +26,7 @@ import '../controller/server_controller.dart';
 import '../presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
 import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
+import '../presentation/downloads/data/downloads_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
@@ -993,6 +994,19 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       tab: 0,
     ).push(c),
     visible: (ref, _) => _serverReachable(ref),
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'ignoreReuploadedChapters',
+    title: (l) => l.ignoreReuploadedChapters,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'ignoreReuploadedChapters',
+      tab: 0,
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(autoDownloadIgnoreReUploadsProvider).value != null,
     tabIndex: 0,
   ),
   SettingsSearchEntry(

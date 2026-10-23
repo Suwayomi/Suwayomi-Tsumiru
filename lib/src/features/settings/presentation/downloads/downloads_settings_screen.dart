@@ -181,12 +181,7 @@ class DownloadsSettingsScreen extends StatelessWidget {
           ),
         ),
         child: Scaffold(
-          appBar: topBar
-              ? null
-              : AppBar(
-                  title: title,
-                  bottom: tabBar,
-                ),
+          appBar: topBar ? null : AppBar(title: title, bottom: tabBar),
           body: topBar
               ? Column(
                   children: [
@@ -351,6 +346,25 @@ class _ServerDownloadsTab extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (ref.watch(autoDownloadIgnoreReUploadsProvider).value != null)
+                SettingsHighlightTarget(
+                  id: 'ignoreReuploadedChapters',
+                  child: SettingsPropTile(
+                    title: context.l10n.ignoreReuploadedChapters,
+                    type: SettingsPropType.switchTile(
+                      value:
+                          ref
+                              .watch(autoDownloadIgnoreReUploadsProvider)
+                              .value ??
+                          false,
+                      onChanged:
+                          canEditPersonal &&
+                              downloadsSettingsDto.autoDownloadNewChapters
+                          ? repository.toggleAutoDownloadIgnoreReUploads
+                          : null,
+                    ),
+                  ),
+                ),
               // Greyed while auto-download is off, never unmounted.
               SettingsHighlightTarget(
                 id: 'autoDownloadCategories',

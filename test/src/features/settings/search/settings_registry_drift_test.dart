@@ -43,6 +43,7 @@ import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.
 import 'package:tsumiru/src/features/settings/presentation/browse/browse_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/connection/connection_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/downloads/data/downloads_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/downloads_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/general_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
@@ -396,6 +397,11 @@ void main() {
             // timer the test binding rejects); the rows only read its value.
             deleteChaptersSettingsControllerProvider.overrideWith(
               _FixedDeleteChapters.new,
+            ),
+            // The live ignore-reuploads read hits the network the same way,
+            // so the row only renders with the gate satisfied.
+            autoDownloadIgnoreReUploadsProvider.overrideWith(
+              (ref) async => true,
             ),
             offlineEnabledProvider.overrideWithValue(true),
             offlineUsageBytesProvider.overrideWith((ref) async => 0),

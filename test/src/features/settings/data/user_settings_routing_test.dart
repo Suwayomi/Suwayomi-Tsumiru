@@ -114,6 +114,15 @@ void main() {
       {'excludeEntryWithUnreadChapters': true},
     ]);
   });
+
+  test('reader writes ignore-reuploads only through userSettings', () async {
+    final downloads = DownloadsSettingsRepository(client, routing: routing);
+    await downloads.toggleAutoDownloadIgnoreReUploads(true);
+    expect(link.operations, ['SetAccountSettings']);
+    expect(link.patches, [
+      {'autoDownloadIgnoreReUploads': true},
+    ]);
+  });
 }
 
 Fragment$SettingsDto serverSettings() => Fragment$SettingsDto(

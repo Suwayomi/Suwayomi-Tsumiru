@@ -2052,6 +2052,7 @@
   "errorUserName": "UserName can't be empty",
   "expandSidebar": "Expand sidebar",
   "excludeEntryWithUnreadChapters": "Ignore automatic chapter downloads for entries with unread chapters",
+  "ignoreReuploadedChapters": "Ignore re-uploaded chapters",
   "extensionInstalled": "Extension Installed!",
   "extensionListEmpty": "Extension list is Empty",
   "extensionRepository": "Extension Repository",
