@@ -189,7 +189,9 @@ Widget titleTopBarSlot({
                   Expanded(
                     child: DefaultTextStyle(
                       style: Theme.of(context).textTheme.titleLarge!,
-                      child: title,
+                      child: pane.tabs != null && !pane.nested
+                          ? Text(context.l10n.server)
+                          : title,
                     ),
                   ),
                   ...actions,
@@ -200,11 +202,14 @@ Widget titleTopBarSlot({
           ),
           if (pane.tabs != null) pane.tabs!,
           Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: child,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 20),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: child,
+                ),
               ),
             ),
           ),

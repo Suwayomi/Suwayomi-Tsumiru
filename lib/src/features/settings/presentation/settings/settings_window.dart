@@ -251,14 +251,7 @@ class _SettingsWindowPageListState
             ),
           ),
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: cs.outlineVariant),
-          ),
-          child: Column(children: destinations.map(row).toList()),
-        ),
+        ...destinations.map(row),
       ],
     );
     return ColoredBox(
@@ -370,7 +363,7 @@ class _SettingsWindowPageListState
                           location: const SyncRoute().location,
                         ),
                         (
-                          icon: Icons.storage_outlined,
+                          icon: Icons.admin_panel_settings_outlined,
                           title: l.server,
                           location: const ServerSettingsRoute().location,
                         ),
