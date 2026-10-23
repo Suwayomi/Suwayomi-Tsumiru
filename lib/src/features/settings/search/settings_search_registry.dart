@@ -34,6 +34,7 @@ import '../presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dar
 import '../presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import '../presentation/server/data/web_interface_repository.dart';
 import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../presentation/server/widget/webview/data/webview_repository.dart';
 import '../presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import '../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'settings_search_entry.dart';
@@ -1340,6 +1341,26 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
         const ServerSettingsRoute(highlight: 'flareSolverrSessionTTL').push(c),
     visible: (ref, _) =>
         ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'webview',
+    title: (l) => l.webview,
+    subtitle: (l) => l.webviewDescription,
+    breadcrumb: (l) => '${l.server} › ${l.webview}',
+    open: (c) => const ServerSettingsRoute(highlight: 'webview').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(webViewSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'clearWebViewCache',
+    title: (l) => l.clearCookiesAndCache,
+    breadcrumb: (l) => '${l.server} › ${l.webview}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'clearWebViewCache').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        (ref.watch(clearCookiesAndCacheSupportProvider).value ?? false),
   ),
   SettingsSearchEntry(
     id: 'debugLogs',

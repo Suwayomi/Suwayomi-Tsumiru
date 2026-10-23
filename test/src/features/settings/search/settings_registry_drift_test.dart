@@ -60,6 +60,8 @@ import 'package:tsumiru/src/features/settings/presentation/server/data/graphql/_
 import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/data/webview_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/graphql/__generated__/webview.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
@@ -440,6 +442,12 @@ void main() {
               ],
             ),
             installedWebInterfaceProvider.overrideWith((ref) async => null),
+            webViewSettingsProvider.overrideWith(
+              (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
+            ),
+            clearCookiesAndCacheSupportProvider.overrideWith(
+              (ref) async => true,
+            ),
           ],
         ),
         const ServerScreen(),

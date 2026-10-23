@@ -22,6 +22,8 @@ import 'widget/misc_settings/misc_settings_section.dart';
 import 'widget/server_binding/server_binding_section.dart';
 import 'widget/socks_proxy/socks_proxy_section.dart';
 import 'widget/web_interface/web_interface_section.dart';
+import 'widget/webview/data/webview_repository.dart';
+import 'widget/webview/webview_section.dart';
 
 class ServerScreen extends ConsumerWidget {
   const ServerScreen({super.key});
@@ -36,6 +38,8 @@ class ServerScreen extends ConsumerWidget {
       ref.invalidate(webInterfaceSettingsProvider);
       ref.invalidate(webInterfaceFlavorsProvider);
       ref.invalidate(installedWebInterfaceProvider);
+      ref.invalidate(webViewSettingsProvider);
+      ref.invalidate(clearCookiesAndCacheSupportProvider);
       ref.invalidate(settingsProvider);
       await ref.read(settingsProvider.future);
     }
@@ -104,6 +108,7 @@ class ServerScreen extends ConsumerWidget {
                   ServerBindingSection(serverBindingDto: serverSettings.value!),
                   SocksProxySection(socksProxyDto: serverSettings.value!),
                   CloudFlareSection(cloudFlareDto: serverSettings.value!),
+                  const WebViewSection(),
                   MiscSettingsSection(miscSettingsDto: serverSettings.value!),
                 ],
               ],
