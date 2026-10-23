@@ -188,20 +188,26 @@ class MiscSettingsSection extends ConsumerWidget {
         if (logs != null) ...[
           SettingsHighlightTarget(
             id: 'logFileCleanup',
-            child: SettingsPropTile(
-              title: context.l10n.logFileCleanup,
-              subtitle: context.l10n.nDays(logs.maxLogFiles.compact()!),
-              type: SettingsPropType.numberSlider(
-                min: 0,
-                max: 1000,
-                value: logs.maxLogFiles.clamp(0, 1000),
-                onChanged: canManage
-                    ? (value) => save(
-                        () => logsRepository.write(
-                          Input$PartialSettingsTypeInput(maxLogFiles: value),
-                        ),
-                      )
-                    : null,
+            // Same merge guard as the OPDS rows: without it the engine folds
+            // this row into the neighbouring switch rows.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: SettingsPropTile(
+                title: context.l10n.logFileCleanup,
+                subtitle: context.l10n.nDays(logs.maxLogFiles.compact()!),
+                type: SettingsPropType.numberSlider(
+                  min: 0,
+                  max: 1000,
+                  value: logs.maxLogFiles.clamp(0, 1000),
+                  onChanged: canManage
+                      ? (value) => save(
+                          () => logsRepository.write(
+                            Input$PartialSettingsTypeInput(maxLogFiles: value),
+                          ),
+                        )
+                      : null,
+                ),
               ),
             ),
           ),

@@ -98,59 +98,81 @@ class DatabaseSection extends ConsumerWidget {
         ),
         SettingsHighlightTarget(
           id: 'databaseUrl',
-          child: SettingsPropTile(
-            title: context.l10n.databaseUrl,
-            subtitle: data.databaseUrl,
-            type: SettingsPropType.textField(
-              hintText: context.l10n.databaseUrlHint,
-              value: data.databaseUrl,
-              onChanged: canManage && !isH2
-                  ? (value) => save(
-                      () => repository.write(
-                        Input$PartialSettingsTypeInput(databaseUrl: value),
-                      ),
-                    )
-                  : null,
+          // Same merge guard as the OPDS rows: without it the engine folds
+          // this row into a neighbouring switch row.
+          child: Semantics(
+            container: true,
+            explicitChildNodes: true,
+            child: SettingsPropTile(
+              title: context.l10n.databaseUrl,
+              subtitle: data.databaseUrl,
+              type: SettingsPropType.textField(
+                hintText: context.l10n.databaseUrlHint,
+                value: data.databaseUrl,
+                onChanged: canManage && !isH2
+                    ? (value) => save(
+                        () => repository.write(
+                          Input$PartialSettingsTypeInput(databaseUrl: value),
+                        ),
+                      )
+                    : null,
+              ),
             ),
           ),
         ),
         SettingsHighlightTarget(
           id: 'databaseUsername',
-          child: SettingsPropTile(
-            title: context.l10n.databaseUsername,
-            subtitle: data.databaseUsername,
-            type: SettingsPropType.textField(
-              hintText: context.l10n.enterProp(
-                context.l10n.databaseUsername,
+          // Same merge guard as the OPDS rows: without it the engine folds
+          // this row into a neighbouring switch row.
+          child: Semantics(
+            container: true,
+            explicitChildNodes: true,
+            child: SettingsPropTile(
+              title: context.l10n.databaseUsername,
+              subtitle: data.databaseUsername,
+              type: SettingsPropType.textField(
+                hintText: context.l10n.enterProp(
+                  context.l10n.databaseUsername,
+                ),
+                value: data.databaseUsername,
+                onChanged: canManage && !isH2
+                    ? (value) => save(
+                        () => repository.write(
+                          Input$PartialSettingsTypeInput(
+                            databaseUsername: value,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
-              value: data.databaseUsername,
-              onChanged: canManage && !isH2
-                  ? (value) => save(
-                      () => repository.write(
-                        Input$PartialSettingsTypeInput(databaseUsername: value),
-                      ),
-                    )
-                  : null,
             ),
           ),
         ),
         SettingsHighlightTarget(
           id: 'databasePassword',
-          child: SettingsPropTile(
-            title: context.l10n.databasePassword,
-            type: SettingsPropType.textField(
-              canObscure: true,
-              hintText: context.l10n.enterProp(
-                context.l10n.databasePassword,
+          // Same merge guard as the OPDS rows: without it the engine folds
+          // this row into a neighbouring switch row.
+          child: Semantics(
+            container: true,
+            explicitChildNodes: true,
+            child: SettingsPropTile(
+              title: context.l10n.databasePassword,
+              type: SettingsPropType.textField(
+                canObscure: true,
+                hintText: context.l10n.enterProp(
+                  context.l10n.databasePassword,
+                ),
+                value: data.databasePassword,
+                onChanged: canManage && !isH2
+                    ? (value) => save(
+                        () => repository.write(
+                          Input$PartialSettingsTypeInput(
+                            databasePassword: value,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
-              value: data.databasePassword,
-              onChanged: canManage && !isH2
-                  ? (value) => save(
-                      () => repository.write(
-                        Input$PartialSettingsTypeInput(databasePassword: value),
-                      ),
-                    )
-                  : null,
             ),
           ),
         ),
