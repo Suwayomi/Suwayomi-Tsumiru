@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/language_list.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
@@ -26,10 +27,13 @@ class ExtensionScreen extends HookConsumerWidget {
     Key? key,
     required String title,
     required List<Extension>? extensions,
+    Widget? headerTrailing,
   }) {
     if (extensions.isBlank) return <Widget>[];
     return [
-      SliverToBoxAdapter(child: ListTile(title: Text(title))),
+      SliverToBoxAdapter(
+        child: ListTile(title: Text(title), trailing: headerTrailing),
+      ),
       SliverList(
         key: key,
         delegate: SliverChildBuilderDelegate(
@@ -53,6 +57,8 @@ class ExtensionScreen extends HookConsumerWidget {
     final all = extensionMap.remove("all");
 
     refresh() => ref.read(extensionActionsProvider).refreshList();
+
+    final updatingAll = useState(false);
 
     useEffect(() {
       // Effect bodies run during build; invalidating a provider there throws.
@@ -95,6 +101,23 @@ class ExtensionScreen extends HookConsumerWidget {
                       key: const ValueKey("update"),
                       title: languageMap["update"]?.displayName ?? "",
                       extensions: update,
+                      headerTrailing: TextButton(
+                        onPressed: updatingAll.value
+                            ? null
+                            : () async {
+                                updatingAll.value = true;
+                                await AppUtils.guard(
+                                  () => ref
+                                      .read(extensionActionsProvider)
+                                      .updateAll([
+                                        for (final e in update ?? []) e.pkgName,
+                                      ]),
+                                  ref.read(toastProvider),
+                                );
+                                if (context.mounted) updatingAll.value = false;
+                              },
+                        child: Text(context.l10n.updateAll),
+                      ),
                     ),
                   if (installed.isNotBlank)
                     ...extensionSet(

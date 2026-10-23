@@ -11,6 +11,17 @@ mutation UpdateExtension($id: String!, $install: Boolean = false, $uninstall: Bo
   }
 }
 
+mutation UpdateExtensions($ids: [String!]!, $update: Boolean = false) {
+  updateExtensions(
+    input: {ids: $ids, patch: {update: $update}}
+  ) {
+    clientMutationId
+    extensions {
+      ...ExtensionDto
+    }
+  }
+}
+
 mutation InstallExternalExtension($extensionFile: Upload!) {
   installExternalExtension(input: {extensionFile: $extensionFile}) {
     clientMutationId

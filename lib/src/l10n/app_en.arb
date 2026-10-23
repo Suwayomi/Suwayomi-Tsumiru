@@ -3020,6 +3020,7 @@
   "unread": "Unread",
   "readProgressBar": "Read progress bar",
   "update": "Update",
+  "updateAll": "Update all",
   "updateCompleted": "Update Completed",
   "updateFailed": "Failed to update {property}",
   "updates": "Updates",
