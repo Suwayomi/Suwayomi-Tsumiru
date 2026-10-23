@@ -786,9 +786,11 @@ class _EnumChips<T> extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               label,
-              style: context.theme.textTheme.labelLarge?.copyWith(
-                color: context.theme.colorScheme.primary,
-              ),
+              style:
+                  context.theme.listTileTheme.titleTextStyle ??
+                  context.textTheme.titleMedium?.copyWith(
+                    color: context.theme.colorScheme.onSurface,
+                  ),
             ),
           ),
         ),

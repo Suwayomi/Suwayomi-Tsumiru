@@ -171,7 +171,6 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
   final localDelete = ref.watch(localDeleteSettingsProvider);
   final backgroundCatchup = ref.watch(backgroundCatchupEnabledProvider);
   return [
-    const InactiveAccountCatalogueTiles(),
     const OfflineServerMismatchBanner(showAfterDismissal: true),
     SettingsGroupHeading(
       label: context.l10n.offlineDownloadsSection,
@@ -390,13 +389,17 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
         ),
       ],
     ),
+    const InactiveAccountCatalogueTiles(),
     const SizedBox(height: 16),
     SettingsGroupCard(
       children: [
         SettingsHighlightTarget(
           id: 'removeAllDownloads',
           child: ListTile(
-            title: Text(context.l10n.offlineRemoveAllDownloads),
+            title: Text(
+              context.l10n.offlineRemoveAllDownloads,
+              style: TextStyle(color: context.theme.colorScheme.error),
+            ),
             onTap: () async {
               final current = ref
                   .read(authCredentialsStoreProvider.notifier)
