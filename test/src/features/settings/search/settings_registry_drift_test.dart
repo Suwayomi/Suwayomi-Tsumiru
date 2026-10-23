@@ -4,17 +4,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Slice 1 drift guard: every registry entry for a page must exist as a
+// Settings drift guard: every registry entry for a page must exist as a
 // SettingsHighlightTarget on that page, and every target on the page must
 // have a registry entry. Screens are pumped with every condition satisfied
 // (keyboard runtime is inherent to the test VM; auto-refresh defaults on;
 // theme dark + custom; recommendations on; full permissions; Reader:
 // force-horizontal off, fullscreen on, flash on, split on, rotate on,
-// volume keys on, Android override; Server: reachable settings with SOCKS
-// and FlareSolverr on, web UI flavour set, authenticated; Connection: LAN
-// address set; SyncYomi configured; KOReader supported; Tracking: tracker
-// list stubbed), so a new conditional tile without an entry — or an entry
-// whose tile was removed — fails here, not silently in search.
+// volume keys on, Android override; Server hub pages: reachable settings
+// with SOCKS and FlareSolverr on, web UI flavour set, authenticated;
+// Connection: LAN address set; Sync: SyncYomi configured and KOReader
+// supported; Tracking: tracker list stubbed), so a new conditional tile
+// without an entry — or an entry whose tile was removed — fails here, not
+// silently in search.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +38,7 @@ import 'package:tsumiru/src/features/settings/controller/server_controller.dart'
 import 'package:tsumiru/src/features/settings/data/user_settings.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
+import 'package:tsumiru/src/features/settings/presentation/advanced/advanced_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/appearance_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.dart';
@@ -50,7 +52,6 @@ import 'package:tsumiru/src/features/settings/presentation/downloads/downloads_s
 import 'package:tsumiru/src/features/settings/presentation/general/general_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/koreader_sync/domain/koreader_sync_domain.dart';
-import 'package:tsumiru/src/features/settings/presentation/koreader_sync/koreader_sync_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/data/library_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/library/library_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/notifications/notifications_settings_screen.dart';
@@ -62,7 +63,12 @@ import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader
 import 'package:tsumiru/src/features/settings/presentation/server/data/graphql/__generated__/web_interface.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/data/server_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
-import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_database_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_images_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_logs_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_network_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_opds_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_web_interface_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/database/data/database_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/database/graphql/__generated__/database.graphql.dart';
@@ -74,9 +80,9 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_se
 import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/data/webview_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/graphql/__generated__/webview.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/sync/sync_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_repository.dart';
-import 'package:tsumiru/src/features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/search/settings_search_registry.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -467,86 +473,110 @@ void main() {
         testableDownloadsEntries(),
       );
 
-      await pumpAndCheck(
-        await _container(
-          extra: [
-            settingsProvider.overrideWith(_SocksFlareOnSettings.new),
-            // Authenticated + MANAGE_SETTINGS, like a logged-out legacy
-            // server: the web rows and Check for update all render.
-            settledAccountAccessProvider.overrideWithValue(
-              AccountAccess(capability: AccountCapability.unsupported),
+      // The Server hub itself is a link list with no highlight targets, so
+      // each hub page is pumped against its own entries instead.
+      Future<ProviderContainer> serverHubPageContainer({
+        required bool socksFlareOn,
+      }) async => _container(
+        extra: [
+          settingsProvider.overrideWith(
+            socksFlareOn ? _SocksFlareOnSettings.new : _FixedSettings.new,
+          ),
+          // Authenticated + MANAGE_SETTINGS, like a logged-out legacy
+          // server: the web rows and Check for update all render.
+          settledAccountAccessProvider.overrideWithValue(
+            AccountAccess(capability: AccountCapability.unsupported),
+          ),
+          webInterfaceSettingsProvider.overrideWith(
+            (ref) async => Fragment$WebInterfaceSettingsDto(
+              webUIFlavor: Enum$WebUIFlavor.WEBUI,
+              webUIChannel: Enum$WebUIChannel.STABLE,
+              webUIUpdateCheckInterval: 12,
+              initialOpenInBrowserEnabled: true,
+              webUIInterface: Enum$WebUIInterface.ELECTRON,
+              electronPath: '',
             ),
-            webInterfaceSettingsProvider.overrideWith(
-              (ref) async => Fragment$WebInterfaceSettingsDto(
-                webUIFlavor: Enum$WebUIFlavor.WEBUI,
-                webUIChannel: Enum$WebUIChannel.STABLE,
-                webUIUpdateCheckInterval: 12,
-                initialOpenInBrowserEnabled: true,
-                webUIInterface: Enum$WebUIInterface.ELECTRON,
-                electronPath: '',
-              ),
+          ),
+          webInterfaceFlavorsProvider.overrideWith(
+            (ref) async => const [Enum$WebUIFlavor.WEBUI, Enum$WebUIFlavor.VUI],
+          ),
+          installedWebInterfaceProvider.overrideWith((ref) async => null),
+          // The gated rows only render with their gates satisfied, like
+          // every other conditional row in this fixture.
+          flareSolverrFallbackProvider.overrideWith((ref) async => true),
+          opdsSettingsProvider.overrideWith((ref) async => _opdsSettings()),
+          databaseSettingsProvider.overrideWith(
+            (ref) async => Fragment$DatabaseSettingsDto(
+              databaseType: Enum$DatabaseType.POSTGRESQL,
+              databaseUrl: 'postgresql://localhost:5432/suwayomi',
+              databaseUsername: 'suwayomi',
+              databasePassword: 'secret',
+              useHikariConnectionPool: true,
             ),
-            webInterfaceFlavorsProvider.overrideWith(
-              (ref) async => const [
-                Enum$WebUIFlavor.WEBUI,
-                Enum$WebUIFlavor.VUI,
-              ],
+          ),
+          miscLogsSettingsProvider.overrideWith(
+            (ref) async => Fragment$MiscLogsSettingsDto(
+              maxLogFiles: 7,
+              maxLogFileSize: '1MB',
+              maxLogFolderSize: '10MB',
             ),
-            installedWebInterfaceProvider.overrideWith((ref) async => null),
-            // The gated rows only render with their gates satisfied, like
-            // every other conditional row in this fixture.
-            flareSolverrFallbackProvider.overrideWith((ref) async => true),
-            opdsSettingsProvider.overrideWith(
-              (ref) async => _opdsSettings(),
-            ),
-            databaseSettingsProvider.overrideWith(
-              (ref) async => Fragment$DatabaseSettingsDto(
-                databaseType: Enum$DatabaseType.POSTGRESQL,
-                databaseUrl: 'postgresql://localhost:5432/suwayomi',
-                databaseUsername: 'suwayomi',
-                databasePassword: 'secret',
-                useHikariConnectionPool: true,
-              ),
-            ),
-            miscLogsSettingsProvider.overrideWith(
-              (ref) async => Fragment$MiscLogsSettingsDto(
-                maxLogFiles: 7,
-                maxLogFileSize: '1MB',
-                maxLogFolderSize: '10MB',
-              ),
-            ),
-            webViewSettingsProvider.overrideWith(
-              (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
-            ),
-            clearCookiesAndCacheSupportProvider.overrideWith(
-              (ref) async => true,
-            ),
-            imagesDownloadSettingsProvider.overrideWith(
-              (ref) async => Fragment$ImagesDownloadSettingsDto(
-                downloadConversions: [
-                  Fragment$ImagesDownloadSettingsDto$downloadConversions(
-                    mimeType: 'image/jpeg',
-                    target: 'image/webp',
-                    compressionLevel: 0.8,
-                  ),
-                ],
-              ),
-            ),
-            serveConversionsProvider.overrideWith(
-              (ref) async => [
-                ServerConversion(
-                  mimeType: 'image/png',
-                  target: 'https://converter.example/process',
+          ),
+          webViewSettingsProvider.overrideWith(
+            (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),
+          ),
+          clearCookiesAndCacheSupportProvider.overrideWith((ref) async => true),
+          imagesDownloadSettingsProvider.overrideWith(
+            (ref) async => Fragment$ImagesDownloadSettingsDto(
+              downloadConversions: [
+                Fragment$ImagesDownloadSettingsDto$downloadConversions(
+                  mimeType: 'image/jpeg',
+                  target: 'image/webp',
+                  compressionLevel: 0.8,
                 ),
               ],
             ),
-            clearCachedImagesSupportProvider.overrideWith(
-              (ref) async => true,
-            ),
-          ],
-        ),
-        const ServerScreen(),
-        serverSettingsSearchEntries,
+          ),
+          serveConversionsProvider.overrideWith(
+            (ref) async => [
+              ServerConversion(
+                mimeType: 'image/png',
+                target: 'https://converter.example/process',
+              ),
+            ],
+          ),
+          clearCachedImagesSupportProvider.overrideWith((ref) async => true),
+        ],
+      );
+
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: true),
+        const ServerNetworkScreen(),
+        serverNetworkSettingsSearchEntries,
+      );
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: false),
+        const ServerWebInterfaceScreen(),
+        serverWebInterfaceSettingsSearchEntries,
+      );
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: false),
+        const ServerOpdsScreen(),
+        serverOpdsSettingsSearchEntries,
+      );
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: false),
+        const ServerImagesScreen(),
+        serverImagesSettingsSearchEntries,
+      );
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: false),
+        const ServerDatabaseScreen(),
+        serverDatabaseSettingsSearchEntries,
+      );
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: false),
+        const ServerLogsScreen(),
+        serverLogsSettingsSearchEntries,
       );
 
       SharedPreferences.setMockInitialValues({
@@ -583,15 +613,6 @@ void main() {
               ),
             ),
             lastSyncStatusProvider.overrideWith((ref) async => null),
-          ],
-        ),
-        const SyncYomiSettingsScreen(),
-        syncYomiSettingsSearchEntries,
-      );
-
-      await pumpAndCheck(
-        await _container(
-          extra: [
             koreaderSyncSettingsProvider.overrideWith(
               (ref) async => (
                 strategyForward: Enum$KoreaderSyncConflictStrategy.PROMPT,
@@ -605,8 +626,14 @@ void main() {
             ),
           ],
         ),
-        const KoreaderSyncSettingsScreen(),
-        koreaderSyncSettingsSearchEntries,
+        const SyncScreen(),
+        syncSettingsSearchEntries,
+      );
+
+      await pumpAndCheck(
+        await _container(),
+        const AdvancedScreen(),
+        advancedSettingsSearchEntries,
       );
 
       await pumpAndCheck(
