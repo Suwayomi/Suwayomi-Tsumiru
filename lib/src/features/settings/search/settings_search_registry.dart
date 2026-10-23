@@ -95,7 +95,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'lockToPortrait',
     title: (l) => l.lockToPortrait,
-    subtitle: (l) => l.lockToPortraitSubtitle,
     breadcrumb: (l) => l.general,
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'lockToPortrait').push(c),
@@ -104,7 +103,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'serverRequestTimeout',
     title: (l) => l.serverRequestTimeout,
-    subtitle: (l) => l.serverRequestTimeoutDescription,
     breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'serverRequestTimeout').push(c),
@@ -122,7 +120,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'autoRefreshRetryDelay',
     title: (l) => l.autoRefreshRetryDelay,
-    subtitle: (l) => l.autoRefreshRetryDelayDescription,
     breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'autoRefreshRetryDelay').push(c),
@@ -262,7 +259,6 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'duplicatedEntries',
     title: (l) => l.duplicatedEntries,
-    subtitle: (l) => l.duplicatedEntriesSubtitle,
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'duplicatedEntries').push(c),
@@ -397,7 +393,6 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'keepScreenOn',
     title: (l) => l.readerKeepScreenOn,
-    subtitle: (l) => l.readerKeepScreenOnSubtitle,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
     open: (c) => const ReaderSettingsRoute(highlight: 'keepScreenOn').push(c),
     visible: (_, _) => !kIsWeb && (isAndroidRuntime || Platform.isIOS),
@@ -686,7 +681,6 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'volumeTap',
     title: (l) => l.readerVolumeTap,
-    subtitle: (l) => l.readerVolumeTapSubtitle,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupNavigation}',
     open: (c) => const ReaderSettingsRoute(highlight: 'volumeTap').push(c),
     visible: (_, _) => !kIsWeb && isAndroidRuntime,
@@ -859,7 +853,6 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'createBackup',
     title: (l) => l.createBackupTitle,
-    subtitle: (l) => l.createBackupDescription,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'createBackup').push(c),
     visible: (_, _) => true,
@@ -867,7 +860,6 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'restoreBackup',
     title: (l) => l.restoreBackupTitle,
-    subtitle: (l) => l.restoreBackupDescription,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'restoreBackup').push(c),
     visible: (_, _) => true,
@@ -1372,7 +1364,6 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'flareSolverr',
     title: (l) => l.flareSolverr,
-    subtitle: (l) => l.openFlareSolverr,
     breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
     open: (c) => const ServerSettingsRoute(highlight: 'flareSolverr').push(c),
     visible: (ref, _) => _serverReachable(ref),

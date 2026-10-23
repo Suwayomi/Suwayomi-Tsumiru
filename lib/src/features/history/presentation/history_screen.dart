@@ -274,14 +274,6 @@ class HistoryEmptyState extends StatelessWidget {
               style: context.theme.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.startReadingToSeeHistory,
-              style: context.theme.textTheme.bodyMedium?.copyWith(
-                color: context.theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
           ],
         ),
       ),

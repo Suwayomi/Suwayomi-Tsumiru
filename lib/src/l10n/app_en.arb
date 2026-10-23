@@ -817,9 +817,6 @@
   "@obsolete": {
     "description": "Text to show that the extension has become Obsolete"
   },
-  "@openFlareSolverr": {
-    "description": "Text for link to Open Flare Solverr setup documentation"
-  },
   "@openInWeb": {
     "description": "Button title text for open the url in web"
   },
@@ -1301,44 +1298,43 @@
     "description": "Zoom start position chip"
   },
   "about": "About",
-  "addCategory": "Add Category",
-  "addToLibrary": "Add to Library",
+  "addCategory": "Add category",
+  "addToLibrary": "Add to library",
   "advanced": "Advanced",
-  "allScanlators": "All Scanlators",
   "animatePageTransitions": "Animate page transitions",
-  "appLanguage": "App Language",
-  "appTheme": "App Theme Mode",
+  "appLanguage": "App language",
+  "appTheme": "Theme mode",
   "appTitle": "Tsumiru",
   "appearance": "Appearance",
-  "authType": "Authentication Type",
+  "authType": "Authentication type",
   "authTypeBasic": "Basic Auth",
   "authTypeSimpleLogin": "Simple Login",
   "authTypeUiLogin": "UI Login (recommended)",
-  "authReverseProxyHelp": "If you use a reverse proxy in front of Suwayomi (Pangolin, Authelia, Authentik, Cloudflare Access, etc.), configure the proxy to pass requests through and let Suwayomi handle authentication here. For public hostnames, turn OFF the 'Use Server Port' toggle on the Server screen so requests go to standard 443.",
+  "authReverseProxyHelp": "Configure your reverse proxy to pass requests through and let Suwayomi handle authentication.",
   "authTestConnection": "Test connection",
   "authTestConnectionSuccess": "Connected.",
   "authTestConnectionFailedNetwork": "Couldn't reach server. Check URL and connectivity.",
   "authTestConnectionFailedAuth": "Login failed. Check username and password.",
   "authTestConnectionFailedMode": "Server may not be in the selected auth mode. Check the server's authMode setting.",
   "authBrowserSessionUnverified": "The server did not confirm your browser session. Check the authentication mode and connection. For Simple Login, serve Tsumiru from the same site as your server.",
-  "authTestConnectionFailedShape": "Server didn't respond as expected. Is your URL pointing at the Suwayomi API?",
-  "authTestConnectionFailedTls": "TLS handshake failed. Common causes: 1) Server is plain HTTP — switch your URL to http://. 2) Public hostname behind a reverse proxy — turn OFF the 'Use Server Port' toggle on the Server screen so requests go to standard 443.",
-  "authSessionExpired": "Session expired — sign in again.",
+  "authTestConnectionFailedShape": "Server didn't respond as expected. Check that the URL points to Suwayomi.",
+  "authTestConnectionFailedTls": "TLS handshake failed. Check whether your server uses http:// or https://.",
+  "authSessionExpired": "Session expired. Sign in again.",
   "authCredentialsNotSaved": "Signed in. This device couldn't save your sign-in, so you'll need to sign in again next launch.",
   "authReauthenticate": "Re-authenticate",
   "authInsecureTransportTitle": "Insecure connection",
-  "authInsecureTransportWarning": "Your server URL uses http:// — your username and password will be sent in cleartext over the network. Use https:// unless you trust the network entirely.",
+  "authInsecureTransportWarning": "Your username and password will be sent unencrypted over HTTP. Use HTTPS unless you trust the network entirely.",
   "authInsecureTransportContinue": "I understand, continue",
   "authLogout": "Log out",
   "authLogoutConfirm": "Log out and clear stored credentials? You'll need to sign in again to use this server.",
-  "authImageUrlLogWarning": "Note: with UI Login, image URLs include your access token as a query parameter, which can appear in your server's access logs.",
+  "authImageUrlLogWarning": "With UI Login, image URLs include your access token, which may appear in server access logs.",
   "authTypeNone": "None",
   "authentication": "Authentication",
   "autoDownload": "Auto-download",
   "autoDownloadNewChapters": "Download new chapters",
   "autoDownloadCategories": "Categories",
   "autoDownloadCategoriesAll": "All categories",
-  "autoDownloadCategoriesHint": "Auto-download new chapters only for included categories (exclude always wins). Tap to cycle: ✓ include · – exclude · empty default.",
+  "autoDownloadCategoriesHint": "Excluded categories take priority. Tap to cycle: ✓ include · – exclude · empty default.",
   "autoDownloadCategoriesIncluded": "Included: {names}",
   "@autoDownloadCategoriesIncluded": {
     "placeholders": {
@@ -1357,7 +1353,7 @@
   },
   "updateCategories": "Categories to update",
   "updateCategoriesAll": "All categories",
-  "updateCategoriesHint": "Only included categories are checked during a global library update (exclude always wins). Tap to cycle: ✓ include · – exclude · empty default.",
+  "updateCategoriesHint": "Excluded categories take priority. Tap to cycle: ✓ include · – exclude · empty default.",
   "updateCategoriesIncluded": "Included: {names}",
   "@updateCategoriesIncluded": {
     "placeholders": {
@@ -1378,8 +1374,8 @@
   "@autoWebtoonSnack": {
     "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
   },
-  "automaticBackup": "Automatic Backup",
-  "automaticUpdate": "Automatic Update",
+  "automaticBackup": "Automated backup",
+  "automaticUpdate": "Automatic updates",
   "centerMarginDoubleAndWide": "Double and wide",
   "centerMarginDoublePages": "Double pages",
   "centerMarginNone": "None",
@@ -1397,7 +1393,6 @@
   "invertDoublePages": "Invert double pages",
   "invertSplitPagesPlacement": "Invert split pages placement",
   "invertWidePageRotation": "Invert rotation of wide pages",
-  "landscapeZoom": "Automatically zoom into wide images",
   "navigateToPan": "Pan wide images",
   "pageLayout": "Page layout",
   "pageLayoutAutomatic": "Automatic",
@@ -1421,7 +1416,7 @@
   "splitWidePages": "Split wide pages",
   "alwaysShowChapterTransition": "Always show chapter transition",
   "autoWebtoonMode": "Auto reading mode",
-  "autoWebtoonModeSubtitle": "Open manhwa, manhua, and webtoons in webtoon scroll mode. Everything else keeps your default reading mode.",
+  "autoWebtoonModeSubtitle": "Open manhwa, manhua, and webtoons in webtoon scroll mode.",
   "backgroundColorAuto": "Auto",
   "backgroundColorBlack": "Black",
   "backgroundColorGray": "Gray",
@@ -1458,17 +1453,17 @@
   "showPageNumber": "Show page number",
   "showVerticalSeekbarInLandscape": "Show vertical seekbar in landscape",
   "refreshChaptersFromSource": "Refresh chapters from source",
-  "refreshChaptersFromSourceSubtitle": "When off, opening an entry shows the chapters already on the server. When on, also check the source for new chapters.",
+  "refreshChaptersFromSourceSubtitle": "Check the source for new chapters when opening an entry.",
   "automaticallyRefreshMetadata": "Automatically refresh metadata",
   "automaticallyRefreshMetadataSubtitle": "Check for new cover and details when updating library",
-  "backup": "Backup & Restore",
-  "backupAndRestore": "Backup and Restore",
-  "backupCleanup": "Backup Cleanup",
-  "backupCleanupDescription": "{count, select, 0{Never} 01{Delete Backups that are older 1 day} other{Delete Backups that are older {count} days}}",
-  "backupInterval": "Backup Interval",
-  "backupLocation": "Backup Location",
+  "backup": "Backup and restore",
+  "backupAndRestore": "Backup and restore",
+  "backupCleanup": "Backup cleanup",
+  "backupCleanupDescription": "{count, select, 0{Never} 01{Delete backups that are older than 1 day} other{Delete backups that are older than {count} days}}",
+  "backupInterval": "Backup interval",
+  "backupLocation": "Backup location",
   "backupLocationDescription": "Folder on the server where automatic backups are saved.",
-  "backupTime": "Backup Time",
+  "backupTime": "Backup time",
   "backupData": "Backup data",
   "@backupData": {
     "description": "Title for the automatic backup contents row"
@@ -1545,19 +1540,15 @@
       }
     }
   },
-  "tabs": "Tabs",
-  "@tabs": {
-    "description": "Library Display sheet section heading for tab-related toggles"
-  },
   "continueReadingButton": "Continue reading button",
   "languageBadge": "Language",
   "sourceBadge": "Source icon",
   "browse": "Browse",
   "buildTime": "Build time",
-  "cacheCleared": "Cache Cleared",
+  "cacheCleared": "Cleared the cache",
   "cancel": "Cancel",
   "categories": "Categories",
-  "categoryUpdate": "Category Update",
+  "categoryUpdate": "Category update",
   "channel": "Channel",
   "chapterDownloadLimit": "Chapter download limit",
   "chapterDownloadLimitDesc": "Limit the amount of new chapters that are going to get downloaded.",
@@ -1565,29 +1556,28 @@
   "chapterDisplaySourceTitle": "Source title",
   "chapterNumber": "Chapter {number}",
   "chapterSortAlphabetical": "Alphabetically",
-  "chapterSortChapterNumber": "By Chapter Number",
-  "chapterSortFetchedDate": "By Fetched Date",
-  "chapterSortSource": "By Source",
-  "chapterSortUploadDate": "By Upload Date",
-  "checkForServerUpdates": "Check for Server updates",
+  "chapterSortChapterNumber": "By chapter number",
+  "chapterSortFetchedDate": "By fetched date",
+  "chapterSortSource": "By source",
+  "chapterSortUploadDate": "By upload date",
+  "checkForServerUpdates": "Check for server updates",
   "checkForUpdates": "Check for updates",
-  "clearCache": "Clear Cache",
+  "clearCache": "Clear cache",
   "clearCookiesAndCache": "Clear cookies and cache",
   "clearedWebViewCookiesAndCache": "Cleared WebView cookies and cache",
   "couldNotClearWebViewCookiesAndCache": "Could not clear WebView cookies and cache",
   "client": "Client",
   "clientVersion": "Client version",
   "close": "Close",
-  "cloudflareBypass": "Cloudflare Bypass",
+  "cloudflareBypass": "Cloudflare bypass",
   "collapseSidebar": "Collapse sidebar",
   "connection": "Connection",
   "connectionAuthNone": "No auth",
   "connectionAuthSignedIn": "Signed in",
   "connectionAuthSignInNeeded": "Sign-in needed",
-  "copied": "Copied!",
-  "copyMsg": "'{msg}' Copied!",
-  "createBackupDescription": "Backup library as a Tachidesk backup",
-  "createBackupTitle": "Create Backup",
+  "copied": "Copied to clipboard",
+  "copyMsg": "Copied to clipboard:\n{msg}",
+  "createBackupTitle": "Create backup",
   "credentials": "Credentials",
   "back": "Back",
   "next": "Next",
@@ -1597,16 +1587,10 @@
   "onboardingWelcomeSubtitle": "A reader for your Suwayomi library.",
   "onboardingChooseTheme": "Choose your theme",
   "onboardingServerTitle": "Connect your server",
-  "onboardingServerSubtitle": "Tsumiru reads from your Suwayomi server.",
   "onboardingServerPortHint": "Suwayomi runs on port 4567 by default.",
   "onboardingServerStepLabel": "STEP 2 OF 3",
-  "onboardingServerOnNetwork": "On this network",
-  "onboardingServerRemote": "Remote",
-  "onboardingServerNone": "No server yet",
-  "onboardingNoServerHelp": "No problem — you can set up a Suwayomi server and connect it later in Settings.",
   "onboardingNoServerLink": "How to set up a server",
   "onboardingTestConnection": "Test connection",
-  "onboardingFindServer": "Find server",
   "onboardingResolvedAddress": "Found your server at {url}",
   "@onboardingResolvedAddress": {
     "placeholders": {
@@ -1623,8 +1607,6 @@
       }
     }
   },
-  "onboardingResolvedNoAuth": "This server is ready — no sign-in needed.",
-  "onboardingResolvedNeedsAuth": "This server needs a sign-in. Add your username and password below.",
   "onboardingSearchNetwork": "Search my network",
   "onboardingCheckingConnection": "Checking connection…",
   "onboardingSigningIn": "Signing in…",
@@ -1637,19 +1619,10 @@
   "onboardingCredsRejected": "Those credentials didn't work. Double-check your username, password, and sign-in method.",
   "onboardingNotReachedHttpsHint": "If it's behind a reverse proxy, try its https address instead.",
   "onboardingAuthMode": "Sign-in method",
-  "onboardingAuthModeAuto": "Username & password (auto)",
   "onboardingAuthModeBasic": "Basic auth",
   "onboardingAuthModeSimple": "Simple login",
   "onboardingAuthModeUi": "UI login",
-  "onboardingResolvedBasicGated": "Something answered at {url} but it's behind a sign-in we can't read past. Pick 'Username & password' and enter your credentials.",
-  "@onboardingResolvedBasicGated": {
-    "placeholders": {
-      "url": {
-        "type": "String"
-      }
-    }
-  },
-  "onboardingResolvedUnconfirmed": "Reached {url}, but it didn't respond as a Suwayomi server — often that's a router or another app, not your server. Double-check the address and port, or use it anyway.",
+  "onboardingResolvedUnconfirmed": "Reached {url}, but it didn't respond as a Suwayomi server. Check the address and port.",
   "@onboardingResolvedUnconfirmed": {
     "placeholders": {
       "url": {
@@ -1670,8 +1643,7 @@
   "@webUiLoginOnlyHint": {
     "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
   },
-  "onboardingUseAddressAnyway": "Use this address anyway",
-  "onboardingConnected": "Connected — Suwayomi v{version}",
+  "onboardingConnected": "Connected to Suwayomi v{version}",
   "@onboardingConnected": {
     "placeholders": {
       "version": {
@@ -1679,10 +1651,8 @@
       }
     }
   },
-  "onboardingConnectFailed": "Couldn't reach that server. Check the address (and login, if it needs one).",
   "onboardingDoneTitle": "You're all set",
   "onboardingDoneSubtitle": "Browse sources to start adding manga to your library.",
-  "current": "Current",
   "daysAgo": "{days, plural, =1{1 day ago} other{{days} days ago}}",
   "justNow": "Just now",
   "minutesAgo": "{minutes, plural, =1{1 minute ago} other{{minutes} minutes ago}}",
@@ -1711,19 +1681,18 @@
   "ok": "OK",
   "delete": "Delete",
   "deleteChaptersConfirm": "Are you sure you want to delete the selected chapters?",
-  "deleteCategoryDescription": "This will merge all Mangas in this Category to Default!",
-  "deleteCategoryTitle": "Are you sure?",
-  "deleteChapters": "Delete chapters",
+  "deleteCategoryDescription": "Move all manga in this category to Default.",
+  "deleteCategoryTitle": "Delete category",
   "deleteFromServer": "Delete from server…",
   "deleteOnDeviceDownloads": "Delete on-device downloads",
-  "deleteOnDeviceDownloadsDescription": "Removes a chapter's copy from this device as you read it. Your server keeps its copy — this only frees space on your phone.",
+  "deleteOnDeviceDownloadsDescription": "Your server keeps its copy.",
   "deleteServerDownloads": "Delete server downloads",
-  "deleteServerDownloadsDescription": "Removes a chapter's copy from your server as you read it (and from this device too). These settings are shared with the web interface.",
+  "deleteServerDownloadsDescription": "Also removes the copy on this device. Settings are shared with the web interface.",
   "deleteChapterAfterManuallyMarkedRead": "Delete chapter after manually marking it as read",
   "deleteFinishedChaptersWhileReading": "Delete finished chapters while reading",
   "allowDeletingBookmarkedChapters": "Allow deleting bookmarked chapters",
   "downloadProtectionWindowTitle": "Keep recently-read chapters downloaded",
-  "downloadProtectionWindowDescription": "Re-download the keep-window chapters if they are missing from the device (requires delete-while-reading to be enabled).",
+  "downloadProtectionWindowDescription": "Re-download recently read chapters missing from this device.",
   "deleteWhileReadingDisabled": "Disabled",
   "deleteWhileReadingLastRead": "Last read chapter",
   "deleteWhileReadingSecondToLast": "Second to last read chapter",
@@ -1732,14 +1701,14 @@
   "deleteWhileReadingFifthToLast": "Fifth to last read chapter",
   "discord": "Discord",
   "display": "Display",
-  "displayMode": "Display Mode",
+  "displayMode": "Display mode",
   "displayModeComfortableGrid": "Comfortable grid",
   "displayModeCompactGrid": "Compact grid",
   "@displayModeCompactGrid": {
     "description": "Library-only label for display mode Grid, whose title sits on the cover"
   },
   "displayModeCoverOnly": "Cover-only grid",
-  "displayModeDescriptiveList": "Descriptive List",
+  "displayModeDescriptiveList": "Descriptive list",
   "displayModeGrid": "Grid",
   "displayModeList": "List",
   "gridStyle": "Grid style",
@@ -1774,7 +1743,7 @@
   "@filterStateExcluded": {
     "description": "Generic tri-state filter chip to hide entries that match"
   },
-  "filterHeaderDownloadStatus": "Download Status",
+  "filterHeaderDownloadStatus": "Download status",
   "@filterHeaderDownloadStatus": {
     "description": "Section label for the downloaded filter chip row"
   },
@@ -1782,7 +1751,7 @@
   "@filterOptionDownloaded": {
     "description": "Download-status filter chip: only downloaded entries"
   },
-  "filterOptionNotDownloaded": "Not Downloaded",
+  "filterOptionNotDownloaded": "Not downloaded",
   "@filterOptionNotDownloaded": {
     "description": "Download-status filter chip: only entries with nothing downloaded"
   },
@@ -1790,7 +1759,7 @@
   "@filterHeaderStorage": {
     "description": "Section label for the on-device filter chip row"
   },
-  "filterOptionOnDevice": "On Device",
+  "filterOptionOnDevice": "On device",
   "@filterOptionOnDevice": {
     "description": "Storage filter chip: only entries kept on this device"
   },
@@ -1798,7 +1767,7 @@
   "@filterOptionRemote": {
     "description": "Storage filter chip: only entries with nothing kept on this device"
   },
-  "filterHeaderReadStatus": "Read Status",
+  "filterHeaderReadStatus": "Read status",
   "@filterHeaderReadStatus": {
     "description": "Section label for the unread filter chip row"
   },
@@ -1818,7 +1787,7 @@
   "@filterOptionStarted": {
     "description": "Progress filter chip: only entries with at least one chapter read"
   },
-  "filterOptionNotStarted": "Not Started",
+  "filterOptionNotStarted": "Not started",
   "@filterOptionNotStarted": {
     "description": "Progress filter chip: only entries with no chapters read yet"
   },
@@ -1830,7 +1799,7 @@
   "@filterOptionBookmarked": {
     "description": "Bookmarks filter chip: only entries with a bookmarked chapter"
   },
-  "filterOptionNotBookmarked": "Not Bookmarked",
+  "filterOptionNotBookmarked": "Not bookmarked",
   "@filterOptionNotBookmarked": {
     "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
   },
@@ -1857,30 +1826,6 @@
   "filterOptionNotInLibrary": "Not in library",
   "@filterOptionNotInLibrary": {
     "description": "Library filter chip: only entries not saved to the library"
-  },
-  "filterHeaderPublicationStatus": "Publication Status",
-  "@filterHeaderPublicationStatus": {
-    "description": "Section label for the completed filter chip row"
-  },
-  "filterOptionCompleted": "Completed",
-  "@filterOptionCompleted": {
-    "description": "Publication-status filter chip: only entries the source marked completed"
-  },
-  "filterOptionNotCompleted": "Not Completed",
-  "@filterOptionNotCompleted": {
-    "description": "Publication-status filter chip: only entries not marked completed"
-  },
-  "filterHeaderContentRating": "Content Rating",
-  "@filterHeaderContentRating": {
-    "description": "Section label for the lewd filter chip row"
-  },
-  "filterOptionLewd": "Lewd",
-  "@filterOptionLewd": {
-    "description": "Content-rating filter chip: only entries the source marked NSFW"
-  },
-  "filterOptionNotLewd": "Not Lewd",
-  "@filterOptionNotLewd": {
-    "description": "Content-rating filter chip: only entries not marked NSFW"
   },
   "filterShortDownloaded": "Downloaded",
   "@filterShortDownloaded": {
@@ -2041,7 +1986,7 @@
     "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters."
   },
   "edit": "Edit",
-  "editCategory": "Edit Category",
+  "editCategory": "Edit category",
   "hideCategory": "Hide category",
   "showCategory": "Show category",
   "showUpdateProgressBanner": "Show update progress banner",
@@ -2055,45 +2000,40 @@
   },
   "incognitoMode": "Incognito mode",
   "incognitoModeDescription": "Pauses reading history",
-  "emptyCategory": "Category name can't be Empty",
-  "enableSocksProxy": "Use SOCKS Proxy",
+  "emptyCategory": "Category name can't be empty",
+  "enableSocksProxy": "Use SOCKS proxy",
   "enterProp": "Enter {prop}",
   "error": "Error",
-  "errorBackupCreate": "Failed to create Backup",
-  "errorBackupRestore": "Failed to restore backup!",
+  "errorBackupCreate": "Could not create backup",
+  "errorBackupRestore": "Could not restore backup",
   "errorExtension": "Can't find the selected extension",
-  "errorFilePick": "File not selected!",
-  "errorFilePickUnknownExtension": "Please select a file with {extensionName} extension",
-  "errorLaunchURL": "Failed to open!\nCopying \"{url}\" to clipboard",
+  "errorFilePick": "File not selected",
+  "errorFilePickUnknownExtension": "Select a file with the {extensionName} extension",
+  "errorLaunchURL": "Couldn't open \"{url}\". Copied to clipboard.",
   "errorPassword": "Password can't be empty",
-  "errorSomethingWentWrong": "Something went wrong!",
-  "errorUserName": "UserName can't be empty",
+  "errorSomethingWentWrong": "Something went wrong",
+  "errorUserName": "Username can't be empty",
   "expandSidebar": "Expand sidebar",
   "excludeEntryWithUnreadChapters": "Ignore automatic chapter downloads for entries with unread chapters",
   "ignoreReuploadedChapters": "Ignore re-uploaded chapters",
-  "extensionInstalled": "Extension Installed!",
-  "extensionListEmpty": "Extension list is Empty",
-  "extensionRepository": "Extension Repository",
-  "extensionRepositoryDescription": "Add repositories from which extensions can be installed",
+  "extensionInstalled": "Extension installed",
+  "extensionListEmpty": "No extensions found",
   "extensions": "Extensions",
   "filter": "Filter",
   "findServer": "Find",
   "finished": "Finished",
   "flareSolverr": "FlareSolverr",
-  "flareSolverrRequestTimeout": "FlareSolverr Request Timeout",
-  "flareSolverrServerUrl": "FlareSolverr Server Url",
+  "flareSolverrRequestTimeout": "FlareSolverr request timeout",
+  "flareSolverrServerUrl": "FlareSolverr server URL",
   "flareSolverrSessionName": "FlareSolverr session name",
   "flareSolverrSessionTTL": "FlareSolverr session TTL",
   "responseFallback": "Response fallback",
   "responseFallbackDescription": "Use the FlareSolverr response in case the server runs into a Cloudflare challenge while FlareSolverr does not and is therefore unable to solve the challenge (does not work for images)",
   "general": "General",
   "gitHub": "GitHub",
-  "globalSearch": "Global Search",
-  "globalUpdate": "Global Update",
-  "gqlDebugLogs": "Graphql debug logs",
-  "gqlDebugLogsHint": "This includes logs with non privacy safe information",
+  "globalSearch": "Global search",
+  "globalUpdate": "Global update",
   "help": "Help",
-  "hideEmptyCategory": "Hide Empty Category",
   "inLibrary": "In library",
   "includeCategories": "Categories",
   "includeChapters": "Chapters",
@@ -2109,12 +2049,10 @@
   "@includeServerSettings": {},
   "install": "Install",
   "installing": "Installing",
-  "installingExtension": "Installing Extension",
-  "invalidPort": "Invalid Port",
+  "installingExtension": "Installing extension",
   "invalidProp": "Invalid {property}",
-  "ip": "IP Address",
+  "ip": "IP address",
   "ipHintText": "Enter server binding IP address",
-  "isTrueBlack": "True Black",
   "appThemeTitle": "Theme",
   "@appThemeTitle": {
     "description": "Header for the color theme picker"
@@ -2148,11 +2086,11 @@
     "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
   },
   "onboardingCustomHeadersHint": "Only needed for some proxies and access gateways.",
-  "customHeadersDescription": "Sent with every request to your server. Only needed when the server sits behind an authentication gateway, Zero Trust guard, or reverse proxy that requires extra headers.",
+  "customHeadersDescription": "Sent with every request to your server.",
   "@customHeadersDescription": {
     "description": "Explanation under the Custom HTTP headers section"
   },
-  "customHeaderEmpty": "No custom headers. Add one if your server sits behind an authentication gateway or reverse proxy that requires extra headers.",
+  "customHeaderEmpty": "No custom headers.",
   "@customHeaderEmpty": {
     "description": "Empty state for the custom headers list"
   },
@@ -2168,7 +2106,7 @@
   "@customHeaderAdd": {
     "description": "Button to add a custom HTTP header"
   },
-  "customHeaderNameInvalid": "Invalid header name (no spaces or colons).",
+  "customHeaderNameInvalid": "Header names cannot contain spaces or colons.",
   "@customHeaderNameInvalid": {
     "description": "Validation error for a bad custom header name"
   },
@@ -2212,53 +2150,46 @@
   },
   "languages": "Languages",
   "latest": "Latest",
-  "lewd": "Lewd",
-  "@lewd": {
-    "description": "Library filter label: NSFW/lewd manga from adult sources"
-  },
   "library": "Library",
-  "libraryColumnsLandscape": "Columns (Landscape)",
+  "libraryColumnsLandscape": "Columns (landscape)",
   "@libraryColumnsLandscape": {
     "description": "Library Display section heading for the landscape column count slider"
   },
-  "libraryColumnsPortrait": "Columns (Portrait)",
+  "libraryColumnsPortrait": "Columns (portrait)",
   "@libraryColumnsPortrait": {
     "description": "Library Display section heading for the portrait column count slider"
   },
   "localSourceLocation": "Local source location",
   "localSourceLocationDescription": "Folder on the server where local source files are kept.",
   "lockToPortrait": "Lock to portrait",
-  "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
   "manga": "Manga",
-  "mangaGridSize": "Manga Grid Size",
-  "mangaMissingSources": "Manga Missing Sources",
+  "mangaGridSize": "Manga grid size",
   "mangaSortAlphabetical": "Alphabetical",
-  "mangaSortDateAdded": "Date Added",
-  "mangaSortLastChapterDate": "Latest Chapter",
-  "mangaSortLastRead": "Last Read",
-  "mangaSortLastUpdated": "Chapter Fetch Date",
-  "mangaSortLastUpdate": "Last Update",
+  "mangaSortDateAdded": "Date added",
+  "mangaSortLastChapterDate": "Latest chapter",
+  "mangaSortLastRead": "Last read",
+  "mangaSortLastUpdated": "Chapter fetch date",
+  "mangaSortLastUpdate": "Last update",
   "mangaSortRating": "Rating",
   "minimumRating": "Minimum rating",
   "mangaSortRandom": "Random",
   "mangaSortTrackerScore": "Tracker score",
-  "mangaSortTotalChapters": "Total Chapters",
+  "mangaSortTotalChapters": "Total chapters",
   "mangaSortUnread": "Unread",
   "mangaStatusCancelled": "Cancelled",
   "mangaStatusCompleted": "Completed",
   "mangaStatusLicensed": "Licensed",
-  "mangaStatusOnHiatus": "On Hiatus",
+  "mangaStatusOnHiatus": "On hiatus",
   "mangaStatusOngoing": "Ongoing",
-  "mangaStatusPublishingFinished": "Publishing Finished",
+  "mangaStatusPublishingFinished": "Publishing finished",
   "mangaStatusUnknown": "Unknown",
   "misc": "Misc",
-  "missingExtension": "Missing Extensions",
-  "missingTrackers": "Missing Trackers",
+  "missingExtension": "Missing extensions",
   "more": "More",
-  "moveToBottom": "Move to Bottom",
+  "moveToBottom": "Move to bottom",
   "moveToTop": "Move to top",
-  "nChapters": "{n, plural, =0{None} =1{1 Chapter} other{{n} Chapters}}",
-  "nDays": "{count, select, 01{01 Day} other{{count} Days}}",
+  "nChapters": "{n, plural, =0{None} =1{1 chapter} other{{n} chapters}}",
+  "nDays": "{count, select, 01{1 day} other{{count} days}}",
   "soon": "Soon",
   "inNDays": "{days, plural, =1{In 1 day} other{In {days} days}}",
   "@inNDays": {
@@ -2290,29 +2221,27 @@
     }
   },
   "nHours": "{n, plural, =1{1 hour} other{{n} hours}}",
-  "nMinutes": "{n, plural, =1{1 Minute} other{{n} Minutes}}",
-  "nRepo": "{n, plural, =1{1 Repo} other{{n} Repos}}",
+  "nMinutes": "{n, plural, =1{1 minute} other{{n} minutes}}",
   "nSeconds": "{n, plural, =1{1 second} other{{n} seconds}}",
-  "nSources": "{n, plural, =1{1 Source} other{{n} Sources}}",
+  "nSources": "{n, plural, =1{1 source} other{{n} sources}}",
   "nameCountDisplay": "{name}: {count}",
   "newUpdateAvailable": "New update available",
-  "nextChapter": "Next: {chapterTitle}",
   "nothingToDownload": "Nothing to download",
   "@nothingToDownload": {
     "description": "Toast shown when a bulk-download preset would queue zero chapters."
   },
   "noVisibleCategories": "No visible categories",
-  "noCategoriesFound": "You don't have any Categories. \n(Tip: Tap the Plus button to create one for organizing your library)",
-  "noCategoriesFoundAlt": "You don't have any Categories. \nCreate one in settings for organizing your library",
+  "noCategoriesFound": "You don't have any categories yet.",
+  "noCategoriesFoundAlt": "You don't have any categories yet.",
   "needsServerConnection": "Needs a connection to the server",
   "@needsServerConnection": {
     "description": "Error toast when a server-stored setting is changed while the server is unreachable"
   },
-  "noCategoryMangaFound": "No manga found in this Category. \n(Tip: Check your search & filters!)",
-  "noChaptersFound": "No Chapters found",
-  "noDownloads": "No Downloads",
-  "noMangaFound": "No Mangas Found",
-  "noOfChapters": "{count} Chapters",
+  "noCategoryMangaFound": "No entries found in this category",
+  "noChaptersFound": "No chapters found",
+  "noDownloads": "No downloads",
+  "noMangaFound": "No manga found",
+  "noOfChapters": "{count} chapters",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
   "readerChapterGapWarning": "{count, plural, =1{Skipping 1 chapter. It may be missing from the source or filtered out.} other{Skipping {count} chapters. They may be missing from the source or filtered out.}}",
   "@readerChapterGapWarning": {
@@ -2353,15 +2282,6 @@
       }
     }
   },
-  "httpErrorCheckWebView": "HTTP {statusCode}, check website in WebView",
-  "@httpErrorCheckWebView": {
-    "description": "Per-provider error on the recommendations screen when its API returns a non-200",
-    "placeholders": {
-      "statusCode": {
-        "type": "int"
-      }
-    }
-  },
   "seriesSeeAll": "See all",
   "seriesTagsMore": "{count} more",
   "@seriesTagsMore": {"placeholders": {"count": {"type": "int"}}},
@@ -2379,17 +2299,17 @@
   "@showRecommendationsSubtitle": {
     "description": "Subtitle for the show recommendations setting"
   },
-  "noPropFound": "No {prop} Found",
+  "noPropFound": "No {prop} found",
   "noResultFound": "No results found",
-  "noServerFound": "No Server found in your local network",
+  "noServerFound": "No server found on your local network",
   "noSourcesFound": "No sources found",
   "noUpdatesAvailable": "You're using the latest version",
   "noUpdatesFound": "No updates found",
   "none": "None",
   "nsfw": "Show NSFW extensions and sources",
   "nsfw18": "18+",
-  "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW(18+) content within app",
-  "numSelected": "{num} Selected",
+  "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
+  "numSelected": "{num} selected",
   "removeFromDevice": "Remove from device",
   "download": "Download",
   "undo": "Undo",
@@ -2425,7 +2345,6 @@
       }
     }
   },
-  "openFlareSolverr": "Checkout FlareSolverr for information on how to set it up",
   "opds": "OPDS",
   "opdsBinaryFileSize": "Binary file size",
   "opdsBinaryFileSizeDescription": "Display file sizes in binary (KiB, MiB, GiB) instead of decimal (KB, MB, GB)",
@@ -2450,7 +2369,7 @@
   "opdsCbzLegacy": "Legacy",
   "opdsCbzModern": "Modern",
   "opdsCbzCompatible": "Compatible",
-  "openInWeb": "Open In Web",
+  "openInWeb": "Open in browser",
   "openSourceInBrowser": "Open source page",
   "openInBrowser": "Open in browser",
   "openOnServer": "Open on server",
@@ -2479,14 +2398,13 @@
   "pinSource": "Pin source",
   "filterSources": "Filter sources",
   "allSources": "All Sources",
-  "pinchToZoom": "Pinch to Zoom",
+  "pinchToZoom": "Pinch to zoom",
   "doubleTapToZoom": "Double tap to zoom",
   "disableZoomOut": "Disable zoom out",
   "disableZoomIn": "Disable zoom in",
   "unpinSource": "Unpin source",
-  "previousChapter": "Previous: {chapterTitle}",
   "queued": "Queued",
-  "quickSearch": "Quick Search",
+  "quickSearch": "Quick search",
   "reader": "Reader",
   "readerMouseScrollSpeed": "Mouse wheel scroll speed",
   "@readerMouseScrollSpeed": {
@@ -2514,8 +2432,8 @@
   "readerNavigationLayoutEdge": "Edge",
   "readerNavigationLayoutInvert": "Invert tap zones",
   "readerNavigationLayoutKindlish": "Kindle-ish",
-  "readerNavigationLayoutLShaped": "L Shaped",
-  "readerNavigationLayoutRightAndLeft": "Right And Left",
+  "readerNavigationLayoutLShaped": "L shaped",
+  "readerNavigationLayoutRightAndLeft": "Right and left",
   "readerNoPages": "No pages found",
   "@readerNoPages": {
     "description": "Shown instead of the reader when the source returns a chapter with no pages."
@@ -2533,7 +2451,7 @@
   "readerOrientationReversePortrait": "Reverse portrait",
   "readerOverlay": "Reader initial overlay",
   "readerOverlaySubtitle": "Shows title and quick settings when opening a chapter",
-  "readerPadding": "Reader Padding",
+  "readerPadding": "Reader padding",
   "readerScrollAnimation": "Scroll animation",
   "readerFeedbackToasts": "Reading feedback toasts",
   "readerFeedbackToastsSubtitle": "Show messages like \"loading next chapter\" and \"no more chapters\"",
@@ -2541,59 +2459,34 @@
   "readerSwipeChapterToggleDescription": "Swipe to change chapter in reader",
   "readerLastPageSwipeToggle": "Last page swipe",
   "readerLastPageSwipeToggleDescription": "Swipe to next chapter only at last page",
-  "chapterSeparator": "Chapter separator",
-  "lastChapterNotification": "This is the last chapter",
-  "firstChapterNotification": "This is the first chapter",
   "loadingNextChapter": "Loading next chapter...",
   "loadingPreviousChapter": "Loading previous chapter...",
   "noMoreChaptersAhead": "There's no next chapter",
-  "noMoreChaptersBehind": "No more chapters behind",
+  "noMoreChaptersBehind": "No previous chapter",
   "nextChapterLoaded": "Loaded: {chapterName}",
   "previousChapterLoaded": "Loaded: {chapterName}",
   "failedToLoadNextChapter": "Failed to load next chapter",
   "failedToLoadPreviousChapter": "Failed to load previous chapter",
-  "chapterCompleted": "Chapter Completed",
+  "chapterCompleted": "Chapter completed",
   "readerTapInvertBoth": "Both",
   "readerTapInvertHorizontal": "Horizontal",
   "readerTapInvertNone": "None",
   "readerTapInvertVertical": "Vertical",
-  "readerVolumeTap": "Volume Keys",
-  "readerVolumeTapInvert": "Invert Volume Keys",
-  "readerVolumeTapSubtitle": "Navigate with Volume Keys",
+  "readerVolumeTap": "Volume keys",
+  "readerVolumeTapInvert": "Invert volume keys",
   "readerKeepScreenOn": "Keep screen on",
-  "readerKeepScreenOnSubtitle": "Prevent the screen from sleeping while reading",
-  "readerIgnoreSafeAreaToggle": "Ignore Safe Area",
+  "readerIgnoreSafeAreaToggle": "Ignore safe area",
   "readerIgnoreSafeAreaToggleDescription": "Allow content to extend into notch and home indicator areas",
-  "reddit": "Reddit",
   "refresh": "Refresh",
   "migrate": "Migrate",
-  "migrationSelectTargetSource": "Select Target Source",
-  "migrationSearchInSource": "Search in {sourceName}",
-  "migrationPreview": "Migration Preview",
-  "migrationInProgress": "Migration in Progress",
-  "migrationComplete": "Migration completed successfully",
-  "migrationFailed": "Migration Failed",
-  "migrationCancelled": "Migration Cancelled",
-  "migrateChapters": "Migrate Chapters",
-  "migrateChaptersDescription": "Copy chapter read status to new source",
-  "migrateCategories": "Migrate Categories",
-  "migrateCategoriesDescription": "Copy manga categories to new source",
-  "migrateDownloads": "Migrate Downloads",
-  "migrateDownloadsDescription": "Move downloaded chapters to new source",
-  "migrateTracking": "Migrate Tracking",
-  "migrateTrackingDescription": "Copy tracking information to new source",
+  "migrateChapters": "Migrate chapters",
+  "migrateCategories": "Migrate categories",
+  "migrateDownloads": "Migrate downloads",
+  "migrateTracking": "Migrate tracking",
   "migrateReaderSettings": "Reader settings",
   "migrateOfflineSettings": "Keep-offline rule",
-  "migrationOptions": "Migration Options",
-  "migrationSettings": "Migration Settings",
+  "migrationSettings": "Migration settings",
   "bulkMigrationTitle": "Migrate sources",
-  "targetSourcesPriority": "Target sources",
-  "targetSourcesPriorityHint": "Each series is matched against these sources in order, top first. Drag to reorder.",
-  "availableSources": "Available sources",
-  "noTargetSourcesSelected": "Add at least one target source to search.",
-  "searchManually": "Choose each match manually",
-  "searchManuallyDescription": "Review and pick every target instead of auto-matching.",
-  "migrationPausedReauth": "Paused — sign in again to continue.",
   "migrationSelectSourcesTitle": "Select sources",
   "migrationListTitle": "Migrate",
   "migrationListTitleProgress": "Migrate ({done}/{total})",
@@ -2640,39 +2533,8 @@
   "migrationSortMode": "Sort mode",
   "migrationSortDirection": "Sort direction",
   "migrationObsoleteSource": "Obsolete",
-  "migrationNeedsMigration": "Needs migration",
-  "migrationOtherSources": "Other sources",
-  "migrationSourceSeriesCount": "{count, plural, =1{1 series} other{{count} series}}",
-  "@migrationSourceSeriesCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "migrationNoLibrarySources": "Your library is empty — nothing to migrate.",
-  "migrationSelectAll": "Select all",
   "migrationInvertSelection": "Invert",
-  "migrationGroupNeedsReview": "Needs review",
-  "migrationGroupNoMatch": "No match",
-  "migrationGroupFailed": "Failed",
-  "migrationGroupReady": "Ready",
-  "migrationGroupInProgress": "In progress",
-  "migrationGroupDone": "Done",
-  "migrationGroupSkipped": "Skipped",
-  "migrationRetry": "Retry",
-  "migrationFindManually": "Find manually",
-  "migrationOverwriteTracking": "Overwrite the target's tracking",
-  "migrationKeepTargetTracking": "This series is already tracked on the target. Keep its tracking, or overwrite with the source's.",
-  "migrationLargeBatchWarning": "That's a large batch. It may take a while and make many source requests.",
-  "migrationTrackerCollisionSummary": "{count, plural, =1{1 series is already tracked on its target — its tracking is kept unless you choose overwrite.} other{{count} series are already tracked on their targets — their tracking is kept unless you choose overwrite.}}",
-  "@migrationTrackerCollisionSummary": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "migrationActionMigrate": "Migrate",
   "migrationActionCopy": "Copy",
   "migrationActionMigrateDescription": "Move each series to the new source and remove the original.",
@@ -2774,7 +2636,6 @@
     }
   },
   "libraryUpdateErrorsEmpty": "No update errors",
-  "libraryUpdateErrorsEmptyDetail": "Series that fail to update show up here",
   "notificationLibraryErrorTitle": "Library update failed",
   "notificationLibraryErrorBody": "{count} series failed to update",
   "@notificationLibraryErrorBody": {
@@ -2808,10 +2669,6 @@
       }
     }
   },
-  "notificationBackupCompleteTitle": "Backup complete",
-  "notificationRestoreCompleteTitle": "Restore complete",
-  "notificationBackupFailedTitle": "Backup failed",
-  "notificationRestoreFailedTitle": "Restore failed",
   "notificationAppUpdateTitle": "Update available",
   "notificationAppUpdateBody": "Tsumiru {version} is available",
   "@notificationAppUpdateBody": {
@@ -2832,9 +2689,6 @@
   },
   "notificationIncognitoTitle": "Incognito mode",
   "notificationIncognitoBody": "History and progress updates are paused",
-  "notificationsErrors": "Error notifications",
-  "notificationsErrorsSubtitle": "Failed downloads and library updates",
-  "notificationsBackup": "Backup notifications",
   "privacyPolicy": "Privacy policy",
   "notificationsAppUpdates": "App update notifications",
   "notificationsExtensionUpdates": "Extension update notifications",
@@ -2861,43 +2715,13 @@
   "notificationsHideContentSubtitle": "Show only a count, not titles or covers",
   "notificationsCheckNow": "Check now",
   "notificationsReliabilityNote": "Checks run periodically, not instantly. Some devices restrict background updates.",
-  "selectTargetSource": "Select Target Source",
-  "noSourcesAvailable": "No sources available for migration",
-  "checkSourceConfiguration": "Please check your source configuration",
-  "noAlternativeSources": "No alternative sources available",
-  "installMoreSources": "Install more sources to enable migration",
-  "errorLoadingSources": "Error loading sources",
   "errorGettingMigrationSources": "Failed to get migration sources",
   "errorSearchingMangaInSource": "Failed to search manga in source",
   "errorFetchingSourceManga": "Failed to fetch source manga",
   "errorSourceMangaNotFound": "Source manga not found",
   "errorFetchingTargetManga": "Failed to fetch target manga",
   "errorTargetMangaNotFound": "Target manga not found",
-  "searchManga": "Search manga...",
-  "searchForManga": "Search for manga in the target source",
-  "enterSearchTerm": "Enter a search term to find manga",
   "noResultsFound": "No results found",
-  "tryDifferentSearch": "Try a different search term",
-  "searchError": "Search error",
-  "importantNotice": "Important Notice",
-  "migrationWarning": "This will permanently move your manga data. This action cannot be undone.",
-  "deleteSourceWarning": "The original manga will be removed from your library after migration.",
-  "confirmMigration": "Confirm Migration",
-  "migrationConfirmationMessage": "Are you sure you want to migrate this manga? This action cannot be undone.",
-  "startMigration": "Start Migration",
-  "preparingMigration": "Preparing migration...",
-  "migrationCompleted": "Migration Completed!",
-  "migrationSuccessMessage": "Your manga has been successfully migrated to the new source.",
-  "migrationCancelledMessage": "The migration process has been cancelled. No changes were made.",
-  "cancelMigration": "Cancel Migration",
-  "cancelMigrationConfirmation": "Are you sure you want to cancel the migration? This action cannot be undone.",
-  "quickPresets": "Quick Presets",
-  "quickMigration": "Quick",
-  "fullMigration": "Full",
-  "customMigration": "Custom",
-  "deleteSourceManga": "Delete Source Manga",
-  "deleteSourceMangaDescription": "Remove the original manga from library after migration",
-  "done": "Done",
   "webtoonScaleType": "Long strip scale",
   "webtoonScaleTypeFitScreen": "Fit screen",
   "webtoonScaleTypeOriginalSize": "Original size",
@@ -2907,22 +2731,15 @@
   "webtoonScaleTypeRatio4to3": "4:3",
   "yes": "Yes",
   "no": "No",
-  "from": "From",
-  "to": "To",
   "source": "Source",
-  "migrationDetails": "Migration Details",
-  "searchAllSources": "Search All Sources",
-  "searchingAllSources": "Searching across all available sources...",
-  "noMatchingMangaFound": "No matching manga found in any source",
-  "deleteSourceAfterMigration": "Delete source manga after migration",
+  "searchAllSources": "Search all sources",
   "reload": "Reload",
   "remove": "Remove",
-  "removeFromLibrary": "Remove from Library?",
+  "removeFromLibrary": "Remove from library",
   "reset": "Reset",
   "restore": "Restore",
-  "restoreBackupDescription": "Restore Tachidesk from backup",
-  "restoreBackupTitle": "Restore Backup",
-  "restored": "Backup restored!",
+  "restoreBackupTitle": "Restore backup",
+  "restored": "Backup restored.",
   "restoring": "Restoring backup",
   "resume": "Resume",
   "retry": "Retry",
@@ -2938,14 +2755,11 @@
   "selectBelow": "Select below",
   "selectInBetween": "Select in between",
   "selectNext10": "Select next 10",
-  "selectUnread": "Select Unread",
+  "selectUnread": "Select unread",
   "server": "Server",
   "serverAddress": "Server address",
-  "serverBindings": "Server Bindings",
-  "serverOwnSettingsCaption": "These settings change the Suwayomi server itself, not how this app connects to it.",
-  "serverPort": "Server Port",
-  "serverPortHintText": "Server port",
-  "serverSettingsSubtitle": "Configure the Suwayomi server itself.",
+  "serverBindings": "Server bindings",
+  "serverPort": "Server port",
   "serverSignedOutTitle": "Signed out",
   "@serverSignedOutTitle": {
     "description": "Title shown when the server rejects the app's credentials."
@@ -2976,14 +2790,13 @@
   },
   "clearCrashLog": "Clear debug log",
   "copyCrashLog": "Copy debug log",
-  "copyCrashLogSubtitle": "For bug reports — copies recent errors and reader diagnostics",
+  "copyCrashLogSubtitle": "Recent errors and reader diagnostics for bug reports",
   "crashLogCleared": "Debug log cleared",
   "crashLogCopied": "Debug log copied to clipboard",
   "noCrashLog": "No debug log found",
   "serverUrl": "Server URL",
-  "serverUrlHintText": "Server url",
+  "serverUrlHintText": "Server URL",
   "addLocalNetworkAddress": "Add a local network address",
-  "serverExternalUrl": "External / Remote URL",
   "serverLanUrl": "Internal / LAN URL",
   "serverLanUrlOptional": "Optional",
   "serverLanUrlHintText": "http://192.168.1.100:4567",
@@ -2998,19 +2811,18 @@
   "settings": "Settings",
   "skipThisVersion": "Don't remind me about this version",
   "skipUpdatingEntries": "Skip updating entries",
-  "socksHost": "SOCKS Host",
-  "socksPassword": "SOCKS Password",
-  "socksPort": "SOCKS Port",
-  "socksProxy": "SOCKS Proxy",
-  "socksUserName": "SOCKS UserName",
-  "socksVersion": "SOCKS Version",
+  "socksHost": "SOCKS host",
+  "socksPassword": "SOCKS password",
+  "socksPort": "SOCKS port",
+  "socksProxy": "SOCKS proxy",
+  "socksUserName": "SOCKS username",
+  "socksVersion": "SOCKS version",
   "sort": "Sort",
   "sourceTypeFilter": "Filter",
   "sourceTypeLatest": "Latest",
   "sourceTypePopular": "Popular",
   "sources": "Sources",
   "start": "Start",
-  "started": "Started",
   "systemTrayIcon": "Show icon in system tray",
   "systemTrayIconDescription": "This icon will be shown on the system that is running the server",
   "thatHaventBeenStarted": "That haven't been started",
@@ -3067,15 +2879,13 @@
     "description": "Button tooltip on an installed extension: uninstall it and install it again"
   },
   "reinstalling": "Reinstalling",
-  "unknownAuthor": "Unknown Author",
-  "unknownManga": "Unknown Manga",
-  "unknownSource": "Unknown Source",
+  "unknownAuthor": "Unknown author",
+  "unknownSource": "Unknown source",
   "unread": "Unread",
   "readProgressBar": "Read progress bar",
   "update": "Update",
   "updateAll": "Update all",
-  "updateCompleted": "Update Completed",
-  "updateFailed": "Failed to update {property}",
+  "updateCompleted": "Update completed",
   "updates": "Updates",
   "updatesGroupingLabel": "Chapter grouping",
   "updatesGroupingHint": "Stack consecutive chapters from the same series into one foldable entry.",
@@ -3110,45 +2920,38 @@
       }
     }
   },
-  "userName": "User Name",
+  "userName": "Username",
   "validating": "Validating",
-  "versionAvailable": "Version {version} available for {app}!!",
-  "webUI": "Open in WEB",
-  "webView": "Web View",
+  "versionAvailable": "Version {version} available for {app}",
+  "webUI": "Open in browser",
+  "webView": "WebView",
   "kcefWebView": "WebView",
   "kcefWebViewDescription": "Enable the WebView via CEF (Chromium)",
-  "whatsNew": "What's New?",
-  "withCompletedStatus": "With Completed status",
+  "whatsNew": "What's new",
+  "withCompletedStatus": "With completed status",
   "withUnreadChapter": "With unread chapter(s)",
   "yesterday": "Yesterday",
-  "recentlyRead": "Recently Read",
+  "recentlyRead": "Recently read",
   "history": "History",
   "searchHistory": "Search history...",
   "noHistoryFound": "No reading history found",
-  "startReadingToSeeHistory": "Start reading manga to see your history here",
   "noSearchResults": "No search results",
   "tryDifferentSearchTerm": "Try a different search term",
   "errorOccurred": "An error occurred",
-  "viewManga": "View Manga",
-  "timeoutSettings": "Timeout Settings",
-  "serverRequestTimeout": "Server Request Timeout",
+  "viewManga": "View manga",
+  "timeoutSettings": "Timeout settings",
+  "serverRequestTimeout": "Server request timeout",
   "@serverRequestTimeout": {
     "description": "Controls how long to wait for server responses"
   },
-  "serverRequestTimeoutDescription": "Time to wait for server responses (in seconds)",
-  "autoRefreshOnTimeout": "Auto-refresh on Timeout",
+  "autoRefreshOnTimeout": "Auto-refresh on timeout",
   "@autoRefreshOnTimeout": {
     "description": "Toggle automatic retry on timeout"
   },
-  "autoRefreshOnTimeoutDescription": "Automatically retries requests that timeout",
-  "autoRefreshRetryDelay": "Auto-refresh Retry Delay",
+  "autoRefreshOnTimeoutDescription": "Automatically retry requests that time out",
+  "autoRefreshRetryDelay": "Auto-refresh retry delay",
   "@autoRefreshRetryDelay": {
     "description": "Delay between auto retry attempts in seconds"
-  },
-  "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)",
-  "offline": "Offline",
-  "@offline": {
-    "description": "Settings entry and screen title for offline downloads"
   },
   "offlineStorageSection": "Storage",
   "@offlineStorageSection": {
@@ -3240,10 +3043,6 @@
   "@keepOffline": {
     "description": "Tooltip for the per-series keep-offline popup button in manga details"
   },
-  "keepOfflineOff": "Off",
-  "@keepOfflineOff": {
-    "description": "Keep-offline rule: disabled"
-  },
   "keepOfflineNextUnread": "Keep next {count} unread",
   "@keepOfflineNextUnread": {
     "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
@@ -3274,12 +3073,8 @@
   "@viewOffline": {
     "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
   },
-  "offlineSheetSubtitle": "Keep chapters downloaded on this device, topped up automatically as you read. Separate from server downloads (the cloud icon up top).",
-  "offlineDownloadAll": "Download all chapters",
-  "@offlineDownloadAll": {
-    "description": "Series offline action: download every chapter to this device"
-  },
-  "offlineRemoveSeries": "Remove all (this series)",
+  "offlineSheetSubtitle": "Keep chapters downloaded on this device, topped up automatically as you read.",
+  "offlineRemoveSeries": "Remove downloads",
   "@offlineRemoveSeries": {
     "description": "Series offline action: remove this series' downloads from the device"
   },
@@ -3314,15 +3109,10 @@
       }
     }
   },
-  "manageDownloads": "Manage downloads",
-  "@manageDownloads": {
-    "description": "Title/entry for the page listing on-device keep-rule subscriptions"
-  },
-  "manageDownloadsEmpty": "No download subscriptions yet",
   "manageDownloadsNothingYet": "Nothing downloaded yet",
   "offlineManualOnly": "Manual only",
   "manageDownloadsChangeRule": "Change rule",
-  "manageDownloadsStopKeep": "Stop keeping (keep files)",
+  "manageDownloadsStopKeep": "Stop keeping",
   "manageDownloadsStopDelete": "Stop keeping & delete files",
   "manageDownloadsKeepFilesConfirm": "Stop auto-keeping {count} series but leave the chapters already downloaded on this device?",
   "@manageDownloadsKeepFilesConfirm": {
@@ -3389,7 +3179,6 @@
   "yourRating": "Your rating",
   "addTag": "Add tag",
   "tags": "Tags",
-  "searchForSources": "Search for sources",
   "searchForExtensions": "Search for extensions",
   "searchSourcesHint": "Search sources...",
   "@searchSourcesHint": {
@@ -3399,7 +3188,6 @@
   "@searchExtensionsHint": {
     "description": "Placeholder in the desktop Browse search box on the Extensions tab"
   },
-  "noTagsYet": "No tags in your library yet",
   "copyToClipboard": "Copy to clipboard",
   "copiedToClipboard": "Copied to clipboard",
   "searchTips": "Search tips",
@@ -3442,7 +3230,7 @@
   "@logOut": {
     "description": "Button label to log out of a tracker account"
   },
-  "reLogin": "Token expired — log in again",
+  "reLogin": "Token expired. Log in again.",
   "@reLogin": {
     "description": "Subtitle shown on a tracker tile when the token is expired, prompting the user to log in again"
   },
@@ -3578,10 +3366,6 @@
   "@filterTracked": {
     "description": "Filter section heading shown when at least one tracker is logged in"
   },
-  "copyPageLink": "Copy page link",
-  "@copyPageLink": {
-    "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
-  },
   "copyImageToClipboard": "Copy",
   "@copyImageToClipboard": {
     "description": "Reader page-actions sheet: copy the current page image itself to the clipboard"
@@ -3638,7 +3422,6 @@
   "@savedToGallery": {
     "description": "Toast shown after the current page image was saved to the device gallery"
   },
-  "zoomStart": "Zoom start position",
   "zoomStartAutomatic": "Automatic",
   "zoomStartCenter": "Center",
   "zoomStartLeft": "Left",
@@ -3743,7 +3526,7 @@
   "@removeExtensionStore": {
     "description": "Title of the confirmation dialog for removing an extension store"
   },
-  "removeExtensionStoreBody": "Do you wish to remove the extension store \"{name}\" ({url})?",
+  "removeExtensionStoreBody": "Remove \"{name}\"?\n{url}",
   "@removeExtensionStoreBody": {
     "description": "Body of the confirmation dialog for removing an extension store",
     "placeholders": {
@@ -3776,7 +3559,7 @@
   "@preferredScanlationGroups": {
     "description": "Title for the preferred scanlation groups filter-sheet row and ranking dialog"
   },
-  "preferredGroupsHint": "Checked groups are preferred in order; chapters they don't cover fall back to other groups.",
+  "preferredGroupsHint": "Checked groups are preferred in order. Chapters they don't cover fall back to other groups.",
   "@preferredGroupsHint": {
     "description": "Hint text explaining the preferred scanlation groups ranking dialog"
   },
@@ -3858,10 +3641,6 @@
   "@duplicatedEntries": {
     "description": "Title of the library settings row that opens the library-wide duplicate scan"
   },
-  "duplicatedEntriesSubtitle": "Show all duplicated entries in your library",
-  "@duplicatedEntriesSubtitle": {
-    "description": "Subtitle of the library settings row that opens the library-wide duplicate scan"
-  },
   "scanForDuplicates": "Scan for duplicates",
   "@scanForDuplicates": {
     "description": "Button text to run the library-wide duplicate scan"
@@ -3912,7 +3691,7 @@
   "@offlineChaptersScreenTitle": {
     "description": "AppBar title for the offline series drill-down chapter list"
   },
-  "offlineChaptersActiveSection": "Downloading / Queued",
+  "offlineChaptersActiveSection": "Downloading / queued",
   "@offlineChaptersActiveSection": {
     "description": "Section header for chapters currently downloading or queued in the offline chapter list"
   },
@@ -3970,7 +3749,6 @@
   "accountRoleUnknown": "Unknown role",
   "accountSignOut": "Sign out",
   "accountSignOutConfirmation": "Sign out of this account? Your downloaded chapters will stay on this device.",
-  "accountBuiltInPassword": "This account’s password is managed in the server settings.",
   "accountPermissionInstallExtensions": "Install extensions",
   "accountPermissionInstallExternalExtensions": "Install extension files",
   "accountPermissionUninstallExtensions": "Uninstall extensions",
@@ -4009,7 +3787,6 @@
   "accountCatalogueRemoveConfirm": "Remove the downloaded chapters and offline library for {account} on {server} from this device? Server data will stay unchanged.",
   "@accountCatalogueRemoveConfirm": {"placeholders": {"account": {"type": "String"}, "server": {"type": "String"}}},
   "accountCatalogueRemoveFailed": "Account downloads could not be removed. They may be in use.",
-  "recommendationsUnavailableWeb": "These recommendations are not available in the web app.",
   "offlineRecoveryRunning": "Recovering downloads. You can keep using the app.",
   "offlineRecoveryFailed": "Download recovery stopped. Existing files have been kept. Retry to continue.",
   "offlineRecoveryUnavailable": "Saved chapters are temporarily unavailable while downloads are recovered.",
@@ -4175,8 +3952,6 @@
   "koreaderSyncHidePassword": "Hide password",
   "koreaderSyncUnsupported": "This server does not support KOReader Sync. Update Suwayomi to use it.",
   "webInterface": "Web interface",
-  "webInterfaceExplanation": "What your server shows when someone opens its address in a browser. This doesn't change this app.",
-  "webInterfaceExplanationCurrent": "What your server shows when someone opens its address in a browser. This is the interface you're using now.",
   "webInterfaceUnsupported": "This server does not support web interface settings.",
   "unsupportedPreference": "This setting is not supported by the app.",
   "webInterfaceInterface": "Interface",
@@ -4246,9 +4021,9 @@
   "webInterfaceWebUI": "WebUI",
   "webInterfaceWebUIDescription": "Use the default WebUI",
   "webInterfaceVUI": "VUI",
-  "webInterfaceVUIDescription": "A preview focused web frontend built with Svelte",
+  "webInterfaceVUIDescription": "A preview focused web frontend built with svelte",
   "webInterfaceTsumiru": "Tsumiru",
-  "webInterfaceTsumiruDescription": "A modern web frontend built with Flutter, with 13 themes, incognito mode and apps for every platform",
+  "webInterfaceTsumiruDescription": "A web frontend built with Flutter, with apps for every platform",
   "webInterfaceCustom": "Custom",
   "webInterfaceCustomDescription": "Use a custom WebUI. Replace the content of the \"webUI\" directory in the server's root directory with the custom WebUI files.",
   "webInterfaceUnknown": "Unknown interface",
@@ -4325,10 +4100,6 @@
   "@lockToPortrait": {
     "description": "General setting: lock the app to portrait orientation"
   },
-  "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
-  "@lockToPortraitSubtitle": {
-    "description": "Subtitle for the lock-to-portrait general setting"
-  },
   "recommendationsLoadFailed": "Couldn't load recommendations from {provider}. Try again later.",
   "@recommendationsLoadFailed": {
     "placeholders": {
@@ -4346,7 +4117,6 @@
     }
   },
   "suggestionsFetching": "Fetching suggestions…",
-  "suggestionsFetchingSubtitle": "Checking recommendation services. This may take a moment.",
   "suggestionsEmpty": "No suggestions found for this title.",
   "suggestionsLoadFailed": "Couldn’t load suggestions. Try again later.",
   "trackerOAuthLinkInvalid": "This sign-in link is no longer valid. Start tracker sign-in again.",

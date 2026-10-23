@@ -191,7 +191,6 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     final downloading = _installing;
     final enabled = !_busy && !downloading;
     final bundledAllowed = data?.webUIFlavor == Enum$WebUIFlavor.WEBUI;
-    final sameServer = ref.watch(serverHostedWebProvider);
     final check = _check;
     final info = installed.value;
     final error =
@@ -227,17 +226,6 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(title: context.l10n.webInterface),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-          child: Text(
-            sameServer
-                ? context.l10n.webInterfaceExplanationCurrent
-                : context.l10n.webInterfaceExplanation,
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
         if (canManage && settings.isLoading && !settings.hasValue)
           const ListTile(title: LinearProgressIndicator()),
         if (canManage && settings.hasValue && data == null)

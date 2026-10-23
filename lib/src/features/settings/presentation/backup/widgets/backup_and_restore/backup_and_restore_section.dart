@@ -167,7 +167,6 @@ class BackupAndRestoreSection extends HookConsumerWidget {
           id: 'createBackup',
           child: ListTile(
             title: Text(context.l10n.createBackupTitle),
-            subtitle: Text(context.l10n.createBackupDescription),
             leading: const Icon(Icons.backup_rounded),
             onTap: () => createBackupFile(ref, context),
           ),
@@ -176,7 +175,6 @@ class BackupAndRestoreSection extends HookConsumerWidget {
           id: 'restoreBackup',
           child: ListTile(
             title: Text(context.l10n.restoreBackupTitle),
-            subtitle: Text(context.l10n.restoreBackupDescription),
             leading: const Icon(Icons.restore_rounded),
             trailing: restoreId.value != null
                 ? RestoreStatusProgress(

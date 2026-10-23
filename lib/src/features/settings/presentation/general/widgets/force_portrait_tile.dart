@@ -52,7 +52,6 @@ class ForcePortraitTile extends ConsumerWidget {
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: const Icon(Icons.screen_lock_portrait_rounded),
       title: Text(context.l10n.lockToPortrait),
-      subtitle: Text(context.l10n.lockToPortraitSubtitle),
       onChanged: (value) {
         ref.read(forcePortraitProvider.notifier).update(value);
         applyForcePortrait(value);

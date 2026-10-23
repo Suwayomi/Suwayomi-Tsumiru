@@ -53,7 +53,6 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
                     ListView(),
                     Emoticons(
                       title: context.l10n.libraryUpdateErrorsEmpty,
-                      subTitle: context.l10n.libraryUpdateErrorsEmptyDetail,
                     ),
                   ],
                 )
