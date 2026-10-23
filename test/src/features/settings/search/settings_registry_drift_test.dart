@@ -64,6 +64,10 @@ import 'package:tsumiru/src/features/settings/presentation/server/data/server_se
 import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/database/data/database_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/database/graphql/__generated__/database.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/graphql/__generated__/misc_logs.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/data/webview_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/graphql/__generated__/webview.graphql.dart';
@@ -468,6 +472,9 @@ void main() {
                 webUIFlavor: Enum$WebUIFlavor.WEBUI,
                 webUIChannel: Enum$WebUIChannel.STABLE,
                 webUIUpdateCheckInterval: 12,
+                initialOpenInBrowserEnabled: true,
+                webUIInterface: Enum$WebUIInterface.ELECTRON,
+                electronPath: '',
               ),
             ),
             webInterfaceFlavorsProvider.overrideWith(
@@ -482,6 +489,22 @@ void main() {
             flareSolverrFallbackProvider.overrideWith((ref) async => true),
             opdsSettingsProvider.overrideWith(
               (ref) async => _opdsSettings(),
+            ),
+            databaseSettingsProvider.overrideWith(
+              (ref) async => Fragment$DatabaseSettingsDto(
+                databaseType: Enum$DatabaseType.POSTGRESQL,
+                databaseUrl: 'postgresql://localhost:5432/suwayomi',
+                databaseUsername: 'suwayomi',
+                databasePassword: 'secret',
+                useHikariConnectionPool: true,
+              ),
+            ),
+            miscLogsSettingsProvider.overrideWith(
+              (ref) async => Fragment$MiscLogsSettingsDto(
+                maxLogFiles: 7,
+                maxLogFileSize: '1MB',
+                maxLogFolderSize: '10MB',
+              ),
             ),
             webViewSettingsProvider.overrideWith(
               (ref) async => Fragment$WebViewSettingsDto(kcefEnabled: true),

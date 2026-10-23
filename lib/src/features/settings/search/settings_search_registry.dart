@@ -37,6 +37,8 @@ import '../presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_
 import '../presentation/server/data/server_settings_repository.dart';
 import '../presentation/server/data/web_interface_repository.dart';
 import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../presentation/server/widget/database/data/database_repository.dart';
+import '../presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
 import '../presentation/server/widget/opds/data/opds_repository.dart';
 import '../presentation/server/widget/webview/data/webview_repository.dart';
 import '../presentation/syncyomi/data/syncyomi_settings_provider.dart';
@@ -1231,6 +1233,35 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     visible: (ref, _) => _webInterfaceVisible(ref),
   ),
   SettingsSearchEntry(
+    id: 'initialOpenInBrowserEnabled',
+    title: (l) => l.initialOpenInBrowserEnabled,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'initialOpenInBrowserEnabled',
+    ).push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'webInterfaceInterface',
+    title: (l) => l.webInterfaceInterface,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'webInterfaceInterface',
+    ).push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'electronPath',
+    title: (l) => l.electronPath,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'electronPath').push(c),
+    visible: (ref, _) =>
+        _webInterfaceVisible(ref) &&
+        ref.watch(webInterfaceSettingsProvider).value?.webUIInterface ==
+            Enum$WebUIInterface.ELECTRON,
+  ),
+  SettingsSearchEntry(
     id: 'webInterfaceChannel',
     title: (l) => l.webInterfaceChannel,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
@@ -1474,6 +1505,58 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
+    id: 'databaseType',
+    title: (l) => l.databaseType,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databaseType').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseUrl',
+    title: (l) => l.databaseUrl,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databaseUrl').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseUsername',
+    title: (l) => l.databaseUsername,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databaseUsername').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databasePassword',
+    title: (l) => l.databasePassword,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'databasePassword').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'hikariConnectionPool',
+    title: (l) => l.hikariConnectionPool,
+    subtitle: (l) => l.hikariConnectionPoolDescription,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'hikariConnectionPool',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
     id: 'webview',
     title: (l) => l.kcefWebView,
     subtitle: (l) => l.kcefWebViewDescription,
@@ -1506,6 +1589,38 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     breadcrumb: (l) => '${l.server} › ${l.misc}',
     open: (c) => const ServerSettingsRoute(highlight: 'systemTrayIcon').push(c),
     visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'logFileCleanup',
+    title: (l) => l.logFileCleanup,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'logFileCleanup').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(miscLogsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'maxLogFileSize',
+    title: (l) => l.maxLogFileSize,
+    subtitle: (l) => l.logSizeExamples,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'maxLogFileSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(miscLogsSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'maxLogFolderSize',
+    title: (l) => l.maxLogFolderSize,
+    subtitle: (l) => l.logSizeExamples,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'maxLogFolderSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(miscLogsSettingsProvider).value != null,
   ),
 ];
 
