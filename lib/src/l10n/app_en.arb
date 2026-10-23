@@ -2705,6 +2705,14 @@
   },
   "network": "Network",
   "notifications": "Notifications",
+  "notificationsSectionNewChapters": "New chapters",
+  "@notificationsSectionNewChapters": {
+    "description": "Section header for new-chapter notification settings"
+  },
+  "notificationsSectionOther": "Other",
+  "@notificationsSectionOther": {
+    "description": "Section header for the remaining notification kinds"
+  },
   "notificationsNewChapters": "New chapter notifications",
   "notificationsNewChaptersSubtitle": "Notify when followed series get new chapters",
   "notificationsDownloadsComplete": "Download notifications",
@@ -2971,13 +2979,13 @@
   "@offlineRemoveAllConfirm": {
     "description": "Body text for remove-all confirmation dialog"
   },
-  "offlineSafetyNets": "Safety nets",
-  "@offlineSafetyNets": {
-    "description": "Section header for safety net settings"
-  },
   "offlineDownloadsSection": "Downloads",
   "@offlineDownloadsSection": {
     "description": "Section header for offline download behaviour settings"
+  },
+  "offlineBackgroundSection": "Background",
+  "@offlineBackgroundSection": {
+    "description": "Section header for background download settings"
   },
   "downloadOverWifiOnly": "Download over Wi-Fi only",
   "downloadNewChaptersInBackground": "Download new chapters in the background",
@@ -3085,7 +3093,10 @@
     "description": "Snackbar shown after starting a series download"
   },
   "markAsRead": "Mark as read",
-  "chapterSwipe": "Chapter swipe",
+  "settingsSectionBehavior": "Behavior",
+  "@settingsSectionBehavior": {
+    "description": "Section header for library behaviour settings"
+  },
   "chapterSwipeToLeft": "Chapter on swipe to left",
   "chapterSwipeToRight": "Chapter on swipe to right",
   "chapterSwipeDisabled": "Disabled",

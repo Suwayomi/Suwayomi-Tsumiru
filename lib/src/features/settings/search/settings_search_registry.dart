@@ -57,7 +57,9 @@ export 'settings_search_row.dart';
 /// that renders its tile — same provider, same comparison:
 ///
 /// - General: Quick Search only exists on keyboard runtimes (same
-///   [isKeyboardRuntime] gate as the screen). Everything else always renders.
+///   [isKeyboardRuntime] gate as the screen). Persistent search bar moved
+///   here from Library (same local provider, always visible). Everything
+///   else always renders.
 /// - Advanced: Clear cache always renders; Copy debug log has no highlight
 ///   target, so it has no entry (the drift guard requires both directions).
 /// - Appearance: Pure black only renders when the theme mode isn't light;
@@ -66,7 +68,8 @@ export 'settings_search_row.dart';
 /// - Library: the whole list renders inside the server-data branch (same
 ///   `serverSettings.value != null` gate as the screen), so every entry
 ///   needs the server reachable. Permission gates only disable the tap, the
-///   tile stays on screen, so they add no further gate.
+///   tile stays on screen, so they add no further gate. Section names:
+///   Categories, Behavior ("Behavior"), Global update.
 ///
 /// The drift-guard test (`settings_registry_drift_test.dart`) pumps each page
 /// with every condition satisfied and checks both directions, so add an entry
@@ -92,6 +95,15 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
     breadcrumb: (l) => l.general,
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'lockToPortrait').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'persistentSearchBar',
+    title: (l) => l.libraryPersistentSearchBar,
+    subtitle: (l) => l.libraryPersistentSearchBarSubtitle,
+    breadcrumb: (l) => l.general,
+    open: (c) =>
+        const GeneralSettingsRoute(highlight: 'persistentSearchBar').push(c),
     visible: (_, _) => true,
   ),
 ];
@@ -170,14 +182,14 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'categories',
     title: (l) => l.categories,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
+    breadcrumb: (l) => '${l.library} › ${l.categories}',
     open: (c) => const LibrarySettingsRoute(highlight: 'categories').push(c),
     visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'defaultCategory',
     title: (l) => l.defaultCategoryOnAdd,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
+    breadcrumb: (l) => '${l.library} › ${l.categories}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'defaultCategory').push(c),
     visible: (ref, _) => _serverReachable(ref),
@@ -186,19 +198,10 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     id: 'refreshChaptersFromSource',
     title: (l) => l.refreshChaptersFromSource,
     subtitle: (l) => l.refreshChaptersFromSourceSubtitle,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
     open: (c) => const LibrarySettingsRoute(
       highlight: 'refreshChaptersFromSource',
     ).push(c),
-    visible: (ref, _) => _serverReachable(ref),
-  ),
-  SettingsSearchEntry(
-    id: 'persistentSearchBar',
-    title: (l) => l.libraryPersistentSearchBar,
-    subtitle: (l) => l.libraryPersistentSearchBarSubtitle,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
-    open: (c) =>
-        const LibrarySettingsRoute(highlight: 'persistentSearchBar').push(c),
     visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
@@ -246,7 +249,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'chapterSwipeToLeft',
     title: (l) => l.chapterSwipeToLeft,
-    breadcrumb: (l) => '${l.library} › ${l.chapterSwipe}',
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'chapterSwipeToLeft').push(c),
     visible: (ref, _) => _serverReachable(ref),
@@ -254,7 +257,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'chapterSwipeToRight',
     title: (l) => l.chapterSwipeToRight,
-    breadcrumb: (l) => '${l.library} › ${l.chapterSwipe}',
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'chapterSwipeToRight').push(c),
     visible: (ref, _) => _serverReachable(ref),
@@ -458,7 +461,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'mouseScrollSpeed',
     title: (l) => l.readerMouseScrollSpeed,
-    breadcrumb: (l) => '${l.reader} › ${l.readerGroupReading}',
+    breadcrumb: (l) => '${l.reader} › ${l.readerGroupNavigation}',
     open: (c) =>
         const ReaderSettingsRoute(highlight: 'mouseScrollSpeed').push(c),
     visible: (_, _) => isKeyboardRuntime,
@@ -723,9 +726,11 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
 ];
 
 /// Notifications page (9 rows, plain "Notifications" breadcrumb), Android
-/// only. The five rows under "New chapter notifications" only render while it
-/// is on — same [notificationsNewChaptersEnabledProvider] read as the screen.
-/// The rest always render there.
+/// only. The four rows under "New chapter notifications" (interval, Wi-Fi,
+/// charging, check now) only render while it is on — same
+/// [notificationsNewChaptersEnabledProvider] read as the screen. Hide
+/// notification content closes the page and is always visible there.
+/// The rest always render too.
 List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'notificationsNewChapters',
@@ -778,9 +783,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsHideContent',
     ).push(c),
-    visible: (ref, _) =>
-        isAndroidNative &&
-        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+    visible: (_, _) => isAndroidNative,
   ),
   SettingsSearchEntry(
     id: 'notificationsCheckNow',
@@ -882,10 +885,11 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   ),
 ];
 
-/// Downloads page: Server tab (9 rows, tab 0) and On device tab (13 rows,
+/// Downloads page: Server tab (8 rows, tab 0) and On device tab (13 rows,
 /// tab 1), with "Downloads › Server" / "Downloads › On device" breadcrumbs.
 /// The three delete rows share titles across tabs but carry per-tab ids, so
-/// search can land on the right tab's row.
+/// search can land on the right tab's row. Image download processing left
+/// the Server tab (it lives on Server admin › Images now).
 ///
 /// Server rows only mount while the server settings hold a value (same
 /// `showUiWhenData` data branch as the screen); permission/personal gates
@@ -895,6 +899,8 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
 /// keep-window switch additionally needs delete-while-reading at 2+, the
 /// background switch needs Android-native, and its two sub-rows need the
 /// background run switched on — each mirroring the screen's gate exactly.
+/// Background rows carry a "› Background" breadcrumb level, safety-net rows
+/// (now under Storage) a "› Storage" one.
 List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'downloadLocation',
@@ -914,20 +920,6 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     open: (c) =>
         const DownloadsSettingsRoute(highlight: 'saveAsCbz', tab: 0).push(c),
     visible: (ref, _) => _serverReachable(ref),
-    tabIndex: 0,
-  ),
-  // Same highlight id as the Server › Images row: both open the same editor.
-  SettingsSearchEntry(
-    id: 'imageDownloadProcessing',
-    title: (l) => l.imageDownloadProcessing,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
-    open: (c) => const DownloadsSettingsRoute(
-      highlight: 'imageDownloadProcessing',
-      tab: 0,
-    ).push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(imagesDownloadSettingsProvider).value != null,
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -1093,7 +1085,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     id: 'backgroundCatchup',
     title: (l) => l.downloadNewChaptersInBackground,
     subtitle: (l) => l.downloadNewChaptersInBackgroundDescription,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineBackgroundSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'backgroundCatchup',
       tab: 1,
@@ -1104,7 +1097,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'backgroundCheckInterval',
     title: (l) => l.notificationsCheckInterval,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineBackgroundSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'backgroundCheckInterval',
       tab: 1,
@@ -1119,7 +1113,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     id: 'backgroundFetchFiles',
     title: (l) => l.backgroundCatchupFetchFiles,
     subtitle: (l) => l.backgroundCatchupFetchFilesDescription,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineBackgroundSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'backgroundFetchFiles',
       tab: 1,
@@ -1144,7 +1139,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineStorageCapEnable',
     title: (l) => l.offlineStorageCapEnable,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineStorageCapEnable',
       tab: 1,
@@ -1155,7 +1151,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineStorageCapLimit',
     title: (l) => l.offlineStorageCapLimit,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineStorageCapLimit',
       tab: 1,
@@ -1166,7 +1163,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineTimeEvictEnable',
     title: (l) => l.offlineTimeEvictEnable,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineTimeEvictEnable',
       tab: 1,
@@ -1177,7 +1175,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineKeepDays',
     title: (l) => l.offlineKeepDaysLabel,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineKeepDays',
       tab: 1,
