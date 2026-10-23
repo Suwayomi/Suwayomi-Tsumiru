@@ -38,6 +38,7 @@ import '../presentation/server/data/server_settings_repository.dart';
 import '../presentation/server/data/web_interface_repository.dart';
 import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../presentation/server/widget/database/data/database_repository.dart';
+import '../presentation/server/widget/images/data/images_repository.dart';
 import '../presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
 import '../presentation/server/widget/opds/data/opds_repository.dart';
 import '../presentation/server/widget/webview/data/webview_repository.dart';
@@ -944,6 +945,20 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
+  // Same highlight id as the Server › Images row: both open the same editor.
+  SettingsSearchEntry(
+    id: 'imageDownloadProcessing',
+    title: (l) => l.imageDownloadProcessing,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'imageDownloadProcessing',
+      tab: 0,
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(imagesDownloadSettingsProvider).value != null,
+    tabIndex: 0,
+  ),
   SettingsSearchEntry(
     id: 'serverDeleteManuallyMarkedRead',
     title: (l) => l.deleteChapterAfterManuallyMarkedRead,
@@ -1226,7 +1241,7 @@ bool _webInterfaceVisible(WidgetRef ref) =>
 List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceFlavor',
-    title: (l) => l.webInterfaceFlavor,
+    title: (l) => l.webInterfaceInterface,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
         const ServerSettingsRoute(highlight: 'webInterfaceFlavor').push(c),
@@ -1243,7 +1258,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   ),
   SettingsSearchEntry(
     id: 'webInterfaceInterface',
-    title: (l) => l.webInterfaceInterface,
+    title: (l) => l.webInterfaceOpenWith,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) => const ServerSettingsRoute(
       highlight: 'webInterfaceInterface',
@@ -1575,6 +1590,37 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     visible: (ref, _) =>
         _serverReachable(ref) &&
         (ref.watch(clearCookiesAndCacheSupportProvider).value ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'imagesClearCache',
+    title: (l) => l.imageProcessingClearCache,
+    breadcrumb: (l) => '${l.server} › ${l.images}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'imagesClearCache').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        (ref.watch(clearCachedImagesSupportProvider).value ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'imageDownloadProcessing',
+    title: (l) => l.imageDownloadProcessing,
+    breadcrumb: (l) => '${l.server} › ${l.images}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'imageDownloadProcessing',
+    ).push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(imagesDownloadSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'imageServeProcessing',
+    title: (l) => l.imageServeProcessing,
+    breadcrumb: (l) => '${l.server} › ${l.images}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'imageServeProcessing').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(serveConversionsProvider).value != null,
   ),
   SettingsSearchEntry(
     id: 'debugLogs',

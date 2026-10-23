@@ -4179,8 +4179,8 @@
   "webInterfaceExplanationCurrent": "What your server shows when someone opens its address in a browser. This is the interface you're using now.",
   "webInterfaceUnsupported": "This server does not support web interface settings.",
   "unsupportedPreference": "This setting is not supported by the app.",
-  "webInterfaceFlavor": "Flavor",
   "webInterfaceInterface": "Interface",
+  "webInterfaceOpenWith": "Open with",
   "webInterfaceBrowser": "Browser",
   "webInterfaceElectron": "Electron",
   "webInterfaceLaunchDescription": "Where to start the WebUI when starting the server",
@@ -4188,6 +4188,47 @@
   "electronPath": "Electron path",
   "electronPathDescription": "The path to the electron installation on the server",
   "electronPathDefault": "Default",
+  "images": "Images",
+  "imageProcessingClearCache": "Clear cache",
+  "imageProcessingClearedCache": "Cleared the cache",
+  "imageProcessingCouldNotClearCache": "Could not clear the cache",
+  "imageDownloadProcessing": "Image download processing",
+  "imageServeProcessing": "Image serve processing",
+  "imageProcessingIntro": "In case no MIME-Type is defined, the \"default\" one will be used for the processing.\nSet the target mode to disabled to prevent processing for a MIME-Type",
+  "imageProcessingMimeType": "MIME-Type",
+  "imageProcessingTargetMode": "Target mode",
+  "imageProcessingMimeTypeTarget": "MIME-Type target",
+  "imageProcessingCompressionLevel": "Compression level",
+  "imageProcessingCallTimeout": "Call timeout",
+  "imageProcessingConnectTimeout": "Connect timeout",
+  "imageProcessingSearchParameters": "Search parameters",
+  "imageProcessingSearchParametersCount": "Search parameters ({count})",
+  "@imageProcessingSearchParametersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "imageProcessingHeaders": "Headers",
+  "imageProcessingHeadersCount": "Headers ({count})",
+  "@imageProcessingHeadersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "imageProcessingName": "Name",
+  "imageProcessingValue": "Value",
+  "imageProcessingSecond": "Second",
+  "imageProcessingInvalidInput": "Invalid input",
+  "imageProcessingFailedToSave": "Failed to save changes",
+  "imageProcessingDisabled": "Disabled",
+  "imageProcessingImage": "Image",
+  "imageProcessingUrl": "URL",
+  "imageProcessingImageDescription": "Convert images to different formats",
+  "imageProcessingUrlDescription": "Convert images to different formats",
   "database": "Database",
   "databaseType": "Type",
   "databaseTypeH2": "H2",

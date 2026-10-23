@@ -255,11 +255,11 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               container: true,
               explicitChildNodes: true,
               child: ListTile(
-                title: Text(context.l10n.webInterfaceFlavor),
+                title: Text(context.l10n.webInterfaceInterface),
                 subtitle: Text(_flavorName(data.webUIFlavor)),
               onTap: enabled && flavors.hasValue && flavors.value!.isNotEmpty
                   ? () => _pick(
-                      title: context.l10n.webInterfaceFlavor,
+                      title: context.l10n.webInterfaceInterface,
                       value: data.webUIFlavor,
                       options: flavors.value!,
                       name: _flavorName,
@@ -297,11 +297,11 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               container: true,
               explicitChildNodes: true,
               child: ListTile(
-                title: Text(context.l10n.webInterfaceInterface),
+                title: Text(context.l10n.webInterfaceOpenWith),
                 subtitle: Text(_interfaceName(data.webUIInterface)),
                 onTap: enabled
                     ? () => _pick(
-                        title: context.l10n.webInterfaceInterface,
+                        title: context.l10n.webInterfaceOpenWith,
                         value: data.webUIInterface,
                         options: const [
                           Enum$WebUIInterface.BROWSER,
