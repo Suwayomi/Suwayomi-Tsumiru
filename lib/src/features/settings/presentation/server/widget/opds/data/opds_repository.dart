@@ -10,12 +10,7 @@ import '../../../../../../account/domain/account_access.dart';
 import '../../../../../data/user_settings.dart';
 import '../graphql/__generated__/opds.graphql.dart';
 
-/// OPDS feed settings. Every `opds*` field is per-user: current servers carry
-/// them deprecated on `SettingsType` ("Now per-user") and live on
-/// `UserSettingsType`, so reads and writes go through [UserSettingsRouting]
-/// exactly like the downloads `autoDownloadIgnoreReUploads` row. The
-/// version-gated legacy query below only serves pre-OPDS servers; its fields
-/// are never added to the shared `SettingsDto` fragment.
+/// OPDS feed settings are per-user (`UserSettingsType`), read and written through [UserSettingsRouting].
 typedef OpdsSettings = ({
   bool useBinaryFileSizes,
   int itemsPerPage,
