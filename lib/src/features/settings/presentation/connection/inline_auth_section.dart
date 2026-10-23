@@ -41,15 +41,91 @@ import 'prompt_sign_in.dart';
 ///                             so we never re-run a login the server rejects).
 ///   * Needs sign-in        -> inline username/password with Test + Sign in,
 ///                             the same shape as the first-run (FTUE) flow.
+/// The authentication-mode picker shared by the Connection page's
+/// Authentication section and its Account card.
+class ConnectionAuthTypePicker extends ConsumerWidget {
+  const ConnectionAuthTypePicker({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authType = ref.watch(authTypeKeyProvider) ?? AuthType.none;
+    final isWeb = ref.watch(isWebProvider);
+    final authChoices = connectionAuthChoices(isWeb: isWeb);
+
+    Future<void> onAuthModeChanged(AuthType? next) async {
+      if (next == null || next == authType) return;
+      stayOnConnectionAfterIdentityChange();
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          if (next == AuthType.none) {
+            final store = ref.read(authCredentialsStoreProvider.notifier);
+            await store.clearUiLoginTokens();
+            await store.clearSimpleLoginCookie();
+            await store.clearBasicCredentials();
+          }
+          // No "Session expired" banner here. Nothing expired: the user just
+          // picked a different mode and is standing on the sign-in fields, so
+          // the banner only flashed across the top and then went away. A real
+          // expiry still raises it from the request paths that meet the 401.
+          ref.read(needsReauthProvider.notifier).set(false);
+          ref.read(authTypeKeyProvider.notifier).update(next);
+        },
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // M3 DropdownMenu (not the legacy DropdownButtonFormField, whose menu
+        // anchors the selected item over the field and can open upward, wider
+        // than the field). Opens below, sized to the field. Keyed by authType
+        // so it re-seeds when the auth mode is changed elsewhere (e.g. logout).
+        SettingsHighlightTarget(
+          id: 'authentication',
+          child: DropdownMenu<AuthType>(
+            key: ValueKey(authType),
+            initialSelection: authType,
+            expandedInsets: EdgeInsets.zero,
+            requestFocusOnTap: false,
+            label: Text(context.l10n.authType),
+            leadingIcon: const Icon(Icons.security_rounded),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
+            dropdownMenuEntries: authChoices
+                .map(
+                  (t) =>
+                      DropdownMenuEntry(value: t, label: t.toLocale(context)),
+                )
+                .toList(),
+            onSelected: onAuthModeChanged,
+          ),
+        ),
+        if (isWeb)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: Text(
+              context.l10n.webUiLoginOnlyHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class InlineAuthSection extends HookConsumerWidget {
-  const InlineAuthSection({super.key});
+  const InlineAuthSection({super.key, this.accountMode = false});
+
+  /// When true, the Account card above already shows the auth-mode picker,
+  /// the signed-in state and the sign-out action, so this section only
+  /// renders the needs-sign-in fields (or nothing while signed in).
+  final bool accountMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authType = ref.watch(authTypeKeyProvider) ?? AuthType.none;
-    final isWeb = ref.watch(isWebProvider);
-    final authChoices = connectionAuthChoices(isWeb: isWeb);
     final needsReauth = ref.watch(needsReauthProvider);
     final storedUsername = ref.watch(authUsernameProvider);
 
@@ -202,29 +278,17 @@ class InlineAuthSection extends HookConsumerWidget {
       message.value = null;
     }
 
-    Future<void> onAuthModeChanged(AuthType? next) async {
-      if (next == null || next == authType) return;
-      stayOnConnectionAfterIdentityChange();
-      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
-        () async {
-          if (next == AuthType.none) {
-            final store = ref.read(authCredentialsStoreProvider.notifier);
-            await store.clearUiLoginTokens();
-            await store.clearSimpleLoginCookie();
-            await store.clearBasicCredentials();
-          }
-          // No "Session expired" banner here. Nothing expired: the user just
-          // picked a different mode and is standing on the sign-in fields, so
-          // the banner only flashed across the top and then went away. A real
-          // expiry still raises it from the request paths that meet the 401.
-          ref.read(needsReauthProvider.notifier).set(false);
-          ref.read(authTypeKeyProvider.notifier).update(next);
-        },
-      );
-      if (!context.mounted) return;
+    // A mode change elsewhere (the Account card picker, logout) resets the
+    // sign-in fields, like the inline picker used to do inline.
+    useEffect(() {
       message.value = null;
       password.clear();
-    }
+      return null;
+    }, [authType]);
+
+    // In account mode the Account card above already shows the picker, the
+    // signed-in state and the sign-out action.
+    if (accountMode && signedIn) return const SizedBox.shrink();
 
     Padding pad(Widget child) =>
         Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 4), child: child);
@@ -232,58 +296,17 @@ class InlineAuthSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.authentication),
-        pad(
-          // M3 DropdownMenu (not the legacy DropdownButtonFormField, whose menu
-          // anchors the selected item over the field and can open upward, wider
-          // than the field). Opens below, sized to the field. Keyed by authType
-          // so it re-seeds when the auth mode is changed elsewhere (e.g. logout).
-          SettingsHighlightTarget(
-            id: 'authentication',
-            child: DropdownMenu<AuthType>(
-              key: ValueKey(authType),
-              initialSelection: authType,
-              expandedInsets: EdgeInsets.zero,
-              requestFocusOnTap: false,
-              label: Text(context.l10n.authType),
-              leadingIcon: const Icon(Icons.security_rounded),
-              inputDecorationTheme: const InputDecorationTheme(
-                border: OutlineInputBorder(),
-              ),
-              dropdownMenuEntries: authChoices
-                  .map(
-                    (t) =>
-                        DropdownMenuEntry(value: t, label: t.toLocale(context)),
-                  )
-                  .toList(),
-              onSelected: onAuthModeChanged,
-            ),
-          ),
-        ),
-        if (isWeb)
-          pad(
-            Text(
-              context.l10n.webUiLoginOnlyHint,
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
+        if (!accountMode) SectionTitle(title: context.l10n.authentication),
+        if (!accountMode) pad(const ConnectionAuthTypePicker()),
         if (authType != AuthType.none) ...[
           if (signedIn) ...[
             ListTile(
-              leading: Icon(
-                Icons.check_circle_rounded,
-                color: theme.colorScheme.primary,
-              ),
               title: Text(context.l10n.connectionAuthSignedIn),
               subtitle: (storedUsername != null && storedUsername.isNotBlank)
                   ? Text(storedUsername)
                   : null,
             ),
             ListTile(
-              leading: Icon(
-                Icons.logout_rounded,
-                color: theme.colorScheme.error,
-              ),
               title: Text(
                 context.l10n.authLogout,
                 style: TextStyle(color: theme.colorScheme.error),

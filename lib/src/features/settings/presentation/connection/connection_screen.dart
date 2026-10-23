@@ -15,16 +15,21 @@ import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/network/cleartext_address.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/section_title.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../account/data/account_actions.dart';
+import '../../../account/data/account_providers.dart';
+import '../../../auth/data/auth_session_status.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../general/timeout_settings/timeout_settings_section.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
+import 'connection_account_section.dart';
 import 'custom_headers_section.dart';
 import 'inline_auth_section.dart';
 
@@ -41,6 +46,11 @@ class ConnectionScreen extends HookConsumerWidget {
     final usesLan = lanUrl != null && activeUrl == lanUrl;
     final showLanAddress = useState(lanUrl != null);
     final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
+    final showAccount = ref.watch(showAccountEntryProvider);
+    final hasCredentials = ref.watch(hasStoredCredentialsProvider);
+    final busy = useState(false);
+    final actions = ref.read(accountActionsProvider);
+    final toast = ref.read(toastProvider);
     final cleartext =
         authType != AuthType.none &&
         [
@@ -73,12 +83,34 @@ class ConnectionScreen extends HookConsumerWidget {
       return null;
     }, const []);
 
+    Future<void> refresh() async {
+      if (busy.value || !hasCredentials) return;
+      busy.value = true;
+      try {
+        await AppUtils.guard(actions.refreshAccount, toast);
+      } finally {
+        if (context.mounted) busy.value = false;
+      }
+    }
+
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.connection);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: title,
+              actions: [
+                if (showAccount)
+                  IconButton(
+                    tooltip: context.l10n.refresh,
+                    onPressed: busy.value || !hasCredentials ? null : refresh,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+              ],
+            ),
       body: ListTileTheme(
         data: ListTileThemeData(
           subtitleTextStyle: TextStyle(
@@ -86,74 +118,91 @@ class ConnectionScreen extends HookConsumerWidget {
           ),
         ),
         child: SettingsHighlightScope(
-          child: ListView(
-            children: [
-              // Surfaced here (where the server is changed) and kept visible even
-              // after dismissal, so it doubles as the "clear to re-enable offline"
-              // recovery affordance for this server.
-              const OfflineServerMismatchBanner(showAfterDismissal: true),
-              SectionTitle(title: context.l10n.serverAddress),
-              const SettingsHighlightTarget(
-                id: 'serverUrl',
-                child: ServerUrlTile(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView(
+                children: [
+                  // Surfaced here (where the server is changed) and kept visible even
+                  // after dismissal, so it doubles as the "clear to re-enable offline"
+                  // recovery affordance for this server.
+                  const OfflineServerMismatchBanner(showAfterDismissal: true),
+                  SettingsGroupHeading(label: context.l10n.server, first: true),
+                  SettingsGroupCard(
+                    children: [
+                      const SettingsHighlightTarget(
+                        id: 'serverUrl',
+                        child: ServerUrlTile(),
+                      ),
+                      if (showLanAddress.value || lanUrl != null)
+                        const SettingsHighlightTarget(
+                          id: 'serverLanUrl',
+                          child: ServerLanUrlTile(),
+                        )
+                      else
+                        ListTile(
+                          title: Text(context.l10n.addLocalNetworkAddress),
+                          onTap: () => showLanAddress.value = true,
+                        ),
+                      if (lanUrl != null)
+                        ListTile(
+                          title: Text(context.l10n.serverActiveUrl),
+                          trailing: Chip(
+                            label: Text(
+                              usesLan
+                                  ? context.l10n.serverUsingLanUrl
+                                  : context.l10n.serverUsingExternalUrl,
+                            ),
+                          ),
+                        ),
+                      if (cleartext)
+                        ListTile(
+                          leading: Icon(
+                            Icons.lock_open_rounded,
+                            color: context.theme.colorScheme.error,
+                          ),
+                          subtitle: Text(
+                            context.l10n.cleartextAddressWarning,
+                            style: TextStyle(
+                              color: context.theme.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      if (!kIsWeb)
+                        SettingsHighlightTarget(
+                          id: 'openInWeb',
+                          child: ListTile(
+                            title: Text(context.l10n.webUI),
+                            onTap: () {
+                              final url = Endpoints.baseApi(
+                                baseUrl: ref.read(serverUrlProvider),
+                                port: ref.read(serverPortProvider),
+                                addPort: ref
+                                    .read(serverPortToggleProvider)
+                                    .ifNull(),
+                                appendApiToUrl: false,
+                              );
+                              if (url.isNotBlank) {
+                                launchUrlInWeb(
+                                  context,
+                                  url,
+                                  ref.read(toastProvider),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (showAccount)
+                    const ConnectionAccountSection()
+                  else
+                    const InlineAuthSection(),
+                  const CustomHeadersSection(),
+                  const TimeoutSettingsSection(),
+                ],
               ),
-              if (showLanAddress.value || lanUrl != null)
-                const SettingsHighlightTarget(
-                  id: 'serverLanUrl',
-                  child: ServerLanUrlTile(),
-                )
-              else
-                ListTile(
-                  leading: const Icon(Icons.add_home_work_outlined),
-                  title: Text(context.l10n.addLocalNetworkAddress),
-                  onTap: () => showLanAddress.value = true,
-                ),
-              if (lanUrl != null)
-                ListTile(
-                  leading: const Icon(Icons.wifi_rounded),
-                  title: Text(context.l10n.serverActiveUrl),
-                  trailing: Chip(
-                    label: Text(
-                      usesLan
-                          ? context.l10n.serverUsingLanUrl
-                          : context.l10n.serverUsingExternalUrl,
-                    ),
-                  ),
-                ),
-              if (cleartext)
-                ListTile(
-                  leading: Icon(
-                    Icons.lock_open_rounded,
-                    color: context.theme.colorScheme.error,
-                  ),
-                  subtitle: Text(
-                    context.l10n.cleartextAddressWarning,
-                    style: TextStyle(color: context.theme.colorScheme.error),
-                  ),
-                ),
-              const InlineAuthSection(),
-              const CustomHeadersSection(),
-              if (!kIsWeb)
-                SettingsHighlightTarget(
-                  id: 'openInWeb',
-                  child: ListTile(
-                    leading: const Icon(Icons.web_rounded),
-                    title: Text(context.l10n.webUI),
-                    onTap: () {
-                      final url = Endpoints.baseApi(
-                        baseUrl: ref.read(serverUrlProvider),
-                        port: ref.read(serverPortProvider),
-                        addPort: ref.read(serverPortToggleProvider).ifNull(),
-                        appendApiToUrl: false,
-                      );
-                      if (url.isNotBlank) {
-                        launchUrlInWeb(context, url, ref.read(toastProvider));
-                      }
-                    },
-                  ),
-                ),
-              const TimeoutSettingsSection(),
-            ],
+            ),
           ),
         ),
       ),
@@ -162,6 +211,14 @@ class ConnectionScreen extends HookConsumerWidget {
       topBar: topBar,
       leading: detailNavigationBackButton(context),
       title: title,
+      actions: [
+        if (showAccount)
+          IconButton(
+            tooltip: context.l10n.refresh,
+            onPressed: busy.value || !hasCredentials ? null : refresh,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+      ],
       child: scaffold,
     );
   }

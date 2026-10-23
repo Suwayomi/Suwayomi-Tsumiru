@@ -547,7 +547,8 @@ class AccountRoute extends GoRouteData with $AccountRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
-  Widget get _screen => const AccountScreen();
+  // The Account page folded into Connection; the old link lands there.
+  Widget get _screen => const ConnectionScreen();
 
   @override
   Widget build(context, state) => DetailNavigationShellScreen(child: _screen);

@@ -12,8 +12,8 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../features/auth/data/custom_headers_store.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
-import '../../../../widgets/section_title.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 
 /// Connection-screen editor for generic custom HTTP headers.
 ///
@@ -61,7 +61,7 @@ class CustomHeadersSection extends HookConsumerWidget {
     final editor = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!compact) SectionTitle(title: context.l10n.customHeaders),
+        if (!compact) SettingsGroupHeading(label: context.l10n.customHeaders),
         Padding(
           padding: const EdgeInsets.fromLTRB(28, 0, 16, 4),
           child: Text(
@@ -83,7 +83,7 @@ class CustomHeadersSection extends HookConsumerWidget {
           ),
         for (final entry in entries)
           ListTile(
-            leading: const Icon(Icons.key_rounded),
+            leading: compact ? const Icon(Icons.key_rounded) : null,
             title: Text(entry.key),
             subtitle: Text(
               entry.value.isEmpty ? '—' : '••••••••',
