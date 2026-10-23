@@ -21,7 +21,6 @@ import '../../../account/data/account_providers.dart';
 import '../../../account/presentation/sign_out_action.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
-import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
@@ -176,19 +175,6 @@ class MoreScreen extends ConsumerWidget {
                       title: context.l10n.history,
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => const HistoryRoute().push(context),
-                    ),
-                    Builder(
-                      builder: (context) {
-                        final count =
-                            ref.watch(failedUpdateCountProvider).value ?? 0;
-                        return SettingsGroupRow(
-                          icon: Icons.error_outline,
-                          title: context.l10n.libraryUpdateErrorsCount(count),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () =>
-                              const LibraryUpdateErrorsRoute().push(context),
-                        );
-                      },
                     ),
                     SettingsGroupRow(
                       icon: Icons.settings_backup_restore_outlined,
