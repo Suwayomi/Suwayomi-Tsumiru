@@ -63,7 +63,7 @@ class CustomHeadersSection extends HookConsumerWidget {
       children: [
         if (!compact) SectionTitle(title: context.l10n.customHeaders),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          padding: const EdgeInsets.fromLTRB(28, 0, 16, 4),
           child: Text(
             compact
                 ? context.l10n.onboardingCustomHeadersHint
@@ -73,7 +73,7 @@ class CustomHeadersSection extends HookConsumerWidget {
         ),
         if (!compact && entries.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            padding: const EdgeInsets.fromLTRB(28, 4, 16, 4),
             child: Text(
               context.l10n.customHeaderEmpty,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(

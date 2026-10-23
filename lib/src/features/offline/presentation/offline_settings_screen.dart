@@ -66,7 +66,7 @@ List<Widget> deleteChaptersSection(
 }) => [
   SettingsGroupHeading(label: title, first: first),
   Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+    padding: const EdgeInsets.fromLTRB(28, 0, 16, 8),
     child: Text(
       description,
       style: context.textTheme.bodySmall?.copyWith(
