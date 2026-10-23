@@ -279,7 +279,6 @@ class LibrarySettingsScreen extends ConsumerWidget {
                   id: 'duplicatedEntries',
                   child: ListTile(
                     title: Text(context.l10n.duplicatedEntries),
-                    subtitle: Text(context.l10n.duplicatedEntriesSubtitle),
                     onTap: () => const LibraryDuplicatesRoute().push(context),
                   ),
                 ),

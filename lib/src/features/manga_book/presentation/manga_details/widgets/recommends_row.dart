@@ -102,7 +102,7 @@ class RecommendsRow extends HookConsumerWidget {
                   ? SizedBox(
                       height: width * 1.5 + 42,
                       child: recs.isLoading
-                          ? const RecommendationLoading(explainServices: true)
+                          ? const RecommendationLoading()
                           : Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,

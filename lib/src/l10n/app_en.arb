@@ -1301,8 +1301,8 @@
     "description": "Zoom start position chip"
   },
   "about": "About",
-  "addCategory": "Add Category",
-  "addToLibrary": "Add to Library",
+  "addCategory": "Add category",
+  "addToLibrary": "Add to library",
   "advanced": "Advanced",
   "allScanlators": "All Scanlators",
   "animatePageTransitions": "Animate page transitions",
@@ -1357,7 +1357,7 @@
   },
   "updateCategories": "Categories to update",
   "updateCategoriesAll": "All categories",
-  "updateCategoriesHint": "Only included categories are checked during a global library update (exclude always wins). Tap to cycle: ✓ include · – exclude · empty default.",
+  "updateCategoriesHint": "Excluded categories take priority. Tap to cycle: ✓ include · – exclude · empty default.",
   "updateCategoriesIncluded": "Included: {names}",
   "@updateCategoriesIncluded": {
     "placeholders": {
@@ -1379,7 +1379,7 @@
     "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
   },
   "automaticBackup": "Automated backup",
-  "automaticUpdate": "Automatic Update",
+  "automaticUpdate": "Automatic updates",
   "centerMarginDoubleAndWide": "Double and wide",
   "centerMarginDoublePages": "Double pages",
   "centerMarginNone": "None",
@@ -1458,7 +1458,7 @@
   "showPageNumber": "Show page number",
   "showVerticalSeekbarInLandscape": "Show vertical seekbar in landscape",
   "refreshChaptersFromSource": "Refresh chapters from source",
-  "refreshChaptersFromSourceSubtitle": "When off, opening an entry shows the chapters already on the server. When on, also check the source for new chapters.",
+  "refreshChaptersFromSourceSubtitle": "Check the source for new chapters when opening an entry.",
   "automaticallyRefreshMetadata": "Automatically refresh metadata",
   "automaticallyRefreshMetadataSubtitle": "Check for new cover and details when updating library",
   "backup": "Backup and restore",
@@ -1557,7 +1557,7 @@
   "cacheCleared": "Cleared the cache",
   "cancel": "Cancel",
   "categories": "Categories",
-  "categoryUpdate": "Category Update",
+  "categoryUpdate": "Category update",
   "channel": "Channel",
   "chapterDownloadLimit": "Chapter download limit",
   "chapterDownloadLimitDesc": "Limit the amount of new chapters that are going to get downloaded.",
@@ -1709,8 +1709,8 @@
   "ok": "OK",
   "delete": "Delete",
   "deleteChaptersConfirm": "Are you sure you want to delete the selected chapters?",
-  "deleteCategoryDescription": "This will merge all Mangas in this Category to Default!",
-  "deleteCategoryTitle": "Are you sure?",
+  "deleteCategoryDescription": "Move all manga in this category to Default.",
+  "deleteCategoryTitle": "Delete category",
   "deleteChapters": "Delete chapters",
   "deleteFromServer": "Delete from server…",
   "deleteOnDeviceDownloads": "Delete on-device downloads",
@@ -1730,14 +1730,14 @@
   "deleteWhileReadingFifthToLast": "Fifth to last read chapter",
   "discord": "Discord",
   "display": "Display",
-  "displayMode": "Display Mode",
+  "displayMode": "Display mode",
   "displayModeComfortableGrid": "Comfortable grid",
   "displayModeCompactGrid": "Compact grid",
   "@displayModeCompactGrid": {
     "description": "Library-only label for display mode Grid, whose title sits on the cover"
   },
   "displayModeCoverOnly": "Cover-only grid",
-  "displayModeDescriptiveList": "Descriptive List",
+  "displayModeDescriptiveList": "Descriptive list",
   "displayModeGrid": "Grid",
   "displayModeList": "List",
   "gridStyle": "Grid style",
@@ -1772,7 +1772,7 @@
   "@filterStateExcluded": {
     "description": "Generic tri-state filter chip to hide entries that match"
   },
-  "filterHeaderDownloadStatus": "Download Status",
+  "filterHeaderDownloadStatus": "Download status",
   "@filterHeaderDownloadStatus": {
     "description": "Section label for the downloaded filter chip row"
   },
@@ -1780,7 +1780,7 @@
   "@filterOptionDownloaded": {
     "description": "Download-status filter chip: only downloaded entries"
   },
-  "filterOptionNotDownloaded": "Not Downloaded",
+  "filterOptionNotDownloaded": "Not downloaded",
   "@filterOptionNotDownloaded": {
     "description": "Download-status filter chip: only entries with nothing downloaded"
   },
@@ -1788,7 +1788,7 @@
   "@filterHeaderStorage": {
     "description": "Section label for the on-device filter chip row"
   },
-  "filterOptionOnDevice": "On Device",
+  "filterOptionOnDevice": "On device",
   "@filterOptionOnDevice": {
     "description": "Storage filter chip: only entries kept on this device"
   },
@@ -1796,7 +1796,7 @@
   "@filterOptionRemote": {
     "description": "Storage filter chip: only entries with nothing kept on this device"
   },
-  "filterHeaderReadStatus": "Read Status",
+  "filterHeaderReadStatus": "Read status",
   "@filterHeaderReadStatus": {
     "description": "Section label for the unread filter chip row"
   },
@@ -1816,7 +1816,7 @@
   "@filterOptionStarted": {
     "description": "Progress filter chip: only entries with at least one chapter read"
   },
-  "filterOptionNotStarted": "Not Started",
+  "filterOptionNotStarted": "Not started",
   "@filterOptionNotStarted": {
     "description": "Progress filter chip: only entries with no chapters read yet"
   },
@@ -1828,7 +1828,7 @@
   "@filterOptionBookmarked": {
     "description": "Bookmarks filter chip: only entries with a bookmarked chapter"
   },
-  "filterOptionNotBookmarked": "Not Bookmarked",
+  "filterOptionNotBookmarked": "Not bookmarked",
   "@filterOptionNotBookmarked": {
     "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
   },
@@ -2039,7 +2039,7 @@
     "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters."
   },
   "edit": "Edit",
-  "editCategory": "Edit Category",
+  "editCategory": "Edit category",
   "hideCategory": "Hide category",
   "showCategory": "Show category",
   "showUpdateProgressBanner": "Show update progress banner",
@@ -2053,7 +2053,7 @@
   },
   "incognitoMode": "Incognito mode",
   "incognitoModeDescription": "Pauses reading history",
-  "emptyCategory": "Category name can't be Empty",
+  "emptyCategory": "Category name can't be empty",
   "enableSocksProxy": "Use SOCKS proxy",
   "enterProp": "Enter {prop}",
   "error": "Error",
@@ -2069,8 +2069,8 @@
   "expandSidebar": "Expand sidebar",
   "excludeEntryWithUnreadChapters": "Ignore automatic chapter downloads for entries with unread chapters",
   "ignoreReuploadedChapters": "Ignore re-uploaded chapters",
-  "extensionInstalled": "Extension Installed!",
-  "extensionListEmpty": "Extension list is Empty",
+  "extensionInstalled": "Extension installed",
+  "extensionListEmpty": "No extensions found",
   "extensionRepository": "Extension Repository",
   "extensionRepositoryDescription": "Add repositories from which extensions can be installed",
   "extensions": "Extensions",
@@ -2086,8 +2086,8 @@
   "responseFallbackDescription": "Use the FlareSolverr response in case the server runs into a Cloudflare challenge while FlareSolverr does not and is therefore unable to solve the challenge (does not work for images)",
   "general": "General",
   "gitHub": "GitHub",
-  "globalSearch": "Global Search",
-  "globalUpdate": "Global Update",
+  "globalSearch": "Global search",
+  "globalUpdate": "Global update",
   "gqlDebugLogs": "Graphql debug logs",
   "gqlDebugLogsHint": "This includes logs with non privacy safe information",
   "help": "Help",
@@ -2107,7 +2107,7 @@
   "@includeServerSettings": {},
   "install": "Install",
   "installing": "Installing",
-  "installingExtension": "Installing Extension",
+  "installingExtension": "Installing extension",
   "invalidPort": "Invalid Port",
   "invalidProp": "Invalid {property}",
   "ip": "IP address",
@@ -2215,11 +2215,11 @@
     "description": "Library filter label: NSFW/lewd manga from adult sources"
   },
   "library": "Library",
-  "libraryColumnsLandscape": "Columns (Landscape)",
+  "libraryColumnsLandscape": "Columns (landscape)",
   "@libraryColumnsLandscape": {
     "description": "Library Display section heading for the landscape column count slider"
   },
-  "libraryColumnsPortrait": "Columns (Portrait)",
+  "libraryColumnsPortrait": "Columns (portrait)",
   "@libraryColumnsPortrait": {
     "description": "Library Display section heading for the portrait column count slider"
   },
@@ -2227,26 +2227,26 @@
   "localSourceLocationDescription": "Folder on the server where local source files are kept.",
   "lockToPortrait": "Lock to portrait",
   "manga": "Manga",
-  "mangaGridSize": "Manga Grid Size",
+  "mangaGridSize": "Manga grid size",
   "mangaMissingSources": "Manga Missing Sources",
   "mangaSortAlphabetical": "Alphabetical",
-  "mangaSortDateAdded": "Date Added",
-  "mangaSortLastChapterDate": "Latest Chapter",
-  "mangaSortLastRead": "Last Read",
-  "mangaSortLastUpdated": "Chapter Fetch Date",
-  "mangaSortLastUpdate": "Last Update",
+  "mangaSortDateAdded": "Date added",
+  "mangaSortLastChapterDate": "Latest chapter",
+  "mangaSortLastRead": "Last read",
+  "mangaSortLastUpdated": "Chapter fetch date",
+  "mangaSortLastUpdate": "Last update",
   "mangaSortRating": "Rating",
   "minimumRating": "Minimum rating",
   "mangaSortRandom": "Random",
   "mangaSortTrackerScore": "Tracker score",
-  "mangaSortTotalChapters": "Total Chapters",
+  "mangaSortTotalChapters": "Total chapters",
   "mangaSortUnread": "Unread",
   "mangaStatusCancelled": "Cancelled",
   "mangaStatusCompleted": "Completed",
   "mangaStatusLicensed": "Licensed",
-  "mangaStatusOnHiatus": "On Hiatus",
+  "mangaStatusOnHiatus": "On hiatus",
   "mangaStatusOngoing": "Ongoing",
-  "mangaStatusPublishingFinished": "Publishing Finished",
+  "mangaStatusPublishingFinished": "Publishing finished",
   "mangaStatusUnknown": "Unknown",
   "misc": "Misc",
   "missingExtension": "Missing extensions",
@@ -2299,16 +2299,16 @@
     "description": "Toast shown when a bulk-download preset would queue zero chapters."
   },
   "noVisibleCategories": "No visible categories",
-  "noCategoriesFound": "You don't have any Categories. \n(Tip: Tap the Plus button to create one for organizing your library)",
-  "noCategoriesFoundAlt": "You don't have any Categories. \nCreate one in settings for organizing your library",
+  "noCategoriesFound": "You don't have any categories yet.",
+  "noCategoriesFoundAlt": "You don't have any categories yet.",
   "needsServerConnection": "Needs a connection to the server",
   "@needsServerConnection": {
     "description": "Error toast when a server-stored setting is changed while the server is unreachable"
   },
-  "noCategoryMangaFound": "No manga found in this Category. \n(Tip: Check your search & filters!)",
+  "noCategoryMangaFound": "No entries found in this category",
   "noChaptersFound": "No Chapters found",
   "noDownloads": "No downloads",
-  "noMangaFound": "No Mangas Found",
+  "noMangaFound": "No manga found",
   "noOfChapters": "{count} Chapters",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
   "readerChapterGapWarning": "{count, plural, =1{Skipping 1 chapter. It may be missing from the source or filtered out.} other{Skipping {count} chapters. They may be missing from the source or filtered out.}}",
@@ -2385,8 +2385,8 @@
   "none": "None",
   "nsfw": "Show NSFW extensions and sources",
   "nsfw18": "18+",
-  "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW(18+) content within app",
-  "numSelected": "{num} Selected",
+  "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
+  "numSelected": "{num} selected",
   "removeFromDevice": "Remove from device",
   "download": "Download",
   "undo": "Undo",
@@ -2771,7 +2771,6 @@
     }
   },
   "libraryUpdateErrorsEmpty": "No update errors",
-  "libraryUpdateErrorsEmptyDetail": "Series that fail to update show up here",
   "notificationLibraryErrorTitle": "Library update failed",
   "notificationLibraryErrorBody": "{count} series failed to update",
   "@notificationLibraryErrorBody": {
@@ -2914,7 +2913,7 @@
   "deleteSourceAfterMigration": "Delete source manga after migration",
   "reload": "Reload",
   "remove": "Remove",
-  "removeFromLibrary": "Remove from Library?",
+  "removeFromLibrary": "Remove from library",
   "reset": "Reset",
   "restore": "Restore",
   "restoreBackupTitle": "Restore backup",
@@ -3061,14 +3060,14 @@
     "description": "Button tooltip on an installed extension: uninstall it and install it again"
   },
   "reinstalling": "Reinstalling",
-  "unknownAuthor": "Unknown Author",
+  "unknownAuthor": "Unknown author",
   "unknownManga": "Unknown Manga",
-  "unknownSource": "Unknown Source",
+  "unknownSource": "Unknown source",
   "unread": "Unread",
   "readProgressBar": "Read progress bar",
   "update": "Update",
   "updateAll": "Update all",
-  "updateCompleted": "Update Completed",
+  "updateCompleted": "Update completed",
   "updateFailed": "Failed to update {property}",
   "updates": "Updates",
   "updatesGroupingLabel": "Chapter grouping",
@@ -3108,11 +3107,11 @@
   "validating": "Validating",
   "versionAvailable": "Version {version} available for {app}!!",
   "webUI": "Open in browser",
-  "webView": "Web View",
+  "webView": "WebView",
   "kcefWebView": "WebView",
   "kcefWebViewDescription": "Enable the WebView via CEF (Chromium)",
   "whatsNew": "What's New?",
-  "withCompletedStatus": "With Completed status",
+  "withCompletedStatus": "With completed status",
   "withUnreadChapter": "With unread chapter(s)",
   "yesterday": "Yesterday",
   "recentlyRead": "Recently Read",
@@ -3735,7 +3734,7 @@
   "@removeExtensionStore": {
     "description": "Title of the confirmation dialog for removing an extension store"
   },
-  "removeExtensionStoreBody": "Do you wish to remove the extension store \"{name}\" ({url})?",
+  "removeExtensionStoreBody": "Remove \"{name}\"?\n{url}",
   "@removeExtensionStoreBody": {
     "description": "Body of the confirmation dialog for removing an extension store",
     "placeholders": {
@@ -3768,7 +3767,7 @@
   "@preferredScanlationGroups": {
     "description": "Title for the preferred scanlation groups filter-sheet row and ranking dialog"
   },
-  "preferredGroupsHint": "Checked groups are preferred in order; chapters they don't cover fall back to other groups.",
+  "preferredGroupsHint": "Checked groups are preferred in order. Chapters they don't cover fall back to other groups.",
   "@preferredGroupsHint": {
     "description": "Hint text explaining the preferred scanlation groups ranking dialog"
   },
@@ -3849,10 +3848,6 @@
   "duplicatedEntries": "Duplicated entries",
   "@duplicatedEntries": {
     "description": "Title of the library settings row that opens the library-wide duplicate scan"
-  },
-  "duplicatedEntriesSubtitle": "Show all duplicated entries in your library",
-  "@duplicatedEntriesSubtitle": {
-    "description": "Subtitle of the library settings row that opens the library-wide duplicate scan"
   },
   "scanForDuplicates": "Scan for duplicates",
   "@scanForDuplicates": {
@@ -4332,7 +4327,6 @@
     }
   },
   "suggestionsFetching": "Fetching suggestions…",
-  "suggestionsFetchingSubtitle": "Checking recommendation services. This may take a moment.",
   "suggestionsEmpty": "No suggestions found for this title.",
   "suggestionsLoadFailed": "Couldn’t load suggestions. Try again later.",
   "trackerOAuthLinkInvalid": "This sign-in link is no longer valid. Start tracker sign-in again.",

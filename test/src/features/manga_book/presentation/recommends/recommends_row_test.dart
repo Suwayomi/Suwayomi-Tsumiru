@@ -166,21 +166,14 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets(
-    'loading explains the work and keeps the full suggestions action',
-    (tester) async {
-      await pump(tester);
-      expect(find.text('Fetching suggestions…'), findsOneWidget);
-      expect(
-        find.text('Checking recommendation services. This may take a moment.'),
-        findsOneWidget,
-      );
-      expect(
-        tester.widget<CoverRowSection>(find.byType(CoverRowSection)).onSeeAll,
-        isNotNull,
-      );
-    },
-  );
+  testWidgets('loading keeps the full suggestions action', (tester) async {
+    await pump(tester);
+    expect(find.text('Fetching suggestions…'), findsOneWidget);
+    expect(
+      tester.widget<CoverRowSection>(find.byType(CoverRowSection)).onSeeAll,
+      isNotNull,
+    );
+  });
   testWidgets('settled empty results remain visible with Retry', (
     tester,
   ) async {

@@ -364,7 +364,7 @@ void main() {
     await tester.tap(selectAll);
     await tester.pumpAndSettle();
     expect(
-      find.descendant(of: topBar, matching: find.text('6 Selected')),
+      find.descendant(of: topBar, matching: find.text('6 selected')),
       findsOneWidget,
     );
     // Close the selection so the two-column checks below start clean.

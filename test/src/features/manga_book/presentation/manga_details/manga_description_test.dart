@@ -58,7 +58,7 @@ void main() {
     await tester.tap(find.text('In library'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Remove from Library?'), findsOneWidget);
+    expect(find.text('Remove from library'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
     expect(
       find.text(

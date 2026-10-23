@@ -259,7 +259,6 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'duplicatedEntries',
     title: (l) => l.duplicatedEntries,
-    subtitle: (l) => l.duplicatedEntriesSubtitle,
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'duplicatedEntries').push(c),
