@@ -20,55 +20,12 @@ class ServerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final access = ref.watch(settledAccountAccessProvider);
+    final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
     const chevron = Icon(Icons.chevron_right_rounded);
-    final List<Widget> rows = [
-      if (canManage)
-        SettingsGroupRow(
-          icon: Icons.lan_outlined,
-          title: context.l10n.network,
-          trailing: chevron,
-          onTap: () => const ServerNetworkRoute().push(context),
-        ),
-      if (canManage)
-        SettingsGroupRow(
-          icon: Icons.web_outlined,
-          title: context.l10n.webInterface,
-          trailing: chevron,
-          onTap: () => const ServerWebInterfaceRoute().push(context),
-        ),
-      SettingsGroupRow(
-        icon: Icons.rss_feed_outlined,
-        title: context.l10n.opds,
-        trailing: chevron,
-        onTap: () => const ServerOpdsRoute().push(context),
-      ),
-      SettingsGroupRow(
-        icon: Icons.image_outlined,
-        title: context.l10n.images,
-        trailing: chevron,
-        onTap: () => const ServerImagesRoute().push(context),
-      ),
-      if (canManage)
-        SettingsGroupRow(
-          icon: Icons.storage_outlined,
-          title: context.l10n.database,
-          trailing: chevron,
-          onTap: () => const ServerDatabaseRoute().push(context),
-        ),
-      if (canManage)
-        SettingsGroupRow(
-          icon: Icons.receipt_long_outlined,
-          title: context.l10n.logs,
-          trailing: chevron,
-          onTap: () => const ServerLogsRoute().push(context),
-        ),
-    ];
 
     final topBar = showsMergedTopBar(context);
-    final title = Text(context.l10n.serverAdmin);
+    final title = Text(context.l10n.server);
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
       body: Center(
@@ -76,7 +33,70 @@ class ServerScreen extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [SettingsGroupCard(children: rows)],
+            children: [
+              if (access.canManageUsers)
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.group_outlined,
+                      title: context.l10n.serverUsers,
+                      trailing: chevron,
+                      onTap: () => const ManageUsersRoute().push(context),
+                    ),
+                  ],
+                ),
+              if (access.canManageUsers) const SizedBox(height: 16),
+              SettingsGroupCard(
+                children: [
+                  if (canManage)
+                    SettingsGroupRow(
+                      icon: Icons.lan_outlined,
+                      title: context.l10n.network,
+                      trailing: chevron,
+                      onTap: () => const ServerNetworkRoute().push(context),
+                    ),
+                  if (canManage)
+                    SettingsGroupRow(
+                      icon: Icons.web_outlined,
+                      title: context.l10n.webInterface,
+                      trailing: chevron,
+                      onTap: () =>
+                          const ServerWebInterfaceRoute().push(context),
+                    ),
+                  SettingsGroupRow(
+                    icon: Icons.rss_feed_outlined,
+                    title: context.l10n.opds,
+                    trailing: chevron,
+                    onTap: () => const ServerOpdsRoute().push(context),
+                  ),
+                  SettingsGroupRow(
+                    icon: Icons.image_outlined,
+                    title: context.l10n.images,
+                    trailing: chevron,
+                    onTap: () => const ServerImagesRoute().push(context),
+                  ),
+                  if (canManage)
+                    SettingsGroupRow(
+                      icon: Icons.storage_outlined,
+                      title: context.l10n.database,
+                      trailing: chevron,
+                      onTap: () => const ServerDatabaseRoute().push(context),
+                    ),
+                ],
+              ),
+              if (canManage) const SizedBox(height: 16),
+              if (canManage)
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.receipt_long_outlined,
+                      title: context.l10n.logs,
+                      trailing: chevron,
+                      onTap: () => const ServerLogsRoute().push(context),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
       ),

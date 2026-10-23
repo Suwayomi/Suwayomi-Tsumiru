@@ -15,7 +15,9 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/web_selection_area.dart';
 import '../../../account/data/account_providers.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
+import '../library/widgets/persistent_search_bar/persistent_search_bar.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -24,18 +26,37 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final showAccount = ref.watch(showAccountEntryProvider);
     final account = ref.watch(currentAccountProvider);
+    // Phone searches from the app-bar entry (or the box under the title when
+    // the persistent setting is on), like More does.
+    final phone = context.windowSizeClass == WindowSizeClass.compact;
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
 
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.settings);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: title,
+              bottom: persistentBox
+                  ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
+                  : null,
+              actions: [
+                if (phone && !persistentBox)
+                  const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
+              ],
+            ),
       body: WebSelectionArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: ListView(
               children: [
-                SettingsGroupHeading(label: context.l10n.settingsGroupApp),
+                SettingsGroupHeading(
+                  label: context.l10n.settingsGroupApp,
+                  first: true,
+                ),
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
@@ -99,21 +120,15 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                SettingsGroupHeading(label: context.l10n.server),
+                SettingsGroupHeading(label: context.l10n.settingsGroupSuwayomi),
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
                       icon: Icons.dns_outlined,
                       title: context.l10n.connection,
+                      subtitle: showAccount ? account?.username : null,
                       onTap: () => const ConnectionRoute().push(context),
                     ),
-                    if (showAccount)
-                      SettingsGroupRow(
-                        icon: Icons.person_outlined,
-                        title: context.l10n.accountTitle,
-                        subtitle: account?.username,
-                        onTap: () => const AccountRoute().push(context),
-                      ),
                     SettingsGroupRow(
                       icon: Icons.cloud_sync_outlined,
                       title: context.l10n.sync,
@@ -121,7 +136,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     SettingsGroupRow(
                       icon: Icons.admin_panel_settings_outlined,
-                      title: context.l10n.serverAdmin,
+                      title: context.l10n.server,
                       onTap: () => const ServerSettingsRoute().push(context),
                     ),
                   ],
@@ -133,11 +148,6 @@ class SettingsScreen extends ConsumerWidget {
                       icon: Icons.build_outlined,
                       title: context.l10n.advanced,
                       onTap: () => const AdvancedRoute().push(context),
-                    ),
-                    SettingsGroupRow(
-                      icon: Icons.info_outlined,
-                      title: context.l10n.about,
-                      onTap: () => const AboutRoute().push(context),
                     ),
                   ],
                 ),

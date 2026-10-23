@@ -62,7 +62,7 @@ String webRouteTitle(
     ['more', 'settings', 'appearance'] => l10n.appearance,
     ['more', 'settings', 'general'] => l10n.general,
     ['more', 'settings', 'backup'] => l10n.backup,
-    ['more', 'settings', 'server'] => l10n.serverAdmin,
+    ['more', 'settings', 'server'] => l10n.server,
     ['more', 'settings', 'server', 'network'] => l10n.network,
     ['more', 'settings', 'server', 'web-interface'] => l10n.webInterface,
     ['more', 'settings', 'server', 'opds'] => l10n.opds,
