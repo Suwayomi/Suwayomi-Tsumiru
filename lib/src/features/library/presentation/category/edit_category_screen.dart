@@ -76,8 +76,9 @@ class EditCategoryScreen extends HookConsumerWidget {
                     );
                   },
                   onReorderItem: (oldIndex, newIndex) {
-                    if (defaultId == null || data[oldIndex].id == defaultId)
+                    if (defaultId == null || data[oldIndex].id == defaultId) {
                       return;
+                    }
                     final protectedIndex = data.indexWhere(
                       (category) => category.id == defaultId,
                     );

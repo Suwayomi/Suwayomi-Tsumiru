@@ -327,8 +327,9 @@ class AccountCodesScreen extends HookConsumerWidget {
                                                     );
                                                   }
                                                 } finally {
-                                                  if (context.mounted)
+                                                  if (context.mounted) {
                                                     busy.value = false;
+                                                  }
                                                 }
                                               },
                                         child: Text(
