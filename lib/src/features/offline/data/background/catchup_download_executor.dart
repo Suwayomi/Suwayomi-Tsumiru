@@ -50,6 +50,7 @@ const _runBudget = Duration(minutes: 7);
 Future<bool> runCatchupDownloads({
   required CatchupStateStore catchupStore,
   required NotificationWorkerConfig config,
+
   /// Where to reach the server from this network; [config]'s endpoint when
   /// not given. See [NotificationEndpoint.forThisNetwork].
   NotificationEndpoint? endpoint,
@@ -840,7 +841,7 @@ Future<_MangaChapters?> _fetchMangaChapters(
   int mangaId,
 ) async {
   const query =
-      'query MangaChapters(\$id: Int!){ chapters(condition:{mangaId: \$id}, order:[{by: SOURCE_ORDER, byType: ASC}]){ nodes { id name sourceOrder chapterNumber uploadDate fetchedAt isRead isBookmarked isDownloaded pageCount } } }';
+      'query MangaChapters(\$id: Int!){ chapters(condition:{mangaId: \$id}, order:[{by: SOURCE_ORDER, byType: ASC}]){ nodes { id name sourceOrder chapterNumber uploadDate fetchedAt user { isRead isBookmarked isDownloaded } pageCount } } }';
   Future<Object?> post(String? accessToken) => postBackgroundGraphql(
     target: target,
     record: record(),
@@ -872,10 +873,15 @@ Future<_MangaChapters?> _fetchMangaChapters(
         chapterNumber: (n['chapterNumber'] as num?)?.toDouble(),
         uploadDate: n['uploadDate'] as String?,
         fetchedAt: n['fetchedAt'] as String?,
-        isRead: n['isRead'] as bool? ?? false,
+        isRead:
+            (n['user'] as Map<String, Object?>?)?['isRead'] as bool? ?? false,
         lastPageRead: 0,
-        isBookmarked: n['isBookmarked'] as bool? ?? false,
-        serverIsDownloaded: n['isDownloaded'] as bool? ?? false,
+        isBookmarked:
+            (n['user'] as Map<String, Object?>?)?['isBookmarked'] as bool? ??
+            false,
+        serverIsDownloaded:
+            (n['user'] as Map<String, Object?>?)?['isDownloaded'] as bool? ??
+            false,
         deviceState: OfflineDeviceState.none,
         pageCount: (n['pageCount'] as num?)?.toInt() ?? 0,
         bytes: 0,
@@ -885,7 +891,8 @@ Future<_MangaChapters?> _fetchMangaChapters(
         bookmarkDirty: false,
         readStateDirty: false,
         readStateManual: false,
-        syncedIsRead: n['isRead'] as bool? ?? false,
+        syncedIsRead:
+            (n['user'] as Map<String, Object?>?)?['isRead'] as bool? ?? false,
         updatedAt: now,
         downloadGeneration: 0,
         serverFetchAttempts: 0,

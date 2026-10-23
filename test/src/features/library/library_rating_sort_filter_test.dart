@@ -14,12 +14,8 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 MangaDto _manga(int id, {int? rating}) => Fragment$MangaDto(
   id: id,
   title: 'M$id',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: rating == null
       ? const []
@@ -28,9 +24,15 @@ MangaDto _manga(int id, {int? rating}) => Fragment$MangaDto(
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 List<MangaDto> _run(

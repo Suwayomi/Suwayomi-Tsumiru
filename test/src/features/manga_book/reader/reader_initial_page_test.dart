@@ -18,11 +18,6 @@ ChapterDto _chapter({
   chapterNumber: 1,
   fetchedAt: '0',
   id: 1,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: isRead,
-  lastPageRead: lastPageRead,
-  lastReadAt: '0',
   mangaId: 1,
   name: 'Chapter 1',
   pageCount: pageCount,
@@ -30,6 +25,13 @@ ChapterDto _chapter({
   uploadDate: '0',
   url: '/chapter/1',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: isRead,
+    lastPageRead: lastPageRead,
+    lastReadAt: '0',
+  ),
 );
 
 ChapterPagesDto _pages({int loadedCount = 5, int pageCount = 5}) =>

@@ -44,12 +44,8 @@ Fragment$MangaDto _manga({
 }) => Fragment$MangaDto(
   id: id,
   title: 'Manga $id',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   source: null,
@@ -57,9 +53,15 @@ Fragment$MangaDto _manga({
   status: Enum$MangaStatus.ONGOING,
   categories: _cats(const []),
   trackRecords: _trks(trackNodes),
-  unreadCount: unreadCount,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: 'https://example.com/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: unreadCount,
+  ),
 );
 
 // ─────────────────────────── tests ──────────────────────────────

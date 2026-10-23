@@ -53,8 +53,8 @@ Future<void> showChapterContextMenu({
   }
 
   List<PopupMenuEntry<void>> buildSingleItems() {
-    final read = chapter.isRead.ifNull();
-    final bookmarked = chapter.isBookmarked.ifNull();
+    final read = chapter.user.isRead.ifNull();
+    final bookmarked = chapter.user.isBookmarked.ifNull();
     final canDownload = canDownloadChapters(ref);
     final offlineEnabled = ref.read(offlineEnabledProvider);
     final onDevice =
@@ -140,7 +140,7 @@ Future<void> showChapterContextMenu({
       PopupMenuItem(
         onTap: () => replaceSelection({
           for (final c in orderedChapters)
-            if (!c.isRead.ifNull()) c.id: c,
+            if (!c.user.isRead.ifNull()) c.id: c,
         }, chapter.id),
         child: ChapterMenuRow(
           icon: Icons.filter_list_rounded,
@@ -215,7 +215,7 @@ Future<void> showChapterContextMenu({
                 : context.l10n.keepOffline,
           ),
         ),
-      if (chapter.isDownloaded.ifNull())
+      if (chapter.user.isDownloaded.ifNull())
         _DangerMenuItem(
           icon: Icons.delete_rounded,
           label: context.l10n.deleteFromServer,
@@ -247,8 +247,8 @@ Future<void> showChapterContextMenu({
   }
 
   List<PopupMenuEntry<void>> buildSelectionItems() {
-    final allRead = targets.every((c) => c.isRead.ifNull());
-    final allBookmarked = targets.every((c) => c.isBookmarked.ifNull());
+    final allRead = targets.every((c) => c.user.isRead.ifNull());
+    final allBookmarked = targets.every((c) => c.user.isBookmarked.ifNull());
     final canDownload = canDownloadChapters(ref);
     return [
       PopupMenuItem(

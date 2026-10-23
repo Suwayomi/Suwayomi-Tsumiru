@@ -76,14 +76,14 @@ Map<String, dynamic> _queueItem({
     'id': chapterId,
     'name': 'Ch. $chapterId',
     'sourceOrder': position,
-    'isDownloaded': false,
+    'user': {'isDownloaded': false, '__typename': 'ChapterUserType'},
     'pageCount': 0,
     '__typename': 'ChapterType',
   },
   'manga': {
     'id': 1,
     'title': 'Series',
-    'downloadCount': 0,
+    'user': {'downloadCount': 0, '__typename': 'MangaUserType'},
     'thumbnailUrl': null,
     '__typename': 'MangaType',
   },
@@ -136,7 +136,6 @@ void main() {
       expect(container.read(downloadsChapterIdsProvider), [10, 11]);
       expect(container.read(showDownloadsFABProvider), isTrue);
     });
-
   });
 
   group('omitted updates', () {

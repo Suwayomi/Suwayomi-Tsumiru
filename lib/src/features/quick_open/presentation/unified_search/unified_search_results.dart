@@ -339,113 +339,113 @@ class UnifiedSearchResults extends HookConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-        if (!hasQuery) ...[
-          SearchSectionHeader(l.unifiedSearchExamplesSection),
-          for (final ex in _searchExamples)
-            selectable(
-              action: () => onSetQuery(ex),
-              tile: (onTap) => ListTile(
-                dense: true,
-                leading: const Icon(Icons.bolt_rounded),
-                title: Text(ex),
-                onTap: onTap,
-              ),
-            ),
-        ],
-        ...?leadingBuilder?.call(selectable),
-        if (suggestions.isNotEmpty) ...[
-          SearchSectionHeader(l.unifiedSearchFiltersSection),
-          for (final s in suggestions)
-            selectable(
-              action: () => onApplySuggestion(s),
-              tile: (onTap) => ListTile(
-                dense: true,
-                leading: Icon(
-                  s.isKey ? Icons.data_object_rounded : Icons.tune_rounded,
+          if (!hasQuery) ...[
+            SearchSectionHeader(l.unifiedSearchExamplesSection),
+            for (final ex in _searchExamples)
+              selectable(
+                action: () => onSetQuery(ex),
+                tile: (onTap) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.bolt_rounded),
+                  title: Text(ex),
+                  onTap: onTap,
                 ),
-                title: Text(s.display),
-                onTap: onTap,
               ),
-            ),
-        ],
-        if (hasQuery && libraryHits.isNotEmpty) ...[
-          SearchSectionHeader(l.unifiedSearchLibrarySection),
-          for (final m in libraryHits)
-            selectable(
-              action: () {
-                MangaRoute(mangaId: m.id).push(context);
-                close();
-              },
-              tile: (onTap) => ListTile(
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: ServerImage(
-                    imageUrl: m.thumbnailUrl ?? "",
-                    size: const Size(40, 56),
+          ],
+          ...?leadingBuilder?.call(selectable),
+          if (suggestions.isNotEmpty) ...[
+            SearchSectionHeader(l.unifiedSearchFiltersSection),
+            for (final s in suggestions)
+              selectable(
+                action: () => onApplySuggestion(s),
+                tile: (onTap) => ListTile(
+                  dense: true,
+                  leading: Icon(
+                    s.isKey ? Icons.data_object_rounded : Icons.tune_rounded,
                   ),
+                  title: Text(s.display),
+                  onTap: onTap,
                 ),
-                title: Text(
-                  m.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: _mangaSubtitle(context, m),
-                onTap: onTap,
               ),
-            ),
-        ],
-        if (goToHits.isNotEmpty) ...[
-          SearchSectionHeader(l.unifiedSearchGoToSection),
-          for (final t in goToHits)
+          ],
+          if (hasQuery && libraryHits.isNotEmpty) ...[
+            SearchSectionHeader(l.unifiedSearchLibrarySection),
+            for (final m in libraryHits)
+              selectable(
+                action: () {
+                  MangaRoute(mangaId: m.id).push(context);
+                  close();
+                },
+                tile: (onTap) => ListTile(
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: ServerImage(
+                      imageUrl: m.thumbnailUrl ?? "",
+                      size: const Size(40, 56),
+                    ),
+                  ),
+                  title: Text(
+                    m.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: _mangaSubtitle(context, m),
+                  onTap: onTap,
+                ),
+              ),
+          ],
+          if (goToHits.isNotEmpty) ...[
+            SearchSectionHeader(l.unifiedSearchGoToSection),
+            for (final t in goToHits)
+              selectable(
+                action: () {
+                  t.navigate(context);
+                  close();
+                },
+                tile: (onTap) => ListTile(
+                  leading: Icon(t.icon),
+                  title: Text(t.label(l)),
+                  subtitle: t.subtitle == null
+                      ? null
+                      : Text(
+                          t.subtitle!(l),
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                  onTap: onTap,
+                ),
+              ),
+          ],
+          if (settingsHits.isNotEmpty) ...[
+            SearchSectionHeader(l.settings),
+            for (final e in settingsHits)
+              selectable(
+                action: () {
+                  e.open(context);
+                  close();
+                },
+                tile: (onTap) => SettingsSearchResultRow(
+                  entry: e,
+                  query: query,
+                  onTap: onTap,
+                ),
+              ),
+          ],
+          if (plainQuery.isNotEmpty) ...[
+            const Divider(height: 1),
             selectable(
               action: () {
-                t.navigate(context);
+                openGlobalSearch(context, query: plainQuery);
                 close();
               },
               tile: (onTap) => ListTile(
-                leading: Icon(t.icon),
-                title: Text(t.label(l)),
-                subtitle: t.subtitle == null
-                    ? null
-                    : Text(
-                        t.subtitle!(l),
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                leading: const Icon(Icons.travel_explore_rounded),
+                title: Text(l.unifiedSearchAllSources(plainQuery)),
                 onTap: onTap,
               ),
             ),
-        ],
-        if (settingsHits.isNotEmpty) ...[
-          SearchSectionHeader(l.settings),
-          for (final e in settingsHits)
-            selectable(
-              action: () {
-                e.open(context);
-                close();
-              },
-              tile: (onTap) => SettingsSearchResultRow(
-                entry: e,
-                query: query,
-                onTap: onTap,
-              ),
-            ),
-        ],
-        if (plainQuery.isNotEmpty) ...[
-          const Divider(height: 1),
-          selectable(
-            action: () {
-              openGlobalSearch(context, query: plainQuery);
-              close();
-            },
-            tile: (onTap) => ListTile(
-              leading: const Icon(Icons.travel_explore_rounded),
-              title: Text(l.unifiedSearchAllSources(plainQuery)),
-              onTap: onTap,
-            ),
-          ),
-        ],
+          ],
         ],
       ),
     );
@@ -456,7 +456,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
     final source = manga.source?.displayName;
     final parts = [
       if (source != null && source.isNotEmpty) source,
-      if (manga.unreadCount > 0) '${manga.unreadCount} unread',
+      if (manga.user.unreadCount > 0) '${manga.user.unreadCount} unread',
     ];
     if (parts.isEmpty) return null;
     return Text(

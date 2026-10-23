@@ -720,7 +720,7 @@ class _PhoneSearchResults extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
-                  '${m.unreadCount} unread',
+                  '${m.user.unreadCount} unread',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodySmall,

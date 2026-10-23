@@ -19,16 +19,18 @@ ChapterDto serverChapter(int id) => Fragment$ChapterDto(
   name: 'c$id',
   chapterNumber: id.toDouble(),
   sourceOrder: id,
-  isRead: false,
-  isBookmarked: false,
-  isDownloaded: true,
-  lastPageRead: 0,
   pageCount: 30,
   fetchedAt: '0',
   uploadDate: '0',
-  lastReadAt: '0',
   url: '',
   meta: const <Fragment$ChapterDto$meta>[],
+  user: Fragment$ChapterDto$user(
+    isRead: false,
+    isBookmarked: false,
+    isDownloaded: true,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 void main() {

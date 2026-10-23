@@ -17,11 +17,6 @@ HistoryItemDto _item({
   id: 1,
   chapterNumber: 1,
   fetchedAt: '0',
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: isRead,
-  lastPageRead: isRead ? 10 : 4,
-  lastReadAt: '1700000000',
   mangaId: 7,
   name: 'Chapter 1',
   pageCount: 10,
@@ -31,9 +26,18 @@ HistoryItemDto _item({
   meta: const [],
   manga: Fragment$HistoryChapterDto$manga(
     id: 7,
-    inLibrary: inLibrary,
     title: 'Series',
-    unreadCount: unreadCount,
+    user: Fragment$HistoryChapterDto$manga$user(
+      inLibrary: inLibrary,
+      unreadCount: unreadCount,
+    ),
+  ),
+  user: Fragment$HistoryChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: isRead,
+    lastPageRead: isRead ? 10 : 4,
+    lastReadAt: '1700000000',
   ),
 );
 

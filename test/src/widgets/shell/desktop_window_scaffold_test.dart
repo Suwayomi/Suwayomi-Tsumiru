@@ -74,32 +74,29 @@ List<String> _localPages(int count) {
 MangaDto _manga() => Fragment$MangaDto(
   id: 1,
   title: 'Test Manga',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/1',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 ChapterDto _chapter() => Fragment$ChapterDto(
   chapterNumber: 1,
   fetchedAt: '0',
   id: 1,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: 1,
   name: 'Chapter 1',
   pageCount: 3,
@@ -107,6 +104,13 @@ ChapterDto _chapter() => Fragment$ChapterDto(
   uploadDate: '0',
   url: '/chapter/1',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 ChapterPagesDto _chapterPages() => ChapterPagesDto(

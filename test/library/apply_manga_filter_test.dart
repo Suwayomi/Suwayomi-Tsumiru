@@ -42,12 +42,8 @@ Fragment$MangaDto _manga({
 }) => Fragment$MangaDto(
   id: id,
   title: 'Manga $id',
-  bookmarkCount: bookmarkCount,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: downloadCount,
   genre: genre,
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   source: source,
@@ -55,9 +51,15 @@ Fragment$MangaDto _manga({
   status: Enum$MangaStatus.ONGOING,
   categories: _cats(categoryIds),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: unreadCount,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: 'https://example.com/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: bookmarkCount,
+    downloadCount: downloadCount,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: unreadCount,
+  ),
 );
 
 /// Calls applyLibraryFilterSort with all defaults off/null and returns ids.

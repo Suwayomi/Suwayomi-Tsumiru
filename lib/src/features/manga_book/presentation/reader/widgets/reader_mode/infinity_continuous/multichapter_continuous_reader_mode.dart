@@ -277,18 +277,21 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // served while the server is unreachable lacks chapters that aren't on the
     // device, and it reloads once the server is back; latched for good, the
     // next chapter never loaded again that session.
-    useEffect(() {
-      if (nextPrevChapterPair.value?.first != null) {
-        hasReachedEnd.value = false;
-      }
-      if (nextPrevChapterPair.value?.second != null) {
-        hasReachedStart.value = false;
-      }
-      return null;
-    }, [
-      nextPrevChapterPair.value?.first?.id,
-      nextPrevChapterPair.value?.second?.id,
-    ]);
+    useEffect(
+      () {
+        if (nextPrevChapterPair.value?.first != null) {
+          hasReachedEnd.value = false;
+        }
+        if (nextPrevChapterPair.value?.second != null) {
+          hasReachedStart.value = false;
+        }
+        return null;
+      },
+      [
+        nextPrevChapterPair.value?.first?.id,
+        nextPrevChapterPair.value?.second?.id,
+      ],
+    );
 
     // --- reading-progress recording -------------------------------------
     // Record progress for the CURRENTLY VISIBLE chapter, not the chapter the
@@ -327,13 +330,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (lc == null) return;
       // Already read in a prior session: leave it alone (mirrors the single-page
       // reader, which skips progress writes for read chapters).
-      if (lc.chapter.isRead.ifNull()) return;
+      if (lc.chapter.user.isRead.ifNull()) return;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
       // Don't write a lower page than what's already saved (at-open snapshot),
       // unless we're completing the chapter.
       if (!completed &&
-          lc.chapter.lastPageRead.getValueOnNullOrNegative() >= rel) {
+          lc.chapter.user.lastPageRead.getValueOnNullOrNegative() >= rel) {
         return;
       }
       final progressResult = await recordReadingProgress(
@@ -1691,7 +1694,7 @@ void _markChapterRead(
   // Incognito: don't mark chapters read or fire history/tracker/delete on a
   // boundary crossing — leave no trace (parity with ReaderScreen's writes).
   if (ref.read(incognitoModeProvider)) return;
-  if (chapter.isRead.ifNull()) return;
+  if (chapter.user.isRead.ifNull()) return;
   if (completedChapterIds.value.contains(chapter.id)) return;
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};
   // Record through the offline-safe path: persists to the on-device catalog

@@ -44,7 +44,6 @@ class ReadingHistory extends _$ReadingHistory {
     if (items != null) state = AsyncData(items);
     // On error keep the current list (the pull spinner has dismissed).
   }
-
 }
 
 @riverpod
@@ -102,10 +101,10 @@ class HistoryFilterInLibrary extends _$HistoryFilterInLibrary
 
 @riverpod
 HistoryFilter historyFilter(Ref ref) => (
-      unfinishedSeries: ref.watch(historyFilterUnfinishedSeriesProvider),
-      unread: ref.watch(historyFilterUnreadProvider),
-      inLibrary: ref.watch(historyFilterInLibraryProvider),
-    );
+  unfinishedSeries: ref.watch(historyFilterUnfinishedSeriesProvider),
+  unread: ref.watch(historyFilterUnreadProvider),
+  inLibrary: ref.watch(historyFilterInLibraryProvider),
+);
 
 @riverpod
 bool historyHasActiveFilters(Ref ref) =>
@@ -116,13 +115,13 @@ bool historyHasActiveFilters(Ref ref) =>
 bool historyItemMatchesFilter(HistoryItemDto item, HistoryFilter filter) {
   final unfinishedSeries = filter.unfinishedSeries;
   if (unfinishedSeries != null &&
-      unfinishedSeries != (item.manga.unreadCount > 0)) {
+      unfinishedSeries != (item.manga.user.unreadCount > 0)) {
     return false;
   }
   final unread = filter.unread;
-  if (unread != null && unread != !item.isRead) return false;
+  if (unread != null && unread != !item.user.isRead) return false;
   final inLibrary = filter.inLibrary;
-  if (inLibrary != null && inLibrary != item.manga.inLibrary) return false;
+  if (inLibrary != null && inLibrary != item.manga.user.inLibrary) return false;
   return true;
 }
 
@@ -133,8 +132,8 @@ List<HistoryGroup> historyGroupedByDate(Ref ref) {
   final historyItems = filter == kNoHistoryFilter
       ? allItems
       : allItems
-          .where((item) => historyItemMatchesFilter(item, filter))
-          .toList();
+            .where((item) => historyItemMatchesFilter(item, filter))
+            .toList();
 
   if (historyItems.isEmpty) return [];
 
@@ -146,10 +145,7 @@ List<HistoryGroup> historyGroupedByDate(Ref ref) {
   }
 
   final groups = groupedItems.entries.map((entry) {
-    return HistoryGroup(
-      title: entry.key,
-      items: entry.value,
-    );
+    return HistoryGroup(title: entry.key, items: entry.value);
   }).toList();
 
   groups.sort((a, b) {

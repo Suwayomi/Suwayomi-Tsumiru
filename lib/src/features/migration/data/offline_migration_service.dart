@@ -299,8 +299,8 @@ class OfflineMigrationService {
     id: c.id,
     chapterNumber: c.chapterNumber,
     name: c.name,
-    isRead: c.isRead,
-    isBookmarked: c.isBookmarked,
-    lastPageRead: c.lastPageRead,
+    isRead: c.user.isRead,
+    isBookmarked: c.user.isBookmarked,
+    lastPageRead: c.user.lastPageRead,
   );
 }

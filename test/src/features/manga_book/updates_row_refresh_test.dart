@@ -22,17 +22,19 @@ final _watchedAfterAsyncGap = Provider<int>((ref) => 1);
 Fragment$MangaBaseDto _manga({int id = _kMangaId}) => Fragment$MangaBaseDto(
   id: id,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   thumbnailUrl: '/thumb/$id',
   title: 'Series $id',
-  unreadCount: 3,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/$id',
+  user: Fragment$MangaBaseDto$user(
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 3,
+  ),
 );
 
 ChapterWithMangaDto _row({required int id, bool isRead = false}) =>
@@ -40,11 +42,6 @@ ChapterWithMangaDto _row({required int id, bool isRead = false}) =>
       id: id,
       chapterNumber: id.toDouble(),
       fetchedAt: '0',
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: isRead,
-      lastPageRead: 0,
-      lastReadAt: '0',
       mangaId: _kMangaId,
       name: 'Chapter $id',
       pageCount: 10,
@@ -53,25 +50,35 @@ ChapterWithMangaDto _row({required int id, bool isRead = false}) =>
       url: '/c/$id',
       meta: const [],
       manga: _manga(),
+      user: Fragment$ChapterWithMangaDto$user(
+        isBookmarked: false,
+        isDownloaded: false,
+        isRead: isRead,
+        lastPageRead: 0,
+        lastReadAt: '0',
+      ),
     );
 
-ChapterDto _fresh({required int id, bool isRead = false}) => Fragment$ChapterDto(
-  id: id,
-  chapterNumber: id.toDouble(),
-  fetchedAt: '0',
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: isRead,
-  lastPageRead: 0,
-  lastReadAt: '0',
-  mangaId: _kMangaId,
-  name: 'Chapter $id',
-  pageCount: 10,
-  sourceOrder: id,
-  uploadDate: '0',
-  url: '/c/$id',
-  meta: const [],
-);
+ChapterDto _fresh({required int id, bool isRead = false}) =>
+    Fragment$ChapterDto(
+      id: id,
+      chapterNumber: id.toDouble(),
+      fetchedAt: '0',
+      mangaId: _kMangaId,
+      name: 'Chapter $id',
+      pageCount: 10,
+      sourceOrder: id,
+      uploadDate: '0',
+      url: '/c/$id',
+      meta: const [],
+      user: Fragment$ChapterDto$user(
+        isBookmarked: false,
+        isDownloaded: false,
+        isRead: isRead,
+        lastPageRead: 0,
+        lastReadAt: '0',
+      ),
+    );
 
 void main() {
   group('patchRowsForManga', () {
@@ -82,7 +89,7 @@ void main() {
         chapters: [_fresh(id: 1)],
       );
 
-      expect(patched.single.isRead, isTrue);
+      expect(patched.single.user.isRead, isTrue);
     });
   });
 
@@ -117,7 +124,7 @@ void main() {
       final pending = refetchChapter(captured, 1);
       await tester.pump(const Duration(milliseconds: 10));
 
-      expect((await pending)?.isRead, isTrue);
+      expect((await pending)?.user.isRead, isTrue);
     });
   });
 }

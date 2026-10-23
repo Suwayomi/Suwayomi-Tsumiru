@@ -52,11 +52,13 @@ void main() {
         manga.copyWith(title: 'Wrong account'),
         fetchedAtGen: 0,
       );
+      final stray = offlineChapterToDto((await db.chapterById(1))!);
       expect(
         await sync.syncChapters([
-          offlineChapterToDto(
-            (await db.chapterById(1))!,
-          ).copyWith(name: 'Wrong account', isRead: true),
+          stray.copyWith(
+            name: 'Wrong account',
+            user: stray.user.copyWith(isRead: true),
+          ),
         ]),
         isEmpty,
       );
@@ -70,5 +72,4 @@ void main() {
       expect(notifications, 0);
     },
   );
-
 }

@@ -12,8 +12,7 @@ import 'package:tsumiru/src/features/browse_center/data/source_repository/source
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
 
 void main() {
-  test('fetchSourceManga reads a payload with no firstUnreadChapter',
-      () async {
+  test('fetchSourceManga reads a payload with no firstUnreadChapter', () async {
     final client = GraphQLClient(
       link: Link.function(
         (request, [forward]) => Stream.value(
@@ -29,7 +28,16 @@ void main() {
                     'age': null,
                     'artist': null,
                     'author': null,
-                    'bookmarkCount': 0,
+                    'user': {
+                      '__typename': 'MangaUserType',
+                      'bookmarkCount': 0,
+                      'downloadCount': 0,
+                      'firstUnreadChapter': null,
+                      'inLibrary': false,
+                      'inLibraryAt': '0',
+                      'lastReadChapter': null,
+                      'unreadCount': 0,
+                    },
                     'chapters': {
                       '__typename': 'ChapterNodeList',
                       'totalCount': 0,
@@ -37,14 +45,10 @@ void main() {
                     'chaptersAge': null,
                     'chaptersLastFetchedAt': null,
                     'description': null,
-                    'downloadCount': 0,
                     'genre': <String>[],
                     'id': 1,
-                    'inLibrary': false,
-                    'inLibraryAt': '0',
                     'initialized': true,
                     'lastFetchedAt': null,
-                    'lastReadChapter': null,
                     'latestFetchedChapter': null,
                     'latestUploadedChapter': null,
                     'meta': <Object>[],
@@ -63,7 +67,6 @@ void main() {
                       '__typename': 'TrackRecordNodeList',
                       'nodes': <Object>[],
                     },
-                    'unreadCount': 0,
                     'updateStrategy': 'ALWAYS_UPDATE',
                     'url': '/manga/1',
                   },
@@ -94,6 +97,6 @@ void main() {
 
     expect(page?.hasNextPage, isFalse);
     expect(page?.mangas.single.title, 'Test');
-    expect(page?.mangas.single.firstUnreadChapter, isNull);
+    expect(page?.mangas.single.user.firstUnreadChapter, isNull);
   });
 }

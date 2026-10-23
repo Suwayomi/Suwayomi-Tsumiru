@@ -60,8 +60,8 @@ List<int> serverDownloadIds(
       ChapterDownloadCandidate(
         id: chapter.id,
         chapterNumber: chapter.chapterNumber,
-        isRead: chapter.isRead,
-        isDownloaded: chapter.isDownloaded,
+        isRead: chapter.user.isRead,
+        isDownloaded: chapter.user.isDownloaded,
       ),
   ], preset);
 }

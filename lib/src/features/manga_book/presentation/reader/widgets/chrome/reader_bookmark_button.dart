@@ -23,9 +23,11 @@ class ReaderBookmarkButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isBookmarked = ref.watch(
-          chapterProvider(chapterId: chapterId)
-              .select((c) => c.value?.isBookmarked),
+    final isBookmarked =
+        ref.watch(
+          chapterProvider(
+            chapterId: chapterId,
+          ).select((c) => c.value?.user.isBookmarked),
         ) ??
         fallbackIsBookmarked;
     return SingleChapterActionIcon(

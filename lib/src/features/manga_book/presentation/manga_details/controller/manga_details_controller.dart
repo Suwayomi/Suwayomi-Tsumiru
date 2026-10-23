@@ -83,7 +83,7 @@ class MangaWithId extends _$MangaWithId {
       onServerAnswer: (server) {
         if (!current() || buildId != _buildId) return;
         state = AsyncData(server);
-        if (server.inLibrary) {
+        if (server.user.inLibrary) {
           unawaited(
             sync?.syncManga(server, fetchedAtGen: fetchGen) ?? Future.value(),
           );
@@ -95,7 +95,7 @@ class MangaWithId extends _$MangaWithId {
     if (!current()) return null;
     ref.keepAlive();
     // Don't mirror browsed (non-library) manga into the offline catalog.
-    if (manga != null && manga.inLibrary && fromServer) {
+    if (manga != null && manga.user.inLibrary && fromServer) {
       unawaited(
         sync?.syncManga(manga, fetchedAtGen: fetchGen) ?? Future.value(),
       );
@@ -550,17 +550,17 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
     if (chapter.id == keepChapterId) return true;
 
     if (chapterFilterUnread != null &&
-        (chapterFilterUnread ^ !(chapter.isRead.ifNull()))) {
+        (chapterFilterUnread ^ !(chapter.user.isRead.ifNull()))) {
       return false;
     }
 
     if (chapterFilterDownloaded != null &&
-        (chapterFilterDownloaded ^ (chapter.isDownloaded.ifNull()))) {
+        (chapterFilterDownloaded ^ (chapter.user.isDownloaded.ifNull()))) {
       return false;
     }
 
     if (chapterFilterBookmark != null &&
-        (chapterFilterBookmark ^ (chapter.isBookmarked.ifNull()))) {
+        (chapterFilterBookmark ^ (chapter.user.isBookmarked.ifNull()))) {
       return false;
     }
 
@@ -696,11 +696,11 @@ ChapterDto? firstUnreadInFilteredChapterList(Ref ref, {required int mangaId}) {
   } else {
     if (isAscSorted) {
       return filteredList.firstWhereOrNull(
-        (element) => !element.isRead.ifNull(true),
+        (element) => !element.user.isRead.ifNull(true),
       );
     } else {
       return filteredList.lastWhereOrNull(
-        (element) => !element.isRead.ifNull(true),
+        (element) => !element.user.isRead.ifNull(true),
       );
     }
   }

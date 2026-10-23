@@ -52,24 +52,15 @@ class ReaderTopBar extends ConsumerWidget {
         child: Row(
           children: [
             // Back button (mirrors AppBar's leading).
-            IconButton(
-              onPressed: onBack,
-              icon: const BackButtonIcon(),
-            ),
+            IconButton(onPressed: onBack, icon: const BackButtonIcon()),
             // Title + subtitle (mirrors AppBar's title ListTile).
             Expanded(
               child: ListTile(
                 title: (manga.title).isNotBlank
-                    ? Text(
-                        manga.title,
-                        overflow: TextOverflow.ellipsis,
-                      )
+                    ? Text(manga.title, overflow: TextOverflow.ellipsis)
                     : null,
                 subtitle: (chapter.name).isNotBlank
-                    ? Text(
-                        chapter.name,
-                        overflow: TextOverflow.ellipsis,
-                      )
+                    ? Text(chapter.name, overflow: TextOverflow.ellipsis)
                     : null,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -77,7 +68,7 @@ class ReaderTopBar extends ConsumerWidget {
             // Actions (mirrors AppBar.actions).
             ReaderBookmarkButton(
               chapterId: chapter.id,
-              fallbackIsBookmarked: chapter.isBookmarked,
+              fallbackIsBookmarked: chapter.user.isBookmarked,
             ),
             chapter.realUrl.isBlank
                 ? const SizedBox.shrink()

@@ -4,11 +4,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
@@ -20,6 +25,7 @@ import 'package:tsumiru/src/features/hotkeys/presentation/global_shortcut_host.d
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_repository.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
@@ -32,17 +38,15 @@ import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
+import 'package:tsumiru/src/utils/graphql/legacy_user_fields_link.dart';
 import 'package:tsumiru/src/widgets/shell/detail_navigation_shell_screen.dart';
+
+import '../../helpers/modern_user_fields_probe.dart';
 
 ChapterDto _chapter({required int id, bool read = false}) => ChapterDto(
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
   id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: read,
-  lastPageRead: 0,
-  lastReadAt: read ? '1' : '0',
   mangaId: 1,
   name: 'Chapter $id',
   pageCount: 20,
@@ -52,6 +56,13 @@ ChapterDto _chapter({required int id, bool read = false}) => ChapterDto(
   uploadDate: '0',
   url: '',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: read,
+    lastPageRead: 0,
+    lastReadAt: read ? '1' : '0',
+  ),
 );
 
 final _chapters = [
@@ -65,19 +76,22 @@ final _manga = MangaDto.fromJson({
   'id': 1,
   'title': 'Test series',
   'author': 'An author',
-  'bookmarkCount': 0,
+  'user': {
+    '__typename': 'MangaUserType',
+    'bookmarkCount': 0,
+    'downloadCount': 0,
+    'inLibrary': true,
+    'inLibraryAt': '0',
+    'unreadCount': 2,
+  },
   'chapters': {'totalCount': 3, '__typename': 'ChapterNodeList'},
-  'downloadCount': 0,
   'genre': ['Action'],
-  'inLibrary': true,
-  'inLibraryAt': '0',
   'initialized': true,
   'meta': [],
   'sourceId': '0',
   'status': 'ONGOING',
   'categories': {'nodes': [], '__typename': 'CategoryNodeList'},
   'trackRecords': {'nodes': [], '__typename': 'TrackRecordNodeList'},
-  'unreadCount': 2,
   'updateStrategy': 'ALWAYS_UPDATE',
   'url': '',
 });
@@ -161,12 +175,60 @@ Future<GoRouter> _pump(
   addTearDown(tester.view.resetDevicePixelRatio);
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
+  final httpClient = MockClient((request) async {
+    final query = (jsonDecode(request.body) as Map)['query'] as String;
+    final probeData = modernUserFieldsProbeData(query);
+    final Map<String, Object?> data;
+    if (probeData != null) {
+      data = probeData;
+    } else if (query.contains('GetDownloadStatus')) {
+      data = {
+        '__typename': 'Query',
+        'downloadStatus': {
+          '__typename': 'DownloadStatus',
+          'state': 'STOPPED',
+          'queue': [],
+        },
+      };
+    } else if (query.contains('DownloadStatusChanged')) {
+      data = {
+        '__typename': 'Subscription',
+        'downloadStatusChanged': {
+          '__typename': 'DownloadUpdates',
+          'state': 'STOPPED',
+          'omittedUpdates': false,
+          'updates': [],
+          'initial': [],
+        },
+      };
+    } else {
+      expect(query, contains('SourceList'));
+      data = {
+        '__typename': 'Query',
+        'sources': {'__typename': 'SourceNodeList', 'nodes': []},
+      };
+    }
+    return http.Response(
+      jsonEncode({'data': data}),
+      200,
+      headers: {'content-type': 'application/json'},
+    );
+  });
+  addTearDown(httpClient.close);
+  final client = GraphQLClient(
+    link: LegacyUserFieldsLink().concat(
+      HttpLink('http://server/graphql', httpClient: httpClient),
+    ),
+    cache: GraphQLCache(),
+  );
   final router = _router(location: location);
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
+        graphQlClientProvider.overrideWithValue(client),
+        graphQlSubscriptionClientProvider.overrideWithValue(client),
         offlineEnabledProvider.overrideWithValue(false),
         downloadsPausedBadgeProvider.overrideWith((ref) => false),
         extensionUpdateBadgeCountProvider.overrideWith((ref) async => 0),

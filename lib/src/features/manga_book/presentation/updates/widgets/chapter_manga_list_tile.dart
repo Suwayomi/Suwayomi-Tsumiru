@@ -36,7 +36,7 @@ class ChapterMangaListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Mihon parity: a read chapter is drawn at 38% of the normal colour.
-    final color = (chapterWithMangaDto.isRead).ifNull()
+    final color = (chapterWithMangaDto.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapterWithMangaDto.manga;
@@ -114,7 +114,8 @@ class ChapterMangaListTile extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          if ((chapterWithMangaDto.isBookmarked).ifNull()) ...[
+                          if ((chapterWithMangaDto.user.isBookmarked)
+                              .ifNull()) ...[
                             const Icon(Icons.bookmark_rounded, size: 20),
                             const Gap(4),
                           ],
@@ -135,7 +136,8 @@ class ChapterMangaListTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color:
-                              color ?? context.theme.colorScheme.onSurfaceVariant,
+                              color ??
+                              context.theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -143,7 +145,8 @@ class ChapterMangaListTile extends StatelessWidget {
                 ),
                 const Gap(8),
                 DownloadStatusIcon(
-                  isDownloaded: (chapterWithMangaDto.isDownloaded).ifNull(),
+                  isDownloaded: (chapterWithMangaDto.user.isDownloaded)
+                      .ifNull(),
                   mangaId: manga.id,
                   chapter: chapterWithMangaDto,
                   updateData: updatePair,

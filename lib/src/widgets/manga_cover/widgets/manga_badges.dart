@@ -33,8 +33,10 @@ const double _kFlagFontRatio = .7;
 /// Strip height, tracking the platform text scale but capped at 1.4× so a large
 /// font can't clip a three-digit count nor swallow the cover.
 double _stripHeight(BuildContext context) {
-  final ratio =
-      (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1.0, 1.4);
+  final ratio = (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+    1.0,
+    1.4,
+  );
   return 20 * ratio;
 }
 
@@ -67,7 +69,7 @@ class MangaBadgesRow extends ConsumerWidget {
     final height = _stripHeight(context);
 
     if (!showCountBadges) {
-      if (!manga.inLibrary.ifNull()) return const SizedBox.shrink();
+      if (!manga.user.inLibrary.ifNull()) return const SizedBox.shrink();
       return Padding(
         padding: padding ?? KEdgeInsets.a8.size,
         child: Row(
@@ -99,7 +101,8 @@ class MangaBadgesRow extends ConsumerWidget {
     final sourceBadge = ref.watch(sourceBadgeProvider).ifNull(false);
     // At least one chapter downloaded to THIS device, a subset of the server's.
     // Empty set when on-device storage is unavailable, so the badge self-hides.
-    final onDevice = ref.watch(onDeviceBadgeProvider).ifNull(true) &&
+    final onDevice =
+        ref.watch(onDeviceBadgeProvider).ifNull(true) &&
         (ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{})
             .contains(manga.id);
 
@@ -113,22 +116,23 @@ class MangaBadgesRow extends ConsumerWidget {
     _Segment? segmentFor(LibraryBadge badge) {
       switch (badge) {
         case LibraryBadge.unread:
-          if (!unreadMode.isVisible || !manga.unreadCount.isGreaterThan(0)) {
+          if (!unreadMode.isVisible ||
+              !manga.user.unreadCount.isGreaterThan(0)) {
             return null;
           }
           return unreadMode == UnreadBadgeMode.dot
               ? _plainSegment(scheme.primary, height)
               : _textSegment(
-                  '${manga.unreadCount.getValueOnNullOrNegative()}',
+                  '${manga.user.unreadCount.getValueOnNullOrNegative()}',
                   scheme.primary,
                   scheme.onPrimary,
                 );
         case LibraryBadge.downloaded:
-          if (!downloadedBadge || !manga.downloadCount.isGreaterThan(0)) {
+          if (!downloadedBadge || !manga.user.downloadCount.isGreaterThan(0)) {
             return null;
           }
           return _textSegment(
-            '${manga.downloadCount.getValueOnNullOrNegative()}',
+            '${manga.user.downloadCount.getValueOnNullOrNegative()}',
             scheme.tertiary,
             scheme.onTertiary,
           );
@@ -188,8 +192,10 @@ class MangaBadgesRow extends ConsumerWidget {
                 )
               : (
                   decoration: BoxDecoration(color: scheme.surface),
-                  child:
-                      _SourceIcon(iconUrl: source.iconUrl, size: height * .8),
+                  child: _SourceIcon(
+                    iconUrl: source.iconUrl,
+                    size: height * .8,
+                  ),
                   fill: false,
                 );
       }
@@ -204,10 +210,16 @@ class MangaBadgesRow extends ConsumerWidget {
     }
     if (left.isEmpty && right.isEmpty) return const SizedBox.shrink();
 
-    final leftStrip =
-        _BadgeStrip(segments: left, side: BadgeSide.left, height: height);
-    final rightStrip =
-        _BadgeStrip(segments: right, side: BadgeSide.right, height: height);
+    final leftStrip = _BadgeStrip(
+      segments: left,
+      side: BadgeSide.left,
+      height: height,
+    );
+    final rightStrip = _BadgeStrip(
+      segments: right,
+      side: BadgeSide.right,
+      height: height,
+    );
 
     return Padding(
       padding: padding ?? KEdgeInsets.a8.size,
@@ -250,33 +262,32 @@ class MangaBadgesRow extends ConsumerWidget {
 }
 
 _Segment _textSegment(String text, Color background, Color foreground) => (
-      decoration: BoxDecoration(color: background),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: TextStyle(color: foreground, fontSize: 12, height: 1),
-      ),
-      fill: false,
-    );
+  decoration: BoxDecoration(color: background),
+  child: Text(
+    text,
+    textAlign: TextAlign.center,
+    style: TextStyle(color: foreground, fontSize: 12, height: 1),
+  ),
+  fill: false,
+);
 
 _Segment _iconSegment(
   IconData icon,
   Color background,
   Color foreground,
   double height,
-) =>
-    (
-      decoration: BoxDecoration(color: background),
-      child: Icon(icon, color: foreground, size: height * .8),
-      fill: false,
-    );
+) => (
+  decoration: BoxDecoration(color: background),
+  child: Icon(icon, color: foreground, size: height * .8),
+  fill: false,
+);
 
 /// "There is something unread" without the arithmetic: a blank accent chip.
 _Segment _plainSegment(Color background, double height) => (
-      decoration: BoxDecoration(color: background),
-      child: SizedBox(width: height * .3),
-      fill: false,
-    );
+  decoration: BoxDecoration(color: background),
+  child: SizedBox(width: height * .3),
+  fill: false,
+);
 
 /// A cluster of badges pinned to one corner of a cover.
 ///
@@ -355,15 +366,14 @@ class _BadgeStrip extends StatelessWidget {
       decoration: segment.decoration,
       child: Padding(
         padding: EdgeInsets.only(
-          left: (isFirst || segment.fill ? 0.0 : _kBadgeSlant) +
+          left:
+              (isFirst || segment.fill ? 0.0 : _kBadgeSlant) +
               (segment.fill ? 0.0 : content + (isFirst ? 2 : 0)),
-          right: (isLast || segment.fill ? 0.0 : _kBadgeSlant) +
+          right:
+              (isLast || segment.fill ? 0.0 : _kBadgeSlant) +
               (segment.fill ? 0.0 : content + (isLast ? 2 : 0)),
         ),
-        child: Center(
-          widthFactor: 1,
-          child: segment.child,
-        ),
+        child: Center(widthFactor: 1, child: segment.child),
       ),
     );
   }
@@ -435,11 +445,9 @@ class _RenderOverlappingRow extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _OverlapParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _OverlapParentData> {
-  _RenderOverlappingRow({
-    required double overlap,
-    required double stripHeight,
-  })  : _overlap = overlap,
-        _stripHeight = stripHeight;
+  _RenderOverlappingRow({required double overlap, required double stripHeight})
+    : _overlap = overlap,
+      _stripHeight = stripHeight;
 
   double _overlap;
   double get overlap => _overlap;
@@ -523,9 +531,8 @@ class _SourceIcon extends StatelessWidget {
             // Extension icons are not all square. `cover` (ServerImage's
             // default) crops them to the cell; `contain` fits the whole glyph.
             fit: BoxFit.contain,
-            progressIndicatorBuilder: (_, _, _) => Center(
-              child: Icon(Icons.extension_rounded, size: size * .8),
-            ),
+            progressIndicatorBuilder: (_, _, _) =>
+                Center(child: Icon(Icons.extension_rounded, size: size * .8)),
           ),
         ),
       ),

@@ -276,7 +276,7 @@ Future<void> migrateOfflineLocalState(
         final pairs = matchChaptersByNumber(
           source: [
             for (final c in source)
-              if (c.isDownloaded) _chapterState(c),
+              if (c.user.isDownloaded) _chapterState(c),
           ],
           target: [for (final c in target) _chapterState(c)],
         );
@@ -300,9 +300,9 @@ ChapterState _chapterState(ChapterDto c) => ChapterState(
   id: c.id,
   chapterNumber: c.chapterNumber,
   name: c.name,
-  isRead: c.isRead,
-  isBookmarked: c.isBookmarked,
-  lastPageRead: c.lastPageRead,
+  isRead: c.user.isRead,
+  isBookmarked: c.user.isBookmarked,
+  lastPageRead: c.user.lastPageRead,
 );
 
 /// Assembles a [BulkMigrationRunner] from the app's real dependencies. Holds a

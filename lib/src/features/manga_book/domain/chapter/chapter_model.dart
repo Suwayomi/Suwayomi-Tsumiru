@@ -27,8 +27,9 @@ extension ChapterExtension on Fragment$ChapterDto {
       _chapterNumberFormat.format(chapterNumber);
 
   bool get hasReadingProgress =>
-      isRead || lastPageRead > 0 || lastReadAt != '0';
+      user.isRead || user.lastPageRead > 0 || user.lastReadAt != '0';
 
-  Map<String, String> get metaData =>
-      {for (final metaItem in meta) metaItem.key: metaItem.value};
+  Map<String, String> get metaData => {
+    for (final metaItem in meta) metaItem.key: metaItem.value,
+  };
 }

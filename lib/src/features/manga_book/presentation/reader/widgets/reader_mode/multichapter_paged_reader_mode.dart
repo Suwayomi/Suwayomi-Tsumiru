@@ -287,11 +287,11 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       if (completedChapterIds.value.contains(chapterId)) return;
       final lc = loadedById(chapterId);
       if (lc == null) return;
-      if (lc.chapter.isRead.ifNull()) return;
+      if (lc.chapter.user.isRead.ifNull()) return;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
       if (!completed &&
-          lc.chapter.lastPageRead.getValueOnNullOrNegative() >= rel) {
+          lc.chapter.user.lastPageRead.getValueOnNullOrNegative() >= rel) {
         return;
       }
       final progressResult = await recordReadingProgress(
@@ -906,7 +906,7 @@ void _markChapterRead(
   BuildContext context,
 ) {
   if (ref.read(incognitoModeProvider)) return;
-  if (chapter.isRead.ifNull()) return;
+  if (chapter.user.isRead.ifNull()) return;
   if (completedChapterIds.value.contains(chapter.id)) return;
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};
   unawaited(

@@ -74,12 +74,8 @@ List<String> _localPages(int count, String tag) {
 MangaDto _webtoonManga(ReaderMode mode) => Fragment$MangaDto(
   id: 1,
   title: 'Test Webtoon',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 1),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: [
     Fragment$MangaDto$meta(key: MangaMetaKeys.readerMode.key, value: mode.name),
@@ -88,9 +84,15 @@ MangaDto _webtoonManga(ReaderMode mode) => Fragment$MangaDto(
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 1,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/1',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 1,
+  ),
 );
 
 ChapterDto _chapter({
@@ -101,11 +103,6 @@ ChapterDto _chapter({
   chapterNumber: sourceOrder.toDouble(),
   fetchedAt: '0',
   id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: 1,
   name: 'Chapter $id',
   pageCount: pageCount,
@@ -113,6 +110,13 @@ ChapterDto _chapter({
   uploadDate: '0',
   url: '/chapter/$id',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
 ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
@@ -152,9 +156,7 @@ Future<void> _pumpReaderOnLastChapter(
           mangaId: 1,
           chapterId: 2,
           readerScanlatorGroup: '',
-        ).overrideWithValue(
-          (first: nextChapter, second: null),
-        ),
+        ).overrideWithValue((first: nextChapter, second: null)),
         trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
       ],
       child: MaterialApp(

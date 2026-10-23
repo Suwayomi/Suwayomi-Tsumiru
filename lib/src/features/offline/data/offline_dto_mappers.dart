@@ -94,30 +94,40 @@ MangaDto offlineMangaToDto(
     id: m.id,
     title: m.title,
     thumbnailUrl: m.thumbnailUrl,
-    bookmarkCount: m.bookmarkCount,
+    user: Fragment$MangaDto$user(
+      bookmarkCount: m.bookmarkCount,
+      downloadCount: m.downloadCount,
+      // The next unread chapter that's downloaded on this device, if any. Drives
+      // the offline "continue reading" button — left null (button hidden) when
+      // the next unread chapter isn't on the device, so it's never a dead end.
+      firstUnreadChapter: firstUnread == null
+          ? null
+          : Fragment$MangaDto$user$firstUnreadChapter(id: firstUnread.id),
+      inLibrary: true,
+      inLibraryAt: m.inLibraryAt ?? '0',
+      // Carries the manga's most-recent read timestamp so the offline library's
+      // "Last Read" sort works; only this field is read off it (see the sort in
+      // library_controller). Null when nothing in the manga has been read.
+      lastReadChapter: lastReadAt == null
+          ? null
+          : Fragment$MangaDto$user$lastReadChapter(
+              id: 0,
+              user: Fragment$MangaDto$user$lastReadChapter$user(
+                isRead: true,
+                lastPageRead: 0,
+                lastReadAt: lastReadAt,
+              ),
+            ),
+      // The stored count is the server's, so it does not move when you read
+      // offline. Add back what this device has changed since the server last
+      // reported, measured per chapter against its synced baseline — exact in
+      // both directions, and correct for a partial mirror because each row
+      // carries its own before-and-after.
+      unreadCount: (m.unreadCount - unsyncedReadDelta).clamp(0, effectiveTotal),
+    ),
     chapters: Fragment$MangaDto$chapters(totalCount: effectiveTotal),
-    downloadCount: m.downloadCount,
-    // The next unread chapter that's downloaded on this device, if any. Drives
-    // the offline "continue reading" button — left null (button hidden) when
-    // the next unread chapter isn't on the device, so it's never a dead end.
-    firstUnreadChapter: firstUnread == null
-        ? null
-        : Fragment$MangaDto$firstUnreadChapter(id: firstUnread.id),
     genre: offlineGenre(m.genre),
-    inLibrary: true,
-    inLibraryAt: m.inLibraryAt ?? '0',
     initialized: true,
-    // Carries the manga's most-recent read timestamp so the offline library's
-    // "Last Read" sort works; only this field is read off it (see the sort in
-    // library_controller). Null when nothing in the manga has been read.
-    lastReadChapter: lastReadAt == null
-        ? null
-        : Fragment$MangaDto$lastReadChapter(
-            id: 0,
-            isRead: true,
-            lastPageRead: 0,
-            lastReadAt: lastReadAt,
-          ),
     latestFetchedChapter: latestFetched,
     latestUploadedChapter: latestUploaded,
     meta: [
@@ -129,12 +139,6 @@ MangaDto offlineMangaToDto(
     status: status,
     categories: Fragment$MangaDto$categories(nodes: categoryNodes),
     trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-    // The stored count is the server's, so it does not move when you read
-    // offline. Add back what this device has changed since the server last
-    // reported, measured per chapter against its synced baseline — exact in
-    // both directions, and correct for a partial mirror because each row
-    // carries its own before-and-after.
-    unreadCount: (m.unreadCount - unsyncedReadDelta).clamp(0, effectiveTotal),
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '',
   );
@@ -157,14 +161,16 @@ ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
   // Real number when synced; index fallback supports pre-v9 rows.
   chapterNumber: c.chapterNumber ?? c.chapterIndex.toDouble(),
   sourceOrder: c.chapterIndex,
-  isRead: c.isRead,
-  isBookmarked: c.isBookmarked,
-  isDownloaded: c.serverIsDownloaded,
-  lastPageRead: c.lastPageRead,
+  user: Fragment$ChapterDto$user(
+    isRead: c.isRead,
+    isBookmarked: c.isBookmarked,
+    isDownloaded: c.serverIsDownloaded,
+    lastPageRead: c.lastPageRead,
+    lastReadAt: '0',
+  ),
   pageCount: c.pageCount,
   fetchedAt: c.fetchedAt ?? '0',
   uploadDate: c.uploadDate ?? '0',
-  lastReadAt: '0',
   url: '',
   scanlator: c.scanlator,
   meta: const <Fragment$ChapterDto$meta>[],

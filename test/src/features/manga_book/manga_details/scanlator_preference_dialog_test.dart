@@ -53,12 +53,8 @@ class _FakeMangaWithId extends MangaWithId {
   Fragment$MangaDto _manga(int mangaId) => Fragment$MangaDto(
     id: mangaId,
     title: 'M',
-    bookmarkCount: 0,
     chapters: Fragment$MangaDto$chapters(totalCount: 0),
-    downloadCount: 0,
     genre: const [],
-    inLibrary: true,
-    inLibraryAt: '0',
     initialized: true,
     meta: [
       for (final e in meta.entries)
@@ -68,9 +64,15 @@ class _FakeMangaWithId extends MangaWithId {
     status: Enum$MangaStatus.ONGOING,
     categories: Fragment$MangaDto$categories(nodes: const []),
     trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-    unreadCount: 0,
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '/manga/$mangaId',
+    user: Fragment$MangaDto$user(
+      bookmarkCount: 0,
+      downloadCount: 0,
+      inLibrary: true,
+      inLibraryAt: '0',
+      unreadCount: 0,
+    ),
   );
 }
 

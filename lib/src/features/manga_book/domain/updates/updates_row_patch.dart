@@ -57,14 +57,18 @@ List<ChapterWithMangaDto> patchRowsForManga({
   final patched = <ChapterWithMangaDto>[];
   for (final row in rows) {
     final chapter = row.mangaId == mangaId ? fresh[row.id] : null;
-    patched.add(chapter == null
-        ? row
-        : row.copyWith(
-            isRead: chapter.isRead || row.isRead,
-            isBookmarked: chapter.isBookmarked,
-            isDownloaded: chapter.isDownloaded,
-            lastPageRead: chapter.lastPageRead,
-          ));
+    patched.add(
+      chapter == null
+          ? row
+          : row.copyWith(
+              user: row.user.copyWith(
+                isRead: chapter.user.isRead || row.user.isRead,
+                isBookmarked: chapter.user.isBookmarked,
+                isDownloaded: chapter.user.isDownloaded,
+                lastPageRead: chapter.user.lastPageRead,
+              ),
+            ),
+    );
   }
   return patched;
 }

@@ -60,7 +60,7 @@ class MigrationSourceShortSearch extends ConsumerWidget {
                   height: mangaCoverBoxHeight(kShortSearchCoverWidth),
                   child: MangaCoverGridTile(
                     manga: manga,
-                    showDarkOverlay: manga.inLibrary.ifNull(),
+                    showDarkOverlay: manga.user.inLibrary.ifNull(),
                     onPressed: () => _onMangaSelected(context, manga),
                   ),
                 );

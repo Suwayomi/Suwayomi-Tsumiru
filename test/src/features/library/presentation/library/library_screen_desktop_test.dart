@@ -42,21 +42,23 @@ Fragment$MangaDto _manga(int id, String title) => Fragment$MangaDto(
   id: id,
   title: title,
   thumbnailUrl: null,
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 4),
-  downloadCount: 1,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: const [],
   sourceId: '1',
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 2,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 1,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 2,
+  ),
 );
 
 /// Pumps the real [LibraryScreen] with two empty categories. Phone widths

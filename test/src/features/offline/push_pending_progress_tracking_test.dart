@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
@@ -127,11 +128,6 @@ ChapterDto _serverChapter({
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
   id: id,
-  isBookmarked: false,
-  isDownloaded: true,
-  isRead: isRead,
-  lastPageRead: lastPageRead,
-  lastReadAt: lastReadAt,
   mangaId: 1,
   name: 'c$id',
   pageCount: 10,
@@ -139,6 +135,13 @@ ChapterDto _serverChapter({
   uploadDate: '0',
   url: 'u$id',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: true,
+    isRead: isRead,
+    lastPageRead: lastPageRead,
+    lastReadAt: lastReadAt,
+  ),
 );
 
 /// Notifier subclass that returns a fixed bool? without touching SharedPreferences.
@@ -298,11 +301,9 @@ void main() {
     await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
     await pushPendingProgress(container);
 
-    expect(
-      (await db.dirtyProgressChapters()).map((c) => c.id),
-      [10],
-      reason: 'a failed push must not clear the dirty flag',
-    );
+    expect((await db.dirtyProgressChapters()).map((c) => c.id), [
+      10,
+    ], reason: 'a failed push must not clear the dirty flag');
   });
 
   test('a manual mark-read is gated on the MANUAL toggle, not the '
@@ -387,67 +388,70 @@ void main() {
     expect((await db.chapterById(10))!.readStateDirty, isFalse);
   });
 
-  test('cross-device never-regress and a partial read never un-reads', () async {
-    final repo = _ServerStateRepository(
-      _serverChapter(id: 10, isRead: false, lastPageRead: 3),
-    );
-    final (:container, :db, :tracker) = await _build(
-      mangaIds: [1],
-      repository: repo,
-    );
-    addTearDown(() {
-      container.dispose();
-      db.close();
-    });
+  test(
+    'cross-device never-regress and a partial read never un-reads',
+    () async {
+      final repo = _ServerStateRepository(
+        _serverChapter(id: 10, isRead: false, lastPageRead: 3),
+      );
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
 
-    await _seed(db, 10, mangaId: 1);
-    await db.setChapterProgress(10, lastPageRead: 8, isRead: null);
-    await pushPendingProgress(container);
+      await _seed(db, 10, mangaId: 1);
+      await db.setChapterProgress(10, lastPageRead: 8, isRead: null);
+      await pushPendingProgress(container);
 
-    expect(repo.patches.single.lastPageRead, 8);
-    expect((await db.chapterById(10))!.progressDirty, isFalse);
+      expect(repo.patches.single.lastPageRead, 8);
+      expect((await db.chapterById(10))!.progressDirty, isFalse);
 
-    final partial = _PartialReadRepo();
-    await recordReadingProgressWithDependencies(
-      offlineEnabled: false,
-      offlineDatabase: null,
-      repository: partial,
-      chapterId: 11,
-      lastPageRead: 38,
-      isRead: false,
-    );
-    final json = partial.lastPatch!.toJson();
-    expect(
-      json.containsKey('isRead'),
-      isFalse,
-      reason: 'a stale client cannot un-read a chapter',
-    );
-    expect(json['lastPageRead'], 38);
+      final partial = _PartialReadRepo();
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: false,
+        offlineDatabase: null,
+        repository: partial,
+        chapterId: 11,
+        lastPageRead: 38,
+        isRead: false,
+      );
+      final json = partial.lastPatch!.toJson();
+      expect(
+        json.containsKey('isRead'),
+        isFalse,
+        reason: 'a stale client cannot un-read a chapter',
+      );
+      expect(json['lastPageRead'], 38);
 
-    final offlineDb = testOfflineDatabase();
-    addTearDown(offlineDb.close);
-    await offlineDb.upsertChapterMetadata(
-      id: 11,
-      mangaId: 1,
-      name: 'c11',
-      chapterIndex: 11,
-      isRead: true,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      pageCount: 40,
-      updatedAt: DateTime(2026),
-    );
-    await recordReadingProgressWithDependencies(
-      offlineEnabled: true,
-      offlineDatabase: offlineDb,
-      repository: _PartialReadRepo(),
-      chapterId: 11,
-      lastPageRead: 38,
-      isRead: false,
-    );
-    final row = (await offlineDb.chapterById(11))!;
-    expect(row.isRead, isTrue, reason: 'only position updates');
-    expect(row.lastPageRead, 38);
-  });
+      final offlineDb = testOfflineDatabase();
+      addTearDown(offlineDb.close);
+      await offlineDb.upsertChapterMetadata(
+        id: 11,
+        mangaId: 1,
+        name: 'c11',
+        chapterIndex: 11,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 40,
+        updatedAt: DateTime(2026),
+      );
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: offlineDb,
+        repository: _PartialReadRepo(),
+        chapterId: 11,
+        lastPageRead: 38,
+        isRead: false,
+      );
+      final row = (await offlineDb.chapterById(11))!;
+      expect(row.isRead, isTrue, reason: 'only position updates');
+      expect(row.lastPageRead, 38);
+    },
+  );
 }

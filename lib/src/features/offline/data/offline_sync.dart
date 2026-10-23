@@ -87,9 +87,9 @@ class OfflineSync {
         sourceContentWarning: manga.source?.contentWarning.name,
         genre: manga.genre.isEmpty ? null : jsonEncode(manga.genre),
         status: manga.status.name,
-        unreadCount: manga.unreadCount,
-        downloadCount: manga.downloadCount,
-        bookmarkCount: manga.bookmarkCount,
+        unreadCount: manga.user.unreadCount,
+        downloadCount: manga.user.downloadCount,
+        bookmarkCount: manga.user.bookmarkCount,
         // manga.inLibraryAt is a raw server field, populated whenever the
         // server has ever tracked the manga — it does NOT imply current
         // membership. A caller can sync a target that isn't in the library
@@ -98,12 +98,12 @@ class OfflineSync {
         // "present" from libraryManga(). Force the sentinel whenever the
         // server says it isn't in the library, regardless of what
         // inLibraryAt itself contains.
-        inLibraryAt: manga.inLibrary
-            ? manga.inLibraryAt
+        inLibraryAt: manga.user.inLibrary
+            ? manga.user.inLibraryAt
             : kLibraryRemovedSentinel,
         latestFetchedAt: manga.latestFetchedChapter?.fetchedAt,
         latestUploadedAt: manga.latestUploadedChapter?.uploadDate,
-        lastReadAt: manga.lastReadChapter?.lastReadAt,
+        lastReadAt: manga.user.lastReadChapter?.user.lastReadAt,
         metaJson: jsonEncode({for (final e in manga.meta) e.key: e.value}),
         totalChapters: manga.chapters.totalCount,
         // Pre-extracted from the same meta list above, with the same
@@ -131,7 +131,7 @@ class OfflineSync {
       final retryGen = _db.syncGeneration;
       final fresh = await refetchManga!(manga.id);
       if (!_current) return;
-      if (fresh != null && fresh.inLibrary) {
+      if (fresh != null && fresh.user.inLibrary) {
         await _syncManga(fresh, fetchedAtGen: retryGen, isSettleRetry: true);
         return;
       }
@@ -149,7 +149,7 @@ class OfflineSync {
     // Acked-awaiting-aggregate: the row carries a correction and the server
     // reports the value we pushed. A differing server value is newer remote
     // information and settles the row instead.
-    return row.isRead != row.syncedIsRead && row.isRead == server.isRead;
+    return row.isRead != row.syncedIsRead && row.isRead == server.user.isRead;
   }
 
   /// Returns the set of chapter IDs that transitioned from unread to read
@@ -181,7 +181,7 @@ class OfflineSync {
         if (!(dirty[c.id]?.readStateDirty ?? false) &&
             existingRows[c.id] != null &&
             !existingRows[c.id]!.isRead &&
-            c.isRead)
+            c.user.isRead)
           c.id,
     };
     // One transaction per list: an interrupted sync must not leave a manga
@@ -206,19 +206,23 @@ class OfflineSync {
           scanlator: c.scanlator,
           uploadDate: c.uploadDate,
           fetchedAt: c.fetchedAt,
-          isRead: keepReadState ? local!.isRead : c.isRead,
+          isRead: keepReadState ? local!.isRead : c.user.isRead,
           // Baseline handling — see OfflineChapters.syncedIsRead.
           syncedIsRead: _keepReadBaseline(existingRows[c.id], c)
               ? null
-              : c.isRead,
-          lastPageRead: keepPosition ? local!.lastPageRead : c.lastPageRead,
-          isBookmarked: keepBookmark ? local!.isBookmarked : c.isBookmarked,
-          serverIsDownloaded: c.isDownloaded,
+              : c.user.isRead,
+          lastPageRead: keepPosition
+              ? local!.lastPageRead
+              : c.user.lastPageRead,
+          isBookmarked: keepBookmark
+              ? local!.isBookmarked
+              : c.user.isBookmarked,
+          serverIsDownloaded: c.user.isDownloaded,
           pageCount: c.pageCount,
           updatedAt: now,
           // Server-managed: always the server's value (drives the offline
           // "Last Read" sort). Never preserve the local one, unlike read progress.
-          lastReadAt: c.lastReadAt,
+          lastReadAt: c.user.lastReadAt,
         );
       }
     });
@@ -303,7 +307,7 @@ class OfflineSync {
     var serverZero = 0;
     var serverEmpty = 0;
     for (final m in serverLibrary) {
-      final v = m.inLibraryAt;
+      final v = m.user.inLibraryAt;
       if (v == '0') {
         serverZero++;
       } else if (v.isEmpty) {
@@ -326,7 +330,7 @@ class OfflineSync {
     // be literal "0" — kLibraryRemovedSentinel is '-1', not '0', so it no
     // longer collides with that.
     await _db.restoreLibraryTimestamps({
-      for (final m in serverLibrary) m.id: m.inLibraryAt,
+      for (final m in serverLibrary) m.id: m.user.inLibraryAt,
     });
     if (!_current) return;
     await _db.markNotInLibrary({for (final m in serverLibrary) m.id});

@@ -68,9 +68,7 @@ class HistoryRepository {
           Input$ChapterFilterInput(
             or: [
               Input$ChapterFilterInput(
-                name: Input$StringFilterInput(
-                  includesInsensitive: searchQuery,
-                ),
+                name: Input$StringFilterInput(includesInsensitive: searchQuery),
               ),
               // Note: We can't search manga title directly in chapter filter
               // This will be handled in the UI layer
@@ -107,7 +105,7 @@ class HistoryRepository {
     final items = <HistoryItemDto>[];
     for (final chapter in chapters?.nodes ?? const <HistoryItemDto>[]) {
       // A timestamp with no read progress isn't history worth showing.
-      if (!chapter.isRead && chapter.lastPageRead <= 0) continue;
+      if (!chapter.user.isRead && chapter.user.lastPageRead <= 0) continue;
       // First-seen per manga wins (server order is already newest-first).
       if (seen.add(chapter.mangaId)) items.add(chapter);
     }

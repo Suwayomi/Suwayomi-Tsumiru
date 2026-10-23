@@ -11,29 +11,28 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
-MangaDto _manga(
-  int id, {
-  required String title,
-  int unreadCount = 0,
-}) => Fragment$MangaDto(
-  id: id,
-  title: title,
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 5),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: const [],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: unreadCount,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/$id',
-);
+MangaDto _manga(int id, {required String title, int unreadCount = 0}) =>
+    Fragment$MangaDto(
+      id: id,
+      title: title,
+      chapters: Fragment$MangaDto$chapters(totalCount: 5),
+      genre: const [],
+      initialized: true,
+      meta: const [],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/$id',
+      user: Fragment$MangaDto$user(
+        bookmarkCount: 0,
+        downloadCount: 0,
+        inLibrary: true,
+        inLibraryAt: '0',
+        unreadCount: unreadCount,
+      ),
+    );
 
 List<int> _sorted(
   List<MangaDto> input, {

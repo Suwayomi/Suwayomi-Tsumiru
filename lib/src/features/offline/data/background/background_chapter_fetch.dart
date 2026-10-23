@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/graphql/legacy_user_fields_link.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../../utils/network/graphql_errors.dart';
 import '../../../account/data/account_permission.dart';
@@ -105,6 +106,30 @@ void applyBackgroundAuthHeaders(
 /// One authenticated GraphQL POST. Returns the decoded `data` map,
 /// [gqlAuthError], or [gqlNetworkError]; null on other failures.
 Future<Object?> postBackgroundGraphql({
+  required BackgroundServerTarget target,
+  required BackgroundTokenRecord record,
+  required String query,
+  required Map<String, Object?> variables,
+  String? accessToken,
+  bool accountCapability = false,
+}) async {
+  if (target.isCancelled?.call() ?? false) return gqlNetworkError;
+  return postWithLegacyUserFields(
+    endpoint: target.graphql,
+    query: query,
+    variables: variables,
+    post: (query, variables, probe) => _postBackgroundGraphql(
+      target: target,
+      record: record,
+      query: query,
+      variables: variables,
+      accessToken: accessToken,
+      accountCapability: !probe && accountCapability,
+    ),
+  );
+}
+
+Future<Object?> _postBackgroundGraphql({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord record,
   required String query,

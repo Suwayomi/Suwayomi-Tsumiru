@@ -66,12 +66,8 @@ List<String> _localPages(int count) {
 MangaDto _manga() => Fragment$MangaDto(
   id: 1,
   title: 'Test Manga',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: [
     Fragment$MangaDto$meta(
@@ -83,20 +79,21 @@ MangaDto _manga() => Fragment$MangaDto(
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/1',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 ChapterDto _chapter() => Fragment$ChapterDto(
   chapterNumber: 1,
   fetchedAt: '0',
   id: 1,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
   mangaId: 1,
   name: 'Chapter 1',
   pageCount: 3,
@@ -104,9 +101,19 @@ ChapterDto _chapter() => Fragment$ChapterDto(
   uploadDate: '0',
   url: '/chapter/1',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: false,
+    isDownloaded: false,
+    isRead: false,
+    lastPageRead: 0,
+    lastReadAt: '0',
+  ),
 );
 
-ChapterDto _partReadChapter() => _chapter().copyWith(lastPageRead: 1);
+ChapterDto _partReadChapter() {
+  final base = _chapter();
+  return base.copyWith(user: base.user.copyWith(lastPageRead: 1));
+}
 
 ChapterPagesDto _chapterPages() => ChapterPagesDto(
   chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),

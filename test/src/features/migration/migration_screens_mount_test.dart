@@ -114,21 +114,23 @@ class _MatchingMigration extends Fake implements MigrationRepository {
       Fragment$MangaDto(
         id: 2,
         title: 'Test Manga',
-        bookmarkCount: 0,
         chapters: Fragment$MangaDto$chapters(totalCount: 0),
-        downloadCount: 0,
         genre: const [],
-        inLibrary: false,
-        inLibraryAt: '0',
         initialized: true,
         meta: const [],
         sourceId: sourceId,
         status: Enum$MangaStatus.ONGOING,
         categories: Fragment$MangaDto$categories(nodes: const []),
         trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-        unreadCount: 0,
         updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
         url: '/manga/2',
+        user: Fragment$MangaDto$user(
+          bookmarkCount: 0,
+          downloadCount: 0,
+          inLibrary: false,
+          inLibraryAt: '0',
+          unreadCount: 0,
+        ),
       ),
     ];
   }

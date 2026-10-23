@@ -2,11 +2,13 @@ fragment ChapterDto on ChapterType {
   chapterNumber
   fetchedAt
   id
-  isBookmarked
-  isDownloaded
-  isRead
-  lastPageRead
-  lastReadAt
+  user {
+    isBookmarked
+    isDownloaded
+    isRead
+    lastPageRead
+    lastReadAt
+  }
   mangaId
   name
   pageCount

@@ -209,7 +209,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
       // Blocks deleting the source so a partial migration can't lose data.
       bool hardFailure = false;
 
-      if (options.migrateCategories && sourceManga.inLibrary) {
+      if (options.migrateCategories && sourceManga.user.inLibrary) {
         try {
           final sourceCategoriesResult = await client.query$GetMangaCategories(
             Options$Query$GetMangaCategories(
@@ -288,9 +288,9 @@ class MigrationRepositoryImpl implements MigrationRepository {
               id: c.id,
               chapterNumber: c.chapterNumber,
               name: c.name,
-              isRead: c.isRead,
-              isBookmarked: c.isBookmarked,
-              lastPageRead: c.lastPageRead,
+              isRead: c.user.isRead,
+              isBookmarked: c.user.isBookmarked,
+              lastPageRead: c.user.lastPageRead,
             );
 
             final matchResult = matchChapterState(
@@ -440,7 +440,9 @@ class MigrationRepositoryImpl implements MigrationRepository {
         warnings.add('Some per-series settings did not carry over: $e');
       }
 
-      if (!hardFailure && sourceManga.inLibrary && !targetManga.inLibrary) {
+      if (!hardFailure &&
+          sourceManga.user.inLibrary &&
+          !targetManga.user.inLibrary) {
         final updateLibraryResult = await client.mutate$UpdateManga(
           Options$Mutation$UpdateManga(
             variables: Variables$Mutation$UpdateManga(
@@ -463,7 +465,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
 
       return MigrationCopyResult(
         success: !hardFailure,
-        sourceInLibrary: sourceManga.inLibrary,
+        sourceInLibrary: sourceManga.user.inLibrary,
         warnings: warnings,
         migratedChapters: migratedChapters,
         migratedCategories: migratedCategories,
@@ -554,7 +556,8 @@ class MigrationRepositoryImpl implements MigrationRepository {
         variables: Variables$Query$GetManga(id: toMangaId),
       ),
     );
-    final targetInLibrary = targetResult.parsedData?.manga.inLibrary ?? false;
+    final targetInLibrary =
+        targetResult.parsedData?.manga.user.inLibrary ?? false;
     final sourceRecords =
         await trackerRepo.getMangaTrackRecords(fromMangaId) ?? const [];
     final targetRecords =

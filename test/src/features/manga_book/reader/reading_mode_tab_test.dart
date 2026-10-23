@@ -59,12 +59,8 @@ class _RecordingRepo implements MangaBookRepository {
 MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
   id: 1,
   title: 'Test Manga',
-  bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
   genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
   initialized: true,
   meta: [
     for (final e in meta.entries)
@@ -74,9 +70,15 @@ MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
   status: Enum$MangaStatus.ONGOING,
   categories: Fragment$MangaDto$categories(nodes: const []),
   trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
-  unreadCount: 0,
   updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
   url: '/manga/1',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: 0,
+  ),
 );
 
 void main() {

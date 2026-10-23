@@ -95,7 +95,7 @@ ChapterDto _pickReaderRelease(
   final kept = releases.firstWhereOrNull((c) => c.id == keepChapterId);
   if (kept != null) return kept;
 
-  final downloaded = releases.where((c) => c.isDownloaded).toList();
+  final downloaded = releases.where((c) => c.user.isDownloaded).toList();
   final candidates = offline && downloaded.isNotEmpty ? downloaded : releases;
   return candidates.firstWhereOrNull(
         (c) => scanlatorGroupOf(c) == scanlatorGroup,
@@ -161,7 +161,7 @@ List<int> expandIdsForDuplicates(
 /// Unread releases in a confident group that already contains a read release.
 List<int> reconcileIdsForReadNumbers(List<ChapterDto> allChapters) => [
   for (final releases in _confidentReleaseGroups(allChapters))
-    if (releases.any((chapter) => chapter.isRead))
+    if (releases.any((chapter) => chapter.user.isRead))
       for (final chapter in releases)
-        if (!chapter.isRead) chapter.id,
+        if (!chapter.user.isRead) chapter.id,
 ];

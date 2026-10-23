@@ -13,6 +13,7 @@ import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/controller/downloads_controller.dart';
@@ -70,11 +71,6 @@ ChapterDto _chapter({
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
   id: id,
-  isBookmarked: bookmarked,
-  isDownloaded: downloaded,
-  isRead: read,
-  lastPageRead: 0,
-  lastReadAt: read ? '1' : '0',
   mangaId: 1,
   name: 'Chapter $id',
   pageCount: 20,
@@ -84,6 +80,13 @@ ChapterDto _chapter({
   uploadDate: '0',
   url: '',
   meta: const [],
+  user: Fragment$ChapterDto$user(
+    isBookmarked: bookmarked,
+    isDownloaded: downloaded,
+    isRead: read,
+    lastPageRead: 0,
+    lastReadAt: read ? '1' : '0',
+  ),
 );
 
 final _chapters = [
@@ -100,19 +103,22 @@ final _manga = MangaDto.fromJson({
   'id': 1,
   'title': 'Test series',
   'author': 'An author',
-  'bookmarkCount': 0,
+  'user': {
+    '__typename': 'MangaUserType',
+    'bookmarkCount': 0,
+    'downloadCount': 0,
+    'inLibrary': true,
+    'inLibraryAt': '0',
+    'unreadCount': 5,
+  },
   'chapters': {'totalCount': 6, '__typename': 'ChapterNodeList'},
-  'downloadCount': 0,
   'genre': ['Action'],
-  'inLibrary': true,
-  'inLibraryAt': '0',
   'initialized': true,
   'meta': [],
   'sourceId': '0',
   'status': 'ONGOING',
   'categories': {'nodes': [], '__typename': 'CategoryNodeList'},
   'trackRecords': {'nodes': [], '__typename': 'TrackRecordNodeList'},
-  'unreadCount': 5,
   'updateStrategy': 'ALWAYS_UPDATE',
   'url': '',
 });
@@ -185,20 +191,21 @@ Future<void> _swipe(WidgetTester tester, String label, Offset delta) async {
 }
 
 void main() {
-  testWidgets('swipe right marks an unread chapter read and a read one unread', (
-    tester,
-  ) async {
-    final book = _RecordingBook();
-    await _pumpPhone(tester, book: book);
-    await _swipe(tester, 'Chapter 4', const Offset(200, 0));
-    expect(book.batches, hasLength(1));
-    expect(book.batches.single.ids, contains(4));
-    expect(book.batches.single.patch.isRead, isTrue);
+  testWidgets(
+    'swipe right marks an unread chapter read and a read one unread',
+    (tester) async {
+      final book = _RecordingBook();
+      await _pumpPhone(tester, book: book);
+      await _swipe(tester, 'Chapter 4', const Offset(200, 0));
+      expect(book.batches, hasLength(1));
+      expect(book.batches.single.ids, contains(4));
+      expect(book.batches.single.patch.isRead, isTrue);
 
-    await _swipe(tester, 'Chapter 1', const Offset(200, 0));
-    expect(book.batches, hasLength(2));
-    expect(book.batches.last.ids, contains(1));
-    expect(book.batches.last.patch.isRead, isFalse);
-    expect(tester.takeException(), isNull);
-  });
+      await _swipe(tester, 'Chapter 1', const Offset(200, 0));
+      expect(book.batches, hasLength(2));
+      expect(book.batches.last.ids, contains(1));
+      expect(book.batches.last.patch.isRead, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

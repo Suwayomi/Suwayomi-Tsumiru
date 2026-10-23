@@ -145,12 +145,12 @@ List<_ReadSnapshot> _captureReadSnapshots(
   return [
     for (final id in [for (final l in expandedByManga.values) ...l])
       if (byId[id] case final original?)
-        if (original.isRead.ifNull() != isRead ||
-            (resetPosition && original.lastPageRead != 0))
+        if (original.user.isRead.ifNull() != isRead ||
+            (resetPosition && original.user.lastPageRead != 0))
           (
             id: id,
-            isRead: original.isRead.ifNull(),
-            lastPageRead: original.lastPageRead,
+            isRead: original.user.isRead.ifNull(),
+            lastPageRead: original.user.lastPageRead,
           ),
   ];
 }
@@ -250,7 +250,7 @@ Future<void> toggleChapterBookmark(WidgetRef ref, ChapterDto chapter) =>
     recordBookmark(
       ref,
       chapterId: chapter.id,
-      isBookmarked: !chapter.isBookmarked.ifNull(),
+      isBookmarked: !chapter.user.isBookmarked.ifNull(),
     );
 
 Future<void> keepChapterOffline(WidgetRef ref, int chapterId) =>
@@ -353,7 +353,7 @@ Future<void> runChapterSwipeDownload({
         toast?.show(context.l10n.queued);
       }
     }
-  } else if (chapter.isDownloaded.ifNull()) {
+  } else if (chapter.user.isDownloaded.ifNull()) {
     final deleted = await deleteChaptersFromServerWithConfirm(
       context: context,
       ref: ref,

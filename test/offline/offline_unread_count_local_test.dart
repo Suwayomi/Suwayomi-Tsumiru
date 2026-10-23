@@ -19,16 +19,18 @@ Fragment$ChapterDto _serverChapter(int id, {required bool isRead}) =>
       name: 'c$id',
       chapterNumber: id.toDouble(),
       sourceOrder: id,
-      isRead: isRead,
-      isBookmarked: false,
-      isDownloaded: false,
-      lastPageRead: 0,
       pageCount: 10,
       fetchedAt: '0',
       uploadDate: '0',
-      lastReadAt: '0',
       url: '',
       meta: const <Fragment$ChapterDto$meta>[],
+      user: Fragment$ChapterDto$user(
+        isRead: isRead,
+        isBookmarked: false,
+        isDownloaded: false,
+        lastPageRead: 0,
+        lastReadAt: '0',
+      ),
     );
 
 void main() {
@@ -66,33 +68,36 @@ void main() {
     Future<int> unreadAsShown() async {
       final m = (await db.mangaById(1))!;
       final d = (await db.unsyncedReadDeltaByManga())[1] ?? 0;
-      return offlineMangaToDto(m, unsyncedReadDelta: d).unreadCount;
+      return offlineMangaToDto(m, unsyncedReadDelta: d).user.unreadCount;
     }
 
     // Started is chapter total minus unread, so an uncorrected aggregate makes
     // a series you just finished a chapter of read as "not started".
-    test('finishing, un-reading and a stale down-sync all correct the count', () async {
-      await db.setChapterReadState(1, true);
-      expect(await unreadAsShown(), 2);
-      await db.setChapterReadState(1, false);
-      expect(await unreadAsShown(), 3);
-      await db.setChapterReadState(1, true);
-      expect(await unreadAsShown(), 2);
+    test(
+      'finishing, un-reading and a stale down-sync all correct the count',
+      () async {
+        await db.setChapterReadState(1, true);
+        expect(await unreadAsShown(), 2);
+        await db.setChapterReadState(1, false);
+        expect(await unreadAsShown(), 3);
+        await db.setChapterReadState(1, true);
+        expect(await unreadAsShown(), 2);
 
-      // A down-sync landing before the push must not clobber the correction.
-      // The server has not been told yet, so its aggregate still says 3.
-      await db.upsertMangaMetadata(
-        id: 1,
-        title: 'Solo Leveling',
-        updatedAt: DateTime(2026),
-        unreadCount: 3,
-        totalChapters: 3,
-      );
-      expect(await unreadAsShown(), 2);
+        // A down-sync landing before the push must not clobber the correction.
+        // The server has not been told yet, so its aggregate still says 3.
+        await db.upsertMangaMetadata(
+          id: 1,
+          title: 'Solo Leveling',
+          updatedAt: DateTime(2026),
+          unreadCount: 3,
+          totalChapters: 3,
+        );
+        expect(await unreadAsShown(), 2);
 
-      await db.setChapterReadState(2, true);
-      expect(await unreadAsShown(), 1);
-    });
+        await db.setChapterReadState(2, true);
+        expect(await unreadAsShown(), 1);
+      },
+    );
 
     // Manga and chapter metadata sync separately, so the reduced server count
     // can land before any chapter down-sync. If the push did not move the

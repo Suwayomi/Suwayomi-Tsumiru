@@ -356,7 +356,7 @@ class _ReaderChapterSheet extends StatelessWidget {
             itemBuilder: (context, index) {
               final chapter = chapters[index];
               final isCurrent = chapter.id == currentChapterId;
-              final lastPageRead = chapter.lastPageRead
+              final lastPageRead = chapter.user.lastPageRead
                   .getValueOnNullOrNegative();
               final scanlator = chapter.scanlator.isNotBlank
                   ? chapter.scanlator!
@@ -376,7 +376,7 @@ class _ReaderChapterSheet extends StatelessWidget {
                 ),
                 selectedColor: colorScheme.onPrimaryContainer,
                 leading: Icon(
-                  chapter.isRead.ifNull()
+                  chapter.user.isRead.ifNull()
                       ? Icons.check_circle_outline_rounded
                       : Icons.radio_button_unchecked_rounded,
                   size: 20,
@@ -416,7 +416,7 @@ class _ReaderChapterSheet extends StatelessWidget {
                           updateData: refreshChapters,
                           chapter: chapter,
                           mangaId: mangaId,
-                          isDownloaded: chapter.isDownloaded.ifNull(),
+                          isDownloaded: chapter.user.isDownloaded.ifNull(),
                         ),
                       ],
                     ),

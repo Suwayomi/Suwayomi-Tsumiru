@@ -92,7 +92,7 @@ class ChapterListTile extends HookConsumerWidget {
           context: context,
           ref: ref,
           chapters: [chapter],
-          isRead: !chapter.isRead.ifNull(),
+          isRead: !chapter.user.isRead.ifNull(),
           refresh: (_) => updateData(),
         );
       case ChapterSwipeAction.toggleBookmark:
@@ -152,9 +152,9 @@ class ChapterListTile extends HookConsumerWidget {
     final readColor = context.theme.colorScheme.onSurface.withValues(
       alpha: 0.38,
     );
-    final read = chapter.isRead.ifNull();
-    final bookmarked = chapter.isBookmarked.ifNull();
-    final downloaded = chapter.isDownloaded.ifNull();
+    final read = chapter.user.isRead.ifNull();
+    final bookmarked = chapter.user.isBookmarked.ifNull();
+    final downloaded = chapter.user.isDownloaded.ifNull();
     final swipeLeft =
         ref.watch(chapterSwipeToLeftProvider) ??
         DBKeys.chapterSwipeToLeft.initial as ChapterSwipeAction;
@@ -177,10 +177,12 @@ class ChapterListTile extends HookConsumerWidget {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (chapter.isBookmarked.ifNull()) ...[
+              if (chapter.user.isBookmarked.ifNull()) ...[
                 Icon(
                   Icons.bookmark_rounded,
-                  color: chapter.isRead.ifNull() ? readColor : context.iconColor,
+                  color: chapter.user.isRead.ifNull()
+                      ? readColor
+                      : context.iconColor,
                   size: 20,
                 ),
                 const Gap(4),
@@ -188,10 +190,12 @@ class ChapterListTile extends HookConsumerWidget {
               Expanded(
                 child: Text(
                   showChapterNumber
-                      ? context.l10n.chapterNumber(chapter.formattedChapterNumber)
+                      ? context.l10n.chapterNumber(
+                          chapter.formattedChapterNumber,
+                        )
                       : chapter.name,
                   style: TextStyle(
-                    color: chapter.isRead.ifNull() ? readColor : null,
+                    color: chapter.user.isRead.ifNull() ? readColor : null,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -204,14 +208,14 @@ class ChapterListTile extends HookConsumerWidget {
                 TextSpan(
                   text: int.tryParse(chapter.uploadDate).toDaysAgo(context),
                   style: TextStyle(
-                    color: chapter.isRead.ifNull() ? readColor : null,
+                    color: chapter.user.isRead.ifNull() ? readColor : null,
                   ),
                 ),
-                if (!chapter.isRead.ifNull() &&
-                    (chapter.lastPageRead).getValueOnNullOrNegative() != 0)
+                if (!chapter.user.isRead.ifNull() &&
+                    (chapter.user.lastPageRead).getValueOnNullOrNegative() != 0)
                   TextSpan(
                     text:
-                        " • ${context.l10n.page(chapter.lastPageRead.getValueOnNullOrNegative() + 1)}",
+                        " • ${context.l10n.page(chapter.user.lastPageRead.getValueOnNullOrNegative() + 1)}",
                     style: TextStyle(
                       color: context.theme.colorScheme.onSurfaceVariant,
                     ),
@@ -219,7 +223,7 @@ class ChapterListTile extends HookConsumerWidget {
                 TextSpan(
                   text: " • $scanlator",
                   style: TextStyle(
-                    color: chapter.isRead.ifNull() ? readColor : null,
+                    color: chapter.user.isRead.ifNull() ? readColor : null,
                   ),
                 ),
               ],
@@ -238,7 +242,7 @@ class ChapterListTile extends HookConsumerWidget {
                   updateData: updateData,
                   chapter: chapter,
                   mangaId: manga.id,
-                  isDownloaded: chapter.isDownloaded.ifNull(),
+                  isDownloaded: chapter.user.isDownloaded.ifNull(),
                 ),
             ],
           ),
@@ -290,9 +294,9 @@ class ChapterListTile extends HookConsumerWidget {
     final showChapterNumber =
         ref.watch(mangaChapterDisplayModeProvider) ==
         ChapterDisplay.chapterNumber;
-    final read = chapter.isRead.ifNull();
+    final read = chapter.user.isRead.ifNull();
     final readColor = cs.onSurface.withValues(alpha: 0.38);
-    final bookmarked = chapter.isBookmarked.ifNull();
+    final bookmarked = chapter.user.isBookmarked.ifNull();
     final hovered = useState(false);
     final popping = useState(false);
     final optionsFocus = useMemoized(FocusNode.new);
@@ -332,7 +336,7 @@ class ChapterListTile extends HookConsumerWidget {
         ? ''
         : chapter.scanlator!;
     final progress = chapter.pageCount > 0
-        ? (chapter.lastPageRead / chapter.pageCount).clamp(0.0, 1.0)
+        ? (chapter.user.lastPageRead / chapter.pageCount).clamp(0.0, 1.0)
         : 0.0;
 
     return WebRouteLink(
@@ -451,7 +455,7 @@ class ChapterListTile extends HookConsumerWidget {
                             updateData: updateData,
                             chapter: chapter,
                             mangaId: manga.id,
-                            isDownloaded: chapter.isDownloaded.ifNull(),
+                            isDownloaded: chapter.user.isDownloaded.ifNull(),
                           ),
                         SizedBox(
                           width: 32,
@@ -481,14 +485,15 @@ class ChapterListTile extends HookConsumerWidget {
                     ),
                     if (isCurrent &&
                         chapter.pageCount > 0 &&
-                        chapter.lastPageRead.getValueOnNullOrNegative() != 0)
+                        chapter.user.lastPageRead.getValueOnNullOrNegative() !=
+                            0)
                       Positioned(
                         left: 0,
                         right: 0,
                         bottom: 0,
                         child: Tooltip(
                           message: context.l10n.pageOfTotal(
-                            chapter.lastPageRead + 1,
+                            chapter.user.lastPageRead + 1,
                             chapter.pageCount,
                           ),
                           child: ClipRect(
