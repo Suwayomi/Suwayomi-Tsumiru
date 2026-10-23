@@ -56,7 +56,6 @@ List<GoToTarget> appGoToTargets({
     label: (l) => l.settings,
     icon: Icons.settings_rounded,
     navigate: (c) => const SettingsRoute().push(c),
-    subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.general,

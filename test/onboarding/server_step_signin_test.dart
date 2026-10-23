@@ -261,7 +261,7 @@ void main() {
           if (needsLogin) {
             expect(find.text('This server needs a login'), findsOneWidget);
             await tester.enterText(
-              find.widgetWithText(TextField, 'User Name'),
+              find.widgetWithText(TextField, 'Username'),
               'reader',
             );
             await tester.enterText(
@@ -285,7 +285,7 @@ void main() {
             expect(
               tester
                   .widget<TextField>(
-                    find.widgetWithText(TextField, 'User Name'),
+                    find.widgetWithText(TextField, 'Username'),
                   )
                   .controller!
                   .text,
@@ -416,7 +416,7 @@ void main() {
 
       // Enter credentials with the default (Basic) auth type and Sign in.
       await tester.enterText(
-        find.widgetWithText(TextField, 'User Name'),
+        find.widgetWithText(TextField, 'Username'),
         'whoever',
       );
       await tester.enterText(
