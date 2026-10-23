@@ -1,0 +1,17 @@
+fragment DatabaseSettingsDto on SettingsType {
+  databaseType
+  databaseUrl
+  databaseUsername
+  databasePassword
+  useHikariConnectionPool
+}
+
+query DatabaseSettings {
+  settings { ...DatabaseSettingsDto }
+}
+
+mutation SetDatabaseSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: {settings: $settings}) {
+    settings { ...DatabaseSettingsDto }
+  }
+}
