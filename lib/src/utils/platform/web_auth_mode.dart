@@ -12,12 +12,20 @@ import '../../features/offline/data/offline_server_identity_repository.dart';
 
 final isWebProvider = Provider<bool>((ref) => kIsWeb);
 
+/// The page origin, or null when the app isn't served over http(s), as
+/// under the test runner.
+String? pageOriginOrNull() {
+  final base = Uri.base;
+  return base.scheme == 'http' || base.scheme == 'https' ? base.origin : null;
+}
+
 /// True when [serverAddress] is on the page's own origin, so the server
 /// already authenticated the browser before the app loaded.
 bool isSameOriginServer({
-  required String pageOrigin,
+  required String? pageOrigin,
   required String serverAddress,
 }) {
+  if (pageOrigin == null) return false;
   final page = Uri.tryParse(pageOrigin);
   final server = Uri.tryParse(serverAddress);
   if (page == null || server == null) return false;
@@ -32,7 +40,7 @@ final webSameOriginProvider = Provider<bool>(
   (ref) =>
       ref.watch(isWebProvider) &&
       isSameOriginServer(
-        pageOrigin: Uri.base.origin,
+        pageOrigin: pageOriginOrNull(),
         serverAddress: ref.watch(currentServerAddressProvider),
       ),
 );

@@ -127,5 +127,12 @@ void main() {
         isTrue,
       );
     });
+
+    test('null page origin is not same-origin', () {
+      expect(
+        isSameOriginServer(pageOrigin: null, serverAddress: 'http://x'),
+        isFalse,
+      );
+    });
   });
 }

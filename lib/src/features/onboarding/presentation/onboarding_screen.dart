@@ -1256,7 +1256,7 @@ class _ServerStep extends HookConsumerWidget {
           ),
           if (isWeb &&
               !isSameOriginServer(
-                pageOrigin: Uri.base.origin,
+                pageOrigin: pageOriginOrNull(),
                 serverAddress:
                     (resolvedUrl.value != null &&
                         resolvedUrl.value!.isNotEmpty)
