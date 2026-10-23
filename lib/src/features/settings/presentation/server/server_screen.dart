@@ -27,7 +27,7 @@ class ServerScreen extends ConsumerWidget {
     final List<Widget> rows = [
       if (canManage)
         SettingsGroupRow(
-          icon: Icons.dns_outlined,
+          icon: Icons.lan_outlined,
           title: context.l10n.network,
           trailing: chevron,
           onTap: () => const ServerNetworkRoute().push(context),
