@@ -1,3 +1,9 @@
+// Copyright (c) 2022 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -9,55 +15,15 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/web_selection_area.dart';
 import '../../../account/data/account_providers.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = context.theme.colorScheme;
     final showAccount = ref.watch(showAccountEntryProvider);
     final account = ref.watch(currentAccountProvider);
-
-    Widget row({
-      required IconData icon,
-      required String title,
-      String? subtitle,
-      required VoidCallback onTap,
-    }) => ListTile(
-      leading: Icon(icon, color: colorScheme.onSurfaceVariant),
-      title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle),
-      onTap: onTap,
-    );
-
-    Widget groupCard(List<Widget> rows) {
-      final children = <Widget>[];
-      for (var i = 0; i < rows.length; i++) {
-        if (i > 0) children.add(const Divider());
-        children.add(rows[i]);
-      }
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Card(
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: children),
-        ),
-      );
-    }
-
-    Widget heading(String label) => Padding(
-      padding: const EdgeInsets.fromLTRB(28, 24, 16, 8),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: colorScheme.onSurface.withValues(alpha: 0.8),
-        ),
-      ),
-    );
 
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.settings);
@@ -69,100 +35,111 @@ class SettingsScreen extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: 720),
             child: ListView(
               children: [
-                heading(context.l10n.settingsGroupApp),
-                groupCard([
-                  row(
-                    icon: Icons.tune_outlined,
-                    title: context.l10n.general,
-                    onTap: () => const GeneralSettingsRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.palette_outlined,
-                    title: context.l10n.appearance,
-                    onTap: () => const AppearanceSettingsRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.chrome_reader_mode_outlined,
-                    title: context.l10n.reader,
-                    onTap: () => const ReaderSettingsRoute().push(context),
-                  ),
-                  if (isKeyboardRuntime)
-                    row(
-                      icon: Icons.keyboard_outlined,
-                      title: context.l10n.keyboardShortcuts,
-                      onTap: () => const HotkeysSettingsRoute().push(context),
+                SettingsGroupHeading(label: context.l10n.settingsGroupApp),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.tune_outlined,
+                      title: context.l10n.general,
+                      onTap: () => const GeneralSettingsRoute().push(context),
                     ),
-                  if (isAndroidNative)
-                    row(
-                      icon: Icons.notifications_outlined,
-                      title: context.l10n.notifications,
+                    SettingsGroupRow(
+                      icon: Icons.palette_outlined,
+                      title: context.l10n.appearance,
                       onTap: () =>
-                          const NotificationsSettingsRoute().push(context),
+                          const AppearanceSettingsRoute().push(context),
                     ),
-                ]),
-                heading(context.l10n.library),
-                groupCard([
-                  row(
-                    icon: Icons.collections_bookmark_outlined,
-                    title: context.l10n.library,
-                    onTap: () => const LibrarySettingsRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.download_outlined,
-                    title: context.l10n.downloads,
-                    onTap: () => const DownloadsSettingsRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.sync_outlined,
-                    title: context.l10n.tracking,
-                    onTap: () => const TrackingSettingsRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.explore_outlined,
-                    title: context.l10n.browse,
-                    onTap: () => const BrowseSettingsRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.settings_backup_restore_outlined,
-                    title: context.l10n.backup,
-                    onTap: () => const BackupRoute().push(context),
-                  ),
-                ]),
-                heading(context.l10n.server),
-                groupCard([
-                  row(
-                    icon: Icons.dns_outlined,
-                    title: context.l10n.connection,
-                    onTap: () => const ConnectionRoute().push(context),
-                  ),
-                  if (showAccount)
-                    row(
-                      icon: Icons.person_outlined,
-                      title: context.l10n.accountTitle,
-                      subtitle: account?.username,
-                      onTap: () => const AccountRoute().push(context),
+                    SettingsGroupRow(
+                      icon: Icons.chrome_reader_mode_outlined,
+                      title: context.l10n.reader,
+                      onTap: () => const ReaderSettingsRoute().push(context),
                     ),
-                  row(
-                    icon: Icons.cloud_sync_outlined,
-                    title: context.l10n.sync,
-                    onTap: () => const SyncRoute().push(context),
-                  ),
-                  row(
-                    icon: Icons.admin_panel_settings_outlined,
-                    title: context.l10n.serverAdmin,
-                    onTap: () => const ServerSettingsRoute().push(context),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                row(
-                  icon: Icons.build_outlined,
-                  title: context.l10n.advanced,
-                  onTap: () => const AdvancedRoute().push(context),
+                    if (isKeyboardRuntime)
+                      SettingsGroupRow(
+                        icon: Icons.keyboard_outlined,
+                        title: context.l10n.keyboardShortcuts,
+                        onTap: () => const HotkeysSettingsRoute().push(context),
+                      ),
+                    if (isAndroidNative)
+                      SettingsGroupRow(
+                        icon: Icons.notifications_outlined,
+                        title: context.l10n.notifications,
+                        onTap: () =>
+                            const NotificationsSettingsRoute().push(context),
+                      ),
+                  ],
                 ),
-                row(
-                  icon: Icons.info_outlined,
-                  title: context.l10n.about,
-                  onTap: () => const AboutRoute().push(context),
+                SettingsGroupHeading(label: context.l10n.library),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.collections_bookmark_outlined,
+                      title: context.l10n.library,
+                      onTap: () => const LibrarySettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.download_outlined,
+                      title: context.l10n.downloads,
+                      onTap: () => const DownloadsSettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.sync_outlined,
+                      title: context.l10n.tracking,
+                      onTap: () => const TrackingSettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.explore_outlined,
+                      title: context.l10n.browse,
+                      onTap: () => const BrowseSettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.settings_backup_restore_outlined,
+                      title: context.l10n.backup,
+                      onTap: () => const BackupRoute().push(context),
+                    ),
+                  ],
+                ),
+                SettingsGroupHeading(label: context.l10n.server),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.dns_outlined,
+                      title: context.l10n.connection,
+                      onTap: () => const ConnectionRoute().push(context),
+                    ),
+                    if (showAccount)
+                      SettingsGroupRow(
+                        icon: Icons.person_outlined,
+                        title: context.l10n.accountTitle,
+                        subtitle: account?.username,
+                        onTap: () => const AccountRoute().push(context),
+                      ),
+                    SettingsGroupRow(
+                      icon: Icons.cloud_sync_outlined,
+                      title: context.l10n.sync,
+                      onTap: () => const SyncRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.admin_panel_settings_outlined,
+                      title: context.l10n.serverAdmin,
+                      onTap: () => const ServerSettingsRoute().push(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.build_outlined,
+                      title: context.l10n.advanced,
+                      onTap: () => const AdvancedRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.info_outlined,
+                      title: context.l10n.about,
+                      onTap: () => const AboutRoute().push(context),
+                    ),
+                  ],
                 ),
               ],
             ),

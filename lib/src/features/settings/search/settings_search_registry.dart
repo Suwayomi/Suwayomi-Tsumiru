@@ -1203,6 +1203,16 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
 bool _serverReachable(WidgetRef ref) =>
     ref.watch(settingsProvider).value != null;
 
+bool _canManageSettings(WidgetRef ref) => ref
+    .watch(settledAccountAccessProvider)
+    .allows(Enum$UserPermission.MANAGE_SETTINGS);
+
+bool _imagesRowVisible(WidgetRef ref) {
+  final access = ref.watch(settledAccountAccessProvider);
+  return access.capability != AccountCapability.supported ||
+      access.allows(Enum$UserPermission.MANAGE_SETTINGS);
+}
+
 bool _webInterfaceVisible(WidgetRef ref) =>
     _serverReachable(ref) &&
     ref
@@ -1216,14 +1226,14 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     title: (l) => l.ip,
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.serverBindings}',
     open: (c) => const ServerNetworkRoute(highlight: 'serverIpAddress').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'serverPort',
     title: (l) => l.serverPort,
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.serverBindings}',
     open: (c) => const ServerNetworkRoute(highlight: 'serverPort').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'enableSocksProxy',
@@ -1231,7 +1241,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
     open: (c) =>
         const ServerNetworkRoute(highlight: 'enableSocksProxy').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'socksVersion',
@@ -1239,7 +1249,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksVersion').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'socksHost',
@@ -1247,7 +1258,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksHost').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'socksPort',
@@ -1255,7 +1267,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksPort').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'socksUserName',
@@ -1263,7 +1276,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksUserName').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'socksPassword',
@@ -1271,7 +1285,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksPassword').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'flareSolverr',
@@ -1279,7 +1294,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     breadcrumb: (l) =>
         '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) => const ServerNetworkRoute(highlight: 'flareSolverr').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'flareSolverrServerUrl',
@@ -1289,7 +1304,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     open: (c) =>
         const ServerNetworkRoute(highlight: 'flareSolverrServerUrl').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'flareSolverrRequestTimeout',
@@ -1300,7 +1316,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
       highlight: 'flareSolverrRequestTimeout',
     ).push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'flareSolverrSessionName',
@@ -1310,7 +1327,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     open: (c) =>
         const ServerNetworkRoute(highlight: 'flareSolverrSessionName').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'flareSolverrSessionTTL',
@@ -1320,7 +1338,8 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     open: (c) =>
         const ServerNetworkRoute(highlight: 'flareSolverrSessionTTL').push(c),
     visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
   ),
   SettingsSearchEntry(
     id: 'flareSolverrResponseFallback',
@@ -1332,6 +1351,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
       highlight: 'flareSolverrResponseFallback',
     ).push(c),
     visible: (ref, _) =>
+        _canManageSettings(ref) &&
         (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false) &&
         ref.watch(flareSolverrFallbackProvider).value != null,
   ),
@@ -1343,6 +1363,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     open: (c) => const ServerNetworkRoute(highlight: 'webview').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(webViewSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1353,6 +1374,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
         const ServerNetworkRoute(highlight: 'clearWebViewCache').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         (ref.watch(clearCookiesAndCacheSupportProvider).value ?? false),
   ),
 ];
@@ -1421,6 +1443,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
     ).push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(settledAccountAccessProvider).capability !=
             AccountCapability.unknown &&
         ref.watch(webInterfaceSettingsProvider).value?.webUIFlavor !=
@@ -1525,6 +1548,7 @@ List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
     open: (c) => const ServerImagesRoute(highlight: 'imagesClearCache').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _imagesRowVisible(ref) &&
         (ref.watch(clearCachedImagesSupportProvider).value ?? false),
   ),
   SettingsSearchEntry(
@@ -1535,6 +1559,7 @@ List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
         const ServerImagesRoute(highlight: 'imageDownloadProcessing').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _imagesRowVisible(ref) &&
         ref.watch(imagesDownloadSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1557,6 +1582,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
     open: (c) => const ServerDatabaseRoute(highlight: 'databaseType').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(databaseSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1566,6 +1592,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
     open: (c) => const ServerDatabaseRoute(highlight: 'databaseUrl').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(databaseSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1576,6 +1603,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
         const ServerDatabaseRoute(highlight: 'databaseUsername').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(databaseSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1586,6 +1614,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
         const ServerDatabaseRoute(highlight: 'databasePassword').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(databaseSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1597,6 +1626,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
         const ServerDatabaseRoute(highlight: 'hikariConnectionPool').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(databaseSettingsProvider).value != null,
   ),
 ];
@@ -1607,14 +1637,14 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
     title: (l) => l.debugLogs,
     breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'debugLogs').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'systemTrayIcon',
     title: (l) => l.systemTrayIcon,
     breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'systemTrayIcon').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'logFileCleanup',
@@ -1623,6 +1653,7 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
     open: (c) => const ServerLogsRoute(highlight: 'logFileCleanup').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(miscLogsSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1633,6 +1664,7 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
     open: (c) => const ServerLogsRoute(highlight: 'maxLogFileSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(miscLogsSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1643,6 +1675,7 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
     open: (c) => const ServerLogsRoute(highlight: 'maxLogFolderSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(miscLogsSettingsProvider).value != null,
   ),
 ];

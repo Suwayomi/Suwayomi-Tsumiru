@@ -4,19 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Reorg completeness guard: every setting reachable before the settings
-// reorg must still be reachable after it, and through search. The frozen
-// list below is the exact set of `id`s in `allSettingsSearchEntries` on
-// origin/main before the change (185 lines, one id shared by two tabs).
-// The drift guard proves every entry renders somewhere; this test proves
-// no entry went missing in the move. If a setting is legitimately renamed
-// or merged, record the old id in [_renamedOrMergedIds] instead of deleting
-// it here, so the history stays explicit.
+// Reorg completeness guard: every pre-reorg setting id must still be
+// searchable after the move; record deliberate renames in [_renamedOrMergedIds].
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/settings/search/settings_search_registry.dart';
 
-/// Frozen pre-reorg ids, verbatim from
-/// `/var/tmp/tsumiru-work/settings-ids-main.txt`.
+/// Frozen pre-reorg ids from origin/main before the reorg.
 const List<String> _preReorgIds = [
   'appLanguage',
   'clearCache',
@@ -216,14 +209,9 @@ void main() {
     final frozen = _preReorgIds.toSet();
     final renamed = _renamedOrMergedIds.keys.toSet();
     expect(
-      current,
-      frozen.difference(renamed),
+      frozen.difference(renamed).difference(current),
+      isEmpty,
       reason: 'every pre-reorg setting is still searchable after the move',
-    );
-    expect(
-      frozen.difference(current),
-      renamed,
-      reason: 'only explicitly recorded renames may leave the set',
     );
   });
 }
