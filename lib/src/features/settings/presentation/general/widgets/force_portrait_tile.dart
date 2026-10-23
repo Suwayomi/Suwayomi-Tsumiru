@@ -50,7 +50,6 @@ class ForcePortraitTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.screen_lock_portrait_rounded),
       title: Text(context.l10n.lockToPortrait),
       onChanged: (value) {
         ref.read(forcePortraitProvider.notifier).update(value);

@@ -27,7 +27,6 @@ class ReaderFeedbackToastsTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.notifications_active_outlined),
       title: Text(context.l10n.readerFeedbackToasts),
       subtitle: Text(context.l10n.readerFeedbackToastsSubtitle),
       onChanged: ref.read(readerFeedbackToastsProvider.notifier).update,

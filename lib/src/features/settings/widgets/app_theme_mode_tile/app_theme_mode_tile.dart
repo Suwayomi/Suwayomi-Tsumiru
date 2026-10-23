@@ -20,18 +20,16 @@ part 'app_theme_mode_tile.g.dart';
 class AppThemeMode extends _$AppThemeMode
     with SharedPreferenceEnumClientMixin<ThemeMode> {
   @override
-  ThemeMode? build() => initialize(
-        DBKeys.themeMode,
-        enumList: ThemeMode.values,
-      );
+  ThemeMode? build() =>
+      initialize(DBKeys.themeMode, enumList: ThemeMode.values);
 }
 
 extension ThemeModeExtension on ThemeMode {
   String toLocale(BuildContext context) => switch (this) {
-        ThemeMode.system => context.l10n.themeModeSystem,
-        ThemeMode.light => context.l10n.themeModeLight,
-        ThemeMode.dark => context.l10n.themeModeDark
-      };
+    ThemeMode.system => context.l10n.themeModeSystem,
+    ThemeMode.light => context.l10n.themeModeLight,
+    ThemeMode.dark => context.l10n.themeModeDark,
+  };
 }
 
 class AppThemeModeTile extends ConsumerWidget {
@@ -41,9 +39,6 @@ class AppThemeModeTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(appThemeModeProvider);
     return ListTile(
-      leading: Icon(
-        context.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-      ),
       subtitle: themeMode != null ? Text(themeMode.toLocale(context)) : null,
       title: Text(context.l10n.appTheme),
       onTap: () => showDialog(

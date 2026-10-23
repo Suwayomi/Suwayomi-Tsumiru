@@ -32,7 +32,6 @@ class ReaderModeTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final readerMode = ref.watch(readerModeKeyProvider);
     return ListTile(
-      leading: const Icon(Icons.app_settings_alt_rounded),
       subtitle: readerMode != null ? Text(readerMode.toLocale(context)) : null,
       title: Text(context.l10n.readerMode),
       onTap: () => showDialog(

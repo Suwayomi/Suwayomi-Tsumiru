@@ -27,7 +27,6 @@ class RefreshChaptersFromSourceTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.sync_rounded),
       title: Text(context.l10n.refreshChaptersFromSource),
       subtitle: Text(context.l10n.refreshChaptersFromSourceSubtitle),
       onChanged: ref.read(refreshChaptersFromSourceProvider.notifier).update,

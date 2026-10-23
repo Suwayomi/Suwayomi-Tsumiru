@@ -34,7 +34,6 @@ class ReaderPaddingSlider extends ConsumerWidget {
     final double readerPadding =
         ref.watch(readerPaddingKeyProvider) ?? DBKeys.readerPadding.initial;
     return SliderSettingTile(
-      icon: Icons.width_wide_rounded,
       title: context.l10n.readerPadding,
       value: readerPadding,
       getSliderLabel: (val) => (val * 2.5).toStringAsFixed(2),
@@ -63,21 +62,17 @@ class AsyncReaderPaddingSlider extends HookConsumerWidget {
     // Slider is controlled and won't move unless this rebuilds.
     final padding = useValueListenable(readerPadding);
 
-    final onDebounceChanged = useCallback<ValueSetter<double>>(
-      (double paddingValue) async {
-        readerPadding.value = (paddingValue);
-        final finalDebounce = debounce.value;
-        if ((finalDebounce?.isActive).ifNull()) {
-          finalDebounce?.cancel();
-        }
-        debounce.value = Timer(
-          kDebounceDuration,
-          () => onChanged(paddingValue),
-        );
-        return;
-      },
-      [],
-    );
+    final onDebounceChanged = useCallback<ValueSetter<double>>((
+      double paddingValue,
+    ) async {
+      readerPadding.value = (paddingValue);
+      final finalDebounce = debounce.value;
+      if ((finalDebounce?.isActive).ifNull()) {
+        finalDebounce?.cancel();
+      }
+      debounce.value = Timer(kDebounceDuration, () => onChanged(paddingValue));
+      return;
+    }, []);
     return SliderSettingTile(
       icon: Icons.width_wide_rounded,
       title: context.l10n.readerPadding,

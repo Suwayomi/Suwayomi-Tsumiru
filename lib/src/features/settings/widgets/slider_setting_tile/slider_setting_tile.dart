@@ -10,7 +10,7 @@ class SliderSettingTile<T> extends StatelessWidget {
   const SliderSettingTile({
     super.key,
     required this.title,
-    required this.icon,
+    this.icon,
     required this.value,
     required this.defaultValue,
     required this.onChanged,
@@ -19,7 +19,7 @@ class SliderSettingTile<T> extends StatelessWidget {
     required this.getSliderLabel,
   });
   final String title;
-  final IconData icon;
+  final IconData? icon;
   final double value;
   final ValueSetter<double> onChanged;
   final double min;
@@ -32,7 +32,7 @@ class SliderSettingTile<T> extends StatelessWidget {
     return ListTile(
       dense: false,
       isThreeLine: true,
-      leading: Icon(icon),
+      leading: icon == null ? null : Icon(icon),
       title: Text(title),
       trailing: IconButton(
         onPressed: () => onChanged(defaultValue),

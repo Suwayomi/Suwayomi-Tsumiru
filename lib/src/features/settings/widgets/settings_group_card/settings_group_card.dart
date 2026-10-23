@@ -60,14 +60,21 @@ class SettingsGroupCard extends StatelessWidget {
 }
 
 class SettingsGroupHeading extends StatelessWidget {
-  const SettingsGroupHeading({super.key, required this.label});
+  const SettingsGroupHeading({
+    super.key,
+    required this.label,
+    this.first = false,
+  });
 
   final String label;
+
+  /// The first heading on a page sits closer to the app bar.
+  final bool first;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 24, 16, 8),
+      padding: EdgeInsets.fromLTRB(28, first ? 8 : 24, 16, 8),
       child: Text(
         label,
         style: TextStyle(

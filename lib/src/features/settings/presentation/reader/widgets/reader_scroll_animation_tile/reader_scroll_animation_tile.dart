@@ -27,7 +27,6 @@ class ReaderScrollAnimationTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.animation_rounded),
       title: Text(context.l10n.readerScrollAnimation),
       onChanged: ref.read(readerScrollAnimationProvider.notifier).update,
       value: ref.watch(readerScrollAnimationProvider).ifNull(),

@@ -37,7 +37,6 @@ class ReaderLastPageSwipeTile extends HookConsumerWidget {
 
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.swipe_right_rounded),
       title: Text(context.l10n.readerLastPageSwipeToggle),
       subtitle: Text(context.l10n.readerLastPageSwipeToggleDescription),
       onChanged: ref.read(lastPageSwipeEnabledProvider.notifier).update,
