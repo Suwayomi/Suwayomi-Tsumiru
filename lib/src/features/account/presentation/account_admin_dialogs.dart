@@ -19,15 +19,23 @@ class CreateAccountDialog extends HookConsumerWidget {
     final username = useTextEditingController();
     final password = useTextEditingController();
     final confirmation = useTextEditingController();
+    final capability = ref.watch(accountCreationPermissionsProvider).value;
+    final permissions = useState<Set<Enum$UserPermission>?>(null);
     return AccountAdminForm(
       title: context.l10n.accountCreateUser,
       onSubmit: () => ref
           .read(accountRepositoryProvider)
           .register(
-            Input$RegisterInput(
-              username: username.text.trim(),
-              password: password.text,
-            ),
+            capability?.user == true && permissions.value != null
+                ? Input$RegisterInput(
+                    username: username.text.trim(),
+                    password: password.text,
+                    userPermissions: permissions.value!.toList(),
+                  )
+                : Input$RegisterInput(
+                    username: username.text.trim(),
+                    password: password.text,
+                  ),
           ),
       children: [
         TextFormField(
@@ -60,6 +68,11 @@ class CreateAccountDialog extends HookConsumerWidget {
               ? context.l10n.accountPasswordsDoNotMatch
               : null,
         ),
+        if (capability?.user == true)
+          AccountPermissionPicker(
+            permissions: permissions.value ?? defaultAccountPermissions,
+            onChanged: (value) => permissions.value = value,
+          ),
       ],
     );
   }
@@ -125,23 +138,10 @@ class EditAccountDialog extends HookConsumerWidget {
                     if (value != null) role.value = value;
                   },
           ),
-        for (final entry in accountPermissionLabels(context).entries)
-          SwitchListTile(
-            dense: true,
-            title: Text(entry.value),
-            value: permissions.value.contains(entry.key),
-            onChanged: immutable
-                ? null
-                : (allowed) {
-                    final updated = {...permissions.value};
-                    if (allowed) {
-                      updated.add(entry.key);
-                    } else {
-                      updated.remove(entry.key);
-                    }
-                    permissions.value = updated;
-                  },
-          ),
+        AccountPermissionPicker(
+          permissions: permissions.value,
+          onChanged: immutable ? null : (value) => permissions.value = value,
+        ),
         if (!immutable)
           TextButton(
             onPressed: () => issueAccountCode(context, ref, userId: user.id),

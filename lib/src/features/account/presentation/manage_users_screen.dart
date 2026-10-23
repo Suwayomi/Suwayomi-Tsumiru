@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
@@ -13,7 +14,6 @@ import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 import '../domain/account_access.dart';
 import 'account_admin_dialogs.dart';
-import 'account_codes_screen.dart';
 import 'account_permission_labels.dart';
 
 class ManageUsersScreen extends HookConsumerWidget {
@@ -84,11 +84,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.key_rounded),
                     title: Text(context.l10n.accountCodes),
-                    onTap: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => const AccountCodesScreen(),
-                      ),
-                    ),
+                    onTap: () => const AccountCodesRoute().push<void>(context),
                   ),
                   Expanded(
                     child: users!.showUiWhenData(

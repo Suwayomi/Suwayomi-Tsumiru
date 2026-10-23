@@ -13,6 +13,7 @@ import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../data/account_administration.dart';
 import '../data/account_providers.dart';
+import 'account_permission_labels.dart';
 
 String accountCodeExpiry(BuildContext context, String seconds) =>
     context.l10n.accountCodeExpires(
@@ -28,18 +29,71 @@ Future<void> issueAccountCode(
   WidgetRef ref, {
   int? userId,
 }) async {
+  List<Enum$UserPermission>? permissions;
+  if (userId == null) {
+    final capability = await AppUtils.guard(
+      () => ref.read(accountCreationPermissionsProvider.future),
+      ref.read(toastProvider),
+    );
+    if (capability == null || !context.mounted) return;
+    if (capability.registration) {
+      final selected =
+          await showDialog<({List<Enum$UserPermission>? permissions})>(
+            context: context,
+            builder: (_) => const RegistrationCodePermissionsDialog(),
+            animationStyle: context.motionStyle,
+          );
+      if (selected == null || !context.mounted) return;
+      permissions = selected.permissions;
+    }
+  }
+  if (!context.mounted) return;
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => IssuedAccountCodeDialog(userId: userId),
+    builder: (_) =>
+        IssuedAccountCodeDialog(userId: userId, permissions: permissions),
     animationStyle: context.motionStyle,
   );
-  if (context.mounted) ref.invalidate(accountCodesProvider);
+  if (context.mounted) {
+    ref.invalidate(accountCodesProvider);
+    ref.invalidate(accountCodePermissionsProvider);
+  }
+}
+
+class RegistrationCodePermissionsDialog extends HookWidget {
+  const RegistrationCodePermissionsDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final permissions = useState<Set<Enum$UserPermission>?>(null);
+    return AlertDialog(
+      scrollable: true,
+      title: Text(context.l10n.accountIssueRegistrationCode),
+      content: AccountPermissionPicker(
+        permissions: permissions.value ?? defaultAccountPermissions,
+        onChanged: (value) => permissions.value = value,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.cancel),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, (
+            permissions: permissions.value?.toList(),
+          )),
+          child: Text(context.l10n.accountIssueRegistrationCode),
+        ),
+      ],
+    );
+  }
 }
 
 class IssuedAccountCodeDialog extends HookConsumerWidget {
-  const IssuedAccountCodeDialog({super.key, this.userId});
+  const IssuedAccountCodeDialog({super.key, this.userId, this.permissions});
   final int? userId;
+  final List<Enum$UserPermission>? permissions;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,7 +102,9 @@ class IssuedAccountCodeDialog extends HookConsumerWidget {
       final repository = ref.read(accountRepositoryProvider);
       if (userId == null) {
         final result = await repository.createRegistrationCode(
-          Input$CreateRegistrationCodeInput(),
+          permissions == null
+              ? Input$CreateRegistrationCodeInput()
+              : Input$CreateRegistrationCodeInput(permissions: permissions),
         );
         if (result == null) {
           throw StateError('Missing registration code response');
@@ -110,6 +166,9 @@ class AccountCodesScreen extends HookConsumerWidget {
     final admitted = ref.watch(settledAccountAccessProvider).canManageUsers;
     final busy = useState(false);
     final codes = admitted ? ref.watch(accountCodesProvider) : null;
+    final codePermissions = admitted
+        ? ref.watch(accountCodePermissionsProvider).value
+        : null;
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
     final topBar = showsMergedTopBar(context);
@@ -146,6 +205,18 @@ class AccountCodesScreen extends HookConsumerWidget {
                               [
                                 if (code.user != null) code.user!.username,
                                 accountCodeExpiry(context, code.expiresAt),
+                                if (codePermissions?[code.id]
+                                    case final permissions?)
+                                  permissions.isEmpty
+                                      ? context.l10n.none
+                                      : accountPermissionLabels(context).entries
+                                            .where(
+                                              (entry) => permissions.contains(
+                                                entry.key,
+                                              ),
+                                            )
+                                            .map((entry) => entry.value)
+                                            .join(', '),
                               ].join('\n'),
                             ),
                             trailing: TextButton(
@@ -198,6 +269,9 @@ class AccountCodesScreen extends HookConsumerWidget {
                                         );
                                         if (context.mounted) {
                                           ref.invalidate(accountCodesProvider);
+                                          ref.invalidate(
+                                            accountCodePermissionsProvider,
+                                          );
                                         }
                                       } finally {
                                         if (context.mounted) busy.value = false;

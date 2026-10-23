@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../constants/db_keys.dart';
 import '../constants/enum.dart';
 import '../features/about/presentation/about/about_screen.dart';
+import '../features/account/presentation/account_codes_screen.dart';
 import '../features/account/presentation/account_screen.dart';
 import '../features/account/presentation/manage_users_screen.dart';
 import '../features/browse_center/domain/source/source_model.dart';
@@ -251,7 +252,12 @@ GoRouter routerConfig(Ref ref) {
                 TypedGoRoute<ConnectionRoute>(path: Routes.connection),
                 TypedGoRoute<AccountRoute>(
                   path: Routes.account,
-                  routes: [TypedGoRoute<ManageUsersRoute>(path: 'users')],
+                  routes: [
+                    TypedGoRoute<ManageUsersRoute>(
+                      path: 'users',
+                      routes: [TypedGoRoute<AccountCodesRoute>(path: 'codes')],
+                    ),
+                  ],
                 ),
                 TypedGoRoute<HistoryRoute>(path: Routes.history),
                 TypedGoRoute<SettingsRoute>(
