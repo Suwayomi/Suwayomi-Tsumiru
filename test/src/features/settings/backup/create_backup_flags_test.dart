@@ -9,10 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/data/backup_settings_repository.dart';
-import 'package:tsumiru/src/features/settings/presentation/backup/widgets/backup_and_restore/widgets/create_backup_dialog.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/widgets/backup_flags/backup_flags.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/widgets/backup_flags/backup_flags_dialog.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
-import 'package:tsumiru/src/widgets/async_buttons/async_elevated_button.dart';
 
 import '../../../../helpers/legacy_account_access.dart';
 
@@ -26,29 +26,19 @@ class _SpyBackupRepo extends BackupSettingsRepository {
         permissions: legacyAccountPermissions,
       );
 
-  Map<String, bool>? captured;
+  BackupFlags? captured;
 
   @override
-  Future<String?> createBackup({
-    required bool includeCategories,
-    required bool includeChapters,
-    required bool includeHistory,
-    required bool includeTracking,
-    required bool includeClientData,
-  }) async {
-    captured = {
-      'categories': includeCategories,
-      'chapters': includeChapters,
-      'history': includeHistory,
-      'tracking': includeTracking,
-      'clientData': includeClientData,
-    };
-    return null; // blank url → dialog returns before the launch/nav path
+  Future<String?> createBackup(BackupFlags flags) async {
+    captured = flags;
+    return null;
   }
 }
 
 void main() {
-  testWidgets('each checkbox maps to its own backup flag', (tester) async {
+  testWidgets('create backup sends the flags chosen in the dialog', (
+    tester,
+  ) async {
     final spy = _SpyBackupRepo();
     await tester.pumpWidget(
       ProviderScope(
@@ -59,25 +49,69 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: CreateBackupDialog()),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  final flags = await showBackupFlagsDialog(
+                    context,
+                    title: 'Create backup',
+                  );
+                  if (flags != null) await spy.createBackup(flags);
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Library entries'), findsOneWidget);
+    expect(find.text('Server settings'), findsOneWidget);
+
     // Turn off exactly one flag — Tracking — and leave the rest on.
     await tester.tap(find.text('Tracking'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(AsyncElevatedButton));
+    await tester.tap(find.text('Ok'));
     await tester.pumpAndSettle();
 
-    expect(spy.captured, {
-      'categories': true,
-      'chapters': true,
-      'history': true,
-      'tracking': false, // only this one flipped — no cross-wiring
-      'clientData': true,
-    });
+    expect(
+      spy.captured,
+      const BackupFlags(
+        includeManga: true,
+        includeCategories: true,
+        includeChapters: true,
+        includeHistory: true,
+        includeTracking: false, // only this one flipped — no cross-wiring
+        includeClientData: true,
+        includeServerSettings: true,
+      ),
+    );
+  });
+
+  test('backup include/exclude summary gives All, None and a joined list', () {
+    List<(String, bool)> entries(List<bool> values) => [
+      ('Library entries', values[0]),
+      ('Chapters', values[1]),
+      ('Tracking', values[2]),
+    ];
+    ({String include, String exclude}) summarize(List<bool> values) =>
+        summarizeBackupFlags(
+          entries: entries(values),
+          all: 'All',
+          none: 'None',
+        );
+
+    expect(summarize([true, true, true]), (include: 'All', exclude: 'None'));
+    expect(summarize([false, false, false]), (include: 'None', exclude: 'All'));
+    expect(summarize([true, false, true]), (
+      include: 'Library entries, Tracking',
+      exclude: 'Chapters',
+    ));
   });
 }

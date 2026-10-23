@@ -40,6 +40,8 @@ import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/appearance_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/data/backup_settings_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/browse/browse_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/connection/connection_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
@@ -80,6 +82,16 @@ class _FixedSettings extends Settings {
   @override
   Future<SettingsDto?> build() async => _serverSettings();
 }
+
+Fragment$AutoBackupFlagsDto _autoBackupFlags() => Fragment$AutoBackupFlagsDto(
+  autoBackupIncludeManga: true,
+  autoBackupIncludeCategories: true,
+  autoBackupIncludeChapters: true,
+  autoBackupIncludeTracking: true,
+  autoBackupIncludeHistory: true,
+  autoBackupIncludeClientData: true,
+  autoBackupIncludeServerSettings: true,
+);
 
 /// Reachable server with SOCKS and FlareSolverr switched on, so every
 /// conditional Server row renders.
@@ -356,6 +368,9 @@ void main() {
             settingsProvider.overrideWith(_FixedSettings.new),
             settledAccountAccessProvider.overrideWithValue(
               AccountAccess(capability: AccountCapability.unsupported),
+            ),
+            autoBackupFlagsProvider.overrideWith(
+              (ref) async => _autoBackupFlags(),
             ),
           ],
         ),
