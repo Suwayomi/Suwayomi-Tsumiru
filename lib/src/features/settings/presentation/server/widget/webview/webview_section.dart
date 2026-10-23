@@ -29,13 +29,13 @@ class WebViewSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.webview),
+        SectionTitle(title: context.l10n.kcefWebView),
         if (data != null)
           SettingsHighlightTarget(
             id: 'webview',
             child: SwitchListTile(
-              title: Text(context.l10n.webview),
-              subtitle: Text(context.l10n.webviewDescription),
+              title: Text(context.l10n.kcefWebView),
+              subtitle: Text(context.l10n.kcefWebViewDescription),
               value: data.kcefEnabled,
               onChanged: canManage
                   ? (isEnabled) async {
@@ -57,9 +57,15 @@ class WebViewSection extends HookConsumerWidget {
         if (canClear)
           SettingsHighlightTarget(
             id: 'clearWebViewCache',
-            child: ListTile(
-              title: Text(context.l10n.clearCookiesAndCache),
-              onTap: canManage && !clearing.value
+            // Explicit boundary: without it the web engine folds this row
+            // into the switch row above, exposing the whole section as one
+            // button with a nested switch instead of two controls.
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: ListTile(
+                title: Text(context.l10n.clearCookiesAndCache),
+                onTap: canManage && !clearing.value
                   ? () async {
                       clearing.value = true;
                       try {
@@ -86,6 +92,7 @@ class WebViewSection extends HookConsumerWidget {
                       }
                     }
                   : null,
+              ),
             ),
           ),
       ],

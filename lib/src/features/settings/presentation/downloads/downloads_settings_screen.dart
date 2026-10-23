@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/app_utils.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
@@ -237,6 +239,7 @@ class _ServerDownloadsTab extends ConsumerWidget {
       onRefresh: () async {
         ref.invalidate(userSettingsProvider);
         ref.invalidate(settingsProvider);
+        ref.invalidate(autoDownloadIgnoreReUploadsProvider);
         await ref.read(settingsProvider.future);
       },
       child: serverSettings.showUiWhenData(context, (data) {
@@ -360,7 +363,18 @@ class _ServerDownloadsTab extends ConsumerWidget {
                       onChanged:
                           canEditPersonal &&
                               downloadsSettingsDto.autoDownloadNewChapters
-                          ? repository.toggleAutoDownloadIgnoreReUploads
+                          ? (value) async {
+                              final result = await AppUtils.guard(
+                                () => repository
+                                    .toggleAutoDownloadIgnoreReUploads(value),
+                                ref.read(toastProvider),
+                              );
+                              if (result != null && context.mounted) {
+                                ref.invalidate(
+                                  autoDownloadIgnoreReUploadsProvider,
+                                );
+                              }
+                            }
                           : null,
                     ),
                   ),

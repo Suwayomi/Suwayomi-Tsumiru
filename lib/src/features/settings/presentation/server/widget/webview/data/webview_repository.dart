@@ -54,27 +54,32 @@ class WebViewRepository {
         .getData((data) => data),
   );
 
-  Future<bool> supportsClearCookiesAndCache() =>
-      _clearCookiesAndCacheSupport[client] ??= _introspectClearSupport();
+  /// Only a definitive answer is cached: a returned `__type` whose field
+  /// list lacks `clearCookiesAndCache` is false. Any error (transport
+  /// failure or GraphQL exception) throws, so nothing is cached and the
+  /// next refresh retries the probe.
+  Future<bool> supportsClearCookiesAndCache() async {
+    final cached = _clearCookiesAndCacheSupport[client];
+    if (cached != null) return cached;
+    final result = await _introspectClearSupport();
+    _clearCookiesAndCacheSupport[client] = Future.value(result);
+    return result;
+  }
 
   Future<bool> _introspectClearSupport() async {
-    try {
-      final result = await client.query(
-        QueryOptions(
-          document: gql(
-            'query { __type(name: "Mutation") { fields { name } } }',
-          ),
-          fetchPolicy: FetchPolicy.cacheFirst,
+    final result = await client.query(
+      QueryOptions(
+        document: gql(
+          'query { __type(name: "Mutation") { fields { name } } }',
         ),
-      );
-      if (result.hasException) return false;
-      final fields =
-          (result.data?['__type']?['fields'] as List?)?.cast<dynamic>() ??
-          const [];
-      return fields.any((f) => (f as Map)['name'] == 'clearCookiesAndCache');
-    } catch (_) {
-      return false;
-    }
+        fetchPolicy: FetchPolicy.cacheFirst,
+      ),
+    );
+    if (result.hasException) throw result.exception!;
+    final fields =
+        (result.data?['__type']?['fields'] as List?)?.cast<dynamic>() ??
+        const [];
+    return fields.any((f) => (f as Map)['name'] == 'clearCookiesAndCache');
   }
 }
 

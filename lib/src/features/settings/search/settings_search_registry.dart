@@ -1371,9 +1371,9 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   ),
   SettingsSearchEntry(
     id: 'webview',
-    title: (l) => l.webview,
-    subtitle: (l) => l.webviewDescription,
-    breadcrumb: (l) => '${l.server} › ${l.webview}',
+    title: (l) => l.kcefWebView,
+    subtitle: (l) => l.kcefWebViewDescription,
+    breadcrumb: (l) => '${l.server} › ${l.kcefWebView}',
     open: (c) => const ServerSettingsRoute(highlight: 'webview').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1382,7 +1382,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'clearWebViewCache',
     title: (l) => l.clearCookiesAndCache,
-    breadcrumb: (l) => '${l.server} › ${l.webview}',
+    breadcrumb: (l) => '${l.server} › ${l.kcefWebView}',
     open: (c) =>
         const ServerSettingsRoute(highlight: 'clearWebViewCache').push(c),
     visible: (ref, _) =>
