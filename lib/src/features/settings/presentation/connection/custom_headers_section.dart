@@ -58,6 +58,33 @@ class CustomHeadersSection extends HookConsumerWidget {
           .put(result.name, result.value);
     }
 
+    Widget headerRow(MapEntry<String, String> entry) => ListTile(
+      leading: compact ? const Icon(Icons.key_rounded) : null,
+      title: Text(entry.key),
+      subtitle: Text(
+        entry.value.isEmpty ? '—' : '••••••••',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () => addOrEdit(existingName: entry.key),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.delete_rounded,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () =>
+                ref.read(customHttpHeadersProvider.notifier).remove(entry.key),
+          ),
+        ],
+      ),
+    );
+
     final editor = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -71,55 +98,53 @@ class CustomHeadersSection extends HookConsumerWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
-        if (!compact && entries.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 4, 16, 4),
-            child: Text(
-              context.l10n.customHeaderEmpty,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+        if (compact) ...[
+          if (entries.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 4, 16, 4),
+              child: Text(
+                context.l10n.customHeaderEmpty,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          for (final entry in entries) headerRow(entry),
+          SettingsHighlightTarget(
+            id: 'customHeaders',
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: OutlinedButton.icon(
+                onPressed: () => addOrEdit(),
+                icon: const Icon(Icons.add_rounded),
+                label: Text(context.l10n.customHeaderAdd),
               ),
             ),
           ),
-        for (final entry in entries)
-          ListTile(
-            leading: compact ? const Icon(Icons.key_rounded) : null,
-            title: Text(entry.key),
-            subtitle: Text(
-              entry.value.isEmpty ? '—' : '••••••••',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit_rounded),
-                  onPressed: () => addOrEdit(existingName: entry.key),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_rounded,
-                    color: Theme.of(context).colorScheme.error,
+        ] else
+          SettingsGroupCard(
+            children: [
+              if (entries.isEmpty)
+                ListTile(
+                  title: Text(
+                    context.l10n.customHeaderEmpty,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  onPressed: () => ref
-                      .read(customHttpHeadersProvider.notifier)
-                      .remove(entry.key),
+                )
+              else
+                for (final entry in entries) headerRow(entry),
+              SettingsHighlightTarget(
+                id: 'customHeaders',
+                child: ListTile(
+                  leading: const Icon(Icons.add_rounded),
+                  title: Text(context.l10n.customHeaderAdd),
+                  onTap: () => addOrEdit(),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        SettingsHighlightTarget(
-          id: 'customHeaders',
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: OutlinedButton.icon(
-              onPressed: () => addOrEdit(),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(context.l10n.customHeaderAdd),
-            ),
-          ),
-        ),
       ],
     );
     if (!compact) return editor;

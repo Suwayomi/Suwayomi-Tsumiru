@@ -108,6 +108,7 @@ class SyncYomiSettingsBody extends ConsumerWidget {
           children: [
             SettingsGroupHeading(label: l10n.syncyomi, first: true),
             _SyncYomiFields(settings: settings),
+            const SizedBox(height: 16),
             SettingsGroupCard(
               children: [
                 _SyncNowSection(

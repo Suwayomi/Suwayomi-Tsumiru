@@ -44,7 +44,12 @@ import 'prompt_sign_in.dart';
 /// The authentication-mode picker shared by the Connection page's
 /// Authentication section and its Account card.
 class ConnectionAuthTypePicker extends ConsumerWidget {
-  const ConnectionAuthTypePicker({super.key});
+  const ConnectionAuthTypePicker({super.key, this.inCard = false});
+
+  /// When true, the picker sits inside a SettingsGroupCard: the dropdown
+  /// gets 16 px padding on all sides (so its floating label clears the row
+  /// above) and the web-only hint sits below it at the same 16 px inset.
+  final bool inCard;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,6 +78,24 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
       );
     }
 
+    final dropdown = SettingsHighlightTarget(
+      id: 'authentication',
+      child: DropdownMenu<AuthType>(
+        key: ValueKey(authType),
+        initialSelection: authType,
+        expandedInsets: EdgeInsets.zero,
+        requestFocusOnTap: false,
+        label: Text(context.l10n.authType),
+        leadingIcon: const Icon(Icons.security_rounded),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+        ),
+        dropdownMenuEntries: authChoices
+            .map((t) => DropdownMenuEntry(value: t, label: t.toLocale(context)))
+            .toList(),
+        onSelected: onAuthModeChanged,
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -80,30 +103,15 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
         // anchors the selected item over the field and can open upward, wider
         // than the field). Opens below, sized to the field. Keyed by authType
         // so it re-seeds when the auth mode is changed elsewhere (e.g. logout).
-        SettingsHighlightTarget(
-          id: 'authentication',
-          child: DropdownMenu<AuthType>(
-            key: ValueKey(authType),
-            initialSelection: authType,
-            expandedInsets: EdgeInsets.zero,
-            requestFocusOnTap: false,
-            label: Text(context.l10n.authType),
-            leadingIcon: const Icon(Icons.security_rounded),
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-            ),
-            dropdownMenuEntries: authChoices
-                .map(
-                  (t) =>
-                      DropdownMenuEntry(value: t, label: t.toLocale(context)),
-                )
-                .toList(),
-            onSelected: onAuthModeChanged,
-          ),
-        ),
+        if (inCard)
+          Padding(padding: const EdgeInsets.all(16), child: dropdown)
+        else
+          dropdown,
         if (isWeb)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            padding: inCard
+                ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+                : const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Text(
               context.l10n.webUiLoginOnlyHint,
               style: Theme.of(context).textTheme.bodySmall,

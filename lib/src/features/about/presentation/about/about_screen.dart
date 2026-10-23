@@ -151,7 +151,6 @@ class AboutScreen extends HookConsumerWidget {
               child: ListView(
                 children: [
                   TsumiruLogo(size: context.height * .2),
-                  const Divider(),
                   SettingsGroupHeading(label: context.l10n.client, first: true),
                   SettingsGroupCard(
                     children: [

@@ -108,7 +108,7 @@ class ConnectionAccountSection extends ConsumerWidget {
                 ],
               ),
             ],
-            const ConnectionAuthTypePicker(),
+            const ConnectionAuthTypePicker(inCard: true),
           ],
         ),
         const InlineAuthSection(accountMode: true),

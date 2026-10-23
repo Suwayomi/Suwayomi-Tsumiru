@@ -147,7 +147,6 @@ class MoreScreen extends ConsumerWidget {
               children: [
                 if (!context.usesDesktopShell) ...[
                   TsumiruLogo(size: context.height * .2),
-                  const Divider(),
                 ],
                 accountSection(),
                 SettingsGroupHeading(label: context.l10n.library),
