@@ -90,10 +90,6 @@
     "@addCategory": {
         "description": "Popup title and Button text to add new category in Edit Category Screen"
     },
-    "allScanlators": "Tüm Scanlatorlar",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "authTypeBasic": "Basit yetki",
     "@authTypeBasic": {
         "description": "Radio button text for the Basic Authentication type"
@@ -148,17 +144,9 @@
             }
         }
     },
-    "createBackupDescription": "Kütüphaneyi Tachidesk yedeği olarak yedekle",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
-    },
     "credentials": "Referanslar",
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"
-    },
-    "current": "Güncel",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
     },
     "delete": "Sil",
     "@delete": {
@@ -282,10 +270,6 @@
     "@installingExtension": {
         "description": "Toast text to show that the extension is installing"
     },
-    "isTrueBlack": "Gerçek siyah",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
-    },
     "languages": "Diller",
     "@languages": {
         "description": "Popup title to filter extensions based on language"
@@ -305,10 +289,6 @@
     "mangaGridSize": "Manga ızgara boyutu",
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
-    },
-    "mangaMissingSources": "Manga kayıp kaynaklar",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "mangaSortAlphabetical": "Alfabetik",
     "@mangaSortAlphabetical": {
@@ -358,10 +338,6 @@
     "@missingExtension": {
         "description": "Group title to show the Missing Extensions when restoring Backup"
     },
-    "missingTrackers": "Kayıp",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
-    },
     "more": "Daha fazla",
     "@more": {
         "description": "Screen title and Navigation text of More screen"
@@ -391,10 +367,6 @@
     "newUpdateAvailable": "Yeni güncelleme mevcut",
     "@newUpdateAvailable": {
         "description": "Popup title to show that the App/Server has and update"
-    },
-    "nextChapter": "Sonraki: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
     },
     "noCategoriesFound": "Kategorin yok\n(Tüyo: Kütüphaneyi organize etmek için artıya basarsanız yeni bir tane yaratabilirsiniz)",
     "@noCategoriesFound": {
@@ -498,10 +470,6 @@
     "@nsfw": {
         "description": "Switch text to show/hide the nsfw extensions"
     },
-    "nsfwInfo": "Bu, resmi olmayan veya muhtemelen yanlış işaretlenmiş uzantıların uygulama içinde NSFW(18+) içerik sunmasını engellemez",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
-    },
     "page": "Sayfa: {number}",
     "@page": {
         "description": "Text to show the last read Page number of the chapter in Manga details screen",
@@ -529,10 +497,6 @@
                 "type": "int"
             }
         }
-    },
-    "previousChapter": "Önceki: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
     },
     "readerNavigationLayoutEdge": "Edge",
     "@readerNavigationLayoutEdge": {
@@ -578,7 +542,6 @@
     "imageScaleTypeOriginalSize": "Orijinal boyut",
     "imageScaleTypeSmartFit": "Akıllı sığdırma",
     "imageScaleTypeStretch": "Uzat",
-    "landscapeZoom": "Geniş görsellere otomatik yakınlaştır",
     "navigateToPan": "Geniş görselleri kaydır",
     "pageLayoutSinglePage": "Tek sayfa",
     "readerForThisSeries": "Bu seri için",
@@ -625,7 +588,6 @@
     "showHiddenCategories": "Gizli kategorileri göster",
     "smallerTapZones": "Daha küçük dokunma bölgeleri",
     "autoScroll": "Otomatik kaydırma",
-    "tabs": "Sekmeler",
     "continueReadingButton": "Okumaya devam et butonu",
     "languageBadge": "Dil",
     "sourceBadge": "Kaynak simgesi",
@@ -645,7 +607,6 @@
     "setCategories": "Kategorileri ayarla",
     "ok": "TAMAM",
     "deleteChaptersConfirm": "Seçilen bölümleri silmek istediğinize emin misiniz?",
-    "deleteChapters": "Bölümleri sil",
     "deleteChapterAfterManuallyMarkedRead": "Okundu olarak işaretlendikten sonra bölümü sil",
     "deleteFinishedChaptersWhileReading": "Okurken biten bölümleri silin",
     "allowDeletingBookmarkedChapters": "Yer imi eklenmiş bölümleri silmeye izin ver",
@@ -666,7 +627,6 @@
     "filterOptionFinished": "Tamamlandı",
     "filterHeaderLibrary": "Kitaplık",
     "filterOptionInLibrary": "Kitaplıkta",
-    "filterOptionCompleted": "Tamamlandı",
     "unreadBadgeModeHidden": "Gizle",
     "groupStyleTabs": "Sekmeler",
     "downloadAllChapters": "Tümü",
@@ -714,7 +674,6 @@
     "mangaSortRandom": "Rastgele",
     "mangaSortTrackerScore": "İzleyici puanı",
     "mangaSortTotalChapters": "Toplam bölüm",
-    "misc": "Çeşitli",
     "soon": "Yakında",
     "smartUpdate": "Akıllı güncelleme",
     "suggestions": "Öneriler",
@@ -771,14 +730,11 @@
     "migrationAvailableHeader": "Mevcut",
     "migrationDataToMigrateHeader": "Taşınacak veriler",
     "migrationObsoleteSource": "Kullanım dışı",
-    "migrationSelectAll": "Tümünü seç",
     "migrationInvertSelection": "Tersine çevir",
-    "migrationRetry": "Tekrar dene",
     "migrationActionMigrate": "Taşı",
     "migrationActionCopy": "Kopyala",
     "libraryUpdateErrors": "Kitaplık güncelleme hataları",
     "notificationDownloadsPausedTitle": "İndirmeler duraklatıldı",
-    "notificationBackupFailedTitle": "Yedekleme başarısız",
     "notificationAppUpdateTitle": "Güncelleme mevcut",
     "notificationExtensionUpdateTitle": "Uzantı güncellemeleri",
     "notificationIncognitoTitle": "Gizli mod",
@@ -787,7 +743,6 @@
     "notificationActionDownload": "İndir",
     "notificationsHideContent": "Bildirim içeriğini gizle",
     "noResultsFound": "Sonuç bulunmadı",
-    "customMigration": "Özel",
     "webtoonScaleTypeFitScreen": "Ekrana sığdır",
     "webtoonScaleTypeOriginalSize": "Orijinal boyut",
     "remove": "Kaldır",
@@ -818,7 +773,6 @@
     "sourceTypePopular": "Popüler",
     "sources": "Kaynaklar",
     "start": "Başla",
-    "started": "Başlandı",
     "systemTrayIcon": "Simgeyi sistem tepsisinde göster",
     "thatHaventBeenStarted": "Henüz başlamamış olanlar",
     "themeModeDark": "Koyu",
@@ -841,10 +795,8 @@
     "recentlyRead": "Son zamanlarda okunanlar",
     "history": "Geçmiş",
     "offlineDownloadsSection": "İndirmeler",
-    "keepOfflineOff": "Kapalı",
     "downloadsServerTab": "Sunucu",
     "tracking": "İzleme",
-    "searchForSources": "Kaynak ara",
     "copyToClipboard": "Panoya kopyala",
     "copiedToClipboard": "Panoya kopyalandı",
     "updateProgressAfterReading": "Okuduktan sonra ilerlemeyi güncelle",
@@ -862,7 +814,6 @@
     "trackMarkPublic": "Herkese açık olarak izle",
     "filterTracked": "İzleniyor",
     "copyImageToClipboard": "Kopyala",
-    "zoomStart": "Yakınlaştırma başlangıç konumu",
     "zoomStartAutomatic": "Otomatik",
     "zoomStartCenter": "Orta",
     "zoomStartLeft": "Sol",
@@ -890,7 +841,6 @@
     "duplicateSkipAll": "Tümünü atla",
     "actionShowEntry": "Girdiyi göster",
     "duplicatedEntries": "Yinelenen girişler",
-    "duplicatedEntriesSubtitle": "Kütüphanenizdeki tüm yinelenen girişleri gösterin",
     "checkDescription": "Açıklamayı kontrol edin",
     "offlineChaptersScreenTitle": "İndirilen bölümler",
     "offlineChaptersDownloadedSection": "İndirilen",
@@ -922,7 +872,6 @@
     "notificationChaptersMultiple": "Bölüm {numbers}",
     "smartUpdateExpected": "Sonraki bölümlerin {predicted} içinde yayınlanacağı tahmin ediliyor, her {interval} içinde bir kontrol ediliyor.",
     "removeExtensionStoreBody": "{name} ({url}) uzantı mağazasını kaldırmak istiyor musunuz?",
-    "httpErrorCheckWebView": "HTTP {statusCode}, siteyi WebView'de kontrol et",
     "trackRemoveAlsoOnRemote": "Ayrıca şuradan da kaldır: {trackerName}",
     "libraryLastUpdated": "Son kitaplık güncelleme: {time}",
     "libraryUpdateErrorsCount": "Kitaplık güncelleme hataları ({count})",
@@ -934,7 +883,6 @@
     "showUpdateProgressBanner": "Güncelleme ilerleme banner'ını göster",
     "migrationHideUnmatched": "Eşleşmeyen girdileri gizle",
     "migrationHideWithoutUpdates": "Daha yeni bölümleri olmayan girdileri gizle",
-    "notificationRestoreCompleteTitle": "Geri yükleme tamamlandı",
     "removeFromLibrary": "Kitaplıktan kaldır",
     "searchingForUpdates": "Güncellemeler kontrol ediliyor",
     "offlineStorageUsage": "Depolama kullanımı",

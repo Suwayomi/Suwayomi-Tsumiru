@@ -28,10 +28,8 @@
     "clientVersion": "Versão Client",
     "close": "Fechar",
     "copyMsg": "\"{msg}\" Copiado!",
-    "createBackupDescription": "Cópia da Biblioteca como cópia de segurança de Tachidesk",
     "createBackupTitle": "Criar cópia de segurança",
     "credentials": "Credenciais",
-    "current": "Atuais",
     "defaultCategory": "Categoria predefinida quando um novo mangá é adicionado à biblioteca",
     "delete": "Remover",
     "deleteCategoryDescription": "Isto irá fundir todos os mangas desta categoria para predefinidos!",
@@ -72,7 +70,6 @@
     "latest": "Mais recente",
     "library": "Biblioteca",
     "manga": "Manga",
-    "mangaMissingSources": "Fontes do manga em falta",
     "mangaSortAlphabetical": "Ordem alfabética",
     "mangaSortDateAdded": "Data adicionada",
     "mangaSortUnread": "Não lido",
@@ -85,7 +82,6 @@
     "mangaStatusPublishingFinished": "Publicação concluída",
     "mangaStatusUnknown": "Desconhecido",
     "missingExtension": "Extensões em falta",
-    "missingTrackers": "Rasteadores em falta",
     "more": "Mais",
     "moveToBottom": "Mover para baixo",
     "moveToTop": "Mover para cima",
@@ -104,7 +100,6 @@
     "noUpdatesFound": "Nenhuma atualização encontrada",
     "nsfw": "Mostrar extensões e fontes NSFW",
     "nsfw18": "18+",
-    "nsfwInfo": "Isto não impede extensões não oficiais ou incorretamente marcadas de mostrarem conteúdo NSFW (18+) dentro da aplicação",
     "numSelected": "{num} Selecionado",
     "obsolete": "Obsoleta",
     "page": "Página: {number}",
@@ -128,10 +123,8 @@
     "readerNavigationLayoutKindlish": "Kindle-ish",
     "readerNavigationLayoutLShaped": "Formato L",
     "readerNavigationLayoutRightAndLeft": "Direita para Esquerda",
-    "reddit": "Reddit",
     "refresh": "Recarregar",
     "reset": "Reiniciar",
-    "restoreBackupDescription": "Restaurar Tachidesk pela cópia de segurança",
     "restoreBackupTitle": "Restaurar cópia de segurança",
     "restored": "Cópia de segurança restaurada!",
     "restoring": "A restaurar cópia de segurança",
@@ -158,7 +151,6 @@
     "uninstall": "Desinstalar",
     "uninstalling": "A Desinstalar",
     "unknownAuthor": "Autor Desconhecido",
-    "unknownManga": "Manga Desconhecido",
     "unknownSource": "Fonte Desconhecida",
     "unread": "Não lida",
     "update": "Atualização",
@@ -177,14 +169,6 @@
     "serverPort": "Porta do Servidor",
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
-    },
-    "serverPortHintText": "Porta do Servidor",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
-    },
-    "allScanlators": "Todas Scans",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
     },
     "readerScrollAnimation": "Animação do Scroll",
     "@readerScrollAnimation": {
@@ -221,14 +205,6 @@
     "daysAgo": "{days} dias atrás",
     "@daysAgo": {
         "description": "Days ago text to show the release date of manga"
-    },
-    "nextChapter": "Próximo: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
-    },
-    "previousChapter": "Anterior: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
     },
     "readerSwipeChapterToggleDescription": "Deslizar para mudar Capitulo no leitor",
     "@readerSwipeChapterToggleDescription": {
@@ -270,10 +246,6 @@
     "readerVolumeTap": "Teclas de volume",
     "@readerVolumeTap": {
         "description": "Switch button text for Reader Page Navigation with Volume Tap"
-    },
-    "readerVolumeTapSubtitle": "Navegar com teclas de volume",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
     },
     "readerVolumeTapInvert": "Inverter teclas de volume",
     "@readerVolumeTapInvert": {

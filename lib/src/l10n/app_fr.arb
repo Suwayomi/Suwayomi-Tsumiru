@@ -108,14 +108,6 @@
             }
         }
     },
-    "createBackupDescription": "Sauvegarder la bibliothèque en tant que sauvegarde Tachidesk",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
-    },
-    "current": "En cours",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
-    },
     "delete": "Supprimer",
     "@delete": {
         "description": "Text for delete button"
@@ -274,10 +266,6 @@
     "@missingExtension": {
         "description": "Group title to show the Missing Extensions when restoring Backup"
     },
-    "missingTrackers": "Pisteurs manquants",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
-    },
     "more": "Plus",
     "@more": {
         "description": "Screen title and Navigation text of More screen"
@@ -346,10 +334,6 @@
     "@nsfw18": {
         "description": "18+ tag Text to show in extensions list"
     },
-    "nsfwInfo": "Cela n'empêche pas les extensions non officielles ou potentiellement signalées de manière incorrecte de faire apparaître du contenu explicite (18+) dans l'application",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
-    },
     "readerModeContinuousHorizontalRTL": "Horizontal en continu (De droite à gauche)",
     "@readerModeContinuousHorizontalRTL": {
         "description": "Radio button text for Reader Mode Type - Continuous Horizontal (RTL)"
@@ -410,10 +394,6 @@
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
     },
-    "reddit": "Reddit",
-    "@reddit": {
-        "description": "Reddit app title"
-    },
     "refresh": "Actualiser",
     "@refresh": {
         "description": "Refresh button text"
@@ -421,10 +401,6 @@
     "reset": "Réinitialiser",
     "@reset": {
         "description": "Button text of reset button in source filters"
-    },
-    "restoreBackupDescription": "Restaurer Tachidesk à partir d'une sauvegarde",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "restoreBackupTitle": "Restaurer la sauvegarde",
     "@restoreBackupTitle": {
@@ -555,10 +531,6 @@
     "mangaSortDateAdded": "Date d'ajout",
     "@mangaSortDateAdded": {
         "description": "Radio button text for Manga sort Type - Date Added"
-    },
-    "mangaMissingSources": "Sources manquantes des mangas",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "mangaStatusCancelled": "Annulé",
     "@mangaStatusCancelled": {
@@ -736,10 +708,6 @@
     "@uninstalling": {
         "description": "Button text to show that the extension is uninstalling"
     },
-    "unknownManga": "Manga inconnu",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
-    },
     "unread": "Non lu",
     "@unread": {
         "description": "Checkbox text to unread bookmarked manga/chapters across app"
@@ -764,10 +732,6 @@
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
     },
-    "serverPortHintText": "Port du serveur",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
-    },
     "noServerFound": "Aucun serveur trouvé sur votre réseau local",
     "@noServerFound": {
         "description": "Text to show that no Server found in locale network"
@@ -775,10 +739,6 @@
     "findServer": "Trouver",
     "@findServer": {
         "description": "Button text of Find Server"
-    },
-    "allScanlators": "Tous les Scanlators",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
     },
     "scanlators": "Scanlators",
     "@scanlators": {
@@ -796,10 +756,6 @@
     "@today": {
         "description": "Today Text to show the release date of manga"
     },
-    "previousChapter": "Précédent : {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
     "readerSwipeChapterToggleDescription": "Activer/désactiver le changement de chapitre par balayage",
     "@readerSwipeChapterToggleDescription": {
         "description": "Switch tile description for, toggle `swipe to change chapter` in reader screen"
@@ -811,14 +767,6 @@
     "readerOverlay": "Superposition initiale du lecteur",
     "@readerOverlay": {
         "description": "Toggle subtile text for Initial Reader Overlay"
-    },
-    "isTrueBlack": "Noir véritable",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
-    },
-    "nextChapter": "Suivant : {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
     },
     "pinchToZoom": "Pincer pour zoomer",
     "@pinchToZoom": {
@@ -836,10 +784,6 @@
     "readerVolumeTapInvert": "Inverser les touches de volume",
     "@readerVolumeTapInvert": {
         "description": "Switch button text to invert Volume Tap "
-    },
-    "readerVolumeTapSubtitle": "Naviguer avec les touches de volume",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
     },
     "remove": "Supprimer",
     "@remove": {
@@ -882,7 +826,6 @@
     "imageScaleTypeOriginalSize": "Taille originale",
     "imageScaleTypeSmartFit": "Adaptation intelligente",
     "imageScaleTypeStretch": "Étirer",
-    "landscapeZoom": "Zoom automatique dans les images larges",
     "navigateToPan": "Panoramique des images larges",
     "pageLayoutSinglePage": "Page unique",
     "readerForThisSeries": "Pour cette série",
@@ -925,7 +868,6 @@
     "showHiddenCategories": "Afficher les catégories masquées",
     "smallerTapZones": "Zones de tap plus petites",
     "autoScroll": "Défilement automatique",
-    "tabs": "Onglets",
     "continueReadingButton": "Bouton \"Reprendre\"",
     "languageBadge": "Langue",
     "sourceBadge": "Icône source",
@@ -947,7 +889,6 @@
     "setCategories": "Définir la catégorie",
     "ok": "Valider",
     "deleteChaptersConfirm": "Supprimer les chapitres sélectionnés ?",
-    "deleteChapters": "Supprimer les chapitres",
     "deleteChapterAfterManuallyMarkedRead": "Supprimer les chapitres après les avoir manuellement marqués comme lus",
     "deleteFinishedChaptersWhileReading": "Supprimer les chapitres terminés pendant la lecture",
     "allowDeletingBookmarkedChapters": "Permettre la suppression des chapitres marqués d'un marque-page",
@@ -969,7 +910,6 @@
     "filterOptionFinished": "Terminé",
     "filterHeaderLibrary": "Bibliothèque",
     "filterOptionInLibrary": "Dans la bibliothèque",
-    "filterOptionCompleted": "Terminé",
     "unreadBadgeModeHidden": "Cacher",
     "groupStyleTabs": "Onglets",
     "downloadAllChapters": "Tout",
@@ -1016,7 +956,6 @@
     "mangaSortRandom": "Aléatoire",
     "mangaSortTrackerScore": "Score du service de suivi",
     "mangaSortTotalChapters": "Total de chapitres",
-    "misc": "Divers",
     "soon": "Bientôt",
     "smartUpdate": "Mise à jour intelligente",
     "none": "Aucun(e)",
@@ -1044,8 +983,6 @@
     "readerTapInvertNone": "Non",
     "readerKeepScreenOn": "Garder l'écran allumé",
     "migrate": "Migrer",
-    "migrationFailed": "Migration échouée",
-    "migrationOptions": "Options de migration",
     "migrationListTitle": "Migrer",
     "migrationListNoMatch": "Aucune correspondance trouvée",
     "migrationSearchManually": "Rechercher manuellement",
@@ -1060,15 +997,11 @@
     "migrationAvailableHeader": "Disponible",
     "migrationDataToMigrateHeader": "Donnée à migrer",
     "migrationObsoleteSource": "Obsolète",
-    "migrationSelectAll": "Tout sélectionner",
     "migrationInvertSelection": "Inverser",
-    "migrationGroupDone": "Effectué",
-    "migrationRetry": "Réessayer",
     "migrationActionMigrate": "Migrer",
     "migrationActionCopy": "Copie",
     "libraryUpdateErrors": "Erreurs de mise à jour de la bibliothèque",
     "notificationDownloadsPausedTitle": "Téléchargement en pause",
-    "notificationBackupFailedTitle": "Échec de la sauvegarde",
     "notificationAppUpdateTitle": "Mise à jour disponible",
     "notificationExtensionUpdateTitle": "Mises à jour d'extensions",
     "notificationIncognitoTitle": "Mode navigation privée",
@@ -1077,9 +1010,6 @@
     "notificationActionDownload": "Télécharger",
     "notificationsHideContent": "Cacher le contenu des notifications",
     "noResultsFound": "Aucun résultat trouvé",
-    "startMigration": "Commencer la migration",
-    "customMigration": "Personnalisé",
-    "done": "Effectué",
     "webtoonScaleTypeFitScreen": "Adapter à l'écran",
     "webtoonScaleTypeOriginalSize": "Taille originale",
     "restore": "Restaurer",
@@ -1094,7 +1024,6 @@
     "socksProxy": "Proxy SOCKS",
     "socksUserName": "Nom d'utilisateur SOCKS",
     "socksVersion": "Version SOCKS",
-    "started": "Commencé",
     "systemTrayIcon": "Afficher l'icône dans la barre d'état système",
     "thatHaventBeenStarted": "Qui n'ont pas été commencées",
     "upcoming": "À venir",
@@ -1104,10 +1033,8 @@
     "recentlyRead": "Lu récemment",
     "history": "Historique",
     "offlineDownloadsSection": "Téléchargements",
-    "keepOfflineOff": "Désactivé",
     "downloadsServerTab": "Serveur",
     "tracking": "Suivi",
-    "searchForSources": "Rechercher une source",
     "copyToClipboard": "Copier dans le presse-papier",
     "copiedToClipboard": "Copié dans le presse-papier",
     "updateProgressAfterReading": "Synchroniser la progression après lecture",
@@ -1125,7 +1052,6 @@
     "trackMarkPublic": "Suivre publiquement",
     "filterTracked": "Suivis",
     "copyImageToClipboard": "Copier",
-    "zoomStart": "Position du zoom initial",
     "zoomStartAutomatic": "Automatique",
     "zoomStartCenter": "Centre",
     "zoomStartLeft": "Gauche",
@@ -1153,7 +1079,6 @@
     "duplicateSkipAll": "Ignorer tout",
     "actionShowEntry": "Afficher la série",
     "duplicatedEntries": "Entrées en double",
-    "duplicatedEntriesSubtitle": "Afficher toutes les entrées en double dans votre bibliothèque",
     "checkDescription": "Vérifier la description",
     "offlineChaptersScreenTitle": "Chapitres téléchargés",
     "offlineChaptersDownloadedSection": "Téléchargé",
@@ -1183,7 +1108,6 @@
     "notificationChaptersMultiple": "Chapitres {numbers}",
     "smartUpdateExpected": "De nouveaux chapitres sont prédits dans environ {predicted}, mise à jour prévu tous les {interval}.",
     "removeExtensionStoreBody": "Souhaitez-vous retirer le magasin d'extension \"{name}\" ({url}) ?",
-    "httpErrorCheckWebView": "HTTP {statusCode}, consulter le site Web dans WebView",
     "trackRemoveAlsoOnRemote": "Supprimez également de {trackerName}",
     "libraryLastUpdated": "Dernière mise à jour de la bibliothèque le : {time}",
     "libraryUpdateErrorsCount": "Erreurs de mise à jour de la bibliothèque ({count})",
@@ -1194,9 +1118,31 @@
     "showUpdateProgressBanner": "Afficher la bannière de progression de mise à jour",
     "migrationHideUnmatched": "Masquer les séries qui ne sont pas similaire",
     "migrationHideWithoutUpdates": "Masquer les séries sans chapitres récents",
-    "notificationRestoreCompleteTitle": "Restauration terminée",
-    "migrationCompleted": "Migration terminée",
     "offlineStorageUsage": "Utilisation du stockage",
     "updateProgressManualMarkRead": "Mise à jour de la progression quand marqué comme lu",
-    "noMoreChaptersAhead": "C'était le dernier chapitre"
+    "noMoreChaptersAhead": "C'était le dernier chapitre",
+    "accountPermissionDenied": "Votre compte n'as pas l'autorisation d'effectuer cette action.",
+    "migrationIdentityUnavailable": "Connectez vous à votre serveur et identifiez-vous avant de commencer à migrer.",
+    "accountSettingsUnavailable": "Les paramètres du compte n'ont pas pu être vérifiés. Reconnectez vous et réessayez.",
+    "manageSettingsPermissionRequired": "Vous avez besoin d'une autorisation pour gérer les paramètres du serveur.",
+    "authTypeUiLogin": "Connexion UI (recommandé)",
+    "@authTypeUiLogin": {
+        "description": "Radio button text for Suwayomi server's ui_login (JWT) auth mode, marked as recommended"
+    },
+    "authReverseProxyHelp": "Configurez votre proxy inverse pour transmettre les requêtes et laissez Suwayomi gérer l'authentification.",
+    "@authReverseProxyHelp": {
+        "description": "Helper text under the login fields explaining how to use Sorayomi with a reverse proxy in front of Suwayomi"
+    },
+    "authTestConnection": "Tester la connexion",
+    "@authTestConnection": {
+        "description": "Button text for testing the entered credentials against the server"
+    },
+    "authTestConnectionSuccess": "Connecté.",
+    "@authTestConnectionSuccess": {
+        "description": "Success toast text after Test Connection succeeds"
+    },
+    "authTestConnectionFailedNetwork": "Impossible de joindre le serveur. Vérifiez l'URL et la connexion.",
+    "@authTestConnectionFailedNetwork": {
+        "description": "Error message when Test Connection cannot reach the server"
+    }
 }

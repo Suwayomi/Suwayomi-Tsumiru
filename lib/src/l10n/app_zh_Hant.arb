@@ -36,10 +36,6 @@
     "@close": {
         "description": "Text for close button"
     },
-    "current": "最近閱讀",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
-    },
     "save": "儲存",
     "@save": {
         "description": "Save Button Text"
@@ -51,10 +47,6 @@
     "filter": "篩選",
     "@filter": {
         "description": "title of filter Tab across the app"
-    },
-    "allScanlators": "所有漢化組",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
     },
     "reset": "重設",
     "@reset": {
@@ -123,10 +115,6 @@
     "inLibrary": "在書架中",
     "@inLibrary": {
         "description": "Button and Chip text to show that the manga is in Library"
-    },
-    "createBackupDescription": "以 Tachidesk 備份檔備份書架",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "unread": "未閱讀",
     "@unread": {
@@ -292,10 +280,6 @@
     "@help": {
         "description": "Button text of help in about screen"
     },
-    "serverPortHintText": "伺服器埠",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
-    },
     "errorUserName": "用戶名不能為空",
     "@errorUserName": {
         "description": "Error Description to show that UserName cannot be empty"
@@ -448,10 +432,6 @@
             }
         }
     },
-    "reddit": "Reddit",
-    "@reddit": {
-        "description": "Reddit app title"
-    },
     "obsolete": "廢棄",
     "@obsolete": {
         "description": "Text to show that the extension has become Obsolete"
@@ -548,10 +528,6 @@
     "@readerModeContinuousHorizontalRTL": {
         "description": "Radio button text for Reader Mode Type - Continuous Horizontal (RTL)"
     },
-    "restoreBackupDescription": "從 Tachidesk 備份中還原",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
-    },
     "errorSomethingWentWrong": "發生錯誤！",
     "@errorSomethingWentWrong": {
         "description": "Error Description to show that Something went wrong!"
@@ -576,10 +552,6 @@
     "@webUI": {
         "description": "Button text to open in web UI"
     },
-    "unknownManga": "未知漫畫",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
-    },
     "restored": "備份已還原！",
     "@restored": {
         "description": "Toast Text to show that the backup has been restored"
@@ -601,10 +573,6 @@
     "refresh": "重新整理",
     "@refresh": {
         "description": "Refresh button text"
-    },
-    "nsfwInfo": "這不能防止非官方或可能被錯誤標記的擴充套件在應用程式中顯示 NSFW(18+) 內容",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
     },
     "newUpdateAvailable": "有可用更新",
     "@newUpdateAvailable": {
@@ -629,10 +597,6 @@
     "editCategory": "編輯分類",
     "@editCategory": {
         "description": "Screen title, Button text and  of Downloads screen"
-    },
-    "missingTrackers": "追蹤器缺失",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
     },
     "readerNavigationLayout": "手勢佈局",
     "@readerNavigationLayout": {
@@ -661,10 +625,6 @@
     "sort": "排序",
     "@sort": {
         "description": "title of sort Tab across the app"
-    },
-    "mangaMissingSources": "漫畫缺少來源",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
     },
     "sourceTypePopular": "熱門",
     "@sourceTypePopular": {
@@ -812,14 +772,6 @@
     "@reload": {
         "description": "Reload button text"
     },
-    "previousChapter": "上章：{chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
-    "nextChapter": "下章：{chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
-    },
     "selectInBetween": "選取區間",
     "@selectInBetween": {
         "description": "Toast Text for selecting chapters in between first and last Chapters"
@@ -841,10 +793,6 @@
     "@readerVolumeTap": {
         "description": "Switch button text for Reader Page Navigation with Volume Tap"
     },
-    "readerVolumeTapSubtitle": "使用音量按鈕操作",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
-    },
     "removeFromLibrary": "從書架移除？",
     "@removeFromLibrary": {
         "description": "Remove From Library Popup text"
@@ -852,10 +800,6 @@
     "remove": "移除",
     "@remove": {
         "description": "Remove Button text"
-    },
-    "isTrueBlack": "純黑",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
     },
     "pinchToZoom": "收縮以縮放",
     "@pinchToZoom": {
@@ -1002,38 +946,14 @@
     "@enableSocksProxy": {
         "description": "Switch title to enable SOCKS Proxy"
     },
-    "extensionRepository": "擴充套件儲存庫",
-    "@extensionRepository": {
-        "description": "Screen title text for Extension repository settings screen"
-    },
-    "extensionRepositoryDescription": "新增儲存庫以從中安裝擴充套件",
-    "@extensionRepositoryDescription": {
-        "description": "Subtitle text for Extension repository settings property"
-    },
     "ipHintText": "輸入伺服器綁定 IP 位址",
     "includeChapters": "章節",
     "@includeChapters": {
         "description": "Check box text to include chapters during create backup"
     },
-    "invalidPort": "無效的通訊埠",
-    "@invalidPort": {
-        "description": "Error when Submitted invalid Port Number"
-    },
     "invalidProp": "無效的 {property}",
     "@invalidProp": {
         "description": "Toast text for select invalid property value"
-    },
-    "gqlDebugLogs": "Graphql 除錯日誌",
-    "@gqlDebugLogs": {
-        "description": "Switch title for Graphql Debug logs in settings"
-    },
-    "gqlDebugLogsHint": "這包括包含使用非隱私安全資訊的日誌",
-    "@gqlDebugLogsHint": {
-        "description": "Switch subTitle for Graphql Debug logs in settings"
-    },
-    "hideEmptyCategory": "隱藏空分類",
-    "@hideEmptyCategory": {
-        "description": "Switch button text to Hide empty category in library"
     },
     "flareSolverr": "FlareSolverr",
     "@flareSolverr": {
@@ -1103,10 +1023,6 @@
     "@saveAsCBZArchive": {
         "description": "Settings toggle label for Save as CBZ archive"
     },
-    "updateFailed": "更新 {property} 失敗",
-    "@updateFailed": {
-        "description": "Failed to update Text"
-    },
     "validating": "驗證",
     "@validating": {
         "description": "toast to show backup validation is in progress"
@@ -1123,14 +1039,6 @@
     "@excludeEntryWithUnreadChapters": {
         "description": "Toggle's title to change Toggle Exclude Entry With Unread Chapters setting"
     },
-    "nRepo": "{n, plural, =1{1 儲存庫} other{{n} 儲存庫}}",
-    "@nRepo": {
-        "description": "Text to show n repo as subtitle"
-    },
-    "openFlareSolverr": "查看 FlareSolverr 的設定說明",
-    "@openFlareSolverr": {
-        "description": "Text for link to Open Flare Solverr setup documentation"
-    },
     "skipUpdatingEntries": "略過正在更新的作品",
     "@skipUpdatingEntries": {
         "description": "Settings Text to update skip Updating Entries"
@@ -1142,10 +1050,6 @@
     "withUnreadChapter": "有未讀章節",
     "@withUnreadChapter": {
         "description": "Setting option Text for Skip updating entries to toggle With unread chapter(s)"
-    },
-    "misc": "雜項",
-    "@misc": {
-        "description": "Section title for misc settings"
     },
     "cloudflareBypass": "略過 Cloudflare",
     "@cloudflareBypass": {
@@ -1336,10 +1240,6 @@
     },
     "invertSplitPagesPlacement": "反轉拆分頁面位置",
     "invertWidePageRotation": "反轉寬頁旋轉",
-    "landscapeZoom": "自動放大寬圖",
-    "@landscapeZoom": {
-        "description": "Paged reader toggle: disable landscape zoom-in"
-    },
     "navigateToPan": "平移寬圖",
     "@navigateToPan": {
         "description": "Paged reader toggle: navigate-to-pan"
@@ -1524,10 +1424,6 @@
             }
         }
     },
-    "tabs": "標籤頁",
-    "@tabs": {
-        "description": "Library Display sheet section heading for tab-related toggles"
-    },
     "continueReadingButton": "繼續閱讀按鈕",
     "@continueReadingButton": {
         "description": "Library display checkbox to overlay a continue-reading (next unread chapter) button on manga covers"
@@ -1563,16 +1459,10 @@
     "onboardingWelcomeSubtitle": "用於閱讀 Suwayomi 書架的閱讀器。",
     "onboardingChooseTheme": "選擇主題",
     "onboardingServerTitle": "連線伺服器",
-    "onboardingServerSubtitle": "Tsumiru 從你的 Suwayomi 伺服器讀取內容。",
     "onboardingServerPortHint": "Suwayomi 預設使用 4567 通訊埠。",
     "onboardingServerStepLabel": "第 2 步，共 3 步",
-    "onboardingServerOnNetwork": "在此網路中",
-    "onboardingServerRemote": "遠端",
-    "onboardingServerNone": "還沒有伺服器",
-    "onboardingNoServerHelp": "沒關係——你可以先搭建 Suwayomi 伺服器，稍後在設定中連線。",
     "onboardingNoServerLink": "如何搭建伺服器",
     "onboardingTestConnection": "測試連線",
-    "onboardingFindServer": "查詢伺服器",
     "onboardingResolvedAddress": "在 {url} 找到伺服器",
     "@onboardingResolvedAddress": {
         "placeholders": {
@@ -1589,8 +1479,6 @@
             }
         }
     },
-    "onboardingResolvedNoAuth": "此伺服器已就緒——無需登入。",
-    "onboardingResolvedNeedsAuth": "此伺服器需要登入。請在下方輸入使用者名稱和密碼。",
     "onboardingSearchNetwork": "搜尋我的網路",
     "onboardingSearching": "正在搜尋網路…",
     "onboardingNoServerFound": "未在網路中找到伺服器——請手動輸入地址。",
@@ -1600,18 +1488,9 @@
     "onboardingCredsRejected": "這些憑據無效。請再次檢查使用者名稱、密碼和登入方式。",
     "onboardingNotReachedHttpsHint": "如果它位於反向代理後面，請嘗試其 https 地址。",
     "onboardingAuthMode": "登入方式",
-    "onboardingAuthModeAuto": "使用者名稱和密碼（自動）",
     "onboardingAuthModeBasic": "Basic 認證",
     "onboardingAuthModeSimple": "簡單登入",
     "onboardingAuthModeUi": "UI 登入",
-    "onboardingResolvedBasicGated": "{url} 有響應，但被我們無法讀取的登入頁擋住。請選擇“使用者名稱和密碼”並輸入憑據。",
-    "@onboardingResolvedBasicGated": {
-        "placeholders": {
-            "url": {
-                "type": "String"
-            }
-        }
-    },
     "onboardingResolvedUnconfirmed": "已到達 {url}，但它沒有像 Suwayomi 伺服器那樣響應——常見原因是路由器或其他應用，而不是你的伺服器。請檢查地址和通訊埠，或仍然使用它。",
     "@onboardingResolvedUnconfirmed": {
         "placeholders": {
@@ -1621,7 +1500,6 @@
         }
     },
     "onboardingNotReached": "無法透過該地址連線伺服器。請確認伺服器正在執行，且此裝置可以訪問。",
-    "onboardingUseAddressAnyway": "仍使用此地址",
     "onboardingConnected": "已連線——Suwayomi v{version}",
     "@onboardingConnected": {
         "placeholders": {
@@ -1630,7 +1508,6 @@
             }
         }
     },
-    "onboardingConnectFailed": "無法連線該伺服器。請檢查地址（以及需要時的登入資訊）。",
     "onboardingDoneTitle": "一切就緒",
     "onboardingDoneSubtitle": "瀏覽來源，開始把漫畫加入書架。",
     "justNow": "剛剛",
@@ -1655,7 +1532,6 @@
     "alwaysAsk": "總是詢問",
     "setCategories": "設定分類",
     "ok": "確定",
-    "deleteChapters": "刪除章節",
     "deleteOnDeviceDownloads": "刪除本機下載",
     "deleteOnDeviceDownloadsDescription": "閱讀時移除章節在本裝置的副本。伺服器仍保留副本——這隻會釋放手機空間。",
     "deleteServerDownloads": "刪除伺服器下載",
@@ -1795,30 +1671,6 @@
     "filterOptionNotInLibrary": "不在書架中",
     "@filterOptionNotInLibrary": {
         "description": "Library filter chip: only entries not saved to the library"
-    },
-    "filterHeaderPublicationStatus": "出版狀態",
-    "@filterHeaderPublicationStatus": {
-        "description": "Section label for the completed filter chip row"
-    },
-    "filterOptionCompleted": "已完結",
-    "@filterOptionCompleted": {
-        "description": "Publication-status filter chip: only entries the source marked completed"
-    },
-    "filterOptionNotCompleted": "未完結",
-    "@filterOptionNotCompleted": {
-        "description": "Publication-status filter chip: only entries not marked completed"
-    },
-    "filterHeaderContentRating": "內容分級",
-    "@filterHeaderContentRating": {
-        "description": "Section label for the lewd filter chip row"
-    },
-    "filterOptionLewd": "擦邊",
-    "@filterOptionLewd": {
-        "description": "Content-rating filter chip: only entries the source marked NSFW"
-    },
-    "filterOptionNotLewd": "非擦邊",
-    "@filterOptionNotLewd": {
-        "description": "Content-rating filter chip: only entries not marked NSFW"
     },
     "limitTitleLines": "標題最多顯示 2 行",
     "@limitTitleLines": {
@@ -1985,10 +1837,6 @@
     "@customHeaders": {
         "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
     },
-    "customHeadersDescription": "隨每個傳送到伺服器的請求一起傳送。僅在伺服器位於需要額外請求頭的認證閘道器、Zero Trust 防護或反向代理後面時才需要。",
-    "@customHeadersDescription": {
-        "description": "Explanation under the Custom HTTP headers section"
-    },
     "customHeaderEmpty": "暫無自定義請求頭。如果伺服器位於需要額外請求頭的認證閘道器或反向代理後面，請新增一個。",
     "@customHeaderEmpty": {
         "description": "Empty state for the custom headers list"
@@ -2035,10 +1883,6 @@
     "pureBlackAmoled": "純黑（AMOLED）",
     "@pureBlackAmoled": {
         "description": "AMOLED dark variant toggle"
-    },
-    "lewd": "擦邊",
-    "@lewd": {
-        "description": "Library filter label: NSFW/lewd manga from adult sources"
     },
     "libraryColumnsLandscape": "列數（橫屏）",
     "@libraryColumnsLandscape": {
@@ -2127,15 +1971,6 @@
         "placeholders": {
             "title": {
                 "type": "String"
-            }
-        }
-    },
-    "httpErrorCheckWebView": "HTTP {statusCode}，請在 WebView 中檢視網站",
-    "@httpErrorCheckWebView": {
-        "description": "Per-provider error on the recommendations screen when its API returns a non-200",
-        "placeholders": {
-            "statusCode": {
-                "type": "int"
             }
         }
     },
@@ -2255,18 +2090,6 @@
     "@readerLastPageSwipeToggleDescription": {
         "description": "Swipe to next chapter only at last page"
     },
-    "chapterSeparator": "章節分隔符",
-    "@chapterSeparator": {
-        "description": "Text for the separator between chapters in continuous reading mode"
-    },
-    "lastChapterNotification": "這是最後一章",
-    "@lastChapterNotification": {
-        "description": "Notification text shown when user is at the last chapter"
-    },
-    "firstChapterNotification": "這是第一章",
-    "@firstChapterNotification": {
-        "description": "Notification text shown when user is at the first chapter"
-    },
     "loadingNextChapter": "正在載入下一章...",
     "@loadingNextChapter": {
         "description": "Loading text shown when loading next chapter in continuous reading"
@@ -2335,10 +2158,6 @@
     "@readerKeepScreenOn": {
         "description": "Reader switch tile title: keep the screen awake while reading"
     },
-    "readerKeepScreenOnSubtitle": "閱讀時防止螢幕休眠",
-    "@readerKeepScreenOnSubtitle": {
-        "description": "Reader switch tile subtitle for keep screen on"
-    },
     "readerIgnoreSafeAreaToggle": "忽略安全區域",
     "@readerIgnoreSafeAreaToggle": {
         "description": "Toggle text to ignore safe area in reader"
@@ -2348,33 +2167,14 @@
         "description": "Description for ignore safe area toggle in reader settings"
     },
     "migrate": "遷移",
-    "migrationSelectTargetSource": "選擇目標來源",
-    "migrationSearchInSource": "在 {sourceName} 中搜尋",
-    "migrationPreview": "遷移預覽",
-    "migrationInProgress": "遷移進行中",
-    "migrationComplete": "遷移成功完成",
-    "migrationFailed": "遷移失敗",
-    "migrationCancelled": "遷移已取消",
     "migrateChapters": "遷移章節",
-    "migrateChaptersDescription": "將章節閱讀狀態複製到新來源",
     "migrateCategories": "遷移類別",
-    "migrateCategoriesDescription": "將漫畫類別複製到新來源",
     "migrateDownloads": "遷移下載",
-    "migrateDownloadsDescription": "將下載的章節移動到新來源",
     "migrateTracking": "遷移追蹤",
-    "migrateTrackingDescription": "將追蹤資訊複製到新來源",
     "migrateReaderSettings": "閱讀器設定",
     "migrateOfflineSettings": "離線保留規則",
-    "migrationOptions": "遷移選項",
     "migrationSettings": "遷移設定",
     "bulkMigrationTitle": "遷移來源",
-    "targetSourcesPriority": "目標來源",
-    "targetSourcesPriorityHint": "每部作品會按順序匹配這些來源，最上面的優先。拖動可重新排序。",
-    "availableSources": "可用來源",
-    "noTargetSourcesSelected": "請至少新增一個要搜尋的目標來源。",
-    "searchManually": "手動選擇每個匹配項",
-    "searchManuallyDescription": "逐個檢視並選擇目標，而不是自動匹配。",
-    "migrationPausedReauth": "已暫停——請重新登入後繼續。",
     "migrationSelectSourcesTitle": "選擇來源",
     "migrationListTitle": "遷移",
     "migrationListTitleProgress": "遷移（{done}/{total}）",
@@ -2420,39 +2220,8 @@
     "migrationSortMode": "排序方式",
     "migrationSortDirection": "排序方向",
     "migrationObsoleteSource": "已廢棄",
-    "migrationNeedsMigration": "需要遷移",
-    "migrationOtherSources": "其他來源",
-    "migrationSourceSeriesCount": "{count, plural, =1{1 部作品} other{{count} 部作品}}",
-    "@migrationSourceSeriesCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "migrationNoLibrarySources": "書架為空——沒有可遷移內容。",
-    "migrationSelectAll": "全選",
     "migrationInvertSelection": "反選",
-    "migrationGroupNeedsReview": "需要檢查",
-    "migrationGroupNoMatch": "無匹配",
-    "migrationGroupFailed": "失敗",
-    "migrationGroupReady": "就緒",
-    "migrationGroupInProgress": "進行中",
-    "migrationGroupDone": "完成",
-    "migrationGroupSkipped": "已跳過",
-    "migrationRetry": "重試",
-    "migrationFindManually": "手動查詢",
-    "migrationOverwriteTracking": "覆蓋目標的追蹤資訊",
-    "migrationKeepTargetTracking": "這部作品已在目標來源上登記追蹤。可以保留其追蹤資訊，或用來源的追蹤資訊覆蓋。",
-    "migrationLargeBatchWarning": "這是一個大批次任務，可能需要較長時間併產生大量來源請求。",
-    "migrationTrackerCollisionSummary": "{count, plural, =1{1 部作品的目標已存在追蹤記錄；除非選擇覆蓋，否則會保留目標上的追蹤資訊。} other{{count} 部作品的目標已存在追蹤記錄；除非選擇覆蓋，否則會保留目標上的追蹤資訊。}}",
-    "@migrationTrackerCollisionSummary": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "migrationActionMigrate": "遷移",
     "migrationActionCopy": "複製",
     "migrationActionMigrateDescription": "把每部作品移動到新來源，並移除原作品。",
@@ -2577,10 +2346,6 @@
     "@notificationDownloadsPausedWifi": {
         "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
     },
-    "notificationBackupCompleteTitle": "備份完成",
-    "notificationRestoreCompleteTitle": "還原完成",
-    "notificationBackupFailedTitle": "備份失敗",
-    "notificationRestoreFailedTitle": "還原失敗",
     "notificationAppUpdateTitle": "有可用更新",
     "notificationAppUpdateBody": "Tsumiru {version} 可用",
     "@notificationAppUpdateBody": {
@@ -2601,9 +2366,6 @@
     },
     "notificationIncognitoTitle": "無痕模式",
     "notificationIncognitoBody": "歷史和進度更新已暫停",
-    "notificationsErrors": "錯誤通知",
-    "notificationsErrorsSubtitle": "下載失敗和書架更新失敗",
-    "notificationsBackup": "備份通知",
     "notificationsAppUpdates": "應用更新通知",
     "notificationsExtensionUpdates": "擴充套件更新通知",
     "notificationActionMarkRead": "標記為已讀",
@@ -2629,43 +2391,13 @@
     "notificationsHideContentSubtitle": "只顯示數量，不顯示標題或封面",
     "notificationsCheckNow": "立即檢查",
     "notificationsReliabilityNote": "檢查會定期執行，不是即時執行。某些裝置會限制後臺更新。",
-    "selectTargetSource": "選擇目標來源",
-    "noSourcesAvailable": "沒有可遷移的來源",
-    "checkSourceConfiguration": "請檢查您的來源配置",
-    "noAlternativeSources": "沒有可用的替代來源",
-    "installMoreSources": "安裝更多來源以啟用遷移",
-    "errorLoadingSources": "載入來源時出錯",
     "errorGettingMigrationSources": "獲取遷移來源失敗",
     "errorSearchingMangaInSource": "在來源中搜尋漫畫失敗",
     "errorFetchingSourceManga": "獲取來源漫畫失敗",
     "errorSourceMangaNotFound": "未找到來源漫畫",
     "errorFetchingTargetManga": "獲取目標漫畫失敗",
     "errorTargetMangaNotFound": "未找到目標漫畫",
-    "searchManga": "搜尋漫畫...",
-    "searchForManga": "在目標來源中搜尋漫畫",
-    "enterSearchTerm": "輸入搜尋詞以查詢漫畫",
     "noResultsFound": "未找到結果",
-    "tryDifferentSearch": "嘗試不同的搜尋詞",
-    "searchError": "搜尋錯誤",
-    "importantNotice": "重要通知",
-    "migrationWarning": "這將永久移動您的漫畫資料。此操作無法撤銷。",
-    "deleteSourceWarning": "遷移後，原始漫畫將從您的庫中刪除。",
-    "confirmMigration": "確認遷移",
-    "migrationConfirmationMessage": "您確定要遷移此漫畫嗎？此操作無法撤銷。",
-    "startMigration": "開始遷移",
-    "preparingMigration": "正在準備遷移...",
-    "migrationCompleted": "遷移完成！",
-    "migrationSuccessMessage": "您的漫畫已成功遷移到新來源。",
-    "migrationCancelledMessage": "遷移過程已取消。未進行任何更改。",
-    "cancelMigration": "取消遷移",
-    "cancelMigrationConfirmation": "您確定要取消遷移嗎？此操作無法撤銷。",
-    "quickPresets": "快速預設",
-    "quickMigration": "快速",
-    "fullMigration": "完整",
-    "customMigration": "自定義",
-    "deleteSourceManga": "刪除來源漫畫",
-    "deleteSourceMangaDescription": "遷移後從庫中移除原始漫畫",
-    "done": "完成",
     "webtoonScaleType": "長條縮放",
     "@webtoonScaleType": {
         "description": "Section label for the long-strip scale chip row"
@@ -2696,20 +2428,12 @@
     },
     "yes": "是",
     "no": "否",
-    "from": "來自",
-    "to": "到",
-    "migrationDetails": "遷移詳情",
     "searchAllSources": "搜尋所有來源",
-    "searchingAllSources": "正在搜尋所有可用來源...",
-    "noMatchingMangaFound": "在任何來源中未找到匹配的漫畫",
-    "deleteSourceAfterMigration": "遷移後刪除來源漫畫",
     "searchLibraryHint": "搜尋標題、作者、來源...",
     "@searchLibraryHint": {
         "description": "Placeholder text in the library search field"
     },
     "serverAddress": "伺服器地址",
-    "serverOwnSettingsCaption": "這些設定會修改 Suwayomi 伺服器本身，而不是應用連線它的方式。",
-    "serverSettingsSubtitle": "配置 Suwayomi 伺服器本身。",
     "serverUnreachableTitle": "無法連線伺服器",
     "@serverUnreachableTitle": {
         "description": "Shown when the app cannot connect to the Suwayomi server"
@@ -2729,7 +2453,6 @@
     "crashLogCopied": "已複製除錯日誌到剪貼簿",
     "noCrashLog": "未找到除錯日誌",
     "addLocalNetworkAddress": "新增區域網路地址",
-    "serverExternalUrl": "外部/遠端 URL",
     "serverLanUrl": "內部/區域網路 URL",
     "serverLanUrlOptional": "可選",
     "serverLanUrlHintText": "http://192.168.1.100:4567",
@@ -2737,10 +2460,6 @@
     "serverUsingLanUrl": "使用區域網路",
     "serverUsingExternalUrl": "使用遠端",
     "skipThisVersion": "這個版本不再提醒我",
-    "started": "已開始",
-    "@started": {
-        "description": "Library filter label: manga the user has started reading (read at least one chapter)"
-    },
     "tomorrow": "明天",
     "upcoming": "即將",
     "upcomingGuide": "這是什麼？",
@@ -2820,17 +2539,14 @@
     "history": "歷史",
     "searchHistory": "搜尋歷史...",
     "noHistoryFound": "未找到閱讀歷史",
-    "startReadingToSeeHistory": "開始閱讀漫畫後，歷史記錄會顯示在這裡",
     "noSearchResults": "沒有搜尋結果",
     "tryDifferentSearchTerm": "嘗試不同的搜尋詞",
     "errorOccurred": "發生錯誤",
     "viewManga": "檢視漫畫",
-    "timeoutSettings": "超時設定",
     "serverRequestTimeout": "伺服器請求超時",
     "@serverRequestTimeout": {
         "description": "Controls how long to wait for server responses"
     },
-    "serverRequestTimeoutDescription": "等待伺服器響應的時間（秒）",
     "autoRefreshOnTimeout": "超時後自動重新整理",
     "@autoRefreshOnTimeout": {
         "description": "Toggle automatic retry on timeout"
@@ -2839,11 +2555,6 @@
     "autoRefreshRetryDelay": "自動重新整理重試延遲",
     "@autoRefreshRetryDelay": {
         "description": "Delay between auto retry attempts in seconds"
-    },
-    "autoRefreshRetryDelayDescription": "自動重試之間的延遲（秒）",
-    "offline": "離線",
-    "@offline": {
-        "description": "Settings entry and screen title for offline downloads"
     },
     "offlineStorageSection": "儲存",
     "@offlineStorageSection": {
@@ -2860,10 +2571,6 @@
     "offlineRemoveAllConfirm": "移除此裝置的全部已下載章節？伺服器書架不會受影響。",
     "@offlineRemoveAllConfirm": {
         "description": "Body text for remove-all confirmation dialog"
-    },
-    "offlineSafetyNets": "安全網",
-    "@offlineSafetyNets": {
-        "description": "Section header for safety net settings"
     },
     "offlineDownloadsSection": "下載",
     "@offlineDownloadsSection": {
@@ -2935,10 +2642,6 @@
     "@keepOffline": {
         "description": "Tooltip for the per-series keep-offline popup button in manga details"
     },
-    "keepOfflineOff": "關閉",
-    "@keepOfflineOff": {
-        "description": "Keep-offline rule: disabled"
-    },
     "keepOfflineNextUnread": "保留後續 {count} 個未讀",
     "@keepOfflineNextUnread": {
         "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
@@ -2970,10 +2673,6 @@
         "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
     },
     "offlineSheetSubtitle": "在本裝置儲存章節，並在閱讀時自動補充。它與伺服器下載（頂部的雲圖示）相互獨立。",
-    "offlineDownloadAll": "下載全部章節",
-    "@offlineDownloadAll": {
-        "description": "Series offline action: download every chapter to this device"
-    },
     "offlineRemoveSeries": "全部移除（此作品）",
     "@offlineRemoveSeries": {
         "description": "Series offline action: remove this series' downloads from the device"
@@ -2982,11 +2681,6 @@
     "@offlineDownloadingToast": {
         "description": "Snackbar shown after starting a series download"
     },
-    "manageDownloads": "管理下載",
-    "@manageDownloads": {
-        "description": "Title/entry for the page listing on-device keep-rule subscriptions"
-    },
-    "manageDownloadsEmpty": "暫無下載訂閱",
     "manageDownloadsNothingYet": "尚無下載內容",
     "offlineManualOnly": "僅手動",
     "manageDownloadsChangeRule": "更改規則",
@@ -3060,9 +2754,7 @@
     "yourRating": "你的評分",
     "addTag": "新增標籤",
     "tags": "標籤",
-    "searchForSources": "搜尋來源",
     "searchForExtensions": "搜尋擴充套件",
-    "noTagsYet": "書架中還沒有標籤",
     "copyToClipboard": "複製到剪貼簿",
     "copiedToClipboard": "已複製到剪貼簿",
     "searchTips": "搜尋技巧",
@@ -3226,10 +2918,6 @@
     "@filterTracked": {
         "description": "Filter section heading shown when at least one tracker is logged in"
     },
-    "copyPageLink": "複製頁面連結",
-    "@copyPageLink": {
-        "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
-    },
     "copyImageToClipboard": "複製",
     "@copyImageToClipboard": {
         "description": "Reader page-actions sheet: copy the current page image itself to the clipboard"
@@ -3285,10 +2973,6 @@
     "savedToGallery": "已儲存到相簿",
     "@savedToGallery": {
         "description": "Toast shown after the current page image was saved to the device gallery"
-    },
-    "zoomStart": "縮放起始位置",
-    "@zoomStart": {
-        "description": "Section label for the paged zoom-start chip row"
     },
     "zoomStartAutomatic": "自動",
     "@zoomStartAutomatic": {
@@ -3520,10 +3204,6 @@
     "@duplicatedEntries": {
         "description": "Title of the library settings row that opens the library-wide duplicate scan"
     },
-    "duplicatedEntriesSubtitle": "顯示書架中的全部重複條目",
-    "@duplicatedEntriesSubtitle": {
-        "description": "Subtitle of the library settings row that opens the library-wide duplicate scan"
-    },
     "scanForDuplicates": "掃描重複項",
     "@scanForDuplicates": {
         "description": "Button text to run the library-wide duplicate scan"
@@ -3618,7 +3298,6 @@
     "onboardingCustomHeadersHint": "僅部分代理伺服器和存取閘道需要。",
     "noVisibleCategories": "沒有可見分類",
     "libraryUpdateErrorsEmpty": "沒有更新錯誤",
-    "libraryUpdateErrorsEmptyDetail": "更新失敗的作品會顯示在這裡",
     "selectBelow": "選取下方全部",
     "serverSignedOutTitle": "已登出",
     "serverSignedOutSubtitle": "伺服器未接受這些登入憑證。請在連線設定中重新登入。",
@@ -3646,7 +3325,6 @@
     "accountRoleUnknown": "未知角色",
     "accountSignOut": "登出",
     "accountSignOutConfirmation": "登出此帳戶？已下載的章節將保留在此裝置上。",
-    "accountBuiltInPassword": "此帳戶的密碼由伺服器設定管理。",
     "accountPermissionInstallExtensions": "安裝擴充套件",
     "accountPermissionInstallExternalExtensions": "安裝擴充套件檔案",
     "accountPermissionUninstallExtensions": "解除安裝擴充套件",
@@ -3682,7 +3360,6 @@
     "accountCatalogueRemoveTitle": "移除帳戶下載？",
     "accountCatalogueRemoveConfirm": "從此裝置移除 {server} 上 {account} 的已下載章節和離線書架？伺服器資料將保持不變。",
     "accountCatalogueRemoveFailed": "無法移除帳戶下載，可能正在使用中。",
-    "recommendationsUnavailableWeb": "網頁版應用程式不提供這些推薦。",
     "offlineRecoveryRunning": "正在復原下載。你可以繼續使用應用程式。",
     "offlineRecoveryFailed": "下載復原已停止。現有檔案已保留。請重試以繼續。",
     "offlineRecoveryUnavailable": "復原下載期間，已儲存的章節暫時無法使用。",

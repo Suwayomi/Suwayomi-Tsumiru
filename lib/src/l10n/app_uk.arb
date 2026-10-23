@@ -1,9 +1,5 @@
 {
     "@@x_translationNotice": "This file includes translations adapted from upstream PO and Android XML. See assets/licenses/translation-notices.txt for attribution and licenses, and scripts/translations/provenance.json for per-string sources.",
-    "allScanlators": "Всі Сканлейтори",
-    "@allScanlators": {
-        "description": "Text for all Scanlators in manga description screen chapter filter"
-    },
     "appLanguage": "Мова застосунку",
     "@appLanguage": {
         "description": "Popup title and Button text to change App Language"
@@ -82,17 +78,9 @@
             }
         }
     },
-    "createBackupDescription": "Резервна копія бібліотеки як резервна копія Tachidesk",
-    "@createBackupDescription": {
-        "description": "Button text description to create backup"
-    },
     "credentials": "Облікові дані",
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"
-    },
-    "current": "Поточний",
-    "@current": {
-        "description": "Text to show the currently reading chapter in Reader Screen"
     },
     "delete": "Видалити",
     "@delete": {
@@ -194,10 +182,6 @@
     "@mangaGridSize": {
         "description": "Popup title and Button text to change Manga Grid size"
     },
-    "mangaMissingSources": "Відсутні джерела манґи",
-    "@mangaMissingSources": {
-        "description": "Group title to show the Manga Missing Sources when restoring Backup"
-    },
     "mangaSortDateAdded": "Дата додавання",
     "@mangaSortDateAdded": {
         "description": "Radio button text for Manga sort Type - Date Added"
@@ -283,10 +267,6 @@
     "nsfw18": "18+",
     "@nsfw18": {
         "description": "18+ tag Text to show in extensions list"
-    },
-    "nsfwInfo": "Це не запобігає появі неофіційних або потенційно неправильно позначених розширень, які можуть містити NSFW(18+) вміст в застосунку",
-    "@nsfwInfo": {
-        "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
     },
     "obsolete": "Застаріле",
     "@obsolete": {
@@ -378,10 +358,6 @@
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
     },
-    "reddit": "Reddit",
-    "@reddit": {
-        "description": "Reddit app title"
-    },
     "refresh": "Оновити",
     "@refresh": {
         "description": "Refresh button text"
@@ -389,10 +365,6 @@
     "reset": "Скинути",
     "@reset": {
         "description": "Button text of reset button in source filters"
-    },
-    "restoreBackupDescription": "Відновити Tachidesk з резервної копії",
-    "@restoreBackupDescription": {
-        "description": "Button text description to create backup"
     },
     "restored": "Резервну копію відновлено!",
     "@restored": {
@@ -429,10 +401,6 @@
     "server": "Сервер",
     "@server": {
         "description": "Text title for the server in About screen"
-    },
-    "serverPortHintText": "Порт сервера",
-    "@serverPortHintText": {
-        "description": "Text Filed hint text to update Server Port"
     },
     "settings": "Налаштування",
     "@settings": {
@@ -638,10 +606,6 @@
     "@mangaSortLastRead": {
         "description": "Radio button text for Manga sort Type - Last Read"
     },
-    "missingTrackers": "Відсутні трекери",
-    "@missingTrackers": {
-        "description": "Group title to show the Missing Trackers when restoring Backup"
-    },
     "mangaStatusLicensed": "Ліцензовано",
     "@mangaStatusLicensed": {
         "description": "Text to show Manga Status Licensed in Manga details screen"
@@ -717,10 +681,6 @@
     "themeModeSystem": "Системна",
     "@themeModeSystem": {
         "description": "Radio button text for App theme - System"
-    },
-    "unknownManga": "Невідома манґа",
-    "@unknownManga": {
-        "description": "Text to show unknown manga in Manga details screen"
     },
     "webView": "Web View",
     "@webView": {
@@ -804,14 +764,6 @@
     "@readerSwipeChapterToggleDescription": {
         "description": "Switch tile description for, toggle `swipe to change chapter` in reader screen"
     },
-    "nextChapter": "Далі: {chapterTitle}",
-    "@nextChapter": {
-        "description": "Text for Next Chapter button in Manga Reader Screen"
-    },
-    "previousChapter": "Попередній: {chapterTitle}",
-    "@previousChapter": {
-        "description": "Text for Previous Chapter button in Manga Reader Screen"
-    },
     "reload": "Перезавантажити",
     "@reload": {
         "description": "Reload button text"
@@ -824,10 +776,6 @@
     "selectUnread": "Обрати Непрочитане",
     "@selectUnread": {
         "description": "Popup Text for selecting unread chapters"
-    },
-    "isTrueBlack": "Справжній чорний",
-    "@isTrueBlack": {
-        "description": "Switch title to enable {} black theme"
     },
     "pinchToZoom": "Збільшення стисканням",
     "@pinchToZoom": {
@@ -844,10 +792,6 @@
     "readerVolumeTapInvert": "Інвертувати клавіші гучності",
     "@readerVolumeTapInvert": {
         "description": "Switch button text to invert Volume Tap "
-    },
-    "readerVolumeTapSubtitle": "Навігація за допомогою клавіш гучності",
-    "@readerVolumeTapSubtitle": {
-        "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
     },
     "remove": "Видалити",
     "@remove": {
@@ -881,7 +825,6 @@
     "imageScaleTypeOriginalSize": "Оригінальний розмір",
     "imageScaleTypeSmartFit": "Розумна",
     "imageScaleTypeStretch": "Розтягнута",
-    "landscapeZoom": "Автоматичне масштабування широких зображень",
     "navigateToPan": "Панорамування широких зображень",
     "readerForThisSeries": "Для цієї серії",
     "readerGroupActions": "Дії",
@@ -926,7 +869,6 @@
     "categoryTabs": "Показувати вкладки категорій",
     "showHiddenCategories": "Показати приховані категорії",
     "smallerTapZones": "Менші зони натискання",
-    "tabs": "Вкладки",
     "continueReadingButton": "Кнопка \"Продовжити читання\"",
     "languageBadge": "Мова",
     "sourceBadge": "Іконка джерела",
@@ -946,7 +888,6 @@
     "setCategories": "Помістити в категорію",
     "ok": "ОК",
     "deleteChaptersConfirm": "Ви впевнені, що бажаєте видалити вибрані розділи?",
-    "deleteChapters": "Видалити глави",
     "deleteChapterAfterManuallyMarkedRead": "Видалити главу після того, як вручну позначили її як прочитану",
     "deleteFinishedChaptersWhileReading": "Видаляти прочитані глави в процесі читання",
     "allowDeletingBookmarkedChapters": "Дозволити видалення розділів з закладок",
@@ -967,7 +908,6 @@
     "filterOptionFinished": "Завершено",
     "filterHeaderLibrary": "Бібліотека",
     "filterOptionInLibrary": "В бібліотеці",
-    "filterOptionCompleted": "Завершене",
     "unreadBadgeModeHidden": "Приховати",
     "groupStyleTabs": "Вкладки",
     "downloadAllChapters": "Всі",
@@ -1015,7 +955,6 @@
     "mangaSortRandom": "Випадково",
     "mangaSortTrackerScore": "Оцінка трекера",
     "mangaSortTotalChapters": "За кількістю розділів",
-    "misc": "Інше",
     "soon": "Незабаром",
     "smartUpdate": "Розумні оновлення",
     "suggestions": "Пропозиції",
@@ -1050,14 +989,10 @@
     "migrationSelectAllSources": "Вибрати все",
     "migrationSearchForSource": "Пошук джерела",
     "migrationObsoleteSource": "Застаріле",
-    "migrationSelectAll": "Обрати все",
-    "migrationGroupDone": "Зроблено",
-    "migrationRetry": "Повторити",
     "migrationActionMigrate": "Мігрувати",
     "migrationActionCopy": "Скопіювати",
     "libraryUpdateErrors": "Помилки оновлення бібліотеки",
     "notificationDownloadsPausedTitle": "Завантаження призупинено",
-    "notificationBackupFailedTitle": "Помилка резервування",
     "notificationAppUpdateTitle": "Доступне оновлення",
     "notificationExtensionUpdateTitle": "Оновлення розширень",
     "notificationIncognitoTitle": "Режим інкогніто",
@@ -1066,8 +1001,6 @@
     "notificationActionDownload": "Завантажити",
     "notificationsHideContent": "Приховати вміст сповіщень",
     "noResultsFound": "Нічого не знайдено",
-    "customMigration": "Власний",
-    "done": "Зроблено",
     "webtoonScaleTypeFitScreen": "По екрану",
     "webtoonScaleTypeOriginalSize": "Оригінальний розмір",
     "restore": "Відновити",
@@ -1081,7 +1014,6 @@
     "socksProxy": "Проксі SOCKS",
     "socksUserName": "Ім'я користувача SOCKS",
     "socksVersion": "Версія SOCKS",
-    "started": "Розпочате",
     "systemTrayIcon": "Показати іконку в системному треї",
     "thatHaventBeenStarted": "Що не були розпочаті",
     "upcoming": "Незабаром",
@@ -1091,10 +1023,8 @@
     "recentlyRead": "Нещодавно прочитане",
     "history": "Історія",
     "offlineDownloadsSection": "Завантаження",
-    "keepOfflineOff": "Вимкнено",
     "downloadsServerTab": "Сервер",
     "tracking": "Відстеження",
-    "searchForSources": "Пошук джерела",
     "copyToClipboard": "Копіювати в буфер обміну",
     "copiedToClipboard": "Скопійовано в буфер обміну",
     "updateProgressAfterReading": "Оновлювати прогрес після прочитання",
@@ -1111,7 +1041,6 @@
     "trackMarkPublic": "Відстежувати публічно",
     "filterTracked": "Відстежуване",
     "copyImageToClipboard": "Копіювати",
-    "zoomStart": "Стартова позиція збільшення",
     "zoomStartAutomatic": "Автоматична",
     "zoomStartCenter": "Центральна",
     "zoomStartLeft": "Зліва",
@@ -1149,7 +1078,6 @@
     "notificationChapterSingleAndMore": "Розділ {number} та ще {count}",
     "notificationChaptersMultiple": "Розділи {numbers}",
     "smartUpdateExpected": "Нові розділи передбачено будуть випущені приблизно в {predicted}, перевіряючи кожні {interval}.",
-    "httpErrorCheckWebView": "Http {statusCode}, перевірте вебсайт у WebView",
     "trackRemoveAlsoOnRemote": "Також видалити з {trackerName}",
     "libraryLastUpdated": "Останнє оновлення бібліотеки: {time}",
     "libraryUpdateErrorsCount": "Помилки оновлення бібліотеки ({count})",
@@ -1159,7 +1087,6 @@
     "pageLayoutDoublePages": "Подвійна сторінка",
     "unreadBadgeMode": "Непрочитані значки",
     "showUpdateProgressBanner": "Показувати оновлений банер прогресу",
-    "notificationRestoreCompleteTitle": "Відновлення завершено",
     "offlineStorageUsage": "Використання сховища",
     "updateProgressManualMarkRead": "Оновити прогрес коли главу помічено прочитаною",
     "noMoreChaptersAhead": "Наступної частини немає"
