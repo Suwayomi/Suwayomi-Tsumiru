@@ -8,13 +8,13 @@ import 'package:tsumiru/src/features/account/data/account_actions.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
-import 'package:tsumiru/src/features/account/presentation/account_screen.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_status.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
+import 'package:tsumiru/src/features/settings/presentation/connection/connection_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/more/more_screen.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -149,7 +149,8 @@ void main() {
             null,
           ),
     );
-    Widget page() => more ? const MoreScreen() : const AccountScreen();
+    // The Account page folded into Connection: account rows render there now.
+    Widget page() => more ? const MoreScreen() : const ConnectionScreen();
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -176,24 +177,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'permissions display and sign-out confirmation',
-    (tester) async {
-      await pump(tester, account: user());
-      expect(find.text('reader'), findsOneWidget);
-      expect(find.text('User'), findsOneWidget);
-      expect(find.text('Permissions'), findsOneWidget);
-      expect(find.text('1 of 9 allowed'), findsOneWidget);
-      expect(find.text('Download chapters'), findsNothing);
-      await tester.tap(find.text('Permissions'));
-      await tester.pumpAndSettle();
-      expect(find.text('Download chapters'), findsOneWidget);
-      expect(find.text('Allowed'), findsOneWidget);
-      expect(find.text('Restricted'), findsNWidgets(8));
-      expect(find.textContaining('NSFW'), findsNothing);
-      expect(const AccountRoute().location, '/more/account');
+  testWidgets('permissions display and sign-out confirmation', (tester) async {
+    await pump(tester, account: user());
+    expect(find.text('reader'), findsOneWidget);
+    expect(find.text('User'), findsOneWidget);
+    expect(find.text('Permissions'), findsOneWidget);
+    expect(find.text('1 of 9 allowed'), findsOneWidget);
+    expect(find.text('Download chapters'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Permissions'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Permissions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Download chapters'), findsOneWidget);
+    expect(find.text('Allowed'), findsOneWidget);
+    expect(find.text('Restricted'), findsNWidgets(8));
+    expect(find.textContaining('NSFW'), findsNothing);
+    expect(const AccountRoute().location, '/more/account');
 
     // Sign-out requires confirmation.
+    await tester.scrollUntilVisible(
+      find.text('Sign out'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
@@ -206,12 +215,18 @@ void main() {
     expect(actions.signOuts, 1);
   });
 
-  testWidgets('More hides the Account entry without account support',
-      (tester) async {
+  testWidgets('More shows the host row without accounts, sign-out with them', (
+    tester,
+  ) async {
     await pump(tester, more: true, capability: AccountCapability.unsupported);
-    expect(find.widgetWithIcon(ListTile, Icons.person_rounded), findsNothing);
+    expect(find.widgetWithIcon(ListTile, Icons.dns_outlined), findsOneWidget);
+    expect(find.widgetWithIcon(ListTile, Icons.person_outlined), findsNothing);
+    expect(find.text('Sign out'), findsNothing);
     await pump(tester, more: true, capability: AccountCapability.unknown);
     expect(
-        find.widgetWithIcon(ListTile, Icons.person_rounded), findsOneWidget);
+      find.widgetWithIcon(ListTile, Icons.person_outlined),
+      findsOneWidget,
+    );
+    expect(find.text('Sign out'), findsOneWidget);
   });
 }

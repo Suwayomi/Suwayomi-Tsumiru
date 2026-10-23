@@ -91,35 +91,37 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('UI login entry points reach recovery, and logout preserves mode',
-      (tester) async {
-    for (final popup in [false, true]) {
-      await mount(
-        tester,
-        popup
-            ? const LoginCredentialsPopup(authType: AuthType.uiLogin)
-            : const InlineAuthSection(),
-      );
-      expect(find.text('Create account'), findsOneWidget);
-      expect(find.text('Reset password'), findsOneWidget);
-      await tester.tap(find.text('Reset password'));
-      await tester.pumpAndSettle();
-      final dialog = tester.widget<AccountCodeDialog>(
-        find.byType(AccountCodeDialog),
-      );
-      expect(dialog.mode, AccountCodeMode.recovery);
-      await dialog.onSubmit(code: 'code', password: 'password');
-      expect(actions.submissions, [
-        ['code', null, 'password'],
-      ]);
-    }
+  testWidgets(
+    'UI login entry points reach recovery, and logout preserves mode',
+    (tester) async {
+      for (final popup in [false, true]) {
+        await mount(
+          tester,
+          popup
+              ? const LoginCredentialsPopup(authType: AuthType.uiLogin)
+              : const InlineAuthSection(),
+        );
+        expect(find.text('Create account'), findsOneWidget);
+        expect(find.text('Reset password'), findsOneWidget);
+        await tester.tap(find.text('Reset password'));
+        await tester.pumpAndSettle();
+        final dialog = tester.widget<AccountCodeDialog>(
+          find.byType(AccountCodeDialog),
+        );
+        expect(dialog.mode, AccountCodeMode.recovery);
+        await dialog.onSubmit(code: 'code', password: 'password');
+        expect(actions.submissions, [
+          ['code', null, 'password'],
+        ]);
+      }
 
-    await mount(tester, const InlineAuthSection(), stored: true);
-    await tester.tap(find.text('Log out'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Log out'));
-    await tester.pumpAndSettle();
-    expect(actions.signOutCalls, 1);
-    expect(preferences.getInt(DBKeys.authType.name), AuthType.uiLogin.index);
-  });
+      await mount(tester, const InlineAuthSection(), stored: true);
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign out'));
+      await tester.pumpAndSettle();
+      expect(actions.signOutCalls, 1);
+      expect(preferences.getInt(DBKeys.authType.name), AuthType.uiLogin.index);
+    },
+  );
 }
