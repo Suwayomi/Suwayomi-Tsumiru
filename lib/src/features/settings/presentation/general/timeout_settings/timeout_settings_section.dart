@@ -72,7 +72,6 @@ class TimeoutSettingsSection extends ConsumerWidget {
           id: 'serverRequestTimeout',
           child: SettingsPropTile(
             title: context.l10n.serverRequestTimeout,
-            description: context.l10n.serverRequestTimeoutDescription,
             leading: const Icon(Icons.timer_rounded),
             subtitle: context.l10n.nSeconds((timeoutMs / 1000).round()),
             type: SettingsPropType.numberSlider(
@@ -105,7 +104,6 @@ class TimeoutSettingsSection extends ConsumerWidget {
             id: 'autoRefreshRetryDelay',
             child: SettingsPropTile(
               title: context.l10n.autoRefreshRetryDelay,
-              description: context.l10n.autoRefreshRetryDelayDescription,
               leading: const Icon(Icons.schedule_rounded),
               subtitle: context.l10n.nSeconds((retryDelayMs / 1000).round()),
               type: SettingsPropType.numberSlider(

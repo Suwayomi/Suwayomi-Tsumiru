@@ -1120,11 +1120,6 @@ class _ServerStep extends HookConsumerWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          context.l10n.onboardingServerSubtitle,
-          style: TextStyle(color: cs.onSurfaceVariant),
-        ),
         const SizedBox(height: 20),
         TextField(
           controller: urlController,

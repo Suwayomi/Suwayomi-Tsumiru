@@ -95,7 +95,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'lockToPortrait',
     title: (l) => l.lockToPortrait,
-    subtitle: (l) => l.lockToPortraitSubtitle,
     breadcrumb: (l) => l.general,
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'lockToPortrait').push(c),
@@ -104,7 +103,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'serverRequestTimeout',
     title: (l) => l.serverRequestTimeout,
-    subtitle: (l) => l.serverRequestTimeoutDescription,
     breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'serverRequestTimeout').push(c),
@@ -122,7 +120,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'autoRefreshRetryDelay',
     title: (l) => l.autoRefreshRetryDelay,
-    subtitle: (l) => l.autoRefreshRetryDelayDescription,
     breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'autoRefreshRetryDelay').push(c),

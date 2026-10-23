@@ -1306,32 +1306,32 @@
   "advanced": "Advanced",
   "allScanlators": "All Scanlators",
   "animatePageTransitions": "Animate page transitions",
-  "appLanguage": "App Language",
-  "appTheme": "App Theme Mode",
+  "appLanguage": "App language",
+  "appTheme": "Theme mode",
   "appTitle": "Tsumiru",
   "appearance": "Appearance",
-  "authType": "Authentication Type",
+  "authType": "Authentication type",
   "authTypeBasic": "Basic Auth",
   "authTypeSimpleLogin": "Simple Login",
   "authTypeUiLogin": "UI Login (recommended)",
-  "authReverseProxyHelp": "If you use a reverse proxy in front of Suwayomi (Pangolin, Authelia, Authentik, Cloudflare Access, etc.), configure the proxy to pass requests through and let Suwayomi handle authentication here. For public hostnames, turn OFF the 'Use Server Port' toggle on the Server screen so requests go to standard 443.",
+  "authReverseProxyHelp": "Configure your reverse proxy to pass requests through and let Suwayomi handle authentication.",
   "authTestConnection": "Test connection",
   "authTestConnectionSuccess": "Connected.",
   "authTestConnectionFailedNetwork": "Couldn't reach server. Check URL and connectivity.",
   "authTestConnectionFailedAuth": "Login failed. Check username and password.",
   "authTestConnectionFailedMode": "Server may not be in the selected auth mode. Check the server's authMode setting.",
   "authBrowserSessionUnverified": "The server did not confirm your browser session. Check the authentication mode and connection. For Simple Login, serve Tsumiru from the same site as your server.",
-  "authTestConnectionFailedShape": "Server didn't respond as expected. Is your URL pointing at the Suwayomi API?",
-  "authTestConnectionFailedTls": "TLS handshake failed. Common causes: 1) Server is plain HTTP — switch your URL to http://. 2) Public hostname behind a reverse proxy — turn OFF the 'Use Server Port' toggle on the Server screen so requests go to standard 443.",
-  "authSessionExpired": "Session expired — sign in again.",
+  "authTestConnectionFailedShape": "Server didn't respond as expected. Check that the URL points to Suwayomi.",
+  "authTestConnectionFailedTls": "TLS handshake failed. Check whether your server uses http:// or https://.",
+  "authSessionExpired": "Session expired. Sign in again.",
   "authCredentialsNotSaved": "Signed in. This device couldn't save your sign-in, so you'll need to sign in again next launch.",
   "authReauthenticate": "Re-authenticate",
   "authInsecureTransportTitle": "Insecure connection",
-  "authInsecureTransportWarning": "Your server URL uses http:// — your username and password will be sent in cleartext over the network. Use https:// unless you trust the network entirely.",
+  "authInsecureTransportWarning": "Your username and password will be sent unencrypted over HTTP. Use HTTPS unless you trust the network entirely.",
   "authInsecureTransportContinue": "I understand, continue",
   "authLogout": "Log out",
   "authLogoutConfirm": "Log out and clear stored credentials? You'll need to sign in again to use this server.",
-  "authImageUrlLogWarning": "Note: with UI Login, image URLs include your access token as a query parameter, which can appear in your server's access logs.",
+  "authImageUrlLogWarning": "With UI Login, image URLs include your access token, which may appear in server access logs.",
   "authTypeNone": "None",
   "authentication": "Authentication",
   "autoDownload": "Auto-download",
@@ -1554,7 +1554,7 @@
   "sourceBadge": "Source icon",
   "browse": "Browse",
   "buildTime": "Build time",
-  "cacheCleared": "Cache Cleared",
+  "cacheCleared": "Cleared the cache",
   "cancel": "Cancel",
   "categories": "Categories",
   "categoryUpdate": "Category Update",
@@ -1571,7 +1571,7 @@
   "chapterSortUploadDate": "By Upload Date",
   "checkForServerUpdates": "Check for Server updates",
   "checkForUpdates": "Check for updates",
-  "clearCache": "Clear Cache",
+  "clearCache": "Clear cache",
   "clearCookiesAndCache": "Clear cookies and cache",
   "clearedWebViewCookiesAndCache": "Cleared WebView cookies and cache",
   "couldNotClearWebViewCookiesAndCache": "Could not clear WebView cookies and cache",
@@ -1597,7 +1597,6 @@
   "onboardingWelcomeSubtitle": "A reader for your Suwayomi library.",
   "onboardingChooseTheme": "Choose your theme",
   "onboardingServerTitle": "Connect your server",
-  "onboardingServerSubtitle": "Tsumiru reads from your Suwayomi server.",
   "onboardingServerPortHint": "Suwayomi runs on port 4567 by default.",
   "onboardingServerStepLabel": "STEP 2 OF 3",
   "onboardingServerOnNetwork": "On this network",
@@ -1649,7 +1648,7 @@
       }
     }
   },
-  "onboardingResolvedUnconfirmed": "Reached {url}, but it didn't respond as a Suwayomi server — often that's a router or another app, not your server. Double-check the address and port, or use it anyway.",
+  "onboardingResolvedUnconfirmed": "Reached {url}, but it didn't respond as a Suwayomi server. Check the address and port.",
   "@onboardingResolvedUnconfirmed": {
     "placeholders": {
       "url": {
@@ -1671,7 +1670,7 @@
     "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
   },
   "onboardingUseAddressAnyway": "Use this address anyway",
-  "onboardingConnected": "Connected — Suwayomi v{version}",
+  "onboardingConnected": "Connected to Suwayomi v{version}",
   "@onboardingConnected": {
     "placeholders": {
       "version": {
@@ -2067,7 +2066,7 @@
   "errorLaunchURL": "Failed to open!\nCopying \"{url}\" to clipboard",
   "errorPassword": "Password can't be empty",
   "errorSomethingWentWrong": "Something went wrong!",
-  "errorUserName": "UserName can't be empty",
+  "errorUserName": "Username can't be empty",
   "expandSidebar": "Expand sidebar",
   "excludeEntryWithUnreadChapters": "Ignore automatic chapter downloads for entries with unread chapters",
   "ignoreReuploadedChapters": "Ignore re-uploaded chapters",
@@ -2148,11 +2147,11 @@
     "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
   },
   "onboardingCustomHeadersHint": "Only needed for some proxies and access gateways.",
-  "customHeadersDescription": "Sent with every request to your server. Only needed when the server sits behind an authentication gateway, Zero Trust guard, or reverse proxy that requires extra headers.",
+  "customHeadersDescription": "Sent with every request to your server.",
   "@customHeadersDescription": {
     "description": "Explanation under the Custom HTTP headers section"
   },
-  "customHeaderEmpty": "No custom headers. Add one if your server sits behind an authentication gateway or reverse proxy that requires extra headers.",
+  "customHeaderEmpty": "No custom headers.",
   "@customHeaderEmpty": {
     "description": "Empty state for the custom headers list"
   },
@@ -2168,7 +2167,7 @@
   "@customHeaderAdd": {
     "description": "Button to add a custom HTTP header"
   },
-  "customHeaderNameInvalid": "Invalid header name (no spaces or colons).",
+  "customHeaderNameInvalid": "Header names cannot contain spaces or colons.",
   "@customHeaderNameInvalid": {
     "description": "Validation error for a bad custom header name"
   },
@@ -2228,7 +2227,6 @@
   "localSourceLocation": "Local source location",
   "localSourceLocationDescription": "Folder on the server where local source files are kept.",
   "lockToPortrait": "Lock to portrait",
-  "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
   "manga": "Manga",
   "mangaGridSize": "Manga Grid Size",
   "mangaMissingSources": "Manga Missing Sources",
@@ -2486,7 +2484,7 @@
   "unpinSource": "Unpin source",
   "previousChapter": "Previous: {chapterTitle}",
   "queued": "Queued",
-  "quickSearch": "Quick Search",
+  "quickSearch": "Quick search",
   "reader": "Reader",
   "readerMouseScrollSpeed": "Mouse wheel scroll speed",
   "@readerMouseScrollSpeed": {
@@ -2974,12 +2972,12 @@
   },
   "clearCrashLog": "Clear debug log",
   "copyCrashLog": "Copy debug log",
-  "copyCrashLogSubtitle": "For bug reports — copies recent errors and reader diagnostics",
+  "copyCrashLogSubtitle": "Recent errors and reader diagnostics for bug reports",
   "crashLogCleared": "Debug log cleared",
   "crashLogCopied": "Debug log copied to clipboard",
   "noCrashLog": "No debug log found",
   "serverUrl": "Server URL",
-  "serverUrlHintText": "Server url",
+  "serverUrlHintText": "Server URL",
   "addLocalNetworkAddress": "Add a local network address",
   "serverExternalUrl": "External / Remote URL",
   "serverLanUrl": "Internal / LAN URL",
@@ -3108,10 +3106,10 @@
       }
     }
   },
-  "userName": "User Name",
+  "userName": "Username",
   "validating": "Validating",
   "versionAvailable": "Version {version} available for {app}!!",
-  "webUI": "Open in WEB",
+  "webUI": "Open in browser",
   "webView": "Web View",
   "kcefWebView": "WebView",
   "kcefWebViewDescription": "Enable the WebView via CEF (Chromium)",
@@ -3128,22 +3126,20 @@
   "tryDifferentSearchTerm": "Try a different search term",
   "errorOccurred": "An error occurred",
   "viewManga": "View Manga",
-  "timeoutSettings": "Timeout Settings",
-  "serverRequestTimeout": "Server Request Timeout",
+  "timeoutSettings": "Timeout settings",
+  "serverRequestTimeout": "Server request timeout",
   "@serverRequestTimeout": {
     "description": "Controls how long to wait for server responses"
   },
-  "serverRequestTimeoutDescription": "Time to wait for server responses (in seconds)",
-  "autoRefreshOnTimeout": "Auto-refresh on Timeout",
+  "autoRefreshOnTimeout": "Auto-refresh on timeout",
   "@autoRefreshOnTimeout": {
     "description": "Toggle automatic retry on timeout"
   },
-  "autoRefreshOnTimeoutDescription": "Automatically retries requests that timeout",
-  "autoRefreshRetryDelay": "Auto-refresh Retry Delay",
+  "autoRefreshOnTimeoutDescription": "Automatically retry requests that time out",
+  "autoRefreshRetryDelay": "Auto-refresh retry delay",
   "@autoRefreshRetryDelay": {
     "description": "Delay between auto retry attempts in seconds"
   },
-  "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)",
   "offline": "Offline",
   "@offline": {
     "description": "Settings entry and screen title for offline downloads"
@@ -4320,10 +4316,6 @@
   "lockToPortrait": "Lock to portrait",
   "@lockToPortrait": {
     "description": "General setting: lock the app to portrait orientation"
-  },
-  "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
-  "@lockToPortraitSubtitle": {
-    "description": "Subtitle for the lock-to-portrait general setting"
   },
   "recommendationsLoadFailed": "Couldn't load recommendations from {provider}. Try again later.",
   "@recommendationsLoadFailed": {
