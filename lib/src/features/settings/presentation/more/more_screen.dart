@@ -18,12 +18,14 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../../widgets/web_selection_area.dart';
 import '../../../account/data/account_providers.dart';
+import '../../../account/presentation/sign_out_action.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
 import '../library/widgets/persistent_search_bar/persistent_search_bar.dart';
@@ -38,6 +40,8 @@ class MoreScreen extends ConsumerWidget {
     final authType = ref.watch(authTypeKeyProvider);
     final account = ref.watch(currentAccountProvider);
     final showAccount = ref.watch(showAccountEntryProvider);
+    final hasStoredCredentials = ref.watch(hasStoredCredentialsProvider);
+    final incognito = ref.watch(incognitoModeProvider);
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     // Phone searches from the app-bar entry (or the box under the title when
     // the persistent setting is on); tablet and desktop are unchanged.
@@ -53,6 +57,65 @@ class MoreScreen extends ConsumerWidget {
       onNavigate: () =>
           ref.read(unifiedSearchQueryProvider.notifier).state = '',
     );
+
+    Widget accountSection() {
+      final host = formatServerHost(
+        ref.watch(serverUrlProvider),
+        ref.watch(serverPortProvider),
+        ref.watch(serverPortToggleProvider).ifNull(),
+      );
+      final statusLabel = switch (connectionAuthStatus(
+        ref.watch(authTypeKeyProvider),
+        ref.watch(needsReauthProvider) ||
+            ((authType ?? AuthType.none) != AuthType.none &&
+                !ref.watch(hasStoredCredentialsProvider)),
+      )) {
+        ConnectionAuthStatus.signedIn => context.l10n.connectionAuthSignedIn,
+        ConnectionAuthStatus.noAuth => context.l10n.connectionAuthNone,
+        ConnectionAuthStatus.signInNeeded =>
+          context.l10n.connectionAuthSignInNeeded,
+      };
+      const chevron = Icon(Icons.chevron_right_rounded);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SettingsGroupHeading(label: context.l10n.accountTitle),
+          SettingsGroupCard(
+            children: [
+              if (showAccount)
+                SettingsGroupRow(
+                  icon: Icons.person_outlined,
+                  title: account?.username ?? context.l10n.accountTitle,
+                  subtitle: host.isEmpty ? null : host,
+                  trailing: chevron,
+                  onTap: () => const ConnectionRoute().push(context),
+                )
+              else
+                SettingsGroupRow(
+                  icon: Icons.dns_outlined,
+                  title: host.isEmpty ? context.l10n.connection : host,
+                  subtitle: statusLabel,
+                  trailing: chevron,
+                  onTap: () => const ConnectionRoute().push(context),
+                ),
+              if (showAccount && hasStoredCredentials)
+                ListTile(
+                  leading: Icon(
+                    Icons.logout_outlined,
+                    color: context.theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    context.l10n.accountSignOut,
+                    style: TextStyle(color: context.theme.colorScheme.error),
+                  ),
+                  onTap: () => confirmAndSignOutAccount(context, ref),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
     final scaffold = Scaffold(
       // Desktop replaces the title with the unified search box (the sidebar
       // already names the page); phone and tablet keep it.
@@ -77,114 +140,116 @@ class MoreScreen extends ConsumerWidget {
               ],
             ),
       body: WebSelectionArea(
-        child: ListView(
-          children: [
-            if (!context.usesDesktopShell) ...[
-              TsumiruLogo(size: context.height * .2),
-              const Divider(),
-            ],
-            Builder(
-              builder: (context) {
-                final host = formatServerHost(
-                  ref.watch(serverUrlProvider),
-                  ref.watch(serverPortProvider),
-                  ref.watch(serverPortToggleProvider).ifNull(),
-                );
-                final statusLabel = switch (connectionAuthStatus(
-                  ref.watch(authTypeKeyProvider),
-                  ref.watch(needsReauthProvider) ||
-                      ((authType ?? AuthType.none) != AuthType.none &&
-                          !ref.watch(hasStoredCredentialsProvider)),
-                )) {
-                  ConnectionAuthStatus.signedIn =>
-                    context.l10n.connectionAuthSignedIn,
-                  ConnectionAuthStatus.noAuth => context.l10n.connectionAuthNone,
-                  ConnectionAuthStatus.signInNeeded =>
-                    context.l10n.connectionAuthSignInNeeded,
-                };
-                final subtitle = host.isEmpty
-                    ? statusLabel
-                    : '$host · $statusLabel';
-                return ListTile(
-                  leading: const Icon(Icons.dns_rounded),
-                  title: Text(context.l10n.connection),
-                  subtitle: Text(subtitle),
-                  onTap: () => const ConnectionRoute().push(context),
-                );
-              },
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              children: [
+                if (!context.usesDesktopShell) ...[
+                  TsumiruLogo(size: context.height * .2),
+                  const Divider(),
+                ],
+                accountSection(),
+                SettingsGroupHeading(label: context.l10n.library),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.visibility_off_outlined,
+                      title: context.l10n.incognitoMode,
+                      subtitle: context.l10n.incognitoModeDescription,
+                      trailing: Switch(
+                        value: incognito,
+                        onChanged: (value) =>
+                            ref.read(incognitoModeProvider.notifier).set(value),
+                      ),
+                      onTap: () => ref
+                          .read(incognitoModeProvider.notifier)
+                          .set(!incognito),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.label_outlined,
+                      title: context.l10n.categories,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => const EditCategoriesRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.history_outlined,
+                      title: context.l10n.history,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => const HistoryRoute().push(context),
+                    ),
+                    Builder(
+                      builder: (context) {
+                        final count =
+                            ref.watch(failedUpdateCountProvider).value ?? 0;
+                        return SettingsGroupRow(
+                          icon: Icons.error_outline,
+                          title: context.l10n.libraryUpdateErrorsCount(count),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () =>
+                              const LibraryUpdateErrorsRoute().push(context),
+                        );
+                      },
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.settings_backup_restore_outlined,
+                      title: context.l10n.backup,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => const BackupRoute().push(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.color_lens_outlined,
+                      title: context.l10n.appearance,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () =>
+                          const AppearanceSettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.settings_outlined,
+                      title: context.l10n.settings,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => const SettingsRoute().push(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.info_outlined,
+                      title: context.l10n.about,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => const AboutRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: Icons.help_outline_rounded,
+                      title: context.l10n.help,
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => launchUrlInWeb(
+                        context,
+                        AppUrls.tachideskHelp.url,
+                        ref.read(toastProvider),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SwitchListTile(
-              secondary: const Icon(Icons.no_accounts_rounded),
-              title: Text(context.l10n.incognitoMode),
-              subtitle: Text(context.l10n.incognitoModeDescription),
-              value: ref.watch(incognitoModeProvider),
-              onChanged: (value) =>
-                  ref.read(incognitoModeProvider.notifier).set(value),
-            ),
-            if (showAccount)
-              ListTile(
-                leading: const Icon(Icons.person_rounded),
-                title: Text(context.l10n.accountTitle),
-                subtitle: account == null ? null : Text(account.username),
-                onTap: () => const AccountRoute().push(context),
-              ),
-            ListTile(
-              title: Text(context.l10n.categories),
-              leading: const Icon(Icons.label_rounded),
-              onTap: () => const EditCategoriesRoute().push(context),
-            ),
-            ListTile(
-              title: Text(context.l10n.history),
-              leading: const Icon(Icons.history_rounded),
-              onTap: () => const HistoryRoute().push(context),
-            ),
-            Builder(
-              builder: (context) {
-                final count = ref.watch(failedUpdateCountProvider).value ?? 0;
-                return ListTile(
-                  title: Text(context.l10n.libraryUpdateErrorsCount(count)),
-                  leading: const Icon(Icons.error_outline_rounded),
-                  onTap: () => const LibraryUpdateErrorsRoute().push(context),
-                );
-              },
-            ),
-            ListTile(
-              title: Text(context.l10n.appearance),
-              leading: const Icon(Icons.color_lens_rounded),
-              onTap: () => const AppearanceSettingsRoute().push(context),
-            ),
-            ListTile(
-              title: Text(context.l10n.backup),
-              leading: const Icon(Icons.settings_backup_restore_rounded),
-              onTap: () => const BackupRoute().push(context),
-            ),
-            const Divider(),
-            ListTile(
-              title: Text(context.l10n.settings),
-              leading: const Icon(Icons.settings_rounded),
-              onTap: () => const SettingsRoute().push(context),
-            ),
-            ListTile(
-              title: Text(context.l10n.about),
-              leading: const Icon(Icons.info_rounded),
-              onTap: () => const AboutRoute().push(context),
-            ),
-            ListTile(
-              title: Text(context.l10n.help),
-              leading: const Icon(Icons.help_rounded),
-              onTap: () => launchUrlInWeb(
-                context,
-                AppUrls.tachideskHelp.url,
-                ref.read(toastProvider),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
     return topBar
         ? TopBarSlot(
-            content: desktopSearchSlotContent(search: search, actions: const []),
+            content: desktopSearchSlotContent(
+              search: search,
+              actions: const [],
+            ),
             minWidth: searchTopBarSlotMinWidth(0),
             child: scaffold,
           )

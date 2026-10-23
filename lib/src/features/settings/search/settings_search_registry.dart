@@ -889,7 +889,7 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
 /// tab 1), with "Downloads › Server" / "Downloads › On device" breadcrumbs.
 /// The three delete rows share titles across tabs but carry per-tab ids, so
 /// search can land on the right tab's row. Image download processing left
-/// the Server tab (it lives on Server admin › Images now).
+/// the Server tab (it lives on Server › Images now).
 ///
 /// Server rows only mount while the server settings hold a value (same
 /// `showUiWhenData` data branch as the screen); permission/personal gates
@@ -1186,7 +1186,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   ),
 ];
 
-/// Server hub pages ("Server admin › \<Page\>" breadcrumbs, with the
+/// Server hub pages ("Server › \<Page\>" breadcrumbs, with the
 /// multi-section Network page adding its section header as a third level).
 /// Every page is server state: each entry needs the server reachable
 /// (`settingsProvider` holding a value — loading/error shows the fallback
@@ -1223,21 +1223,21 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'serverIpAddress',
     title: (l) => l.ip,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.serverBindings}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.serverBindings}',
     open: (c) => const ServerNetworkRoute(highlight: 'serverIpAddress').push(c),
     visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'serverPort',
     title: (l) => l.serverPort,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.serverBindings}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.serverBindings}',
     open: (c) => const ServerNetworkRoute(highlight: 'serverPort').push(c),
     visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'enableSocksProxy',
     title: (l) => l.enableSocksProxy,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
     open: (c) =>
         const ServerNetworkRoute(highlight: 'enableSocksProxy').push(c),
     visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
@@ -1245,7 +1245,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'socksVersion',
     title: (l) => l.socksVersion,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksVersion').push(c),
     visible: (ref, _) =>
         _canManageSettings(ref) &&
@@ -1254,7 +1254,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'socksHost',
     title: (l) => l.socksHost,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksHost').push(c),
     visible: (ref, _) =>
         _canManageSettings(ref) &&
@@ -1263,7 +1263,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'socksPort',
     title: (l) => l.socksPort,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksPort').push(c),
     visible: (ref, _) =>
         _canManageSettings(ref) &&
@@ -1272,7 +1272,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'socksUserName',
     title: (l) => l.socksUserName,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksUserName').push(c),
     visible: (ref, _) =>
         _canManageSettings(ref) &&
@@ -1281,7 +1281,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'socksPassword',
     title: (l) => l.socksPassword,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.socksProxy}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
     open: (c) => const ServerNetworkRoute(highlight: 'socksPassword').push(c),
     visible: (ref, _) =>
         _canManageSettings(ref) &&
@@ -1290,16 +1290,14 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'flareSolverr',
     title: (l) => l.flareSolverr,
-    breadcrumb: (l) =>
-        '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) => const ServerNetworkRoute(highlight: 'flareSolverr').push(c),
     visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'flareSolverrServerUrl',
     title: (l) => l.flareSolverrServerUrl,
-    breadcrumb: (l) =>
-        '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) =>
         const ServerNetworkRoute(highlight: 'flareSolverrServerUrl').push(c),
     visible: (ref, _) =>
@@ -1309,8 +1307,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'flareSolverrRequestTimeout',
     title: (l) => l.flareSolverrRequestTimeout,
-    breadcrumb: (l) =>
-        '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) => const ServerNetworkRoute(
       highlight: 'flareSolverrRequestTimeout',
     ).push(c),
@@ -1321,8 +1318,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'flareSolverrSessionName',
     title: (l) => l.flareSolverrSessionName,
-    breadcrumb: (l) =>
-        '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) =>
         const ServerNetworkRoute(highlight: 'flareSolverrSessionName').push(c),
     visible: (ref, _) =>
@@ -1332,8 +1328,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'flareSolverrSessionTTL',
     title: (l) => l.flareSolverrSessionTTL,
-    breadcrumb: (l) =>
-        '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) =>
         const ServerNetworkRoute(highlight: 'flareSolverrSessionTTL').push(c),
     visible: (ref, _) =>
@@ -1344,8 +1339,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     id: 'flareSolverrResponseFallback',
     title: (l) => l.responseFallback,
     subtitle: (l) => l.responseFallbackDescription,
-    breadcrumb: (l) =>
-        '${l.serverAdmin} › ${l.network} › ${l.cloudflareBypass}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
     open: (c) => const ServerNetworkRoute(
       highlight: 'flareSolverrResponseFallback',
     ).push(c),
@@ -1358,7 +1352,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
     id: 'webview',
     title: (l) => l.kcefWebView,
     subtitle: (l) => l.kcefWebViewDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.kcefWebView}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.kcefWebView}',
     open: (c) => const ServerNetworkRoute(highlight: 'webview').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1368,7 +1362,7 @@ List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'clearWebViewCache',
     title: (l) => l.clearCookiesAndCache,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.network} › ${l.kcefWebView}',
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.kcefWebView}',
     open: (c) =>
         const ServerNetworkRoute(highlight: 'clearWebViewCache').push(c),
     visible: (ref, _) =>
@@ -1382,7 +1376,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceFlavor',
     title: (l) => l.webInterfaceInterface,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
         const ServerWebInterfaceRoute(highlight: 'webInterfaceFlavor').push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
@@ -1390,7 +1384,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'initialOpenInBrowserEnabled',
     title: (l) => l.initialOpenInBrowserEnabled,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) => const ServerWebInterfaceRoute(
       highlight: 'initialOpenInBrowserEnabled',
     ).push(c),
@@ -1399,7 +1393,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceInterface',
     title: (l) => l.webInterfaceOpenWith,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) => const ServerWebInterfaceRoute(
       highlight: 'webInterfaceInterface',
     ).push(c),
@@ -1408,7 +1402,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'electronPath',
     title: (l) => l.electronPath,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
         const ServerWebInterfaceRoute(highlight: 'electronPath').push(c),
     visible: (ref, _) =>
@@ -1419,7 +1413,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceChannel',
     title: (l) => l.webInterfaceChannel,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
         const ServerWebInterfaceRoute(highlight: 'webInterfaceChannel').push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
@@ -1427,7 +1421,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceAutomaticUpdates',
     title: (l) => l.webInterfaceAutomaticUpdates,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) => const ServerWebInterfaceRoute(
       highlight: 'webInterfaceAutomaticUpdates',
     ).push(c),
@@ -1436,7 +1430,7 @@ List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceCheckUpdate',
     title: (l) => l.webInterfaceCheckUpdate,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.webInterface}',
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) => const ServerWebInterfaceRoute(
       highlight: 'webInterfaceCheckUpdate',
     ).push(c),
@@ -1455,7 +1449,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsBinaryFileSize',
     title: (l) => l.opdsBinaryFileSize,
     subtitle: (l) => l.opdsBinaryFileSizeDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) => const ServerOpdsRoute(highlight: 'opdsBinaryFileSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
@@ -1464,7 +1458,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsItemsPerPage',
     title: (l) => l.opdsItemsPerPage,
     subtitle: (l) => l.opdsItemsPerPageDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) => const ServerOpdsRoute(highlight: 'opdsItemsPerPage').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
@@ -1473,7 +1467,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsEnablePageReadProgress',
     title: (l) => l.opdsEnablePageReadProgress,
     subtitle: (l) => l.opdsEnablePageReadProgressDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) =>
         const ServerOpdsRoute(highlight: 'opdsEnablePageReadProgress').push(c),
     visible: (ref, _) =>
@@ -1483,7 +1477,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsMarkAsReadOnDownload',
     title: (l) => l.opdsMarkAsReadOnDownload,
     subtitle: (l) => l.opdsMarkAsReadOnDownloadDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) =>
         const ServerOpdsRoute(highlight: 'opdsMarkAsReadOnDownload').push(c),
     visible: (ref, _) =>
@@ -1493,7 +1487,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsShowOnlyUnreadChapters',
     title: (l) => l.opdsShowOnlyUnreadChapters,
     subtitle: (l) => l.opdsShowOnlyUnreadChaptersDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) =>
         const ServerOpdsRoute(highlight: 'opdsShowOnlyUnreadChapters').push(c),
     visible: (ref, _) =>
@@ -1503,7 +1497,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsShowOnlyDownloadedChapters',
     title: (l) => l.opdsShowOnlyDownloadedChapters,
     subtitle: (l) => l.opdsShowOnlyDownloadedChaptersDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) => const ServerOpdsRoute(
       highlight: 'opdsShowOnlyDownloadedChapters',
     ).push(c),
@@ -1514,7 +1508,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
     id: 'opdsSkipChapterMetadataFeed',
     title: (l) => l.opdsSkipChapterMetadataFeed,
     subtitle: (l) => l.opdsSkipChapterMetadataFeedDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) =>
         const ServerOpdsRoute(highlight: 'opdsSkipChapterMetadataFeed').push(c),
     visible: (ref, _) =>
@@ -1523,7 +1517,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'opdsChapterSortOrder',
     title: (l) => l.opdsChapterSortOrder,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) =>
         const ServerOpdsRoute(highlight: 'opdsChapterSortOrder').push(c),
     visible: (ref, _) =>
@@ -1532,7 +1526,7 @@ List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'opdsCbzMimetype',
     title: (l) => l.opdsCbzMimeType,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.opds}',
+    breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) => const ServerOpdsRoute(highlight: 'opdsCbzMimetype').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
@@ -1543,7 +1537,7 @@ List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'imagesClearCache',
     title: (l) => l.imageProcessingClearCache,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.images}',
+    breadcrumb: (l) => '${l.server} › ${l.images}',
     open: (c) => const ServerImagesRoute(highlight: 'imagesClearCache').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1553,7 +1547,7 @@ List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'imageDownloadProcessing',
     title: (l) => l.imageDownloadProcessing,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.images}',
+    breadcrumb: (l) => '${l.server} › ${l.images}',
     open: (c) =>
         const ServerImagesRoute(highlight: 'imageDownloadProcessing').push(c),
     visible: (ref, _) =>
@@ -1564,7 +1558,7 @@ List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'imageServeProcessing',
     title: (l) => l.imageServeProcessing,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.images}',
+    breadcrumb: (l) => '${l.server} › ${l.images}',
     open: (c) =>
         const ServerImagesRoute(highlight: 'imageServeProcessing').push(c),
     visible: (ref, _) =>
@@ -1577,7 +1571,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'databaseType',
     title: (l) => l.databaseType,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.database}',
+    breadcrumb: (l) => '${l.server} › ${l.database}',
     open: (c) => const ServerDatabaseRoute(highlight: 'databaseType').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1587,7 +1581,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'databaseUrl',
     title: (l) => l.databaseUrl,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.database}',
+    breadcrumb: (l) => '${l.server} › ${l.database}',
     open: (c) => const ServerDatabaseRoute(highlight: 'databaseUrl').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1597,7 +1591,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'databaseUsername',
     title: (l) => l.databaseUsername,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.database}',
+    breadcrumb: (l) => '${l.server} › ${l.database}',
     open: (c) =>
         const ServerDatabaseRoute(highlight: 'databaseUsername').push(c),
     visible: (ref, _) =>
@@ -1608,7 +1602,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'databasePassword',
     title: (l) => l.databasePassword,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.database}',
+    breadcrumb: (l) => '${l.server} › ${l.database}',
     open: (c) =>
         const ServerDatabaseRoute(highlight: 'databasePassword').push(c),
     visible: (ref, _) =>
@@ -1620,7 +1614,7 @@ List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
     id: 'hikariConnectionPool',
     title: (l) => l.hikariConnectionPool,
     subtitle: (l) => l.hikariConnectionPoolDescription,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.database}',
+    breadcrumb: (l) => '${l.server} › ${l.database}',
     open: (c) =>
         const ServerDatabaseRoute(highlight: 'hikariConnectionPool').push(c),
     visible: (ref, _) =>
@@ -1634,21 +1628,21 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'debugLogs',
     title: (l) => l.debugLogs,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'debugLogs').push(c),
     visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'systemTrayIcon',
     title: (l) => l.systemTrayIcon,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'systemTrayIcon').push(c),
     visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'logFileCleanup',
     title: (l) => l.logFileCleanup,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'logFileCleanup').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1659,7 +1653,7 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
     id: 'maxLogFileSize',
     title: (l) => l.maxLogFileSize,
     subtitle: (l) => l.logSizeExamples,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'maxLogFileSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1670,7 +1664,7 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
     id: 'maxLogFolderSize',
     title: (l) => l.maxLogFolderSize,
     subtitle: (l) => l.logSizeExamples,
-    breadcrumb: (l) => '${l.serverAdmin} › ${l.logs}',
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
     open: (c) => const ServerLogsRoute(highlight: 'maxLogFolderSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
@@ -1679,49 +1673,49 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
   ),
 ];
 
-/// Connection page (5 rows with the plain "Connection" breadcrumb, plus the
-/// moved Timeout section). Server URL and the auth-mode dropdown always
-/// render; the LAN tile only once an address exists (the "add" row is a
-/// button, not a setting); the custom-headers entry lands on the section's
-/// Add row (per-header rows are dynamic, not settings); Open in WEB is
-/// desktop-only, like its tile. The Timeout rows moved here from General:
-/// Auto-refresh Retry Delay only renders while auto-refresh is on, the other
-/// two always render. Username/password fields, sign-in/test/log-out buttons,
-/// chips, and warnings are credentials or transient state, so they have no
-/// entries.
+/// Connection page ("Connection › \<Section\>" breadcrumbs). Server URL, the
+/// LAN row and Open in WEB sit under "Server"; the auth-mode picker sits
+/// under "Account" (it lives in the Account card on account servers and in
+/// the Authentication section elsewhere); the custom-headers entry lands on
+/// the section's Add row (per-header rows are dynamic, not settings); Open in
+/// WEB is desktop-only, like its tile. The Timeout rows moved here from
+/// General: Auto-refresh Retry Delay only renders while auto-refresh is on,
+/// the other two always render. Username/password fields, sign-in/test/log-out
+/// buttons, chips, and warnings are credentials or transient state, so they
+/// have no entries.
 List<SettingsSearchEntry> get connectionSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'serverUrl',
     title: (l) => l.serverUrl,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.server}',
     open: (c) => const ConnectionRoute(highlight: 'serverUrl').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'serverLanUrl',
     title: (l) => l.serverLanUrl,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.server}',
     open: (c) => const ConnectionRoute(highlight: 'serverLanUrl').push(c),
     visible: (ref, _) => ref.watch(serverLanUrlProvider) != null,
   ),
   SettingsSearchEntry(
     id: 'authentication',
     title: (l) => l.authType,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.accountTitle}',
     open: (c) => const ConnectionRoute(highlight: 'authentication').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'customHeaders',
     title: (l) => l.customHeaders,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.customHeaders}',
     open: (c) => const ConnectionRoute(highlight: 'customHeaders').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'openInWeb',
     title: (l) => l.webUI,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.server}',
     open: (c) => const ConnectionRoute(highlight: 'openInWeb').push(c),
     visible: (_, _) => !kIsWeb,
   ),
