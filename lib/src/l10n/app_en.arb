@@ -1338,7 +1338,7 @@
   "autoDownloadNewChapters": "Download new chapters",
   "autoDownloadCategories": "Categories",
   "autoDownloadCategoriesAll": "All categories",
-  "autoDownloadCategoriesHint": "Auto-download new chapters only for included categories (exclude always wins). Tap to cycle: ✓ include · – exclude · empty default.",
+  "autoDownloadCategoriesHint": "Excluded categories take priority. Tap to cycle: ✓ include · – exclude · empty default.",
   "autoDownloadCategoriesIncluded": "Included: {names}",
   "@autoDownloadCategoriesIncluded": {
     "placeholders": {
@@ -1378,7 +1378,7 @@
   "@autoWebtoonSnack": {
     "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
   },
-  "automaticBackup": "Automatic Backup",
+  "automaticBackup": "Automated backup",
   "automaticUpdate": "Automatic Update",
   "centerMarginDoubleAndWide": "Double and wide",
   "centerMarginDoublePages": "Double pages",
@@ -1461,14 +1461,14 @@
   "refreshChaptersFromSourceSubtitle": "When off, opening an entry shows the chapters already on the server. When on, also check the source for new chapters.",
   "automaticallyRefreshMetadata": "Automatically refresh metadata",
   "automaticallyRefreshMetadataSubtitle": "Check for new cover and details when updating library",
-  "backup": "Backup & Restore",
-  "backupAndRestore": "Backup and Restore",
-  "backupCleanup": "Backup Cleanup",
-  "backupCleanupDescription": "{count, select, 0{Never} 01{Delete Backups that are older 1 day} other{Delete Backups that are older {count} days}}",
-  "backupInterval": "Backup Interval",
-  "backupLocation": "Backup Location",
+  "backup": "Backup and restore",
+  "backupAndRestore": "Backup and restore",
+  "backupCleanup": "Backup cleanup",
+  "backupCleanupDescription": "{count, select, 0{Never} 01{Delete backups that are older than 1 day} other{Delete backups that are older than {count} days}}",
+  "backupInterval": "Backup interval",
+  "backupLocation": "Backup location",
   "backupLocationDescription": "Folder on the server where automatic backups are saved.",
-  "backupTime": "Backup Time",
+  "backupTime": "Backup time",
   "backupData": "Backup data",
   "@backupData": {
     "description": "Title for the automatic backup contents row"
@@ -1586,8 +1586,7 @@
   "connectionAuthSignInNeeded": "Sign-in needed",
   "copied": "Copied!",
   "copyMsg": "'{msg}' Copied!",
-  "createBackupDescription": "Backup library as a Tachidesk backup",
-  "createBackupTitle": "Create Backup",
+  "createBackupTitle": "Create backup",
   "credentials": "Credentials",
   "back": "Back",
   "next": "Next",
@@ -1715,14 +1714,14 @@
   "deleteChapters": "Delete chapters",
   "deleteFromServer": "Delete from server…",
   "deleteOnDeviceDownloads": "Delete on-device downloads",
-  "deleteOnDeviceDownloadsDescription": "Removes a chapter's copy from this device as you read it. Your server keeps its copy — this only frees space on your phone.",
+  "deleteOnDeviceDownloadsDescription": "Your server keeps its copy.",
   "deleteServerDownloads": "Delete server downloads",
-  "deleteServerDownloadsDescription": "Removes a chapter's copy from your server as you read it (and from this device too). These settings are shared with the web interface.",
+  "deleteServerDownloadsDescription": "Also removes the copy on this device. Settings are shared with the web interface.",
   "deleteChapterAfterManuallyMarkedRead": "Delete chapter after manually marking it as read",
   "deleteFinishedChaptersWhileReading": "Delete finished chapters while reading",
   "allowDeletingBookmarkedChapters": "Allow deleting bookmarked chapters",
   "downloadProtectionWindowTitle": "Keep recently-read chapters downloaded",
-  "downloadProtectionWindowDescription": "Re-download the keep-window chapters if they are missing from the device (requires delete-while-reading to be enabled).",
+  "downloadProtectionWindowDescription": "Re-download recently read chapters missing from this device.",
   "deleteWhileReadingDisabled": "Disabled",
   "deleteWhileReadingLastRead": "Last read chapter",
   "deleteWhileReadingSecondToLast": "Second to last read chapter",
@@ -2058,8 +2057,8 @@
   "enableSocksProxy": "Use SOCKS proxy",
   "enterProp": "Enter {prop}",
   "error": "Error",
-  "errorBackupCreate": "Failed to create Backup",
-  "errorBackupRestore": "Failed to restore backup!",
+  "errorBackupCreate": "Could not create backup",
+  "errorBackupRestore": "Could not restore backup",
   "errorExtension": "Can't find the selected extension",
   "errorFilePick": "File not selected!",
   "errorFilePickUnknownExtension": "Please select a file with {extensionName} extension",
@@ -2250,10 +2249,10 @@
   "mangaStatusPublishingFinished": "Publishing Finished",
   "mangaStatusUnknown": "Unknown",
   "misc": "Misc",
-  "missingExtension": "Missing Extensions",
+  "missingExtension": "Missing extensions",
   "missingTrackers": "Missing Trackers",
   "more": "More",
-  "moveToBottom": "Move to Bottom",
+  "moveToBottom": "Move to bottom",
   "moveToTop": "Move to top",
   "nChapters": "{n, plural, =0{None} =1{1 Chapter} other{{n} Chapters}}",
   "nDays": "{count, select, 01{01 Day} other{{count} Days}}",
@@ -2308,7 +2307,7 @@
   },
   "noCategoryMangaFound": "No manga found in this Category. \n(Tip: Check your search & filters!)",
   "noChaptersFound": "No Chapters found",
-  "noDownloads": "No Downloads",
+  "noDownloads": "No downloads",
   "noMangaFound": "No Mangas Found",
   "noOfChapters": "{count} Chapters",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
@@ -2918,9 +2917,8 @@
   "removeFromLibrary": "Remove from Library?",
   "reset": "Reset",
   "restore": "Restore",
-  "restoreBackupDescription": "Restore Tachidesk from backup",
-  "restoreBackupTitle": "Restore Backup",
-  "restored": "Backup restored!",
+  "restoreBackupTitle": "Restore backup",
+  "restored": "Backup restored.",
   "restoring": "Restoring backup",
   "resume": "Resume",
   "retry": "Retry",
@@ -3268,12 +3266,12 @@
   "@viewOffline": {
     "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
   },
-  "offlineSheetSubtitle": "Keep chapters downloaded on this device, topped up automatically as you read. Separate from server downloads (the cloud icon up top).",
+  "offlineSheetSubtitle": "Keep chapters downloaded on this device, topped up automatically as you read.",
   "offlineDownloadAll": "Download all chapters",
   "@offlineDownloadAll": {
     "description": "Series offline action: download every chapter to this device"
   },
-  "offlineRemoveSeries": "Remove all (this series)",
+  "offlineRemoveSeries": "Remove downloads",
   "@offlineRemoveSeries": {
     "description": "Series offline action: remove this series' downloads from the device"
   },
@@ -3316,7 +3314,7 @@
   "manageDownloadsNothingYet": "Nothing downloaded yet",
   "offlineManualOnly": "Manual only",
   "manageDownloadsChangeRule": "Change rule",
-  "manageDownloadsStopKeep": "Stop keeping (keep files)",
+  "manageDownloadsStopKeep": "Stop keeping",
   "manageDownloadsStopDelete": "Stop keeping & delete files",
   "manageDownloadsKeepFilesConfirm": "Stop auto-keeping {count} series but leave the chapters already downloaded on this device?",
   "@manageDownloadsKeepFilesConfirm": {
@@ -3906,7 +3904,7 @@
   "@offlineChaptersScreenTitle": {
     "description": "AppBar title for the offline series drill-down chapter list"
   },
-  "offlineChaptersActiveSection": "Downloading / Queued",
+  "offlineChaptersActiveSection": "Downloading / queued",
   "@offlineChaptersActiveSection": {
     "description": "Section header for chapters currently downloading or queued in the offline chapter list"
   },

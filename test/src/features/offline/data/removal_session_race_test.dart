@@ -156,7 +156,7 @@ void main() {
         } else {
           final tile = pauseAt == 'series'
               ? tester.widget<ListTile>(
-                  find.widgetWithText(ListTile, 'Remove all (this series)'),
+                  find.widgetWithText(ListTile, 'Remove downloads'),
                 )
               : null;
           if (tile != null) {

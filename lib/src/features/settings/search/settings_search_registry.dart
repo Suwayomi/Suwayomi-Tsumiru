@@ -856,7 +856,6 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'createBackup',
     title: (l) => l.createBackupTitle,
-    subtitle: (l) => l.createBackupDescription,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'createBackup').push(c),
     visible: (_, _) => true,
@@ -864,7 +863,6 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'restoreBackup',
     title: (l) => l.restoreBackupTitle,
-    subtitle: (l) => l.restoreBackupDescription,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'restoreBackup').push(c),
     visible: (_, _) => true,
