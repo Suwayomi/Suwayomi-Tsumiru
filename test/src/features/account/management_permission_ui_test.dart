@@ -56,16 +56,14 @@ void main() {
         localSwitch.onChanged!(true);
         await tester.pumpAndSettle();
         expect(container.read(showNSFWProvider), true);
-        final tiles = tester
-            .widgetList<ListTile>(find.byType(ListTile))
-            .where(
-              (tile) =>
-                  tile.leading is Icon &&
-                  [
-                    (Icons.swap_vert_rounded),
-                    Icons.folder_rounded,
-                  ].contains((tile.leading! as Icon).icon),
-            );
+        // The global rows are SettingsPropTiles (no leading icons since the
+        // card regroup): find them by title instead.
+        final tiles = ['Parallel source requests', 'Local source location']
+            .map(
+              (label) =>
+                  tester.widget<ListTile>(find.widgetWithText(ListTile, label)),
+            )
+            .toList();
         expect(tiles, hasLength(2));
         expect(tiles.every((tile) => tile.onTap == null), true);
       },

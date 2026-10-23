@@ -20,6 +20,7 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/koreader_sync_repository.dart';
 import 'domain/koreader_sync_domain.dart';
 import 'widgets/koreader_sync_dialog.dart';
@@ -53,6 +54,31 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = showsMergedTopBar(context);
+    final title = Text(l10n.koreaderSync);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
+      body: const SettingsHighlightScope(
+        child: SingleChildScrollView(child: KoreaderSyncSettingsBody()),
+      ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
+    );
+  }
+}
+
+class KoreaderSyncSettingsBody extends ConsumerWidget {
+  const KoreaderSyncSettingsBody({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final settings = ref.watch(koreaderSyncSettingsProvider);
     final koSync = ref.watch(koSyncStatusProvider);
 
@@ -67,125 +93,110 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
       await AppUtils.guard(action, ref.read(toastProvider));
     }
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
-    final topBar = showsMergedTopBar(context);
-    final title = Text(l10n.koreaderSync);
-    final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
-      body: settings.showUiWhenData(
-        context,
-        refresh: refresh,
-        skipLoadingOnReload: true,
-        (server) {
-          final koSyncError = koSync.error;
-          if (server == null ||
-              (koSyncError != null &&
-                  onlyUndefinedFieldErrors(
-                    koSyncError,
-                    type: 'Query',
-                    field: 'koSyncStatus',
-                  ))) {
-            return Emoticons(title: l10n.koreaderSyncUnsupported);
-          }
-          return koSync.showUiWhenData(
-            context,
-            refresh: refresh,
-            skipLoadingOnReload: true,
-            (status) {
-              return SettingsHighlightScope(
-                child: ListView(
-                  children: [
-                    SettingsHighlightTarget(
-                      id: 'koreaderSyncStatus',
-                      child: ListTile(
-                        title: Text(l10n.koreaderSyncStatus),
-                        subtitle: Text(
-                          status.isLoggedIn
-                              ? l10n.koreaderSyncConnectedAs(
-                                  status.username ?? '',
-                                  status.serverAddress ?? '',
-                                )
-                              : l10n.koreaderSyncStatusDisconnected,
-                        ),
-                        onTap: () => showDialog<void>(
-                          context: context,
-                          builder: (_) => KoreaderSyncDialog(status: status),
-                          animationStyle: context.motionStyle,
-                        ),
-                      ),
+    return settings.showUiWhenData(
+      context,
+      refresh: refresh,
+      skipLoadingOnReload: true,
+      (server) {
+        final koSyncError = koSync.error;
+        if (server == null ||
+            (koSyncError != null &&
+                onlyUndefinedFieldErrors(
+                  koSyncError,
+                  type: 'Query',
+                  field: 'koSyncStatus',
+                ))) {
+          return Emoticons(title: l10n.koreaderSyncUnsupported);
+        }
+        return koSync.showUiWhenData(
+          context,
+          refresh: refresh,
+          skipLoadingOnReload: true,
+          (status) {
+            return SettingsGroupCard(
+              children: [
+                SettingsHighlightTarget(
+                  id: 'koreaderSyncStatus',
+                  child: ListTile(
+                    title: Text(l10n.koreaderSyncStatus),
+                    subtitle: Text(
+                      status.isLoggedIn
+                          ? l10n.koreaderSyncConnectedAs(
+                              status.username ?? '',
+                              status.serverAddress ?? '',
+                            )
+                          : l10n.koreaderSyncStatusDisconnected,
                     ),
-                    SettingsHighlightTarget(
-                      id: 'koreaderSyncStrategyForward',
-                      child: _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
-                        title: l10n.koreaderSyncStrategyForward,
-                        value: server.strategyForward,
-                        options: koreaderSyncConflictStrategies,
-                        label: (value) => _strategyLabel(context, value),
-                        onSelected: (value) => save(
-                          () => ref
-                              .read(koreaderSyncRepositoryProvider)
-                              .updateStrategyForward(value),
-                        ),
-                      ),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (_) => KoreaderSyncDialog(status: status),
+                      animationStyle: context.motionStyle,
                     ),
-                    SettingsHighlightTarget(
-                      id: 'koreaderSyncStrategyBackward',
-                      child: _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
-                        title: l10n.koreaderSyncStrategyBackward,
-                        value: server.strategyBackward,
-                        options: koreaderSyncConflictStrategies,
-                        label: (value) => _strategyLabel(context, value),
-                        onSelected: (value) => save(
-                          () => ref
-                              .read(koreaderSyncRepositoryProvider)
-                              .updateStrategyBackward(value),
-                        ),
-                      ),
-                    ),
-                    SettingsHighlightTarget(
-                      id: 'koreaderSyncChecksumMethod',
-                      child: _ChoiceTile<Enum$KoreaderSyncChecksumMethod>(
-                        title: l10n.koreaderSyncChecksumMethod,
-                        value: server.checksumMethod,
-                        options: koreaderSyncChecksumMethods,
-                        label: (value) => _checksumLabel(context, value),
-                        onSelected: (value) => save(
-                          () => ref
-                              .read(koreaderSyncRepositoryProvider)
-                              .updateChecksumMethod(value),
-                        ),
-                      ),
-                    ),
-                    SettingsHighlightTarget(
-                      id: 'koreaderSyncPercentageTolerance',
-                      child: ListTile(
-                        title: Text(l10n.koreaderSyncPercentageTolerance),
-                        subtitle: Text(
-                          formatPercentageTolerance(server.percentageTolerance),
-                        ),
-                        onTap: () => showDialog<void>(
-                          context: context,
-                          builder: (_) => PercentageToleranceDialog(
-                            value: server.percentageTolerance,
-                          ),
-                          animationStyle: context.motionStyle,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              );
-            },
-          );
-        },
-      ),
-    );
-    return titleTopBarSlot(
-      topBar: topBar,
-      leading: detailNavigationBackButton(context),
-      title: title,
-      child: scaffold,
+                SettingsHighlightTarget(
+                  id: 'koreaderSyncStrategyForward',
+                  child: _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
+                    title: l10n.koreaderSyncStrategyForward,
+                    value: server.strategyForward,
+                    options: koreaderSyncConflictStrategies,
+                    label: (value) => _strategyLabel(context, value),
+                    onSelected: (value) => save(
+                      () => ref
+                          .read(koreaderSyncRepositoryProvider)
+                          .updateStrategyForward(value),
+                    ),
+                  ),
+                ),
+                SettingsHighlightTarget(
+                  id: 'koreaderSyncStrategyBackward',
+                  child: _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
+                    title: l10n.koreaderSyncStrategyBackward,
+                    value: server.strategyBackward,
+                    options: koreaderSyncConflictStrategies,
+                    label: (value) => _strategyLabel(context, value),
+                    onSelected: (value) => save(
+                      () => ref
+                          .read(koreaderSyncRepositoryProvider)
+                          .updateStrategyBackward(value),
+                    ),
+                  ),
+                ),
+                SettingsHighlightTarget(
+                  id: 'koreaderSyncChecksumMethod',
+                  child: _ChoiceTile<Enum$KoreaderSyncChecksumMethod>(
+                    title: l10n.koreaderSyncChecksumMethod,
+                    value: server.checksumMethod,
+                    options: koreaderSyncChecksumMethods,
+                    label: (value) => _checksumLabel(context, value),
+                    onSelected: (value) => save(
+                      () => ref
+                          .read(koreaderSyncRepositoryProvider)
+                          .updateChecksumMethod(value),
+                    ),
+                  ),
+                ),
+                SettingsHighlightTarget(
+                  id: 'koreaderSyncPercentageTolerance',
+                  child: ListTile(
+                    title: Text(l10n.koreaderSyncPercentageTolerance),
+                    subtitle: Text(
+                      formatPercentageTolerance(server.percentageTolerance),
+                    ),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (_) => PercentageToleranceDialog(
+                        value: server.percentageTolerance,
+                      ),
+                      animationStyle: context.motionStyle,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

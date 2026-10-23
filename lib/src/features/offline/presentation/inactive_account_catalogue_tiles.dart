@@ -4,8 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/motion/reduce_motion.dart';
-import '../../../widgets/section_title.dart';
 import '../../auth/data/auth_credentials_store.dart';
+import '../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../data/account_catalogue.dart';
 import '../data/account_catalogue_providers.dart';
 import 'offline_settings_format.dart';
@@ -23,25 +23,30 @@ class InactiveAccountCatalogueTiles extends ConsumerWidget {
     final rows = catalogues.value ?? const <AccountCatalogue>[];
     if (rows.isEmpty) return const SizedBox.shrink();
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.accountInactiveCatalogues),
-        for (final catalogue in rows)
-          ListTile(
-            title: Text(
-              catalogue.isNonAccount
-                  ? context.l10n.accountCatalogueWithoutLogin
-                  : catalogue.username ??
-                        context.l10n.accountCatalogueOwner(catalogue.owner),
-            ),
-            subtitle: Text(
-              '${catalogue.address ?? context.l10n.accountCatalogueUnknownServer} · ${formatBytes(catalogue.bytes)}',
-            ),
-            trailing: IconButton(
-              tooltip: context.l10n.delete,
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _remove(context, ref, catalogue),
-            ),
-          ),
+        SettingsGroupHeading(label: context.l10n.accountInactiveCatalogues),
+        SettingsGroupCard(
+          children: [
+            for (final catalogue in rows)
+              ListTile(
+                title: Text(
+                  catalogue.isNonAccount
+                      ? context.l10n.accountCatalogueWithoutLogin
+                      : catalogue.username ??
+                            context.l10n.accountCatalogueOwner(catalogue.owner),
+                ),
+                subtitle: Text(
+                  '${catalogue.address ?? context.l10n.accountCatalogueUnknownServer} · ${formatBytes(catalogue.bytes)}',
+                ),
+                trailing: IconButton(
+                  tooltip: context.l10n.delete,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _remove(context, ref, catalogue),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

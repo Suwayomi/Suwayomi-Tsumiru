@@ -8,8 +8,8 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../widgets/input_popup/settings_prop_tile.dart';
-import '../../../../../widgets/section_title.dart';
 import '../../../search/settings_search_registry.dart';
+import '../../../widgets/settings_group_card/settings_group_card.dart';
 
 part 'timeout_settings_section.g.dart';
 
@@ -66,58 +66,63 @@ class TimeoutSettingsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.timeoutSettings),
-        // Server Request Timeout
-        SettingsHighlightTarget(
-          id: 'serverRequestTimeout',
-          child: SettingsPropTile(
-            title: context.l10n.serverRequestTimeout,
-            leading: const Icon(Icons.timer_rounded),
-            subtitle: context.l10n.nSeconds((timeoutMs / 1000).round()),
-            type: SettingsPropType.numberSlider(
-              min: TimeoutConstants.requestTimeoutMinSeconds,
-              max: TimeoutConstants.requestTimeoutMaxSeconds,
-              value: (timeoutMs / 1000).round(),
-              onChanged: (seconds) async {
-                ref
-                    .read(serverRequestTimeoutProvider.notifier)
-                    .update(seconds * 1000);
-              },
-            ),
-          ),
-        ),
-        // Auto-refresh on Timeout toggle
-        SettingsHighlightTarget(
-          id: 'autoRefreshOnTimeout',
-          child: SwitchListTile(
-            controlAffinity: ListTileControlAffinity.trailing,
-            secondary: const Icon(Icons.refresh_rounded),
-            title: Text(context.l10n.autoRefreshOnTimeout),
-            subtitle: Text(context.l10n.autoRefreshOnTimeoutDescription),
-            value: autoRefreshEnabled,
-            onChanged: ref.read(autoRefreshOnTimeoutProvider.notifier).update,
-          ),
-        ),
-        // Retry delay only when auto-refresh is enabled
-        if (autoRefreshEnabled)
-          SettingsHighlightTarget(
-            id: 'autoRefreshRetryDelay',
-            child: SettingsPropTile(
-              title: context.l10n.autoRefreshRetryDelay,
-              leading: const Icon(Icons.schedule_rounded),
-              subtitle: context.l10n.nSeconds((retryDelayMs / 1000).round()),
-              type: SettingsPropType.numberSlider(
-                min: TimeoutConstants.autoRefreshRetryDelayMinSeconds,
-                max: TimeoutConstants.autoRefreshRetryDelayMaxSeconds,
-                value: (retryDelayMs / 1000).round(),
-                onChanged: (seconds) async {
-                  ref
-                      .read(autoRefreshRetryDelayProvider.notifier)
-                      .update(seconds * 1000);
-                },
+        SettingsGroupHeading(label: context.l10n.timeouts),
+        SettingsGroupCard(
+          children: [
+            // Server Request Timeout
+            SettingsHighlightTarget(
+              id: 'serverRequestTimeout',
+              child: SettingsPropTile(
+                title: context.l10n.serverRequestTimeout,
+                subtitle: context.l10n.nSeconds((timeoutMs / 1000).round()),
+                type: SettingsPropType.numberSlider(
+                  min: TimeoutConstants.requestTimeoutMinSeconds,
+                  max: TimeoutConstants.requestTimeoutMaxSeconds,
+                  value: (timeoutMs / 1000).round(),
+                  onChanged: (seconds) async {
+                    ref
+                        .read(serverRequestTimeoutProvider.notifier)
+                        .update(seconds * 1000);
+                  },
+                ),
               ),
             ),
-          ),
+            // Auto-refresh on Timeout toggle
+            SettingsHighlightTarget(
+              id: 'autoRefreshOnTimeout',
+              child: SwitchListTile(
+                controlAffinity: ListTileControlAffinity.trailing,
+                title: Text(context.l10n.autoRefreshOnTimeout),
+                subtitle: Text(context.l10n.autoRefreshOnTimeoutDescription),
+                value: autoRefreshEnabled,
+                onChanged: ref
+                    .read(autoRefreshOnTimeoutProvider.notifier)
+                    .update,
+              ),
+            ),
+            // Retry delay only when auto-refresh is enabled
+            if (autoRefreshEnabled)
+              SettingsHighlightTarget(
+                id: 'autoRefreshRetryDelay',
+                child: SettingsPropTile(
+                  title: context.l10n.autoRefreshRetryDelay,
+                  subtitle: context.l10n.nSeconds(
+                    (retryDelayMs / 1000).round(),
+                  ),
+                  type: SettingsPropType.numberSlider(
+                    min: TimeoutConstants.autoRefreshRetryDelayMinSeconds,
+                    max: TimeoutConstants.autoRefreshRetryDelayMaxSeconds,
+                    value: (retryDelayMs / 1000).round(),
+                    onChanged: (seconds) async {
+                      ref
+                          .read(autoRefreshRetryDelayProvider.notifier)
+                          .update(seconds * 1000);
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

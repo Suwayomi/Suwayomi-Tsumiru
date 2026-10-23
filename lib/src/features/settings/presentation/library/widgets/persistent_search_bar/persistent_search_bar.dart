@@ -28,7 +28,6 @@ class PersistentSearchBarTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.search_rounded),
       title: Text(context.l10n.libraryPersistentSearchBar),
       subtitle: Text(context.l10n.libraryPersistentSearchBarSubtitle),
       onChanged: ref.read(libraryPersistentSearchBarProvider.notifier).update,

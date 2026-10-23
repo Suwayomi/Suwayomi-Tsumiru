@@ -35,11 +35,16 @@ class BackupScreen extends ConsumerWidget {
             ),
           ),
           child: SettingsHighlightScope(
-            child: ListView(
-              children: const [
-                BackupAndRestoreSection(),
-                AutomaticBackupSection(),
-              ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: ListView(
+                  children: const [
+                    BackupAndRestoreSection(),
+                    AutomaticBackupSection(),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

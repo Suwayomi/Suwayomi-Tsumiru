@@ -8,118 +8,95 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/network/graphql_errors.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/server_unreachable_view.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
-import '../../controller/server_controller.dart';
-import '../../search/settings_search_registry.dart';
-import 'data/web_interface_repository.dart';
-import 'widget/cloud_flare/cloud_flare_section.dart';
-import 'widget/database/data/database_repository.dart';
-import 'widget/database/database_section.dart';
-import 'widget/images/data/images_repository.dart';
-import 'widget/images/images_section.dart';
-import 'widget/misc_settings/data/misc_logs_repository.dart';
-import 'widget/misc_settings/misc_settings_section.dart';
-import 'widget/opds/data/opds_repository.dart';
-import 'widget/opds/opds_section.dart';
-import 'widget/server_binding/server_binding_section.dart';
-import 'widget/socks_proxy/socks_proxy_section.dart';
-import 'widget/web_interface/web_interface_section.dart';
-import 'widget/webview/data/webview_repository.dart';
-import 'widget/webview/webview_section.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 
 class ServerScreen extends ConsumerWidget {
   const ServerScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.MANAGE_SETTINGS);
-    final serverSettings = ref.watch(settingsProvider);
-    Future<void> onRefresh() async {
-      ref.invalidate(webInterfaceSettingsProvider);
-      ref.invalidate(webInterfaceFlavorsProvider);
-      ref.invalidate(installedWebInterfaceProvider);
-      ref.invalidate(opdsSettingsProvider);
-      ref.invalidate(databaseSettingsProvider);
-      ref.invalidate(miscLogsSettingsProvider);
-      ref.invalidate(webViewSettingsProvider);
-      ref.invalidate(clearCookiesAndCacheSupportProvider);
-      ref.invalidate(imagesDownloadSettingsProvider);
-      ref.invalidate(serveConversionsProvider);
-      ref.invalidate(clearCachedImagesSupportProvider);
-      ref.invalidate(settingsProvider);
-      await ref.read(settingsProvider.future);
-    }
+    final access = ref.watch(settledAccountAccessProvider);
+    final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
+    const chevron = Icon(Icons.chevron_right_rounded);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.server);
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
-      body: RefreshIndicator(
-        onRefresh: onRefresh,
-        child: ListTileTheme(
-          data: ListTileThemeData(
-            subtitleTextStyle: TextStyle(
-              color: context.theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          child: SettingsHighlightScope(
-            child: ListView(
-              children: [
-                if (serverSettings.isLoading && !serverSettings.hasValue)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                // On error these settings can't load (they live on the server).
-                // A connection failure gets the "can't reach server" view with a
-                // path to Connection settings, instead of a blank page.
-                if (serverSettings.hasError && !serverSettings.hasValue)
-                  Builder(
-                    builder: (context) {
-                      final error = serverSettings.error!;
-                      final unwrapped = error is OperationMessageException
-                          ? error.exception
-                          : error;
-                      if (isConnectionError(unwrapped)) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          child: ServerUnreachableView(onRetry: onRefresh),
-                        );
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(child: Text(error.toString())),
-                      );
-                    },
-                  ),
-                if (!canManage)
-                  ListTile(
-                    subtitle: Text(
-                      context.l10n.manageSettingsPermissionRequired,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              if (access.canManageUsers)
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.group_outlined,
+                      title: context.l10n.serverUsers,
+                      trailing: chevron,
+                      onTap: () => const ManageUsersRoute().push(context),
                     ),
+                  ],
+                ),
+              if (access.canManageUsers) const SizedBox(height: 16),
+              SettingsGroupCard(
+                children: [
+                  if (canManage)
+                    SettingsGroupRow(
+                      icon: Icons.lan_outlined,
+                      title: context.l10n.network,
+                      trailing: chevron,
+                      onTap: () => const ServerNetworkRoute().push(context),
+                    ),
+                  if (canManage)
+                    SettingsGroupRow(
+                      icon: Icons.web_outlined,
+                      title: context.l10n.webInterface,
+                      trailing: chevron,
+                      onTap: () =>
+                          const ServerWebInterfaceRoute().push(context),
+                    ),
+                  SettingsGroupRow(
+                    icon: Icons.rss_feed_outlined,
+                    title: context.l10n.opds,
+                    trailing: chevron,
+                    onTap: () => const ServerOpdsRoute().push(context),
                   ),
-                const WebInterfaceSection(),
-                if (serverSettings.value != null) ...[
-                  ServerBindingSection(serverBindingDto: serverSettings.value!),
-                  SocksProxySection(socksProxyDto: serverSettings.value!),
-                  CloudFlareSection(cloudFlareDto: serverSettings.value!),
-                  const OpdsSection(),
-                  const DatabaseSection(),
-                  const WebViewSection(),
-                  const ImagesSection(),
-                  MiscSettingsSection(miscSettingsDto: serverSettings.value!),
+                  SettingsGroupRow(
+                    icon: Icons.image_outlined,
+                    title: context.l10n.images,
+                    trailing: chevron,
+                    onTap: () => const ServerImagesRoute().push(context),
+                  ),
+                  if (canManage)
+                    SettingsGroupRow(
+                      icon: Icons.storage_outlined,
+                      title: context.l10n.database,
+                      trailing: chevron,
+                      onTap: () => const ServerDatabaseRoute().push(context),
+                    ),
                 ],
-              ],
-            ),
+              ),
+              if (canManage) const SizedBox(height: 16),
+              if (canManage)
+                SettingsGroupCard(
+                  children: [
+                    SettingsGroupRow(
+                      icon: Icons.receipt_long_outlined,
+                      title: context.l10n.logs,
+                      trailing: chevron,
+                      onTap: () => const ServerLogsRoute().push(context),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ),
       ),

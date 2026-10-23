@@ -10,11 +10,11 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../controller/server_controller.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import '../../data/server_settings_repository.dart';
 import 'data/misc_logs_repository.dart';
 import 'graphql/__generated__/misc_logs.graphql.dart';
@@ -126,7 +126,7 @@ class MiscSettingsSection extends ConsumerWidget {
     }) => SettingsHighlightTarget(
       id: id,
       // Same merge guard as the OPDS rows: without it the engine folds
-      // this row into the neighbouring switch row.
+      // this row into the neighbouring switch rows.
       child: Semantics(
         container: true,
         explicitChildNodes: true,
@@ -134,11 +134,7 @@ class MiscSettingsSection extends ConsumerWidget {
           title: Text(title),
           subtitle: Text(current),
           onTap: canManage
-              ? () => editLogSize(
-                  title: title,
-                  current: current,
-                  patch: patch,
-                )
+              ? () => editLogSize(title: title, current: current, patch: patch)
               : null,
         ),
       ),
@@ -146,85 +142,100 @@ class MiscSettingsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.misc),
-        SettingsHighlightTarget(
-          id: 'debugLogs',
-          child: SwitchListTile(
-            title: Text(context.l10n.debugLogs),
-            value: miscSettingsDto.debugLogsEnabled,
-            onChanged: canManage
-                ? (isEnabled) async {
-                    final value = await AppUtils.guard(
-                      () => repository.toggleDebugLogs(isEnabled),
-                      ref.read(toastProvider),
-                    );
-                    if (value != null && context.mounted) {
-                      ref.read(settingsProvider.notifier).updateState(value);
-                    }
-                  }
-                : null,
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'systemTrayIcon',
-          child: SwitchListTile(
-            title: Text(context.l10n.systemTrayIcon),
-            subtitle: Text(context.l10n.systemTrayIconDescription),
-            value: miscSettingsDto.systemTrayEnabled,
-            onChanged: canManage
-                ? (isEnabled) async {
-                    final value = await AppUtils.guard(
-                      () => repository.toggleSystemTrayEnabled(isEnabled),
-                      ref.read(toastProvider),
-                    );
-                    if (value != null && context.mounted) {
-                      ref.read(settingsProvider.notifier).updateState(value);
-                    }
-                  }
-                : null,
-          ),
-        ),
-        if (logs != null) ...[
-          SettingsHighlightTarget(
-            id: 'logFileCleanup',
-            // Same merge guard as the OPDS rows: without it the engine folds
-            // this row into the neighbouring switch rows.
-            child: Semantics(
-              container: true,
-              explicitChildNodes: true,
-              child: SettingsPropTile(
-                title: context.l10n.logFileCleanup,
-                subtitle: context.l10n.nDays(logs.maxLogFiles.compact()!),
-                type: SettingsPropType.numberSlider(
-                  min: 0,
-                  max: 1000,
-                  value: logs.maxLogFiles.clamp(0, 1000),
-                  onChanged: canManage
-                      ? (value) => save(
-                          () => logsRepository.write(
-                            Input$PartialSettingsTypeInput(maxLogFiles: value),
-                          ),
-                        )
-                      : null,
-                ),
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'debugLogs',
+              child: SwitchListTile(
+                title: Text(context.l10n.debugLogs),
+                value: miscSettingsDto.debugLogsEnabled,
+                onChanged: canManage
+                    ? (isEnabled) async {
+                        final value = await AppUtils.guard(
+                          () => repository.toggleDebugLogs(isEnabled),
+                          ref.read(toastProvider),
+                        );
+                        if (value != null && context.mounted) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateState(value);
+                        }
+                      }
+                    : null,
               ),
             ),
-          ),
-          logSizeRow(
-            id: 'maxLogFileSize',
-            title: context.l10n.maxLogFileSize,
-            current: logs.maxLogFileSize,
-            patch: (value) =>
-                Input$PartialSettingsTypeInput(maxLogFileSize: value),
-          ),
-          logSizeRow(
-            id: 'maxLogFolderSize',
-            title: context.l10n.maxLogFolderSize,
-            current: logs.maxLogFolderSize,
-            patch: (value) =>
-                Input$PartialSettingsTypeInput(maxLogFolderSize: value),
-          ),
-        ],
+            if (logs != null) ...[
+              SettingsHighlightTarget(
+                id: 'logFileCleanup',
+                // Same merge guard as the OPDS rows: without it the engine
+                // folds this row into the neighbouring switch rows.
+                child: Semantics(
+                  container: true,
+                  explicitChildNodes: true,
+                  child: SettingsPropTile(
+                    title: context.l10n.logFileCleanup,
+                    subtitle: context.l10n.nDays(logs.maxLogFiles.compact()!),
+                    type: SettingsPropType.numberSlider(
+                      min: 0,
+                      max: 1000,
+                      value: logs.maxLogFiles.clamp(0, 1000),
+                      onChanged: canManage
+                          ? (value) => save(
+                              () => logsRepository.write(
+                                Input$PartialSettingsTypeInput(
+                                  maxLogFiles: value,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+              logSizeRow(
+                id: 'maxLogFileSize',
+                title: context.l10n.maxLogFileSize,
+                current: logs.maxLogFileSize,
+                patch: (value) =>
+                    Input$PartialSettingsTypeInput(maxLogFileSize: value),
+              ),
+              logSizeRow(
+                id: 'maxLogFolderSize',
+                title: context.l10n.maxLogFolderSize,
+                current: logs.maxLogFolderSize,
+                patch: (value) =>
+                    Input$PartialSettingsTypeInput(maxLogFolderSize: value),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'systemTrayIcon',
+              child: SwitchListTile(
+                title: Text(context.l10n.systemTrayIcon),
+                subtitle: Text(context.l10n.systemTrayIconDescription),
+                value: miscSettingsDto.systemTrayEnabled,
+                onChanged: canManage
+                    ? (isEnabled) async {
+                        final value = await AppUtils.guard(
+                          () => repository.toggleSystemTrayEnabled(isEnabled),
+                          ref.read(toastProvider),
+                        );
+                        if (value != null && context.mounted) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateState(value);
+                        }
+                      }
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

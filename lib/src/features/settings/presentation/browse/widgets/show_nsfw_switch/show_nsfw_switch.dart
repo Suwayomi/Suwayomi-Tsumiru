@@ -26,7 +26,6 @@ class ShowNSFWTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.eighteen_up_rating_rounded),
       title: Text(context.l10n.nsfw),
       onChanged: ref.read(showNSFWProvider.notifier).update,
       value: ref.watch(showNSFWProvider).ifNull(),

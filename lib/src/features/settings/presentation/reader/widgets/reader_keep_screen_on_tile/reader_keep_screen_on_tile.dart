@@ -30,7 +30,6 @@ class ReaderKeepScreenOnTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.brightness_high_rounded),
       title: Text(context.l10n.readerKeepScreenOn),
       onChanged: ref.read(keepScreenOnProvider.notifier).update,
       value: ref.watch(keepScreenOnProvider).ifNull(true),

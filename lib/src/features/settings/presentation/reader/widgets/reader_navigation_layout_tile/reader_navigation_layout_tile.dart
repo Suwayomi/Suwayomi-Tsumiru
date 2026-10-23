@@ -25,9 +25,9 @@ class ReaderNavigationLayoutKey extends _$ReaderNavigationLayoutKey
     with SharedPreferenceEnumClientMixin<ReaderNavigationLayout> {
   @override
   ReaderNavigationLayout? build() => initialize(
-        DBKeys.readerNavigationLayout,
-        enumList: ReaderNavigationLayout.values,
-      );
+    DBKeys.readerNavigationLayout,
+    enumList: ReaderNavigationLayout.values,
+  );
 }
 
 // Komikku keeps tap zones per viewer (navigationModePager /
@@ -39,10 +39,10 @@ class PagedNavigationLayoutKey extends _$PagedNavigationLayoutKey
     with SharedPreferenceEnumClientMixin<ReaderNavigationLayout> {
   @override
   ReaderNavigationLayout? build() => initialize(
-        DBKeys.pagedNavigationLayout,
-        enumList: ReaderNavigationLayout.values,
-        initial: ref.read(readerNavigationLayoutKeyProvider),
-      );
+    DBKeys.pagedNavigationLayout,
+    enumList: ReaderNavigationLayout.values,
+    initial: ref.read(readerNavigationLayoutKeyProvider),
+  );
 }
 
 @riverpod
@@ -50,10 +50,10 @@ class LongStripNavigationLayoutKey extends _$LongStripNavigationLayoutKey
     with SharedPreferenceEnumClientMixin<ReaderNavigationLayout> {
   @override
   ReaderNavigationLayout? build() => initialize(
-        DBKeys.longStripNavigationLayout,
-        enumList: ReaderNavigationLayout.values,
-        initial: ref.read(readerNavigationLayoutKeyProvider),
-      );
+    DBKeys.longStripNavigationLayout,
+    enumList: ReaderNavigationLayout.values,
+    initial: ref.read(readerNavigationLayoutKeyProvider),
+  );
 }
 
 /// Tap zones for one viewer. Paged and long strip keep their own, so the tile
@@ -65,7 +65,8 @@ class ReaderNavigationLayoutTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final layout = (longStrip
+    final layout =
+        (longStrip
             ? ref.watch(longStripNavigationLayoutKeyProvider)
             : ref.watch(pagedNavigationLayoutKeyProvider)) ??
         ReaderNavigationLayout.defaultNavigation;
@@ -73,7 +74,6 @@ class ReaderNavigationLayoutTile extends ConsumerWidget {
         ? ref.read(longStripNavigationLayoutKeyProvider.notifier).update(value)
         : ref.read(pagedNavigationLayoutKeyProvider.notifier).update(value);
     return ListTile(
-      leading: const Icon(Icons.touch_app_rounded),
       subtitle: Text(layout.toLocale(context)),
       title: Text(context.l10n.readerNavigationLayout),
       onTap: () => showDialog(
@@ -106,7 +106,8 @@ class ReaderTapInvertTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final invert = (longStrip
+    final invert =
+        (longStrip
             ? ref.watch(longStripTapInvertKeyProvider)
             : ref.watch(pagedTapInvertKeyProvider)) ??
         TapInvert.none;
@@ -114,7 +115,6 @@ class ReaderTapInvertTile extends ConsumerWidget {
         ? ref.read(longStripTapInvertKeyProvider.notifier).update(value)
         : ref.read(pagedTapInvertKeyProvider.notifier).update(value);
     return ListTile(
-      leading: const Icon(Icons.switch_left_rounded),
       subtitle: Text(invert.toLocale(context)),
       title: Text(context.l10n.readerNavigationLayoutInvert),
       onTap: () => showDialog(

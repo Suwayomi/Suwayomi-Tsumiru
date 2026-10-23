@@ -27,10 +27,10 @@ class ReaderMouseScrollSpeedSlider extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final speed = ref.watch(readerMouseScrollSpeedKeyProvider) ??
+    final speed =
+        ref.watch(readerMouseScrollSpeedKeyProvider) ??
         DBKeys.readerMouseScrollSpeed.initial;
     return SliderSettingTile(
-      icon: Icons.mouse_rounded,
       title: context.l10n.readerMouseScrollSpeed,
       value: speed,
       getSliderLabel: (val) => '${val.toStringAsFixed(1)}x',

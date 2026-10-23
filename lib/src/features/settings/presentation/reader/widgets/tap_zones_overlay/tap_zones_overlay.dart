@@ -39,7 +39,6 @@ class ShowTapZonesOverlayTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.touch_app_rounded),
       title: Text(context.l10n.showTapZonesOverlay),
       subtitle: Text(context.l10n.showTapZonesOverlaySubtitle),
       value: ref.watch(showTapZonesOverlayProvider).ifNull(),

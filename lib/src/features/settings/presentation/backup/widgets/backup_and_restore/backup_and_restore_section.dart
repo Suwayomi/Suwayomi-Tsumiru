@@ -1,7 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/endpoints.dart';
@@ -10,9 +9,9 @@ import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/file_picker_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import '../../../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../data/backup_settings_repository.dart';
@@ -162,45 +161,46 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.backupAndRestore),
-        SettingsHighlightTarget(
-          id: 'createBackup',
-          child: ListTile(
-            title: Text(context.l10n.createBackupTitle),
-            leading: const Icon(Icons.backup_rounded),
-            onTap: () => createBackupFile(ref, context),
-          ),
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'createBackup',
+              child: ListTile(
+                title: Text(context.l10n.createBackupTitle),
+                onTap: () => createBackupFile(ref, context),
+              ),
+            ),
+            SettingsHighlightTarget(
+              id: 'restoreBackup',
+              child: ListTile(
+                title: Text(context.l10n.restoreBackupTitle),
+                trailing: restoreId.value != null
+                    ? RestoreStatusProgress(
+                        restoreRequestId: restoreId.value!,
+                        onCompleted: (state) {
+                          if (state == RestoreState.FAILURE) {
+                            toast?.showError(
+                              context.l10n.errorBackupRestore,
+                              withMicrotask: true,
+                            );
+                          } else {
+                            toast?.show(
+                              context.l10n.restored,
+                              withMicrotask: true,
+                              instantShow: true,
+                            );
+                          }
+                          restoreId.value = null;
+                        },
+                      )
+                    : null,
+                onTap: () async =>
+                    restoreId.value = await backupFilePicker(ref, context),
+              ),
+            ),
+          ],
         ),
-        SettingsHighlightTarget(
-          id: 'restoreBackup',
-          child: ListTile(
-            title: Text(context.l10n.restoreBackupTitle),
-            leading: const Icon(Icons.restore_rounded),
-            trailing: restoreId.value != null
-                ? RestoreStatusProgress(
-                    restoreRequestId: restoreId.value!,
-                    onCompleted: (state) {
-                      if (state == RestoreState.FAILURE) {
-                        toast?.showError(
-                          context.l10n.errorBackupRestore,
-                          withMicrotask: true,
-                        );
-                      } else {
-                        toast?.show(
-                          context.l10n.restored,
-                          withMicrotask: true,
-                          instantShow: true,
-                        );
-                      }
-                      restoreId.value = null;
-                    },
-                  )
-                : null,
-            onTap: () async =>
-                restoreId.value = await backupFilePicker(ref, context),
-          ),
-        ),
-        const Gap(8),
       ],
     );
   }

@@ -31,7 +31,6 @@ class GridCoverWidthSlider extends ConsumerWidget {
       defaultValue: DBKeys.gridMangaCoverWidth.initial,
       getSliderLabel: (value) => value.round().toString(),
       title: context.l10n.mangaGridSize,
-      icon: Icons.grid_view_rounded,
       value:
           ref.watch(gridMinWidthProvider) ?? DBKeys.gridMangaCoverWidth.initial,
       onChanged: (val) =>

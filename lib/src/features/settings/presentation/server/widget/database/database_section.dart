@@ -9,9 +9,9 @@ import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/database_repository.dart';
 import 'graphql/__generated__/database.graphql.dart';
 
@@ -49,21 +49,22 @@ class DatabaseSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.database),
-        SettingsHighlightTarget(
-          id: 'databaseType',
-          // Same merge guard as the OPDS rows: without it the engine folds
-          // this row into a neighbouring switch row.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: ListTile(
-              title: Text(context.l10n.databaseType),
-              subtitle: Text(_databaseTypeName(context, type)),
-              onTap: canManage
-                  ? () async {
-                      final selected =
-                          await showDialog<Enum$DatabaseType>(
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'databaseType',
+              // Same merge guard as the OPDS rows: without it the engine folds
+              // this row into a neighbouring switch row.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: ListTile(
+                  title: Text(context.l10n.databaseType),
+                  subtitle: Text(_databaseTypeName(context, type)),
+                  onTap: canManage
+                      ? () async {
+                          final selected = await showDialog<Enum$DatabaseType>(
                             context: context,
                             builder: (dialogContext) =>
                                 RadioListPopup<Enum$DatabaseType>(
@@ -80,120 +81,124 @@ class DatabaseSection extends ConsumerWidget {
                                 ),
                             animationStyle: context.motionStyle,
                           );
-                      if (selected != null &&
-                          selected != type &&
-                          context.mounted) {
-                        await save(
+                          if (selected != null &&
+                              selected != type &&
+                              context.mounted) {
+                            await save(
+                              () => repository.write(
+                                Input$PartialSettingsTypeInput(
+                                  databaseType: selected,
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      : null,
+                ),
+              ),
+            ),
+            SettingsHighlightTarget(
+              id: 'databaseUrl',
+              // Same merge guard as the OPDS rows: without it the engine folds
+              // this row into a neighbouring switch row.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: SettingsPropTile(
+                  title: context.l10n.databaseUrl,
+                  subtitle: data.databaseUrl,
+                  type: SettingsPropType.textField(
+                    hintText: context.l10n.databaseUrlHint,
+                    value: data.databaseUrl,
+                    onChanged: canManage && !isH2
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                databaseUrl: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+            SettingsHighlightTarget(
+              id: 'databaseUsername',
+              // Same merge guard as the OPDS rows: without it the engine folds
+              // this row into a neighbouring switch row.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: SettingsPropTile(
+                  title: context.l10n.databaseUsername,
+                  subtitle: data.databaseUsername,
+                  type: SettingsPropType.textField(
+                    hintText: context.l10n.enterProp(
+                      context.l10n.databaseUsername,
+                    ),
+                    value: data.databaseUsername,
+                    onChanged: canManage && !isH2
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                databaseUsername: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+            SettingsHighlightTarget(
+              id: 'databasePassword',
+              // Same merge guard as the OPDS rows: without it the engine folds
+              // this row into a neighbouring switch row.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: SettingsPropTile(
+                  title: context.l10n.databasePassword,
+                  type: SettingsPropType.textField(
+                    canObscure: true,
+                    hintText: context.l10n.enterProp(
+                      context.l10n.databasePassword,
+                    ),
+                    value: data.databasePassword,
+                    onChanged: canManage && !isH2
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                databasePassword: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+            SettingsHighlightTarget(
+              id: 'hikariConnectionPool',
+              child: SettingsPropTile(
+                title: context.l10n.hikariConnectionPool,
+                description: context.l10n.hikariConnectionPoolDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.useHikariConnectionPool,
+                  onChanged: canManage
+                      ? (value) => save(
                           () => repository.write(
                             Input$PartialSettingsTypeInput(
-                              databaseType: selected,
+                              useHikariConnectionPool: value,
                             ),
                           ),
-                        );
-                      }
-                    }
-                  : null,
-            ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'databaseUrl',
-          // Same merge guard as the OPDS rows: without it the engine folds
-          // this row into a neighbouring switch row.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: SettingsPropTile(
-              title: context.l10n.databaseUrl,
-              subtitle: data.databaseUrl,
-              type: SettingsPropType.textField(
-                hintText: context.l10n.databaseUrlHint,
-                value: data.databaseUrl,
-                onChanged: canManage && !isH2
-                    ? (value) => save(
-                        () => repository.write(
-                          Input$PartialSettingsTypeInput(databaseUrl: value),
-                        ),
-                      )
-                    : null,
-              ),
-            ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'databaseUsername',
-          // Same merge guard as the OPDS rows: without it the engine folds
-          // this row into a neighbouring switch row.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: SettingsPropTile(
-              title: context.l10n.databaseUsername,
-              subtitle: data.databaseUsername,
-              type: SettingsPropType.textField(
-                hintText: context.l10n.enterProp(
-                  context.l10n.databaseUsername,
+                        )
+                      : null,
                 ),
-                value: data.databaseUsername,
-                onChanged: canManage && !isH2
-                    ? (value) => save(
-                        () => repository.write(
-                          Input$PartialSettingsTypeInput(
-                            databaseUsername: value,
-                          ),
-                        ),
-                      )
-                    : null,
               ),
             ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'databasePassword',
-          // Same merge guard as the OPDS rows: without it the engine folds
-          // this row into a neighbouring switch row.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: SettingsPropTile(
-              title: context.l10n.databasePassword,
-              type: SettingsPropType.textField(
-                canObscure: true,
-                hintText: context.l10n.enterProp(
-                  context.l10n.databasePassword,
-                ),
-                value: data.databasePassword,
-                onChanged: canManage && !isH2
-                    ? (value) => save(
-                        () => repository.write(
-                          Input$PartialSettingsTypeInput(
-                            databasePassword: value,
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-            ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'hikariConnectionPool',
-          child: SettingsPropTile(
-            title: context.l10n.hikariConnectionPool,
-            description: context.l10n.hikariConnectionPoolDescription,
-            type: SettingsPropType.switchTile(
-              value: data.useHikariConnectionPool,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.write(
-                        Input$PartialSettingsTypeInput(
-                          useHikariConnectionPool: value,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-          ),
+          ],
         ),
       ],
     );

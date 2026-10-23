@@ -27,7 +27,6 @@ class ReaderInitialOverlayTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.layers_outlined),
       title: Text(context.l10n.readerOverlay),
       subtitle: Text(context.l10n.readerOverlaySubtitle),
       onChanged: ref.read(readerInitialOverlayProvider.notifier).update,

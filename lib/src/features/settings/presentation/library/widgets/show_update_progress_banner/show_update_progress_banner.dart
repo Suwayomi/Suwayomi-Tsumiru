@@ -28,7 +28,6 @@ class ShowUpdateProgressBannerTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.sync_rounded),
       title: Text(context.l10n.showUpdateProgressBanner),
       onChanged: ref.read(showUpdateProgressBannerProvider.notifier).update,
       value: ref.watch(showUpdateProgressBannerProvider).ifNull(true),

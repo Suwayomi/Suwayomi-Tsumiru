@@ -15,6 +15,7 @@ import '../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
@@ -67,150 +68,49 @@ String syncYomiDataSummary(BuildContext context, List<SyncYomiDataKind> kinds) {
 class SyncYomiSettingsScreen extends ConsumerWidget {
   const SyncYomiSettingsScreen({super.key});
 
-  Future<bool> _save(WidgetRef ref, Future<bool> Function() request) async =>
-      await AppUtils.guard(request, ref.read(toastProvider)) ?? false;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final repository = ref.watch(syncyomiSettingsRepositoryProvider);
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.syncyomi);
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),
-      body: ref.watch(syncYomiSettingsProvider).showUiWhenData(
-        context,
-        skipLoadingOnReload: true,
-        (settings) {
-          if (settings == null) {
-            return Emoticons(title: l10n.syncYomiUnsupported);
-          }
-          final intervalOption = syncYomiIntervalOption(settings.interval);
-          final syncData = enabledSyncYomiData(
-            manga: settings.dataManga,
-            chapters: settings.dataChapters,
-            categories: settings.dataCategories,
-            history: settings.dataHistory,
-            tracking: settings.dataTracking,
-          );
-          return SettingsHighlightScope(
-            child: ListView(
+      body: const SettingsHighlightScope(
+        child: SingleChildScrollView(child: SyncYomiSettingsBody()),
+      ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
+    );
+  }
+}
+
+class SyncYomiSettingsBody extends ConsumerWidget {
+  const SyncYomiSettingsBody({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return ref.watch(syncYomiSettingsProvider).showUiWhenData(
+      context,
+      skipLoadingOnReload: true,
+      (settings) {
+        if (settings == null) {
+          return Emoticons(title: l10n.syncYomiUnsupported);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SettingsGroupHeading(label: l10n.syncyomi, first: true),
+            _SyncYomiFields(settings: settings),
+            const SizedBox(height: 16),
+            SettingsGroupCard(
               children: [
-                SettingsHighlightTarget(
-                  id: 'syncYomiEnabled',
-                  child: SettingsPropTile(
-                    title: l10n.syncYomiEnabled,
-                    type: SettingsPropType.switchTile(
-                      value: settings.enabled,
-                      onChanged: repository.updateEnabled,
-                    ),
-                  ),
-                ),
-                SettingsHighlightTarget(
-                  id: 'syncYomiHost',
-                  child: ListTile(
-                    title: Text(l10n.syncYomiHost),
-                    subtitle: Text(
-                      settings.host.isBlank
-                          ? l10n.syncYomiNotSet
-                          : settings.host,
-                    ),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (_) => SyncYomiHostDialog(
-                        value: settings.host,
-                        onSave: (host) =>
-                            _save(ref, () => repository.updateHost(host)),
-                      ),
-                      animationStyle: context.motionStyle,
-                    ),
-                  ),
-                ),
-                SettingsHighlightTarget(
-                  id: 'syncYomiApiKey',
-                  child: SettingsPropTile(
-                    title: l10n.syncYomiApiKey,
-                    subtitle: settings.apiKey.isBlank
-                        ? l10n.syncYomiNotSet
-                        : l10n.syncYomiSet,
-                    type: SettingsPropType.textField(
-                      hintText: l10n.syncYomiApiKey,
-                      value: settings.apiKey,
-                      canObscure: true,
-                      onChanged: repository.updateApiKey,
-                    ),
-                  ),
-                ),
-                SettingsHighlightTarget(
-                  id: 'syncYomiSyncInterval',
-                  child: ListTile(
-                    title: Text(l10n.syncYomiSyncInterval),
-                    subtitle: Text(
-                      syncYomiIntervalLabel(context, settings.interval),
-                    ),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (context) => RadioListPopup<String>(
-                        title: l10n.syncYomiSyncInterval,
-                        // Matched on duration, so P1D reads as the PT24H option
-                        // rather than being offered as a second "Daily" row.
-                        optionList: [
-                          ...kSyncYomiIntervalOptions,
-                          if (intervalOption == null) settings.interval,
-                        ],
-                        getOptionTitle: (value) =>
-                            syncYomiIntervalLabel(context, value),
-                        value: intervalOption ?? settings.interval,
-                        onChange: (value) {
-                          _save(ref, () => repository.updateInterval(value));
-                          Navigator.pop(context);
-                        },
-                      ),
-                      animationStyle: context.motionStyle,
-                    ),
-                  ),
-                ),
-                SettingsHighlightTarget(
-                  id: 'syncYomiSyncData',
-                  child: ListTile(
-                    title: Text(l10n.syncYomiSyncData),
-                    subtitle: Text(syncYomiDataSummary(context, syncData)),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (context) => MultiSelectPopup<SyncYomiDataKind>(
-                        title: l10n.syncYomiSyncData,
-                        optionList: SyncYomiDataKind.values,
-                        values: syncData,
-                        getOptionTitle: (kind) =>
-                            _syncYomiDataLabel(context, kind),
-                        onChange: (selected) {
-                          _save(
-                            ref,
-                            () => repository.updateSyncData(
-                              manga: selected.contains(SyncYomiDataKind.manga),
-                              chapters: selected.contains(
-                                SyncYomiDataKind.chapters,
-                              ),
-                              categories: selected.contains(
-                                SyncYomiDataKind.categories,
-                              ),
-                              history: selected.contains(
-                                SyncYomiDataKind.history,
-                              ),
-                              tracking: selected.contains(
-                                SyncYomiDataKind.tracking,
-                              ),
-                            ),
-                          );
-                          Navigator.pop(context);
-                        },
-                      ),
-                      animationStyle: context.motionStyle,
-                    ),
-                  ),
-                ),
                 _SyncNowSection(
                   canStart:
                       settings.enabled &&
@@ -219,15 +119,137 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ],
+        );
+      },
     );
-    return titleTopBarSlot(
-      topBar: topBar,
-      leading: detailNavigationBackButton(context),
-      title: title,
-      child: scaffold,
+  }
+}
+
+class _SyncYomiFields extends ConsumerWidget {
+  const _SyncYomiFields({required this.settings});
+
+  final SyncYomiSettings settings;
+
+  Future<bool> _save(WidgetRef ref, Future<bool> Function() request) async =>
+      await AppUtils.guard(request, ref.read(toastProvider)) ?? false;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final repository = ref.watch(syncyomiSettingsRepositoryProvider);
+    final intervalOption = syncYomiIntervalOption(settings.interval);
+    final syncData = enabledSyncYomiData(
+      manga: settings.dataManga,
+      chapters: settings.dataChapters,
+      categories: settings.dataCategories,
+      history: settings.dataHistory,
+      tracking: settings.dataTracking,
+    );
+    return SettingsGroupCard(
+      children: [
+        SettingsHighlightTarget(
+          id: 'syncYomiEnabled',
+          child: SettingsPropTile(
+            title: l10n.syncYomiEnabled,
+            type: SettingsPropType.switchTile(
+              value: settings.enabled,
+              onChanged: repository.updateEnabled,
+            ),
+          ),
+        ),
+        SettingsHighlightTarget(
+          id: 'syncYomiHost',
+          child: ListTile(
+            title: Text(l10n.syncYomiHost),
+            subtitle: Text(
+              settings.host.isBlank ? l10n.syncYomiNotSet : settings.host,
+            ),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (_) => SyncYomiHostDialog(
+                value: settings.host,
+                onSave: (host) => _save(ref, () => repository.updateHost(host)),
+              ),
+              animationStyle: context.motionStyle,
+            ),
+          ),
+        ),
+        SettingsHighlightTarget(
+          id: 'syncYomiApiKey',
+          child: SettingsPropTile(
+            title: l10n.syncYomiApiKey,
+            subtitle: settings.apiKey.isBlank
+                ? l10n.syncYomiNotSet
+                : l10n.syncYomiSet,
+            type: SettingsPropType.textField(
+              hintText: l10n.syncYomiApiKey,
+              value: settings.apiKey,
+              canObscure: true,
+              onChanged: repository.updateApiKey,
+            ),
+          ),
+        ),
+        SettingsHighlightTarget(
+          id: 'syncYomiSyncInterval',
+          child: ListTile(
+            title: Text(l10n.syncYomiSyncInterval),
+            subtitle: Text(syncYomiIntervalLabel(context, settings.interval)),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (context) => RadioListPopup<String>(
+                title: l10n.syncYomiSyncInterval,
+                // Matched on duration, so P1D reads as the PT24H option
+                // rather than being offered as a second "Daily" row.
+                optionList: [
+                  ...kSyncYomiIntervalOptions,
+                  if (intervalOption == null) settings.interval,
+                ],
+                getOptionTitle: (value) =>
+                    syncYomiIntervalLabel(context, value),
+                value: intervalOption ?? settings.interval,
+                onChange: (value) {
+                  _save(ref, () => repository.updateInterval(value));
+                  Navigator.pop(context);
+                },
+              ),
+              animationStyle: context.motionStyle,
+            ),
+          ),
+        ),
+        SettingsHighlightTarget(
+          id: 'syncYomiSyncData',
+          child: ListTile(
+            title: Text(l10n.syncYomiSyncData),
+            subtitle: Text(syncYomiDataSummary(context, syncData)),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (context) => MultiSelectPopup<SyncYomiDataKind>(
+                title: l10n.syncYomiSyncData,
+                optionList: SyncYomiDataKind.values,
+                values: syncData,
+                getOptionTitle: (kind) => _syncYomiDataLabel(context, kind),
+                onChange: (selected) {
+                  _save(
+                    ref,
+                    () => repository.updateSyncData(
+                      manga: selected.contains(SyncYomiDataKind.manga),
+                      chapters: selected.contains(SyncYomiDataKind.chapters),
+                      categories: selected.contains(
+                        SyncYomiDataKind.categories,
+                      ),
+                      history: selected.contains(SyncYomiDataKind.history),
+                      tracking: selected.contains(SyncYomiDataKind.tracking),
+                    ),
+                  );
+                  Navigator.pop(context);
+                },
+              ),
+              animationStyle: context.motionStyle,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

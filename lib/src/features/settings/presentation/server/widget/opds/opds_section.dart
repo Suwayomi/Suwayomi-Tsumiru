@@ -11,9 +11,11 @@ import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
-import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
+import '../../../../../account/domain/account_access.dart';
+import '../../../../data/user_settings.dart';
 import '../../../../search/settings_search_registry.dart';
+import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import 'data/opds_repository.dart';
 
 String _sortOrderLabel(BuildContext context, Enum$SortOrder value) =>
@@ -70,9 +72,12 @@ class OpdsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final access = ref.watch(settledAccountAccessProvider);
+    final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final personalState = ref.watch(personalSettingsStateProvider);
+    final canEdit = access.capability == AccountCapability.supported
+        ? personalState == PersonalSettingsState.ready
+        : canManage;
     final repository = ref.watch(opdsSettingsRepositoryProvider);
     final settings = ref.watch(opdsSettingsProvider);
     if (settings.hasError) return const SizedBox.shrink();
@@ -88,178 +93,197 @@ class OpdsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.opds),
-        SettingsHighlightTarget(
-          id: 'opdsBinaryFileSize',
-          child: SettingsPropTile(
-            title: context.l10n.opdsBinaryFileSize,
-            description: context.l10n.opdsBinaryFileSizeDescription,
-            type: SettingsPropType.switchTile(
-              value: data.useBinaryFileSizes,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateUseBinaryFileSizes(value),
-                    )
-                  : null,
-            ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'opdsItemsPerPage',
-          // Explicit boundary: without it the engine folds this row into a
-          // neighbouring switch row, the same merge webview_section.dart
-          // guards against.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: SettingsPropTile(
-              title: context.l10n.opdsItemsPerPage,
-              subtitle: data.itemsPerPage.toString(),
-              description: context.l10n.opdsItemsPerPageDescription,
-              type: SettingsPropType.numberSlider(
-                min: 10,
-                max: 5000,
-                value: data.itemsPerPage.clamp(10, 5000),
-                onChanged: canManage
-                    ? (value) =>
-                          save(() => repository.updateItemsPerPage(value))
-                    : null,
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'opdsItemsPerPage',
+              // Explicit boundary: without it the engine folds this row into a
+              // neighbouring switch row, the same merge webview_section.dart
+              // guards against.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: SettingsPropTile(
+                  title: context.l10n.opdsItemsPerPage,
+                  subtitle: data.itemsPerPage.toString(),
+                  description: context.l10n.opdsItemsPerPageDescription,
+                  type: SettingsPropType.numberSlider(
+                    min: 10,
+                    max: 5000,
+                    value: data.itemsPerPage.clamp(10, 5000),
+                    onChanged: canEdit
+                        ? (value) =>
+                              save(() => repository.updateItemsPerPage(value))
+                        : null,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'opdsEnablePageReadProgress',
-          child: SettingsPropTile(
-            title: context.l10n.opdsEnablePageReadProgress,
-            description: context.l10n.opdsEnablePageReadProgressDescription,
-            type: SettingsPropType.switchTile(
-              value: data.enablePageReadProgress,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateEnablePageReadProgress(value),
-                    )
-                  : null,
+            SettingsHighlightTarget(
+              id: 'opdsChapterSortOrder',
+              // Explicit boundary, same merge guard as above.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: ListTile(
+                  title: Text(context.l10n.opdsChapterSortOrder),
+                  subtitle: Text(
+                    _sortOrderLabel(context, data.chapterSortOrder),
+                  ),
+                  onTap: canEdit
+                      ? () => _pickOpds<Enum$SortOrder>(
+                          context,
+                          title: context.l10n.opdsChapterSortOrder,
+                          description:
+                              context.l10n.opdsChapterSortOrderDescription,
+                          value: data.chapterSortOrder,
+                          options: const [
+                            Enum$SortOrder.ASC,
+                            Enum$SortOrder.DESC,
+                          ],
+                          name: (value) => _sortOrderLabel(context, value),
+                          write: (value) => save(
+                            () => repository.updateChapterSortOrder(value),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'opdsMarkAsReadOnDownload',
-          child: SettingsPropTile(
-            title: context.l10n.opdsMarkAsReadOnDownload,
-            description: context.l10n.opdsMarkAsReadOnDownloadDescription,
-            type: SettingsPropType.switchTile(
-              value: data.markAsReadOnDownload,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateMarkAsReadOnDownload(value),
-                    )
-                  : null,
+            SettingsHighlightTarget(
+              id: 'opdsShowOnlyUnreadChapters',
+              child: SettingsPropTile(
+                title: context.l10n.opdsShowOnlyUnreadChapters,
+                description: context.l10n.opdsShowOnlyUnreadChaptersDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.showOnlyUnreadChapters,
+                  onChanged: canEdit
+                      ? (value) => save(
+                          () => repository.updateShowOnlyUnreadChapters(value),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'opdsShowOnlyUnreadChapters',
-          child: SettingsPropTile(
-            title: context.l10n.opdsShowOnlyUnreadChapters,
-            description: context.l10n.opdsShowOnlyUnreadChaptersDescription,
-            type: SettingsPropType.switchTile(
-              value: data.showOnlyUnreadChapters,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateShowOnlyUnreadChapters(value),
-                    )
-                  : null,
+            SettingsHighlightTarget(
+              id: 'opdsShowOnlyDownloadedChapters',
+              child: SettingsPropTile(
+                title: context.l10n.opdsShowOnlyDownloadedChapters,
+                description:
+                    context.l10n.opdsShowOnlyDownloadedChaptersDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.showOnlyDownloadedChapters,
+                  onChanged: canEdit
+                      ? (value) => save(
+                          () => repository.updateShowOnlyDownloadedChapters(
+                            value,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'opdsShowOnlyDownloadedChapters',
-          child: SettingsPropTile(
-            title: context.l10n.opdsShowOnlyDownloadedChapters,
-            description:
-                context.l10n.opdsShowOnlyDownloadedChaptersDescription,
-            type: SettingsPropType.switchTile(
-              value: data.showOnlyDownloadedChapters,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateShowOnlyDownloadedChapters(value),
-                    )
-                  : null,
+            SettingsHighlightTarget(
+              id: 'opdsSkipChapterMetadataFeed',
+              child: SettingsPropTile(
+                title: context.l10n.opdsSkipChapterMetadataFeed,
+                description:
+                    context.l10n.opdsSkipChapterMetadataFeedDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.skipChapterMetadataFeed,
+                  onChanged: canEdit
+                      ? (value) => save(
+                          () => repository.updateSkipChapterMetadataFeed(value),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-        SettingsHighlightTarget(
-          id: 'opdsSkipChapterMetadataFeed',
-          child: SettingsPropTile(
-            title: context.l10n.opdsSkipChapterMetadataFeed,
-            description: context.l10n.opdsSkipChapterMetadataFeedDescription,
-            type: SettingsPropType.switchTile(
-              value: data.skipChapterMetadataFeed,
-              onChanged: canManage
-                  ? (value) => save(
-                      () => repository.updateSkipChapterMetadataFeed(value),
-                    )
-                  : null,
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'opdsEnablePageReadProgress',
+              child: SettingsPropTile(
+                title: context.l10n.opdsEnablePageReadProgress,
+                description: context.l10n.opdsEnablePageReadProgressDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.enablePageReadProgress,
+                  onChanged: canEdit
+                      ? (value) => save(
+                          () => repository.updateEnablePageReadProgress(value),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
+            SettingsHighlightTarget(
+              id: 'opdsMarkAsReadOnDownload',
+              child: SettingsPropTile(
+                title: context.l10n.opdsMarkAsReadOnDownload,
+                description: context.l10n.opdsMarkAsReadOnDownloadDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.markAsReadOnDownload,
+                  onChanged: canEdit
+                      ? (value) => save(
+                          () => repository.updateMarkAsReadOnDownload(value),
+                        )
+                      : null,
+                ),
+              ),
+            ),
+          ],
         ),
-        SettingsHighlightTarget(
-          id: 'opdsChapterSortOrder',
-          // Explicit boundary, same merge guard as above.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: ListTile(
-              title: Text(context.l10n.opdsChapterSortOrder),
-              subtitle: Text(_sortOrderLabel(context, data.chapterSortOrder)),
-              onTap: canManage
-                  ? () => _pickOpds<Enum$SortOrder>(
-                      context,
-                      title: context.l10n.opdsChapterSortOrder,
-                      description:
-                          context.l10n.opdsChapterSortOrderDescription,
-                      value: data.chapterSortOrder,
-                      options: const [
-                        Enum$SortOrder.ASC,
-                        Enum$SortOrder.DESC,
-                      ],
-                      name: (value) => _sortOrderLabel(context, value),
-                      write: (value) => save(
-                        () => repository.updateChapterSortOrder(value),
-                      ),
-                    )
-                  : null,
+        const SizedBox(height: 16),
+        SettingsGroupCard(
+          children: [
+            SettingsHighlightTarget(
+              id: 'opdsBinaryFileSize',
+              child: SettingsPropTile(
+                title: context.l10n.opdsBinaryFileSize,
+                description: context.l10n.opdsBinaryFileSizeDescription,
+                type: SettingsPropType.switchTile(
+                  value: data.useBinaryFileSizes,
+                  onChanged: canEdit
+                      ? (value) => save(
+                          () => repository.updateUseBinaryFileSizes(value),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
-        ),
-        SettingsHighlightTarget(
-          id: 'opdsCbzMimetype',
-          // Explicit boundary, same merge guard as above.
-          child: Semantics(
-            container: true,
-            explicitChildNodes: true,
-            child: ListTile(
-              title: Text(context.l10n.opdsCbzMimeType),
-              subtitle: Text(_cbzMimetypeLabel(context, data.cbzMimetype)),
-              onTap: canManage
-                  ? () => _pickOpds<Enum$CbzMediaType>(
-                      context,
-                      title: context.l10n.opdsCbzMimeType,
-                      description: context.l10n.opdsCbzMimeTypeDescription,
-                      value: data.cbzMimetype,
-                      options: const [
-                        Enum$CbzMediaType.LEGACY,
-                        Enum$CbzMediaType.MODERN,
-                        Enum$CbzMediaType.COMPATIBLE,
-                      ],
-                      name: (value) => _cbzMimetypeLabel(context, value),
-                      write: (value) =>
-                          save(() => repository.updateCbzMimetype(value)),
-                    )
-                  : null,
+            SettingsHighlightTarget(
+              id: 'opdsCbzMimetype',
+              // Explicit boundary, same merge guard as above.
+              child: Semantics(
+                container: true,
+                explicitChildNodes: true,
+                child: ListTile(
+                  title: Text(context.l10n.opdsCbzMimeType),
+                  subtitle: Text(_cbzMimetypeLabel(context, data.cbzMimetype)),
+                  onTap: canEdit
+                      ? () => _pickOpds<Enum$CbzMediaType>(
+                          context,
+                          title: context.l10n.opdsCbzMimeType,
+                          description: context.l10n.opdsCbzMimeTypeDescription,
+                          value: data.cbzMimetype,
+                          options: const [
+                            Enum$CbzMediaType.LEGACY,
+                            Enum$CbzMediaType.MODERN,
+                            Enum$CbzMediaType.COMPATIBLE,
+                          ],
+                          name: (value) => _cbzMimetypeLabel(context, value),
+                          write: (value) =>
+                              save(() => repository.updateCbzMimetype(value)),
+                        )
+                      : null,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );

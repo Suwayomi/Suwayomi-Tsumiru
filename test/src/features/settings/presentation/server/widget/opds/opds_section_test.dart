@@ -88,18 +88,27 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final switches = find.byType(SwitchListTile);
-    expect(switches, findsWidgets);
-    expect(tester.widget<SwitchListTile>(switches.first).value, isFalse);
+    // Binary file size sits in the third card now; target it by label.
+    final binarySwitch = find.widgetWithText(
+      SwitchListTile,
+      'Binary file size',
+    );
+    expect(binarySwitch, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(binarySwitch).value, isFalse);
     final queriesBefore = link.legacyQueries;
 
-    await tester.tap(switches.first);
+    await tester.scrollUntilVisible(
+      binarySwitch,
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(binarySwitch);
     await tester.pumpAndSettle();
 
     expect(link.mutations, 1);
     expect(link.state.opdsUseBinaryFileSizes, isTrue);
     expect(link.legacyQueries, greaterThan(queriesBefore));
-    expect(tester.widget<SwitchListTile>(switches.first).value, isTrue);
+    expect(tester.widget<SwitchListTile>(binarySwitch).value, isTrue);
     expect(tester.takeException(), isNull);
   });
 }

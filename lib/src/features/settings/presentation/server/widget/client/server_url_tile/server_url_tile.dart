@@ -312,7 +312,6 @@ class ServerUrlTile extends ConsumerWidget {
     return SettingsPropTile(
       title: context.l10n.serverUrl,
       subtitle: serverUrl,
-      leading: const Icon(Icons.computer_rounded),
       type: SettingsPropType<void>.textField(
         hintText: context.l10n.serverUrlHintText,
         value: serverUrl,
@@ -335,7 +334,6 @@ class ServerLanUrlTile extends ConsumerWidget {
     return SettingsPropTile(
       title: context.l10n.serverLanUrl,
       subtitle: serverUrl ?? context.l10n.serverLanUrlOptional,
-      leading: const Icon(Icons.home_rounded),
       trailing: !kIsWeb ? const ServerSearchButton() : null,
       type: SettingsPropType<void>.textField(
         hintText: context.l10n.serverLanUrlHintText,

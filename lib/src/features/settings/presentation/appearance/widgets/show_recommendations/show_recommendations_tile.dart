@@ -34,7 +34,6 @@ class ShowRecommendationsTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.recommend_rounded),
       title: Text(context.l10n.showRecommendations),
       subtitle: Text(context.l10n.showRecommendationsSubtitle),
       onChanged: ref.read(showRecommendationsProvider.notifier).update,
@@ -52,7 +51,6 @@ class RecommendsInOverflowTile extends ConsumerWidget {
     }
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.more_vert_rounded),
       title: Text(context.l10n.recommendsInOverflow),
       subtitle: Text(context.l10n.recommendsInOverflowSubtitle),
       onChanged: ref.read(recommendsInOverflowProvider.notifier).update,

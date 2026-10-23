@@ -1325,8 +1325,8 @@
   "authInsecureTransportTitle": "Insecure connection",
   "authInsecureTransportWarning": "Your username and password will be sent unencrypted over HTTP. Use HTTPS unless you trust the network entirely.",
   "authInsecureTransportContinue": "I understand, continue",
-  "authLogout": "Log out",
-  "authLogoutConfirm": "Log out and clear stored credentials? You'll need to sign in again to use this server.",
+  "authLogout": "Sign out",
+  "authLogoutConfirm": "Sign out and clear stored credentials? You'll need to sign in again to use this server.",
   "authImageUrlLogWarning": "With UI Login, image URLs include your access token, which may appear in server access logs.",
   "authTypeNone": "None",
   "authentication": "Authentication",
@@ -2183,7 +2183,6 @@
   "mangaStatusOngoing": "Ongoing",
   "mangaStatusPublishingFinished": "Publishing finished",
   "mangaStatusUnknown": "Unknown",
-  "misc": "Misc",
   "missingExtension": "Missing extensions",
   "more": "More",
   "moveToBottom": "Move to bottom",
@@ -2704,7 +2703,16 @@
       }
     }
   },
+  "network": "Network",
   "notifications": "Notifications",
+  "notificationsSectionNewChapters": "New chapters",
+  "@notificationsSectionNewChapters": {
+    "description": "Section header for new-chapter notification settings"
+  },
+  "notificationsSectionOther": "Other",
+  "@notificationsSectionOther": {
+    "description": "Section header for the remaining notification kinds"
+  },
   "notificationsNewChapters": "New chapter notifications",
   "notificationsNewChaptersSubtitle": "Notify when followed series get new chapters",
   "notificationsDownloadsComplete": "Download notifications",
@@ -2808,6 +2816,15 @@
     "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
   },
   "serverVersion": "Server version",
+  "serverUsers": "Users",
+  "@serverUsers": {
+    "description": "Server hub entry that opens user management"
+  },
+  "settingsGroupApp": "App",
+  "settingsGroupSuwayomi": "Suwayomi",
+  "@settingsGroupSuwayomi": {
+    "description": "Group header for Suwayomi server settings"
+  },
   "settings": "Settings",
   "skipThisVersion": "Don't remind me about this version",
   "skipUpdatingEntries": "Skip updating entries",
@@ -2939,7 +2956,7 @@
   "tryDifferentSearchTerm": "Try a different search term",
   "errorOccurred": "An error occurred",
   "viewManga": "View manga",
-  "timeoutSettings": "Timeout settings",
+  "timeouts": "Timeouts",
   "serverRequestTimeout": "Server request timeout",
   "@serverRequestTimeout": {
     "description": "Controls how long to wait for server responses"
@@ -2969,13 +2986,13 @@
   "@offlineRemoveAllConfirm": {
     "description": "Body text for remove-all confirmation dialog"
   },
-  "offlineSafetyNets": "Safety nets",
-  "@offlineSafetyNets": {
-    "description": "Section header for safety net settings"
-  },
   "offlineDownloadsSection": "Downloads",
   "@offlineDownloadsSection": {
     "description": "Section header for offline download behaviour settings"
+  },
+  "offlineBackgroundSection": "Background",
+  "@offlineBackgroundSection": {
+    "description": "Section header for background download settings"
   },
   "downloadOverWifiOnly": "Download over Wi-Fi only",
   "downloadNewChaptersInBackground": "Download new chapters in the background",
@@ -3083,6 +3100,10 @@
     "description": "Snackbar shown after starting a series download"
   },
   "markAsRead": "Mark as read",
+  "settingsSectionBehavior": "Behavior",
+  "@settingsSectionBehavior": {
+    "description": "Section header for library behaviour settings"
+  },
   "chapterSwipeToLeft": "Chapter on swipe to left",
   "chapterSwipeToRight": "Chapter on swipe to right",
   "chapterSwipeDisabled": "Disabled",
@@ -3823,6 +3844,7 @@
       "preset": { "type": "String" }
     }
   },
+  "sync": "Sync",
   "syncyomi": "SyncYomi",
   "@syncyomi": {
     "description": "Settings entry and screen title for the SyncYomi library sync server"
@@ -4014,6 +4036,7 @@
   "databasePassword": "Password",
   "hikariConnectionPool": "Reuse database connections",
   "hikariConnectionPoolDescription": "Faster, but can cause read errors on some setups.",
+  "logs": "Logs",
   "logFileCleanup": "Log file cleanup",
   "maxLogFileSize": "Maximum log file size",
   "maxLogFolderSize": "Maximum size of all log files",

@@ -13,8 +13,8 @@ import 'app_theme_providers.dart';
 /// Horizontal curated theme picker. Each card previews the theme's surface +
 /// accents at the brightness currently in use, and shows a check when selected.
 ///
-/// Give it a [title] to get a header row carrying that title plus a pair of
-/// scroll arrows, shown only while the cards overflow.
+/// While the cards overflow, a row with a pair of scroll arrows is shown
+/// above them. Give it a [title] to label that row.
 class ThemeSelector extends HookConsumerWidget {
   const ThemeSelector({super.key, this.title});
 
@@ -88,10 +88,10 @@ class ThemeSelector extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (title != null)
+        if (title != null || canScroll)
           Row(
             children: [
-              Expanded(child: title!),
+              if (title != null) Expanded(child: title!) else const Spacer(),
               if (canScroll) ...[
                 arrow(
                   icon: Icons.chevron_left_rounded,

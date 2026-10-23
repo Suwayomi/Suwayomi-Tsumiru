@@ -28,7 +28,6 @@ class ReaderIgnoreSafeAreaTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
-      secondary: const Icon(Icons.fullscreen_rounded),
       title: Text(context.l10n.readerIgnoreSafeAreaToggle),
       subtitle: Text(context.l10n.readerIgnoreSafeAreaToggleDescription),
       onChanged: ref.read(readerIgnoreSafeAreaProvider.notifier).update,

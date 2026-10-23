@@ -57,15 +57,19 @@ export 'settings_search_row.dart';
 /// that renders its tile — same provider, same comparison:
 ///
 /// - General: Quick Search only exists on keyboard runtimes (same
-///   [isKeyboardRuntime] gate as the screen); Auto-refresh Retry Delay only
-///   renders while auto-refresh is on. Everything else always renders.
+///   [isKeyboardRuntime] gate as the screen). Persistent search bar moved
+///   here from Library (same local provider, always visible). Everything
+///   else always renders.
+/// - Advanced: Clear cache always renders; Copy debug log has no highlight
+///   target, so it has no entry (the drift guard requires both directions).
 /// - Appearance: Pure black only renders when the theme mode isn't light;
 ///   Custom color only renders with the Custom theme; Recommendations in
 ///   overflow unmounts while recommendations are off. The rest always render.
 /// - Library: the whole list renders inside the server-data branch (same
 ///   `serverSettings.value != null` gate as the screen), so every entry
 ///   needs the server reachable. Permission gates only disable the tap, the
-///   tile stays on screen, so they add no further gate.
+///   tile stays on screen, so they add no further gate. Section names:
+///   Categories, Behavior ("Behavior"), Global update.
 ///
 /// The drift-guard test (`settings_registry_drift_test.dart`) pumps each page
 /// with every condition satisfied and checks both directions, so add an entry
@@ -76,13 +80,6 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
     title: (l) => l.appLanguage,
     breadcrumb: (l) => l.general,
     open: (c) => const GeneralSettingsRoute(highlight: 'appLanguage').push(c),
-    visible: (_, _) => true,
-  ),
-  SettingsSearchEntry(
-    id: 'clearCache',
-    title: (l) => l.clearCache,
-    breadcrumb: (l) => l.general,
-    open: (c) => const GeneralSettingsRoute(highlight: 'clearCache').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -101,29 +98,23 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
-    id: 'serverRequestTimeout',
-    title: (l) => l.serverRequestTimeout,
-    breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
+    id: 'persistentSearchBar',
+    title: (l) => l.libraryPersistentSearchBar,
+    subtitle: (l) => l.libraryPersistentSearchBarSubtitle,
+    breadcrumb: (l) => l.general,
     open: (c) =>
-        const GeneralSettingsRoute(highlight: 'serverRequestTimeout').push(c),
+        const GeneralSettingsRoute(highlight: 'persistentSearchBar').push(c),
     visible: (_, _) => true,
   ),
+];
+
+List<SettingsSearchEntry> get advancedSettingsSearchEntries => [
   SettingsSearchEntry(
-    id: 'autoRefreshOnTimeout',
-    title: (l) => l.autoRefreshOnTimeout,
-    subtitle: (l) => l.autoRefreshOnTimeoutDescription,
-    breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
-    open: (c) =>
-        const GeneralSettingsRoute(highlight: 'autoRefreshOnTimeout').push(c),
+    id: 'clearCache',
+    title: (l) => l.clearCache,
+    breadcrumb: (l) => l.advanced,
+    open: (c) => const AdvancedRoute(highlight: 'clearCache').push(c),
     visible: (_, _) => true,
-  ),
-  SettingsSearchEntry(
-    id: 'autoRefreshRetryDelay',
-    title: (l) => l.autoRefreshRetryDelay,
-    breadcrumb: (l) => '${l.general} › ${l.timeoutSettings}',
-    open: (c) =>
-        const GeneralSettingsRoute(highlight: 'autoRefreshRetryDelay').push(c),
-    visible: (ref, _) => ref.watch(autoRefreshOnTimeoutProvider).ifNull(),
   ),
 ];
 
@@ -191,14 +182,14 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'categories',
     title: (l) => l.categories,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
+    breadcrumb: (l) => '${l.library} › ${l.categories}',
     open: (c) => const LibrarySettingsRoute(highlight: 'categories').push(c),
     visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'defaultCategory',
     title: (l) => l.defaultCategoryOnAdd,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
+    breadcrumb: (l) => '${l.library} › ${l.categories}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'defaultCategory').push(c),
     visible: (ref, _) => _serverReachable(ref),
@@ -207,19 +198,10 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     id: 'refreshChaptersFromSource',
     title: (l) => l.refreshChaptersFromSource,
     subtitle: (l) => l.refreshChaptersFromSourceSubtitle,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
     open: (c) => const LibrarySettingsRoute(
       highlight: 'refreshChaptersFromSource',
     ).push(c),
-    visible: (ref, _) => _serverReachable(ref),
-  ),
-  SettingsSearchEntry(
-    id: 'persistentSearchBar',
-    title: (l) => l.libraryPersistentSearchBar,
-    subtitle: (l) => l.libraryPersistentSearchBarSubtitle,
-    breadcrumb: (l) => '${l.library} › ${l.general}',
-    open: (c) =>
-        const LibrarySettingsRoute(highlight: 'persistentSearchBar').push(c),
     visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
@@ -267,7 +249,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'chapterSwipeToLeft',
     title: (l) => l.chapterSwipeToLeft,
-    breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'chapterSwipeToLeft').push(c),
     visible: (ref, _) => _serverReachable(ref),
@@ -275,7 +257,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'chapterSwipeToRight',
     title: (l) => l.chapterSwipeToRight,
-    breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'chapterSwipeToRight').push(c),
     visible: (ref, _) => _serverReachable(ref),
@@ -479,7 +461,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'mouseScrollSpeed',
     title: (l) => l.readerMouseScrollSpeed,
-    breadcrumb: (l) => '${l.reader} › ${l.readerGroupReading}',
+    breadcrumb: (l) => '${l.reader} › ${l.readerGroupNavigation}',
     open: (c) =>
         const ReaderSettingsRoute(highlight: 'mouseScrollSpeed').push(c),
     visible: (_, _) => isKeyboardRuntime,
@@ -744,9 +726,11 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
 ];
 
 /// Notifications page (9 rows, plain "Notifications" breadcrumb), Android
-/// only. The five rows under "New chapter notifications" only render while it
-/// is on — same [notificationsNewChaptersEnabledProvider] read as the screen.
-/// The rest always render there.
+/// only. The four rows under "New chapter notifications" (interval, Wi-Fi,
+/// charging, check now) only render while it is on — same
+/// [notificationsNewChaptersEnabledProvider] read as the screen. Hide
+/// notification content closes the page and is always visible there.
+/// The rest always render too.
 List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'notificationsNewChapters',
@@ -799,9 +783,7 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
     open: (c) => const NotificationsSettingsRoute(
       highlight: 'notificationsHideContent',
     ).push(c),
-    visible: (ref, _) =>
-        isAndroidNative &&
-        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+    visible: (_, _) => isAndroidNative,
   ),
   SettingsSearchEntry(
     id: 'notificationsCheckNow',
@@ -903,10 +885,11 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   ),
 ];
 
-/// Downloads page: Server tab (9 rows, tab 0) and On device tab (13 rows,
+/// Downloads page: Server tab (8 rows, tab 0) and On device tab (13 rows,
 /// tab 1), with "Downloads › Server" / "Downloads › On device" breadcrumbs.
 /// The three delete rows share titles across tabs but carry per-tab ids, so
-/// search can land on the right tab's row.
+/// search can land on the right tab's row. Image download processing left
+/// the Server tab (it lives on Server › Images now).
 ///
 /// Server rows only mount while the server settings hold a value (same
 /// `showUiWhenData` data branch as the screen); permission/personal gates
@@ -916,6 +899,8 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
 /// keep-window switch additionally needs delete-while-reading at 2+, the
 /// background switch needs Android-native, and its two sub-rows need the
 /// background run switched on — each mirroring the screen's gate exactly.
+/// Background rows carry a "› Background" breadcrumb level, safety-net rows
+/// (now under Storage) a "› Storage" one.
 List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'downloadLocation',
@@ -935,20 +920,6 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     open: (c) =>
         const DownloadsSettingsRoute(highlight: 'saveAsCbz', tab: 0).push(c),
     visible: (ref, _) => _serverReachable(ref),
-    tabIndex: 0,
-  ),
-  // Same highlight id as the Server › Images row: both open the same editor.
-  SettingsSearchEntry(
-    id: 'imageDownloadProcessing',
-    title: (l) => l.imageDownloadProcessing,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
-    open: (c) => const DownloadsSettingsRoute(
-      highlight: 'imageDownloadProcessing',
-      tab: 0,
-    ).push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(imagesDownloadSettingsProvider).value != null,
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -1114,7 +1085,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     id: 'backgroundCatchup',
     title: (l) => l.downloadNewChaptersInBackground,
     subtitle: (l) => l.downloadNewChaptersInBackgroundDescription,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineBackgroundSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'backgroundCatchup',
       tab: 1,
@@ -1125,7 +1097,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'backgroundCheckInterval',
     title: (l) => l.notificationsCheckInterval,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineBackgroundSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'backgroundCheckInterval',
       tab: 1,
@@ -1140,7 +1113,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     id: 'backgroundFetchFiles',
     title: (l) => l.backgroundCatchupFetchFiles,
     subtitle: (l) => l.backgroundCatchupFetchFilesDescription,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineBackgroundSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'backgroundFetchFiles',
       tab: 1,
@@ -1165,7 +1139,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineStorageCapEnable',
     title: (l) => l.offlineStorageCapEnable,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineStorageCapEnable',
       tab: 1,
@@ -1176,7 +1151,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineStorageCapLimit',
     title: (l) => l.offlineStorageCapLimit,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineStorageCapLimit',
       tab: 1,
@@ -1187,7 +1163,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineTimeEvictEnable',
     title: (l) => l.offlineTimeEvictEnable,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineTimeEvictEnable',
       tab: 1,
@@ -1198,7 +1175,8 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'offlineKeepDays',
     title: (l) => l.offlineKeepDaysLabel,
-    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    breadcrumb: (l) =>
+        '${l.downloads} › ${l.downloadsOnDeviceTab} › ${l.offlineStorageSection}',
     open: (c) => const DownloadsSettingsRoute(
       highlight: 'offlineKeepDays',
       tab: 1,
@@ -1208,10 +1186,11 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   ),
 ];
 
-/// Server page (17 rows, "Server › \<Section\>" breadcrumbs with the real
-/// section header strings). The whole page is server state: every entry needs
-/// the server reachable (`settingsProvider` holding a value — loading/error
-/// shows the fallback view instead), which subsumes each section's own
+/// Server hub pages ("Server › \<Page\>" breadcrumbs, with the
+/// multi-section Network page adding its section header as a third level).
+/// Every page is server state: each entry needs the server reachable
+/// (`settingsProvider` holding a value — loading/error shows the fallback
+/// view instead), which subsumes each section's own
 /// `serverSettings.value != null` gate. Web-interface rows additionally need
 /// the web settings loaded and MANAGE_SETTINGS (both gate the tiles'
 /// mounting, unlike the permission-gated-but-mounted rows elsewhere); the
@@ -1223,6 +1202,16 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
 bool _serverReachable(WidgetRef ref) =>
     ref.watch(settingsProvider).value != null;
 
+bool _canManageSettings(WidgetRef ref) => ref
+    .watch(settledAccountAccessProvider)
+    .allows(Enum$UserPermission.MANAGE_SETTINGS);
+
+bool _imagesRowVisible(WidgetRef ref) {
+  final access = ref.watch(settledAccountAccessProvider);
+  return access.capability != AccountCapability.supported ||
+      access.allows(Enum$UserPermission.MANAGE_SETTINGS);
+}
+
 bool _webInterfaceVisible(WidgetRef ref) =>
     _serverReachable(ref) &&
     ref
@@ -1230,20 +1219,173 @@ bool _webInterfaceVisible(WidgetRef ref) =>
         .allows(Enum$UserPermission.MANAGE_SETTINGS) &&
     ref.watch(webInterfaceSettingsProvider).value != null;
 
-List<SettingsSearchEntry> get serverSettingsSearchEntries => [
+List<SettingsSearchEntry> get serverNetworkSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'serverIpAddress',
+    title: (l) => l.ip,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.serverBindings}',
+    open: (c) => const ServerNetworkRoute(highlight: 'serverIpAddress').push(c),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'serverPort',
+    title: (l) => l.serverPort,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.serverBindings}',
+    open: (c) => const ServerNetworkRoute(highlight: 'serverPort').push(c),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'enableSocksProxy',
+    title: (l) => l.enableSocksProxy,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
+    open: (c) =>
+        const ServerNetworkRoute(highlight: 'enableSocksProxy').push(c),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'socksVersion',
+    title: (l) => l.socksVersion,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
+    open: (c) => const ServerNetworkRoute(highlight: 'socksVersion').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'socksHost',
+    title: (l) => l.socksHost,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
+    open: (c) => const ServerNetworkRoute(highlight: 'socksHost').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'socksPort',
+    title: (l) => l.socksPort,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
+    open: (c) => const ServerNetworkRoute(highlight: 'socksPort').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'socksUserName',
+    title: (l) => l.socksUserName,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
+    open: (c) => const ServerNetworkRoute(highlight: 'socksUserName').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'socksPassword',
+    title: (l) => l.socksPassword,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.socksProxy}',
+    open: (c) => const ServerNetworkRoute(highlight: 'socksPassword').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.socksProxyEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverr',
+    title: (l) => l.flareSolverr,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
+    open: (c) => const ServerNetworkRoute(highlight: 'flareSolverr').push(c),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrServerUrl',
+    title: (l) => l.flareSolverrServerUrl,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
+    open: (c) =>
+        const ServerNetworkRoute(highlight: 'flareSolverrServerUrl').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrRequestTimeout',
+    title: (l) => l.flareSolverrRequestTimeout,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
+    open: (c) => const ServerNetworkRoute(
+      highlight: 'flareSolverrRequestTimeout',
+    ).push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrSessionName',
+    title: (l) => l.flareSolverrSessionName,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
+    open: (c) =>
+        const ServerNetworkRoute(highlight: 'flareSolverrSessionName').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrSessionTTL',
+    title: (l) => l.flareSolverrSessionTTL,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
+    open: (c) =>
+        const ServerNetworkRoute(highlight: 'flareSolverrSessionTTL').push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrResponseFallback',
+    title: (l) => l.responseFallback,
+    subtitle: (l) => l.responseFallbackDescription,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.cloudflareBypass}',
+    open: (c) => const ServerNetworkRoute(
+      highlight: 'flareSolverrResponseFallback',
+    ).push(c),
+    visible: (ref, _) =>
+        _canManageSettings(ref) &&
+        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false) &&
+        ref.watch(flareSolverrFallbackProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'webview',
+    title: (l) => l.kcefWebView,
+    subtitle: (l) => l.kcefWebViewDescription,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.kcefWebView}',
+    open: (c) => const ServerNetworkRoute(highlight: 'webview').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(webViewSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'clearWebViewCache',
+    title: (l) => l.clearCookiesAndCache,
+    breadcrumb: (l) => '${l.server} › ${l.network} › ${l.kcefWebView}',
+    open: (c) =>
+        const ServerNetworkRoute(highlight: 'clearWebViewCache').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        (ref.watch(clearCookiesAndCacheSupportProvider).value ?? false),
+  ),
+];
+
+List<SettingsSearchEntry> get serverWebInterfaceSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'webInterfaceFlavor',
     title: (l) => l.webInterfaceInterface,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
-        const ServerSettingsRoute(highlight: 'webInterfaceFlavor').push(c),
+        const ServerWebInterfaceRoute(highlight: 'webInterfaceFlavor').push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
   ),
   SettingsSearchEntry(
     id: 'initialOpenInBrowserEnabled',
     title: (l) => l.initialOpenInBrowserEnabled,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
-    open: (c) => const ServerSettingsRoute(
+    open: (c) => const ServerWebInterfaceRoute(
       highlight: 'initialOpenInBrowserEnabled',
     ).push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
@@ -1252,7 +1394,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     id: 'webInterfaceInterface',
     title: (l) => l.webInterfaceOpenWith,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
-    open: (c) => const ServerSettingsRoute(
+    open: (c) => const ServerWebInterfaceRoute(
       highlight: 'webInterfaceInterface',
     ).push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
@@ -1262,7 +1404,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.electronPath,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
-        const ServerSettingsRoute(highlight: 'electronPath').push(c),
+        const ServerWebInterfaceRoute(highlight: 'electronPath').push(c),
     visible: (ref, _) =>
         _webInterfaceVisible(ref) &&
         ref.watch(webInterfaceSettingsProvider).value?.webUIInterface ==
@@ -1273,14 +1415,14 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.webInterfaceChannel,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
     open: (c) =>
-        const ServerSettingsRoute(highlight: 'webInterfaceChannel').push(c),
+        const ServerWebInterfaceRoute(highlight: 'webInterfaceChannel').push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
   ),
   SettingsSearchEntry(
     id: 'webInterfaceAutomaticUpdates',
     title: (l) => l.webInterfaceAutomaticUpdates,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
-    open: (c) => const ServerSettingsRoute(
+    open: (c) => const ServerWebInterfaceRoute(
       highlight: 'webInterfaceAutomaticUpdates',
     ).push(c),
     visible: (ref, _) => _webInterfaceVisible(ref),
@@ -1289,141 +1431,26 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     id: 'webInterfaceCheckUpdate',
     title: (l) => l.webInterfaceCheckUpdate,
     breadcrumb: (l) => '${l.server} › ${l.webInterface}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'webInterfaceCheckUpdate').push(c),
+    open: (c) => const ServerWebInterfaceRoute(
+      highlight: 'webInterfaceCheckUpdate',
+    ).push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(settledAccountAccessProvider).capability !=
             AccountCapability.unknown &&
         ref.watch(webInterfaceSettingsProvider).value?.webUIFlavor !=
             Enum$WebUIFlavor.CUSTOM,
   ),
-  SettingsSearchEntry(
-    id: 'serverIpAddress',
-    title: (l) => l.ip,
-    breadcrumb: (l) => '${l.server} › ${l.serverBindings}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'serverIpAddress').push(c),
-    visible: (ref, _) => _serverReachable(ref),
-  ),
-  SettingsSearchEntry(
-    id: 'serverPort',
-    title: (l) => l.serverPort,
-    breadcrumb: (l) => '${l.server} › ${l.serverBindings}',
-    open: (c) => const ServerSettingsRoute(highlight: 'serverPort').push(c),
-    visible: (ref, _) => _serverReachable(ref),
-  ),
-  SettingsSearchEntry(
-    id: 'enableSocksProxy',
-    title: (l) => l.enableSocksProxy,
-    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'enableSocksProxy').push(c),
-    visible: (ref, _) => _serverReachable(ref),
-  ),
-  SettingsSearchEntry(
-    id: 'socksVersion',
-    title: (l) => l.socksVersion,
-    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
-    open: (c) => const ServerSettingsRoute(highlight: 'socksVersion').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'socksHost',
-    title: (l) => l.socksHost,
-    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
-    open: (c) => const ServerSettingsRoute(highlight: 'socksHost').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'socksPort',
-    title: (l) => l.socksPort,
-    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
-    open: (c) => const ServerSettingsRoute(highlight: 'socksPort').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'socksUserName',
-    title: (l) => l.socksUserName,
-    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
-    open: (c) => const ServerSettingsRoute(highlight: 'socksUserName').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'socksPassword',
-    title: (l) => l.socksPassword,
-    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
-    open: (c) => const ServerSettingsRoute(highlight: 'socksPassword').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'flareSolverr',
-    title: (l) => l.flareSolverr,
-    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
-    open: (c) => const ServerSettingsRoute(highlight: 'flareSolverr').push(c),
-    visible: (ref, _) => _serverReachable(ref),
-  ),
-  SettingsSearchEntry(
-    id: 'flareSolverrServerUrl',
-    title: (l) => l.flareSolverrServerUrl,
-    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'flareSolverrServerUrl').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'flareSolverrRequestTimeout',
-    title: (l) => l.flareSolverrRequestTimeout,
-    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'flareSolverrRequestTimeout',
-    ).push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'flareSolverrSessionName',
-    title: (l) => l.flareSolverrSessionName,
-    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'flareSolverrSessionName').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'flareSolverrSessionTTL',
-    title: (l) => l.flareSolverrSessionTTL,
-    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'flareSolverrSessionTTL').push(c),
-    visible: (ref, _) =>
-        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
-  ),
-  SettingsSearchEntry(
-    id: 'flareSolverrResponseFallback',
-    title: (l) => l.responseFallback,
-    subtitle: (l) => l.responseFallbackDescription,
-    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'flareSolverrResponseFallback',
-    ).push(c),
-    visible: (ref, _) =>
-        (ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false) &&
-        ref.watch(flareSolverrFallbackProvider).value != null,
-  ),
+];
+
+List<SettingsSearchEntry> get serverOpdsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'opdsBinaryFileSize',
     title: (l) => l.opdsBinaryFileSize,
     subtitle: (l) => l.opdsBinaryFileSizeDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'opdsBinaryFileSize').push(c),
+    open: (c) => const ServerOpdsRoute(highlight: 'opdsBinaryFileSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1432,8 +1459,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsItemsPerPage,
     subtitle: (l) => l.opdsItemsPerPageDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'opdsItemsPerPage').push(c),
+    open: (c) => const ServerOpdsRoute(highlight: 'opdsItemsPerPage').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1442,9 +1468,8 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsEnablePageReadProgress,
     subtitle: (l) => l.opdsEnablePageReadProgressDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'opdsEnablePageReadProgress',
-    ).push(c),
+    open: (c) =>
+        const ServerOpdsRoute(highlight: 'opdsEnablePageReadProgress').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1453,9 +1478,8 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsMarkAsReadOnDownload,
     subtitle: (l) => l.opdsMarkAsReadOnDownloadDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'opdsMarkAsReadOnDownload',
-    ).push(c),
+    open: (c) =>
+        const ServerOpdsRoute(highlight: 'opdsMarkAsReadOnDownload').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1464,9 +1488,8 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsShowOnlyUnreadChapters,
     subtitle: (l) => l.opdsShowOnlyUnreadChaptersDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'opdsShowOnlyUnreadChapters',
-    ).push(c),
+    open: (c) =>
+        const ServerOpdsRoute(highlight: 'opdsShowOnlyUnreadChapters').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1475,7 +1498,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsShowOnlyDownloadedChapters,
     subtitle: (l) => l.opdsShowOnlyDownloadedChaptersDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) => const ServerSettingsRoute(
+    open: (c) => const ServerOpdsRoute(
       highlight: 'opdsShowOnlyDownloadedChapters',
     ).push(c),
     visible: (ref, _) =>
@@ -1486,9 +1509,8 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsSkipChapterMetadataFeed,
     subtitle: (l) => l.opdsSkipChapterMetadataFeedDescription,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'opdsSkipChapterMetadataFeed',
-    ).push(c),
+    open: (c) =>
+        const ServerOpdsRoute(highlight: 'opdsSkipChapterMetadataFeed').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1497,7 +1519,7 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.opdsChapterSortOrder,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
     open: (c) =>
-        const ServerSettingsRoute(highlight: 'opdsChapterSortOrder').push(c),
+        const ServerOpdsRoute(highlight: 'opdsChapterSortOrder').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
@@ -1505,102 +1527,32 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     id: 'opdsCbzMimetype',
     title: (l) => l.opdsCbzMimeType,
     breadcrumb: (l) => '${l.server} › ${l.opds}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'opdsCbzMimetype').push(c),
+    open: (c) => const ServerOpdsRoute(highlight: 'opdsCbzMimetype').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) && ref.watch(opdsSettingsProvider).value != null,
   ),
-  SettingsSearchEntry(
-    id: 'databaseType',
-    title: (l) => l.databaseType,
-    breadcrumb: (l) => '${l.server} › ${l.database}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'databaseType').push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(databaseSettingsProvider).value != null,
-  ),
-  SettingsSearchEntry(
-    id: 'databaseUrl',
-    title: (l) => l.databaseUrl,
-    breadcrumb: (l) => '${l.server} › ${l.database}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'databaseUrl').push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(databaseSettingsProvider).value != null,
-  ),
-  SettingsSearchEntry(
-    id: 'databaseUsername',
-    title: (l) => l.databaseUsername,
-    breadcrumb: (l) => '${l.server} › ${l.database}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'databaseUsername').push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(databaseSettingsProvider).value != null,
-  ),
-  SettingsSearchEntry(
-    id: 'databasePassword',
-    title: (l) => l.databasePassword,
-    breadcrumb: (l) => '${l.server} › ${l.database}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'databasePassword').push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(databaseSettingsProvider).value != null,
-  ),
-  SettingsSearchEntry(
-    id: 'hikariConnectionPool',
-    title: (l) => l.hikariConnectionPool,
-    subtitle: (l) => l.hikariConnectionPoolDescription,
-    breadcrumb: (l) => '${l.server} › ${l.database}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'hikariConnectionPool',
-    ).push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(databaseSettingsProvider).value != null,
-  ),
-  SettingsSearchEntry(
-    id: 'webview',
-    title: (l) => l.kcefWebView,
-    subtitle: (l) => l.kcefWebViewDescription,
-    breadcrumb: (l) => '${l.server} › ${l.kcefWebView}',
-    open: (c) => const ServerSettingsRoute(highlight: 'webview').push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        ref.watch(webViewSettingsProvider).value != null,
-  ),
-  SettingsSearchEntry(
-    id: 'clearWebViewCache',
-    title: (l) => l.clearCookiesAndCache,
-    breadcrumb: (l) => '${l.server} › ${l.kcefWebView}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'clearWebViewCache').push(c),
-    visible: (ref, _) =>
-        _serverReachable(ref) &&
-        (ref.watch(clearCookiesAndCacheSupportProvider).value ?? false),
-  ),
+];
+
+List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'imagesClearCache',
     title: (l) => l.imageProcessingClearCache,
     breadcrumb: (l) => '${l.server} › ${l.images}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'imagesClearCache').push(c),
+    open: (c) => const ServerImagesRoute(highlight: 'imagesClearCache').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _imagesRowVisible(ref) &&
         (ref.watch(clearCachedImagesSupportProvider).value ?? false),
   ),
   SettingsSearchEntry(
     id: 'imageDownloadProcessing',
     title: (l) => l.imageDownloadProcessing,
     breadcrumb: (l) => '${l.server} › ${l.images}',
-    open: (c) => const ServerSettingsRoute(
-      highlight: 'imageDownloadProcessing',
-    ).push(c),
+    open: (c) =>
+        const ServerImagesRoute(highlight: 'imageDownloadProcessing').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _imagesRowVisible(ref) &&
         ref.watch(imagesDownloadSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
@@ -1608,158 +1560,244 @@ List<SettingsSearchEntry> get serverSettingsSearchEntries => [
     title: (l) => l.imageServeProcessing,
     breadcrumb: (l) => '${l.server} › ${l.images}',
     open: (c) =>
-        const ServerSettingsRoute(highlight: 'imageServeProcessing').push(c),
+        const ServerImagesRoute(highlight: 'imageServeProcessing').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
         ref.watch(serveConversionsProvider).value != null,
   ),
+];
+
+List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'databaseType',
+    title: (l) => l.databaseType,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) => const ServerDatabaseRoute(highlight: 'databaseType').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseUrl',
+    title: (l) => l.databaseUrl,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) => const ServerDatabaseRoute(highlight: 'databaseUrl').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databaseUsername',
+    title: (l) => l.databaseUsername,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerDatabaseRoute(highlight: 'databaseUsername').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'databasePassword',
+    title: (l) => l.databasePassword,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerDatabaseRoute(highlight: 'databasePassword').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'hikariConnectionPool',
+    title: (l) => l.hikariConnectionPool,
+    subtitle: (l) => l.hikariConnectionPoolDescription,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerDatabaseRoute(highlight: 'hikariConnectionPool').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null,
+  ),
+];
+
+List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'debugLogs',
     title: (l) => l.debugLogs,
-    breadcrumb: (l) => '${l.server} › ${l.misc}',
-    open: (c) => const ServerSettingsRoute(highlight: 'debugLogs').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
+    open: (c) => const ServerLogsRoute(highlight: 'debugLogs').push(c),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'systemTrayIcon',
     title: (l) => l.systemTrayIcon,
-    breadcrumb: (l) => '${l.server} › ${l.misc}',
-    open: (c) => const ServerSettingsRoute(highlight: 'systemTrayIcon').push(c),
-    visible: (ref, _) => _serverReachable(ref),
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
+    open: (c) => const ServerLogsRoute(highlight: 'systemTrayIcon').push(c),
+    visible: (ref, _) => _serverReachable(ref) && _canManageSettings(ref),
   ),
   SettingsSearchEntry(
     id: 'logFileCleanup',
     title: (l) => l.logFileCleanup,
-    breadcrumb: (l) => '${l.server} › ${l.misc}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'logFileCleanup').push(c),
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
+    open: (c) => const ServerLogsRoute(highlight: 'logFileCleanup').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(miscLogsSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
     id: 'maxLogFileSize',
     title: (l) => l.maxLogFileSize,
     subtitle: (l) => l.logSizeExamples,
-    breadcrumb: (l) => '${l.server} › ${l.misc}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'maxLogFileSize').push(c),
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
+    open: (c) => const ServerLogsRoute(highlight: 'maxLogFileSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(miscLogsSettingsProvider).value != null,
   ),
   SettingsSearchEntry(
     id: 'maxLogFolderSize',
     title: (l) => l.maxLogFolderSize,
     subtitle: (l) => l.logSizeExamples,
-    breadcrumb: (l) => '${l.server} › ${l.misc}',
-    open: (c) =>
-        const ServerSettingsRoute(highlight: 'maxLogFolderSize').push(c),
+    breadcrumb: (l) => '${l.server} › ${l.logs}',
+    open: (c) => const ServerLogsRoute(highlight: 'maxLogFolderSize').push(c),
     visible: (ref, _) =>
         _serverReachable(ref) &&
+        _canManageSettings(ref) &&
         ref.watch(miscLogsSettingsProvider).value != null,
   ),
 ];
 
-/// Connection page (5 rows, plain "Connection" breadcrumb). Server URL and
-/// the auth-mode dropdown always render; the LAN tile only once an address
-/// exists (the "add" row is a button, not a setting); the custom-headers
-/// entry lands on the section's Add row (per-header rows are dynamic, not
-/// settings); Open in WEB is desktop-only, like its tile. Username/password
-/// fields, sign-in/test/log-out buttons, chips, and warnings are credentials
-/// or transient state, so they have no entries.
+/// Connection page ("Connection › \<Section\>" breadcrumbs). Server URL, the
+/// LAN row and Open in WEB sit under "Server"; the auth-mode picker sits
+/// under "Account" (it lives in the Account card on account servers and in
+/// the Authentication section elsewhere); the custom-headers entry lands on
+/// the section's Add row (per-header rows are dynamic, not settings); Open in
+/// WEB is desktop-only, like its tile. The Timeout rows moved here from
+/// General: Auto-refresh Retry Delay only renders while auto-refresh is on,
+/// the other two always render. Username/password fields, sign-in/test/log-out
+/// buttons, chips, and warnings are credentials or transient state, so they
+/// have no entries.
 List<SettingsSearchEntry> get connectionSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'serverUrl',
     title: (l) => l.serverUrl,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.server}',
     open: (c) => const ConnectionRoute(highlight: 'serverUrl').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'serverLanUrl',
     title: (l) => l.serverLanUrl,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.server}',
     open: (c) => const ConnectionRoute(highlight: 'serverLanUrl').push(c),
     visible: (ref, _) => ref.watch(serverLanUrlProvider) != null,
   ),
   SettingsSearchEntry(
     id: 'authentication',
     title: (l) => l.authType,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.accountTitle}',
     open: (c) => const ConnectionRoute(highlight: 'authentication').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'customHeaders',
     title: (l) => l.customHeaders,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.customHeaders}',
     open: (c) => const ConnectionRoute(highlight: 'customHeaders').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'openInWeb',
     title: (l) => l.webUI,
-    breadcrumb: (l) => l.connection,
+    breadcrumb: (l) => '${l.connection} › ${l.server}',
     open: (c) => const ConnectionRoute(highlight: 'openInWeb').push(c),
     visible: (_, _) => !kIsWeb,
   ),
+  SettingsSearchEntry(
+    id: 'serverRequestTimeout',
+    title: (l) => l.serverRequestTimeout,
+    breadcrumb: (l) => '${l.connection} › ${l.timeouts}',
+    open: (c) =>
+        const ConnectionRoute(highlight: 'serverRequestTimeout').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'autoRefreshOnTimeout',
+    title: (l) => l.autoRefreshOnTimeout,
+    subtitle: (l) => l.autoRefreshOnTimeoutDescription,
+    breadcrumb: (l) => '${l.connection} › ${l.timeouts}',
+    open: (c) =>
+        const ConnectionRoute(highlight: 'autoRefreshOnTimeout').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'autoRefreshRetryDelay',
+    title: (l) => l.autoRefreshRetryDelay,
+    breadcrumb: (l) => '${l.connection} › ${l.timeouts}',
+    open: (c) =>
+        const ConnectionRoute(highlight: 'autoRefreshRetryDelay').push(c),
+    visible: (ref, _) => ref.watch(autoRefreshOnTimeoutProvider).ifNull(),
+  ),
 ];
 
-/// SyncYomi page (6 rows, plain "SyncYomi" breadcrumb). Null settings mean
-/// the server doesn't support it (the unsupported note shows instead), so
-/// nothing is visible then; loading/error likewise hides everything. Sync
-/// now additionally needs the triple the screen's section gates on: the
-/// switch on plus a non-blank host and API key.
+/// Sync page (SyncYomi content first, then KOReader Sync, each under its
+/// section title). The support gates are unchanged from the old pages:
+/// null SyncYomi settings hide its rows; KOReader rows additionally need
+/// the KOReader status loaded without the undefined-field error.
 bool _syncYomiSupported(WidgetRef ref) =>
     ref.watch(syncYomiSettingsProvider).value != null;
 
-List<SettingsSearchEntry> get syncYomiSettingsSearchEntries => [
+bool _koreaderSyncSupported(WidgetRef ref) =>
+    ref.watch(koreaderSyncSettingsProvider).value != null &&
+    ref.watch(koSyncStatusProvider).value != null;
+
+List<SettingsSearchEntry> get syncSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'syncYomiEnabled',
     title: (l) => l.syncYomiEnabled,
-    breadcrumb: (l) => l.syncyomi,
-    open: (c) =>
-        const SyncYomiSettingsRoute(highlight: 'syncYomiEnabled').push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.syncyomi}',
+    open: (c) => const SyncRoute(highlight: 'syncYomiEnabled').push(c),
     visible: (ref, _) => _syncYomiSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'syncYomiHost',
     title: (l) => l.syncYomiHost,
-    breadcrumb: (l) => l.syncyomi,
-    open: (c) => const SyncYomiSettingsRoute(highlight: 'syncYomiHost').push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.syncyomi}',
+    open: (c) => const SyncRoute(highlight: 'syncYomiHost').push(c),
     visible: (ref, _) => _syncYomiSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'syncYomiApiKey',
     title: (l) => l.syncYomiApiKey,
-    breadcrumb: (l) => l.syncyomi,
-    open: (c) =>
-        const SyncYomiSettingsRoute(highlight: 'syncYomiApiKey').push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.syncyomi}',
+    open: (c) => const SyncRoute(highlight: 'syncYomiApiKey').push(c),
     visible: (ref, _) => _syncYomiSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'syncYomiSyncInterval',
     title: (l) => l.syncYomiSyncInterval,
-    breadcrumb: (l) => l.syncyomi,
-    open: (c) =>
-        const SyncYomiSettingsRoute(highlight: 'syncYomiSyncInterval').push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.syncyomi}',
+    open: (c) => const SyncRoute(highlight: 'syncYomiSyncInterval').push(c),
     visible: (ref, _) => _syncYomiSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'syncYomiSyncData',
     title: (l) => l.syncYomiSyncData,
-    breadcrumb: (l) => l.syncyomi,
-    open: (c) =>
-        const SyncYomiSettingsRoute(highlight: 'syncYomiSyncData').push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.syncyomi}',
+    open: (c) => const SyncRoute(highlight: 'syncYomiSyncData').push(c),
     visible: (ref, _) => _syncYomiSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'syncYomiSyncNow',
     title: (l) => l.syncYomiSyncNow,
-    breadcrumb: (l) => l.syncyomi,
-    open: (c) =>
-        const SyncYomiSettingsRoute(highlight: 'syncYomiSyncNow').push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.syncyomi}',
+    open: (c) => const SyncRoute(highlight: 'syncYomiSyncNow').push(c),
     visible: (ref, _) {
       final settings = ref.watch(syncYomiSettingsProvider).value;
       return settings != null &&
@@ -1768,61 +1806,43 @@ List<SettingsSearchEntry> get syncYomiSettingsSearchEntries => [
           settings.apiKey.isNotBlank;
     },
   ),
-];
-
-/// KOReader page (5 rows, plain "KOReader Sync" breadcrumb). Same
-/// unsupported rule as the screen: the list only renders when both the
-/// server settings and the KOReader status hold values (a null server, a
-/// still-loading/error status, or the undefined-field status error all show
-/// the unsupported note instead), so every entry needs both.
-bool _koreaderSyncSupported(WidgetRef ref) =>
-    ref.watch(koreaderSyncSettingsProvider).value != null &&
-    ref.watch(koSyncStatusProvider).value != null;
-
-List<SettingsSearchEntry> get koreaderSyncSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'koreaderSyncStatus',
     title: (l) => l.koreaderSyncStatus,
-    breadcrumb: (l) => l.koreaderSync,
-    open: (c) => const KoreaderSyncSettingsRoute(
-      highlight: 'koreaderSyncStatus',
-    ).push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.koreaderSync}',
+    open: (c) => const SyncRoute(highlight: 'koreaderSyncStatus').push(c),
     visible: (ref, _) => _koreaderSyncSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'koreaderSyncStrategyForward',
     title: (l) => l.koreaderSyncStrategyForward,
-    breadcrumb: (l) => l.koreaderSync,
-    open: (c) => const KoreaderSyncSettingsRoute(
-      highlight: 'koreaderSyncStrategyForward',
-    ).push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.koreaderSync}',
+    open: (c) =>
+        const SyncRoute(highlight: 'koreaderSyncStrategyForward').push(c),
     visible: (ref, _) => _koreaderSyncSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'koreaderSyncStrategyBackward',
     title: (l) => l.koreaderSyncStrategyBackward,
-    breadcrumb: (l) => l.koreaderSync,
-    open: (c) => const KoreaderSyncSettingsRoute(
-      highlight: 'koreaderSyncStrategyBackward',
-    ).push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.koreaderSync}',
+    open: (c) =>
+        const SyncRoute(highlight: 'koreaderSyncStrategyBackward').push(c),
     visible: (ref, _) => _koreaderSyncSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'koreaderSyncChecksumMethod',
     title: (l) => l.koreaderSyncChecksumMethod,
-    breadcrumb: (l) => l.koreaderSync,
-    open: (c) => const KoreaderSyncSettingsRoute(
-      highlight: 'koreaderSyncChecksumMethod',
-    ).push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.koreaderSync}',
+    open: (c) =>
+        const SyncRoute(highlight: 'koreaderSyncChecksumMethod').push(c),
     visible: (ref, _) => _koreaderSyncSupported(ref),
   ),
   SettingsSearchEntry(
     id: 'koreaderSyncPercentageTolerance',
     title: (l) => l.koreaderSyncPercentageTolerance,
-    breadcrumb: (l) => l.koreaderSync,
-    open: (c) => const KoreaderSyncSettingsRoute(
-      highlight: 'koreaderSyncPercentageTolerance',
-    ).push(c),
+    breadcrumb: (l) => '${l.sync} › ${l.koreaderSync}',
+    open: (c) =>
+        const SyncRoute(highlight: 'koreaderSyncPercentageTolerance').push(c),
     visible: (ref, _) => _koreaderSyncSupported(ref),
   ),
 ];
@@ -1871,11 +1891,12 @@ void pinSettingsSearchProviders(WidgetRef ref) {
   ref.watch(koSyncStatusProvider);
 }
 
-/// Every registered entry in result order: General, Appearance, Library,
-/// Reader, Browse, Notifications, Backup, Downloads, Server, Connection,
-/// SyncYomi, KOReader, Tracking.
+/// Every registered entry in result order: General, Advanced, Appearance,
+/// Library, Reader, Browse, Notifications, Backup, Downloads, Server hub
+/// pages, Connection, Sync, Tracking.
 List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...generalSettingsSearchEntries,
+  ...advancedSettingsSearchEntries,
   ...appearanceSettingsSearchEntries,
   ...librarySettingsSearchEntries,
   ...readerSettingsSearchEntries,
@@ -1883,9 +1904,13 @@ List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...notificationsSettingsSearchEntries,
   ...backupSettingsSearchEntries,
   ...downloadsSettingsSearchEntries,
-  ...serverSettingsSearchEntries,
+  ...serverNetworkSettingsSearchEntries,
+  ...serverWebInterfaceSettingsSearchEntries,
+  ...serverOpdsSettingsSearchEntries,
+  ...serverImagesSettingsSearchEntries,
+  ...serverDatabaseSettingsSearchEntries,
+  ...serverLogsSettingsSearchEntries,
   ...connectionSettingsSearchEntries,
-  ...syncYomiSettingsSearchEntries,
-  ...koreaderSyncSettingsSearchEntries,
+  ...syncSettingsSearchEntries,
   ...trackingSettingsSearchEntries,
 ];

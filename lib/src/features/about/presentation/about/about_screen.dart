@@ -22,6 +22,7 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../../widgets/web_selection_area.dart';
+import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/about_repository.dart';
 import '../../domain/about/about_dto.dart';
 import '../../domain/server_update/server_update.dart';
@@ -144,103 +145,122 @@ class AboutScreen extends HookConsumerWidget {
       body: WebSelectionArea(
         child: RefreshIndicator(
           onRefresh: () => ref.refresh(aboutProvider.future),
-          child: ListView(
-            children: [
-              TsumiruLogo(size: context.height * .2),
-              const Divider(),
-              ClipboardListTile(
-                title: context.l10n.client,
-                value: packageInfo.appName,
-              ),
-              ClipboardListTile(
-                title: context.l10n.clientVersion,
-                value: "v${packageInfo.version}",
-              ),
-              ListTile(
-                title: Text(context.l10n.whatsNew),
-                onTap: () async {
-                  await launchUrlInWeb(
-                    context,
-                    AppUrls.sorayomiWhatsNew.url,
-                    toast,
-                  );
-                },
-              ),
-              if (!isGooglePlayBuild)
-                ListTile(
-                  title: Text(
-                    serverHosted
-                        ? context.l10n.updatedByYourServer
-                        : context.l10n.checkForUpdates,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView(
+                children: [
+                  TsumiruLogo(size: context.height * .2),
+                  SettingsGroupHeading(label: context.l10n.client, first: true),
+                  SettingsGroupCard(
+                    children: [
+                      ClipboardListTile(
+                        title: context.l10n.client,
+                        value: packageInfo.appName,
+                      ),
+                      ClipboardListTile(
+                        title: context.l10n.clientVersion,
+                        value: "v${packageInfo.version}",
+                      ),
+                      ListTile(
+                        title: Text(context.l10n.whatsNew),
+                        onTap: () async {
+                          await launchUrlInWeb(
+                            context,
+                            AppUrls.sorayomiWhatsNew.url,
+                            toast,
+                          );
+                        },
+                      ),
+                      if (!isGooglePlayBuild)
+                        ListTile(
+                          title: Text(
+                            serverHosted
+                                ? context.l10n.updatedByYourServer
+                                : context.l10n.checkForUpdates,
+                          ),
+                          onTap: serverHosted
+                              ? () => const ServerSettingsRoute().push(context)
+                              : () => checkForUpdate(
+                                  title: packageInfo.appName,
+                                  context: context,
+                                  updateCallback: ref
+                                      .read(aboutRepositoryProvider)
+                                      .checkUpdate,
+                                  toast: toast,
+                                ),
+                        ),
+                      ListTile(
+                        title: Text(context.l10n.privacyPolicy),
+                        onTap: () => launchUrlInWeb(
+                          context,
+                          AppUrls.privacyPolicy.url,
+                          toast,
+                        ),
+                      ),
+                    ],
                   ),
-                  onTap: serverHosted
-                      ? () => const ServerSettingsRoute().push(context)
-                      : () => checkForUpdate(
-                          title: packageInfo.appName,
-                          context: context,
-                          updateCallback: ref
-                              .read(aboutRepositoryProvider)
-                              .checkUpdate,
+                  if (about != null) ...[
+                    SettingsGroupHeading(label: context.l10n.server),
+                    SettingsGroupCard(
+                      children: [
+                        ClipboardListTile(
+                          title: context.l10n.server,
+                          value: about.name,
+                        ),
+                        ClipboardListTile(
+                          title: context.l10n.channel,
+                          value: about.buildType,
+                        ),
+                        if (serverVer.isNotBlank)
+                          ClipboardListTile(
+                            title: context.l10n.serverVersion,
+                            value: serverVer,
+                          ),
+                        ClipboardListTile(
+                          title: context.l10n.buildTime,
+                          value: about.buildTime.toDateString,
+                        ),
+                        if (serverVer.isNotBlank)
+                          ListTile(
+                            title: Text(context.l10n.checkForServerUpdates),
+                            onTap: () => checkForServerUpdate(
+                              context: context,
+                              serverVer: serverVer ?? "",
+                              about: about,
+                              updateCallback: ref
+                                  .read(aboutRepositoryProvider)
+                                  .checkServerUpdate,
+                              toast: toast,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  Padding(
+                    padding: KEdgeInsets.a8.size,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceEvenly,
+                      children: [
+                        MediaLaunchButton(
+                          title: "${context.l10n.gitHub} ",
+                          icon: Icon(BrandIcons.github),
+                          url: AppUrls.sorayomiGithubUrl.url,
                           toast: toast,
                         ),
-                ),
-              ListTile(
-                title: Text(context.l10n.privacyPolicy),
-                onTap: () =>
-                    launchUrlInWeb(context, AppUrls.privacyPolicy.url, toast),
-              ),
-              if (about != null) ...[
-                const Divider(),
-                ClipboardListTile(title: context.l10n.server, value: about.name),
-                ClipboardListTile(
-                  title: context.l10n.channel,
-                  value: about.buildType,
-                ),
-                if (serverVer.isNotBlank)
-                  ClipboardListTile(
-                    title: context.l10n.serverVersion,
-                    value: serverVer,
-                  ),
-                ClipboardListTile(
-                  title: context.l10n.buildTime,
-                  value: about.buildTime.toDateString,
-                ),
-                if (serverVer.isNotBlank)
-                  ListTile(
-                    title: Text(context.l10n.checkForServerUpdates),
-                    onTap: () => checkForServerUpdate(
-                      context: context,
-                      serverVer: serverVer ?? "",
-                      about: about,
-                      updateCallback: ref
-                          .read(aboutRepositoryProvider)
-                          .checkServerUpdate,
-                      toast: toast,
+                        if ((about?.discord).isNotBlank)
+                          MediaLaunchButton(
+                            title: context.l10n.discord,
+                            icon: Icon(BrandIcons.discord),
+                            url: about!.discord,
+                            toast: toast,
+                          ),
+                      ],
                     ),
                   ),
-              ],
-              Padding(
-                padding: KEdgeInsets.a8.size,
-                child: Wrap(
-                  alignment: WrapAlignment.spaceEvenly,
-                  children: [
-                    MediaLaunchButton(
-                      title: "${context.l10n.gitHub} ",
-                      icon: Icon(BrandIcons.github),
-                      url: AppUrls.sorayomiGithubUrl.url,
-                      toast: toast,
-                    ),
-                    if ((about?.discord).isNotBlank)
-                      MediaLaunchButton(
-                        title: context.l10n.discord,
-                        icon: Icon(BrandIcons.discord),
-                        url: about!.discord,
-                        toast: toast,
-                      ),
-                  ],
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

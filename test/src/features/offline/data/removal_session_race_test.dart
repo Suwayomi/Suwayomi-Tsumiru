@@ -142,6 +142,11 @@ void main() {
           await tester.tap(find.byType(SeriesOfflineButton));
           await tester.pumpAndSettle();
         } else {
+          await tester.scrollUntilVisible(
+            find.text('Remove all downloads'),
+            500,
+            scrollable: find.byType(Scrollable).first,
+          );
           await tester.tap(find.text('Remove all downloads'));
           await tester.pumpAndSettle();
         }
