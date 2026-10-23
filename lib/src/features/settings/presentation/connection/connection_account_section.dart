@@ -112,6 +112,7 @@ class ConnectionAccountSection extends ConsumerWidget {
           ],
         ),
         const InlineAuthSection(accountMode: true),
+        const SizedBox(height: 16),
         SettingsGroupCard(
           children: [
             if (hasCredentials)
