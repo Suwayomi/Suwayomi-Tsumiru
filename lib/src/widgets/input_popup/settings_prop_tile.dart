@@ -52,32 +52,24 @@ class SettingsPropTile extends StatelessWidget {
         switchProp: type as SwitchProp,
       );
     }
-    return Tooltip(
-      message: subtitleString ?? title,
-      child: ListTile(
-        leading: leading,
-        trailing: trailing,
-        title: titleWidget ?? Text(title!),
-        subtitle: subtitleString.isNotBlank
-            ? Text(
-                subtitleString ?? "",
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        onTap: AppUtils.returnIf(
-          onTap != null,
-          onTap,
-          AppUtils.returnIf(
-            type.onChanged != null,
-            () => showDialog(
-              context: context,
-              builder: (context) => SettingsPropPopUp(
-                title: title,
-                description: description,
-                type: type,
-              ),
-              animationStyle: context.motionStyle,
+    return ListTile(
+      leading: leading,
+      trailing: trailing,
+      title: titleWidget ?? Text(title!),
+      subtitle: subtitleString.isNotBlank ? Text(subtitleString ?? "") : null,
+      onTap: AppUtils.returnIf(
+        onTap != null,
+        onTap,
+        AppUtils.returnIf(
+          type.onChanged != null,
+          () => showDialog(
+            context: context,
+            builder: (context) => SettingsPropPopUp(
+              title: title,
+              description: description,
+              type: type,
             ),
+            animationStyle: context.motionStyle,
           ),
         ),
       ),
@@ -103,32 +95,21 @@ class SwitchSettingsPropTile extends ConsumerWidget {
 
   @override
   Widget build(context, ref) {
-    return Tooltip(
-      message: subtitleString ?? title,
-      child: SwitchListTile(
-        controlAffinity: ListTileControlAffinity.trailing,
-        secondary: leading,
-        title: titleWidget ?? Text(title!),
-        value: switchProp.value.ifNull(),
-        subtitle: subtitleString.isNotBlank
-            ? Text(
-                subtitleString ?? "",
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        onChanged: AppUtils.returnIf(
-          switchProp.onChanged != null,
-          (val) async {
-            final result = await AppUtils.guard(
-              () => switchProp.onChanged!(val),
-              ref.read(toastProvider),
-            );
-            if (result != null && result is SettingsDto) {
-              ref.read(settingsProvider.notifier).updateState(result);
-            }
-          },
-        ),
-      ),
+    return SwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      secondary: leading,
+      title: titleWidget ?? Text(title!),
+      value: switchProp.value.ifNull(),
+      subtitle: subtitleString.isNotBlank ? Text(subtitleString ?? "") : null,
+      onChanged: AppUtils.returnIf(switchProp.onChanged != null, (val) async {
+        final result = await AppUtils.guard(
+          () => switchProp.onChanged!(val),
+          ref.read(toastProvider),
+        );
+        if (result != null && result is SettingsDto) {
+          ref.read(settingsProvider.notifier).updateState(result);
+        }
+      }),
     );
   }
 }
