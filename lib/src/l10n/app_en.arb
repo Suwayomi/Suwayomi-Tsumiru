@@ -803,9 +803,6 @@
   "@nsfw18": {
     "description": "18+ tag Text to show in extensions list"
   },
-  "@nsfwInfo": {
-    "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
-  },
   "@numSelected": {
     "description": "Title text to show the number of chapters selected in the Manga details screen and Updates screen",
     "placeholders": {
@@ -2312,7 +2309,6 @@
   "none": "None",
   "nsfw": "Show NSFW extensions and sources",
   "nsfw18": "18+",
-  "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
   "numSelected": "{num} selected",
   "removeFromDevice": "Remove from device",
   "download": "Download",

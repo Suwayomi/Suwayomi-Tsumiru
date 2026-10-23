@@ -78,9 +78,10 @@ class DesktopSidebar extends ConsumerWidget {
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
-    // Desktop dropped the More tab: the five destinations match the shell
-    // branches one-to-one, so [selectedIndex] needs no translation.
-    final navList = NavigationBarData.desktopNavList;
+    final showFoot = context.windowSizeClass >= WindowSizeClass.expanded;
+    final navList = showFoot
+        ? NavigationBarData.desktopNavList
+        : NavigationBarData.tabletNavList;
 
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
     final expanded = sidebarIsExpanded(context, preference);
@@ -301,9 +302,11 @@ class DesktopSidebar extends ConsumerWidget {
                         children: [
                           ...brandRows,
                           ...destinationRows,
-                          footDivider,
-                          incognitoRow(showExpanded),
-                          settingsRow(showExpanded),
+                          if (showFoot) ...[
+                            footDivider,
+                            incognitoRow(showExpanded),
+                            settingsRow(showExpanded),
+                          ],
                         ],
                       ),
                     )
@@ -319,9 +322,11 @@ class DesktopSidebar extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        footDivider,
-                        incognitoRow(showExpanded),
-                        settingsRow(showExpanded),
+                        if (showFoot) ...[
+                          footDivider,
+                          incognitoRow(showExpanded),
+                          settingsRow(showExpanded),
+                        ],
                       ],
                     ),
             ),

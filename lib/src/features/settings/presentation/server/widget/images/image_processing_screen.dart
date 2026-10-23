@@ -166,7 +166,7 @@ class _ImageProcessingScreenState
       leading: detailNavigationBackButton(context),
       title: title,
       child: Scaffold(
-        appBar: topBar ? null : AppBar(title: title),
+        appBar: topBar ? null : AppBar(leading: detailNavigationBackButton(context), title: title),
         body: _isDownload
             ? ref.watch(imagesDownloadSettingsProvider).when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -217,7 +217,7 @@ class _ImageProcessingScreenState
                 _rules!.any((r) => r.hasInvalidNumericInput);
             final changed = imageConversionsChanged(_baseline!, rules);
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: settingsPagePadding(context, const EdgeInsets.all(16)),
               children: [
                 Text(context.l10n.imageProcessingIntro),
                 const SizedBox(height: 16),

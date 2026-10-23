@@ -159,6 +159,27 @@ double searchTopBarSlotMinWidth(int actionCount, [bool hasLeading = false]) =>
     actionCount * (48.0 + kDesktopTopBarGap) +
     kDesktopTopBarGap;
 
+BoxConstraints settingsPageConstraints(
+  BuildContext context, {
+  double maxWidth = 720,
+}) => BoxConstraints(
+  maxWidth: SettingsPaneScope.maybeOf(context) == null
+      ? maxWidth
+      : double.infinity,
+);
+
+EdgeInsets? settingsPagePadding(
+  BuildContext context, [
+  EdgeInsetsGeometry? padding,
+]) {
+  final pane = SettingsPaneScope.maybeOf(context);
+  if (pane == null) return padding?.resolve(Directionality.of(context));
+  return EdgeInsets.only(
+    left: 20,
+    right: (pane.width - 740).clamp(0, double.infinity),
+  ).add(padding ?? EdgeInsets.zero).resolve(Directionality.of(context));
+}
+
 /// Wraps a standard back-arrow title page for the desktop top bar: without
 /// the merged bar [child] is returned unchanged; with it the page's AppBar
 /// must be null and its toolbar shows in the shell bar instead. The page
@@ -201,18 +222,7 @@ Widget titleTopBarSlot({
             ),
           ),
           if (pane.tabs != null) pane.tabs!,
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: child,
-                ),
-              ),
-            ),
-          ),
+          Expanded(child: child),
         ],
       );
     }

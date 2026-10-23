@@ -62,7 +62,13 @@ class DownloadsSettingsScreen extends StatelessWidget {
           ),
         ),
         child: Scaffold(
-          appBar: topBar ? null : AppBar(title: title, bottom: tabBar),
+          appBar: topBar
+              ? null
+              : AppBar(
+                  leading: detailNavigationBackButton(context),
+                  title: title,
+                  bottom: tabBar,
+                ),
           body: topBar
               ? Column(
                   children: [
@@ -135,8 +141,9 @@ class _ServerDownloadsTab extends ConsumerWidget {
         return SettingsHighlightScope(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: settingsPageConstraints(context),
               child: ListView(
+                padding: settingsPagePadding(context),
                 children: [
                   SettingsGroupHeading(
                     label: context.l10n.general,
@@ -327,8 +334,11 @@ class _OnDeviceDownloadsTab extends ConsumerWidget {
     return SettingsHighlightScope(
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(children: buildOnDeviceStorageTiles(context, ref)),
+          constraints: settingsPageConstraints(context),
+          child: ListView(
+            padding: settingsPagePadding(context),
+            children: buildOnDeviceStorageTiles(context, ref),
+          ),
         ),
       ),
     );

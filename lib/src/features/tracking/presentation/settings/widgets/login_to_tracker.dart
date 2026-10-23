@@ -108,6 +108,7 @@ Future<void> loginToTracker(WidgetRef ref, Fragment$TrackerDto tracker) async {
         MaterialPageRoute(
           builder: (ctx) => SettingsPaneScope(
             nested: true,
+            width: pane.width,
             onClose: pane.onClose,
             onBack: () => Navigator.of(ctx).pop(),
             child: Builder(
@@ -116,7 +117,10 @@ Future<void> loginToTracker(WidgetRef ref, Fragment$TrackerDto tracker) async {
                 leading: const BackButton(),
                 title: Text(tracker.name),
                 child: Scaffold(
-                  body: SingleChildScrollView(child: credentials(ctx)),
+                  body: SingleChildScrollView(
+                    padding: settingsPagePadding(ctx),
+                    child: credentials(ctx),
+                  ),
                 ),
               ),
             ),

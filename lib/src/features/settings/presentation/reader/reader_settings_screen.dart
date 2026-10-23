@@ -73,12 +73,15 @@ class ReaderSettingsScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.reader);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: SettingsHighlightScope(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: settingsPageConstraints(context),
             child: ListView(
+              padding: settingsPagePadding(context),
               children: [
                 // Group order follows Komikku's reader settings: ungrouped
                 // basics first, then Display, E-Ink, Reading, Paged,

@@ -38,6 +38,7 @@ class SettingsScreen extends ConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
+              leading: detailNavigationBackButton(context),
               title: title,
               bottom: persistentBox
                   ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
@@ -50,8 +51,9 @@ class SettingsScreen extends ConsumerWidget {
       body: WebSelectionArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: settingsPageConstraints(context),
             child: ListView(
+              padding: settingsPagePadding(context),
               children: [
                 SettingsGroupHeading(
                   label: context.l10n.settingsGroupApp,

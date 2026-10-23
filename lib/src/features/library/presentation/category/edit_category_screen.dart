@@ -39,7 +39,9 @@ class EditCategoryScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.editCategory);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       floatingActionButton: categoryList.asError?.error != null
           ? null
           : const CategoryCreateFab(),
@@ -57,6 +59,7 @@ class EditCategoryScreen extends HookConsumerWidget {
           return RefreshIndicator(
             onRefresh: () => ref.refresh(categoryControllerProvider.future),
             child: ReorderableListView.builder(
+              padding: settingsPagePadding(context),
               // Custom drag handles live in CategoryTile (and the default
               // category has none), so suppress the built-in trailing ones.
               buildDefaultDragHandles: false,

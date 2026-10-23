@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../graphql/__generated__/schema.graphql.dart';
@@ -42,7 +41,9 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.browse);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
@@ -54,8 +55,9 @@ class BrowseSettingsScreen extends ConsumerWidget {
           child: SettingsHighlightScope(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
+                constraints: settingsPageConstraints(context),
                 child: ListView(
+                  padding: settingsPagePadding(context),
                   children: [
                     if (!canManage)
                       ListTile(
@@ -139,26 +141,6 @@ class BrowseSettingsScreen extends ConsumerWidget {
                           id: 'showNsfw',
                           child: ShowNSFWTile(),
                         ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        const Gap(16),
-                        Icon(
-                          Icons.info_outline_rounded,
-                          color: context.theme.colorScheme.onSurfaceVariant,
-                          size: 18,
-                        ),
-                        const Gap(10),
-                        Expanded(
-                          child: Text(
-                            context.l10n.nsfwInfo,
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: context.theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const Gap(10),
                       ],
                     ),
                   ],

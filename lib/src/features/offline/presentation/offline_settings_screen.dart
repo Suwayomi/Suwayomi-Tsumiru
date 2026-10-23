@@ -457,11 +457,19 @@ class OfflineSettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: topBar ? null : AppBar(title: title),
+        appBar: topBar
+            ? null
+            : AppBar(
+                leading: detailNavigationBackButton(context),
+                title: title,
+              ),
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(children: buildOnDeviceStorageTiles(context, ref)),
+            constraints: settingsPageConstraints(context),
+            child: ListView(
+              padding: settingsPagePadding(context),
+              children: buildOnDeviceStorageTiles(context, ref),
+            ),
           ),
         ),
       ),

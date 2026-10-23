@@ -43,12 +43,15 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.notifications);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: SettingsHighlightScope(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: settingsPageConstraints(context),
             child: ListView(
+              padding: settingsPagePadding(context),
               children: [
                 SettingsGroupHeading(
                   label: l10n.notificationsSectionNewChapters,

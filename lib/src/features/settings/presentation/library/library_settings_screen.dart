@@ -65,7 +65,12 @@ class LibrarySettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: topBar ? null : AppBar(title: title),
+        appBar: topBar
+            ? null
+            : AppBar(
+                leading: detailNavigationBackButton(context),
+                title: title,
+              ),
         body: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(userSettingsProvider);
@@ -119,8 +124,9 @@ class LibrarySettingsScreen extends ConsumerWidget {
             return SettingsHighlightScope(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
+                  constraints: settingsPageConstraints(context),
                   child: ListView(
+                    padding: settingsPagePadding(context),
                     children: [
                       SettingsGroupHeading(
                         label: context.l10n.categories,

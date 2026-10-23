@@ -84,6 +84,7 @@ class SettingsWindow extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: ModalBarrier(
+                      onDismiss: close,
                       color: Theme.of(
                         context,
                       ).colorScheme.scrim.withValues(alpha: .45),
@@ -127,14 +128,18 @@ class SettingsWindow extends StatelessWidget {
                                   color: context.colorScheme.outlineVariant,
                                 ),
                                 Expanded(
-                                  child: SettingsPaneScope(
-                                    nested: nested,
-                                    onClose: close,
-                                    onBack: back,
-                                    tabs: _isServerPath(path)
-                                        ? _ServerTabs(path: path)
-                                        : null,
-                                    child: child,
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) =>
+                                        SettingsPaneScope(
+                                          width: constraints.maxWidth,
+                                          nested: nested,
+                                          onClose: close,
+                                          onBack: back,
+                                          tabs: _isServerPath(path)
+                                              ? _ServerTabs(path: path)
+                                              : null,
+                                          child: child,
+                                        ),
                                   ),
                                 ),
                               ],

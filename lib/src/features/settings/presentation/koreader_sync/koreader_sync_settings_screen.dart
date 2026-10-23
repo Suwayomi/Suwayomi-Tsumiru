@@ -59,9 +59,14 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.koreaderSync);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
-      body: const SettingsHighlightScope(
-        child: SingleChildScrollView(child: KoreaderSyncSettingsBody()),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
+      body: SettingsHighlightScope(
+        child: SingleChildScrollView(
+          padding: settingsPagePadding(context),
+          child: const KoreaderSyncSettingsBody(),
+        ),
       ),
     );
     return titleTopBarSlot(

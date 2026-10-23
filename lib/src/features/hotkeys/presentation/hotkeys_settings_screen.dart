@@ -47,12 +47,12 @@ class HotkeysSettingsScreen extends StatelessWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(l.keyboardShortcuts);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar ? null : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: WebSelectionArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(padding: const EdgeInsets.only(bottom: 24), children: rows),
+            constraints: settingsPageConstraints(context, maxWidth: 640),
+            child: ListView(padding: settingsPagePadding(context, const EdgeInsets.only(bottom: 24)), children: rows),
           ),
         ),
       ),

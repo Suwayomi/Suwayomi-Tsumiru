@@ -41,14 +41,19 @@ class ManageUsersScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.accountPermissionManageUsers);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: WebSelectionArea(
         child: !access.canManageUsers
             ? Center(child: Text(context.l10n.accountSettingsUnavailable))
             : Column(
                 children: [
                   Padding(
-                    padding: KEdgeInsets.a16.size,
+                    padding: settingsPagePadding(
+                      context,
+                      KEdgeInsets.a16.size,
+                    )!,
                     child: TextField(
                       controller: search,
                       textInputAction: TextInputAction.search,
@@ -69,22 +74,31 @@ class ManageUsersScreen extends HookConsumerWidget {
                       },
                     ),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.person_add_rounded),
-                    title: Text(context.l10n.accountCreateUser),
-                    onTap: () async {
-                      await showDialog<void>(
-                        context: context,
-                        builder: (_) => const CreateAccountDialog(),
-                        animationStyle: context.motionStyle,
-                      );
-                      if (context.mounted) ref.invalidate(accountUsersProvider);
-                    },
+                  Padding(
+                    padding: settingsPagePadding(context) ?? EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const Icon(Icons.person_add_rounded),
+                      title: Text(context.l10n.accountCreateUser),
+                      onTap: () async {
+                        await showDialog<void>(
+                          context: context,
+                          builder: (_) => const CreateAccountDialog(),
+                          animationStyle: context.motionStyle,
+                        );
+                        if (context.mounted) {
+                          ref.invalidate(accountUsersProvider);
+                        }
+                      },
+                    ),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.key_rounded),
-                    title: Text(context.l10n.accountCodes),
-                    onTap: () => const AccountCodesRoute().push<void>(context),
+                  Padding(
+                    padding: settingsPagePadding(context) ?? EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const Icon(Icons.key_rounded),
+                      title: Text(context.l10n.accountCodes),
+                      onTap: () =>
+                          const AccountCodesRoute().push<void>(context),
+                    ),
                   ),
                   Expanded(
                     child: users!.showUiWhenData(
@@ -92,6 +106,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                       (data) => RefreshIndicator(
                         onRefresh: refresh,
                         child: ListView(
+                          padding: settingsPagePadding(context),
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             for (final user in data.nodes)
@@ -137,7 +152,8 @@ class ManageUsersScreen extends HookConsumerWidget {
                                 onTap: () async {
                                   await showDialog<void>(
                                     context: context,
-                                    builder: (_) => EditAccountDialog(user: user),
+                                    builder: (_) =>
+                                        EditAccountDialog(user: user),
                                     animationStyle: context.motionStyle,
                                   );
                                   if (context.mounted) {
@@ -146,12 +162,15 @@ class ManageUsersScreen extends HookConsumerWidget {
                                 },
                               ),
                             if (data.nodes.isEmpty)
-                              ListTile(title: Text(context.l10n.accountNoUsers)),
+                              ListTile(
+                                title: Text(context.l10n.accountNoUsers),
+                              ),
                             if (cursors.value.length > 1 ||
                                 (data.pageInfo.hasNextPage &&
                                     data.pageInfo.endCursor != null))
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   if (cursors.value.length > 1)
                                     TextButton(

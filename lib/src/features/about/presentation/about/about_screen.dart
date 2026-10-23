@@ -141,14 +141,17 @@ class AboutScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.about);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: WebSelectionArea(
         child: RefreshIndicator(
           onRefresh: () => ref.refresh(aboutProvider.future),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: settingsPageConstraints(context),
               child: ListView(
+                padding: settingsPagePadding(context),
                 children: [
                   TsumiruLogo(size: context.height * .2),
                   SettingsGroupHeading(label: context.l10n.client, first: true),

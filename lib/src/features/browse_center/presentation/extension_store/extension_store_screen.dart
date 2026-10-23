@@ -53,15 +53,13 @@ class ExtensionStoreScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.extensionStores);
     final actions = <Widget>[
-      IconButton(
-        icon: const Icon(Icons.refresh_rounded),
-        onPressed: refresh,
-      ),
+      IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: refresh),
     ];
     final scaffold = Scaffold(
       appBar: topBar
           ? null
           : AppBar(
+              leading: detailNavigationBackButton(context),
               title: title,
               actions: actions,
             ),
@@ -106,7 +104,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                   );
                 }
                 return ListView.builder(
-                  padding: KEdgeInsets.a8.size,
+                  padding: settingsPagePadding(context, KEdgeInsets.a8.size),
                   itemCount: stores.length,
                   itemBuilder: (context, index) {
                     final store = stores[index];

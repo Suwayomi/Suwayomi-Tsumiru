@@ -174,23 +174,29 @@ class AccountCodesScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.accountCodes);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: !admitted
           ? Center(child: Text(context.l10n.accountSettingsUnavailable))
           : Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.add_rounded),
-                  title: Text(context.l10n.accountIssueRegistrationCode),
-                  onTap: busy.value
-                      ? null
-                      : () => issueAccountCode(context, ref),
+                Padding(
+                  padding: settingsPagePadding(context) ?? EdgeInsets.zero,
+                  child: ListTile(
+                    leading: const Icon(Icons.add_rounded),
+                    title: Text(context.l10n.accountIssueRegistrationCode),
+                    onTap: busy.value
+                        ? null
+                        : () => issueAccountCode(context, ref),
+                  ),
                 ),
                 if (busy.value) const LinearProgressIndicator(),
                 Expanded(
                   child: codes!.showUiWhenData(
                     context,
                     (data) => ListView(
+                      padding: settingsPagePadding(context),
                       children: [
                         if (data.isEmpty)
                           ListTile(title: Text(context.l10n.accountNoCodes)),

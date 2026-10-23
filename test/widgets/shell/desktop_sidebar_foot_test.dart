@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // Desktop sidebar foot: Incognito and Settings sit below the destinations,
-// and More is gone from the desktop navigation.
+// while narrower sidebars keep More.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -82,6 +82,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(incognitoModeProvider), isTrue);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    tester.view.physicalSize = const Size(700, 900);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip(l10n.more), findsOneWidget);
+    expect(find.byTooltip(l10n.incognitoShort), findsNothing);
+    expect(find.byTooltip(l10n.settings), findsNothing);
+    expect(find.byType(Switch), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

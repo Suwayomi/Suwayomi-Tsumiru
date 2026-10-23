@@ -25,7 +25,9 @@ class BackupScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.backup);
     final scaffold = Scaffold(
-      appBar: topBar ? null : AppBar(title: title),
+      appBar: topBar
+          ? null
+          : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(settingsProvider.future),
         child: ListTileTheme(
@@ -37,8 +39,9 @@ class BackupScreen extends ConsumerWidget {
           child: SettingsHighlightScope(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
+                constraints: settingsPageConstraints(context),
                 child: ListView(
+                  padding: settingsPagePadding(context),
                   children: const [
                     BackupAndRestoreSection(),
                     AutomaticBackupSection(),

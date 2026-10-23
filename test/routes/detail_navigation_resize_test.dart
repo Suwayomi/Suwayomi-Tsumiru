@@ -290,6 +290,34 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   });
 
+  testWidgets('phone settings Back returns to the previous route', (
+    tester,
+  ) async {
+    final router = await _pumpRouter(tester);
+    debugDesktopPlatformOverride = false;
+    tester.view.physicalSize = const Size(412, 915);
+    router.go(const MoreRoute().location);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final previousLocation = router.state.uri;
+    router.push(const BackupRoute().location);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SettingsWindowPageList), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byType(BackButton),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byType(BackButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(router.state.uri, previousLocation);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings page list fits at 1000 by 720 without scrolling', (
     tester,
   ) async {

@@ -7,9 +7,11 @@ class SettingsPaneScope extends InheritedWidget {
     required this.onClose,
     required this.onBack,
     this.tabs,
+    this.width = 720,
     required super.child,
   });
 
+  final double width;
   final Widget? tabs;
   final bool nested;
   final VoidCallback onClose;
@@ -20,6 +22,7 @@ class SettingsPaneScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(SettingsPaneScope oldWidget) =>
+      width != oldWidget.width ||
       tabs != oldWidget.tabs ||
       nested != oldWidget.nested ||
       onClose != oldWidget.onClose ||
