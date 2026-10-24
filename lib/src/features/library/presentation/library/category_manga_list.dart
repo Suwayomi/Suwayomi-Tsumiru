@@ -18,6 +18,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/download_presets_menu.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../account/data/account_permission.dart';
@@ -39,6 +40,7 @@ import '../../../offline/data/offline_repository.dart';
 import '../../../offline/data/offline_runtime_storage.dart';
 import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/keep_rule_picker.dart';
+import '../../../offline/presentation/offline_action_confirmations.dart';
 import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import 'controller/library_controller.dart';
@@ -106,6 +108,15 @@ class CategoryMangaList extends HookConsumerWidget {
     }
 
     Future<void> markSelection(bool read) async {
+      if (!await confirmAction(
+            context,
+            title: read ? context.l10n.markAsRead : context.l10n.markAsUnread,
+            message: context.l10n.confirmSeriesReadMessage,
+            action: read ? context.l10n.markAsRead : context.l10n.markAsUnread,
+          ) ||
+          !context.mounted) {
+        return;
+      }
       final ids = selection.value.toList();
       selection.value = const {};
       final repo = ref.read(mangaBookRepositoryProvider);
@@ -295,6 +306,16 @@ class CategoryMangaList extends HookConsumerWidget {
                               return;
                             }
 
+                            if (!await confirmKeepRuleChanges(
+                                  ref,
+                                  ids,
+                                  picked.rule,
+                                  picked.count,
+                                ) ||
+                                !context.mounted ||
+                                !current()) {
+                              return;
+                            }
                             if (picked.rule == OfflineKeepRule.off) {
                               // changeKeepRule also rewrites background work; bare setKeepRule leaves downloads scheduled.
                               if (!current()) return;

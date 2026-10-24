@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
 import 'controller/manga_details_controller.dart';
 import 'widgets/manga_notes_save.dart';
 import 'widgets/manga_notes_toolbar.dart';
@@ -33,6 +34,18 @@ class MangaNotesScreen extends HookConsumerWidget {
 
     Future<bool> save() async {
       if (saved.value || controller.text == initialNotes) return true;
+      if (controller.text.trimRight().isEmpty &&
+          initialNotes.trimRight().isNotEmpty) {
+        if (!await confirmAction(
+              context,
+              title: context.l10n.confirmDeleteNoteTitle,
+              message: context.l10n.confirmDeleteNoteMessage,
+              action: context.l10n.delete,
+            ) ||
+            !context.mounted) {
+          return false;
+        }
+      }
       final ok = await persistMangaNotes(
         client: ref.read(graphQlClientProvider),
         mangaId: mangaId,

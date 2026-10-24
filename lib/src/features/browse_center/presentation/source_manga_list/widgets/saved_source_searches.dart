@@ -18,6 +18,7 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/webui_meta/saved_search_filters.dart';
 import '../../../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../../../../utils/webui_meta/webui_meta_repository.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../domain/filter/filter_model.dart';
 import '../controller/source_manga_controller.dart';
 
@@ -92,6 +93,17 @@ class SavedSourceSearches extends HookConsumerWidget {
         ),
       );
       if (name == null || !context.mounted) return;
+      if (searches.containsKey(name)) {
+        if (!await confirmAction(
+              context,
+              title: context.l10n.confirmOverwriteSearchTitle,
+              message: context.l10n.confirmOverwriteSearchMessage,
+              action: context.l10n.confirmOverwriteAction,
+            ) ||
+            !context.mounted) {
+          return;
+        }
+      }
       await writeSearches({
         ...searches,
         name: {

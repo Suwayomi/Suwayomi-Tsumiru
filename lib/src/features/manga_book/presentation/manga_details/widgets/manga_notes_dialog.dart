@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../controller/manga_details_controller.dart';
 import 'manga_notes_save.dart';
 import 'manga_notes_toolbar.dart';
@@ -31,6 +32,19 @@ class MangaNotesDialog extends HookConsumerWidget {
     Future<void> save() async {
       if (saving.value) return;
       saving.value = true;
+      if (controller.text.trimRight().isEmpty &&
+          initialNotes.trimRight().isNotEmpty) {
+        if (!await confirmAction(
+              context,
+              title: context.l10n.confirmDeleteNoteTitle,
+              message: context.l10n.confirmDeleteNoteMessage,
+              action: context.l10n.delete,
+            ) ||
+            !context.mounted) {
+          if (context.mounted) saving.value = false;
+          return;
+        }
+      }
       final ok = await persistMangaNotes(
         client: ref.read(graphQlClientProvider),
         mangaId: mangaId,
