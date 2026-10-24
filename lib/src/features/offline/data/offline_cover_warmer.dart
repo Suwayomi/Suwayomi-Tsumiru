@@ -21,21 +21,11 @@ import '../../settings/presentation/server/widget/credential_popup/credentials_p
 
 part 'offline_cover_warmer.g.dart';
 
-/// Downloads library covers into the durable cover cache during online use.
-///
-/// The cover cache only holds covers the user has scrolled past; a series
-/// added but never viewed would still be a broken image offline. The library
-/// list already syncs the catalog on every online load, so the same pass tops
-/// up missing covers — a no-op once every cover is present.
-///
-/// keepAlive: the warm loop outlives the (autoDispose) library providers that
-/// trigger it, and reading providers from a disposed ref throws.
+// Keep alive: background warming outlives the auto-disposed library providers that trigger it.
 @Riverpod(keepAlive: true)
 class OfflineCoverWarmer extends _$OfflineCoverWarmer {
   static const _concurrency = 4;
 
-  /// Cache keys currently being fetched, so overlapping library loads don't
-  /// stack duplicate downloads.
   final _inFlight = <String>{};
 
   @override
@@ -111,14 +101,11 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
           authHeaders: headers,
         );
       } catch (_) {
-        // Best-effort: a failed cover fetch retries on the next library load.
       } finally {
         _inFlight.remove(cacheKey);
       }
     }
 
-    // Bounded fan-out so a first-time warm of a large library doesn't hammer
-    // the server or saturate the connection.
     for (var i = 0; i < pending.length; i += _concurrency) {
       if (!current()) return;
       final batch = pending.skip(i).take(_concurrency);

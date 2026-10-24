@@ -15,20 +15,13 @@ import 'chapter_manifest.dart';
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 
-/// Resolves a chapter's page URLs (wraps the GraphQL fetchChapterPages call).
 typedef PageUrlsResolver = Future<List<String>> Function(int chapterId);
 
-/// Reports a chapter's live page progress upward (the arc can't be counted from
-/// the catalog any more — page rows only appear at commit).
+/// Reports progress before page rows become visible at commit.
 typedef DownloadProgressSink =
     void Function(int chapterId, int done, int total);
 
-/// Orchestrates background chapter downloads on top of [ChapterDownloadEngine],
-/// one chapter at a time (page-level parallelism lives in the engine) since
-/// everything comes from our own server. Auth is resolved fresh per request
-/// and refreshed on a 401 — nothing baked at enqueue, which is what stranded
-/// the old `background_downloader` tasks with expired tokens; deps are
-/// injected so the flow is testable without GraphQL/HTTP/dart:io.
+/// Downloads one chapter at a time, resolving auth per request and refreshing on 401.
 class OfflineDownloadCoordinator {
   OfflineDownloadCoordinator({
     required this.db,
@@ -48,64 +41,37 @@ class OfflineDownloadCoordinator {
   final ChapterDownloadEngine engine;
   final OfflinePageStore store;
 
-  /// Live page progress for the UI arc. Null in tests.
   final DownloadProgressSink? onProgress;
 
-  /// The chapter stopped being live — committed, failed or cancelled.
   final void Function(int chapterId)? onProgressDone;
 
-  /// Reports "the server is unreachable" upward when a resolve fails on a
-  /// connection error. Without it the pump can park during a background-only
-  /// outage that no UI read ever notices, and the reconnect listener (which
-  /// needs a true->false transition) would never fire to unpark it.
+  /// Signals outages so reconnect can restart a parked queue.
   void Function()? onServerUnreachable;
   final Future<void> Function()? onPermissionDenied;
   final bool Function()? isCurrentSession;
   bool _permissionHeld = false;
 
-  /// Reads the persisted "downloads paused" flag (injected so a restart
-  /// survives with the pause intact, without depending on SharedPreferences
-  /// directly). Null in tests = never persistently paused.
+  /// Null means no persisted pause.
   final bool Function()? persistedPaused;
 
-  /// In-session pause, set by [pause]/[resume] for an immediate brake — the
-  /// gate is the OR of this and the persisted flag, so a restart still honours
-  /// a saved pause even though this resets to false.
   bool _paused = false;
 
-  /// True when on-device downloads are paused (in-session or persisted).
   bool get isPaused => _paused || (persistedPaused?.call() ?? false);
 
-  // These three and [_pumping] are PROCESS-WIDE (static): a keep-alive provider
-  // rebuild mid-drain can leave an old coordinator's pump running while deletes
-  // route through the new instance, so instance-local guards would let it
-  // resurrect a just-deleted chapter — sharing state keeps a delete claim
-  // visible across generations.
+  // Shared across provider rebuilds so old pumps observe new delete claims.
 
-  /// Chapter currently being downloaded by the engine. One at a time, so at most
-  /// one entry.
   static final Set<int> _active = {};
 
-  /// Chapters asked to stop mid-download (delete / pause). Cleared once the
-  /// in-flight download observes it and unwinds.
+  // Cleared after the in-flight download observes cancellation.
   static final Set<int> _cancelled = {};
 
-  /// Chapters mid-delete, reference-counted by claimant (a user delete and a
-  /// reconcile eviction can overlap). Pump/[enqueueChapter] skip any key
-  /// present; the claim releases only when the last claimant calls [endDelete],
-  /// so one finishing early can't unguard a chapter another is still
-  /// deleting — `_cancelled` alone isn't enough since `enqueueChapter`'s
-  /// `finally` clears it.
+  // Reference counts keep overlapping deletes guarded until the last claimant exits.
   static final Map<int, int> _deleting = {};
 
-  /// True while a pump loop is draining the queue — only ONE loop ever drains
-  /// the shared DB queue even across a mid-drain rebuild.
+  // One drain across all coordinator instances.
   static bool _pumping = false;
-  // Set when a chapter parks on a dead network; cleared at each pump start.
   bool _pausedForOffline = false;
 
-  /// Reset all process-wide state. Test-only: tests share one process, so a
-  /// coordinator built in one test would otherwise inherit another's claims.
   static void resetSharedStateForTest() {
     _active.clear();
     _cancelled.clear();
@@ -113,18 +79,14 @@ class OfflineDownloadCoordinator {
     _pumping = false;
   }
 
-  /// True if this chapter is actively downloading right now.
   bool isActive(int chapterId) => _active.contains(chapterId);
 
-  /// Ask an in-flight chapter to stop; the pump leaves its already-stored pages
-  /// on disk so a later run resumes rather than restarts.
+  /// Leaves staged pages available for resume.
   void cancel(int chapterId) {
     if (_active.contains(chapterId)) _cancelled.add(chapterId);
   }
 
-  /// Claim a chapter for deletion, cancelling it and waiting (bounded) for the
-  /// engine to stop writing. Call before deleting files/rows; pair with
-  /// [endDelete] in a `finally`.
+  /// Call before deleting files/rows; pair with [endDelete] in finally.
   Future<void> beginDelete(
     int chapterId, {
     Duration timeout = const Duration(seconds: 3),
@@ -137,9 +99,7 @@ class OfflineDownloadCoordinator {
     }
   }
 
-  /// Release a chapter claimed by [beginDelete] once its files/rows are gone.
-  /// Drops the cancel only when the LAST claimant exits, so an overlapping
-  /// delete keeps it guarded.
+  /// Releases cancellation only after the last overlapping delete ends.
   void endDelete(int chapterId) {
     final remaining = (_deleting[chapterId] ?? 0) - 1;
     if (remaining <= 0) {
@@ -150,9 +110,7 @@ class OfflineDownloadCoordinator {
     }
   }
 
-  /// Pause all on-device downloading: stop starting new chapters and cancel the
-  /// in-flight one (left `downloading` = resumable). The persisted flag is set
-  /// by the caller; this is the immediate in-session brake.
+  /// Cancels in-flight work for resume; the caller must persist the pause separately.
   void pause() {
     _paused = true;
     _cancelled.addAll(_active);
@@ -190,17 +148,12 @@ class OfflineDownloadCoordinator {
     }
   }
 
-  /// Resume on-device downloading and drain the backlog. Returns the drain
-  /// future so callers can await it (the UI fires it and forgets).
   Future<void> resume() {
     _paused = false;
     return pumpDownloads();
   }
 
-  /// Add a chapter to the persistent download queue (state `queued`). The pump
-  /// starts it when it reaches the front. Skips chapters already downloaded, in
-  /// flight, or terminally `error` — pass [allowErrored] for an explicit user
-  /// retry, which is the only thing that may revive a failed chapter.
+  /// Only explicit user retries may set [allowErrored] to revive terminal failures.
   Future<void> queueChapter(
     int chapterId, {
     bool allowErrored = false,
@@ -209,9 +162,7 @@ class OfflineDownloadCoordinator {
   }) async {
     if (_deleting.containsKey(chapterId)) return;
     await db.transaction(() async {
-      // Recheck inside the transaction (serialized with deleteChapter): `none`
-      // is itself queueable, so without the _deleting guard a racing queue
-      // request would re-queue a chapter the user just removed.
+      // Recheck under the transaction: a racing delete must block queueing even a none row.
       if (_deleting.containsKey(chapterId)) return;
       final c = await db.chapterById(chapterId);
       if (c == null) return;
@@ -234,7 +185,6 @@ class OfflineDownloadCoordinator {
           c.deviceState == OfflineDeviceState.queued) {
         return;
       }
-      // Terminal: only an explicit user retry may revive a failed chapter.
       if (c.deviceState == OfflineDeviceState.error && !allowErrored) return;
       if (c.deviceState == OfflineDeviceState.error) {
         await db.bumpChapterGeneration(chapterId);
@@ -243,27 +193,19 @@ class OfflineDownloadCoordinator {
     });
   }
 
-  /// Resolve + download a single chapter immediately (used by the pump and for
-  /// a direct save). Idempotent + resumable: skips an already-`downloaded`
-  /// chapter, doesn't re-fetch pages already on disk, and simply resumes a
-  /// chapter left `downloading` by a prior run.
+  /// Resumes staging and skips already downloaded chapters.
   Future<void> enqueueChapter(OfflineChapter chapter) async {
     if (_deleting.containsKey(chapter.id) ||
         isCurrentSession?.call() == false) {
       return;
     }
     if (chapter.deviceState == OfflineDeviceState.downloaded) return;
-    // Paused: don't start (or re-start a stranded) chapter. Guarded here too,
-    // not just in pumpDownloads — enqueueChapter's `finally` clears
-    // `_cancelled`, so a stray pump could otherwise re-select and restart a
-    // stranded chapter while paused.
+    // Direct saves bypass the pump, so they must honor pause here too.
     if (isPaused) return;
     if (_active.contains(chapter.id)) return;
     _active.add(chapter.id);
     try {
-      // Recheck _deleting and mark downloading atomically (serialized with
-      // deleteChapter) — a mid-flight delete claim must win; `none` is itself
-      // a valid fresh-download start, so only an active delete blocks it.
+      // Claim and state transition must be atomic with deletion.
       final started = await db.transaction(() async {
         if (_deleting.containsKey(chapter.id) ||
             isCurrentSession?.call() == false) {
@@ -300,8 +242,6 @@ class OfflineDownloadCoordinator {
         indices,
         generation,
       );
-      // A determinate arc from the first frame — webtoon chapters only learn
-      // their page total here, when the list resolves.
       await db.setChapterPageCount(chapter.id, urls.length);
       var done = staged.length;
       onProgress?.call(chapter.id, done, urls.length);
@@ -320,8 +260,6 @@ class OfflineDownloadCoordinator {
             isPaused ||
             isCurrentSession?.call() == false,
         onPageStored: (pageIndex, relPath, bytes) async {
-          // Pages live in staging until the chapter commits, so there is no
-          // catalog row to write here — only progress to report.
           onProgress?.call(chapter.id, ++done, urls.length);
         },
       );
@@ -335,15 +273,9 @@ class OfflineDownloadCoordinator {
         return;
       }
       if (outcome.offline) {
-        // No network / Wi-Fi-only blocked it — leave the chapter `downloading`
-        // so it resumes on reconnect, NOT `error`. Stop the pump too: the
-        // parked row stays first in line, so pumping on would just re-pick it
-        // in a hot loop while the network is down.
+        // Stop draining while offline; the resumable head would otherwise hot-loop.
         _pausedForOffline = true;
-        // Say so out loud. Parking is only half a plan — the reconnect that
-        // restarts the pump is triggered by this flag going up and back down,
-        // so a park that stays quiet strands the whole queue until the app is
-        // restarted, with nothing on screen to explain why.
+        // Reconnect requires the unreachable transition to restart the queue.
         onServerUnreachable?.call();
         logger.i(
           'Offline: chapter ${chapter.id} paused (no network); '
@@ -383,11 +315,7 @@ class OfflineDownloadCoordinator {
         await onPermissionDenied?.call();
         await _applyTerminalError(chapter);
       } else if (isConnectionError(cause)) {
-        // Page-list resolve hit a dead network, not a real chapter failure:
-        // leave it downloading so the next pump resumes it (Android worker
-        // parity). Park the pump too — a proxy answering 502 fails in
-        // milliseconds, and re-picking the same row would hot-loop for the
-        // whole outage.
+        // Park on connection failures so a fast proxy error cannot hot-loop the head.
         _pausedForOffline = true;
         onServerUnreachable?.call();
         logger.i(
@@ -401,21 +329,12 @@ class OfflineDownloadCoordinator {
     } finally {
       _active.remove(chapter.id);
       onProgressDone?.call(chapter.id);
-      // Keep the cancel set while a delete still holds a claim — endDelete owns
-      // clearing it once the last claimant exits.
+      // Only the last delete claimant may clear cancellation.
       if (!_deleting.containsKey(chapter.id)) _cancelled.remove(chapter.id);
     }
   }
 
-  /// Open (or adopt) the chapter's staging directory and report which pages are
-  /// already there.
-  ///
-  /// Staging survives an interrupted run, which is what makes a resume cheap.
-  /// Anything we can't positively identify as this exact download is wiped
-  /// first: a different page set, a generation from before a delete, or a
-  /// manifest too damaged to read. Adopting files on any weaker evidence would
-  /// let a later resume count them as ours and commit a chapter assembled from
-  /// two different downloads.
+  // Resume only staging with the same pages and generation; never mix downloads.
   Future<Set<int>> _openStaging(
     int mangaId,
     int chapterId,
@@ -465,21 +384,13 @@ class OfflineDownloadCoordinator {
         await db.setChapterDeviceState(chapter.id, OfflineDeviceState.error);
       });
 
-  /// Drain the queue one chapter at a time: resume any chapter left
-  /// `downloading` (stranded by an app restart) first, then pull from the
-  /// `queued` backlog. Single-flight — a second call while running is a no-op;
-  /// the running loop picks up anything newly queued.
+  /// Single-flight; resumes stranded downloads before queued chapters.
   Future<void> pumpDownloads() async {
-    // CORRUPTION GATE: on Android the foreground-service worker is the sole
-    // downloader — two isolates writing the same files/catalog corrupts it, so
-    // this pump must never run there; BackgroundDownloadController drives
-    // Android instead.
+    // Android workers own downloading; a second isolate writing these files would corrupt them.
     if (isAndroidNative) return;
     if (isPaused) return;
     if (_pumping) return;
     _pumping = true;
-    // A fresh pump is a fresh chance: the offline park below stops THIS drain;
-    // the next trigger (launch resume, a new save, reconnect) tries again.
     _pausedForOffline = false;
     _permissionHeld = false;
     try {
@@ -494,9 +405,6 @@ class OfflineDownloadCoordinator {
     }
   }
 
-  /// The next chapter to work on: a stranded `downloading` chapter (state says
-  /// downloading but nothing is in flight — left over from a kill), else the
-  /// head of the `queued` backlog. Null when there's nothing to do.
   Future<OfflineChapter?> _nextChapter() async {
     final downloading = await db.chaptersInState(
       OfflineDeviceState.downloading,
@@ -515,7 +423,6 @@ class OfflineDownloadCoordinator {
       'active=${_active.length} stranded=$stranded',
     );
     if (firstStranded != null) return firstStranded;
-    // Skip a queue head mid-deletion so it doesn't stall the rest of the backlog.
     final queued = await db.chaptersInState(OfflineDeviceState.queued);
     return queued.where((c) => !_deleting.containsKey(c.id)).firstOrNull;
   }

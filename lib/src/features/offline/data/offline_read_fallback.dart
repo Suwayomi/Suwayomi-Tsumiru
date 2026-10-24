@@ -17,23 +17,14 @@ import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
 import 'offline_dto_mappers.dart';
 
-/// Fall back to the on-device cache only on a genuine loss of connectivity; a
-/// server that answered with an error must surface, not be masked as offline.
+// Fall back only on connectivity loss; server errors must still surface.
 
 bool _shouldFallBack(Object e) =>
     isConnectionError(e is OperationMessageException ? e.exception : e);
 
-/// Bounds how long a fallback-capable read waits on the network once a
-/// catalog exists to serve instead — otherwise a hung request (airplane mode,
-/// a dead Cloudflare origin) burns the full client timeout before the catalog
-/// appears. TimeoutException counts as a connection error, so the fallback
-/// path takes over at the cap.
+// Bound network waits only when a catalog can serve the fallback.
 const kOfflineFallbackFetchTimeout = Duration(seconds: 15);
 
-/// Runs [fetch], capped at [fetchTimeout] when [canServe] says this wrapper
-/// has something to fall back to. With nothing to serve, the cap would only
-/// turn a slow-but-working load into an error — so the full client timeout
-/// applies.
 Future<T> _boundedFetch<T>(
   Future<T> Function() fetch,
   Future<bool> Function() canServe,
@@ -43,10 +34,6 @@ Future<T> _boundedFetch<T>(
   return fetch().timeout(fetchTimeout);
 }
 
-/// Starts [fetch] without waiting for it and hands a non-null answer to
-/// [onAnswer]. Used after a complete device copy has already opened from the
-/// catalog: a slow or failed refresh changes nothing on screen, and a fresh
-/// server row replaces the catalog row when it lands (stale-while-revalidate).
 void _refreshInBackground<T extends Object>({
   required Future<T?> Function() fetch,
   required void Function(T value) onAnswer,
@@ -56,15 +43,11 @@ void _refreshInBackground<T extends Object>({
       final value = await fetch();
       if (value != null) onAnswer(value);
     } catch (_) {
-      // Best-effort: the device copy is already open.
     }
   }());
 }
 
-/// Whether the catalog holds a complete copy of [chapterId] on this device: the
-/// row is marked downloaded and its page rows exist. The same test
-/// [OfflineRepository.localChapterPages] applies before serving page paths, so
-/// chapter metadata and pages agree on what "on the device" means.
+/// Requires downloaded state and page rows, matching localChapterPages.
 Future<bool> chapterCompleteOnDevice(OfflineDatabase db, int chapterId) async {
   final c = await db.chapterById(chapterId);
   if (c == null || c.deviceState != OfflineDeviceState.downloaded) {
@@ -73,13 +56,7 @@ Future<bool> chapterCompleteOnDevice(OfflineDatabase db, int chapterId) async {
   return (await db.downloadedPageCount(chapterId)) > 0;
 }
 
-/// Network-first read with on-device catalog fallback. Tries [fetch]; if it
-/// throws and offline is available with catalog data, returns the catalog
-/// mapped to the server DTO type. Otherwise rethrows the original error.
-///
-/// [offlineFirst] (the "View offline" button) skips the network and serves the
-/// catalog straight away — still reported as unreachable so the offline banner
-/// stays up.
+/// Falls back on connectivity loss; [offlineFirst] skips network and keeps the offline banner.
 Future<List<MangaDto>?> libraryWithOfflineFallback({
   required Future<List<MangaDto>?> Function() fetch,
   required OfflineDatabase? db,
@@ -87,18 +64,10 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
   void Function(bool reachable)? onReachability,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
-  // Fired (synchronously, before return) when the result came from the
-  // catalog, not the server. Callers MUST NOT sync a catalog-served result
-  // back into the catalog: the DTO round-trip loses fields (lastReadAt,
-  // real chapter numbers) and would overwrite good rows with the echo.
+  // Catalog DTOs lose fields on round-trip; callers must not sync them back into storage.
   void Function()? onCatalogServe,
 }) async {
-  // Null means nothing to serve, so callers rethrow the original network
-  // error (or fall through to it) rather than a synthetic one.
-  //
-  // Scoped to series with files on this device — the offline library is for
-  // reading, not browsing metadata. Everything else lives in Downloads → On
-  // device.
+  // Null means no fallback; only series with device files belong in the offline library.
   Future<List<MangaDto>?> serveCatalog() async {
     final downloadedIds = await db!.mangaIdsWithDeviceDownloads();
     if (downloadedIds.isEmpty) return null;
@@ -111,13 +80,10 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
     final readDelta = await db.unsyncedReadDeltaByManga();
     final chapterCounts = await db.chapterCountByManga();
-    // Load all category memberships in one query, keyed by mangaId.
     final categoryMap = await db.categoriesForMangas({
       for (final m in rows) m.id,
     });
-    // The manga column carries the server's Last-Read snapshot for every
-    // library entry; a chapter-row max can be newer when something was read
-    // offline since the last sync. Numeric max — both are epoch strings.
+    // Offline reads may be newer than manga snapshots; compare epoch strings numerically.
     String? mergedLastRead(OfflineManga m) {
       final fromChapters = int.tryParse(lastReadByManga[m.id] ?? '');
       final fromManga = int.tryParse(m.lastReadAt ?? '');
@@ -130,8 +96,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
       for (final m in rows)
         offlineMangaToDto(
           m,
-          // Without it, a row whose totalChapters was never synced bounds its
-          // unread count at zero, as mangaWithOfflineFallback already avoids.
+          // Unsynced totalChapters must not clamp unread count to zero.
           chapterCount: chapterCounts[m.id] ?? 0,
           lastReadAt: mergedLastRead(m),
           firstUnread: firstUnreadByManga[m.id],
@@ -158,8 +123,6 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     onReachability?.call(true);
     return result;
   } catch (e) {
-    // Report unreachability even when we go on to serve cache below, so the
-    // outage isn't hidden from an app-wide "offline" indicator.
     final connectionLost = _shouldFallBack(e);
     onReachability?.call(!connectionLost);
     if (!offlineEnabled || !connectionLost) rethrow;
@@ -175,8 +138,6 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
   }
 }
 
-/// The library silently switching to the on-device catalog explains stale
-/// counts and missing series, but left no trace in the debug log.
 void _logLibraryCatalogServe(String reason, int count, {Object? error}) =>
     recordDiagnostic(
       redactTokens(
@@ -193,9 +154,7 @@ Future<MangaDto?> mangaWithOfflineFallback({
   required int mangaId,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
-  // True when this series has a complete copy on the device (the reader's
-  // opened chapter is downloaded). With [onServerAnswer], the catalog row is
-  // served at once and refreshed from the server in the background.
+  // With onServerAnswer, a complete device copy opens immediately and refreshes in the background.
   Future<bool> Function()? deviceCopyOnDisk,
   void Function(MangaDto value)? onServerAnswer,
   void Function()? onCatalogServe,
@@ -219,8 +178,6 @@ Future<MangaDto?> mangaWithOfflineFallback({
 
   if (offlineEnabled && db != null) {
     final inCatalog = await db.mangaById(mangaId) != null;
-    // A complete device copy opens straight from the catalog; the offline pin
-    // skips the refresh too, since the user asked to stay off the network.
     final deviceFirst =
         inCatalog &&
         !offlineFirst &&
@@ -238,7 +195,6 @@ Future<MangaDto?> mangaWithOfflineFallback({
       }
     }
   }
-  // Not in the catalog (e.g. a browse result) — fall through to the network.
   try {
     return await _boundedFetch(fetch, canServe, fetchTimeout);
   } catch (e) {
@@ -250,8 +206,6 @@ Future<MangaDto?> mangaWithOfflineFallback({
   }
 }
 
-/// The reader fetches chapter metadata from the server. A downloaded chapter
-/// must still open offline, so fall back to the on-device catalog row.
 Future<ChapterDto?> chapterMetaWithOfflineFallback({
   required Future<ChapterDto?> Function() fetch,
   required OfflineDatabase? db,
@@ -259,9 +213,7 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
   required int chapterId,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
-  // True when this chapter is complete on the device. With [onServerAnswer],
-  // the catalog row is served at once and refreshed from the server in the
-  // background (stale-while-revalidate).
+  // With onServerAnswer, a complete device copy opens immediately and refreshes in the background.
   Future<bool> Function()? deviceCopyOnDisk,
   void Function(ChapterDto value)? onServerAnswer,
   void Function()? onCatalogServe,
@@ -298,10 +250,6 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
   }
 }
 
-/// The library screen is gated on the category list (the tabs). Offline that
-/// server fetch fails before any per-category manga list runs, blanking the
-/// whole screen. Fall back to a single synthetic "Default" category so the
-/// library renders the on-device catalog as one flat tab.
 Future<List<CategoryDto>?> categoriesWithOfflineFallback({
   required Future<List<CategoryDto>?> Function() fetch,
   required OfflineDatabase? db,
@@ -329,12 +277,7 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
               ),
             ];
     }
-    // Real per-tab counts. Every mirrored category is kept even at zero:
-    // offline, empty means "nothing downloaded from it", not "you put nothing
-    // in it", and dropping them left a user whose downloads all sit in one
-    // category with no tab bar at all — their categories looked deleted.
-    // Manga with no membership rows live in the server's default category,
-    // which their DTOs don't list.
+    // Keep empty mirrored categories: no downloads does not mean the category is absent.
     final counts = await db.mangaCountByCategory(downloadedInLibrary);
     final uncategorized = await db.uncategorizedOf(downloadedInLibrary);
     int countFor(OfflineCategory cat) =>
@@ -350,7 +293,6 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
           name: cat.name,
           order: cat.sortOrder,
           mangas: Fragment$CategoryDto$mangas(totalCount: countFor(cat)),
-          // Mirrored so hidden tabs stay hidden offline.
           meta: [
             if (cat.isHidden)
               Fragment$CategoryDto$meta(
@@ -360,8 +302,6 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
           ],
         ),
     ];
-    // Downloads with no home tab (uncategorizedOf already covers orphaned
-    // memberships) get a synthetic Default.
     final defaultCovered = storedCats.any(
       (category) => category.isDefaultCategory,
     );

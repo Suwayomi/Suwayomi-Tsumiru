@@ -31,37 +31,24 @@ import 'background_token_record.dart';
 import 'catchup_work_spec.dart';
 import 'queued_download_runner.dart';
 
-/// Per-run bounds under WorkManager's ~10-minute budget: stop cleanly with
-/// headroom rather than get killed mid-write.
+// Bound each run below WorkManager's time budget with headroom for cleanup.
 const _maxChaptersPerRun = 10;
 const _runBudget = Duration(minutes: 7);
 
-/// Attempts a single chapter gets across runs before its obligation is dropped.
-/// Without this the ledger never converges: a chapter the server cannot serve
-/// stays pending and is retried on every scheduled wake, forever.
 
-/// Download the ledger's obligations inside the WorkManager task. Returns
-/// false only on transient failure (scheduler retries).
-///
-/// Server-client invariant holds in background too: a chapter the server has
-/// not downloaded is enqueued server-side and collected a later run — the
-/// device never proxies a source through the server without the server keeping
-/// its copy.
+/// False requests a scheduler retry for transient failure.
+/// Missing server copies are fetched server-side first, then pulled on a later run.
 Future<bool> runCatchupDownloads({
   required CatchupStateStore catchupStore,
   required NotificationWorkerConfig config,
 
-  /// Where to reach the server from this network; [config]'s endpoint when
-  /// not given. See [NotificationEndpoint.forThisNetwork].
+  /// Defaults to [config] endpoint when omitted.
   NotificationEndpoint? endpoint,
   required BackgroundTokenRecord Function() record,
   required TokenBroker broker,
 }) async {
   var spec = catchupStore.readSpec();
-  // spec.serverId is the offline catalog's server-instance id (what
-  // writeCatchupWorkSpec stamps it with) — NOT config.serverId, which is a
-  // "url|port" string scoping the unrelated notification cursor. Comparing
-  // against the wrong one meant this guard could never pass.
+  // spec.serverId is the catalog instance id; config.serverId scopes a separate URL/port cursor.
   if (spec == null || spec.serverId != catchupStore.catalogServerId) {
     recordDiagnostic(
       '[${DateTime.now().toIso8601String()}] offline-catchup: '
@@ -72,10 +59,7 @@ Future<bool> runCatchupDownloads({
 
   var ledger = catchupStore.readLedger(spec.serverId);
 
-  // Compute backfill needs BEFORE the early-exit: an empty ledger is not
-  // necessarily empty work — manga in the spec that have never had a full
-  // chapter-list pass need one regardless of whether there are ledger
-  // obligations (the ledger starts empty on every fresh spec or server switch).
+  // An empty ledger still needs chapter-list backfill for manga absent from prior full passes.
   var needsBackfill = spec.keepRuleMangaIds.difference(
     ledger.backfilledMangaIds,
   );
@@ -92,8 +76,7 @@ Future<bool> runCatchupDownloads({
     return true;
   }
 
-  // Wi-Fi-only is enforced here, not in the task's constraints — tightening
-  // those would silently stop the notification check on cellular.
+  // Scheduler Wi-Fi constraints would also block notification checks on cellular.
   if (spec.wifiOnly) {
     final net = await Connectivity().checkConnectivity();
     final unmetered =
@@ -118,8 +101,7 @@ Future<bool> runCatchupDownloads({
   );
   final lock = BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
 
-  // The FGS may legitimately own the log right now; skip the run rather than
-  // interleave writers.
+  // Do not interleave log writes with the foreground-service worker.
   if (!await lock.acquire('wm-catchup')) {
     recordDiagnostic(
       '[${DateTime.now().toIso8601String()}] offline-catchup: '
@@ -344,15 +326,8 @@ Future<bool> runCatchupDownloads({
       return true;
     }
 
-    // Read once for the whole run. Safe not because the log is frozen — this
-    // executor appends to it below — but because each manga is visited exactly
-    // once and the only entries written meanwhile belong to the manga being
-    // processed, which the filter below drops anyway. A retry loop or a second
-    // pass would break that.
+    // One snapshot is safe only because each manga is visited once and its own new entries are excluded.
     final logEntries = await log.parse();
-    // needsBackfill was computed before the early-exit check so it is already
-    // available here; the set is the same because backfilledMangaIds only grows
-    // during the run and we haven't touched the ledger yet at this point.
     if (needsBackfill.isNotEmpty) {
       recordDiagnostic(
         '[${DateTime.now().toIso8601String()}] offline-catchup: '
@@ -374,7 +349,6 @@ Future<bool> runCatchupDownloads({
           .where((m) => m.mangaId == mangaId)
           .firstOrNull;
       if (mangaSpec == null) {
-        // Rule removed since resolution: drop the obligations.
         ledger = _dropManga(ledger, mangaId);
         await catchupStore.writeLedger(spec.serverId, ledger);
         continue;
@@ -388,8 +362,7 @@ Future<bool> runCatchupDownloads({
       );
       if (chapters == null) return false; // transient — retry next wake
 
-      // Pinned chapters are always desired; the server rows can't know about
-      // pins (device-side state), so the spec's set joins the rule's.
+      // Pins are device-only; merge the spec pins with the server-derived desired set.
       final serverIds = {for (final r in chapters.rows) r.id};
 
       final serverFetch = {...ledger.pendingServerFetch};
@@ -442,7 +415,6 @@ Future<bool> runCatchupDownloads({
         if (deviceSpent > 0) dlRetries[row.id] = deviceSpent;
       }
 
-      // Exclude exhausted chapters so they cannot occupy an nUnread slot indefinitely.
       final exhausted = <int>{};
       for (final r in chapters.rows) {
         final serverFetchSpent = retries[r.id] ?? 0;
@@ -508,7 +480,6 @@ Future<bool> runCatchupDownloads({
         sortAxis: mangaSpec.chapterSortMode,
       )..addAll(mangaSpec.pinnedChapterIds.intersection(serverIds));
 
-      // Present = every truth the executor can see without drift.
       final present = <int>{
         ...mangaSpec.onDeviceChapterIds,
         ...mangaSpec.failedChapterIds,
@@ -545,14 +516,7 @@ Future<bool> runCatchupDownloads({
         final row = chapters.byId[chapterId];
         if (row == null) continue;
 
-        // A budget per hop, spent only on that hop's own failures. Sharing one
-        // meant a slow source could exhaust a chapter before the device had
-        // tried at all, and a chapter neither hop can produce is otherwise
-        // retried on every wake for the life of the install.
-        //
-        // Counters outlive the obligation they gave up on: `desired` is rebuilt
-        // from the spec each run, so a cleared counter just starts the attempts
-        // over. Success clears them; so does the chapter leaving the window.
+        // Keep separate per-hop budgets across runs; only success or leaving the window resets them.
         try {
           if (!row.serverIsDownloaded) {
             final spent = retries[chapterId] ?? 0;
@@ -637,9 +601,6 @@ Future<bool> runCatchupDownloads({
               'attempt=${dlSpent + 1}/$catchupMaxChapterAttempts\n',
             );
           } else {
-            // Transient (network blip, server busy): keep the obligation and
-            // let the next wake retry — this is why a pending chapter can
-            // silently carry over run after run without spending its budget.
             recordDiagnostic(
               '[${DateTime.now().toIso8601String()}] offline-catchup: '
               'download-deferred mangaId=$mangaId chapterId=$chapterId '
@@ -681,27 +642,8 @@ Future<bool> runCatchupDownloads({
         }
       }
 
-      // Drop obligations that are satisfied (present) or no longer desired
-      // (rule window moved on) — either way there is nothing left to do. The
-      // attempt counters go with them: they exist to stop a chapter being
-      // retried while it is still wanted, so one left behind would meet a
-      // re-added chapter with an already-spent budget.
-      //
-      // Scans BOTH maps, not just `pending`: a chapter can be exhausted (and
-      // now excluded from `desired` above) while it only ever reached
-      // `pendingServerFetch` — never promoted to `pendingDownloads`. Dropping
-      // it from `pending` alone left it in `serverFetch` forever, which kept
-      // its manga in the `mangaIds` set at the top of this run and re-issued
-      // a real chapter-list fetch for it on every wake indefinitely, even
-      // though nothing was ever going to download.
-      //
-      // `exhausted` is deliberately excluded from the "no longer desired"
-      // half of this condition: it is ALSO why those chapters are missing
-      // from `desired` (see above), and wiping their counters here would
-      // reset them to 0 next run — un-exhausting a chapter right back into
-      // fresh attempts and undoing the whole point of excluding it. A
-      // chapter drops out of `desired` for two different reasons and only
-      // one of them should forgive its spent budget.
+      // Clear satisfied or no-longer-desired obligations from both maps.
+      // Exhaustion also excludes a chapter from desired; preserve its spent budget until it leaves the window.
       final done = {
         for (final e in pending.entries)
           if (e.value == mangaId &&
@@ -728,10 +670,6 @@ Future<bool> runCatchupDownloads({
         pendingServerFetch: serverFetch,
         serverFetchRetries: retries,
         downloadRetries: dlRetries,
-        // The chapter-list fetch above already ran, whether or not this
-        // manga was one that needed it — recording it here (not just inside
-        // the needsBackfill branch) keeps the set accurate for every manga
-        // this run actually looked at.
         backfilledMangaIds: {...ledger.backfilledMangaIds, mangaId},
       );
       if (!await persistProgress()) return true;
@@ -768,26 +706,13 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) {
     chapterGenerations: without(ledger.chapterGenerations),
     pendingDownloads: without(ledger.pendingDownloads),
     pendingServerFetch: without(ledger.pendingServerFetch),
-    // The rule is gone, so the attempts spent under it mean nothing — leaving
-    // them would meet the manga with a spent budget if it came back.
     serverFetchRetries: without(ledger.serverFetchRetries),
     downloadRetries: without(ledger.downloadRetries),
-    // Same reasoning: a manga that comes back under the rule again is a fresh
-    // backlog as far as this executor knows, not one it already visited.
     backfilledMangaIds: {...ledger.backfilledMangaIds}..remove(mangaId),
   );
 }
 
-/// Chapters already recorded in the un-replayed log, or already committed on
-/// disk — work the spec's snapshot can't know about yet.
-///
-/// Deliberately NOT "staging looks complete". Staging fills before the adoption
-/// record is written, so a worker killed in that window would leave a directory
-/// that satisfies the obligation while nothing durable claims it: the ledger
-/// entry would be dropped here, and replay — finding files with no row and no
-/// record — would delete them. The chapter would simply vanish from the queue.
-/// A committed directory is the safe equivalent, because only an adoption that
-/// already replayed could have produced one.
+// Staging alone is not durable adoption: require a log record or committed directory.
 Future<Set<int>> _loggedOrCommitted(
   List<LogEntry> logEntries,
   IoOfflinePageStore store,
@@ -832,8 +757,7 @@ class _MangaChapters {
   final Map<int, OfflineChapter> byId;
 }
 
-/// The manga's live chapter list, shaped as [OfflineChapter] rows so the pure
-/// keep-rule math runs on it unchanged. Null when the server was unreachable.
+/// Null when the server was unreachable.
 Future<_MangaChapters?> _fetchMangaChapters(
   BackgroundServerTarget target,
   BackgroundTokenRecord Function() record,
@@ -926,14 +850,7 @@ Future<bool> _enqueueServerDownload(
     },
     accessToken: accessToken,
   );
-  // Without this retry, a uiLogin access token that expired between wakes
-  // (the wake interval is 1-6h, far longer than a typical token lifetime)
-  // makes this call 401 and give up every single run — the server never
-  // actually gets asked to fetch the chapter from source in the background,
-  // no matter how many attempts the ledger counts. `_fetchMangaChapters`
-  // above already refreshed the token this run if it was stale, but that
-  // refresh only persists to the store (via the broker), not back into
-  // `record()` — so this call still needs its own retry, same as that one.
+  // Retry with refreshed auth: the broker persists refreshes without updating record().
   var result = await post(null);
   if (result == gqlAuthError && record().authType == 'uiLogin') {
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
@@ -944,17 +861,7 @@ Future<bool> _enqueueServerDownload(
       result['enqueueChapterDownloads'] is Map;
 }
 
-/// Download one chapter into staging, returning the bytes staged (0 when it
-/// didn't finish).
-///
-/// This worker never publishes a chapter — it has no drift access, so it cannot
-/// check the row the way a commit must. It fills staging and leaves an adoption
-/// record; the next launch commits it on the main isolate. Timing is unchanged
-/// for the user: adoption already happened at replay.
-/// Whether an attempt failed because the chapter cannot be served, or merely
-/// because the server was not there at the time. Only the first is worth
-/// spending an attempt on — an outage would otherwise abandon the chapter for
-/// good after a few nights.
+/// Transient outages do not consume the chapter failure budget.
 typedef ChapterAttempt = ({int bytes, bool transient});
 
 Future<ChapterAttempt> _downloadOneChapter({
@@ -976,24 +883,14 @@ Future<ChapterAttempt> _downloadOneChapter({
     broker: broker,
     chapterId: row.id,
   );
-  // null: server unreachable. empty: it answered, and has no pages for this
-  // chapter.
+  // Null means unreachable; empty means the server answered with no pages.
   if ((isCancelled?.call() ?? false) || urls == null) {
     return (bytes: 0, transient: true);
   }
   if (urls.isEmpty) return (bytes: 0, transient: false);
 
   final indices = [for (var i = 0; i < urls.length; i++) i];
-  // The generation comes from the spec, not a hardcoded 0: a chapter that was
-  // deleted once and re-queued keeps a bumped generation on its row, and
-  // staging stamped 0 would be rejected at launch — after this run had already
-  // struck the obligation off the ledger. A chapter drift has never seen has
-  // no entry, so it gets 0, matching the row adoption creates.
-  //
-  // Reuse staging that matches, the way the foreground downloaders do. These
-  // runs are cut short constantly — the WorkManager budget, a dropped
-  // connection, a yield to the foreground service — and a big chapter that
-  // restarted from page zero every time might never finish at all.
+  // Preserve spec generations and resume matching staging so interrupted runs can make progress.
   final existing = await store.readManifest(mangaId, row.id);
   var staged = const <int>{};
   if (existing != null &&
@@ -1036,9 +933,7 @@ Future<ChapterAttempt> _downloadOneChapter({
     return (bytes: 0, transient: true);
   }
 
-  // Measured off staging rather than this run's writes: a resumed chapter
-  // fetched only what was missing, and the ledger's cap accounting wants the
-  // whole chapter.
+  // Account the whole staged chapter, including pages downloaded by earlier runs.
   final bytes = await store.stagedBytes(mangaId, row.id);
   if (!queued) {
     await log.appendAdopt(

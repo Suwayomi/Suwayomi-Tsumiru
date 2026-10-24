@@ -18,10 +18,6 @@ import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 
-/// The prominent per-series offline control that lives in the manga-details
-/// action row (beside "In Library"). Shows whether the series is on the device
-/// and opens an action sheet to download / auto-keep / remove it. Replaces the
-/// old buried app-bar pin.
 class SeriesOfflineButton extends ConsumerWidget {
   const SeriesOfflineButton({super.key, required this.mangaId});
 
@@ -35,8 +31,6 @@ class SeriesOfflineButton extends ConsumerWidget {
     final inFlight = progress?.inFlight ?? 0;
     final onDevice = downloaded > 0;
     final downloading = inFlight > 0;
-    // Surface the active keep-rule on the button so users can see at a glance
-    // why a series keeps re-downloading, without opening the sheet (#74).
     final config = ref.watch(mangaKeepConfigProvider(mangaId)).value;
     return MangaActionButton(
       active: onDevice || downloading,
@@ -61,8 +55,6 @@ class SeriesOfflineButton extends ConsumerWidget {
     );
   }
 
-  /// Label for an active keep-rule, or null when no rule is set (rule off) so
-  /// the caller falls back to the generic on-device / download label.
   String? _ruleLabel(BuildContext context, OfflineKeepRule? rule, int? count) =>
       switch (rule) {
         OfflineKeepRule.all => context.l10n.keepOfflineAll,
@@ -81,9 +73,7 @@ class SeriesOfflineButton extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // Scroll-controlled and scrollable: a default sheet is capped at 9/16
-      // of the space it is given, and the "Updating library" strip is a
-      // sibling of the page content, so it shrinks that space from under it.
+      // The library-update strip shrinks available height; avoid the default 9/16 sheet cap.
       isScrollControlled: true,
       builder: (sheetContext) => Consumer(
         builder: (context, sheetRef, _) {

@@ -27,9 +27,7 @@ class ChapterEntry extends LogEntry {
   final String status; // downloaded | error | authFailed | offline
 }
 
-/// A chapter was deleted at the given (post-bump) generation; replay wipes
-/// prior accumulation for it, so even a stale entry appended after this is
-/// discarded rather than applied.
+/// Post-delete generation rejects older events even if appended after the tombstone.
 class DeletedEntry extends LogEntry {
   const DeletedEntry(this.chapterId, this.generation);
   final int chapterId, generation;
@@ -43,11 +41,8 @@ class DrainedEntry extends LogEntry {
   const DrainedEntry();
 }
 
-/// A chapter the background catch-up downloaded that drift has never seen —
-/// carries the metadata replay needs to CREATE the row. Adoption is the one
-/// sanctioned exception to never-resurrect: it only applies when the row is
-/// missing outright (a foreground delete keeps its row as `none`), the manga
-/// still has an active keep rule, and the serverId matches the catalog.
+/// Creates missing rows only for matching server identity and an active keep-rule.
+/// Deleted rows remain none and must never be resurrected.
 class AdoptChapterEntry extends LogEntry {
   const AdoptChapterEntry({
     required this.chapterId,
@@ -70,15 +65,7 @@ class AdoptChapterEntry extends LogEntry {
   final int generation;
 }
 
-/// Append-only JSONL record of background-download progress — the durable
-/// record of what the worker isolates decided, replayed into drift on
-/// resume/launch. A torn final line (killed mid-write) is silently discarded
-/// on parse.
-///
-/// Only terminal, adoption and tombstone entries live here. Per-page lines used
-/// to be appended (and fsynced) as each page landed; they are gone, because the
-/// pages themselves are no longer the thing that makes a chapter complete — the
-/// staging manifest is, and it is written once per chapter.
+/// Append-only terminal, adoption, and tombstone records; parse discards a torn final line.
 class BackgroundCompletionLog {
   BackgroundCompletionLog(this.file);
   final File file;
@@ -142,9 +129,7 @@ class BackgroundCompletionLog {
         continue; // torn/partial line — discard
       }
       switch (j['t']) {
-        // 'page': written by builds before chapters became atomic. Ignored —
-        // recovery reads the filesystem, which is the same truth without the
-        // fsync per page.
+        // Ignore legacy page records; recovery inspects the filesystem.
         case 'chapter':
           out.add(
             ChapterEntry(
@@ -187,11 +172,7 @@ class BackgroundCompletionLog {
   }
 }
 
-/// Apply a worker's non-success terminal event to drift. A success no longer
-/// arrives this way — a chapter becomes `downloaded` by being committed, never
-/// by a log line claiming it is. [eventGeneration] older than the chapter's
-/// persisted `downloadGeneration` (bumped on each delete) is dropped, so a
-/// stale event from a deleted/re-queued chapter can't mark it failed.
+/// Applies failures only; success requires commit. Rejects events older than downloadGeneration.
 Future<void> applyBackgroundTerminalState({
   required OfflineDatabase db,
   required int chapterId,
@@ -205,15 +186,7 @@ Future<void> applyBackgroundTerminalState({
     final c = await db.chapterById(chapterId);
     if (c == null || c.deviceState == OfflineDeviceState.none) return;
     if (eventGeneration != c.downloadGeneration) return; // stale generation
-    // Accepts `queued` as well as `downloading`: the worker's `chapterStart`
-    // event (which flips queued -> downloading) is dispatched via
-    // `unawaited()` on the main isolate, same as this terminal event — there
-    // is no ordering guarantee between them. A chapter that fails fast enough
-    // (this event's transaction landing before chapterStart's) was previously
-    // silently skipped here because its row still read `queued`, leaving it
-    // stranded there forever: still "pending" to every future restart, with
-    // no error and nothing logged to explain why — the exact mechanism behind
-    // a fast, silent, repeating foreground-service restart loop.
+    // chapterStart and terminal events are unawaited; a fast failure can arrive while still queued.
     if (c.deviceState == OfflineDeviceState.downloading ||
         c.deviceState == OfflineDeviceState.queued) {
       await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
@@ -221,14 +194,7 @@ Future<void> applyBackgroundTerminalState({
   });
 }
 
-/// Reconcile the catalog with what is actually on disk, then apply whatever the
-/// background workers recorded.
-///
-/// Recovery is state-driven rather than log-driven: the workers only ever fill
-/// staging directories, so the durable question at launch is "what does each
-/// chapter's directory look like, and what does its row say" — which survives a
-/// lost log, a killed worker, and a crash between the commit rename and its
-/// catalog write.
+/// Recovers files against catalog state before replaying worker records.
 Future<void> replayCompletionLog({
   required OfflineDatabase db,
   required OfflinePageStore store,
@@ -238,8 +204,7 @@ Future<void> replayCompletionLog({
 }) async {
   final entries = await log.parse();
 
-  // Adoptions first: they create rows drift has never seen, so the recovery
-  // pass below sees a row to attach the files to rather than an orphan.
+  // Create adoption rows before recovery can treat their files as unauthorized orphans.
   await _adoptCatchupChapters(
     db: db,
     store: store,
@@ -255,9 +220,6 @@ Future<void> replayCompletionLog({
   await log.truncate();
 }
 
-/// Create rows for chapters the background catch-up downloaded while drift knew
-/// nothing about them. The files themselves are published by the recovery pass;
-/// this only decides whether we are willing to own them at all.
 Future<void> _adoptCatchupChapters({
   required OfflineDatabase db,
   required OfflinePageStore store,
@@ -293,8 +255,7 @@ Future<void> _adoptCatchupChapters({
         catalogServerId != null &&
         a.serverId == catalogServerId;
     if (!accepted) {
-      // Refusals clean up here, under replay's ownership — a refused download
-      // has no row, so eviction can't see it and it would sit on disk forever.
+      // Refused adoptions have no row for eviction to find; clean their files under replay ownership.
       if (!failed) await store.deleteChapter(a.mangaId, a.chapterId);
       continue;
     }
@@ -326,8 +287,7 @@ Future<void> _adoptCatchupChapters({
         chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
         syncedIsRead: a.isRead,
       );
-      // Claim it as ours before the commit runs. If the files turn out to be
-      // incomplete, the row stays resumable instead of being thrown away.
+      // Claim before commit so incomplete files remain resumable.
       await db.setChapterDeviceState(
         a.chapterId,
         failed ? OfflineDeviceState.error : OfflineDeviceState.downloading,
@@ -336,9 +296,7 @@ Future<void> _adoptCatchupChapters({
   }
 }
 
-/// Apply the workers' failure records, scoped to the newest generation seen per
-/// chapter so an entry from before a delete can't mark a re-queued chapter
-/// failed.
+// Apply only the newest generation so pre-delete events cannot fail re-queued downloads.
 Future<void> _applyTerminalEntries({
   required OfflineDatabase db,
   required List<LogEntry> entries,

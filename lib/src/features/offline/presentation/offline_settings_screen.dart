@@ -30,8 +30,6 @@ import 'inactive_account_catalogue_tiles.dart';
 import 'offline_server_mismatch_banner.dart';
 import 'offline_settings_format.dart';
 
-/// Labels for the "after reading automatically delete" select (0 = disabled,
-/// N = the Nth chapter behind), matching the Suwayomi-WebUI wording.
 String _deleteWhileReadingLabel(BuildContext context, int value) =>
     switch (value) {
       1 => context.l10n.deleteWhileReadingLastRead,
@@ -42,17 +40,7 @@ String _deleteWhileReadingLabel(BuildContext context, int value) =>
       _ => context.l10n.deleteWhileReadingDisabled,
     };
 
-/// One "Delete chapters" card, shared by the server and on-device tabs of the
-/// Downloads page — identical controls, different backing settings.
-///
-/// [whileReadingSubOptions] renders directly below the "delete finished
-/// chapters while reading" row — the option that controls whether they're
-/// meaningful at all — rather than at the end of the card, so a
-/// dependent toggle stays visually attached to what governs it.
-///
-/// [targetIdPrefix] namespaces the three rows' highlight ids per tab
-/// ('server' / 'device'): the two tabs share titles but never target ids, so
-/// search can scroll to the right tab's row.
+/// [targetIdPrefix] must distinguish server/device rows so search selects the correct tab.
 List<Widget> deleteChaptersSection(
   BuildContext context, {
   required String title,
@@ -126,9 +114,6 @@ List<Widget> deleteChaptersSection(
   ),
 ];
 
-/// Indented dependent toggle, shown only while its controlling option makes
-/// it meaningful — same treatment as the reader settings' sub-toggles, so a
-/// dependent option doesn't read as a normal, independent one.
 class SubSwitchTile extends StatelessWidget {
   const SubSwitchTile({
     super.key,
@@ -156,9 +141,6 @@ class SubSwitchTile extends StatelessWidget {
   }
 }
 
-/// The on-device (offline) download + storage settings, as a flat list of
-/// tiles so it can be composed into the Downloads screen's "On-device" tab.
-/// Returns a single "not available" note when the offline feature is disabled.
 List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
   if (!ref.watch(offlineEnabledProvider)) {
     return [
@@ -212,7 +194,6 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
         ),
       ],
     ),
-    // On-device downloads (this phone). Independent, default off.
     ...deleteChaptersSection(
       context,
       title: context.l10n.deleteOnDeviceDownloads,
@@ -225,8 +206,6 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
       onBookmark: (v) async =>
           ref.read(localDeleteWithBookmarkProvider.notifier).update(v),
       targetIdPrefix: 'device',
-      // Only meaningful when the keep window has at least 1 protected
-      // slot — rendered right under the option that controls it.
       whileReadingSubOptions: localDelete.deleteWhileReading >= 2
           ? [
               SettingsHighlightTarget(
@@ -244,9 +223,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
             ]
           : const [],
     ),
-    // Background wake-ups are Android's WorkManager; on other platforms the
-    // in-app triggers (launch, update-finish, queue-drain) are the coverage,
-    // so the switch would be a lie there.
+    // Only Android has scheduled wakes; other platforms use in-app triggers.
     if (isAndroidNative) ...[
       SettingsGroupHeading(label: context.l10n.offlineBackgroundSection),
       SettingsGroupCard(
@@ -267,12 +244,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
               ),
             ),
           ),
-          // Both sub-options are meaningless with the run itself switched
-          // off — nested the same way the Notifications screen nests its
-          // own check interval under "New chapters". The interval is the
-          // SAME WorkManager schedule that check uses (one shared periodic
-          // job), so it's shown here too rather than only being reachable
-          // from a screen this toggle doesn't depend on.
+          // Catch-up and notification checks share the same periodic WorkManager job.
           if (backgroundCatchup) ...[
             SettingsHighlightTarget(
               id: 'backgroundCheckInterval',
@@ -319,7 +291,6 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     SettingsGroupHeading(label: context.l10n.offlineStorageSection),
     SettingsGroupCard(
       children: [
-        // Storage used is info only (no action), so it stays out of search.
         ListTile(
           title: Text(context.l10n.offlineStorageUsage),
           subtitle: Text(
@@ -438,16 +409,11 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
   ];
 }
 
-/// Standalone screen kept for the existing route; the same tiles are also
-/// shown in the Downloads screen's "On-device" tab via
-/// [buildOnDeviceStorageTiles].
 class OfflineSettingsScreen extends ConsumerWidget {
   const OfflineSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.onDeviceDownloads);
     final content = ListTileTheme(

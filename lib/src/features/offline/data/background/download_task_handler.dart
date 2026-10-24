@@ -38,67 +38,42 @@ import 'catchup_work_spec.dart';
 import 'record_seal.dart';
 import 'work_order_admission.dart';
 
-/// Foreground-service entry point. Must be top-level +
-/// `@pragma('vm:entry-point')` so AOT keeps it and the plugin can re-enter it
-/// in the background isolate; actual work runs in [DownloadTaskHandler.onStart].
+// Top-level entry point and pragma keep the AOT callback available to the background plugin.
 @pragma('vm:entry-point')
 void backgroundDownloadCallback() {
   FlutterForegroundTask.setTaskHandler(DownloadTaskHandler());
 }
 
-/// Bound on every HTTP call this isolate makes. None of `package:http`'s
-/// calls time out on their own — a proxy/tunnel in front of the server that
-/// accepts a connection but never replies would otherwise hang the request
-/// forever: no exception, no gateway status, nothing to catch — the drain
-/// loop just sits on one `await` permanently, which reads on-screen as a
-/// notification and progress spinner frozen at whatever count they were at
-/// when it happened, with nothing at all reaching the crash log to explain
-/// why (every error-handling path here is downstream of something throwing).
+// Bound HTTP waits so an unresponsive proxy cannot strand the worker on one await.
 const _httpTimeout = Duration(seconds: 30);
 
-/// Storage key under which the main isolate stashes the JSON-encoded
-/// [BackgroundWorkOrder] for the worker to pick up in [DownloadTaskHandler.onStart].
 const String kWorkOrderKey = 'work_order';
 
-/// Storage key for the gen-versioned [BackgroundTokenRecord] shared across the
-/// main + worker isolates (so a rotated refresh token survives a worker
-/// rotation and is read back by the main side on stop).
+/// Shared gen-versioned token record; main reads back worker-rotated tokens on stop.
 const String kTokenRecordKey = 'token_record';
 
 class DownloadTaskHandler extends TaskHandler {
-  /// chapterIds still to download, in order.
   final Set<int> _queue = <int>{};
 
-  /// chapterId -> mangaId, needed to build page paths.
   final Map<int, int> _mangaOf = <int, int>{};
 
-  /// chapterId -> download generation, echoed on every event so the main isolate
-  /// can drop events from a deleted (stale) generation.
+  // Stamp every event so main can reject pre-delete generations.
   final Map<int, int> _genOf = <int, int>{};
 
-  /// chapters the main isolate asked to drop (delete/cancel).
   final Set<int> _cancelled = <int>{};
 
-  /// Total chapters seen across this service lifetime (for the notification
-  /// "done/total"). Seeded from the work order, grows as `add` ops arrive.
   int _total = 0;
 
-  /// Chapters that reached a terminal state (for the notification counter).
   int _done = 0;
 
   var _wifiOnly = false;
 
-  /// Set when an `add` op merges new work while the drain loop is between
-  /// chapters, so the drain loop re-checks before self-stopping.
+  // New work arriving between chapters must be observed before self-stop.
   var _sawNewWork = false;
 
-  /// The chapter the drain loop is actively downloading — already pulled off
-  /// [_queue], so an `add` merge (which resends every `downloading` row on
-  /// resume) would otherwise re-queue and double-download it.
+  // In-flight work has left the queue; exclude it when merging resumed drift rows.
   int? _inFlight;
 
-  /// True once onDestroy fires (timeout / external stop) — the drain loop and
-  /// the in-flight chapter observe it and unwind.
   var _stopping = false;
   Future<void>? _drainFuture;
   Timer? _yieldTimer;
@@ -106,14 +81,9 @@ class DownloadTaskHandler extends TaskHandler {
   Future<void>? _controlCheck;
   DateTime? _lastControlRefresh;
 
-  /// True once the main isolate sends `{op:'pause'}`. The in-flight chapter is
-  /// cancelled (left resumable) and the worker self-stops; drift retains
-  /// queued/downloading so resume re-enqueues them.
   var _paused = false;
 
-  /// One client for every request this worker makes. `http.get`/`http.post`
-  /// open and close a connection per call, so downloading paid a fresh TLS
-  /// handshake for every single page.
+  // Reuse connections across the worker run instead of paying TLS setup per page.
   final http.Client _http = http.Client();
 
   BackgroundWorkOrder? _order;
@@ -134,33 +104,18 @@ class DownloadTaskHandler extends TaskHandler {
   late BackgroundTokenRecord _record;
   late TokenBroker _broker;
 
-  /// Where this run reaches the server: the order's verified address, or the
-  /// server's other address when only that one answers from this network.
-  /// See [pickBackgroundServerBase] and [_repickServer].
   late String _serverBase;
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    // This isolate starts with no diagnostic sink (main.dart wires the UI
-    // isolate's), so every recordDiagnostic() below would be a silent no-op.
+    // The worker isolate does not inherit the main diagnostic sink.
     try {
       final crashLogPath = await initCrashLog();
       setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
     } catch (_) {}
-    // The work order's and token record's secrets are sealed.
     await RecordSeal.load(kSecureStorage);
     final raw = await FlutterForegroundTask.getData<String>(key: kWorkOrderKey);
     if (raw == null) {
-      // Nothing to do — self-stop so we don't sit as a zombie notification.
-      // Nothing else reports this: if Android itself restarts this service
-      // (TaskStarter.system — after killing it for resources, a common OS
-      // behavior for a foreground service under memory/battery pressure) and
-      // the work order was already wiped by the previous run's own stop
-      // handshake, this fires immediately on every restart with nothing to
-      // do — a start/instant-stop cycle entirely outside ensureServiceRunning,
-      // driven by the OS's own restart policy rather than anything in this
-      // app's own retry/backoff logic, which would explain a notification
-      // flashing far faster than any network timeout could produce.
       _sendEvent({'kind': 'noWorkOrder', 'starter': starter.name});
       await FlutterForegroundTask.stopService();
       return;
@@ -170,8 +125,7 @@ class DownloadTaskHandler extends TaskHandler {
     );
     var order = _order!;
 
-    // Plugin-free path building: the main isolate already resolved the offline
-    // base dir (path_provider lives in the root isolate), so we just wrap it.
+    // path_provider runs on the root isolate; the work order supplies its resolved path.
     _paths = OfflinePaths(order.baseDir);
     _store = IoOfflinePageStore(_paths);
     _log = BackgroundCompletionLog(File('${order.baseDir}/.bg_completion.log'));
@@ -189,13 +143,6 @@ class DownloadTaskHandler extends TaskHandler {
       }
     }
     if (!acquired) {
-      // Still contended — leave the queue in drift; the next start retries.
-      // Nothing else reports this: without it, a lock held by a wedged other
-      // party (e.g. the WorkManager catch-up executor stuck on a hung request)
-      // makes this service start, spend ~30s failing to acquire, and stop —
-      // over and over, every time something re-triggers a start — showing as
-      // the notification repeatedly appearing and disappearing with no
-      // download ever actually attempted and nothing explaining why.
       _sendEvent({'kind': 'lockFailed'});
       await FlutterForegroundTask.stopService();
       return;
@@ -303,15 +250,7 @@ class DownloadTaskHandler extends TaskHandler {
         final generation = data['gen'] as int? ?? 0;
         if (generation < (_genOf[id] ?? 0)) break;
         if (id == _inFlight) break; // already downloading — don't double-queue
-        // A re-add after a delete carries a bumped generation; adopt it so this
-        // download's events outrank the deleted generation's stale ones. It
-        // also supersedes any earlier cancellation of this same id: a chapter
-        // that fell out of a keep-rule window (evicted → 'remove' → added to
-        // _cancelled) and then falls back in (window shifts again within the
-        // same FGS session, e.g. a read/unread toggle) is wanted again, not
-        // still cancelled — without this, the id stayed in _cancelled for the
-        // rest of the session and every future 'add' for it silently no-opped,
-        // since both branches below also required it absent from _cancelled.
+        // A newer-generation add supersedes prior cancellation and must stamp its own events.
         _cancelled.remove(id);
         _genOf[id] = generation;
         if (!_queue.contains(id) && !_mangaOf.containsKey(id)) {
@@ -320,8 +259,6 @@ class DownloadTaskHandler extends TaskHandler {
           _total++;
           _sawNewWork = true;
         } else if (!_queue.contains(id)) {
-          // Known manga mapping but not currently queued (e.g. re-add of a
-          // chapter whose row we still remember): requeue it.
           _queue.add(id);
           _sawNewWork = true;
         }
@@ -332,9 +269,6 @@ class DownloadTaskHandler extends TaskHandler {
       case 'setWifiOnly':
         _wifiOnly = data['value'] as bool;
       case 'pause':
-        // User paused: the in-flight chapter's isCancelled picks this up and
-        // unwinds (left resumable), the drain loop exits and self-stops; main
-        // won't restart while the persisted pause flag is set.
         _paused = true;
         _http.close();
     }
@@ -420,9 +354,6 @@ class DownloadTaskHandler extends TaskHandler {
     await _lock?.release();
   }
 
-  // ---------------------------------------------------------------------------
-  // Drain loop
-  // ---------------------------------------------------------------------------
 
   Future<void> _drain() async {
     while (!_stopping && !_paused) {
@@ -432,9 +363,7 @@ class DownloadTaskHandler extends TaskHandler {
           _sawNewWork = false;
           continue;
         }
-        // Queue genuinely empty — record the drain marker, tell main we're
-        // stopping (so it can recheck for anything enqueued during this window
-        // and restart us), then self-stop.
+        // Record drain before self-stop so main can pick up work queued during shutdown.
         await _log.appendDrained();
         if (_stopping) return;
         _sendEvent({'kind': 'drained'});
@@ -448,25 +377,20 @@ class DownloadTaskHandler extends TaskHandler {
       _inFlight = null;
       if (_stopping) return;
       if (parked) {
-        // Server unreachable — stop with the queue still in drift so a reconnect
-        // (or relaunch) resumes it. No drained marker: it isn't drained, parked.
+        // Park without a drained marker; drift retains the queue for reconnect.
         await _releaseOwnership();
         await FlutterForegroundTask.stopService();
         return;
       }
     }
-    // Exited because the user paused (not a stop/timeout): self-stop cleanly to
-    // clear the FGS notification. drift still has queued/downloading rows, so
-    // resume just re-enqueues; do NOT append a drained marker — this is parked,
-    // not drained.
+    // Pause preserves drift work and must not emit a drained marker.
     if (_paused && !_stopping) {
       await _releaseOwnership();
       await FlutterForegroundTask.stopService();
     }
   }
 
-  /// Returns true when the chapter was parked (server unreachable) — the drain
-  /// should stop and leave the queue intact for a later resume.
+  /// True means park the drain with resumable work intact.
   Future<bool> _downloadChapter(
     int chapterId,
     int mangaId, {
@@ -481,26 +405,10 @@ class DownloadTaskHandler extends TaskHandler {
     }
     if (_paused || _stopping || _cancelled.contains(chapterId)) return false;
     if (urls == null) {
-      // The phone may have moved between home Wi-Fi and mobile data since the
-      // run picked its address: try the server's other one before parking.
       if (!afterRepick && await _repickServer()) {
         return _downloadChapter(chapterId, mangaId, afterRepick: true);
       }
-      // Server unreachable resolving pages: leave `downloading` (resumable) and
-      // park. Marking it error here poisoned the whole queue — one blip
-      // cascaded through every remaining chapter.
-      //
-      // Nothing else reports this chapter, and main's stop handshake would read
-      // the still-pending queue as work stranded by the shutdown and restart us
-      // straight back into the same dead server. (A park that happens mid-
-      // download says so through its `offline` chapterDone instead — sending
-      // both would let a stale one park a session that had already recovered.)
-      //
-      // chapterId/mangaId ride along so the main isolate can tell "this one
-      // specific chapter keeps parking" (its own source is gone/broken) apart
-      // from "the server is actually down" (parks would spread across whatever
-      // chapter happens to be first each restart) — without this, the main
-      // isolate had no way to attribute a park to a chapter at all.
+      // Notify main to arm backoff before the stop handshake sees pending drift work.
       _sendEvent({
         'kind': 'parked',
         'chapterId': chapterId,
@@ -510,8 +418,6 @@ class DownloadTaskHandler extends TaskHandler {
       return true;
     }
     if (urls.isEmpty) {
-      // Could not resolve pages (terminal): a server with no pages or a hard
-      // failure even after a token refresh. Mark error, keep draining.
       await _log.appendChapter(
         chapterId: chapterId,
         status: 'error',
@@ -524,15 +430,10 @@ class DownloadTaskHandler extends TaskHandler {
       return false;
     }
 
-    // Tell the UI this chapter is downloading so the progress arc shows in
-    // foreground (the main isolate applies it to the catalog); while
-    // backgrounded it's dropped and covered by log replay.
     _sendEvent({
       'kind': 'chapterStart',
       'chapterId': chapterId,
       'gen': _genOf[chapterId] ?? 0,
-      // The resolved page count — lets the UI show a determinate progress arc
-      // (webtoon chapters don't know their page total until resolved here).
       'total': urls.length,
     });
 
@@ -552,9 +453,7 @@ class DownloadTaskHandler extends TaskHandler {
       pages: pages,
       isCancelled: () => _cancelled.contains(chapterId) || _stopping || _paused,
       onPageStored: (i, rel, bytes) async {
-        // Progress only. Pages sit in staging until the MAIN isolate commits
-        // the chapter, so there is no row for this isolate to write — and no
-        // per-page log line either, which was a second fsync on every page.
+        // The main isolate publishes staging; worker page events report progress only.
         _sendEvent({
           'kind': 'page',
           'chapterId': chapterId,
@@ -580,8 +479,7 @@ class DownloadTaskHandler extends TaskHandler {
         : 'error';
 
     if (status != null) {
-      // Bytes are measured by whoever commits, after the rename — nothing is in
-      // the chapter's final directory yet, so there is nothing to weigh here.
+      // The committer measures final bytes after promotion.
       await _log.appendChapter(
         chapterId: chapterId,
         status: status,
@@ -592,16 +490,10 @@ class DownloadTaskHandler extends TaskHandler {
       _done++;
     }
     _afterChapter(chapterId, status, offlineReason: outcome.offlineReason);
-    // Network died mid-download: the chapter is recorded `offline` (resumable),
-    // so park rather than churn every remaining chapter through the same drop.
     return status == 'offline' || status == 'authFailed';
   }
 
-  /// Open (or adopt) the chapter's staging directory, returning the pages
-  /// already there. Only staging that positively matches this download is
-  /// reused; a different page list, an older generation, or an unreadable
-  /// manifest all mean the files belong to some other attempt, so they are
-  /// wiped rather than merged into.
+  // Resume only staging with matching pages and generation.
   Future<Set<int>> _openStaging(
     int mangaId,
     int chapterId,
@@ -623,7 +515,6 @@ class DownloadTaskHandler extends TaskHandler {
     return const {};
   }
 
-  /// Notification + main-isolate notification after each chapter settles.
   void _afterChapter(int chapterId, String? status, {String? offlineReason}) {
     _sendEvent({
       'kind': 'chapterDone',
@@ -633,8 +524,7 @@ class DownloadTaskHandler extends TaskHandler {
       'status': status,
       'reason': offlineReason,
     });
-    // The icon rides every update — the plugin persists the latest content
-    // wholesale, so omitting it here could reset the icon to the fallback.
+    // The plugin replaces notification content wholesale; include the icon on every update.
     FlutterForegroundTask.updateService(
       notificationTitle: 'Downloading chapters',
       notificationText: 'Downloading — $_done/$_total',
@@ -644,13 +534,7 @@ class DownloadTaskHandler extends TaskHandler {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Page-list resolution (hand-rolled GraphQL POST, pure http)
-  // ---------------------------------------------------------------------------
 
-  /// Resolves a chapter's page URLs: the list on success, empty on terminal
-  /// failure (no pages), or null when the server was unreachable (transient —
-  /// the caller parks, doesn't error).
   Future<void> _recordPermissionDenied(int chapterId) async {
     final order = _order!;
     final catalogId = order.catalogServerId;
@@ -696,9 +580,6 @@ class DownloadTaskHandler extends TaskHandler {
 
   String? _lastNetworkErrorReason;
 
-  /// After the server stopped answering, whether its other address answers
-  /// from this network instead, and is still the same server. Switches this
-  /// run to it when so.
   Future<bool> _repickServer() async {
     final order = _order;
     if (order == null || _paused || _stopping) return false;
@@ -748,7 +629,6 @@ class DownloadTaskHandler extends TaskHandler {
     writePage: _store,
     parallelPageLimit: 5,
     fetchPage: (pageUrl) async {
-      // The broker's write keeps [_record] current, which the request reads.
       await _broker.refreshIfDue(_record);
       final (url, headers) = _authedPageRequest(pageUrl);
       final http.Response res;
@@ -759,7 +639,6 @@ class DownloadTaskHandler extends TaskHandler {
       } on http.ClientException catch (e) {
         throw PageOfflineException('ClientException: $e');
       } on SocketException catch (e) {
-        // Device offline (connection refused / unreachable host / DNS).
         throw PageOfflineException('SocketException: $e');
       } on TimeoutException {
         throw PageOfflineException(
@@ -772,8 +651,7 @@ class DownloadTaskHandler extends TaskHandler {
           Enum$UserPermission.DOWNLOAD_CHAPTERS,
         );
       }
-      // Same as the page-list POST: a gateway speaking for a dead origin leaves
-      // the chapter resumable rather than failing it.
+      // Gateway failures leave work resumable rather than consuming chapter retries.
       if (isGatewayStatus(res.statusCode)) {
         throw PageOfflineException('HTTP ${res.statusCode} on page fetch');
       }
@@ -786,7 +664,6 @@ class DownloadTaskHandler extends TaskHandler {
       );
     },
     refreshAuth: () async {
-      // Only ui_login rotates; basic/simple credentials are static.
       if (_record.authType != 'uiLogin') return false;
       final newAccess = await _broker.resolveAfter401(
         _record.accessToken ?? '',
@@ -795,10 +672,7 @@ class DownloadTaskHandler extends TaskHandler {
     },
   );
 
-  /// Builds the page-image GET URL + headers, mirroring
-  /// `fetchOfflinePageBytes`: base API without `/api` (page URLs already carry
-  /// it), every auth mode via headers. Reads the
-  /// current in-isolate [_record] (kept fresh by the broker), not Riverpod.
+  // Page URLs already include /api; use current broker auth and the server base without /api.
   (String, Map<String, String>) _authedPageRequest(String pageUrl) {
     final order = _order!;
     final base = Endpoints.baseApi(
@@ -826,9 +700,6 @@ class DownloadTaskHandler extends TaskHandler {
     return (fetchUrl, headers);
   }
 
-  // ---------------------------------------------------------------------------
-  // Token broker (in-isolate, FFT-storage-backed)
-  // ---------------------------------------------------------------------------
 
   TokenBroker _buildBroker() => TokenBroker(
     expectedIdentity: _order!.auth,
@@ -859,7 +730,6 @@ class DownloadTaskHandler extends TaskHandler {
       }
     }),
     refreshFn: (refreshToken) async {
-      // Only ui_login refreshes; basic/simple return null.
       if (_record.authType != 'uiLogin') {
         return (tokens: null, transient: false);
       }
@@ -887,11 +757,7 @@ class DownloadTaskHandler extends TaskHandler {
               body: body,
             )
             .timeout(_httpTimeout);
-        // A proxy answering for a dead origin is the server being unreachable,
-        // not the refresh token being invalid — same rule as the page-list
-        // fetch. Without this, the very first request after reconnecting
-        // (which races the network actually settling) permanently condemns
-        // every chapter that happened to 401 in that window.
+        // A gateway failure means unreachable origin, not invalid refresh credentials.
         if (isGatewayStatus(res.statusCode)) {
           logBackgroundRefresh(
             'download',
@@ -917,8 +783,7 @@ class DownloadTaskHandler extends TaskHandler {
           );
           return (tokens: null, transient: false);
         }
-        // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
-        // input one (the broker persists it back as the current refresh).
+        // Suwayomi does not rotate refresh tokens; retain the input token.
         return (
           tokens: (access: access, refresh: refreshToken),
           transient: false,

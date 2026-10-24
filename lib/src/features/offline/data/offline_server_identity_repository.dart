@@ -90,7 +90,6 @@ Set<String> knownServerAddresses(Ref ref) {
   final lan = ref.watch(serverLanUrlProvider);
   return {
     ref.watch(currentServerAddressProvider),
-    // The remote and LAN URLs are two endpoints of the same server.
     if (external != null && external.isNotEmpty)
       serverAddress(baseUrl: external, port: port, addPort: addPort),
     if (lan != null && lan.isNotEmpty)

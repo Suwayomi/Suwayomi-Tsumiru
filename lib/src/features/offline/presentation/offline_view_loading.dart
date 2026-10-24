@@ -12,10 +12,6 @@ import '../../../widgets/custom_circular_progress_indicator.dart';
 import '../data/offline_repository.dart';
 import '../data/server_reachability.dart';
 
-/// Library loading state with a way out: while a fallback-capable read is
-/// still waiting on its network window, a "View offline" button serves the
-/// on-device catalog immediately instead of making the user sit out the wait.
-/// Renders as the plain shimmer when there is no catalog to offer.
 class OfflineViewLoading extends ConsumerWidget {
   const OfflineViewLoading({super.key});
 

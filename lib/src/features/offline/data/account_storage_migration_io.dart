@@ -392,8 +392,7 @@ Future<String> _prepareAccountStorage({
     if (await destinationDb.exists() &&
         !_catalogueIsValid(destinationDb.path) &&
         await worker.run(sourceDb.path, destinationDb.path, 'prefix')) {
-      // A valid catalogue or a nonmatching file may contain account changes.
-      // Only an incomplete byte-for-byte copy can be replaced from the source.
+      // Replace only incomplete byte-identical copies; valid or different files may contain account changes.
       for (final suffix in ['-wal', '-shm', '-journal']) {
         final sidecar = File('${destinationDb.path}$suffix');
         if (await sidecar.exists() && await sidecar.length() != 0) {
@@ -553,12 +552,7 @@ Future<void> _checkTree(
   }
 }
 
-/// Both paths live under the same offline root, so a rename is a metadata
-/// change and the chapter bytes never move. Copying an 11 GB catalogue and
-/// verifying it byte by byte took over an hour and blocked the app behind a
-/// splash screen. The copy below stays for the case a rename can't serve:
-/// a destination that already holds a partial migration, or a root split
-/// across devices.
+// Prefer rename to avoid copying chapter bytes; fall back for occupied paths or different devices.
 Future<void> _moveDirectory(
   Directory source,
   Directory destination,
@@ -570,8 +564,7 @@ Future<void> _moveDirectory(
 ) async {
   recovery?.check();
   await _checkAncestors(destination.path, offlineRoot);
-  // A rename adopts the subtree wholesale, so it has to be vetted first. The
-  // per-entry walk below only sees what it copies.
+  // Rename adopts the whole subtree, so validate it before moving.
   await _checkLegacyTree(source, recovery);
   if (await _renamed(source, destination.path, renameEntity)) {
     recovery?.completed();
@@ -649,8 +642,6 @@ Future<void> _moveFile(
   await source.delete();
 }
 
-/// True when [source] now lives at [destination]. A rename onto an occupied
-/// path, or across devices, fails and the caller copies instead.
 Future<bool> _renamed(
   FileSystemEntity source,
   String destination,
@@ -712,7 +703,6 @@ bool _catalogueIsValid(String path) {
   }
 }
 
-/// Requests are sequential, so one worker serves the whole migration.
 class _AccountFileWorker {
   _AccountFileWorker(this.recovery);
 

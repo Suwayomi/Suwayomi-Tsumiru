@@ -33,20 +33,11 @@ import 'server_reachability.dart';
 
 part 'offline_background_downloads.g.dart';
 
-/// The chapter download engine wired with real deps: an auth'd HTTP page fetch
-/// (resolving the server base + current auth at request time), the on-disk page
-/// store, and a token refresher. Pure Dart — runs the same on Android and the
-/// Linux desktop build. Null on web / when offline storage is unavailable.
-///
-/// Keep-alive: nothing watches the download pipeline — it's only read by
-/// fire-and-forget triggers — and an auto-dispose Ref dies at the first async
-/// gap, so the engine's run-time auth reads would throw mid-download.
+// Keep alive: fire-and-forget downloads read runtime auth across async gaps without any watchers.
 @Riverpod(keepAlive: true)
 ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   if (!ref.watch(offlineServerAccessProvider)) return null;
   final isCurrentSession = watchAuthSession(ref);
-  // Page-level parallelism. One chapter downloads
-  // at a time; this is how many of its pages are in flight at once.
   final parallel =
       (ref.watch(offlineDownloadConcurrencyProvider) ??
               DBKeys.offlineDownloadConcurrency.initial as int)
@@ -58,13 +49,9 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
     parallelPageLimit: parallel,
     refreshAuth: () async {
       if (!isCurrentSession()) return false;
-      // Only ui_login has a refreshable rotating token. basic / simple_login /
-      // none don't rotate, so a 401 there means the credential is wrong — no
-      // point retrying.
+      // Only ui_login credentials rotate; other 401s cannot be refreshed.
       if (ref.read(authTypeKeyProvider) != AuthType.uiLogin) return false;
-      // Refresh through a raw client (not the auth-linked one) so the refresh
-      // mutation itself can't recurse through SuwayomiAuthLink; the coordinator
-      // owns single-flight dedup, so concurrent 401s collapse to one refresh.
+      // Raw client prevents recursive auth-link refresh; the coordinator deduplicates concurrent 401s.
       final rawClient = GraphQLClient(
         link: HttpLink(
           Endpoints.baseApi(
@@ -97,13 +84,7 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   );
 }
 
-/// The offline download orchestrator (one chapter at a time,
-/// page-parallel inside the engine, run-time auth). Null on web / when offline
-/// storage is unavailable.
-///
-/// Keep-alive so every trigger (launch resume, download starter, pause,
-/// catalog clear) reaches the SAME live instance — the in-memory
-/// active/cancelled state is only meaningful on the instance actually pumping.
+// Keep alive so every trigger reaches the coordinator that owns active work.
 @Riverpod(keepAlive: true)
 OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
   if (!ref.watch(offlineServerAccessProvider)) return null;
@@ -112,8 +93,7 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
   final repo = ref.watch(mangaBookRepositoryProvider);
   final store = ref.watch(offlinePageStoreProvider);
-  // Captured at build, read live per call: a rebuild mid-pump unmounts the old
-  // Ref, and the old instance still polls this between chapters.
+  // Capture prefs before async pumping can outlive this provider Ref.
   final prefs = ref.watch(sharedPreferencesProvider);
   final read = ref.container.read;
   return OfflineDownloadCoordinator(
@@ -150,7 +130,7 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
         !isCurrentSession() ||
         !downloadPermissionAllowed(read) ||
         (prefs.getBool(DBKeys.offlineDownloadsPaused.name) ?? false),
-    // Deferred: the pump can hit this mid-provider-build.
+    // Defer because the pump may invoke this during provider construction.
     onServerUnreachable: () => Future(() {
       if (!isCurrentSession()) return;
       try {
@@ -162,21 +142,9 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
   );
 }
 
-/// Settle on-disk chapter files against the catalog at launch, BEFORE the launch
-/// reconcile and catch-up run. Android reaches this through the background
-/// worker's launch replay (ordered ahead of reconcile in `main`); every other
-/// platform has no replay at all, so without this a chapter whose commit landed
-/// but whose catalog write didn't would be seen as missing and downloaded all
-/// over again, and files left by a crashed delete would never be swept.
-///
-/// Split out of [initOfflineDownloads] so the launch path can order recovery
-/// ahead of the reconcile pass (which must see post-recovery device state),
-/// mirroring Android's replay-before-reconcile ordering. Depends only on the
-/// database and page store — no coordinator — so it is safe to run this early,
-/// before the download pump.
+/// Run before launch reconciliation so it sees recovered device state; Android replay owns its recovery.
 Future<void> recoverDiskAtLaunch(ProviderContainer container) async {
   if (!container.read(offlineActiveProvider)) return;
-  // On Android the foreground-service worker's replay owns recovery.
   if (isAndroidNative) return;
   await recoverChaptersOnDisk(
     db: container.read(offlineDatabaseProvider),
@@ -184,23 +152,12 @@ Future<void> recoverDiskAtLaunch(ProviderContainer container) async {
   );
 }
 
-/// Resume offline downloads at launch. Chapters left `downloading` by a previous
-/// run (the in-memory loop doesn't survive a process death) are stranded; the
-/// pump resumes them one at a time, re-fetching only pages not already on disk.
-/// Chapters previously marked `error` get one fresh attempt — most past errors
-/// were the stale-token 401s the run-time-auth engine now avoids.
-///
-/// Disk recovery is NOT done here — it runs earlier via [recoverDiskAtLaunch],
-/// which the launch path invokes before the reconcile pass. This is pump-only.
+/// Resumes stranded downloads; disk recovery must already have run before reconciliation.
 Future<void> initOfflineDownloads(ProviderContainer container) async {
   if (!container.read(offlineActiveProvider)) return;
-  // On Android the foreground-service worker owns downloads (see the corruption
-  // gate in pumpDownloads + BackgroundDownloadController); the launch path calls
-  // the controller instead.
   if (isAndroidNative) return;
   final coord = container.read(offlineDownloadCoordinatorProvider);
   if (coord == null) return;
-  // `error` is terminal: this used to promote every errored chapter on each
-  // launch, retrying forever. The user retries from the save button.
+  // Error is terminal until an explicit user retry.
   await coord.pumpDownloads();
 }

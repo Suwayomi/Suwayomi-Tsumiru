@@ -7,12 +7,7 @@
 import 'offline_database.dart';
 import 'reconcile_types.dart';
 
-/// Chapter ids that should be on-device for one manga, given its keep-rule.
-/// Always includes pinned chapters (manual saves are sticky, rule-independent).
-///
-/// [sortAxis] is the manga's own chapter sort (null when it has no per-manga
-/// sort meta) — see ChapterSortAxis. Null falls back to the pre-existing
-/// chapterNumber-else-chapterIndex ranking below.
+/// Always includes pinned chapters; a null [sortAxis] uses chapter number, then source order.
 Set<int> desiredChapterIds(
   List<OfflineChapter> chapters,
   OfflineKeepRule rule,
@@ -30,34 +25,7 @@ Set<int> desiredChapterIds(
       for (final c in chapters)
         if (!c.isRead) c.id,
     },
-    // Excludes chapters already given up on (OfflineDeviceState.error) from the
-    // candidate pool BEFORE cutting to `keepUnreadCount`. Without this, a
-    // chapter the source can never serve (e.g. removed/renumbered upstream)
-    // permanently occupies one of the N slots — the reconciler already skips
-    // re-downloading an errored chapter every pass (so it never gets retried),
-    // but nothing here ever let the (N+1)th unread chapter take its place, so
-    // the user's "keep N downloaded" setting silently plateaus at N-1 forever.
-    //
-    // Also restricts to chapters AFTER the user's furthest-read position.
-    // Without this, an unread gap earlier in the series (e.g. the user skipped
-    // ch. 2 but read ch. 3+) causes the worker to download behind their reading
-    // progress instead of ahead of it.
-    //
-    // Ranks the whole manga on ONE axis so the furthest-read floor and the
-    // download-ahead window are always compared on the same scale. chapterNumber
-    // (the parsed chapter number: 1.0, 10.5, …) reflects narrative reading
-    // order, so it wins whenever the source assigns real numbers — including
-    // reverse-listed sources whose sourceOrder runs backwards. Only when NO
-    // chapter carries a usable number do we fall back to chapterIndex
-    // (sourceOrder) for all of them.
-    //
-    // In chapterNumber mode a chapter without a usable number (a bonus/special
-    // the source never numbered) has no place on the narrative axis, so it is
-    // excluded from both the floor and the window rather than ranked on the
-    // incompatible sourceOrder scale — mixing the two silently corrupted the
-    // floor (a read, high-sourceOrder special would shove it far past the real
-    // reading position and starve the window). Such chapters can still be
-    // pinned, and if already on-device+unread they survive via retainedChapterIds.
+    // Keep the floor and window on one axis; unnumbered specials cannot share the numbered axis.
     OfflineKeepRule.nUnread => () {
       int? epoch(String? v) => v == null ? null : int.tryParse(v);
       int stamp(OfflineChapter c, ChapterSortAxis? axis) =>
@@ -68,9 +36,7 @@ Set<int> desiredChapterIds(
           } ??
           0;
 
-      // Chapter timestamps only arrive with a row's next down-sync: until
-      // then no chapter carries one, so rank the pre-existing way (null)
-      // rather than download nothing.
+      // Timestamp sorts need a down-sync before they have values; fall back until then.
       final axis =
           (sortAxis == ChapterSortAxis.uploadedAt ||
                   sortAxis == ChapterSortAxis.fetchedAt) &&
@@ -78,8 +44,6 @@ Set<int> desiredChapterIds(
           ? null
           : sortAxis;
 
-      // axis == null (no per-manga sort meta) is exactly the
-      // byNumber/chapterIndex logic from before per-manga axes existed.
       final byNumber = axis == null
           ? chapters.any((c) => (c.chapterNumber ?? 0) > 0)
           : axis == ChapterSortAxis.chapterNumber;
@@ -105,18 +69,12 @@ Set<int> desiredChapterIds(
         ),
         ChapterSortAxis.uploadedAt ||
         ChapterSortAxis.fetchedAt => stamp(a, axis).compareTo(stamp(b, axis)),
-        // Same key as the chapter list display, so the reader's next chapter
-        // and the download-ahead window agree.
+        // Match the chapter list so download-ahead follows the reader.
         ChapterSortAxis.alphabetical => a.name.toLowerCase().compareTo(
           b.name.toLowerCase(),
         ),
       };
-      // A shared date or name is routine (a whole batch fetched at once
-      // shares one fetchedAt) and marks distinct chapters: break the tie by
-      // source order, as the display does, so reading one doesn't push its
-      // same-stamp siblings behind the floor. A chapterNumber tie is a
-      // scanlator duplicate of the same chapter, which the floor deliberately
-      // keeps excluding.
+      // Date/name ties are distinct chapters; number ties are scanlator duplicates excluded by the floor.
       final breakTies =
           axis == ChapterSortAxis.uploadedAt ||
           axis == ChapterSortAxis.fetchedAt ||
@@ -151,21 +109,8 @@ Set<int> desiredChapterIds(
   return ruleSet..addAll(pinned);
 }
 
-/// Chapter ids allowed to REMAIN on-device for one manga, given its keep-rule.
-///
-/// Deliberately broader than [desiredChapterIds] (which drives what to
-/// *download*). The nUnread rule is a download-ahead window, not a deletion
-/// window: a chapter already on the device that is still UNREAD is never
-/// removed just for falling outside the next-N window or behind the
-/// furthest-read floor. Without this split, marking a far-ahead chapter read
-/// (or leaving a skipped gap) would silently delete unread chapters the reader
-/// already has — e.g. at ch. 10 with 11..20 downloaded, marking ch. 100 read
-/// would raise the floor to 100 and evict 11..20.
-///
-/// READ chapters are intentionally NOT retained here: under nUnread they still
-/// fall out of the window and are cleaned by the rule (the rolling window),
-/// on top of the delete-while-reading path. Every other rule retains exactly
-/// what it downloads.
+/// Under nUnread, retains downloaded unread chapters even outside the download-ahead window.
+/// Read chapters still expire; other rules retain exactly what they request.
 Set<int> retainedChapterIds(
   List<OfflineChapter> chapters,
   OfflineKeepRule rule,
@@ -186,15 +131,7 @@ Set<int> retainedChapterIds(
   };
 }
 
-/// Read chapters the "finished chapters to keep" setting still wants kept.
-/// Slot N targets the chapter N-1 behind the one just finished, so the N-1
-/// most recently read chapters are the ones the user asked to hold on to.
-///
-/// Ordered by the server's read timestamp, not chapter order: someone who
-/// dips back to an early chapter has just-finished it, and ranking by chapter
-/// number would protect wherever they got furthest instead. Rows synced before
-/// per-chapter timestamps existed carry none, so they fall back to reading
-/// order.
+/// Retains slots − 1 read chapters, newest by read timestamp with reading-order fallback.
 Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
   if (slots <= 1) return const {};
   int readAt(OfflineChapter c) => int.tryParse(c.lastReadAt ?? '') ?? 0;
@@ -203,33 +140,22 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
       final byTime = readAt(b).compareTo(readAt(a));
       if (byTime != 0) return byTime;
       final byOrder = b.chapterIndex.compareTo(a.chapterIndex);
-      // Duplicate scanlator copies share a chapter index; id keeps the pick
-      // stable instead of letting sort order decide.
+      // Scanlator duplicates share an index; id makes the selection deterministic.
       return byOrder != 0 ? byOrder : b.id.compareTo(a.id);
     });
   return read.take(slots - 1).map((c) => c.id).toSet();
 }
 
-/// Why [applySafetyNets] evicted a given chapter — the first bucket that
-/// claimed it, in the same precedence order the function evaluates them.
+/// Eviction reasons use the first matching bucket in [applySafetyNets].
 enum EvictReason {
-  /// Not wanted by the manga's keep-rule (outside the nUnread window, or the
-  /// rule is `off`/`allUnread` and excludes it) and not pinned/protected.
   notDesired,
 
-  /// Non-pinned and older than the configured `keepDays` time net.
   timeNet,
 
-  /// Non-pinned and evicted oldest-first to bring retained bytes under the
-  /// configured storage cap.
   storageCap,
 }
 
-/// Decide evictions over the currently-downloaded set, honoring precedence:
-/// pinned > safety-nets > rule. Pinned chapters are never evicted.
-/// [protected] chapters (read this session) dodge the rule eviction only —
-/// the time and storage nets still apply, since those exist for space
-/// pressure, not the rolling unread window.
+/// Pinned chapters are never evicted; [protected] bypasses rule eviction only, not safety nets.
 ({Set<int> evict, Map<int, EvictReason> reasons, bool overCapWarning})
     applySafetyNets({
   required List<OfflineChapter> downloaded,
@@ -239,12 +165,8 @@ enum EvictReason {
   Set<int> protected = const {},
 }) {
   final evict = <int>{};
-  // First reason a chapter is added to `evict` wins — a chapter can match
-  // more than one bucket (e.g. both outside the rule window AND over the
-  // time net), but only the first one actually explains why it left.
   final reasons = <int, EvictReason>{};
 
-  // 1) Not wanted by any rule and not pinned.
   for (final c in downloaded) {
     if (!c.pinned && !desired.contains(c.id) && !protected.contains(c.id)) {
       evict.add(c.id);
@@ -252,7 +174,6 @@ enum EvictReason {
     }
   }
 
-  // 2) Time-net: non-pinned older than keepDays.
   if (nets.timeEvictEnabled) {
     for (final c in downloaded) {
       final dt = c.downloadedAt;
@@ -265,10 +186,6 @@ enum EvictReason {
     }
   }
 
-  // 3) Storage cap: evict oldest non-pinned until under cap. Tracks the
-  // retained total as a running value instead of re-folding the whole
-  // (already-filtered) list on every iteration — same result, O(n log n)
-  // (the sort) instead of O(n^2) for a manga with many downloaded chapters.
   var overCapWarning = false;
   if (nets.storageCapEnabled) {
     final candidates =

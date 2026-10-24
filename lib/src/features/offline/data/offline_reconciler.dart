@@ -13,35 +13,12 @@ import 'offline_database.dart';
 import 'reconcile_logic.dart';
 import 'reconcile_types.dart';
 
-/// Rough per-page byte estimate used to bound cap-gated downloads before any
-/// real download sizes are known (cold start). Refined to real averages once
-/// chapters are on device.
+// Cold-start estimate per page until actual chapter sizes are available.
 const _estimatedBytesPerPage = 256 * 1024;
 
-/// Cap on how many times the reconciler will ask the server to fetch a
-/// chapter it has never managed to download — persisted in
-/// [OfflineChapters.serverFetchAttempts], not in-memory.
-///
-/// Unlike the local-download hop (which persists `OfflineDeviceState.error`
-/// after one failure), asking the SERVER to fetch a chapter from its source
-/// had no equivalent persisted "give up" signal — a chapter whose source is
-/// gone/renumbered upstream just sits with `serverIsDownloaded == false`
-/// forever. Without this cap, every single reconcile pass (app launch,
-/// library sync, every download-queue-drain callback) re-issues a real
-/// enqueue mutation for it, indefinitely — exactly the "series stuck wanting
-/// to download chapters that don't exist" resource drain this guards against.
-///
-/// Persisted rather than in-memory: an in-memory counter resets every app
-/// restart, so a chapter whose source is truly gone would get a fresh budget
-/// every session and never actually reach the cap that stops it.
+// Persisted server-fetch retry cap; restarts must not renew the budget.
 const _maxServerFetchAttempts = 5;
 
-/// Orchestrates a single reconcile pass for one manga: reads the offline
-/// catalog, computes which chapters to download vs evict, invokes the injected
-/// callbacks, and returns the [ReconcilePlan].
-///
-/// Callbacks are injected so the reconciler is fully testable without a real
-/// download manager or filesystem.
 class OfflineReconciler {
   OfflineReconciler({
     required this.db,
@@ -62,30 +39,18 @@ class OfflineReconciler {
   final Future<void> Function(int chapterId) onEvict;
   final DateTime now;
 
-  /// Chapters read this session — shielded from rule eviction so finishing a
-  /// chapter doesn't remove it from the device until the next launch.
+  /// Shields session-read chapters from rule eviction only.
   final Set<int> sessionProtected;
 
-  /// The user's "delete finished chapters while reading" slot count. Every path
-  /// that deletes a download has to honour it, not just the reader.
   final int deleteWhileReadingSlots;
 
-  /// Chapter IDs that transitioned from unread → read during the most recent
-  /// server sync (e.g. read in WebUI). Used by RC7 to apply the local
-  /// delete-while-reading setting to externally-read chapters, exactly as if
-  /// each had been finished in the in-app reader.
+  /// Unread-to-read transitions from the latest sync, used for local delete-on-read.
   final Set<int> newlyReadChapterIds;
 
-  /// When true, the reconciler ensures the slots-1 most recently read chapters
-  /// are present on device — downloading them if missing. Defaults to false to
-  /// preserve existing behavior; only meaningful when deleteWhileReadingSlots >= 2.
+  /// Downloads the slots − 1 read-chapter window when enabled and slots >= 2.
   final bool downloadProtectionWindow;
 
-  /// Called with chapters the keep-rule wants but the SERVER hasn't downloaded
-  /// yet — enqueue a server download (server-client model: the server fetches
-  /// the source, then a later reconcile pass pulls the device copy once
-  /// serverIsDownloaded flips). Optional; when null those chapters are skipped
-  /// (legacy behaviour).
+  /// Queues missing server copies; null skips them until the server downloads them independently.
   final Future<void> Function(Set<int> chapterIds)? onServerDownload;
 
   Future<ReconcilePlan> reconcileManga(int mangaId) async {
@@ -96,18 +61,15 @@ class OfflineReconciler {
 
     final chapters = await db.chaptersForManga(mangaId);
 
-    // RC6: collect orphaned chapters (server-gone) — they must always be evicted.
     final orphanedIds = {
       for (final c in chapters)
         if (c.deviceState == OfflineDeviceState.orphaned) c.id,
     };
 
-    // Only chapters in `downloaded` state are considered by applySafetyNets.
     final downloaded = chapters
         .where((c) => c.deviceState == OfflineDeviceState.downloaded)
         .toList();
 
-    // The download-ahead set: what the keep-rule wants pulled to device.
     final desired = desiredChapterIds(
       chapters,
       manga.keepRule,
@@ -115,10 +77,7 @@ class OfflineReconciler {
       sortAxis: manga.chapterSortMode,
     );
 
-    // The retention set: what may STAY on device. Broader than `desired` for
-    // nUnread — the window bounds new downloads only, it must not delete unread
-    // chapters already on disk (see retainedChapterIds). Drives eviction; the
-    // download loop below still uses `desired`.
+    // nUnread limits new downloads, not retention of unread chapters already on disk.
     final retained = retainedChapterIds(
       chapters,
       manga.keepRule,
@@ -137,26 +96,14 @@ class OfflineReconciler {
       },
     );
 
-    // Merge orphaned ids into the evict set. `evictReasons` tracks WHY each
-    // chapter left — orphaned/RC7 additions below always win over whatever
-    // (if anything) applySafetyNets already attributed, since they are
-    // stronger, unconditional reasons.
+    // Orphan and sync-read eviction reasons override rule/safety-net reasons.
     final toEvict = {...ev.evict, ...orphanedIds};
     final evictReasons = <int, String>{
       for (final entry in ev.reasons.entries) entry.key: entry.value.name,
       for (final id in orphanedIds) id: 'orphaned',
     };
 
-    // RC7: Sync-read eviction — for chapters that transitioned from unread to
-    // read during this sync (e.g. read in WebUI), apply the local
-    // delete-while-reading setting exactly as if each had been finished in the
-    // in-app reader. Only newly-read chapters are considered, so old read
-    // chapters already on the device are never touched unexpectedly.
-    //
-    // slots >= 1: the slots − 1 most-recently-read chapters among the newly-read
-    //   batch are shielded by the same readChaptersInDeleteWindow window the
-    //   reader uses. slots = 1 → delete the chapter itself; slots = 2 → keep
-    //   the most recently read, delete the rest; etc.
+    // Apply delete-on-read only to new remote read transitions, preserving the slots − 1 window.
     if (deleteWhileReadingSlots >= 1 && newlyReadChapterIds.isNotEmpty) {
       final newlyReadDownloaded = downloaded
           .where((c) => newlyReadChapterIds.contains(c.id))
@@ -175,15 +122,9 @@ class OfflineReconciler {
       }
     }
 
-    // Build the toDownload set.
-    // RC5: when the storage cap is active, do not emit downloads that would
-    // push retained bytes over the cap — this ensures reconcile converges (a
-    // fixed point) rather than triggering an evict→re-pull loop across passes.
+    // Bound downloads by retained bytes so cap eviction cannot trigger endless re-downloads.
     final byId = {for (final c in chapters) c.id: c};
 
-    // Protection-window download: ensure the slots-1 most recently read
-    // chapters are on-device when the user opted in. Meaningless for keep=off
-    // (nothing is kept) and requires slots >= 2 (slots=1 means delete-all).
     final protectionWindowIds =
         downloadProtectionWindow &&
             deleteWhileReadingSlots >= 2 &&
@@ -191,13 +132,10 @@ class OfflineReconciler {
         ? readChaptersInDeleteWindow(chapters, deleteWhileReadingSlots)
         : const <int>{};
 
-    // Retained bytes after evictions (downloaded chapters not in toEvict).
     final retainedBytes = downloaded
         .where((c) => !toEvict.contains(c.id))
         .fold<int>(0, (sum, c) => sum + c.bytes);
 
-    // Average byte size of currently-downloaded chapters — used to estimate
-    // each new download's footprint so we can stop before exceeding the cap.
     final avgBytes = downloaded.isEmpty
         ? 0
         : downloaded.fold<int>(0, (s, c) => s + c.bytes) ~/ downloaded.length;
@@ -209,9 +147,6 @@ class OfflineReconciler {
     for (final id in {...desired, ...protectionWindowIds}) {
       final c = byId[id];
       if (c == null || c.deviceState == OfflineDeviceState.error) continue;
-      // Wanted but the server hasn't downloaded it yet: ask the server to
-      // download it (it fetches the source); a later reconcile pass pulls the
-      // device copy once serverIsDownloaded flips. Only when a handler is wired.
       if (!c.serverIsDownloaded) {
         if (onServerDownload != null &&
             c.deviceState != OfflineDeviceState.downloaded) {
@@ -238,24 +173,14 @@ class OfflineReconciler {
         }
         continue;
       }
-      // Server now has it: any earlier fetch-attempt budget is moot — clear
-      // it lazily so a later, unrelated failure (e.g. after a manual re-fetch)
-      // starts fresh instead of inheriting attempts spent on a since-resolved
-      // problem.
       if (c.serverFetchAttempts > 0) {
         await db.resetServerFetchAttempts(id);
       }
-      // Already on device — nothing to do.
       if (c.deviceState == OfflineDeviceState.downloaded) continue;
 
       if (nets.storageCapEnabled) {
-        // RC5 convergence guard: stop adding if there is no room.
-        // If the cap is already met/exceeded by retained bytes, emit nothing.
         if (projectedBytes >= nets.storageCapBytes) break;
-        // Cold-start fallback: when avgBytes is 0 (no chapters downloaded yet),
-        // use a pageCount-derived estimate so the guard still bounds first-pass
-        // downloads and avoids the evict↔re-pull oscillation the cap exists to
-        // prevent.
+        // Bound cold-start downloads by page estimates until measured chapter averages exist.
         final estimate = avgBytes > 0
             ? avgBytes
             : c.pageCount * _estimatedBytesPerPage;
@@ -268,11 +193,6 @@ class OfflineReconciler {
       toDownload.add(id);
     }
 
-    // Trace the reconcile decision: what the server-synced list + keep rule
-    // wanted, and how each desired chapter was routed against local state —
-    // pulled to the device (server already has it), asked of the server (it
-    // does not), or neither (already on device / errored). Only emitted when
-    // there is something to act on, so a steady-state library stays quiet.
     if (toDownload.isNotEmpty || toServerDownload.isNotEmpty) {
       var alreadyOnDevice = 0;
       var errored = 0;
@@ -295,9 +215,6 @@ class OfflineReconciler {
     }
 
     if (toEvict.isNotEmpty) {
-      // Group by reason so a big time-net/storage-cap sweep is one line, not
-      // one per chapter — but every evicted id is still named, so "why did
-      // chapter X leave the device" is always answerable from this log.
       final byReason = <String, List<int>>{};
       for (final id in toEvict) {
         (byReason[evictReasons[id] ?? 'unknown'] ??= []).add(id);
@@ -326,10 +243,6 @@ class OfflineReconciler {
             await db.incrementServerFetchAttempts(id);
           }
         });
-        // A trail of every attempt, not just the final give-up — so a session
-        // that never reaches the cap (or one where the enqueue mutation itself
-        // silently no-ops server-side) is still visible, not only the ones
-        // that exhaust the budget.
         final c = byId[id];
         recordDiagnostic(
           '[${DateTime.now().toIso8601String()}] offline-reconcile: '
@@ -348,14 +261,7 @@ class OfflineReconciler {
     );
   }
 
-  /// Asks the server to fetch [ids] in one request. The server rejects the
-  /// whole request when one id no longer exists (a chapter its source
-  /// recreated under a new id), so a rejected request is retried one chapter
-  /// at a time: the valid chapters still get queued, and a rejected one spends
-  /// its attempt towards [_maxServerFetchAttempts] instead of blocking the rest
-  /// on every pass. A dead network, a missing permission or an expired session
-  /// isn't about one chapter, so it still fails the pass without spending
-  /// attempts.
+  // One invalid id rejects the server batch; retry individually and charge only chapter rejections.
   Future<void> _askServerToFetch(int mangaId, Set<int> ids) async {
     Future<bool> ask(Set<int> batch) async {
       try {
@@ -378,8 +284,6 @@ class OfflineReconciler {
   }
 }
 
-/// The server answered and refused the request, as opposed to never being
-/// reached, the account lacking the permission, or the session signed out.
 bool _isChapterRejection(Object error) {
   final cause = error is OperationMessageException ? error.exception : error;
   return cause is OperationException &&

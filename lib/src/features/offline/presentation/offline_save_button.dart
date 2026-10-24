@@ -16,11 +16,6 @@ import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 
-/// Save / on-device indicator for a chapter. Hidden on web / when offline is
-/// unavailable. The button is shown even for chapters the server hasn't
-/// downloaded yet: tapping it cascades a server download first (the server
-/// fetches the source), then pulls the device copy — we never scrape sources
-/// ourselves (see [saveChapterToDevice]).
 class OfflineSaveButton extends ConsumerWidget {
   const OfflineSaveButton({super.key, required this.chapterId});
 
@@ -64,7 +59,6 @@ class OfflineSaveButton extends ConsumerWidget {
         tooltip: canDownload
             ? 'Save to device'
             : context.l10n.accountPermissionDenied,
-        // Muted = a "get it" button (vs the solid-indigo "on device" badge).
         icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
         onPressed: canDownload ? () => _save(context, ref) : null,
       ),
@@ -76,7 +70,7 @@ class OfflineSaveButton extends ConsumerWidget {
       await saveChapterToDevice(ref, chapterId);
     } catch (e) {
       if (context.mounted) {
-        // Raw exception text is a multi-line socket dump when offline.
+        // Raw offline errors can contain multi-line socket dumps.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -109,9 +103,7 @@ class _CancelOnTap extends ConsumerWidget {
   );
 }
 
-/// A chapter waiting its turn in the queue. Deliberately static: this is the
-/// state hundreds of rows sit in at once, so anything that animates here costs
-/// a full-list repaint every frame for the life of the queue.
+// Hundreds of queued rows can coexist; animation would repaint the list every frame.
 class _QueuedIndicator extends StatelessWidget {
   const _QueuedIndicator();
 
@@ -131,9 +123,6 @@ class _QueuedIndicator extends StatelessWidget {
   }
 }
 
-/// Determinate download arc for the chapter being fetched right now, showing
-/// how many of its pages are on disk. Only ever one row at a time, so it can
-/// afford to animate.
 class _DownloadingIndicator extends ConsumerWidget {
   const _DownloadingIndicator({required this.chapterId});
 
@@ -142,7 +131,6 @@ class _DownloadingIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(offlineChapterProgressProvider(chapterId));
-    // Spin until the first page lands, so the icon is never invisible.
     final value = (progress == null || progress <= 0.0) ? null : progress;
     return SizedBox(
       width: 40,

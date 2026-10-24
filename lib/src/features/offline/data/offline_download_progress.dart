@@ -6,29 +6,15 @@
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-/// How far along one chapter's download is.
 typedef ChapterDownloadProgress = ({int done, int total});
 
-/// Live download progress, reported by whichever downloader is running.
-///
-/// The progress arc used to count page rows in the catalog, which only worked
-/// while pages were published one at a time. Now a chapter's rows all appear at
-/// once when it commits, so progress has to come from the downloader itself.
-/// In-memory by design: this is a view of what is happening right now, and a
-/// chapter that was interrupted should show as resumable, not frozen at 60%.
+// Progress is in-memory: page rows appear only at commit, and interrupted work must not show stale progress.
 class OfflineDownloadProgress
     extends Notifier<Map<int, ChapterDownloadProgress>> {
   @override
   Map<int, ChapterDownloadProgress> build() => const {};
 
-  /// A chapter began with a known page total, or advanced to [done] pages.
-  ///
-  /// Pages land far faster than a display can show them — a webtoon chapter
-  /// over a fast link arrives at dozens a second, against a screen that redraws
-  /// 60 times a second and an arc a person cannot read to better than a percent
-  /// or so. Publishing every page made the UI rebuild for updates nobody could
-  /// see, so only a visible change is published: the arc looks identical and
-  /// most of the repaints stop happening.
+  // Publish whole-percent changes only; faster page updates cannot move the rendered arc.
   void start(int chapterId, {required int total, int done = 0}) {
     final current = state[chapterId];
     if (current != null &&
@@ -40,12 +26,9 @@ class OfflineDownloadProgress
     state = {...state, chapterId: (done: done, total: total)};
   }
 
-  /// Whole percent, the finest step the arc actually renders.
   static int _percent(int done, int total) =>
       total <= 0 ? 0 : (done * 100) ~/ total;
 
-  /// The chapter settled (committed, failed, cancelled or deleted) — the arc
-  /// stops being live and the row's device state takes over.
   void clear(int chapterId) {
     if (!state.containsKey(chapterId)) return;
     state = {

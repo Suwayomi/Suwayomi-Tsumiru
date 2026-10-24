@@ -12,19 +12,13 @@ import 'chapter_manifest.dart';
 import 'offline_page_store.dart';
 import 'offline_paths.dart';
 
-/// Suffix of a page file still being written. Anything wearing it is junk from
-/// an interrupted run and is swept, never counted.
+// Interrupted writes are swept, never counted as complete pages.
 const String _pageTempSuffix = '.tmp';
 
-/// Directory-name suffix marking a chapter's staging area.
 const String _stagingSuffix = '.part';
 
-/// Directory-name suffix of a committed copy set aside during a replacement.
 const String _supersededSuffix = '.superseded';
 
-/// Native (mobile + desktop) page store: writes page files under the app-support
-/// offline dir. dart:io — only constructed on native platforms (via the
-/// conditional-import bootstrap), never on web.
 class IoOfflinePageStore implements OfflinePageStore {
   const IoOfflinePageStore(this.paths);
 
@@ -36,10 +30,6 @@ class IoOfflinePageStore implements OfflinePageStore {
   Directory _finalDir(int mangaId, int chapterId) =>
       Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
 
-  /// Where a committed copy waits while its replacement is renamed into place.
-  /// Not a chapter id and not `.part`, so the recovery scan ignores it; a crash
-  /// mid-swap leaves one behind, cleared by this chapter's next commit or
-  /// delete.
   Directory _superseded(int mangaId, int chapterId) =>
       Directory('${_finalDir(mangaId, chapterId).path}$_supersededSuffix');
 
@@ -50,9 +40,7 @@ class IoOfflinePageStore implements OfflinePageStore {
     ChapterManifest manifest,
   ) async {
     await _staging(mangaId, chapterId).create(recursive: true);
-    // The one write in the whole download that still syncs. Everything else can
-    // be re-fetched, but a manifest that didn't survive the crash leaves a
-    // complete-looking chapter nobody can verify.
+    // Sync the manifest: surviving pages cannot be verified without it after a crash.
     await File(
       paths.absolute(paths.stagingManifestRel(mangaId, chapterId)),
     ).writeAsString(manifest.toJsonString(), flush: true);
@@ -75,10 +63,7 @@ class IoOfflinePageStore implements OfflinePageStore {
   Future<Set<int>> stagedPageIndices(int mangaId, int chapterId) async =>
       (await _stagedPages(mangaId, chapterId)).keys.toSet();
 
-  /// Staged page files by index, after sweeping junk: half-written `.tmp`
-  /// leftovers go, and when a retry landed the same page under two extensions
-  /// the newest wins and the loser is deleted, so the commit rename can't carry
-  /// an ambiguous pair into the final directory.
+  // Sweep partial writes and keep only the newest extension for each page index.
   Future<Map<int, File>> _stagedPages(int mangaId, int chapterId) async {
     final dir = _staging(mangaId, chapterId);
     if (!await dir.exists()) return const {};
@@ -108,11 +93,7 @@ class IoOfflinePageStore implements OfflinePageStore {
         await _quietDelete(keepNew ? existing : entity);
       }
     } on PathNotFoundException {
-      // The exists() check above can't be atomic with list() below — a
-      // concurrent delete/re-queue of this same chapter (the FGS and the
-      // WorkManager catch-up executor both stage independently) can remove
-      // the directory in between. Nothing staged is exactly the right answer
-      // once it's gone, same as the exists() guard already returns for it.
+      // A concurrent delete can remove the directory between exists() and list().
       return const {};
     }
     return byIndex;
@@ -130,8 +111,7 @@ class IoOfflinePageStore implements OfflinePageStore {
     final abs = paths.absolute(rel);
     final file = File(abs);
     await file.parent.create(recursive: true);
-    // Rename into its final name within staging so a kill mid-write leaves a
-    // sweepable `.tmp`, never a truncated page that reads as complete.
+    // Rename completed writes so a crash leaves a sweepable .tmp rather than a truncated page.
     final tmp = File('$abs$_pageTempSuffix');
     await tmp.writeAsBytes(bytes);
     await tmp.rename(abs);
@@ -145,28 +125,18 @@ class IoOfflinePageStore implements OfflinePageStore {
     final staged = await _stagedPages(mangaId, chapterId);
     if (!manifest.indices.every(staged.containsKey)) return null;
 
-    // INVARIANT: a complete copy of this chapter exists at every instant, in a
-    // place that survives a kill. Staging has just been verified whole, so it
-    // counts; the committed directory counts; the set-aside copy counts. The
-    // rule is only ever to remove one while another is known to exist.
-    //
-    // A rename can't land on a populated directory, so an existing copy is
-    // moved aside rather than deleted — and NOT deleted up front, because a
-    // kill during a previous swap leaves it as the only copy there is.
+    // Preserve at least one complete copy across the swap; move an occupied destination aside first.
     final finalDir = _finalDir(mangaId, chapterId);
     final superseded = _superseded(mangaId, chapterId);
     await finalDir.parent.create(recursive: true);
     if (await finalDir.exists()) {
-      // The committed copy is live, so anything set aside earlier is stale.
       await _quietDeleteDir(superseded);
       await finalDir.rename(superseded.path);
     }
     try {
       await _staging(mangaId, chapterId).rename(finalDir.path);
     } catch (_) {
-      // Promotion failed. Put the previous chapter back rather than leave the
-      // reader with nothing — the caller's failure path purges staging, so
-      // without this both copies would be gone.
+      // Restore the previous copy before failure cleanup purges staging.
       if (!await finalDir.exists() && await superseded.exists()) {
         await superseded.rename(finalDir.path);
       }
@@ -183,9 +153,7 @@ class IoOfflinePageStore implements OfflinePageStore {
       ));
     }
     pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
-    // Deferred past the measurement loop above, which can still throw — the
-    // previous chapter must outlive every step that might fail, not just the
-    // rename.
+    // Keep the previous copy until measurement succeeds too.
     await _quietDeleteDir(superseded);
     return pages;
   }
@@ -201,7 +169,6 @@ class IoOfflinePageStore implements OfflinePageStore {
     if (!await base.exists()) return const [];
     await for (final mangaEntity in base.list()) {
       if (mangaEntity is! Directory) continue;
-      // Skips `covers` and anything else that isn't a manga id.
       final mangaId = int.tryParse(p.basename(mangaEntity.path));
       if (mangaId == null) continue;
       await for (final chapterEntity in mangaEntity.list()) {
@@ -243,9 +210,7 @@ class IoOfflinePageStore implements OfflinePageStore {
     if (!await dir.exists()) {
       return (state: ChapterDirState.absent, generation: 0);
     }
-    // The manifest rides along in the commit rename, so a committed chapter
-    // carries the record of what it should contain. Its absence dates the
-    // directory to before atomic commits.
+    // A missing manifest identifies a legacy directory from before atomic commits.
     final manifestFile = File(p.join(dir.path, kChapterManifestName));
     if (!await manifestFile.exists()) {
       return (state: ChapterDirState.legacy, generation: 0);
@@ -290,8 +255,7 @@ class IoOfflinePageStore implements OfflinePageStore {
     return pages;
   }
 
-  /// Page-file names in a committed directory, by index. Names only — naming a
-  /// file is a directory read, measuring it is a stat apiece.
+  // List names without per-file stat calls; measurement is deferred until needed.
   Future<Map<int, String>> _committedNames(Directory dir) async {
     final byIndex = <int, String>{};
     await for (final entity in dir.list()) {
@@ -372,8 +336,7 @@ class IoOfflinePageStore implements OfflinePageStore {
     }
     indices.sort();
 
-    // Any half-finished staging on the target is from a download this transfer
-    // supersedes; start clean so its pages can't be mistaken for copied ones.
+    // Clear prior target staging so it cannot be mistaken for copied pages.
     await deleteStaging(toMangaId, toChapterId);
     final manifest = ChapterManifest(generation: generation, indices: indices);
     await beginChapter(toMangaId, toChapterId, manifest);
@@ -414,17 +377,11 @@ class IoOfflinePageStore implements OfflinePageStore {
     try {
       await file.delete();
     } catch (_) {
-      // A locked or already-gone file is not worth failing a download over.
     }
   }
 
   Future<void> _quietDeleteDir(Directory dir) async {
-    // Retry up to 3 times with a brief back-off: on Windows, anti-virus or
-    // the file indexer can briefly hold a read handle on a freshly-created
-    // file, causing delete(recursive: true) to fail with EPERM/errno-32.
-    // Under full-suite parallel load this happens often enough to make tests
-    // flaky; the content is non-essential (leftover bytes, not corruption),
-    // so silent retry is correct here.
+    // Windows antivirus/indexing can briefly hold files open; retry EPERM/errno-32 deletions.
     for (var i = 0; i < 3; i++) {
       try {
         if (await dir.exists()) await dir.delete(recursive: true);

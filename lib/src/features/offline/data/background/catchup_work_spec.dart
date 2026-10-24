@@ -17,9 +17,7 @@ import '../offline_storage_identity.dart';
 import '../offline_types.dart';
 import 'background_schedule.dart';
 
-/// The background download step's read-only stand-in for drift: what the
-/// foreground knew when it last ran. Drift stays single-writer; the worker
-/// never opens it.
+/// Read-only foreground snapshot; background workers must never open drift.
 class CatchupMangaSpec {
   const CatchupMangaSpec({
     required this.mangaId,
@@ -41,27 +39,17 @@ class CatchupMangaSpec {
   final Set<int> failedChapterIds;
   final Map<int, int> serverFetchAttempts;
 
-  /// The manga's own chapter sort axis, mirrored from
-  /// OfflineMangas.chapterSortMode. Null means no per-manga sort meta — the
-  /// keep-window then falls back to its pre-existing
-  /// chapterNumber-else-chapterIndex ranking.
+  /// Null falls back to chapter number, then source order.
   final ChapterSortAxis? chapterSortMode;
 
-  /// Download generation per chapter, for the ones that have been deleted at
-  /// least once. Staging the worker writes has to carry the generation its row
-  /// actually holds, or the commit at launch rejects it as belonging to a
-  /// download that was superseded — and the work is thrown away after the
-  /// obligation has already been marked done. Absent means 0, the default for
-  /// a chapter nobody has deleted.
+  /// Missing ids have generation 0; worker staging must carry the catalog generation.
   final Map<int, int> chapterGenerations;
 
-  /// The generation to stamp on a download of [chapterId].
   int generationOf(int chapterId) => chapterGenerations[chapterId] ?? 0;
 
   Map<String, Object?> toJson() => {
     'mangaId': mangaId,
-    // By NAME, not index — the enum may gain values and a spec file can
-    // outlive the app version that wrote it.
+    // Persist enum names: specs may outlive the app version that wrote them.
     'keepRule': keepRule.name,
     'keepUnreadCount': keepUnreadCount,
     'onDevice': onDeviceChapterIds.toList(),
@@ -162,7 +150,6 @@ class CatchupWorkSpec {
   final List<CatchupMangaSpec> manga;
   final List<QueuedChapterSpec> queuedChapters;
 
-  /// On-device bytes when the spec was written — the executor's cap baseline.
   final int usedBytes;
 
   Set<int> get keepRuleMangaIds => {for (final m in manga) m.mangaId};
@@ -198,9 +185,7 @@ class CatchupWorkSpec {
   );
 }
 
-/// The download side's cursor and obligations, written as ONE JSON value so
-/// every transition is atomic — the ledger and cursor can never disagree after
-/// a crash (the completion log wins where they overlap; see prune()).
+// Retry budget per chapter and per hop.
 const catchupMaxChapterAttempts = 5;
 
 class CatchupLedger {
@@ -219,34 +204,21 @@ class CatchupLedger {
   final NewChapterWatermark cursor;
   final Map<int, int> chapterGenerations;
 
-  /// chapterId → mangaId, resolved but not yet completed on device.
+  /// chapterId → mangaId, awaiting device download.
   final Map<int, int> pendingDownloads;
 
-  /// chapterId → mangaId, enqueued server-side; collect next run.
+  /// chapterId → mangaId, awaiting server fetch.
   final Map<int, int> pendingServerFetch;
 
-  /// chapterId → runs spent asking the server to fetch it from the source;
-  /// expired entries surface via the launch banner instead of retrying forever
-  /// against a dead source.
+  /// chapterId → server-fetch attempts; exhausted entries surface at launch.
   final Map<int, int> serverFetchRetries;
 
-  /// chapterId → attempts spent pulling it from the server onto this device.
-  /// Separate from [serverFetchRetries] on purpose: the two hops fail for
-  /// different reasons, and one budget shared between them meant a slow source
-  /// could exhaust the chapter before the device ever tried.
+  /// Separate device-hop budget so server retries cannot exhaust device attempts.
   final Map<int, int> downloadRetries;
   final Map<String, int> queuedServerRetries;
   final Map<String, int> queuedDownloadRetries;
 
-  /// Manga the executor has already given one full chapter-list pass since it
-  /// entered the spec. The feed-based cursor above only ever surfaces chapters
-  /// that are NEW since it was seeded — a manga's pre-existing backlog (e.g. a
-  /// keep rule just turned on for it) never appears there and would otherwise
-  /// sit untouched until the next foreground launch pass, which is the one
-  /// path that fetches a manga's full list rather than diffing the feed. Once
-  /// a manga is in this set its remaining gaps live in [pendingDownloads] /
-  /// [pendingServerFetch] like any other obligation, so it only needs the one
-  /// pass.
+  /// Manga with a completed full-list pass; pre-existing backlog is absent from the feed cursor.
   final Set<int> backfilledMangaIds;
 
   bool get hasActionableServerFetch => pendingServerFetch.keys.any(
@@ -320,8 +292,7 @@ class CatchupLedger {
   };
 }
 
-/// SharedPreferences-backed, single-JSON-per-key (atomic writes), readable
-/// from the WorkManager isolate — the NotificationStateStore pattern.
+/// Cursor and obligations use atomic JSON writes shared with WorkManager.
 class CatchupStateStore {
   CatchupStateStore(this._prefs);
   final SharedPreferences _prefs;
@@ -376,33 +347,22 @@ class CatchupStateStore {
   static const _enabledKey = 'catchup_bg_enabled';
   static const _downloadEnabledKey = 'catchup_bg_download_enabled';
 
-  /// The worker isolate and the app share these keys through separate
-  /// SharedPreferences caches; open() reloads so a run never plans from — or
-  /// writes back — another isolate's stale snapshot.
+  // Reload per-isolate preference caches before planning or writing shared state.
   static Future<CatchupStateStore> open() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
     return CatchupStateStore(prefs);
   }
 
-  // Default ON: keep rules are an explicit per-series "keep this on my device"
-  // opt-in, and without them this is a no-op. (Komikku defaults its GLOBAL
-  // auto-download off — a deliberate deviation, flagged in the design doc.)
   bool get enabled => _prefs.getBool(_enabledKey) ?? true;
   Future<void> setEnabled(bool v) => _prefs.setBool(_enabledKey, v);
 
-  /// Whether the background run also fetches chapter files, or only detects
-  /// and queues them (leaving the actual download for the next foreground
-  /// session). Default ON — matches the behavior before this toggle existed.
+  /// Disabling file downloads keeps detection and queueing scheduled.
   bool get downloadEnabled => _prefs.getBool(_downloadEnabledKey) ?? true;
   Future<void> setDownloadEnabled(bool v) =>
       _prefs.setBool(_downloadEnabledKey, v);
 
-  /// The offline catalog's own server-instance id — what [writeSpec]'s
-  /// [CatchupWorkSpec.serverId] is actually stamped with. NOT the same value
-  /// as [NotificationWorkerConfig.serverId] (a "url|port" string scoping the
-  /// unrelated notification cursor) — the executor must not cross-check the
-  /// spec against that instead, or the spec looks perpetually stale.
+  /// Catalog server-instance id; differs from the notification cursor URL/port id.
   String? get catalogServerId =>
       _prefs.getString(offlineCatalogServerIdKey(_prefs));
 

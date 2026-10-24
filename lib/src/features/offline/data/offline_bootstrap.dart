@@ -13,12 +13,7 @@ import 'offline_database.dart';
 import 'offline_page_store.dart';
 import 'offline_paths.dart';
 
-/// Open the on-device offline catalog at app startup.
-///
-/// Returns `null` on web (offline disabled there); on mobile/desktop returns the
-/// drift database, path resolver, and page store, which `main()` uses to
-/// override `offlineDatabaseProvider` / `offlinePathsProvider` /
-/// `offlinePageStoreProvider`.
+/// Null on web; native results supply the offline provider overrides.
 Future<({OfflineDatabase db, OfflinePaths paths, OfflinePageStore store})?>
 initOfflineStorage({
   String? accountId,

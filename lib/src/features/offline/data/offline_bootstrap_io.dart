@@ -20,8 +20,6 @@ import 'offline_page_store.dart';
 import 'offline_page_store_io.dart';
 import 'offline_paths.dart';
 
-/// Native (mobile + desktop) implementation: open the drift catalog on a file
-/// under the app-support directory, plus the dart:io page store.
 Future<({OfflineDatabase db, OfflinePaths paths, OfflinePageStore store})?>
 openOfflineStorage({
   String? accountId,

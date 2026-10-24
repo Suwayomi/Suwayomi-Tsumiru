@@ -10,10 +10,6 @@ import 'record_seal.dart';
 
 typedef RefreshResult = ({String access, String refresh});
 
-/// Logs one background refresh-call outcome that would otherwise leave no
-/// trace. `source` names the worker (`notify`, `download`); the error keeps
-/// its type, since `package:http` wraps a socket failure in a
-/// `ClientException` that a bare `on SocketException` doesn't catch.
 void logBackgroundRefresh(String source, String event, [Object? error]) {
   final cause = error == null
       ? ''
@@ -44,7 +40,7 @@ class BackgroundTokenRecord {
 
   final int gen;
   final String authType; // basic | simpleLogin | uiLogin | none
-  // Endpoint these creds belong to, checked before writeback after a switch.
+  // Check credential endpoint before writeback after a server switch.
   final String? endpoint;
   final int? identityEpoch;
   final String? catalogServerId;
@@ -56,9 +52,7 @@ class BackgroundTokenRecord {
       basicCredential,
       simpleCookie;
 
-  /// Generic custom headers (e.g. Cloudflare Zero Trust) snapshotted for the
-  /// background isolate, which has no Riverpod access. Applied to every
-  /// server request alongside the auth headers.
+  /// Custom headers accompany every worker request; workers have no Riverpod access.
   final Map<String, String> extraHeaders;
 
   BackgroundTokenRecord copyWith({
@@ -89,9 +83,7 @@ class BackgroundTokenRecord {
       catalogServerId == other.catalogServerId &&
       originalRefreshToken == other.originalRefreshToken;
 
-  /// The secrets are sealed (see [RecordSeal]): these records are persisted
-  /// outside secure storage. Custom headers count, since they can carry
-  /// access tokens (Cloudflare Zero Trust service tokens).
+  // Seal all secrets, including custom-header tokens: these records live outside secure storage.
   Map<String, Object?> toJson() => {
     'gen': gen,
     'authType': authType,
@@ -99,7 +91,7 @@ class BackgroundTokenRecord {
     'identityEpoch': identityEpoch,
     'catalogServerId': catalogServerId,
     'notificationSessionId': notificationSessionId,
-    // Without a key the secrets are left out, so the record reads as nobody.
+    // No key means no secrets; never persist plaintext credentials.
     if (RecordSeal.ready)
       'sealed': RecordSeal.seal({
         'originalRefreshToken': originalRefreshToken,
@@ -112,10 +104,7 @@ class BackgroundTokenRecord {
       }),
   };
 
-  /// Reads a record written by [toJson], or a plain one from before records
-  /// were sealed (rewritten sealed on the next write). Secrets that can't be
-  /// unsealed read as absent: the record then matches no identity and
-  /// authenticates as nobody.
+  /// Accepts legacy plaintext records; unreadable sealed secrets authenticate as nobody.
   factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) {
     final sealed = j['sealed'];
     final secrets = sealed is String
@@ -143,9 +132,7 @@ class BackgroundTokenRecord {
   }
 }
 
-/// Merge isolate-side custom headers into [headers] without clobbering the
-/// app's own auth headers. Shared by the background download / notification
-/// workers (no Riverpod there).
+/// Merges custom headers without overriding the app's auth headers.
 Map<String, String> applyIsolateCustomHeaders(
   Map<String, String> headers,
   Map<String, String> extra,
@@ -158,15 +145,8 @@ Map<String, String> applyIsolateCustomHeaders(
   return headers;
 }
 
-/// Suwayomi reports an expired/invalid access token as HTTP **200** with a
-/// GraphQL error carrying `extensions.http.status == 401` (or an "unauthorized"
-/// message), NOT an HTTP 401 — `verifyJwt` downgrades a bad token to a Visitor
-/// and the `@requireAuth` field errors in-band. Every background GraphQL path
-/// must treat this like a 401 so the broker refresh fires; the foreground
-/// `SuwayomiAuthLink` already does. Without it, once the server's short
-/// (default 5-minute) access token expires, every background run fails silently
-/// and never refreshes. Shared by the notification client and the catch-up
-/// fetch path so both detect it identically.
+/// Suwayomi can return HTTP 200 with GraphQL extensions.http.status 401 after verifyJwt falls back to Visitor.
+/// Treat in-band authorization errors as 401 so background token refresh runs.
 bool isGraphqlAuthError(Object? errors) {
   if (errors is! List) return false;
   for (final err in errors) {
@@ -182,10 +162,7 @@ bool isGraphqlAuthError(Object? errors) {
   return false;
 }
 
-/// Outcome of one refresh attempt: the new tokens on success, or a failure
-/// that distinguishes "the refresh call itself couldn't reach the server"
-/// (transient — retry later, auth may still be fine) from "the server
-/// responded and rejected the refresh token" (auth is genuinely dead).
+/// Distinguishes transient refresh outages from explicit credential rejection.
 typedef RefreshAttempt = ({RefreshResult? tokens, bool transient});
 
 class TokenBroker {
@@ -207,19 +184,12 @@ class TokenBroker {
         : null;
   }
 
-  /// Set by the most recent failed [resolveAfter401] — only meaningful right
-  /// after it returns null. Without this, a caller treats a refresh that
-  /// merely couldn't reach the server (e.g. right after the device
-  /// reconnects, before the network has actually settled) the same as a
-  /// refresh token the server explicitly rejected, and gives up on the
-  /// chapter permanently instead of retrying once the network is real.
+  /// Describes the latest null resolveAfter401 result; outages remain retryable.
   bool lastRefreshTransient = false;
 
-  /// How close to expiry [refreshIfDue] refreshes a ui_login access token.
   static const Duration refreshLead = Duration(seconds: 60);
 
-  /// How long a failed [refreshIfDue] answers the 401 that follows it for the
-  /// same token, instead of the broker calling the server a second time.
+  // Reuse a recent failed early refresh for the following 401 on the same token.
   static const Duration _failedRefreshReuse = Duration(seconds: 15);
 
   BackgroundTokenRecord? _latest;
@@ -227,18 +197,10 @@ class TokenBroker {
   String? _failedFor;
   DateTime? _failedAt;
 
-  /// The newest record this broker wrote. A caller holding a record from
-  /// before another path refreshed would otherwise send the stale token, take
-  /// a 401, and only then pick the new one up.
   BackgroundTokenRecord? get latest => _latest;
 
-  /// [record], or the record refreshed first when its ui_login access token
-  /// has expired or is about to. The worker wakes every few hours and access
-  /// tokens last minutes, so its first request always went out only to come
-  /// back 401 and be retried after the refresh it was going to need anyway.
-  /// The refresh token isn't rotated, so refreshing early costs nothing.
-  /// Concurrent callers (parallel page fetches) share one refresh; a failed
-  /// one returns [record] and the request takes the 401 path as before.
+  /// Refreshes near-expiry ui_login tokens; concurrent callers share one attempt.
+  /// Returns [record] on failure so the request can follow the normal 401 path.
   Future<BackgroundTokenRecord> refreshIfDue(
     BackgroundTokenRecord record, {
     DateTime? now,
@@ -248,7 +210,7 @@ class TokenBroker {
     }
     final token = record.accessToken;
     final exp = token == null || token.isEmpty ? null : decodeJwtExp(token);
-    // An opaque token has no expiry to read: leave it to the 401 path.
+    // Opaque tokens have no readable expiry; refresh through the 401 path.
     if (exp == null && token != null && token.isNotEmpty) {
       return Future.value(record);
     }
@@ -273,22 +235,18 @@ class TokenBroker {
     }();
   }
 
-  /// Returns a usable access token to retry with, or null if auth is dead.
+  /// Null on failure; inspect lastRefreshTransient before treating auth as invalid.
   Future<String?> resolveAfter401(String tokenThat401d) {
     final failedAt = _failedAt;
     if (tokenThat401d == _failedFor &&
         failedAt != null &&
         DateTime.now().difference(failedAt) < _failedRefreshReuse) {
-      // refreshIfDue just tried this token and failed; lastRefreshTransient
-      // still describes that attempt.
       _log('auth-rejected after-failed-refresh-ahead');
       return Future.value(null);
     }
     return _resolve(tokenThat401d);
   }
 
-  /// [rejected]: the server refused [tokenThat401d], as opposed to
-  /// [refreshIfDue] renewing it ahead of time.
   Future<String?> _resolve(String tokenThat401d, {bool rejected = true}) async {
     lastRefreshTransient = false;
     final current = await _read();
@@ -297,7 +255,6 @@ class TokenBroker {
       _log('identity-changed-before-refresh gen=${current.gen}');
       return null;
     }
-    // Someone already refreshed to a different access token — use it, no refresh.
     if (current.accessToken != null && current.accessToken != tokenThat401d) {
       _log('reused-newer-token gen=${current.gen}');
       return current.accessToken;
@@ -331,11 +288,6 @@ class TokenBroker {
     return tokens.access;
   }
 
-  /// Every background 401 and how it ended: a refresh, a reused newer token, or
-  /// why none happened. The callers log a null result only as
-  /// `refresh-failed transient=…`, which can't tell an identity mismatch or a
-  /// missing refresh token from a real rejection; and a successful refresh left
-  /// no trace, so a healthy worker looked the same as one never challenged.
   static void _log(String event) => recordDiagnostic(
     '[${DateTime.now().toIso8601String()}] token-broker: $event\n',
   );

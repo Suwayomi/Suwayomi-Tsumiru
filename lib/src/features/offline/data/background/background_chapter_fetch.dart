@@ -25,24 +25,12 @@ import '../offline_page_store.dart';
 import '../offline_server_identity.dart';
 import 'background_token_record.dart';
 
-/// One client for the whole background run. `http.get`/`http.post` open and
-/// close a connection per call, so a catch-up batch paid a fresh TLS handshake
-/// for every page it fetched. Lives as long as the isolate does.
+// Reuse connections for the isolate lifetime instead of TLS setup per page.
 final http.Client backgroundHttpClient = http.Client();
 
-/// Bound on every call through this file. None of `package:http`'s calls time
-/// out on their own, and this executor holds the shared `.bg_lock` file for
-/// its whole run — a proxy/tunnel that accepts a connection but never replies
-/// would hang a request forever, which means the lock is NEVER released, which
-/// means the foreground-service worker can never acquire it either: it starts,
-/// fails to get the lock, stops, and whatever re-triggers it starts the same
-/// failed attempt again — the notification flashing on and off with nothing
-/// ever reaching a chapter, and nothing logged, because nothing here ever
-/// throws to report through.
+// Bound requests so a hung proxy cannot hold .bg_lock and block foreground ownership forever.
 const _httpTimeout = Duration(seconds: 30);
 
-/// Server coordinates for the isolate-side fetch paths — the work-order fields
-/// the FGS uses, shared with the WorkManager catch-up executor.
 class BackgroundServerTarget {
   const BackgroundServerTarget({
     required this.serverBase,
@@ -74,14 +62,11 @@ class BackgroundServerTarget {
   );
 }
 
-/// Sentinel for authentication failures.
 const Object gqlAuthError = Object();
 
-/// Sentinel: server unreachable (transient) — the caller parks, doesn't error.
+/// Transient outage; park rather than fail the chapter.
 const Object gqlNetworkError = Object();
 
-/// The app's auth modes on a hand-rolled request (uiLogin Bearer, basic,
-/// simpleLogin cookie).
 void applyBackgroundAuthHeaders(
   Map<String, String> headers,
   BackgroundTokenRecord record, {
@@ -103,8 +88,7 @@ void applyBackgroundAuthHeaders(
   applyIsolateCustomHeaders(headers, record.extraHeaders);
 }
 
-/// One authenticated GraphQL POST. Returns the decoded `data` map,
-/// [gqlAuthError], or [gqlNetworkError]; null on other failures.
+/// Returns data, [gqlAuthError], [gqlNetworkError], or null for other failures.
 Future<Object?> postBackgroundGraphql({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord record,
@@ -155,8 +139,7 @@ Future<Object?> _postBackgroundGraphql({
         Enum$UserPermission.DOWNLOAD_CHAPTERS,
       );
     }
-    // A proxy answering for a dead origin is an outage, not a bad request —
-    // the same rule the foreground worker and the app itself use.
+    // Gateway failures represent an unreachable origin, not chapter rejection.
     if (isGatewayStatus(res.statusCode)) {
       target.onNetworkError?.call('HTTP ${res.statusCode} on GraphQL request');
       return gqlNetworkError;
@@ -262,9 +245,7 @@ Future<bool> verifyBackgroundDownloadAccess({
   return true;
 }
 
-/// A chapter's page URLs: the list on success, empty on terminal failure, null
-/// when the server was unreachable or a 401 could not be resolved. Retries
-/// once through the broker on 401.
+/// Empty on terminal no-pages failure; null on outage or unresolved auth. Retries 401 once.
 Future<List<String>?> resolveChapterPageUrls({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord Function() record,
@@ -297,21 +278,10 @@ Future<List<String>?> resolveChapterPageUrls({
     if (newAccess != null) {
       result = await post(newAccess);
     } else if (broker.lastRefreshTransient) {
-      // The refresh call itself couldn't reach the server — likely the same
-      // blip that produced the 401 in the first place (e.g. right after the
-      // device reconnects). Park instead of condemning the chapter outright.
       return null;
     }
   }
-  // An auth failure that survives the retry above (the refresh succeeded but
-  // the retried call 401'd again, or the refresh itself failed non-
-  // transiently) used to fall all the way through to the empty-list return
-  // below — indistinguishable from "the server answered, this chapter truly
-  // has no pages". The FGS worker treats an empty list as terminal and marks
-  // the chapter `error` on the spot (download_task_handler.dart), so a token
-  // that was merely stale right after a reconnect condemned the chapter
-  // outright instead of getting the park-and-retry treatment every other
-  // ambiguous failure in this file gets.
+  // Unresolved auth is ambiguous; only a confirmed empty page list is terminal.
   if (result == gqlNetworkError || result == gqlAuthError) return null;
   if (result is Map<String, Object?>) {
     final chapter = result['fetchChapterPages'];
@@ -323,9 +293,6 @@ Future<List<String>?> resolveChapterPageUrls({
   return null;
 }
 
-/// The page-download engine over the isolate-side auth — shared verbatim
-/// between the FGS worker and the catch-up executor so the two paths cannot
-/// drift.
 ChapterDownloadEngine buildBackgroundEngine({
   required OfflinePageStore store,
   required BackgroundServerTarget target,
