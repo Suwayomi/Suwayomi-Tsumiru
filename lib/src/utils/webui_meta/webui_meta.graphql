@@ -42,7 +42,3 @@ query GetWebUiGlobalMetas {
     }
   }
 }
-
-query WebUiGlobalSettings {
-  metas { nodes { key value } }
-}

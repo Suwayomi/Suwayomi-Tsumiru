@@ -404,7 +404,7 @@ void main() {
         });
         var metas = <String, String>{};
         final link = _Link((request) {
-          if (_name(request) == 'WebUiGlobalSettings') {
+          if (_name(request) == 'GetWebUiGlobalMetas') {
             return _data({
               'metas': {
                 '__typename': 'GlobalMetaNodeList',
@@ -478,7 +478,7 @@ void main() {
       for (final forget in [false, true]) {
         final link = _Link((request) {
           switch (_name(request)) {
-            case 'WebUiGlobalSettings':
+            case 'GetWebUiGlobalMetas':
               return _data({
                 'metas': {
                   '__typename': 'GlobalMetaNodeList',

@@ -18,8 +18,8 @@ class WebUiSettings extends AsyncNotifier<Map<String, String>> {
   Future<Map<String, String>> build() async {
     final result = await ref
         .watch(graphQlClientProvider)
-        .query$WebUiGlobalSettings(
-          Options$Query$WebUiGlobalSettings(fetchPolicy: FetchPolicy.noCache),
+        .query$GetWebUiGlobalMetas(
+          Options$Query$GetWebUiGlobalMetas(fetchPolicy: FetchPolicy.noCache),
         )
         .getData(
           (data) => {for (final meta in data.metas.nodes) meta.key: meta.value},
