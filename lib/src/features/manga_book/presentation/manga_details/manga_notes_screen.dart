@@ -32,7 +32,7 @@ class MangaNotesScreen extends HookConsumerWidget {
     final leaving = useRef(false);
 
     Future<bool> save() async {
-      if (saved.value) return true;
+      if (saved.value || controller.text == initialNotes) return true;
       final ok = await persistMangaNotes(
         client: ref.read(graphQlClientProvider),
         mangaId: mangaId,

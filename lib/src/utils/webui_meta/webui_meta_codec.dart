@@ -53,22 +53,14 @@ String? readWebUiValue(Map<String, String> metas, String key) {
     set[lengthKey] = '$newChunkCount';
   }
 
-  final staleParsed = _webUiNumber(existingMetas[lengthKey]);
-  var staleChunkCount = staleParsed != null && staleParsed.isFinite
-      ? staleParsed.toInt()
-      : 0;
-  while (existingMetas.containsKey('${fullKey}_$staleChunkCount')) {
-    staleChunkCount++;
-  }
-  if (newChunkCount > 0 && existingMetas.containsKey(fullKey)) {
-    delete.add(fullKey);
-  }
-  if (newChunkCount == 0 && existingMetas.containsKey(lengthKey)) {
-    delete.add(lengthKey);
-  }
-  for (var index = newChunkCount; index < staleChunkCount; index++) {
-    delete.add('${fullKey}_$index');
-  }
+  final chunkKey = RegExp('^${RegExp.escape(fullKey)}_[0-9]+\$');
+  delete.addAll(
+    existingMetas.keys.where(
+      (key) =>
+          (key == fullKey || key == lengthKey || chunkKey.hasMatch(key)) &&
+          !set.containsKey(key),
+    ),
+  );
   return (set: set, delete: delete);
 }
 

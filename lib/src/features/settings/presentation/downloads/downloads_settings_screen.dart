@@ -197,8 +197,10 @@ class _ServerDownloadsTab extends ConsumerWidget {
                     settings: serverDelete,
                     onManual:
                         serverDeleteController.setDeleteManuallyMarkedRead,
-                    onWhileReading:
-                        serverDeleteController.setDeleteWhileReading,
+                    onWhileReading: (value) => AppUtils.guard(
+                      () => serverDeleteController.setDeleteWhileReading(value),
+                      ref.read(toastProvider),
+                    ),
                     onBookmark: serverDeleteController.setDeleteWithBookmark,
                     targetIdPrefix: 'server',
                   ),

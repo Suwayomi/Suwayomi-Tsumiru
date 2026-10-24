@@ -42,3 +42,21 @@ query GetWebUiGlobalMetas {
     }
   }
 }
+
+query GetWebUiMangaMetas($id: Int!) {
+  manga(id: $id) {
+    meta {
+      key
+      value
+    }
+  }
+}
+
+query GetWebUiSourceMetas($id: LongString!) {
+  source(id: $id) {
+    meta {
+      key
+      value
+    }
+  }
+}

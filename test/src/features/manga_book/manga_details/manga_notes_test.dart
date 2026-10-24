@@ -62,7 +62,9 @@ void main() {
   test(
     'long notes save as chunks through a fake client and read back intact',
     () async {
-      final server = <String, String>{};
+      final server = <String, String>{
+        'webUI_notes': 'another client wrote this',
+      };
       final client = _fakeMetaClient(server);
 
       var saved = false;
@@ -98,6 +100,27 @@ void main() {
 
 GraphQLClient _fakeMetaClient(Map<String, String> server) => GraphQLClient(
   link: Link.function((request, [forward]) {
+    if (request.variables.containsKey('id')) {
+      return Stream.value(
+        Response(
+          data: {
+            '__typename': 'Query',
+            'manga': {
+              '__typename': 'MangaType',
+              'meta': [
+                for (final entry in server.entries)
+                  {
+                    '__typename': 'MangaMetaType',
+                    'key': entry.key,
+                    'value': entry.value,
+                  },
+              ],
+            },
+          },
+          response: const {},
+        ),
+      );
+    }
     final input =
         (request.variables['input'] as Map<String, dynamic>)['items'] as List;
     final item = (input.first as Map<String, dynamic>);
