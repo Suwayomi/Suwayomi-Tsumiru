@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import 'controller/manga_details_controller.dart';
 import 'widgets/manga_notes_save.dart';
 import 'widgets/manga_notes_toolbar.dart';
 
@@ -38,7 +39,9 @@ class MangaNotesScreen extends HookConsumerWidget {
         rawText: controller.text,
         existingMetas: existingMetas,
         onSaved: () {
-          if (context.mounted) refreshMangaAfterNotes(ref, mangaId);
+          if (context.mounted) {
+            ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+          }
         },
       );
       saved.value = ok;

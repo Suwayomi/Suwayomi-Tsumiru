@@ -1,9 +1,6 @@
-import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../global_providers/global_providers.dart';
-import '../extensions/custom_extensions.dart';
-import '__generated__/webui_meta.graphql.dart';
 import 'webui_meta_codec.dart';
 import 'webui_meta_repository.dart';
 
@@ -15,17 +12,8 @@ final webUiSettingsProvider =
 
 class WebUiSettings extends AsyncNotifier<Map<String, String>> {
   @override
-  Future<Map<String, String>> build() async {
-    final result = await ref
-        .watch(graphQlClientProvider)
-        .query$GetWebUiGlobalMetas(
-          Options$Query$GetWebUiGlobalMetas(fetchPolicy: FetchPolicy.noCache),
-        )
-        .getData(
-          (data) => {for (final meta in data.metas.nodes) meta.key: meta.value},
-        );
-    return result ?? {};
-  }
+  Future<Map<String, String>> build() =>
+      WebUiMetaRepository(ref.watch(graphQlClientProvider)).readGlobalMetas();
 
   Future<void> write(String key, String value) async {
     final metas = await future;

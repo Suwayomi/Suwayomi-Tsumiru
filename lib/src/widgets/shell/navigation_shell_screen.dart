@@ -121,8 +121,7 @@ class NavigationShellScreen extends HookConsumerWidget {
           onAction: () => goRouter.push(aboutLocation),
         );
       }
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 
   @override

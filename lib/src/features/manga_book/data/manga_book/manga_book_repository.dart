@@ -10,8 +10,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/webui_meta/__generated__/webui_meta.graphql.dart';
 import '../../../../utils/webui_meta/webui_meta_codec.dart';
+import '../../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
@@ -57,12 +57,8 @@ class MangaBookRepository {
       .then((ids) => ids ?? const []);
 
   Future<void> removeMangaFromLibrary(int mangaId) async {
-    final metas = await client
-        .query$GetWebUiGlobalMetas(
-          Options$Query$GetWebUiGlobalMetas(fetchPolicy: FetchPolicy.noCache),
-        )
-        .getData((data) => {for (final m in data.metas.nodes) m.key: m.value});
-    final forget = readWebUiValue(metas ?? {}, 'removeMangaFromCategories');
+    final metas = await WebUiMetaRepository(client).readGlobalMetas();
+    final forget = readWebUiValue(metas, 'removeMangaFromCategories');
     final removed = await client
       .mutate$UpdateManga(
         Options$Mutation$UpdateManga(

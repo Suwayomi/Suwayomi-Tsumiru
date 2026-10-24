@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../controller/manga_details_controller.dart';
 import 'manga_notes_save.dart';
 import 'manga_notes_toolbar.dart';
 
@@ -35,7 +36,7 @@ class MangaNotesDialog extends HookConsumerWidget {
         mangaId: mangaId,
         rawText: controller.text,
         existingMetas: existingMetas,
-        onSaved: () => refreshMangaAfterNotes(ref, mangaId),
+        onSaved: () => ref.invalidate(mangaWithIdProvider(mangaId: mangaId)),
       );
       if (!context.mounted) return;
       if (!ok) {

@@ -202,7 +202,10 @@ serveConversionsProvider = FutureProvider.autoDispose<List<ServerConversion>?>(
                   connectTimeout: c.connectTimeout,
                   headers: c.headers
                       ?.map(
-                    (h) => ServerConversionHeader(name: h.name, value: h.value),
+                        (h) => ServerConversionHeader(
+                          name: h.name,
+                          value: h.value,
+                        ),
                       )
                       .toList(),
                 ),

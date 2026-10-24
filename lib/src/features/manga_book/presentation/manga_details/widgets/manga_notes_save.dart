@@ -1,8 +1,5 @@
 import 'package:graphql/client.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import '../../../../../utils/webui_meta/webui_meta_repository.dart';
-import '../controller/manga_details_controller.dart';
 
 Future<bool> persistMangaNotes({
   required GraphQLClient client,
@@ -24,8 +21,4 @@ Future<bool> persistMangaNotes({
   }
   onSaved();
   return true;
-}
-
-void refreshMangaAfterNotes(WidgetRef ref, int mangaId) {
-  ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
 }

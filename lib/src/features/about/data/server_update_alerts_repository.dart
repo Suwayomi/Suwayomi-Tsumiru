@@ -15,18 +15,11 @@ import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../account/data/account_permission.dart';
 
-class ServerUpdateAlertSettings {
-  const ServerUpdateAlertSettings({
-    required this.informVersionUpdated,
-    required this.informAvailableUpdate,
-    required this.metas,
-  });
-
-  final bool informVersionUpdated;
-  final bool informAvailableUpdate;
-
-  final Map<String, String> metas;
-}
+typedef ServerUpdateAlertSettings = ({
+  bool informVersionUpdated,
+  bool informAvailableUpdate,
+  Map<String, String> metas,
+});
 
 bool _decodeAlertFlag(Map<String, String> metas, String key) {
   final raw = readWebUiValue(metas, key);
@@ -42,7 +35,7 @@ class ServerUpdateAlertsRepository {
 
   Future<ServerUpdateAlertSettings?> settings() async {
     final metas = await WebUiMetaRepository(client).readGlobalMetas();
-    return ServerUpdateAlertSettings(
+    return (
       informVersionUpdated: _decodeAlertFlag(
         metas,
         'serverInformVersionUpdated',
@@ -94,23 +87,12 @@ decideServerUpdateAlerts({
     checkAvailable: false,
   );
   if (!canManage || currentVersion.isBlank) return none;
-  if (lastSeenVersion.isBlank) {
-    return (
-      showUpdatedNotice: false,
-      storeVersion: true,
-      checkAvailable: informAvailableUpdate,
-    );
-  }
-  if (lastSeenVersion != currentVersion) {
-    return (
-      showUpdatedNotice: informVersionUpdated,
-      storeVersion: true,
-      checkAvailable: informAvailableUpdate,
-    );
-  }
   return (
-    showUpdatedNotice: false,
-    storeVersion: false,
+    showUpdatedNotice:
+        !lastSeenVersion.isBlank &&
+        lastSeenVersion != currentVersion &&
+        informVersionUpdated,
+    storeVersion: lastSeenVersion.isBlank || lastSeenVersion != currentVersion,
     checkAvailable: informAvailableUpdate,
   );
 }

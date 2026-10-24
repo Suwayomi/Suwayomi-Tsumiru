@@ -46,15 +46,11 @@ TextEditingValue toggleNumberedList(TextEditingValue value) =>
           '${index + 1}. ${line.replaceFirst(_numberedPrefix, '')}',
     );
 
-typedef _HasPrefix = bool Function(String line);
-typedef _RemovePrefix = String Function(String line);
-typedef _AddPrefix = String Function(String line, int index);
-
 TextEditingValue _toggleLinePrefix(
   TextEditingValue value, {
-  required _HasPrefix hasPrefix,
-  required _RemovePrefix removePrefix,
-  required _AddPrefix addPrefix,
+  required bool Function(String) hasPrefix,
+  required String Function(String) removePrefix,
+  required String Function(String, int) addPrefix,
 }) {
   final text = value.text;
   final selection = value.selection;
@@ -79,9 +75,7 @@ TextEditingValue _toggleLinePrefix(
   final firstLine = lineOf(anchor);
   // A selection ending exactly on a line start belongs to the previous line.
   final lastLine = lineOf(
-    focus > starts[firstLine] && _isLineStart(starts, focus)
-        ? focus - 1
-        : focus,
+    focus > starts[firstLine] && starts.contains(focus) ? focus - 1 : focus,
   );
   final target = [for (var i = firstLine; i <= lastLine; i++) i];
 
@@ -107,5 +101,3 @@ TextEditingValue _toggleLinePrefix(
     ),
   );
 }
-
-bool _isLineStart(List<int> starts, int position) => starts.contains(position);

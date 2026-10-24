@@ -344,9 +344,7 @@ class SearchTerm {
     final m = _ratingSpec.firstMatch(spec.trim());
     if (m == null) return null; // unparseable → no constraint
     final n = int.tryParse(m.group(2)!);
-    if (n == null) {
-      return null;
-    }
+    if (n == null) return null; // overflow (very long digit run) → no constraint
     return switch (m.group(1) ?? '=') {
       '>=' => actual >= n,
       '<=' => actual <= n,
