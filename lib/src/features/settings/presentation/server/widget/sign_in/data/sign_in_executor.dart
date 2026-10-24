@@ -2,7 +2,6 @@ import 'package:graphql/client.dart';
 
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../../../utils/network/graphql_errors.dart';
 import 'sign_in_transition.dart';
 
 class SignInValues {
@@ -53,7 +52,6 @@ class SignInExecutor {
     required this.read,
     required this.authenticate,
     required this.commit,
-    required this.invalidateUi,
     required this.requestSignIn,
   });
 
@@ -61,7 +59,6 @@ class SignInExecutor {
   final Future<SignInValues> Function() read;
   final Future<void> Function(SignInFollowUp, SignInValues) authenticate;
   final Future<void> Function(AuthType) commit;
-  final Future<void> Function() invalidateUi;
   final void Function(AuthType) requestSignIn;
 
   Future<void> run({
@@ -84,19 +81,23 @@ class SignInExecutor {
       try {
         effective = await read();
       } catch (error) {
-        final cause = error is OperationMessageException
-            ? error.exception
-            : error;
-        if (isSignInSessionEnded(cause) &&
-            proposed.mode == AuthType.uiLogin &&
+        if (proposed.mode == AuthType.uiLogin &&
             proposed.audience != before.audience) {
-          await invalidateUi();
           requestSignIn(AuthType.uiLogin);
           return;
         }
         requestSignIn(proposed.mode);
         rethrow;
       }
+    }
+    final difference = effective.difference(proposed);
+    if (effective.mode != proposed.mode ||
+        difference.username ||
+        difference.password ||
+        difference.audience ||
+        difference.accessExpiry ||
+        difference.refreshExpiry) {
+      throw StateError('The server did not confirm the sign-in settings');
     }
     final decision = decide(effective);
     if (decision.refusal != null) {
@@ -106,7 +107,6 @@ class SignInExecutor {
     final followUp = decision.followUp!;
     if (followUp == SignInFollowUp.keepSession) return;
     if (followUp == SignInFollowUp.reauthenticate) {
-      await invalidateUi();
       requestSignIn(AuthType.uiLogin);
       return;
     }

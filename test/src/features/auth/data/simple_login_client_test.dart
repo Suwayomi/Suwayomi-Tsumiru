@@ -10,6 +10,14 @@ void main() {
       'follows redirects', () async {
     bool? followRedirects;
     final mock = MockClient((request) async {
+      if (request.url.path == '/api/graphql') {
+        expect(request.headers['Cookie'], 'JSESSIONID=abc.123');
+        expect(request.headers['Authorization'], isNull);
+        return http.Response(
+          '{"data":{"downloadStatus":{"__typename":"DownloadStatus"}}}',
+          200,
+        );
+      }
       expect(request.url.toString(), 'https://server.test/login.html');
       expect(
         request.headers['Content-Type'],
@@ -58,24 +66,31 @@ void main() {
     expect(browserFollows, isTrue);
   });
 
-  test('a rejected login and an unexpected status are distinct failures', () async {
-    final auth = MockClient(
-      (request) async =>
-          http.Response('<html>Invalid username or password</html>', 200),
-    );
-    await expectLater(
-      SimpleLoginClient(
-        httpClient: auth,
-      ).login(serverBaseUrl: 'https://server.test', username: 'aaron', password: 'wrong'),
-      throwsA(isA<SimpleLoginAuthFailure>()),
-    );
+  test(
+    'a rejected login and an unexpected status are distinct failures',
+    () async {
+      final auth = MockClient(
+        (request) async =>
+            http.Response('<html>Invalid username or password</html>', 200),
+      );
+      await expectLater(
+        SimpleLoginClient(httpClient: auth).login(
+          serverBaseUrl: 'https://server.test',
+          username: 'aaron',
+          password: 'wrong',
+        ),
+        throwsA(isA<SimpleLoginAuthFailure>()),
+      );
 
-    final shape = MockClient((request) async => http.Response('', 500));
-    await expectLater(
-      SimpleLoginClient(
-        httpClient: shape,
-      ).login(serverBaseUrl: 'https://server.test', username: 'aaron', password: 'hunter2'),
-      throwsA(isA<SimpleLoginShapeFailure>()),
-    );
-  });
+      final shape = MockClient((request) async => http.Response('', 500));
+      await expectLater(
+        SimpleLoginClient(httpClient: shape).login(
+          serverBaseUrl: 'https://server.test',
+          username: 'aaron',
+          password: 'hunter2',
+        ),
+        throwsA(isA<SimpleLoginShapeFailure>()),
+      );
+    },
+  );
 }

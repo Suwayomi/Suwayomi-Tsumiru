@@ -47,6 +47,14 @@ class ConnectionAuthTypeTile extends ConsumerWidget {
 
     Future<void> onAuthModeChanged(AuthType next) async {
       if (next == authType) return;
+      if (next != AuthType.none) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => LoginCredentialsPopup(authType: next),
+          animationStyle: context.motionStyle,
+        );
+        return;
+      }
       stayOnConnectionAfterIdentityChange();
       await ref.read(backgroundDownloadControllerProvider).changeIdentity(
         () async {
@@ -79,7 +87,7 @@ class ConnectionAuthTypeTile extends ConsumerWidget {
               Navigator.pop(dialogContext);
               onAuthModeChanged(option);
             },
-        ),
+          ),
           animationStyle: context.motionStyle,
         ),
       ),
@@ -99,13 +107,13 @@ class ConnectionAuthWebHint extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     return Padding(
-            padding: inCard
-                ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
-                : const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: Text(
-              context.l10n.webUiLoginOnlyHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+      padding: inCard
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+          : const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Text(
+        context.l10n.webUiLoginOnlyHint,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
     );
   }
 }

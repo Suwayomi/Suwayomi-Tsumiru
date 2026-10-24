@@ -4,6 +4,39 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/sign_in
 import 'package:tsumiru/src/features/settings/presentation/server/widget/sign_in/data/sign_in_transition.dart';
 
 void main() {
+  test('masked or unconfirmed settings never change the sign-in', () async {
+    const before = SignInValues(
+      mode: AuthType.uiLogin,
+      username: 'admin',
+      password: 'secret',
+      audience: 'server',
+      accessExpiry: 'PT5M',
+      refreshExpiry: 'PT1440H',
+    );
+    final proposed = before.copyWith(accessExpiry: 'PT10M');
+    for (final reply in [
+      proposed.copyWith(mode: AuthType.none, username: ''),
+      proposed.copyWith(username: 'other'),
+      before,
+    ]) {
+      final executor = SignInExecutor(
+        write: () async => reply,
+        read: () async => fail('No fallback for unconfirmed replies'),
+        authenticate: (_, _) async => fail('Must retain credentials'),
+        commit: (_) async => fail('Must retain mode'),
+        requestSignIn: (_) => fail('Must retain the current sign-in'),
+      );
+      await expectLater(
+        executor.run(
+          before: before,
+          proposed: proposed,
+          decide: (_) => const SignInDecision.follow(SignInFollowUp.none),
+        ),
+        throwsStateError,
+      );
+    }
+  });
+
   test(
     'verification failure preserves credentials and success commits them',
     () async {
@@ -36,7 +69,6 @@ void main() {
           events.add('commit');
           stored = proposed.copyWith(mode: mode);
         },
-        invalidateUi: () async => fail('No audience edit'),
         requestSignIn: (mode) => requested = mode,
       );
       Future<void> save() => executor.run(

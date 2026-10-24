@@ -107,7 +107,17 @@ class SimpleLoginClient {
         '303 response had no Set-Cookie header',
       );
     }
-    return setCookie.split(';').first.trim();
+    final cookie = setCookie.split(';').first.trim();
+    if (!await authProbeAuthorized(
+      serverBaseUrl,
+      client: _http,
+      timeout: timeout,
+      cookie: cookie,
+      extraHeaders: extraHeaders,
+    )) {
+      throw const SimpleLoginSessionFailure();
+    }
+    return cookie;
   }
 
   static bool _looksLikeLoginForm(String body) =>

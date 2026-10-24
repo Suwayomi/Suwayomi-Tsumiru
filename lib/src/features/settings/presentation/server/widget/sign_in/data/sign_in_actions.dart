@@ -277,7 +277,6 @@ class SignInActions {
             container.read(authRecoveryTargetProvider.notifier).set(null);
             container.read(needsReauthProvider.notifier).set(false);
           },
-          invalidateUi: store.clearUiLoginTokens,
           requestSignIn: requestSignIn,
         ).run(
           before: before,
