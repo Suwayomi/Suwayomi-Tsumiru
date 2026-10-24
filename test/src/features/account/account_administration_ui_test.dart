@@ -10,6 +10,7 @@ import 'package:tsumiru/src/features/account/presentation/manage_users_screen.da
 import 'package:tsumiru/src/features/account/presentation/account_admin_dialogs.dart';
 import 'package:tsumiru/src/features/account/presentation/account_codes_screen.dart';
 import 'package:tsumiru/src/features/account/presentation/account_permission_labels.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/compact_switch.dart';
 
@@ -50,6 +51,54 @@ void main() {
   }
 
   setUp(() => link = AdminLink());
+
+  testWidgets('the last user manager cannot remove their own access', (
+    tester,
+  ) async {
+    final user = adminAccess(admin: true, granted: false).user!;
+    link.respond = (_) => Response(
+      response: {},
+      data: {
+        '__typename': 'Query',
+        'users': {
+          '__typename': 'UserNodeList',
+          'nodes': [user.toJson()],
+          'totalCount': 1,
+          'pageInfo': {
+            '__typename': 'PageInfo',
+            'hasNextPage': false,
+            'hasPreviousPage': false,
+            'startCursor': null,
+            'endCursor': null,
+          },
+        },
+      },
+    );
+    await pump(
+      tester,
+      Scaffold(body: EditAccountDialog(user: user)),
+      admin: true,
+      granted: false,
+    );
+    await tester.tap(find.byType(DropdownButtonFormField<Enum$UserRole>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('User').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('At least one account must keep access to manage users.'),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+      isNull,
+    );
+    expect(
+      link.requests.where(
+        (request) => request.operation.operationName == 'UpdateAccount',
+      ),
+      isEmpty,
+    );
+  });
 
   testWidgets('denied administration screen sends no requests', (tester) async {
     await pump(tester, const ManageUsersScreen(), granted: false);
