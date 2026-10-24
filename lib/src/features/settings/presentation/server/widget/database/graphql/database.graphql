@@ -15,3 +15,7 @@ mutation SetDatabaseSettings($settings: PartialSettingsTypeInput!) {
     settings { ...DatabaseSettingsDto }
   }
 }
+
+query PreviewDatabaseSettings {
+  settings { databaseSchema hikariMaxPoolSize }
+}

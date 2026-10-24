@@ -35,6 +35,7 @@ class DatabaseSection extends ConsumerWidget {
     if (settings.hasError) return const SizedBox.shrink();
     final data = settings.value;
     if (data == null) return const SizedBox.shrink();
+    final preview = ref.watch(previewDatabaseSettingsProvider).value;
     final type = data.databaseType;
     final isH2 = type == Enum$DatabaseType.H2;
     Future<void> save(
@@ -43,6 +44,7 @@ class DatabaseSection extends ConsumerWidget {
       final result = await AppUtils.guard(action, ref.read(toastProvider));
       if (result != null && context.mounted) {
         ref.invalidate(databaseSettingsProvider);
+        ref.invalidate(previewDatabaseSettingsProvider);
       }
     }
 
@@ -179,6 +181,27 @@ class DatabaseSection extends ConsumerWidget {
                 ),
               ),
             ),
+            if (preview != null)
+              SettingsHighlightTarget(
+                id: 'databaseSchema',
+                child: SettingsPropTile(
+                  title: context.l10n.databaseSchema,
+                  subtitle: preview.databaseSchema,
+                  type: SettingsPropType.textField(
+                    value: preview.databaseSchema,
+                    hintText: context.l10n.databaseSchema,
+                    onChanged: canManage && !isH2
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                databaseSchema: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
             SettingsHighlightTarget(
               id: 'hikariConnectionPool',
               child: SettingsPropTile(
@@ -198,6 +221,28 @@ class DatabaseSection extends ConsumerWidget {
                 ),
               ),
             ),
+            if (preview != null)
+              SettingsHighlightTarget(
+                id: 'hikariMaxPoolSize',
+                child: SettingsPropTile(
+                  title: context.l10n.hikariMaxPoolSize,
+                  subtitle: '${preview.hikariMaxPoolSize}',
+                  type: SettingsPropType.numberPicker(
+                    min: 1,
+                    max: 10000000,
+                    value: preview.hikariMaxPoolSize,
+                    onChanged: canManage && data.useHikariConnectionPool
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                hikariMaxPoolSize: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
           ],
         ),
       ],

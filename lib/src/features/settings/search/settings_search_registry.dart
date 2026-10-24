@@ -1696,6 +1696,30 @@ List<SettingsSearchEntry> get serverSignInSettingsSearchEntries => [
 
 List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
   SettingsSearchEntry(
+    id: 'databaseSchema',
+    title: (l) => l.databaseSchema,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) => const ServerDatabaseRoute(highlight: 'databaseSchema').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null &&
+        ref.watch(previewDatabaseSettingsProvider).value != null,
+  ),
+  SettingsSearchEntry(
+    id: 'hikariMaxPoolSize',
+    title: (l) => l.hikariMaxPoolSize,
+    breadcrumb: (l) => '${l.server} › ${l.database}',
+    open: (c) =>
+        const ServerDatabaseRoute(highlight: 'hikariMaxPoolSize').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(databaseSettingsProvider).value != null &&
+        ref.watch(previewDatabaseSettingsProvider).value != null,
+  ),
+
+  SettingsSearchEntry(
     id: 'databaseType',
     title: (l) => l.databaseType,
     breadcrumb: (l) => '${l.server} › ${l.database}',

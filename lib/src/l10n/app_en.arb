@@ -4195,5 +4195,7 @@
   "serverSignInMinutes": "{count, plural, =1{1 minute} other{{count} minutes}}",
   "@serverSignInMinutes": {"placeholders": {"count": {"type": "int"}}},
   "serverSignInDays": "{count, plural, =1{1 day} other{{count} days}}",
-  "@serverSignInDays": {"placeholders": {"count": {"type": "int"}}}
+  "@serverSignInDays": {"placeholders": {"count": {"type": "int"}}},
+  "databaseSchema": "Schema",
+  "hikariMaxPoolSize": "Maximum connections"
 }

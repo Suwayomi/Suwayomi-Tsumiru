@@ -40,6 +40,7 @@ Future<ProviderContainer> _pumpSection(
       settledAccountAccessProvider.overrideWithValue(
         AccountAccess(capability: AccountCapability.unsupported),
       ),
+      previewDatabaseSettingsProvider.overrideWith((ref) async => null),
       databaseSettingsProvider.overrideWith(
         (ref) async => _settings(readType()),
       ),
