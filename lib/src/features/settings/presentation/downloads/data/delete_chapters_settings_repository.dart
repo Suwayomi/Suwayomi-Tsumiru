@@ -63,6 +63,16 @@ class DeleteChaptersSettingsRepository {
       .query$GlobalMetas(Options$Query$GlobalMetas())
       .getData((data) => data.metas.nodes);
 
+  Future<void> setRawGlobalMeta(String key, String value) async {
+    await ferryClient
+        .mutate$SetGlobalMeta(
+          Options$Mutation$SetGlobalMeta(
+            variables: Variables$Mutation$SetGlobalMeta(key: key, value: value),
+          ),
+        )
+        .getData((data) => data.setGlobalMeta);
+  }
+
   /// Values must be JSON-encoded for WebUI compatibility.
   Future<void> setGlobalMeta(String key, String value) => WebUiMetaRepository(
     ferryClient,

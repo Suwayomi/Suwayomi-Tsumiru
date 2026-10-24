@@ -64,7 +64,7 @@ class GlobalSearchScope extends _$GlobalSearchScope
     if (value == null) return;
     ref
         .read(deleteChaptersSettingsRepositoryProvider)
-        .setGlobalMeta(kGlobalSearchScopeMetaKey, value.name)
+        .setRawGlobalMeta(kGlobalSearchScopeMetaKey, value.name)
         .catchError((_) {});
   }
 }
