@@ -11,6 +11,7 @@ import '../constants/app_theme.dart';
 import '../constants/gen/assets.gen.dart';
 import '../features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../utils/theme/app_theme_builder.dart';
+import '../utils/theme/theme_tokens.dart';
 
 /// Indigo Night uses original artwork; other themes tint shadows with their dark accent pair.
 class TsumiruLogo extends ConsumerWidget {
@@ -38,20 +39,26 @@ class TsumiruLogo extends ConsumerWidget {
             Assets.icons.logoOnLightShadow.path,
             Assets.icons.logoOnLightForeground.path,
           );
-    final gradientScheme = isDark
-        ? scheme
-        : schemeFor(
-            theme,
-            Brightness.dark,
-            Color(ref.watch(customThemeColorProvider) ?? 0xFF7C7BFF),
-          );
+    final List<Color> stops;
+    if (theme == AppTheme.custom) {
+      final gradientScheme = isDark
+          ? scheme
+          : schemeFor(
+              theme,
+              Brightness.dark,
+              Color(ref.watch(customThemeColorProvider) ?? 0xFF7C7BFF),
+            );
+      stops = [gradientScheme.primary, gradientScheme.secondary];
+    } else {
+      stops = tokensFor(theme, Brightness.dark).grad!.colors;
+    }
 
     return Stack(
       alignment: Alignment.center,
       children: [
         ShaderMask(
           blendMode: BlendMode.modulate,
-          shaderCallback: logoShadowGradient(gradientScheme).createShader,
+          shaderCallback: logoShadowGradient(stops).createShader,
           child: Image.asset(background, width: size, height: size),
         ),
         Image.asset(foreground, width: size, height: size),
@@ -60,16 +67,12 @@ class TsumiruLogo extends ConsumerWidget {
   }
 }
 
-LinearGradient logoShadowGradient(ColorScheme scheme) {
-  final (
-    top,
-    bottom,
-  ) = scheme.primary.computeLuminance() > scheme.secondary.computeLuminance()
-      ? (scheme.primary, scheme.secondary)
-      : (scheme.secondary, scheme.primary);
+LinearGradient logoShadowGradient(List<Color> stops) {
+  final ordered = List<Color>.of(stops)
+    ..sort((a, b) => b.computeLuminance().compareTo(a.computeLuminance()));
   return LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [top, bottom],
+    colors: ordered,
   );
 }

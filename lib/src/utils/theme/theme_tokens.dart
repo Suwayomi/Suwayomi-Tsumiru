@@ -16,6 +16,7 @@ class ThemeTokens {
     required this.border,
     this.onAccent,
     this.accentBg,
+    this.accentFill,
     this.grad,
   });
 
@@ -29,9 +30,10 @@ class ThemeTokens {
   final Color danger; // error  (--danger)
   final Color border; // panel border overlay  (--panel-brd → outlineVariant)
 
-  // Null for tokens only supplied by light themes.
+  // Null when the mode does not supply the token.
   final Color? onAccent; // text on a filled accent  (--on-accent)
   final Color? accentBg; // tinted accent container  (--accent-bg)
+  final Color? accentFill; // selected nav fill  (--accent-fill)
   final LinearGradient? grad; // brand gradient  (--grad)
 }
 
@@ -41,10 +43,17 @@ const _indigoDark = ThemeTokens(
   ink: Color(0xFFEEF0FB),
   muted: Color(0xFF9AA0C4),
   faint: Color(0xFF6B7099),
-  accent: Color(0xFF7C7BFF),
+  accent: Color(0xFF959BFC),
   accent2: Color(0xFF33D6FF),
   danger: Color(0xFFFF6B6B),
   border: Color(0x14FFFFFF), // --panel-brd: white @ 0.08
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF47469E),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF7C7BFF), Color(0xFF33D6FF)],
+  ),
 );
 const _carbonDark = ThemeTokens(
   bg: Color(0xFF08100E),
@@ -56,6 +65,13 @@ const _carbonDark = ThemeTokens(
   accent2: Color(0xFF22D3EE),
   danger: Color(0xFFFF6F6F),
   border: Color(0x12FFFFFF), // white @ 0.07
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF016148),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF19E6B0), Color(0xFF22D3EE)],
+  ),
 );
 const _plumDark = ThemeTokens(
   bg: Color(0xFF120A16),
@@ -63,10 +79,17 @@ const _plumDark = ThemeTokens(
   ink: Color(0xFFFBEEFB),
   muted: Color(0xFFCAA0C9),
   faint: Color(0xFF946B93),
-  accent: Color(0xFFFF5DB1),
+  accent: Color(0xFFFD87BF),
   accent2: Color(0xFFFF9F5C),
   danger: Color(0xFFFF7A6B),
   border: Color(0x17FFFFFF), // white @ 0.09
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF912360),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF5DB1), Color(0xFFFF9F5C)],
+  ),
 );
 
 const _regressionDark = ThemeTokens(
@@ -75,10 +98,17 @@ const _regressionDark = ThemeTokens(
   ink: Color(0xFFDBE6FF),
   muted: Color(0xFF8FA2CC),
   faint: Color(0xFF5A6890),
-  accent: Color(0xFF3D8BFF),
+  accent: Color(0xFF69A4FE),
   accent2: Color(0xFF6FD2FF),
   danger: Color(0xFFFF5D6C),
   border: Color(0x38508CFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF0B4798),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF3D8BFF), Color(0xFF6FD2FF)],
+  ),
 );
 const _emberDark = ThemeTokens(
   bg: Color(0xFF140A0C),
@@ -86,10 +116,17 @@ const _emberDark = ThemeTokens(
   ink: Color(0xFFFBE9EA),
   muted: Color(0xFFC99A9E),
   faint: Color(0xFF8F6468),
-  accent: Color(0xFFFF3B4E),
+  accent: Color(0xFFFD8180),
   accent2: Color(0xFFFFB338),
   danger: Color(0xFFFF5B5B),
   border: Color(0x14FFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF95202B),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF3B4E), Color(0xFFFFB338)],
+  ),
 );
 const _synthwaveDark = ThemeTokens(
   bg: Color(0xFF150B2E),
@@ -97,10 +134,17 @@ const _synthwaveDark = ThemeTokens(
   ink: Color(0xFFF3E9FF),
   muted: Color(0xFFB9A4E0),
   faint: Color(0xFF7E6AA8),
-  accent: Color(0xFFFF2E97),
+  accent: Color(0xFFFE89B6),
   accent2: Color(0xFF2DE2FF),
   danger: Color(0xFFFF5D73),
   border: Color(0x17FFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF8F2456),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF2E97), Color(0xFF2DE2FF)],
+  ),
 );
 const _terminalDark = ThemeTokens(
   bg: Color(0xFF060A06),
@@ -112,6 +156,13 @@ const _terminalDark = ThemeTokens(
   accent2: Color(0xFFFFD84D),
   danger: Color(0xFFFF5B5B),
   border: Color(0x1A78FF96),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF026027),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF36FF7A), Color(0xFFFFD84D)],
+  ),
 );
 const _catppuccinDark = ThemeTokens(
   bg: Color(0xFF1E1E2E),
@@ -123,6 +174,13 @@ const _catppuccinDark = ThemeTokens(
   accent2: Color(0xFF89B4FA),
   danger: Color(0xFFF38BA8),
   border: Color(0x14FFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF532F76),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFCBA6F7), Color(0xFF89B4FA)],
+  ),
 );
 const _nordDark = ThemeTokens(
   bg: Color(0xFF2E3440),
@@ -134,6 +192,13 @@ const _nordDark = ThemeTokens(
   accent2: Color(0xFF81A1C1),
   danger: Color(0xFFBF616A),
   border: Color(0x1AFFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF1E5765),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF88C0D0), Color(0xFF81A1C1)],
+  ),
 );
 const _gruvboxDark = ThemeTokens(
   bg: Color(0xFF1D2021),
@@ -145,6 +210,13 @@ const _gruvboxDark = ThemeTokens(
   accent2: Color(0xFF8EC07C),
   danger: Color(0xFFFB4934),
   border: Color(0x14FFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF6E3405),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFE8019), Color(0xFF8EC07C)],
+  ),
 );
 const _draculaDark = ThemeTokens(
   bg: Color(0xFF282A36),
@@ -152,10 +224,17 @@ const _draculaDark = ThemeTokens(
   ink: Color(0xFFF8F8F2),
   muted: Color(0xFFB9BCD0),
   faint: Color(0xFF6272A4),
-  accent: Color(0xFFBD93F9),
+  accent: Color(0xFFCEB1FD),
   accent2: Color(0xFFFF79C6),
   danger: Color(0xFFFF5555),
   border: Color(0x17FFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF634689),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFBD93F9), Color(0xFFFF79C6)],
+  ),
 );
 const _monoDark = ThemeTokens(
   bg: Color(0xFF0A0A0B),
@@ -167,6 +246,13 @@ const _monoDark = ThemeTokens(
   accent2: Color(0xFFA8A8B2),
   danger: Color(0xFFFF6B6B),
   border: Color(0x1AFFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF535358),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFE8E8EE), Color(0xFFA8A8B2)],
+  ),
 );
 const _royalDark = ThemeTokens(
   bg: Color(0xFF0D0B16),
@@ -178,6 +264,13 @@ const _royalDark = ThemeTokens(
   accent2: Color(0xFF9B7BFF),
   danger: Color(0xFFFF6B6B),
   border: Color(0x17FFFFFF),
+  onAccent: Color(0xFF0A0A12),
+  accentFill: Color(0xFF644D03),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFE8C468), Color(0xFF9B7BFF)],
+  ),
 );
 
 const _indigoLight = ThemeTokens(

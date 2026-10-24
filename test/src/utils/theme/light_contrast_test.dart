@@ -70,4 +70,30 @@ void main() {
       }
     });
   }
+
+  test('dark selected states meet WCAG contrast', () {
+    for (final theme in AppTheme.values.where((t) => t != AppTheme.custom)) {
+      final tokens = tokensFor(theme, Brightness.dark);
+      final s = schemeFromTokens(tokens, Brightness.dark);
+      final fill = tokens.accentFill!;
+
+      expect(
+        contrastRatio(s.primary, s.surface),
+        greaterThanOrEqualTo(contrastRatio(s.onSurfaceVariant, s.surface)),
+        reason: '${theme.name}: primary/surface below onSurfaceVariant/surface',
+      );
+      _expectRatio(
+        s.onPrimary,
+        s.primary,
+        4.5,
+        '${theme.name}: onPrimary/primary',
+      );
+      _expectRatio(
+        s.onSurface,
+        fill,
+        7.0,
+        '${theme.name}: onSurface/accentFill',
+      );
+    }
+  });
 }

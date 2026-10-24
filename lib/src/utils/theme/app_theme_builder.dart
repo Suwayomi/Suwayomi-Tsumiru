@@ -36,7 +36,10 @@ ThemeData buildAppTheme({
     onGradient: tokens?.onAccent ?? const Color(0xFF0B0D1A),
     success: brandSuccessColor(brightness),
     neutral: theme == AppTheme.mono && brightness == Brightness.light,
+    navSelectedFill: tokens?.accentFill,
   );
+  // Dark token themes fill the selected nav indicator; others follow M3.
+  final navFill = tokens?.accentFill;
 
   final primary = scheme.primary;
   final outline = scheme.outlineVariant;
@@ -101,34 +104,42 @@ ThemeData buildAppTheme({
     ),
     tabBarTheme: const TabBarThemeData(tabAlignment: TabAlignment.center),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: scheme.surface,
+      backgroundColor: scheme.surfaceContainer,
       elevation: 0,
-      indicatorColor: primary.withValues(alpha: 0.22),
+      indicatorColor: navFill ?? scheme.secondaryContainer,
       iconTheme: WidgetStateProperty.resolveWith(
         (s) => IconThemeData(
           color: s.contains(WidgetState.selected)
-              ? primary
+              ? (navFill != null
+                    ? scheme.onSurface
+                    : scheme.onSecondaryContainer)
               : scheme.onSurfaceVariant,
         ),
       ),
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (s) => TextStyle(
+      labelTextStyle: WidgetStateProperty.resolveWith((s) {
+        final selected = s.contains(WidgetState.selected);
+        return TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: s.contains(WidgetState.selected)
-              ? primary
-              : scheme.onSurfaceVariant,
-        ),
-      ),
+          height: 1.33,
+          letterSpacing: 0.5,
+          overflow: TextOverflow.ellipsis,
+          fontWeight: selected && navFill != null
+              ? FontWeight.w700
+              : FontWeight.w500,
+          color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+        );
+      }),
     ),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: scheme.surface,
-      indicatorColor: primary.withValues(alpha: 0.22),
-      selectedIconTheme: IconThemeData(color: primary),
+      indicatorColor: navFill ?? primary.withValues(alpha: 0.22),
+      selectedIconTheme: IconThemeData(
+        color: navFill != null ? scheme.onSurface : primary,
+      ),
       unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
       selectedLabelTextStyle: TextStyle(
-        color: primary,
-        fontWeight: FontWeight.w600,
+        color: navFill != null ? scheme.onSurface : primary,
+        fontWeight: navFill != null ? FontWeight.w700 : FontWeight.w600,
       ),
       unselectedLabelTextStyle: TextStyle(color: scheme.onSurfaceVariant),
     ),

@@ -23,7 +23,7 @@ void main() {
       greaterThan(0.5),
       reason: 'the Monochrome accent should be light',
     );
-    expect(scheme.onPrimary, Colors.black);
+    expect(scheme.onPrimary, const Color(0xFF0A0A12));
 
     for (final theme in AppTheme.values) {
       if (theme == AppTheme.custom) continue; // custom is ColorScheme.fromSeed

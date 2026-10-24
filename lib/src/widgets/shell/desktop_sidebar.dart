@@ -17,6 +17,7 @@ import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
+import '../../utils/theme/brand.dart';
 import '../compact_switch.dart';
 import '../desktop/desktop_brand.dart';
 import '../desktop/desktop_top_bar.dart';
@@ -75,7 +76,8 @@ class DesktopSidebar extends ConsumerWidget {
     void collapse() => ref.read(sidebarExpandedProvider.notifier).update(false);
 
     final cs = context.colorScheme;
-    final selectedBg = cs.primary.withValues(alpha: 0.22);
+    final navFill = BrandColors.of(context).navSelectedFill;
+    final selectedBg = navFill ?? cs.primary.withValues(alpha: 0.22);
     final hoverBg = cs.onSurface.withValues(alpha: 0.05);
 
     // Switch content at the animated width midpoint; keep Settings mapped to the hidden More branch.
@@ -126,7 +128,14 @@ class DesktopSidebar extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,
-                          color: selected ? cs.primary : cs.onSurfaceVariant,
+                          color: selected
+                              ? (navFill != null
+                                    ? cs.onSurface
+                                    : cs.primary)
+                              : cs.onSurfaceVariant,
+                          fontWeight: selected && navFill != null
+                              ? FontWeight.w700
+                              : null,
                         ),
                       ),
                     ),
@@ -165,7 +174,11 @@ class DesktopSidebar extends ConsumerWidget {
         selected: selected,
         label: label,
         icon: IconTheme(
-          data: IconThemeData(color: selected ? cs.primary : cs.onSurface),
+          data: IconThemeData(
+            color: selected
+                ? (navFill != null ? cs.onSurface : cs.primary)
+                : (navFill != null ? cs.onSurfaceVariant : cs.onSurface),
+          ),
           child: badgedNavIcon(
             NavMotionIcon(data, selected: selected),
             data,
@@ -187,7 +200,7 @@ class DesktopSidebar extends ConsumerWidget {
         label: label,
         icon: Icon(
           incognito ? FluentIcons.incognito_24_filled : FluentIcons.incognito_24_regular,
-          color: cs.onSurface,
+          color: navFill != null ? cs.onSurfaceVariant : cs.onSurface,
         ),
         trailing: CompactSwitch(
           value: incognito,
@@ -206,7 +219,9 @@ class DesktopSidebar extends ConsumerWidget {
         label: label,
         icon: Icon(
           FluentIcons.settings_24_regular,
-          color: settingsSelected ? cs.primary : cs.onSurface,
+          color: settingsSelected
+              ? (navFill != null ? cs.onSurface : cs.primary)
+              : (navFill != null ? cs.onSurfaceVariant : cs.onSurface),
         ),
         onTap: () => const SettingsRoute().push(context),
         gapBelow: 0,

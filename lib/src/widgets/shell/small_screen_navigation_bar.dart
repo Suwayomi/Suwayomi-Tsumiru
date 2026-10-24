@@ -44,26 +44,19 @@ class SmallScreenNavigationBar extends ConsumerWidget {
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final navList = NavigationBarData.getNavList(context);
-    return NavigationBarTheme(
-      data: NavigationBarThemeData(
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(overflow: TextOverflow.ellipsis),
-        ),
-      ),
-      child: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onDestinationSelected,
-        destinations: [
-          for (var i = 0; i < navList.length; i++)
-            getNavigationDestination(
-              context,
-              navList[i],
-              i == selectedIndex,
-              downloadsPaused,
-              extensionUpdates,
-            ),
-        ],
-      ),
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onDestinationSelected,
+      destinations: [
+        for (var i = 0; i < navList.length; i++)
+          getNavigationDestination(
+            context,
+            navList[i],
+            i == selectedIndex,
+            downloadsPaused,
+            extensionUpdates,
+          ),
+      ],
     );
   }
 }

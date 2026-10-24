@@ -10,7 +10,7 @@ void main() {
     final t = tokensFor(AppTheme.indigoNight, Brightness.dark);
     expect(t.bg, const Color(0xFF0B0D1A));
     expect(t.ink, const Color(0xFFEEF0FB));
-    expect(t.accent, const Color(0xFF7C7BFF));
+    expect(t.accent, const Color(0xFF959BFC));
     expect(t.accent2, const Color(0xFF33D6FF));
     expect(t.danger, const Color(0xFFFF6B6B));
 
