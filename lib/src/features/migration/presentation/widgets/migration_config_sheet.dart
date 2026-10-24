@@ -10,9 +10,6 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/compact_switch.dart';
 
-/// What the config sheet returns: which data carries over and how the list
-/// filters. Copy-vs-Migrate is deliberately NOT here — Komikku decides that on
-/// the migration list screen's top bar.
 class MigrationRunConfig {
   const MigrationRunConfig({
     required this.migrateChapters,
@@ -35,9 +32,6 @@ class MigrationRunConfig {
   final bool hideWithoutUpdates;
 }
 
-/// Bottom sheet — "Data to migrate" (Komikku `MigrationConfigScreenSheet`). The
-/// carry-over flags are filter chips; hide options are switches; an additional
-/// search query can be appended. Continue starts the migration list.
 class MigrationConfigSheet extends HookWidget {
   const MigrationConfigSheet({
     super.key,
@@ -59,7 +53,7 @@ class MigrationConfigSheet extends HookWidget {
     final tracking = useState(true);
     final readerSettings = useState(true);
     final offlineSettings = useState(true);
-    // Opt-in: moving/re-fetching downloads costs bandwidth and disk.
+    // Moving or refetching downloads requires an explicit bandwidth/disk opt-in.
     final downloads = useState(false);
     final hideUnmatched = useState(false);
     final hideWithoutUpdates = useState(false);

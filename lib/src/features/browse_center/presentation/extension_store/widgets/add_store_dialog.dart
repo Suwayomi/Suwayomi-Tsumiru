@@ -15,9 +15,7 @@ import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../data/extension_store_repository/extension_store_repository.dart';
 
-/// Mirrors Komikku's ExtensionStoreCreateDialog. Duplicate check is an exact
-/// string match against the caller's current store URLs (not a normalized
-/// compare) — same URL byte-for-byte is what the server itself rejects.
+/// Duplicate URLs use exact string equality, as required by the server.
 class AddStoreDialog extends HookConsumerWidget {
   const AddStoreDialog({super.key, required this.existingUrls});
 
@@ -50,8 +48,7 @@ class AddStoreDialog extends HookConsumerWidget {
         }
       } catch (e) {
         if (!context.mounted) return;
-        // The dialog stays open on failure — a raw server exception can carry
-        // HTML/stack noise, so keep only the first line, clamped.
+        // Server exceptions can contain HTML or stack traces; show only a clamped first line.
         final firstLine = isPermissionDenied(e)
             ? context.l10n.accountPermissionDenied
             : e.toString().split('\n').first;

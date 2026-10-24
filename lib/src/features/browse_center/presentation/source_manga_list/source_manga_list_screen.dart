@@ -85,8 +85,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
     final sourcePages = useMemoized(() => SourcePageSequence<MangaDto>());
     final controller = useServerPagingController<MangaDto>(
       firstPageKey: 1,
-      // Read per request: a LAN/remote endpoint switch replaces the client,
-      // and the one captured on the first build is disposed with it.
+      // Read per request because endpoint switches dispose the previous client.
       fetchPage: (pageKey) async {
         final repository = ref.read(sourceRepositoryProvider);
         final hideLibraryEntries = ref.read(
@@ -118,9 +117,6 @@ class SourceMangaListScreen extends HookConsumerWidget {
     return source.showUiWhenData(
       context,
       (data) {
-        // Native desktop draws the title and actions in the shell bar
-        // instead of an app bar; the type chips and search box stay in the
-        // page body.
         final topBar = showsMergedTopBar(context);
         final title = Text(data?.displayName ?? context.l10n.source);
         final actions = <Widget>[
@@ -252,8 +248,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     child: toolbarBottom,
                   ),
                 ),
-        // Edge-drag would fight the system back gesture; the filter button is
-        // the way in.
+        // Edge-drag conflicts with the system back gesture.
         endDrawerEnableOpenDragGesture: false,
           endDrawer: filterList != null
             ? Drawer(

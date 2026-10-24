@@ -28,8 +28,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
   final bool enabled;
   final ValueChanged<SourcePreferenceChange> onChanged;
 
-  /// Position in the preference list; keys the tile when the server sends no
-  /// preference key.
+  /// Fallback tile key when the server provides no preference key.
   final int? index;
 
   Key? _keyFor(String? key) => key != null

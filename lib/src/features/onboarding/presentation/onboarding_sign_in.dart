@@ -9,8 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
 
-/// Save the final step before the identity transition can replace the wizard.
-/// Rejected sign-ins leave the onboarding state untouched.
+/// Saves the final step before sign-in can replace the wizard; rejection preserves onboarding state.
 Future<void> finishOnboardingSignIn(
   WidgetRef ref,
   Future<void> Function() signIn,

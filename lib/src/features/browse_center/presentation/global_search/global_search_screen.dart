@@ -25,8 +25,7 @@ import 'widgets/source_short_search.dart';
 String _normalizedTitle(String value) =>
     value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
-/// Null until every source has settled; otherwise the titles matching [query]
-/// exactly across the settled results.
+// Wait for every source before deciding whether a title match is unique.
 List<MangaDto>? _exactMatches(
   AsyncValue<List<QuickSearchResults>> results,
   String query,
@@ -50,8 +49,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
   });
   final String? initialQuery;
 
-  /// Opened from a Suggestions card: a lone exact title match opens straight
-  /// into that series.
+  /// Opens a lone exact title match directly when launched from a suggestion.
   final bool fromSuggestion;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,8 +72,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
     final hasPinned = ref.watch(pinnedSourcesProvider).isNotEmpty;
     final decided = useRef(false);
     final cancelled = useRef(false);
-    // Latest focus state, tracked from the node itself: a build-time read
-    // races an unfocus that lands without rebuilding the page.
+    // Focus may change without rebuilding; track it directly from the node.
     final hadFocus = useRef(false);
     useEffect(() {
       void update() => hadFocus.value = searchFocusNode.hasFocus;
@@ -100,8 +97,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
       return () => HardwareKeyboard.instance.removeHandler(onKey);
     }, const []);
 
-    // A refreshing source list can still settle into extra sources; deciding
-    // against it would miss a second exact match.
+    // A refresh may add sources with another exact match.
     final sourcesSettled = !sourceList.isLoading && !sourceList.isRefreshing;
     if (fromSuggestion &&
         sourcesSettled &&
@@ -138,7 +134,6 @@ class GlobalSearchScreen extends HookConsumerWidget {
             ),
           );
         }
-        // "Has results" hides sources still loading / that returned none.
         final visible = onlyHasResults
             ? data
                   .where((e) => (e.mangaList.value?.isNotEmpty).ifNull())
@@ -158,13 +153,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
       hasPinned: hasPinned,
       onInteract: cancelAutoOpen,
     );
-    // Native desktop draws the search box in the shell bar instead of an
-    // app bar; the filter chips stay in the page body. The focus node and
-    // controller are shared so the draft survives the move, and the slot
-    // mount autofocuses only when focus was held across the toggle: the
-    // slot mounts a frame after the old field detaches, so bare refocusing
-    // would be lost — and unconditional autofocus would steal focus back
-    // after an explicit unfocus.
+    // The shell slot mounts a frame later; restore focus only if the old field held it.
     final topBar = showsMergedTopBar(context);
     final restoreFocus = topBar && !wasTopBar.value && hadFocus.value;
     wasTopBar.value = topBar;

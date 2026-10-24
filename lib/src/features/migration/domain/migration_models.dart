@@ -37,8 +37,7 @@ abstract class MigrationOption with _$MigrationOption {
     @Default(true) bool migrateOfflineSettings,
     @Default(false) bool migrateTracking,
     @Default(true) bool deleteSource,
-    // When the target already has a track record for the same tracker, keep the
-    // target's by default; overwrite with the source's only on explicit opt-in.
+    // Preserve target tracker records unless overwrite is explicitly selected.
     @Default(false) bool overwriteExistingTracking,
   }) = _MigrationOption;
 
@@ -46,10 +45,7 @@ abstract class MigrationOption with _$MigrationOption {
       _$MigrationOptionFromJson(json);
 }
 
-/// Outcome of copying one manga's data (library/categories/chapters/tracking)
-/// onto a target, WITHOUT removing the source. Internal to the migration
-/// engine — the source-removal step consumes it. Plain class (no serialization)
-/// so the bulk runner can journal copy/remove as separate boundaries.
+/// Copy outcome before removal; the runner journals copy and removal separately.
 class MigrationCopyResult {
   const MigrationCopyResult({
     required this.success,
@@ -64,7 +60,7 @@ class MigrationCopyResult {
     this.error,
   });
 
-  /// True when no step hard-failed — only then is removing the source safe.
+  /// Source removal is safe only when no copy step hard-failed.
   final bool success;
   final bool sourceInLibrary;
   final List<String> warnings;
@@ -72,17 +68,14 @@ class MigrationCopyResult {
   final int migratedCategories;
   final int migratedTracking;
 
-  /// Source track-record ids that were copied to the target; on a Migrate these
-  /// are unbound from the source (locally, never touching the remote tracker).
+  /// Copied source tracker IDs to unbind locally, never on the remote tracker.
   final List<int> copiedSourceRecordIds;
   final String? targetTitle;
   final String? targetSourceId;
   final String? error;
 }
 
-/// Preflight of migrating onto a specific target: whether the target is already
-/// a library entry, and which trackers already have a record there that the
-/// source would collide with. Drives the merge keep-vs-overwrite choice.
+/// Existing-target and tracker collisions requiring a keep/overwrite choice.
 class MigrationMergePreflight {
   const MigrationMergePreflight({
     required this.targetInLibrary,
@@ -107,7 +100,6 @@ abstract class MangaSearchResult with _$MangaSearchResult {
       _$MangaSearchResultFromJson(json);
 }
 
-// Nav route data classes — no JSON serialization needed, navigation-only.
 @freezed
 abstract class MigrationRouteData with _$MigrationRouteData {
   const factory MigrationRouteData({
@@ -115,7 +107,6 @@ abstract class MigrationRouteData with _$MigrationRouteData {
   }) = _MigrationRouteData;
 }
 
-/// Nav payload for the bulk config screen — the set of library manga to migrate.
 @freezed
 abstract class MigrationBulkConfigData with _$MigrationBulkConfigData {
   const factory MigrationBulkConfigData({
@@ -123,8 +114,6 @@ abstract class MigrationBulkConfigData with _$MigrationBulkConfigData {
   }) = _MigrationBulkConfigData;
 }
 
-/// Nav payload for the bulk run screen — the configured batch, ready to search
-/// and commit.
 @freezed
 abstract class MigrationBulkRunData with _$MigrationBulkRunData {
   const factory MigrationBulkRunData({
@@ -137,7 +126,6 @@ abstract class MigrationBulkRunData with _$MigrationBulkRunData {
   }) = _MigrationBulkRunData;
 }
 
-/// Nav payload for the per-source picker (Screen 2).
 @freezed
 abstract class MigrationSourceMangaData with _$MigrationSourceMangaData {
   const factory MigrationSourceMangaData({

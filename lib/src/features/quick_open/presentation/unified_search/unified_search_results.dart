@@ -23,29 +23,23 @@ import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
 
-// A few operators worth teaching in the empty state — each filters immediately
-// and shows a different metatag, so the autocomplete can carry the rest.
 const List<String> _searchExamples = [
   'unread:true',
   'downloaded:true',
   'status:ongoing',
 ];
 
-/// "Go to" category targets, shared by the list and the Enter handler so both
-/// offer the same destinations.
 List<GoToTarget> _categoryTargets(WidgetRef ref) => [
   for (final c in ref.watch(visibleCategoryListProvider).value ?? const [])
     GoToTarget(
       label: (_) => c.name,
       icon: Icons.folder_rounded,
-      // .push (not .go) rebuilds LibraryScreen so its DefaultTabController
-      // lands on the chosen category — .go reuses the live screen and the
-      // tab never changes.
+      // push rebuilds LibraryScreen for the chosen category; go reuses its current tab controller.
       navigate: (ctx) => LibraryRoute(categoryId: c.id).push(ctx),
     ),
 ];
 
-/// Go-to destinations matching [query] (empty query = the full launcher list).
+/// Empty queries return all launcher destinations.
 List<GoToTarget> matchingGoToTargets(
   WidgetRef ref,
   String query,
@@ -71,7 +65,6 @@ List<GoToTarget> matchingGoToTargets(
   );
 }
 
-/// Settings entries matching [query], visibility-filtered for this ref+context.
 List<SettingsSearchEntry> matchingSettingsEntries(
   WidgetRef ref,
   BuildContext context,
@@ -83,11 +76,7 @@ List<SettingsSearchEntry> matchingSettingsEntries(
   isVisible: (e) => e.visible(ref, context),
 );
 
-/// Enter opens the top result (library first, then go-to, then settings),
-/// falling back to the global handoff — not always global. Returns true when
-/// it navigated, so callers can clear their field; every entry point
-/// (overlay, desktop dropdowns) shares this so Enter behaves one way
-/// everywhere.
+/// Opens the top Library, Go-to, or Settings result, then global search; true means navigation occurred.
 bool submitUnifiedQuery(
   BuildContext context,
   WidgetRef ref,
@@ -125,31 +114,20 @@ bool submitUnifiedQuery(
   return false; // pure operator query, nothing typed to hand off
 }
 
-/// Builds one selectable dropdown row: keyboard highlight paints the row's
-/// existing hover colour, mouse hover moves the highlight, Semantics carries
-/// the selected state for screen readers. The same [action] drives tap and
-/// Enter. Host-provided leading sections build through this so their rows
-/// join the keyboard order ahead of the unified rows.
+/// Leading sections use this builder to join keyboard selection before unified result rows.
 typedef SelectableRowBuilder =
     Widget Function({
       required VoidCallback action,
       required Widget Function(VoidCallback onTap) tile,
     });
 
-/// Keyboard highlight state for one [UnifiedSearchResults] list, owned by the
-/// host (desktop dropdown, Ctrl+K overlay). Focus stays in the host's text
-/// field the whole time; Up/Down move [index], Enter activates it exactly as
-/// a tap would. A null index means nothing is highlighted, so Enter keeps the
-/// host's top-result rule. No wrap-around: Down on the last row stays put;
-/// Up from the first row clears the highlight back to none.
+/// Host-owned selection keeps field focus; null selects nothing, Down stops at the end, Up can clear.
 class UnifiedSearchSelection extends ChangeNotifier {
   int? _index;
   List<VoidCallback> _rows = const [];
 
-  /// Highlighted row in visual order, or null for none.
   int? get index => _index;
 
-  /// Number of selectable rows in the current list.
   int get length => _rows.length;
 
   void _setIndex(int? value) {
@@ -158,9 +136,7 @@ class UnifiedSearchSelection extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The results list calls this (post-frame) with one entry per selectable
-  /// row in visual order. Only notifies when a count change disturbs the
-  /// highlight, so a plain rebuild never loops back into the list.
+  /// Called post-frame in visual order; only a count change affecting selection notifies listeners.
   void setRows(List<VoidCallback> rows) {
     _rows = rows;
     if (_index != null && _index! >= rows.length) {
@@ -184,12 +160,9 @@ class UnifiedSearchSelection extends ChangeNotifier {
     _setIndex(index);
   }
 
-  /// The host calls this on every text change and every fresh open, so
-  /// nothing is highlighted until the user moves.
   void reset() => _setIndex(null);
 
-  /// Runs the highlighted row's tap handler. Returns false when nothing is
-  /// highlighted, so the host can fall back to its top-result rule.
+  /// False means no selection, allowing the host to use its top-result fallback.
   bool activateSelected() {
     final i = _index;
     if (i == null || i < 0 || i >= _rows.length) return false;
@@ -198,10 +171,6 @@ class UnifiedSearchSelection extends ChangeNotifier {
   }
 }
 
-/// The unified results list: Examples (empty query), Filters, Library hits ≤6
-/// with source • unread subtitle, Go to, Search all sources. Query in, results
-/// out — every host (the phone/tablet overlay, the desktop dropdowns) renders
-/// this so the sections stay identical.
 class UnifiedSearchResults extends HookConsumerWidget {
   const UnifiedSearchResults({
     super.key,
@@ -215,39 +184,31 @@ class UnifiedSearchResults extends HookConsumerWidget {
     required this.selection,
   });
 
-  /// The text being searched.
   final String query;
 
-  /// Called after any navigation, so the host can hide/clear.
+  /// Called after navigation so the host can close results.
   final VoidCallback close;
 
-  /// Caret offset for operator autocomplete; null puts it at the end.
+  /// Null puts autocomplete at the end of the query.
   final int? caret;
 
-  /// False hides the Library section (the Library grid is already filtered).
   final bool showLibrarySection;
 
-  /// Extra sections rendered before the unified ones (History on its page),
-  /// built with [SelectableRowBuilder] so their rows join the keyboard order
-  /// first with the same highlight, hover, Semantics, and scroll behaviour.
+  /// Leading rows use SelectableRowBuilder to precede unified rows in keyboard order.
   final List<Widget> Function(SelectableRowBuilder selectable)? leadingBuilder;
 
-  /// Tapping an example replaces the field text (host splices its controller).
   final ValueChanged<String> onSetQuery;
 
-  /// Tapping a filter suggestion splices it into the field text.
   final ValueChanged<SearchSuggestion> onApplySuggestion;
 
-  /// Host-owned keyboard highlight (Up/Down/Enter/hover); focus never leaves
-  /// the host's text field.
+  /// Host-owned selection; keyboard navigation leaves focus in the text field.
   final UnifiedSearchSelection selection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     useListenable(selection);
     final l = context.l10n;
-    // Keep the server-backed search dependencies alive for the whole open
-    // search, so typing never refetches them (see pinSettingsSearchProviders).
+    // Pin server-backed dependencies while open so typing does not refetch them.
     pinSettingsSearchProviders(ref);
     final caret = this.caret ?? query.length;
     final token = activeTokenAt(query, caret);
@@ -270,14 +231,10 @@ class UnifiedSearchResults extends HookConsumerWidget {
         : const <SettingsSearchEntry>[];
     final plainQuery = plainQueryText(query);
 
-    // One tap handler per selectable row in visual order (headers skipped).
-    // The host's selection reads this post-frame for Up/Down/Enter.
     final activations = <VoidCallback>[];
     final rowContexts = <int, BuildContext>{};
     var nextRow = 0;
 
-    // The host's leading rows build through this first, so they take the
-    // first indices in visual order. See [SelectableRowBuilder].
     Widget selectable({
       required VoidCallback action,
       required Widget Function(VoidCallback onTap) tile,
@@ -314,8 +271,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
     final highlighted = selection.index;
     useEffect(() {
       if (highlighted == null) return null;
-      // Post-frame: layout has run, so every row registered its context.
-      // Re-check the live index then — a text change may have reset it since.
+      // Wait for row contexts after layout; text edits may have reset selection meanwhile.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (selection.index != highlighted) return;
         final rowContext = rowContexts[highlighted];
@@ -331,9 +287,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
       return null;
     }, [highlighted]);
 
-    // A scroll view over an eager Column, not a lazy ListView: every row
-    // stays built, so the keyboard highlight can scroll any index into
-    // view. The list is short (tens of plain tiles at most).
+    // Build every row eagerly so keyboard selection can scroll any index into view.
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -451,7 +405,6 @@ class UnifiedSearchResults extends HookConsumerWidget {
     );
   }
 
-  // Source name + unread count, whichever are present; null when neither.
   Widget? _mangaSubtitle(BuildContext context, MangaDto manga) {
     final source = manga.source?.displayName;
     final parts = [

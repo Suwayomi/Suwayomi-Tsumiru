@@ -22,10 +22,6 @@ import '../../domain/language/flag_emoji.dart';
 import '../../domain/source/source_model.dart';
 import 'controller/source_controller.dart';
 
-/// 1:1 port of Komikku's SourcesFilterScreen: every language is a toggle
-/// (enables/disables it in browse), each enabled language has an "All Sources"
-/// toggle plus per-source checkboxes. Language state is [SourceLanguageFilter];
-/// per-source hide state is the `tsumiru_isHidden` server meta.
 class SourceFilterScreen extends HookConsumerWidget {
   const SourceFilterScreen({super.key});
 
@@ -62,8 +58,6 @@ class SourceFilterScreen extends HookConsumerWidget {
 
     refresh() => ref.refresh(sourceListProvider.future);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.sources);
     final scaffold = Scaffold(
@@ -72,12 +66,8 @@ class SourceFilterScreen extends HookConsumerWidget {
           : AppBar(leading: detailNavigationBackButton(context), title: title),
       body: sourceMapData.showUiWhenData(context, (data) {
         final sourceMap = {...data};
-        // The local source isn't listed on Komikku's filter screen (it's
-        // always available); Browse surfaces it in its own bucket.
+        // The local source is always available in its own Browse bucket.
         sourceMap.remove('localsourcelang');
-        // Komikku's GetLanguagesWithSources ordering: enabled languages
-        // first, then alphabetical — so the languages you actually use float
-        // to the top above the disabled ones.
         bool isEnabled(String c) => enabledLangs?.contains(c) ?? false;
         final languages = sourceMap.keys.toList()
           ..sort((a, b) {
@@ -144,8 +134,6 @@ class SourceFilterScreen extends HookConsumerWidget {
   }
 }
 
-/// Komikku's SourcesFilterHeader: `native (name flag)` with a switch that
-/// enables/disables the whole language.
 class _LanguageToggle extends StatelessWidget {
   const _LanguageToggle({
     required this.langCode,
@@ -174,8 +162,6 @@ class _LanguageToggle extends StatelessWidget {
   }
 }
 
-/// Komikku's SourcesFilterToggle: `All Sources (flag)` — enables/disables
-/// every source in the language at once. On when none are hidden.
 class _AllSourcesToggle extends StatelessWidget {
   const _AllSourcesToggle({
     required this.langCode,
@@ -192,15 +178,12 @@ class _AllSourcesToggle extends StatelessWidget {
     final allShown = sources.every((s) => !s.isHidden);
     return CompactSwitchListTile(
       value: allShown,
-      // On -> hide all; off/partial -> show all.
       onChanged: (_) => onToggleAll(allShown),
       title: Text('${context.l10n.allSources} (${flagEmojiForLang(langCode)})'),
     );
   }
 }
 
-/// Komikku's SourcesFilterItem: source icon, name, `flag lang 18+` subtitle,
-/// and a trailing checkbox (checked = shown).
 class _SourceCheckItem extends StatelessWidget {
   const _SourceCheckItem({required this.source, required this.onToggle});
 

@@ -12,10 +12,7 @@ import '../domain/migration_models.dart';
 import 'migration_journal.dart';
 import 'migration_repository.dart';
 
-/// The headless bulk migration engine: matches, then copies + removes each pair
-/// through a durable write-ahead [MigrationJournal] with bounded concurrency, a
-/// dirty-state gate, and auth-pause — enforced before source removal, never
-/// deferred, so a crash at any point is recoverable via [recover].
+/// Journals copy and removal before each server mutation so interrupted batches can recover.
 class BulkMigrationRunner extends ChangeNotifier {
   BulkMigrationRunner({
     required this.repo,
@@ -49,21 +46,17 @@ class BulkMigrationRunner extends ChangeNotifier {
   final MigrationRepository repo;
   final MigrationJournal journal;
 
-  /// Carry-over flags; mutable so the list screen's Settings sheet can amend
-  /// them before commit (deleteSource is applied per-commit, not from here).
+  /// Mutable until commit; deleteSource is supplied separately per commit.
   MigrationOption options;
   final BulkMatcher matcher;
   final DirtyGate dirtyGate;
   final bool Function() isReauthNeeded;
   final Future<void> Function(CancelToken token) waitAuthReady;
 
-  /// Invoked after a source is removed (Migrate) so offline can evict orphaned
-  /// device copies (device ⊆ server). Failures are swallowed — not data loss.
+  /// Evicts device copies after source removal; failures do not fail migration.
   final Future<void> Function(int fromMangaId)? onSourceRemoved;
 
-  /// Carries device-local state (offline downloads + keep-rule) onto the target,
-  /// after a successful copy and before source removal. Best-effort: an offline
-  /// copy is never data loss, so a failure must not block the migration.
+  /// Carries offline state after copy and before removal; failures do not block migration.
   final Future<void> Function(
     int fromMangaId,
     int toMangaId,
@@ -74,8 +67,7 @@ class BulkMigrationRunner extends ChangeNotifier {
   final Semaphore semaphore;
   final RateLimiter rateLimiter;
 
-  /// At/above this display-title confidence the target is pre-selected; between
-  /// [reviewFloor] and this it is flagged for review; below, it's no match.
+  /// Scores at this threshold auto-select; [reviewFloor] to here requires review.
   final double autoApplyThreshold;
   final double reviewFloor;
 
@@ -93,8 +85,6 @@ class BulkMigrationRunner extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lets the screen push a repaint after mutating entry display fields
-  /// (e.g. fetched chapter counts) outside the runner's own transitions.
   void notify() => notifyListeners();
 
   void _set(BulkMigrationEntry e, BulkEntryPhase phase, [String? message]) {
@@ -103,10 +93,8 @@ class BulkMigrationRunner extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- Matching phase -------------------------------------------------------
 
-  /// Runs the matcher for every un-searched entry through the rate limiter and
-  /// concurrency bound. No mutations — populates targets + confidence only.
+  /// Populates matches and confidence without server mutations.
   Future<void> search() async {
     final work = _entries
         .where((e) => e.phase == BulkEntryPhase.queued)
@@ -135,16 +123,14 @@ class BulkMigrationRunner extends ChangeNotifier {
         _set(e, BulkEntryPhase.ready);
       }
     } on CancelledException {
-      // leave queued/searching for a later re-run
+      // Leave queued/searching entries for a later run.
     } catch (err) {
       _set(e, BulkEntryPhase.failed, '$err');
     }
   }
 
-  // ---- Merge preflight ------------------------------------------------------
 
-  /// Preflights each matched entry: flags targets already in library and
-  /// colliding trackers, so the owner can choose keep vs overwrite. No mutations.
+  /// Detects existing targets and tracker collisions without server mutations.
   Future<void> preflight() async {
     final work = _entries
         .where(
@@ -169,22 +155,16 @@ class BulkMigrationRunner extends ChangeNotifier {
       e.collidingTrackerIds = result.collidingTrackerIds;
       notifyListeners();
     } on CancelledException {
-      // best-effort — a missing preflight just defaults to keep-target
+      // Missing preflight preserves target tracking by default.
     } catch (_) {
-      // best-effort
+      // Missing preflight preserves target tracking by default.
     }
   }
 
-  // ---- Commit phase ---------------------------------------------------------
 
-  /// Copies + (for Migrate) removes every committable entry. An entry is
-  /// committable once it's [BulkEntryPhase.ready], or [needsReview] the owner
-  /// approved (moved to ready via [approve]).
-  /// The effective Copy-vs-Migrate choice for the run; Komikku picks this on the
-  /// list screen's top bar (Copy = keep source, Migrate = remove it).
   late bool _deleteSource = options.deleteSource;
 
-  /// [deleteSource] true = Migrate (remove sources), false = Copy (keep them).
+  /// [deleteSource] removes sources after copy; false keeps them.
   Future<void> commit({required bool deleteSource}) async {
     _deleteSource = deleteSource;
     final work = _entries
@@ -194,7 +174,6 @@ class BulkMigrationRunner extends ChangeNotifier {
     await _settle(work);
   }
 
-  /// Commit a single entry now (the per-row "Migrate now" / "Copy now" action).
   Future<void> commitOne(int fromMangaId, {required bool deleteSource}) async {
     _deleteSource = deleteSource;
     final e = _byId(fromMangaId);
@@ -212,8 +191,7 @@ class BulkMigrationRunner extends ChangeNotifier {
     if (toId == null) return;
     try {
       _checkActive();
-      // Auth-pause: a 401 wave halts the batch until reauth, instead of failing
-      // every remaining entry mid-removal.
+      // Pause on reauth before processing further entries.
       _paused = isReauthNeeded();
       if (_paused) {
         notifyListeners();
@@ -222,8 +200,7 @@ class BulkMigrationRunner extends ChangeNotifier {
       }
       _checkActive();
 
-      // Dirty-state gate BEFORE any copy — Migrate must never strand an
-      // unsynced offline read on a source about to be removed.
+      // Flush unsynced offline reads before copying a source that will be removed.
       if (_deleteSource) {
         final clean = await dirtyGate(e.fromMangaId, _token);
         _checkActive();
@@ -282,7 +259,6 @@ class BulkMigrationRunner extends ChangeNotifier {
         try {
           await localHook(e.fromMangaId, toId, _optionsFor(e));
         } catch (_) {
-          // Best-effort — a stranded download re-fetches on the target later.
         }
       }
 
@@ -321,7 +297,7 @@ class BulkMigrationRunner extends ChangeNotifier {
       await _evict(e.fromMangaId);
       _set(e, BulkEntryPhase.done);
     } on CancelledException {
-      // Leave the journal at its last write-ahead state; recover() resumes it.
+      // Keep the last write-ahead state for recovery.
     } catch (err) {
       if (isSessionCurrent?.call() == false || _token.isCancelled) return;
       await journal.advance(
@@ -333,10 +309,7 @@ class BulkMigrationRunner extends ChangeNotifier {
     }
   }
 
-  // ---- Recovery -------------------------------------------------------------
 
-  /// Reconciles the journal on relaunch (delegates to [recoverMigrationJournal]
-  /// so a launch hook can drain a crashed batch without a full runner).
   Future<void> recover() => recoverMigrationJournal(
     repo: repo,
     journal: journal,
@@ -345,7 +318,6 @@ class BulkMigrationRunner extends ChangeNotifier {
         !_token.isCancelled && (isSessionCurrent?.call() ?? true),
   );
 
-  /// Best-effort device eviction after a source is removed (device ⊆ server).
   Future<void> _evict(int fromMangaId) async {
     final hook = onSourceRemoved;
     _checkActive();
@@ -353,11 +325,10 @@ class BulkMigrationRunner extends ChangeNotifier {
     try {
       await hook(fromMangaId);
     } catch (_) {
-      // A stray on-device copy is not data loss — never fail the migrate on it.
+      // Eviction failure leaves a spare device copy and must not fail migration.
     }
   }
 
-  // ---- Owner actions --------------------------------------------------------
 
   void approve(int fromMangaId) {
     final e = _byId(fromMangaId);
@@ -369,15 +340,11 @@ class BulkMigrationRunner extends ChangeNotifier {
     if (e != null) _set(e, BulkEntryPhase.skipped);
   }
 
-  /// Drops an entry from the list (Komikku `removeManga`) — used after a per-row
-  /// migrate/copy so the finished row disappears rather than lingering.
   void remove(int fromMangaId) {
     _entries.removeWhere((e) => e.fromMangaId == fromMangaId);
     notifyListeners();
   }
 
-  /// Owner's keep-vs-overwrite choice for an entry whose target already has a
-  /// colliding tracker record.
   void setOverwriteTracking(int fromMangaId, bool overwrite) {
     final e = _byId(fromMangaId);
     if (e == null) return;
@@ -385,8 +352,7 @@ class BulkMigrationRunner extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Re-queues a single retryable entry (failed / noMatch / dirtyBlocked) for
-  /// another pass; the caller re-runs search()/commit().
+  /// Requeues failed, unmatched, or dirty-blocked entries; caller reruns search/commit.
   void retryEntry(int fromMangaId) {
     final e = _byId(fromMangaId);
     if (e == null || !e.isRetryable) return;
@@ -407,8 +373,7 @@ class BulkMigrationRunner extends ChangeNotifier {
     _set(e, BulkEntryPhase.ready);
   }
 
-  /// Re-queues retryable entries (failed / noMatch / needsReview / dirtyBlocked)
-  /// for another search + commit pass. Resets the cancel token.
+  /// Requeues retryable entries for search/commit and resets cancellation.
   void retryFailed() {
     _token = CancelToken();
     for (final e in _entries) {
@@ -421,8 +386,7 @@ class BulkMigrationRunner extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Re-adds a removed source to the library. Only meaningful after a done
-  /// Migrate; does not reverse copied chapters/categories/tracker binds.
+  /// Restores library membership only; copied chapters, categories, and tracker bindings remain.
   Future<bool> restoreSource(int fromMangaId) {
     _checkActive();
     return repo.restoreSourceToLibrary(fromMangaId);
@@ -435,26 +399,18 @@ class BulkMigrationRunner extends ChangeNotifier {
     return null;
   }
 
-  /// Awaits all work; a thrown [CancelledException] from a cancelled permit is
-  /// swallowed so cancel() returns cleanly rather than surfacing an error.
   Future<void> _settle(List<Future<void>> work) async {
     for (final f in work) {
       try {
         await f;
       } on CancelledException {
-        // expected on cancel
+        // Cancellation is an expected completion path.
       }
     }
   }
 }
 
-/// Drains the crash-recovery journal using each entry's own persisted options.
-/// Standalone so it can run at launch as well as via [BulkMigrationRunner.recover]:
-///  - `prepared`/`copying` → re-run copy (idempotent), then remove if Migrate;
-///  - `copied`/`removing`  → copy proven, so just (re-)remove the source;
-///  - `removed`            → stale terminal, drop;
-///  - `failed`             → leave for the owner to retry.
-/// Never removes a source not proven copied.
+/// Replays interrupted copy/removal states; never removes a source without a completed copy.
 Future<void> recoverMigrationJournal({
   required MigrationRepository repo,
   required MigrationJournal journal,
@@ -467,7 +423,7 @@ Future<void> recoverMigrationJournal({
     try {
       await onSourceRemoved(id);
     } catch (_) {
-      // A stray on-device copy is not data loss — never fail recovery on it.
+      // Eviction failure leaves a spare device copy and must not fail recovery.
     }
   }
 

@@ -18,8 +18,7 @@ import '../../../offline/data/background/background_endpoint.dart';
 import '../../../offline/data/background/background_token_record.dart'
     show BackgroundTokenRecord, TokenBroker, applyIsolateCustomHeaders;
 
-/// Where + how the background worker reaches the server. Persisted so the
-/// WorkManager isolate (no Riverpod, no widget tree) can rebuild it.
+/// Persisted endpoint used by the provider-free background isolate.
 class NotificationEndpoint {
   const NotificationEndpoint({
     required this.baseUrl,
@@ -29,19 +28,14 @@ class NotificationEndpoint {
     this.externalUrl,
   });
 
-  /// The address the foreground had verified when it wrote this; the worker's
-  /// identity checks are tied to it.
+  /// Identity checks use the address verified by the foreground.
   final String baseUrl;
   final int? port;
   final bool addPort;
 
-  /// The server's two configured addresses, so a background run can reach it
-  /// from whichever network it wakes on (see [pickBackgroundServerBase]).
-  /// Null in configs written before they were kept.
+  /// Configured addresses for network selection; null for older persisted configs.
   final String? lanUrl, externalUrl;
 
-  /// This endpoint as a background run should reach it now: the same server,
-  /// at the address the current network can reach.
   Future<NotificationEndpoint> forThisNetwork({
     required String source,
     @visibleForTesting Future<bool> Function(String url)? isReachable,
@@ -89,7 +83,6 @@ class NotificationEndpoint {
       );
 }
 
-/// A new chapter as the notifier needs it (detection fields + display fields).
 typedef NotifChapter = ({
   int id,
   int mangaId,
@@ -107,9 +100,7 @@ typedef NewChaptersPage = ({
   String? endCursor,
 });
 
-/// Provider-free authenticated GraphQL for the background notification worker.
-/// Reuses the download worker's proven [BackgroundTokenRecord] + [TokenBroker]
-/// (auth modes + gen-versioned 401 refresh), so nothing here touches Riverpod.
+/// Provider-free GraphQL client sharing versioned auth refresh through [TokenBroker].
 class NotificationBackgroundClient {
   NotificationBackgroundClient({
     required this.endpoint,
@@ -130,11 +121,8 @@ class NotificationBackgroundClient {
   final http.Client _http;
   BackgroundTokenRecord _record;
 
-  /// Live view of the auth record (the broker rotates it mid-run) — the
-  /// catch-up executor shares this client's auth.
+  /// Returns live broker auth, including rotations made by the catch-up executor.
   BackgroundTokenRecord currentRecord() {
-    // The catch-up executor refreshes through the shared broker; pick that up
-    // rather than keep sending the token it replaced.
     final latest = broker.latest;
     if (latest != null &&
         latest.gen > _record.gen &&
@@ -147,8 +135,7 @@ class NotificationBackgroundClient {
   static const Object _authError = gqlAuthError;
   static const Object _networkError = gqlNetworkError;
 
-  /// One raw GraphQL POST, retrying once through the broker on a ui_login 401.
-  /// Returns the `data` map, or null on auth-dead / network / server error.
+  // Retry ui_login once through the broker on 401; return null on auth, network, or server failure.
   Future<Map<String, Object?>?> _post(
     String query,
     Map<String, Object?> variables, {
@@ -256,8 +243,7 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
   }
 }''';
 
-  /// One page of unread, in-library chapters fetched at/after [fetchedAtGte]
-  /// (a LongString epoch), ascending by (fetchedAt, id). Null on failure.
+  /// Unread library chapters since epoch-second string [fetchedAtGte], ascending by (fetchedAt, id); null on failure.
   Future<NewChaptersPage?> fetchNewChaptersPage({
     required String fetchedAtGte,
     String? after,
@@ -307,9 +293,7 @@ query NotifMaxFetched {
   ) { nodes { fetchedAt } }
 }''';
 
-  /// The server's current highest in-library `fetchedAt` (LongString), for
-  /// first-enable initialization — so we neither dump the backlog nor miss the
-  /// next fetch. 0 when the library has no chapters yet.
+  /// Highest library fetchedAt in epoch seconds; zero for an empty library.
   Future<int> serverMaxFetchedAt() async {
     final data = await _post(_maxFetchedQuery, const {});
     final nodes =
@@ -356,10 +340,7 @@ mutation NotifEnqueue($ids: [Int!]!) {
     }
   }
 
-  /// Fetch a manga cover's bytes for the per-series notification, mirroring
-  /// `fetchOfflinePageBytes`: base API without `/api` (the thumbnail path carries
-  /// it), every auth mode via headers. Best-effort — a
-  /// failed cover just falls back to a text notification, so no 401 retry.
+  /// Cover paths already include /api; fetch failures fall back to text without a 401 retry.
   Future<List<int>?> fetchCover(String thumbnailUrl) async {
     final base = Endpoints.baseApi(
       baseUrl: endpoint.baseUrl,
@@ -394,7 +375,6 @@ mutation NotifEnqueue($ids: [Int!]!) {
   static const _extensionUpdatesQuery =
       'query { extensions(condition: { hasUpdate: true, isInstalled: true }) { totalCount } }';
 
-  /// How many installed extensions have an update available (server-tracked).
   Future<int> countExtensionUpdates() async {
     final data = await _post(_extensionUpdatesQuery, const {});
     return ((data?['extensions'] as Map<String, Object?>?)?['totalCount']
@@ -403,8 +383,7 @@ mutation NotifEnqueue($ids: [Int!]!) {
         0;
   }
 
-  /// The latest Tsumiru release tag + its page, from the public GitHub API (no
-  /// auth, no server). Null on any failure.
+  /// Public GitHub release version and page; null on failure.
   Future<({String version, String url})?> fetchLatestRelease() async {
     if (isGooglePlayBuild) return null;
     try {

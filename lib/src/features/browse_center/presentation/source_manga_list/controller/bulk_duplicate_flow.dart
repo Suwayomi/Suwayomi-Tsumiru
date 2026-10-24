@@ -9,13 +9,7 @@ import '../../../../library/domain/duplicate_matcher.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../manga_book/presentation/manga_details/widgets/duplicate_manga_dialog.dart';
 
-/// The result of splitting a bulk selection into what can be added silently and
-/// what needs a per-entry duplicate prompt.
-///
-/// [hitIdsByManga] / [certainIdsByManga] key on the *selected* manga id and hold
-/// the ids of the entries it collided with — those ids may reference the library
-/// OR an earlier selection member, so the widget resolves card DTOs from the
-/// union of both.
+/// Collision maps key selected manga IDs to library or earlier-selection IDs.
 typedef BulkSplit = ({
   List<int> cleanIds,
   List<MangaDto> flagged,
@@ -23,10 +17,7 @@ typedef BulkSplit = ({
   Map<int, Set<int>> certainIdsByManga,
 });
 
-/// Classifies each selected manga against the library plus every earlier
-/// selection member already ruled clean (Komikku's incremental semantics — the
-/// second of two identical picks is caught by the first). A null [library]
-/// (provider error) fails open: everything is treated as clean.
+/// Checks the library and earlier clean selections; a null library treats all picks as clean.
 BulkSplit splitSelectionForDuplicates({
   required List<MangaDto> selection,
   required List<MangaDto>? library,
@@ -45,8 +36,7 @@ BulkSplit splitSelectionForDuplicates({
   final hitIdsByManga = <int, Set<int>>{};
   final certainIdsByManga = <int, Set<int>>{};
 
-  // Comparators grow as clean members are accepted, so a later pick collides
-  // with an earlier clean one. Flagged members never join the pool.
+  // Only clean picks join the comparison pool for later selections.
   final pool = library.map(dupEntryFromManga).toList();
 
   for (final manga in selection) {
@@ -83,7 +73,6 @@ BulkSplit splitSelectionForDuplicates({
   );
 }
 
-/// What the bulk loop does with one duplicate prompt's result.
 enum BulkDupAction {
   addThis,
   addRest,
@@ -94,9 +83,6 @@ enum BulkDupAction {
   cancelStop,
 }
 
-/// Maps a [DuplicateDialogResult] to its bulk-loop action. The exhaustive switch
-/// (no `default:`, null handled) is the compile-time guarantee that every dialog
-/// outcome — including a barrier dismiss (null) — has a defined behavior.
 BulkDupAction classifyDuplicateResult(DuplicateDialogResult? result) =>
     switch (result) {
       DuplicateDialogResult.addAnyway => BulkDupAction.addThis,

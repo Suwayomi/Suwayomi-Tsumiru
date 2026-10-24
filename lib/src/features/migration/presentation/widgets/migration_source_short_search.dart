@@ -111,7 +111,6 @@ class MigrationSourceShortSearch extends ConsumerWidget {
     );
   }
 
-  // Return the chosen target to the migration list, which sets it on the runner.
   void _onMangaSelected(BuildContext context, MangaDto targetManga) =>
       context.pop(targetManga);
 }

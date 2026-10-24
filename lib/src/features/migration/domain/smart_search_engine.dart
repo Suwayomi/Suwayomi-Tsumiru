@@ -4,24 +4,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Migration match scoring — ports Komikku's regular (single-query) smart
-/// search. Pure over an injected search action, so it's unit-testable and the
-/// bulk runner can drive it through its rate limiter.
 library;
 
 import 'bulk_migration_types.dart';
 import 'concurrency.dart';
 import 'string_similarity.dart';
 
-/// A source-search hit reduced to what the matcher needs (id + title for
-/// scoring, thumbnail for the list card).
 typedef SearchCandidate = ({int id, String title, String? thumbnailUrl});
 
-/// Searches one source for [query], returning its candidates.
 typedef SourceSearch = Future<List<SearchCandidate>> Function(
     String sourceId, String query);
 
-/// Best regular-search match for one title.
 class SmartSearchResult {
   const SmartSearchResult({
     this.mangaId,
@@ -35,12 +28,9 @@ class SmartSearchResult {
   final String? title;
   final String? thumbnailUrl;
 
-  /// Real normalized-Levenshtein score of the chosen candidate (never the
-  /// single-candidate 1.0 shortcut).
+  /// Actual normalized Levenshtein similarity, even for a single candidate.
   final double confidence;
 
-  /// True when the source returned exactly one candidate — provenance only, so
-  /// a lone unrelated result can't masquerade as a perfect match.
   final bool singleCandidate;
 
   bool get hasMatch => mangaId != null;
@@ -52,15 +42,11 @@ class SmartSearchEngine {
     this.extraSearchParams,
   });
 
-  /// Komikku's `MIN_ELIGIBLE_THRESHOLD` — candidates below this are discarded.
-  /// It is a FILTER floor, not an auto-migrate threshold.
+  /// Eligibility floor, separate from the auto-migrate threshold.
   final double eligibleThreshold;
   final String? extraSearchParams;
 
-  /// Single-query search against display titles. ALWAYS computes the real
-  /// similarity — deliberate divergence: Komikku shortcuts a lone single-query
-  /// single-candidate to 1.0, here that only sets [SmartSearchResult.singleCandidate].
-  /// Returns the best eligible candidate, excluding [excludeId] (the source itself).
+  /// Returns the best eligible match excluding [excludeId]; a lone candidate still gets its real score.
   Future<SmartSearchResult> regularSearch({
     required String title,
     required Future<List<SearchCandidate>> Function(String query) search,
@@ -95,10 +81,7 @@ class SmartSearchEngine {
   }
 }
 
-/// Builds the runner's matcher: walks [targetSourceIds] in priority order
-/// (strictly sequential, no source concurrency — the biggest Cloudflare/rate
-/// multiplier), rate-limited, and takes the FIRST source with an eligible match
-/// (self-matches excluded). The score sets the review/auto-select tier in the runner.
+/// Searches sources sequentially in priority order with rate limiting; first eligible match wins.
 BulkMatcher buildSmartMatcher({
   required SourceSearch search,
   required List<String> targetSourceIds,

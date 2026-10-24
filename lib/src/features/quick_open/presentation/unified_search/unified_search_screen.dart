@@ -15,7 +15,6 @@ import 'unified_search_autocomplete.dart';
 import 'unified_search_providers.dart';
 import 'unified_search_results.dart';
 
-/// Up/Down move the results highlight; focus stays in the field.
 class _MoveSearchHighlightIntent extends Intent {
   const _MoveSearchHighlightIntent(this.delta);
 
@@ -44,8 +43,6 @@ class UnifiedSearchScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
 
-    // DslSearchController highlights recognized operators, same as the library
-    // bar; we own it (not onChanged) so applying a suggestion can splice text.
     final controller = useMemoized(
       () => DslSearchController(text: ref.read(unifiedSearchQueryProvider)),
       const [],
@@ -56,14 +53,9 @@ class UnifiedSearchScreen extends HookConsumerWidget {
     useEffect(() {
       var lastText = controller.text;
       void sync() {
-        // Only mirror real text edits into the provider. Selection/caret-only
-        // changes (e.g. a layout-driven selection clamp) must NOT write state —
-        // that could land mid-build and throw. Text only changes from user
-        // input or our own setQuery, never during build.
+        // Ignore selection-only edits: provider writes during layout can throw.
         if (controller.text == lastText) return;
         lastText = controller.text;
-        // Every text change clears the highlight; the user moves again from
-        // the top.
         selection.reset();
         ref.read(unifiedSearchQueryProvider.notifier).state = controller.text;
       }
@@ -102,14 +94,11 @@ class UnifiedSearchScreen extends HookConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Align(
         alignment: Alignment.topCenter,
-        // Absorb taps on the card's blank areas so a near-miss doesn't fall
-        // through to the overlay's outer close-on-tap.
+        // Absorb blank-card taps so they do not dismiss the outer overlay.
         child: GestureDetector(
           onTap: () {},
           behavior: HitTestBehavior.opaque,
           child: ConstrainedBox(
-            // Hug content, but cap the height so a long result set scrolls
-            // inside a tidy panel instead of running to the screen edge.
             constraints: BoxConstraints(
               maxWidth: 640,
               maxHeight: MediaQuery.sizeOf(context).height * 0.75,
@@ -152,10 +141,6 @@ class UnifiedSearchScreen extends HookConsumerWidget {
                             prefixIcon: const Icon(Icons.search_rounded),
                             border: InputBorder.none,
                           ),
-                          // Enter opens the highlighted row exactly as a tap
-                          // would; with no highlight, the top result — shared
-                          // with the desktop dropdowns so it behaves one way
-                          // everywhere.
                           onSubmitted: (_) {
                             if (selection.activateSelected()) return;
                             submitUnifiedQuery(

@@ -20,13 +20,10 @@ import '../../source/controller/source_controller.dart';
 
 part 'source_quick_search_controller.g.dart';
 
-/// Tsumiru-only server global-meta key so the scope follows the user across
-/// devices. Stores the enum name ('pinned' / 'all').
+/// Global server meta storing the scope enum name ("pinned" or "all").
 const kGlobalSearchScopeMetaKey = 'tsumiru_global_search_scope';
 
-/// Search scope for global search, remembered across launches. Local prefs
-/// answer instantly (and offline); the server's global meta is the shared
-/// copy — adopted on open when reachable, pushed on every change.
+/// Uses local prefs offline and syncs scope through server meta.
 @riverpod
 class GlobalSearchScope extends _$GlobalSearchScope
     with SharedPreferenceEnumClientMixin<GlobalSearchSourceFilter> {
@@ -58,7 +55,6 @@ class GlobalSearchScope extends _$GlobalSearchScope
         super.update(server);
       }
     } catch (_) {
-      // Offline or unreachable: the local value stands.
     }
   }
 
@@ -66,7 +62,6 @@ class GlobalSearchScope extends _$GlobalSearchScope
   void update(GlobalSearchSourceFilter? value) {
     super.update(value);
     if (value == null) return;
-    // Best-effort cross-device sync; local prefs stay authoritative offline.
     ref
         .read(deleteChaptersSettingsRepositoryProvider)
         .setGlobalMeta(kGlobalSearchScopeMetaKey, value.name)
@@ -74,7 +69,6 @@ class GlobalSearchScope extends _$GlobalSearchScope
   }
 }
 
-/// When true, only sources that returned results are shown (hide empty/loading).
 final globalSearchOnlyHasResultsProvider = StateProvider<bool>((Ref ref) => false);
 
 typedef QuickSearchResults = ({
@@ -92,7 +86,7 @@ Future<List<MangaDto>> sourceQuickSearchMangaList(
   String? query,
 }) async {
   final rateLimiterQueue = ref.watch(rateLimitQueueProvider(query));
-  // Capture now — ref access after the gap may throw once disposed.
+  // Capture before awaiting; ref may be disposed afterward.
   final sourceRepository = ref.watch(sourceRepositoryProvider);
   final mangaPage = await rateLimiterQueue
       .add(() => sourceRepository.fetchSourceManga(
@@ -107,9 +101,7 @@ Future<List<MangaDto>> sourceQuickSearchMangaList(
 @riverpod
 AsyncValue<List<QuickSearchResults>> quickSearchResults(Ref ref,
     {String? query}) {
-  // Pinned-first list of every searchable source (pinned sources are otherwise
-  // excluded from the grouped map and would never be searched). The Pinned/All
-  // chip narrows it to just the pinned ones; with no pinned, it's always "all".
+  // Grouped sources exclude pins; searchableSources includes them first.
   final sourcesData = ref.watch(searchableSourcesProvider);
   final scope = ref.watch(globalSearchScopeProvider);
   final pinned = ref.watch(pinnedSourcesProvider);

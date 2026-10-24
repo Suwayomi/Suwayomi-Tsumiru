@@ -13,9 +13,7 @@ import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'onboarding_complete.g.dart';
 
-/// Whether the first-time onboarding wizard has been finished. While false, the
-/// router sends every route to `/onboarding`. Persisted in SharedPreferences;
-/// a one-time launch migration seeds it true for already-configured installs.
+/// False redirects every route to /onboarding; persisted across launches.
 @riverpod
 class OnboardingComplete extends _$OnboardingComplete
     with SharedPreferenceClientMixin<bool> {
@@ -23,19 +21,13 @@ class OnboardingComplete extends _$OnboardingComplete
   bool? build() => initialize(DBKeys.onboardingComplete);
 }
 
-/// Whether a saved server URL counts as "already configured" for the one-time
-/// onboarding migration — anything but unset/empty or the default loopback.
-/// Existing installs that pass this are seeded onboarded so the wizard never
-/// shows for them.
+/// A nonempty, non-default-loopback URL counts as an existing configuration.
 bool serverConfiguredForOnboarding(String? serverUrl) =>
     serverUrl != null &&
     serverUrl.isNotEmpty &&
     serverUrl != DBKeys.serverUrl.initial;
 
-/// One-time first-run seeding, run at launch while [DBKeys.onboardingComplete]
-/// is unset. Installs with a real server skip the wizard; genuinely new ones
-/// also start in Dark unless a theme mode is already stored, so existing
-/// users keep following the system.
+/// Seeds only unset onboarding state; new installs default to Dark unless a theme is saved.
 Future<void> seedFirstRunPreferences(SharedPreferences prefs) async {
   if (prefs.getBool(DBKeys.onboardingComplete.name) != null) return;
   final configured = serverConfiguredForOnboarding(

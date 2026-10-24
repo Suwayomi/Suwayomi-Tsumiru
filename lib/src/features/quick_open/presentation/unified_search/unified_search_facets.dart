@@ -10,10 +10,7 @@ import '../../../library/domain/library_search_query.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 
-/// Distinct values present in the library for each enumerable metatag, used to
-/// power value-autocomplete (`source:` → the sources you actually have). Only
-/// enumerable operators appear here; booleans and `rating:` are handled by the
-/// autocomplete engine directly.
+/// Enumerable library metatag values; booleans and rating are handled directly by autocomplete.
 class LibraryFacets {
   const LibraryFacets({
     this.source = const [],
@@ -33,8 +30,7 @@ class LibraryFacets {
 
   static const empty = LibraryFacets();
 
-  /// Values to suggest for metatag [key], or null when the key has no
-  /// enumerable facet (free-form numeric/boolean).
+  /// Null for keys without an enumerable facet.
   List<String>? valuesFor(String key) => switch (key) {
         'source' => source,
         'status' => status,
@@ -46,8 +42,7 @@ class LibraryFacets {
       };
 }
 
-/// Builds [LibraryFacets] from the flat field views of the library. Pure so it
-/// unit-tests without GraphQL DTOs; status is lowercased for display.
+/// Collects distinct library facets and lowercases status for display.
 LibraryFacets buildLibraryFacets(Iterable<LibraryFilterFields> fields) {
   final source = <String>{};
   final status = <String>{};
@@ -86,8 +81,6 @@ LibraryFacets buildLibraryFacets(Iterable<LibraryFilterFields> fields) {
   );
 }
 
-/// Library facets for autocomplete — recomputed only when the library changes,
-/// not per keystroke.
 final unifiedLibraryFacetsProvider = Provider<LibraryFacets>((Ref ref) {
   final library = ref.watch(libraryMangaListProvider).value ?? const [];
   return buildLibraryFacets(library.map((m) => m.filterFields()));

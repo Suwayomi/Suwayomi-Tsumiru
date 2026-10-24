@@ -35,10 +35,7 @@ String? notificationIdentityFingerprint(BackgroundTokenRecord record) {
   );
 }
 
-/// Everything the headless worker needs to reach the server and decide what to
-/// notify. Written by the app (on enable / settings change / auth rotation);
-/// read fresh by the WorkManager isolate. `serverId` scopes the cursor so a
-/// server switch can't replay or skip chapters.
+/// Foreground-written worker config; serverId scopes detection state across server switches.
 class NotificationWorkerConfig {
   const NotificationWorkerConfig({
     required this.serverId,
@@ -82,15 +79,13 @@ class NotificationWorkerConfig {
       identityEpoch == record.identityEpoch &&
       catalogServerId == record.catalogServerId;
 
-  /// The installed app version, so the worker can compare against the latest
-  /// release without a plugin call in the isolate.
+  /// Persist the version so the worker needs no plugin call in its isolate.
   final String appVersion;
 
-  /// The periodic job runs when ANY check is on.
   bool get anyEnabled =>
       newChaptersEnabled || appUpdatesEnabled || extensionUpdatesEnabled;
 
-  /// Empty include = all categories; anything in exclude is dropped.
+  /// Empty include allows all categories; exclusion takes precedence.
   final Set<int> includedCategoryIds;
   final Set<int> excludedCategoryIds;
   final bool hideContent;
@@ -143,9 +138,7 @@ class NotificationWorkerConfig {
         hideContent: (j['hideContent'] as bool?) ?? false,
       );
 
-  /// Category scope as an allow-set for [detectNewChapters], or null (= all)
-  /// when there's no include list and nothing excluded. Computed against the
-  /// live library membership the worker fetches.
+  /// Resolves category scope from live membership; null permits all manga.
   Set<int>? allowedMangaIds(Map<int, Set<int>> mangaCategoryIds) {
     if (includedCategoryIds.isEmpty && excludedCategoryIds.isEmpty) return null;
     return {
@@ -164,8 +157,7 @@ class NotificationWorkerConfig {
   }
 }
 
-/// One series pending in the durable outbox — enough to (re)publish the
-/// notification without another network call.
+/// Durable notification content that can replay without another network request.
 class PendingSeriesNotification {
   const PendingSeriesNotification({
     required this.mangaId,
@@ -183,7 +175,7 @@ class PendingSeriesNotification {
   final List<int> chapterIds;
   final List<double> chapterNumbers;
 
-  /// The earliest-by-number new chapter — the "open first new chapter" target.
+  /// Earliest new chapter by number, used as the tap target.
   final int firstChapterId;
   final int totalCount;
 
@@ -213,10 +205,7 @@ class PendingSeriesNotification {
       );
 }
 
-/// The durable outbox: the batch to publish plus the advanced cursor, written
-/// as ONE atomic value BEFORE publishing. A crash after this point re-publishes
-/// (stable ids + onlyAlertOnce → a replace, not a re-buzz), never loses the
-/// cursor advance, and never drops a detected chapter.
+/// Persist batch and next cursor atomically before publishing; stable IDs make crash replay safe.
 class NotificationOutbox {
   const NotificationOutbox({
     required this.pending,
@@ -252,9 +241,7 @@ class NotificationOutbox {
       );
 }
 
-/// SharedPreferences-backed store, readable from any isolate. Each value is a
-/// single JSON string, so every write is atomic — enough for the outbox
-/// protocol without a database.
+/// Each value is one atomic JSON write, readable from any isolate.
 class NotificationStateStore {
   NotificationStateStore(this._prefs);
   final SharedPreferences _prefs;
@@ -284,8 +271,7 @@ class NotificationStateStore {
     );
   }
 
-  /// The auth record rotates independently of config (a ui_login refresh bumps
-  /// its gen), so it lives under its own key — the broker reads/writes it here.
+  /// Auth rotates independently of config and must have its own key.
   BackgroundTokenRecord? readTokenRecord() {
     final raw = _prefs.getString(_tokenKey);
     if (raw == null) return null;
@@ -300,8 +286,7 @@ class NotificationStateStore {
     }
   }
 
-  /// The cursor for [serverId]; resets to empty when the stored cursor belongs
-  /// to a different server (switch → no replay/skip).
+  /// A server mismatch resets detection state to avoid replaying or skipping chapters.
   NewChapterWatermark readWatermark(String serverId) {
     final raw = _prefs.getString(_cursorKey);
     if (raw == null) return const NewChapterWatermark();
@@ -331,8 +316,6 @@ class NotificationStateStore {
 
   Future<void> clearOutbox() => _prefs.remove(_outboxKey);
 
-  // Dedup for the app/extension update checks — only notify when the state
-  // actually changes, not every wake.
   String? get lastNotifiedAppVersion => _prefs.getString('notif_app_version');
   Future<void> setLastNotifiedAppVersion(String v) =>
       _prefs.setString('notif_app_version', v);
@@ -347,7 +330,7 @@ class NotificationStateStore {
     await clearState();
   }
 
-  /// Reset detection state (server switch / disable) without touching config.
+  /// Clears detection state without touching worker config.
   Future<void> clearState() async {
     await _prefs.remove(_cursorKey);
     await _prefs.remove(_outboxKey);

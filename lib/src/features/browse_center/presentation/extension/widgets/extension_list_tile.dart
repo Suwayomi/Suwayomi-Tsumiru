@@ -92,13 +92,9 @@ class ExtensionListTileTailing extends StatelessWidget {
 
   final Extension extension;
 
-  /// The label of the action in flight, or null when the tile is idle.
   final ValueNotifier<String?> runningAction;
   final WidgetRef ref;
 
-  /// Runs an extension action with the button's spinner and error toast.
-  /// [ExtensionActions] refreshes both the extension and the source list, so no
-  /// caller needs to pass a refresh callback down.
   Future<void> _run(
     String label,
     Future<void> Function(ExtensionActions actions) action,
@@ -111,8 +107,7 @@ class ExtensionListTileTailing extends StatelessWidget {
       );
       runningAction.value = null;
     } catch (_) {
-      // The refresh this action triggers can rebuild the list and dispose the
-      // tile out from under the spinner.
+      // Refreshing can dispose this tile before the action completes.
     }
   }
 
@@ -215,7 +210,6 @@ class ExtensionListTileTailing extends StatelessWidget {
     );
   }
 
-  /// Repairs an extension with no loaded sources or a phantom update (#428).
   VoidCallback _reinstall(BuildContext context) =>
       () => _run(
         context.l10n.reinstalling,

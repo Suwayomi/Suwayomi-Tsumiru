@@ -48,15 +48,10 @@ class SourceMangaDisplayView extends HookConsumerWidget {
         ref.watch(sourceDisplayModeProvider) ??
         DBKeys.sourceDisplayMode.initial;
 
-    // Multi-select: long-press a cover to start selecting, tap to add/remove,
-    // then bulk-add the whole selection to the library. Mirrors the library
-    // grid's selection model.
     final selection = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
 
-    // The run screen's pattern: loop-side reads go through the container so an
-    // await never touches a disposed `ref`; every dialog await is followed by a
-    // mounted guard.
+    // Use the container across awaits; the widget ref may be disposed.
     final container = ProviderScope.containerOf(context, listen: false);
 
     void toggleSelection(int id) {
@@ -65,9 +60,6 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       selection.value = next;
     }
 
-    // Adds [ids] to the library, flips the loaded covers, refetches the library
-    // list, and returns the server-confirmed count (a partial apply adds fewer
-    // than requested).
     Future<int> addAndReflect(List<int> ids) async {
       if (ids.isEmpty) return 0;
       final result = await AsyncValue.guard(
@@ -95,7 +87,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       ];
       selection.value = const {};
 
-      // Fail open: a library-list error must never block the add.
+      // A failed library lookup must not block adding manga.
       List<MangaDto>? library;
       try {
         library = await container.read(libraryMangaListProvider.future);
@@ -113,8 +105,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       var skipped = 0;
       if (!context.mounted) return;
 
-      // Hits may reference an earlier selection member, not just the library —
-      // resolve card DTOs from the union so intra-selection hits still render.
+      // Duplicate hits may refer to earlier selections, so resolve cards from both lists.
       final cardPool = [...?library, ...selected];
       final trackerNames = container.read(libraryTrackerNamesProvider);
 
@@ -206,8 +197,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
         selecting: selecting,
         onToggleSelection: toggleSelection,
       ),
-      // comfortableGrid isn't offered in the source display picker; map it to
-      // the grid so the exhaustive switch stays safe.
+      // Map saved comfortableGrid values to the source picker's supported grid.
       DisplayMode.coverOnly ||
       DisplayMode.comfortableGrid => SourceMangaGridView(
         sourceId: sourceId,
@@ -220,8 +210,6 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       ),
     };
 
-    // While selecting, swallow the system back to clear the selection first,
-    // and float the action bar over the grid.
     return PopScope(
       canPop: !selecting,
       onPopInvokedWithResult: (didPop, _) {

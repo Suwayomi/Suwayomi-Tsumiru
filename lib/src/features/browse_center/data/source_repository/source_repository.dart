@@ -98,8 +98,7 @@ class SourceRepository {
         .getData((data) => data.updateSourcePreference?.preferences),
   );
 
-  /// Pins/unpins a source by writing the `webUI_isPinned` server meta key
-  /// (the exact key WebUI uses, so the state syncs across clients).
+  /// Persists pin state in server meta shared with WebUI.
   Future<void> setSourcePinned(String sourceId, bool pinned) => ferryClient
       .mutate$SetSourceMeta(
         Options$Mutation$SetSourceMeta(
@@ -116,8 +115,7 @@ class SourceRepository {
       )
       .getData((data) => data.setSourceMeta?.meta);
 
-  /// Hides/unhides a source from the browse list by writing the
-  /// `tsumiru_isHidden` server meta key (syncs across Tsumiru devices).
+  /// Persists hidden state in server meta shared across Tsumiru devices.
   Future<void> setSourceHidden(String sourceId, bool hidden) => ferryClient
       .mutate$SetSourceMeta(
         Options$Mutation$SetSourceMeta(

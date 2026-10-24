@@ -39,8 +39,7 @@ class AppliedSourceFilter extends _$AppliedSourceFilter {
 class SourceDisplayMode extends _$SourceDisplayMode
     with SharedPreferenceEnumClientMixin<DisplayMode> {
   @override
-  // Persist against DisplayMode.values, not the curated sourceDisplayList —
-  // the latter would be a second, reorderable wire format for the same index.
+  // Persist indices into DisplayMode.values; the curated picker list can be reordered.
   DisplayMode? build() => initialize(
         DBKeys.sourceDisplayMode,
         enumList: DisplayMode.values,

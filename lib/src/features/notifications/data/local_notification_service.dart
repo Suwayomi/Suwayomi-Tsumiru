@@ -10,13 +10,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'notification_state_store.dart';
 
-/// Action ids on a per-series notification (Komikku parity).
 const kNotifActionMarkRead = 'markRead';
 const kNotifActionDownload = 'download';
 const kNotifActionView = 'view';
 
-/// Payload carried by a notification tap/action, so the (foreground or
-/// headless) handler can route/act without any object graph.
 class NotificationPayload {
   const NotificationPayload.updates({
     this.identityEpoch,
@@ -61,14 +58,12 @@ class NotificationPayload {
 
   final int? mangaId;
 
-  /// The first new chapter — the tap target.
+  /// First new chapter, used as the notification tap target.
   final int? chapterId;
 
-  /// Every new chapter in this series' notification — the Mark-read / Download
-  /// action targets.
+  /// All new chapter IDs targeted by Mark-read and Download.
   final List<int> chapterIds;
 
-  /// Routes the tap to the library update errors screen.
   final bool isUpdateErrors;
 
   String encode() => jsonEncode({
@@ -119,8 +114,7 @@ class NotificationPayload {
   }
 }
 
-/// One series' rendered notification content (formatted by the worker, so this
-/// service stays free of localization/BuildContext and works in any isolate).
+/// Preformatted content usable without localization or BuildContext in any isolate.
 class SeriesNotificationContent {
   const SeriesNotificationContent({
     required this.mangaId,
@@ -135,16 +129,14 @@ class SeriesNotificationContent {
   final String body;
   final int firstChapterId;
 
-  /// Every new chapter id — the Mark-read / Download action targets.
+  /// All new chapter IDs targeted by Mark-read and Download.
   final List<int> chapterIds;
 
-  /// Local file path of the fetched cover, or null → text-only fallback.
+  /// Null uses a text-only notification.
   final String? coverPath;
 }
 
-/// Thin wrapper over `flutter_local_notifications`: channels, a grouped summary
-/// + per-series children (Mihon/Komikku shape), and download-complete. Usable
-/// from the UI isolate and the headless worker isolate alike.
+/// Notification service shared by foreground and headless isolates.
 class LocalNotificationService {
   LocalNotificationService([FlutterLocalNotificationsPlugin? plugin])
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
@@ -161,8 +153,7 @@ class LocalNotificationService {
   static const incognitoChannelId = 'incognito';
   static const _newChaptersGroup = 'com.tsumiru.NEW_CHAPTERS';
 
-  // Stable ids: one summary, per-series keyed on manga id (kept in a band well
-  // clear of the summary), so a re-publish REPLACES rather than re-buzzes.
+  // Stable IDs replace notifications on replay instead of alerting again.
   static const _summaryId = 1;
   static const _downloadsCompleteId = 2;
   static const _libraryErrorId = 3;
@@ -239,11 +230,7 @@ class LocalNotificationService {
     return await android?.requestNotificationsPermission() ?? true;
   }
 
-  /// Posts the grouped summary + one notification per series. [summaryTitle]
-  /// and [summaryLines] are pre-localized; [hideContent] suppresses the
-  /// per-series children and the title list (privacy).
-  /// Komikku only offers the one-tap Download action when the new-chapter count
-  /// is at/below its queue-warning threshold, to avoid a mass enqueue.
+  // Cap the one-tap Download action to avoid mass enqueue.
   static const _downloadActionMax = 10;
 
   Future<void> showNewChapters({
@@ -264,8 +251,7 @@ class LocalNotificationService {
       'New chapters',
       groupKey: _newChaptersGroup,
       setAsGroupSummary: true,
-      // Only the summary alerts — children stay silent, so N new series is one
-      // buzz, not N (Komikku `setGroupAlertBehavior(GROUP_ALERT_SUMMARY)`).
+      // Only the summary alerts, so a batch produces one buzz.
       groupAlertBehavior: GroupAlertBehavior.summary,
       onlyAlertOnce: true,
       autoCancel: true,
@@ -290,8 +276,6 @@ class LocalNotificationService {
 
     if (hideContent) return;
     for (final s in series) {
-      // Komikku shows the cover via BigPicture (LibraryUpdateNotifier.kt:249);
-      // fall back to big-text when the cover fetch failed.
       final cover = s.coverPath;
       final StyleInformation style = cover != null
           ? BigPictureStyleInformation(
@@ -313,7 +297,7 @@ class LocalNotificationService {
         largeIcon: cover != null ? FilePathAndroidBitmap(cover) : null,
         styleInformation: style,
         actions: [
-          // Mark-read / Download act headlessly (no UI); View opens the app.
+          // Mark-read and Download run headlessly; View opens the app.
           AndroidNotificationAction(kNotifActionMarkRead, markReadLabel),
           AndroidNotificationAction(
             kNotifActionView,
@@ -448,7 +432,6 @@ class LocalNotificationService {
     body: body,
   );
 
-  /// Tapping opens the release page (payload = a URL the launch handler routes).
   Future<void> showAppUpdate(String title, String body, String? url) =>
       _showSimple(
         id: _appUpdateId,
@@ -468,7 +451,6 @@ class LocalNotificationService {
     body: body,
   );
 
-  /// Persistent, non-dismissible while incognito mode is on (Komikku parity).
   Future<void> showIncognito(String title, String body) => _showSimple(
     id: _incognitoId,
     channelId: incognitoChannelId,

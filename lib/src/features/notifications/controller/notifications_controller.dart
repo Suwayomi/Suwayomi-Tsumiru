@@ -31,10 +31,7 @@ import '../data/local_notification_service.dart';
 import '../data/notification_state_store.dart';
 import 'notification_settings_providers.dart';
 
-/// Bridges app state → the background worker: writes the durable config + token
-/// record the headless isolate reads, and (re)schedules or cancels the periodic
-/// WorkManager job. Call [sync] on launch, on settings change, and on auth
-/// change so the worker always has a fresh, endpoint-bound configuration.
+/// Sync on launch, settings, and auth changes to persist endpoint-bound worker config and scheduling.
 class NotificationsController {
   NotificationsController(this._ref);
   final Ref _ref;
@@ -49,8 +46,7 @@ class NotificationsController {
     baseUrl: _ref.read(serverUrlProvider) ?? '',
     port: _ref.read(serverPortProvider),
     addPort: _ref.read(serverPortToggleProvider).ifNull(),
-    // Both addresses, as ServerEndpointResolver chooses between them, so the
-    // worker can make the same choice from whatever network it wakes on.
+    // Persist both addresses so the worker can choose for its current network.
     lanUrl: _ref.read(serverLanUrlProvider),
     externalUrl:
         _ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial,
@@ -112,7 +108,6 @@ class NotificationsController {
         payload.matchesConfig(config);
   }
 
-  /// Persist config + token and reconcile the schedule with current settings.
   Future<void> sync() async {
     await withBackgroundScheduleLock(() async {
       final newChapters = _ref
@@ -199,15 +194,12 @@ class NotificationsController {
       await store.writeTokenRecord(token);
       await store.writeConfig(config);
 
-      // The periodic job runs when ANY check is on; if the new-chapter check went
-      // off, drop its detection state.
       if (!newChapters) await store.clearState();
     });
     await reconcileBackgroundSchedule();
   }
 
-  /// Create the channels and request the Android 13+ POST_NOTIFICATIONS
-  /// permission before enabling, then reconcile the schedule.
+  /// Requests Android notification permission before enabling and reconciling scheduling.
   Future<void> requestPermissionAndSync() async {
     if (!isAndroidNative) return;
     final service = LocalNotificationService();
@@ -216,8 +208,7 @@ class NotificationsController {
     await sync();
   }
 
-  /// Manual "check now" — a one-off job under its OWN unique name so it can't
-  /// collide with or suppress the periodic schedule.
+  /// Uses a separate unique-work name so manual checks cannot suppress periodic scheduling.
   Future<void> checkNow() async {
     if (!isAndroidNative) return;
     await sync();

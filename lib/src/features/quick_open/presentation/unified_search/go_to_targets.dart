@@ -10,7 +10,6 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/platform/is_android_native.dart';
 
-/// One "jump to" destination — a screen, settings page, or category.
 class GoToTarget {
   const GoToTarget({
     required this.label,
@@ -25,9 +24,6 @@ class GoToTarget {
   final String Function(AppLocalizations)? subtitle;
 }
 
-/// Nav + settings destinations. Closures capture the exact typed-route call,
-/// so this can't be const. `includeHotkeys` mirrors the desktop-only tile,
-/// `includeAccount` mirrors the More screen's Account entry.
 List<GoToTarget> appGoToTargets({
   required bool includeHotkeys,
   bool includeAccount = true,

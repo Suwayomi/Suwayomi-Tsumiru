@@ -14,10 +14,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 import '../unified_search/unified_search_screen.dart';
 
-/// Whether the quick-open overlay is showing. The keyboard shortcuts that
-/// open it live in the app-wide GlobalShortcutHost (which holds focus, unlike
-/// this deep-in-the-tree widget), so they toggle this provider rather than a
-/// local state.
+// GlobalShortcutHost owns focus and toggles this state from outside the overlay.
 final quickOpenVisibleProvider = StateProvider<bool>((Ref ref) => false);
 
 class SearchStackScreen extends ConsumerWidget {

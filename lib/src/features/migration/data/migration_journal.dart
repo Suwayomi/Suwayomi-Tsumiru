@@ -10,31 +10,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/migration_models.dart';
 
-/// Write-ahead lifecycle of one source→target migration pair. Each transition
-/// is persisted BEFORE the matching server mutation, so a crash leaves a marker
-/// to reconcile on relaunch.
+/// Persist each transition before its server mutation to allow crash recovery.
 enum MigrationPairState {
-  /// Queued, matched to a target, nothing sent yet.
   prepared,
 
-  /// About to copy data onto the target (recovery: re-run copy — idempotent).
+  /// Recovery repeats the idempotent copy.
   copying,
 
-  /// Copy verified complete; source not yet removed (recovery: verify + remove).
+  /// Copy completed; recovery may remove the source.
   copied,
 
-  /// About to remove the source (recovery: verify source state, then remove).
+  /// Recovery verifies source state before repeating removal.
   removing,
 
-  /// Source removed — terminal success.
   removed,
 
-  /// A step failed; source deliberately kept — terminal, retryable.
+  /// Terminal and retryable; the source is retained.
   failed,
 }
 
-/// One journalled pair. Keyed on [fromMangaId] (a source migrates once per
-/// batch); [toMangaId] identifies the target for idempotency across a crash.
+/// Keyed by source manga ID, which may migrate only once per batch.
 class MigrationJournalEntry {
   const MigrationJournalEntry({
     required this.fromMangaId,
@@ -49,11 +44,10 @@ class MigrationJournalEntry {
   final int toMangaId;
   final MigrationPairState state;
 
-  /// The exact options the batch ran with, persisted so recovery re-copies with
-  /// the same flags instead of silently reverting to defaults.
+  /// Recovery must use the original copy flags.
   final MigrationOption options;
 
-  /// Source track-record ids copied to the target, to unbind on removal.
+  /// Source tracker records to unbind locally after copying.
   final List<int> copiedSourceRecordIds;
   final String? failureReason;
 
@@ -95,10 +89,7 @@ class MigrationJournalEntry {
       );
 }
 
-/// Durable per-pair journal for one bulk migration batch, persisted as a single
-/// JSON blob in [SharedPreferences]. Small enough that a full rewrite per
-/// transition is cheap and atomic enough for crash-safety. Only ONE batch is
-/// journalled at a time.
+/// Stores one batch as a single JSON value; each transition rewrites it atomically.
 class MigrationJournal {
   MigrationJournal(this._prefs, {this.accountId}) {
     if (accountId != null && accountId!.isEmpty) {
@@ -129,13 +120,11 @@ class MigrationJournal {
           loaded[e.fromMangaId] = e;
         }
       } catch (_) {
-        // Corrupt journal — drop it rather than wedging the runner.
       }
     }
     return _cache = loaded;
   }
 
-  /// Current journal contents (recovery reads these on relaunch).
   List<MigrationJournalEntry> entries() => _entries.values.toList();
 
   MigrationJournalEntry? entryFor(int fromMangaId) => _entries[fromMangaId];
@@ -145,8 +134,7 @@ class MigrationJournal {
     await _prefs.setString(_prefsKey, jsonEncode(list));
   }
 
-  /// Write-ahead a transition: caller MUST await this before the corresponding
-  /// server mutation so a crash leaves the pre-mutation marker.
+  /// Caller must await this before the corresponding server mutation.
   Future<void> put(MigrationJournalEntry entry) async {
     _entries[entry.fromMangaId] = entry;
     await _flush();

@@ -4,22 +4,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Cancellation-aware concurrency primitives for the bulk migration runner.
-/// Pure Dart, no Flutter/GraphQL — unit-testable in isolation.
 library;
 
 import 'dart:async';
 import 'dart:collection';
 
-/// Thrown when a wait is abandoned because its [CancelToken] fired.
 class CancelledException implements Exception {
   const CancelledException();
   @override
   String toString() => 'CancelledException';
 }
 
-/// A one-shot cancellation signal shared across a batch. Cancelling completes
-/// [whenCancelled] so any primitive blocked on it wakes immediately.
+/// One-shot cancellation wakes all primitives waiting on [whenCancelled].
 class CancelToken {
   bool _cancelled = false;
   final Completer<void> _completer = Completer<void>();
@@ -33,16 +29,12 @@ class CancelToken {
     if (!_completer.isCompleted) _completer.complete();
   }
 
-  /// Throws [CancelledException] if already cancelled — call at the top of a
-  /// cancellable step.
   void throwIfCancelled() {
     if (_cancelled) throw const CancelledException();
   }
 }
 
-/// A counting semaphore bounding how many units of work run at once. Waiters are
-/// served FIFO. A blocked [acquire] wakes and throws [CancelledException] if its
-/// token fires, and is removed from the queue so it never later steals a permit.
+/// FIFO semaphore; cancellation removes a blocked waiter and throws [CancelledException].
 class Semaphore {
   Semaphore(this._permits) : assert(_permits > 0);
 
@@ -66,12 +58,11 @@ class Semaphore {
     }
     await Future.any([waiter.future, token.whenCancelled]);
     if (token.isCancelled && !waiter.isCompleted) {
-      // Cancelled before a permit was handed to us: drop from the queue so a
-      // later release doesn't grant a permit no one will release.
+      // Remove cancelled waiters so a later release cannot strand a permit.
       _waiters.remove(waiter);
       throw const CancelledException();
     }
-    // Otherwise a release completed our waiter and already spent a permit on us.
+    // A completed waiter already owns a permit.
   }
 
   void release() {
@@ -82,7 +73,7 @@ class Semaphore {
     }
   }
 
-  /// Runs [action] holding one permit, releasing it even on error/cancel.
+  /// Holds one permit through completion, including errors and cancellation.
   Future<T> withPermit<T>(Future<T> Function() action,
       [CancelToken? token]) async {
     await acquire(token);
@@ -94,10 +85,7 @@ class Semaphore {
   }
 }
 
-/// Serializes and paces requests to at most one per [minInterval], so a large
-/// batch can't hammer a source (Cloudflare / 429). Acquisitions are chained so
-/// the spacing holds even under concurrent callers. Cancellation-aware: a
-/// pending wait throws [CancelledException] rather than blocking the batch.
+/// Serializes requests at [minInterval] spacing, including concurrent callers; waits are cancellable.
 class RateLimiter {
   RateLimiter({required this.minInterval});
 
@@ -105,8 +93,7 @@ class RateLimiter {
   Future<void> _tail = Future<void>.value();
   DateTime? _lastGranted;
 
-  /// Reserve the next slot. Callers should await this immediately before the
-  /// request and hold nothing else that could deadlock behind it.
+  /// Await immediately before requesting, without holding resources that could deadlock.
   Future<void> acquire([CancelToken? token]) {
     token?.throwIfCancelled();
     final prior = _tail;
@@ -131,8 +118,7 @@ class RateLimiter {
         }
         _lastGranted = DateTime.now();
       } finally {
-        // Release the chain so the next caller proceeds regardless of our
-        // outcome — a cancelled acquire must not stall the queue forever.
+        // Cancellation must release the chain so later callers can proceed.
         completer.complete();
       }
     });

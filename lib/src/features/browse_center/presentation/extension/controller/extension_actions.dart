@@ -18,13 +18,7 @@ import 'extension_update_badge.dart';
 
 part 'extension_actions.g.dart';
 
-/// The single entry point for installing, updating and uninstalling extensions.
-///
-/// The server registers an extension's sources in the same transaction that
-/// installs it, so the source list is stale the moment the mutation returns.
-/// Browse keeps its tabs alive, so a stale list survives every tab switch and
-/// only clears on restart — route every extension action through here so the
-/// source list can never be left behind again (#344).
+/// Refreshes sources after extension mutations, which register sources in the same transaction.
 class ExtensionActions {
   ExtensionActions(this._ref);
 
@@ -71,8 +65,7 @@ class ExtensionActions {
     if (languageCode.isNotBlank) _enableSourceLanguage(languageCode!);
   }
 
-  /// A blank filter means the user turned every language off (the key defaults
-  /// to a populated list), so installing an extension doesn't switch one back on.
+  // An empty saved filter means all languages were deliberately disabled.
   void _enableSourceLanguage(String code) {
     final enabled = _ref.read(sourceLanguageFilterProvider);
     if (enabled.isNotBlank && !enabled!.contains(code)) {
@@ -108,8 +101,6 @@ class ExtensionActions {
   }
 }
 
-/// Kept alive on purpose: callers reach it with `ref.read` inside a button
-/// handler and then await a network round trip. An auto-disposing provider
-/// would be gone before the refresh runs.
+// Keep alive across awaited button actions so their refresh can still run.
 @Riverpod(keepAlive: true)
 ExtensionActions extensionActions(Ref ref) => ExtensionActions(ref);
