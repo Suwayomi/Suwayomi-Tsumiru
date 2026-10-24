@@ -50,6 +50,17 @@ Future<bool> reloadServerImage({
   return isCurrentSession();
 }
 
+final failedReaderPageReloadsProvider = Provider<Set<Future<void> Function()>>(
+  (ref) => {},
+);
+
+Future<void> retryFailedReaderPages(WidgetRef ref) async {
+  await Future.wait([
+    for (final reload in {...ref.read(failedReaderPageReloadsProvider)})
+      reload(),
+  ]);
+}
+
 final _trailingSlashes = RegExp(r'/+$');
 final _leadingSlashes = RegExp(r'^/+');
 
@@ -120,8 +131,7 @@ String uiLoginImageUrl(String url, String? token) =>
 /// still puts it there off the web. It stays in the browser's history, valid
 /// for the access token's lifetime (5 minutes by default).
 String serverImageBrowserUrl(WidgetRef ref, String fetchUrl) {
-  if (kImageTokenInUrl ||
-      ref.read(authTypeKeyProvider) != AuthType.uiLogin) {
+  if (kImageTokenInUrl || ref.read(authTypeKeyProvider) != AuthType.uiLogin) {
     return fetchUrl;
   }
   return appendUiLoginTokenToWebUrl(
@@ -210,6 +220,23 @@ class ServerImage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
+    final failed = useRef(false);
+    final reload = useRef<Future<void> Function()?>(null);
+    final reloads =
+        showReloadButton &&
+            imageUrl.isNotEmpty &&
+            localFilePath == null &&
+            !imageUrl.startsWith('file:')
+        ? ref.watch(failedReaderPageReloadsProvider)
+        : null;
+    useEffect(() {
+      Future<void> retry() async {
+        if (failed.value) await reload.value?.call();
+      }
+
+      reloads?.add(retry);
+      return () => reloads?.remove(retry);
+    }, [reloads, showReloadButton]);
     // Debounce the decode resolution. Reader modes tie memCache* to the window
     // size; a desktop window resize changes it every frame, which would evict
     // and re-decode the page each frame — flashing its placeholder ("black")
@@ -407,7 +434,28 @@ class ServerImage extends HookConsumerWidget {
         !reloadStore.sessionChanging &&
         reloadStore.sessionEpoch == reloadEpoch;
 
+    reload.value = () async {
+      final ready = await reloadServerImage(
+        cacheKeys: {cacheKey},
+        isCurrentSession: canReload,
+        evict: cacheManager.removeFile,
+        refresh: () async {
+          await ref
+              .read(authCoordinatorProvider.notifier)
+              .refreshUiAccessTokenIfDue(
+                gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+                trigger: 'image-reload',
+              );
+        },
+      );
+      if (ready && canReload()) {
+        failed.value = false;
+        key.value = UniqueKey();
+      }
+    };
+
     Widget errorWidget(BuildContext context, String error, stackTrace) {
+      failed.value = true;
       if (showReloadButton) {
         return AppUtils.wrapOn(
           wrapper,
@@ -424,24 +472,7 @@ class ServerImage extends HookConsumerWidget {
                   ),
                   const Gap(32),
                   TextButton(
-                    onPressed: () async {
-                      final ready = await reloadServerImage(
-                        cacheKeys: {cacheKey},
-                        isCurrentSession: canReload,
-                        evict: cacheManager.removeFile,
-                        refresh: () async {
-                          await ref
-                              .read(authCoordinatorProvider.notifier)
-                              .refreshUiAccessTokenIfDue(
-                                gqlClient: ref.read(
-                                  unauthenticatedGraphQlClientProvider,
-                                ),
-                                trigger: 'image-reload',
-                              );
-                        },
-                      );
-                      if (ready && canReload()) key.value = UniqueKey();
-                    },
+                    onPressed: () => reload.value?.call(),
                     child: Text(context.l10n.reload),
                   ),
                 ],

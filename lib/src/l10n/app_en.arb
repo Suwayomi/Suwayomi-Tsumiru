@@ -4207,5 +4207,8 @@
   "downloadAhead": "Download ahead",
   "autoDownloadWhileReading": "Auto download while reading",
   "downloadAheadLimit": "Number of unread chapters to download",
-  "hideLibraryEntries": "Hide entries already in library"
+  "hideLibraryEntries": "Hide entries already in library",
+  "retryErroredPages": "Retry errored pages",
+  "openChapterInWebView": "Open in WebView",
+  "shareChapterLink": "Share chapter link"
 }
