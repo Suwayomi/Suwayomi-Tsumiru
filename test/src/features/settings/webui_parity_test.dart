@@ -373,6 +373,9 @@ void main() {
         bool nextDownloaded = true,
       }) => chapterIdsForDownloadAhead(
         chapter: current,
+        nextChapter: chapters[4].copyWith(
+          user: chapters[4].user.copyWith(isDownloaded: nextDownloaded),
+        ),
         chapters: [
           for (final c in chapters)
             c.id == 2

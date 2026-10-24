@@ -10,6 +10,7 @@ import '../../manga_details/controller/manga_details_controller.dart';
 List<int> chapterIdsForDownloadAhead({
   required ChapterDto chapter,
   required List<ChapterDto> chapters,
+  required ChapterDto? nextChapter,
   required int pageIndex,
   required int limit,
   required Set<int> queued,
@@ -20,17 +21,27 @@ List<int> chapterIdsForDownloadAhead({
       (pageIndex + 1) / chapter.pageCount <= 0.25) {
     return [];
   }
-  final ordered = [...chapters]
-    ..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
-  final index = ordered.indexWhere((item) => item.id == chapter.id);
-  if (index <= 0 || !ordered[index - 1].user.isDownloaded) return [];
-  final unread = ordered
-      .take(index)
+  if (nextChapter == null || !nextChapter.user.isDownloaded) return [];
+  final index = chapters.indexWhere((item) => item.id == chapter.id);
+  final nextIndex = chapters.indexWhere((item) => item.id == nextChapter.id);
+  if (index < 0 || nextIndex < 0 || (nextIndex - index).abs() != 1) return [];
+  final step = nextIndex - index;
+  final ahead = <ChapterDto>[
+    for (var i = nextIndex; i >= 0 && i < chapters.length; i += step)
+      chapters[i],
+  ];
+  final selected = ahead
       .where((item) => !item.user.isRead)
-      .toList();
-  return unread
-      .skip(unread.length > limit ? unread.length - limit : 0)
-      .where((item) => !item.user.isDownloaded && !queued.contains(item.id))
+      .take(limit)
+      .map((item) => item.id)
+      .toSet();
+  return chapters
+      .where(
+        (item) =>
+            selected.contains(item.id) &&
+            !item.user.isDownloaded &&
+            !queued.contains(item.id),
+      )
       .map((item) => item.id)
       .toList();
 }
@@ -41,14 +52,23 @@ Future<void> downloadAhead(
   WidgetRef ref,
   int mangaId,
   int chapterId,
-  int pageIndex,
-) async {
+  int pageIndex, {
+  String? readerScanlatorGroup,
+}) async {
   if (ref.read(viewOfflineNowProvider) || ref.read(serverUnreachableProvider)) {
     return;
   }
   final limit = ref.read(downloadAheadLimitProvider);
   if (limit == 0) return;
-  final chapters = ref.read(mangaChapterListProvider(mangaId: mangaId)).value;
+  final chapters = ref
+      .read(
+        mangaChapterListWithFilterProvider(
+          mangaId: mangaId,
+          keepChapterId: chapterId,
+          readerScanlatorGroup: readerScanlatorGroup,
+        ),
+      )
+      .value;
   if (chapters == null) return;
   final chapter = chapters
       .where((chapter) => chapter.id == chapterId)
@@ -60,6 +80,15 @@ Future<void> downloadAhead(
   final ids = chapterIdsForDownloadAhead(
     chapter: chapter,
     chapters: chapters,
+    nextChapter: ref
+        .read(
+          getNextAndPreviousChaptersProvider(
+            mangaId: mangaId,
+            chapterId: chapterId,
+            readerScanlatorGroup: readerScanlatorGroup,
+          ),
+        )
+        ?.first,
     pageIndex: pageIndex,
     limit: limit,
     queued: {...queue.keys, ...pending},

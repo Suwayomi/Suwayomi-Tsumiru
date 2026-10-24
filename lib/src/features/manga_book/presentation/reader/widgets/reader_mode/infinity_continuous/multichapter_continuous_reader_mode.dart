@@ -403,7 +403,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     void scheduleVisibleProgress(int chapterId, int rel) {
       unawaited(
-        downloadAhead(ref, manga.id, chapterId, rel).catchError((Object error) {
+        downloadAhead(
+          ref,
+          manga.id,
+          chapterId,
+          rel,
+          readerScanlatorGroup: readerScanlatorGroup,
+        ).catchError((Object error) {
           debugPrint('$error');
         }),
       );

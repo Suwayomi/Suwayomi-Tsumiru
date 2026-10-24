@@ -114,7 +114,9 @@ class ReaderScreen extends HookConsumerWidget {
     // Latest page reached, so we can flush it on exit (the debounce below would
     // otherwise drop the last few pages if you back out before it fires).
     final latestPage = useRef<int>(-1);
-    final progressQueue = ref.read(readerProgressQueuesProvider).putIfAbsent(chapterId, ReaderProgressQueue.new);
+    final progressQueue = ref
+        .read(readerProgressQueuesProvider)
+        .putIfAbsent(chapterId, ReaderProgressQueue.new);
     final progressGeneration = useRef(progressQueue.generation);
     // The first onPageChanged is the on-mount restore, not a page turn.
     // Counting it as reading would mark a chapter opened at its last page read.
@@ -127,7 +129,11 @@ class ReaderScreen extends HookConsumerWidget {
       // Incognito: leave no trace. Skip every progress/history write (covers
       // both the debounced call and the PopScope flush). The PopScope's own
       // provider invalidations still run — they're outside this callback.
-      if (incognitoMode || progressQueue.syncing || progressGeneration.value != progressQueue.generation) return;
+      if (incognitoMode ||
+          progressQueue.syncing ||
+          progressGeneration.value != progressQueue.generation) {
+        return;
+      }
       final chapterValue = pinnedChapter;
       final chapterPagesValue = pinnedChapterPages;
       if (chapterValue == null || chapterPagesValue == null) return;
@@ -201,9 +207,13 @@ class ReaderScreen extends HookConsumerWidget {
       }
 
       unawaited(
-        downloadAhead(ref, mangaId, chapterValue.id, index).catchError((
-          Object error,
-        ) {
+        downloadAhead(
+          ref,
+          mangaId,
+          chapterValue.id,
+          index,
+          readerScanlatorGroup: readerScanlatorGroup,
+        ).catchError((Object error) {
           debugPrint('$error');
         }),
       );
