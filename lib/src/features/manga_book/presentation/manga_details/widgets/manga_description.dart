@@ -27,6 +27,7 @@ import '../../../../../widgets/server_image.dart';
 import '../../../../migration/domain/migration_models.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../../offline/presentation/series_offline_button.dart';
+import '../../../../settings/presentation/appearance/widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import '../../../../tracking/presentation/hub/track_sheet.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../controller/manga_details_controller.dart';
@@ -262,10 +263,18 @@ class MangaDescription extends HookConsumerWidget {
       ],
     );
 
+    // Device-only override from the Appearance → Series page switch. Unset
+    // keeps the shipped behaviour: backdrop on single-column, plain header
+    // on two-column.
+    final showBackdrop = resolveMangaThumbnailBackdrop(
+      override: ref.watch(mangaThumbnailBackdropProvider),
+      twoColumn: twoColumn,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (twoColumn)
+        if (!showBackdrop)
           SeriesHeader(
             manga: manga,
             belowStatus: soonWidget,
@@ -274,7 +283,7 @@ class MangaDescription extends HookConsumerWidget {
         else
           Stack(
             children: [
-              if (manga.thumbnailUrl.isNotBlank)
+              if (showBackdrop && manga.thumbnailUrl.isNotBlank)
                 Positioned.fill(
                   child: ClipRect(
                     child: ImageFiltered(
@@ -315,51 +324,60 @@ class MangaDescription extends HookConsumerWidget {
                     ),
                   ),
                 ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        cs.primary.withValues(alpha: 0.30),
-                        surface.withValues(alpha: 0.55),
-                      ],
+              if (showBackdrop)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          cs.primary.withValues(alpha: 0.30),
+                          surface.withValues(alpha: 0.55),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        surface.withValues(alpha: 0.10),
-                        surface.withValues(alpha: 0.70),
-                        surface,
-                      ],
+              if (showBackdrop)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          surface.withValues(alpha: 0.10),
+                          surface.withValues(alpha: 0.70),
+                          surface,
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                // Clear only the status bar; the transparent app-bar icons float
-                // over the top of the hero so the cover rides up into the backdrop
-                // instead of leaving a dead toolbar-height band above it.
-                padding: EdgeInsets.only(
-                  top: MediaQuery.paddingOf(context).top + 8,
-                ),
-                child: MangaCoverDescriptiveListTile(
+              if (twoColumn)
+                SeriesHeader(
                   manga: manga,
-                  showBadges: false,
-                  onTitleClicked: (query) =>
-                      openGlobalSearch(context, query: query),
                   belowStatus: soonWidget,
-                  titleMaxLines: null,
+                  onLibraryPressed: toggleLibrary,
+                )
+              else
+                Padding(
+                  // Clear only the status bar; the transparent app-bar icons float
+                  // over the top of the hero so the cover rides up into the backdrop
+                  // instead of leaving a dead toolbar-height band above it.
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.paddingOf(context).top + 8,
+                  ),
+                  child: MangaCoverDescriptiveListTile(
+                    manga: manga,
+                    showBadges: false,
+                    onTitleClicked: (query) =>
+                        openGlobalSearch(context, query: query),
+                    belowStatus: soonWidget,
+                    titleMaxLines: null,
+                  ),
                 ),
-              ),
             ],
           ),
         Builder(

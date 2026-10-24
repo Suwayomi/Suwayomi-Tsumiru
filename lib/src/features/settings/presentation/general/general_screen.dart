@@ -5,16 +5,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/language_list.dart';
-import '../../../../global_providers/global_providers.dart';
-import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
@@ -27,6 +24,19 @@ class GeneralScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // App language moved to Appearance: a saved General link still carrying
+    // highlight=appLanguage lands on the row's new home instead.
+    final highlight = GoRouter.maybeOf(
+      context,
+    )?.state.uri.queryParameters['highlight'];
+    if (highlight == 'appLanguage') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          const AppearanceSettingsRoute(highlight: 'appLanguage').go(context);
+        }
+      });
+    }
+
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
     final topBar = showsMergedTopBar(context);
@@ -46,30 +56,6 @@ class GeneralScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsHighlightTarget(
-                      id: 'appLanguage',
-                      child: ListTile(
-                        title: Text(context.l10n.appLanguage),
-                        subtitle: Text(
-                          getLanguageNameFormLocale(context.currentLocale),
-                        ),
-                        onTap: () => showDialog(
-                          context: context,
-                          builder: (context) => RadioListPopup<Locale>(
-                            title: context.l10n.appLanguage,
-                            optionList: AppLocalizations.supportedLocales,
-                            value: context.currentLocale,
-                            onChange: (locale) {
-                              ref.read(l10nProvider.notifier).update(locale);
-                              Navigator.pop(context);
-                            },
-                            getOptionTitle: getLanguageNameFormLocale,
-                            getOptionSubtitle: getLanguageNameInEnFormLocale,
-                          ),
-                          animationStyle: context.motionStyle,
-                        ),
-                      ),
-                    ),
-                    const SettingsHighlightTarget(
                       id: 'lockToPortrait',
                       child: ForcePortraitTile(),
                     ),

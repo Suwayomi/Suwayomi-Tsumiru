@@ -79,13 +79,6 @@ export 'settings_search_row.dart';
 /// and wrap its tile together — one without the other fails the suite.
 List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
-    id: 'appLanguage',
-    title: (l) => l.appLanguage,
-    breadcrumb: (l) => l.general,
-    open: (c) => const GeneralSettingsRoute(highlight: 'appLanguage').push(c),
-    visible: (_, _) => true,
-  ),
-  SettingsSearchEntry(
     id: 'quickSearch',
     title: (l) => l.quickSearch,
     breadcrumb: (l) => l.general,
@@ -122,6 +115,14 @@ List<SettingsSearchEntry> get advancedSettingsSearchEntries => [
 ];
 
 List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'appLanguage',
+    title: (l) => l.appLanguage,
+    breadcrumb: (l) => '${l.appearance} › ${l.display}',
+    open: (c) =>
+        const AppearanceSettingsRoute(highlight: 'appLanguage').push(c),
+    visible: (_, _) => true,
+  ),
   SettingsSearchEntry(
     id: 'appThemeMode',
     title: (l) => l.appTheme,
@@ -161,10 +162,19 @@ List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
+    id: 'mangaThumbnailBackdrop',
+    title: (l) => l.mangaThumbnailBackdrop,
+    breadcrumb: (l) => '${l.appearance} › ${l.seriesPage}',
+    open: (c) => const AppearanceSettingsRoute(
+      highlight: 'mangaThumbnailBackdrop',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
     id: 'showRecommendations',
     title: (l) => l.showRecommendations,
     subtitle: (l) => l.showRecommendationsSubtitle,
-    breadcrumb: (l) => l.appearance,
+    breadcrumb: (l) => '${l.appearance} › ${l.seriesPage}',
     open: (c) =>
         const AppearanceSettingsRoute(highlight: 'showRecommendations').push(c),
     visible: (_, _) => true,
@@ -173,7 +183,7 @@ List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [
     id: 'recommendsInOverflow',
     title: (l) => l.recommendsInOverflow,
     subtitle: (l) => l.recommendsInOverflowSubtitle,
-    breadcrumb: (l) => l.appearance,
+    breadcrumb: (l) => '${l.appearance} › ${l.seriesPage}',
     open: (c) => const AppearanceSettingsRoute(
       highlight: 'recommendsInOverflow',
     ).push(c),

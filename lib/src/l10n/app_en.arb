@@ -2166,6 +2166,7 @@
   "lockToPortrait": "Lock to portrait",
   "manga": "Manga",
   "mangaGridSize": "Manga grid size",
+  "mangaThumbnailBackdrop": "Manga thumbnail as background",
   "mangaSortAlphabetical": "Alphabetical",
   "mangaSortDateAdded": "Date added",
   "mangaSortLastChapterDate": "Latest chapter",
@@ -2290,6 +2291,7 @@
   "@seriesTagsMore": {"placeholders": {"count": {"type": "int"}}},
   "seriesNextChapterExpected": "Next chapter expected {days, plural, =0{soon} =1{in 1 day} other{in {days} days}}",
   "@seriesNextChapterExpected": {"placeholders": {"days": {"type": "int"}}},
+  "seriesPage": "Series page",
   "suggestions": "Suggestions",
   "@suggestions": {
     "description": "Header for the inline suggestions row on the manga details page"

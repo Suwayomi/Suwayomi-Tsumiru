@@ -55,6 +55,9 @@ enum DBKeys {
   showNSFW(true),
   showRecommendations(true),
   recommendsInOverflow(false),
+  // Null until the user flips the Series page switch: single-column shows
+  // the cover backdrop, two-column hides it. Device-only, never synced.
+  mangaThumbnailBackdrop(null),
   downloadedBadge(false),
   // On by default: the badge shipped always-on, so off would change behavior.
   onDeviceBadge(true),

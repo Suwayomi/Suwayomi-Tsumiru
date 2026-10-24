@@ -14,10 +14,12 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
+import 'widgets/app_language/app_language_tile.dart';
 import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
 import 'widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import 'widgets/is_true_black/is_true_black_tile.dart';
+import 'widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import 'widgets/show_recommendations/show_recommendations_tile.dart';
 
 class AppearanceScreen extends ConsumerWidget {
@@ -72,11 +74,24 @@ class AppearanceScreen extends ConsumerWidget {
                   ],
                 ),
                 SettingsGroupHeading(label: context.l10n.display),
+                const SettingsGroupCard(
+                  children: [
+                    SettingsHighlightTarget(
+                      id: 'appLanguage',
+                      child: AppLanguageTile(),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'mangaGridSize',
+                      child: GridCoverWidthSlider(),
+                    ),
+                  ],
+                ),
+                SettingsGroupHeading(label: context.l10n.seriesPage),
                 SettingsGroupCard(
                   children: [
                     const SettingsHighlightTarget(
-                      id: 'mangaGridSize',
-                      child: GridCoverWidthSlider(),
+                      id: 'mangaThumbnailBackdrop',
+                      child: MangaThumbnailBackdropTile(),
                     ),
                     const SettingsHighlightTarget(
                       id: 'showRecommendations',
