@@ -15,9 +15,9 @@ import '../../../account/data/account_providers.dart';
 import '../../../account/presentation/manage_users_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../general/general_screen.dart';
-import '../server/server_network_screen.dart';
 import '../server/server_opds_screen.dart';
 import '../server/server_screen.dart';
+import '../server/server_sign_in_screen.dart';
 import 'settings_pane_scope.dart';
 import 'settings_screen.dart';
 
@@ -174,7 +174,7 @@ class SettingsWindowPageBody extends ConsumerWidget {
       final access = ref.watch(settledAccountAccessProvider);
       if (access.canManageUsers) return const ManageUsersScreen();
       if (access.allows(Enum$UserPermission.MANAGE_SETTINGS)) {
-        return const ServerNetworkScreen();
+        return const ServerSignInScreen();
       }
       return const ServerOpdsScreen();
     }
@@ -452,6 +452,8 @@ class _ServerTabs extends ConsumerWidget {
     final tabs = <({String title, String location})>[
       if (access.canManageUsers)
         (title: l.serverUsers, location: const ManageUsersRoute().location),
+      if (manage)
+        (title: l.serverSignIn, location: const ServerSignInRoute().location),
       if (manage)
         (title: l.network, location: const ServerNetworkRoute().location),
       if (manage)

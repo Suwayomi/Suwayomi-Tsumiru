@@ -251,6 +251,23 @@ class ServerImagesRoute extends GoRouteData with $ServerImagesRoute {
       detailNavigationPage(context, state, _screen);
 }
 
+class ServerSignInRoute extends GoRouteData with $ServerSignInRoute {
+  const ServerSignInRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  Widget get _screen => const ServerSignInScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
 class ServerDatabaseRoute extends GoRouteData with $ServerDatabaseRoute {
   const ServerDatabaseRoute({this.highlight});
 

@@ -60,6 +60,7 @@ import '../features/settings/presentation/server/server_logs_screen.dart';
 import '../features/settings/presentation/server/server_network_screen.dart';
 import '../features/settings/presentation/server/server_opds_screen.dart';
 import '../features/settings/presentation/server/server_screen.dart';
+import '../features/settings/presentation/server/server_sign_in_screen.dart';
 import '../features/settings/presentation/server/server_web_interface_screen.dart';
 import '../features/settings/presentation/server/widget/images/image_conversions.dart';
 import '../features/settings/presentation/server/widget/images/image_processing_screen.dart';
@@ -130,6 +131,7 @@ abstract class Routes {
   static const serverOpds = 'opds';
   static const serverImages = 'images';
   static const serverDatabase = 'database';
+  static const serverSignIn = 'sign-in';
   static const serverLogs = 'logs';
   static const syncSettings = 'sync';
   static const advancedSettings = 'advanced';
@@ -305,6 +307,9 @@ GoRouter routerConfig(Ref ref) {
                           routes: [
                             TypedGoRoute<ImageProcessingRoute>(
                               path: Routes.imageProcessing,
+                            ),
+                            TypedGoRoute<ServerSignInRoute>(
+                              path: Routes.serverSignIn,
                             ),
                             TypedGoRoute<ServerNetworkRoute>(
                               path: Routes.serverNetwork,
