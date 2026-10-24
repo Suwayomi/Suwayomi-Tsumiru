@@ -9,7 +9,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../../migration/controller/bulk_migration_providers.dart';
 import '../../../../migration/data/bulk_migration_runner.dart';
@@ -25,6 +27,18 @@ Future<bool> migrateDuplicateIntoCandidate(
   required MangaDto from,
   required MangaDto to,
 }) async {
+  if (!await confirmAction(
+        context,
+        title: context.l10n.migrationActionMigrate,
+        message: context.l10n.confirmDuplicateMigrationMessage(
+          '${from.title} (${from.source?.displayName ?? from.sourceId})',
+          '${to.title} (${to.source?.displayName ?? to.sourceId})',
+        ),
+        action: context.l10n.migrationActionMigrate,
+      ) ||
+      !context.mounted) {
+    return false;
+  }
   final container = ProviderScope.containerOf(context, listen: false);
   final runner = buildBulkMigrationRunner(
     container: container,

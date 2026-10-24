@@ -9,6 +9,7 @@ import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
 import 'data/graphql/__generated__/query.graphql.dart';
 import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
@@ -128,6 +129,15 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   }, [terminal, view.kind, startDate]);
 
   Future<void> start() async {
+    if (!await confirmAction(
+          context,
+          title: l10n.syncYomiSyncNow,
+          message: l10n.confirmSyncYomiMessage,
+          action: l10n.syncYomiSyncNow,
+        ) ||
+        !context.mounted) {
+      return;
+    }
     final result = await AppUtils.guard(
       repository.startSync,
       ref.read(toastProvider),

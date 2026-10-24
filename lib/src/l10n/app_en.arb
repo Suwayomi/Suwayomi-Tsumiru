@@ -4257,5 +4257,13 @@
   "confirmDeleteDeviceMessage": "This removes the chapter download from this device.",
   "confirmDeleteSeriesDeviceMessage": "This stops keeping the series offline and deletes all its device downloads.",
   "confirmKeepRuleTitle": "Change offline rule",
-  "confirmKeepRuleMessage": "This change deletes chapters already downloaded on this device."
+  "confirmKeepRuleMessage": "This change deletes chapters already downloaded on this device.",
+  "confirmDuplicateMigrationMessage": "Migrate from {source} to {target}? This copies series data to the target and removes the original from your library.",
+  "@confirmDuplicateMigrationMessage": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "confirmSyncYomiMessage": "SyncYomi will merge local and remote library data, upload the merged backup, and restore it on this server. Continue?"
 }
