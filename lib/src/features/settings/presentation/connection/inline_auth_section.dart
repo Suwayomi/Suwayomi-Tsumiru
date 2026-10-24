@@ -92,7 +92,7 @@ class ConnectionAuthTypeTile extends ConsumerWidget {
               Navigator.pop(dialogContext);
               onAuthModeChanged(option);
             },
-          ),
+        ),
           animationStyle: context.motionStyle,
         ),
       ),
@@ -114,13 +114,13 @@ class ConnectionAuthWebHint extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     return Padding(
-      padding: inCard
-          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
-          : const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      child: Text(
-        context.l10n.webUiLoginOnlyHint,
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
+            padding: inCard
+                ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+                : const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: Text(
+              context.l10n.webUiLoginOnlyHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
     );
   }
 }

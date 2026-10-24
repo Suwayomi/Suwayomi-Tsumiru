@@ -131,7 +131,8 @@ String uiLoginImageUrl(String url, String? token) =>
 /// still puts it there off the web. It stays in the browser's history, valid
 /// for the access token's lifetime (5 minutes by default).
 String serverImageBrowserUrl(WidgetRef ref, String fetchUrl) {
-  if (kImageTokenInUrl || ref.read(authTypeKeyProvider) != AuthType.uiLogin) {
+  if (kImageTokenInUrl ||
+      ref.read(authTypeKeyProvider) != AuthType.uiLogin) {
     return fetchUrl;
   }
   return appendUiLoginTokenToWebUrl(

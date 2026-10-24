@@ -11,9 +11,8 @@ import '../../../../../data/user_settings.dart';
 import '../graphql/__generated__/images.graphql.dart';
 import '../image_conversions.dart';
 
-final Expando<Future<bool>> _clearCachedImagesSupport = Expando<Future<bool>>(
-  'clearCachedImagesSupport',
-);
+final Expando<Future<bool>> _clearCachedImagesSupport =
+    Expando<Future<bool>>('clearCachedImagesSupport');
 
 class ImagesRepository {
   const ImagesRepository(this.client, {required this.permissions});
@@ -153,58 +152,62 @@ class ServeConversionsRepository {
   }
 }
 
-final serveConversionsRepositoryProvider = Provider<ServeConversionsRepository>(
-  (ref) => ServeConversionsRepository(
-    ref.watch(graphQlClientProvider),
-    routing: ref.watch(userSettingsRoutingProvider),
-  ),
-);
+final serveConversionsRepositoryProvider =
+    Provider<ServeConversionsRepository>(
+      (ref) => ServeConversionsRepository(
+        ref.watch(graphQlClientProvider),
+        routing: ref.watch(userSettingsRoutingProvider),
+      ),
+    );
 
 final FutureProvider<List<ServerConversion>?>
 serveConversionsProvider = FutureProvider.autoDispose<List<ServerConversion>?>(
   (ref) => accountOrLegacySettings(
     ref,
     fromUser: (user) {
-      if (user == null) throw StateError('Missing account settings');
-      return user.serveConversions
-          .map(
-            (c) => ServerConversion(
-              mimeType: c.mimeType,
-              target: c.target,
-              compressionLevel: c.compressionLevel,
-              callTimeout: c.callTimeout,
-              connectTimeout: c.connectTimeout,
-              headers: c.headers
-                  ?.map(
-                    (h) => ServerConversionHeader(name: h.name, value: h.value),
-                  )
-                  .toList(),
-            ),
-          )
-          .toList();
+          if (user == null) throw StateError('Missing account settings');
+          return user.serveConversions
+              .map(
+                (c) => ServerConversion(
+                  mimeType: c.mimeType,
+                  target: c.target,
+                  compressionLevel: c.compressionLevel,
+                  callTimeout: c.callTimeout,
+                  connectTimeout: c.connectTimeout,
+                  headers: c.headers
+                      ?.map(
+                        (h) => ServerConversionHeader(
+                          name: h.name,
+                          value: h.value,
+                        ),
+                      )
+                      .toList(),
+                ),
+              )
+              .toList();
     },
     legacy: () async {
-      final settings = await ref
-          .watch(serveConversionsRepositoryProvider)
-          .legacySettings();
-      final conversions = settings?.serveConversions;
-      if (conversions == null) return null;
-      return conversions
-          .map(
-            (c) => ServerConversion(
-              mimeType: c.mimeType,
-              target: c.target,
-              compressionLevel: c.compressionLevel,
-              callTimeout: c.callTimeout,
-              connectTimeout: c.connectTimeout,
-              headers: c.headers
-                  ?.map(
+          final settings = await ref
+              .watch(serveConversionsRepositoryProvider)
+              .legacySettings();
+          final conversions = settings?.serveConversions;
+          if (conversions == null) return null;
+          return conversions
+              .map(
+                (c) => ServerConversion(
+                  mimeType: c.mimeType,
+                  target: c.target,
+                  compressionLevel: c.compressionLevel,
+                  callTimeout: c.callTimeout,
+                  connectTimeout: c.connectTimeout,
+                  headers: c.headers
+                      ?.map(
                     (h) => ServerConversionHeader(name: h.name, value: h.value),
-                  )
-                  .toList(),
-            ),
-          )
-          .toList();
+                      )
+                      .toList(),
+                ),
+              )
+              .toList();
     },
   ),
 );

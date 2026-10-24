@@ -33,8 +33,10 @@ Future<void> showTrackSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (ctx) =>
-        TrackSheetContent(mangaId: mangaId, mangaTitle: mangaTitle),
+    builder: (ctx) => TrackSheetContent(
+      mangaId: mangaId,
+      mangaTitle: mangaTitle,
+    ),
     sheetAnimationStyle: context.motionStyle,
   );
 }
@@ -57,7 +59,8 @@ class TrackSheetContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trackersAsync = ref.watch(trackersProvider);
-    final recordsAsync = ref.watch(mangaTrackRecordsProvider(mangaId: mangaId));
+    final recordsAsync =
+        ref.watch(mangaTrackRecordsProvider(mangaId: mangaId));
 
     // Surface errors from either provider.
     if (trackersAsync.hasError || recordsAsync.hasError) {
@@ -82,10 +85,9 @@ class TrackSheetContent extends ConsumerWidget {
     final trackers = trackersAsync.value ?? [];
     final records = recordsAsync.value ?? [];
     final loggedIn = trackers.where((t) => t.isLoggedIn).toList();
-    final loggedOutBound = trackers
-        .where((t) => !t.isLoggedIn)
-        .where((t) => records.any((r) => r.trackerId == t.id))
-        .toList();
+    final loggedOutBound = trackers.where((t) => !t.isLoggedIn).where(
+      (t) => records.any((r) => r.trackerId == t.id),
+    ).toList();
 
     // viewInsets.bottom = keyboard. The Android nav bar reads 0 through
     // MediaQuery padding in this app (so showModalBottomSheet's useSafeArea
@@ -99,61 +101,62 @@ class TrackSheetContent extends ConsumerWidget {
           bottom: MediaQuery.viewInsetsOf(context).bottom + navBarInset,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag handle.
-            const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: context.theme.colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle.
+          const SizedBox(height: 8),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 4),
+          ),
+          const SizedBox(height: 4),
 
-            // Always-present "Manage trackers" action.
-            ListTile(
-              leading: const Icon(Icons.manage_accounts_outlined),
-              title: Text(context.l10n.manageTrackers),
-              onTap: () {
-                Navigator.of(context).pop();
-                const TrackingSettingsRoute().push(context);
-              },
-            ),
-            const Divider(height: 1),
+          // Always-present "Manage trackers" action.
+          ListTile(
+            leading: const Icon(Icons.manage_accounts_outlined),
+            title: Text(context.l10n.manageTrackers),
+            onTap: () {
+              Navigator.of(context).pop();
+              const TrackingSettingsRoute().push(context);
+            },
+          ),
+          const Divider(height: 1),
 
-            // Empty state only when nothing useful to show.
-            if (loggedIn.isEmpty && loggedOutBound.isEmpty)
-              _EmptyLoginState()
-            else ...[
-              ...loggedIn.map((tracker) {
-                final record = records.firstWhereOrNull(
-                  (r) => r.trackerId == tracker.id,
-                );
-                return _TrackerCard(
-                  tracker: tracker,
-                  record: record,
-                  mangaId: mangaId,
-                  mangaTitle: mangaTitle,
-                );
-              }),
+          // Empty state only when nothing useful to show.
+          if (loggedIn.isEmpty && loggedOutBound.isEmpty)
+            _EmptyLoginState()
+          else ...[
+            ...loggedIn.map((tracker) {
+              final record = records
+                  .firstWhereOrNull((r) => r.trackerId == tracker.id);
+              return _TrackerCard(
+                tracker: tracker,
+                record: record,
+                mangaId: mangaId,
+                mangaTitle: mangaTitle,
+              );
+            }),
 
-              // Logged-out trackers that still have a bound record for this manga.
-              ...loggedOutBound.map((tracker) {
-                final record = records.firstWhereOrNull(
-                  (r) => r.trackerId == tracker.id,
-                );
-                return _LoggedOutBoundCard(tracker: tracker, record: record!);
-              }),
-            ],
-
-            const SizedBox(height: 16),
+            // Logged-out trackers that still have a bound record for this manga.
+            ...loggedOutBound.map((tracker) {
+              final record =
+                  records.firstWhereOrNull((r) => r.trackerId == tracker.id);
+              return _LoggedOutBoundCard(
+                tracker: tracker,
+                record: record!,
+              );
+            }),
           ],
+
+          const SizedBox(height: 16),
+        ],
         ),
       ),
     );
@@ -273,8 +276,7 @@ class _TrackerCard extends ConsumerWidget {
                     tracker: tracker,
                     onBound: () {
                       ref.invalidate(
-                        mangaTrackRecordsProvider(mangaId: mangaId),
-                      );
+                          mangaTrackRecordsProvider(mangaId: mangaId));
                     },
                   ),
                   sheetAnimationStyle: context.motionStyle,
@@ -299,7 +301,10 @@ class _TrackerCard extends ConsumerWidget {
 }
 
 class _LoggedOutBoundCard extends StatelessWidget {
-  const _LoggedOutBoundCard({required this.tracker, required this.record});
+  const _LoggedOutBoundCard({
+    required this.tracker,
+    required this.record,
+  });
 
   final Fragment$TrackerDto tracker;
   final Fragment$TrackRecordDto record;
@@ -339,7 +344,10 @@ class _LoggedOutBoundCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(record.title, style: context.textTheme.bodyMedium),
+                Text(
+                  record.title,
+                  style: context.textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () {
@@ -372,7 +380,10 @@ class _ErrorState extends StatelessWidget {
         children: [
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: Text(context.l10n.refresh)),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(context.l10n.refresh),
+          ),
         ],
       ),
     );

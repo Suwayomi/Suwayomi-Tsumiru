@@ -38,7 +38,10 @@ class SourceMangaFilter extends HookWidget {
     useEffect(() {
       final changeMap = <int, List<FilterChange>>{};
       for (final change in appliedChanges) {
-        changeMap[change.position] = [...?changeMap[change.position], change];
+        changeMap[change.position] = [
+          ...?changeMap[change.position],
+          change,
+        ];
       }
       filterChangeMap.value = changeMap;
       return null;

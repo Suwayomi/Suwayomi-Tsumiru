@@ -72,14 +72,12 @@ class SourceMangaListScreen extends HookConsumerWidget {
       webUiBoolProvider('hideLibraryEntries'),
     );
     final appliedFilter = ref.watch(appliedSourceFilterProvider(sourceId));
-    final appliedFilterNotifier = ref.watch(
-      appliedSourceFilterProvider(sourceId).notifier,
-    );
+    final appliedFilterNotifier =
+        ref.watch(appliedSourceFilterProvider(sourceId).notifier);
     final liveAppliedFilter = useRef(appliedFilter);
     liveAppliedFilter.value = appliedFilter;
-    final filterList = ref
-        .watch(baseSourceMangaFilterListProvider(sourceId))
-        .value;
+    final filterList =
+        ref.watch(baseSourceMangaFilterListProvider(sourceId)).value;
     final source = ref.watch(sourceProvider(sourceId));
 
     final query = useState(initialQuery);
@@ -97,15 +95,15 @@ class SourceMangaListScreen extends HookConsumerWidget {
         final currentQuery = query.value;
         final currentFilter = liveAppliedFilter.value;
         return sourcePages.fetch(
-          pageKey,
+        pageKey,
           (sourcePage) => _fetchPage(
             repository,
             sourcePage,
             hideLibraryEntries: hideLibraryEntries,
             query: currentQuery,
             filter: currentFilter,
-          ),
-        );
+      ),
+    );
       },
     );
     void refresh() {
@@ -153,8 +151,9 @@ class SourceMangaListScreen extends HookConsumerWidget {
             ),
           if ((data?.isConfigurable).ifNull())
             IconButton(
-              onPressed: () =>
-                  SourcePreferenceRoute(sourceId: sourceId).go(context),
+              onPressed: () => SourcePreferenceRoute(
+                sourceId: sourceId,
+              ).go(context),
               icon: const Icon(Icons.settings_rounded),
             ),
         ];
@@ -253,18 +252,18 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     child: toolbarBottom,
                   ),
                 ),
-          // Edge-drag would fight the system back gesture; the filter button is
-          // the way in.
-          endDrawerEnableOpenDragGesture: false,
+        // Edge-drag would fight the system back gesture; the filter button is
+        // the way in.
+        endDrawerEnableOpenDragGesture: false,
           endDrawer: filterList != null
-              ? Drawer(
-                  width: kDrawerWidth,
-                  shape: const RoundedRectangleBorder(),
-                  child: Builder(
-                    builder: (context) => SourceMangaFilter(
+            ? Drawer(
+                width: kDrawerWidth,
+                shape: const RoundedRectangleBorder(),
+                child: Builder(
+                  builder: (context) => SourceMangaFilter(
                       filters: filterList.toList(),
-                      sourceId: sourceId,
-                      appliedChanges: appliedFilter,
+                    sourceId: sourceId,
+                    appliedChanges: appliedFilter,
                       query: query.value,
                       onSavedSearchSelected: (savedQuery, changes) {
                         Navigator.pop(context);
@@ -281,41 +280,41 @@ class SourceMangaListScreen extends HookConsumerWidget {
                           ).go(context);
                         }
                       },
-                      onReset: () {
-                        appliedFilterNotifier.reset();
+                    onReset: () {
+                      appliedFilterNotifier.reset();
                         refresh();
-                      },
-                      onSubmitted: (value) {
-                        Navigator.pop(context);
-                        appliedFilterNotifier.apply(value ?? const []);
+                    },
+                    onSubmitted: (value) {
+                      Navigator.pop(context);
+                      appliedFilterNotifier.apply(value ?? const []);
                         refresh();
-                      },
-                    ),
+                    },
                   ),
-                )
-              : null,
-          body: topBar
-              ? Column(
-                  children: [
-                    toolbarBottom,
-                    Expanded(child: listBody),
-                  ],
-                )
-              : listBody,
-          floatingActionButton:
+                ),
+              )
+            : null,
+        body: topBar
+            ? Column(
+                children: [
+                  toolbarBottom,
+                  Expanded(child: listBody),
+                ],
+              )
+            : listBody,
+        floatingActionButton:
               sourceType == SourceType.SEARCH && filterList != null
-              ? Builder(
-                  builder: (context) => FloatingActionButton.extended(
-                    icon: Icon(Icons.filter_alt_rounded),
-                    onPressed: () =>
-                        context.windowSizeClass >= WindowSizeClass.medium
-                        ? Scaffold.of(context).openEndDrawer()
-                        : showModalBottomSheet(
-                            context: context,
-                            builder: (context) => SourceMangaFilter(
+                ? Builder(
+                    builder: (context) => FloatingActionButton.extended(
+                      icon: Icon(Icons.filter_alt_rounded),
+                      onPressed: () => context.windowSizeClass >=
+                              WindowSizeClass.medium
+                          ? Scaffold.of(context).openEndDrawer()
+                          : showModalBottomSheet(
+                              context: context,
+                              builder: (context) => SourceMangaFilter(
                               filters: filterList.toList(),
-                              sourceId: sourceId,
-                              appliedChanges: appliedFilter,
+                                sourceId: sourceId,
+                                appliedChanges: appliedFilter,
                               query: query.value,
                               onSavedSearchSelected: (savedQuery, changes) {
                                 Navigator.pop(context);
@@ -332,23 +331,24 @@ class SourceMangaListScreen extends HookConsumerWidget {
                                   ).go(context);
                                 }
                               },
-                              onReset: () {
-                                appliedFilterNotifier.reset();
+                                onReset: () {
+                                  appliedFilterNotifier.reset();
                                 refresh();
-                              },
-                              onSubmitted: (value) {
-                                Navigator.pop(context);
-                                appliedFilterNotifier.apply(value ?? const []);
+                                },
+                                onSubmitted: (value) {
+                                  Navigator.pop(context);
+                                  appliedFilterNotifier
+                                      .apply(value ?? const []);
                                 refresh();
-                              },
+                                },
+                              ),
+                              sheetAnimationStyle: context.motionStyle,
                             ),
-                            sheetAnimationStyle: context.motionStyle,
-                          ),
-                    label: Text(context.l10n.filter),
-                  ),
-                )
-              : null,
-        );
+                      label: Text(context.l10n.filter),
+                    ),
+                  )
+                : null,
+      );
         return titleTopBarSlot(
           topBar: topBar,
           leading: detailNavigationBackButton(context),

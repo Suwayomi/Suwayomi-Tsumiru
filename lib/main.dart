@@ -503,15 +503,11 @@ void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
   Future<void> handleUri(Uri uri) async {
     if (uri.scheme != 'tsumiru' || uri.host != 'tracker-oauth') return;
     final container = currentContainer();
-    final current = container
-        .read(authCredentialsStoreProvider.notifier)
-        .captureSession();
+    final current = container.read(authCredentialsStoreProvider.notifier).captureSession();
     if (!current()) return;
     try {
       final toast = container.read(toastProvider);
-      final outcome = await container
-          .read(nativeTrackerOAuthProvider)
-          .handleCallback(uri);
+      final outcome = await container.read(nativeTrackerOAuthProvider).handleCallback(uri);
       if (!current()) return;
       final context = rootNavigatorKey.currentContext;
       if (context == null || !context.mounted) return;

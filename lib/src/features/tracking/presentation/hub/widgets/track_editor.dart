@@ -71,7 +71,9 @@ class TrackEditor extends ConsumerWidget {
 
   /// Converts a local-midnight [DateTime] to an epoch-ms String.
   static String _dateToEpoch(DateTime dt) =>
-      DateTime(dt.year, dt.month, dt.day).millisecondsSinceEpoch.toString();
+      DateTime(dt.year, dt.month, dt.day)
+          .millisecondsSinceEpoch
+          .toString();
 
   // ------------------------------------------------------------------
   // Build
@@ -170,23 +172,26 @@ class TrackEditor extends ConsumerWidget {
         _EditorRow(
           label: context.l10n.trackStatus,
           child: DropdownButton<int>(
-            value: tracker.statuses.any((s) => s.value == trackRecord.status)
+            value: tracker.statuses
+                    .any((s) => s.value == trackRecord.status)
                 ? trackRecord.status
                 : null,
             isExpanded: true,
             underline: const SizedBox.shrink(),
             items: tracker.statuses
                 .map(
-                  (s) => DropdownMenuItem(value: s.value, child: Text(s.name)),
+                  (s) => DropdownMenuItem(
+                    value: s.value,
+                    child: Text(s.name),
+                  ),
                 )
                 .toList(),
             onChanged: (value) {
               if (value == null) return;
-              _doUpdate(
-                ref,
-                context,
-                () => repo.update(recordId: trackRecord.id, status: value),
-              );
+              _doUpdate(ref, context, () => repo.update(
+                    recordId: trackRecord.id,
+                    status: value,
+                  ));
             },
           ),
         ),
@@ -203,15 +208,19 @@ class TrackEditor extends ConsumerWidget {
             isExpanded: true,
             underline: const SizedBox.shrink(),
             items: tracker.scores
-                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s),
+                  ),
+                )
                 .toList(),
             onChanged: (value) {
               if (value == null) return;
-              _doUpdate(
-                ref,
-                context,
-                () => repo.update(recordId: trackRecord.id, scoreString: value),
-              );
+              _doUpdate(ref, context, () => repo.update(
+                    recordId: trackRecord.id,
+                    scoreString: value,
+                  ));
             },
           ),
         ),
@@ -225,11 +234,10 @@ class TrackEditor extends ConsumerWidget {
           label: context.l10n.trackChaptersRead,
           chaptersRead: trackRecord.lastChapterRead,
           totalChapters: trackRecord.totalChapters,
-          onSubmit: (val) => _doUpdate(
-            ref,
-            context,
-            () => repo.update(recordId: trackRecord.id, lastChapterRead: val),
-          ),
+          onSubmit: (val) => _doUpdate(ref, context, () => repo.update(
+                recordId: trackRecord.id,
+                lastChapterRead: val,
+              )),
         ),
 
         // ---------------------------------------------------------------
@@ -239,36 +247,26 @@ class TrackEditor extends ConsumerWidget {
           _DateRow(
             label: context.l10n.trackStartDate,
             date: _epochToDate(trackRecord.startDate),
-            onPick: (dt) => _doUpdate(
-              ref,
-              context,
-              () => repo.update(
-                recordId: trackRecord.id,
-                startDate: _dateToEpoch(dt),
-              ),
-            ),
-            onClear: () => _doUpdate(
-              ref,
-              context,
-              () => repo.update(recordId: trackRecord.id, startDate: '0'),
-            ),
+            onPick: (dt) => _doUpdate(ref, context, () => repo.update(
+                  recordId: trackRecord.id,
+                  startDate: _dateToEpoch(dt),
+                )),
+            onClear: () => _doUpdate(ref, context, () => repo.update(
+                  recordId: trackRecord.id,
+                  startDate: '0',
+                )),
           ),
           _DateRow(
             label: context.l10n.trackFinishDate,
             date: _epochToDate(trackRecord.finishDate),
-            onPick: (dt) => _doUpdate(
-              ref,
-              context,
-              () => repo.update(
-                recordId: trackRecord.id,
-                finishDate: _dateToEpoch(dt),
-              ),
-            ),
-            onClear: () => _doUpdate(
-              ref,
-              context,
-              () => repo.update(recordId: trackRecord.id, finishDate: '0'),
-            ),
+            onPick: (dt) => _doUpdate(ref, context, () => repo.update(
+                  recordId: trackRecord.id,
+                  finishDate: _dateToEpoch(dt),
+                )),
+            onClear: () => _doUpdate(ref, context, () => repo.update(
+                  recordId: trackRecord.id,
+                  finishDate: '0',
+                )),
           ),
         ],
 
@@ -289,14 +287,10 @@ class TrackEditor extends ConsumerWidget {
   ) async {
     switch (action) {
       case _MenuAction.togglePrivate:
-        await _doUpdate(
-          ref,
-          context,
-          () => repo.update(
-            recordId: trackRecord.id,
-            private: !trackRecord.private,
-          ),
-        );
+        await _doUpdate(ref, context, () => repo.update(
+              recordId: trackRecord.id,
+              private: !trackRecord.private,
+            ));
 
       case _MenuAction.changeEntry:
         if (!context.mounted) return;
@@ -321,14 +315,10 @@ class TrackEditor extends ConsumerWidget {
         if (deleteRemote == null) return; // cancelled
         // Re-check context.mounted after the dialog await.
         if (!context.mounted) return;
-        await _doUpdate(
-          ref,
-          context,
-          () => repo.unbind(
-            recordId: trackRecord.id,
-            deleteRemoteTrack: deleteRemote,
-          ),
-        );
+        await _doUpdate(ref, context, () => repo.unbind(
+              recordId: trackRecord.id,
+              deleteRemoteTrack: deleteRemote,
+            ));
     }
   }
 
@@ -350,8 +340,10 @@ class TrackEditor extends ConsumerWidget {
                 const SizedBox(height: 8),
                 CheckboxListTile(
                   value: deleteRemote,
-                  onChanged: (v) => setState(() => deleteRemote = v ?? false),
-                  title: Text(ctx.l10n.trackRemoveAlsoOnRemote(tracker.name)),
+                  onChanged: (v) =>
+                      setState(() => deleteRemote = v ?? false),
+                  title:
+                      Text(ctx.l10n.trackRemoveAlsoOnRemote(tracker.name)),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                 ),

@@ -47,7 +47,7 @@ class UpdateProgressManualMarkRead extends _$UpdateProgressManualMarkRead {
                   .getBool(DBKeys.updateProgressManualMarkRead.name) ??
               true
         : decodeWebUiBool(value);
-  }
+}
 
   Future<void> update(bool? value) async {
     if (value == null) return;

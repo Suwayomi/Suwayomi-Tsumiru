@@ -79,7 +79,7 @@ Future<void> performSignIn(
             .getData((data) => data.settings);
         if (status == null) {
           throw StateError('Could not verify anonymous access');
-        }
+    }
     }
     if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
     if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();

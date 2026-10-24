@@ -99,19 +99,19 @@ const List<String> librarySearchMetatagKeys = [
 ];
 
 _Field? _fieldFor(String key) => switch (key) {
-  'tag' => _Field.tag,
-  'genre' => _Field.genre,
-  'author' => _Field.author,
-  'artist' => _Field.artist,
-  'title' => _Field.title,
-  'unread' => _Field.unread,
-  'downloaded' => _Field.downloaded,
-  'rating' => _Field.rating,
-  'status' => _Field.status,
-  'source' => _Field.source,
-  'tracked' => _Field.tracked,
-  _ => null,
-};
+      'tag' => _Field.tag,
+      'genre' => _Field.genre,
+      'author' => _Field.author,
+      'artist' => _Field.artist,
+      'title' => _Field.title,
+      'unread' => _Field.unread,
+      'downloaded' => _Field.downloaded,
+      'rating' => _Field.rating,
+      'status' => _Field.status,
+      'source' => _Field.source,
+      'tracked' => _Field.tracked,
+      _ => null,
+    };
 
 class LibrarySearchQuery {
   const LibrarySearchQuery(this.terms);
@@ -240,8 +240,8 @@ class SearchTerm {
     _Field? field,
     this.value,
     List<SearchTerm>? alternatives,
-  }) : _field = field,
-       _alternatives = alternatives;
+  })  : _field = field,
+        _alternatives = alternatives;
 
   factory SearchTerm._text(String text, bool negated) =>
       SearchTerm._(negated: negated, text: text.toLowerCase());
@@ -319,9 +319,7 @@ class SearchTerm {
         final lv = v.toLowerCase();
         // Match the exact enum name, or a partial like `hiatus` → `on_hiatus`
         // and `finished` → `publishing_finished`.
-        return ns == lv ||
-            ns.replaceAll('_', ' ').contains(lv) ||
-            ns.contains(lv);
+        return ns == lv || ns.replaceAll('_', ' ').contains(lv) || ns.contains(lv);
       case _Field.source:
         return f.sourceName?.toLowerCase().contains(v.toLowerCase());
       case _Field.tracked:
@@ -335,10 +333,10 @@ class SearchTerm {
   }
 
   static bool? _parseBool(String v) => switch (v.toLowerCase()) {
-    'true' || 'yes' || '1' => true,
-    'false' || 'no' || '0' => false,
-    _ => null,
-  };
+        'true' || 'yes' || '1' => true,
+        'false' || 'no' || '0' => false,
+        _ => null,
+      };
 
   static final _ratingSpec = RegExp(r'^(>=|<=|>|<|=)?\s*(\d+)$');
 

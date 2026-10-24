@@ -439,17 +439,15 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
             return Future.value(const AsyncValue<void>.data(null));
           }
           return recordReadingProgressWithDependencies(
-            offlineEnabled: offlineEnabledForFlush,
-            offlineDatabase: offlineDbForFlush,
-            repository: repoForFlush,
-            chapterId: p.chapterId,
+          offlineEnabled: offlineEnabledForFlush,
+          offlineDatabase: offlineDbForFlush,
+          repository: repoForFlush,
+          chapterId: p.chapterId,
             lastPageRead: p.rel,
-            isRead: isCompletion,
-            completionChapterIds: isCompletion
-                ? expandIdsForDuplicates(allChaptersForFlush.value, [
-                    p.chapterId,
-                  ])
-                : null,
+          isRead: isCompletion,
+          completionChapterIds: isCompletion
+              ? expandIdsForDuplicates(allChaptersForFlush.value, [p.chapterId])
+              : null,
           );
         }).ignore();
       };

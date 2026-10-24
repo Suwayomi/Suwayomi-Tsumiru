@@ -69,10 +69,8 @@ class TrackingSettingsScreen extends ConsumerWidget {
                           value: updateAfterReading,
                           onChanged: (value) => update(
                             () => ref
-                                .read(
-                                  updateProgressAfterReadingProvider.notifier,
-                                )
-                                .update(value),
+                              .read(updateProgressAfterReadingProvider.notifier)
+                              .update(value),
                           ),
                         ),
                       ),
@@ -88,10 +86,10 @@ class TrackingSettingsScreen extends ConsumerWidget {
                           value: updateManualMarkRead,
                           onChanged: (value) => update(
                             () => ref
-                                .read(
-                                  updateProgressManualMarkReadProvider.notifier,
-                                )
-                                .update(value),
+                              .read(
+                                updateProgressManualMarkReadProvider.notifier,
+                              )
+                              .update(value),
                           ),
                         ),
                       ),

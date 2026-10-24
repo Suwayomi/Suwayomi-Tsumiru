@@ -311,8 +311,8 @@ class AboutScreen extends HookConsumerWidget {
                             title: context.l10n.githubServer,
                             icon: Icon(BrandIcons.github),
                             url: about!.github,
-                            toast: toast,
-                          ),
+                          toast: toast,
+                        ),
                         if ((about?.discord).isNotBlank)
                           MediaLaunchButton(
                             title: context.l10n.discord,

@@ -72,7 +72,10 @@ class SuwayomiAuthLink extends Link {
         ? request
         : request.updateContextEntry<HttpLinkHeaders>(
             (HttpLinkHeaders? entry) => HttpLinkHeaders(
-              headers: <String, String>{...?entry?.headers, ...resolvedHeaders},
+              headers: <String, String>{
+                ...?entry?.headers,
+                ...resolvedHeaders,
+              },
             ),
           );
 

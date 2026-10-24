@@ -116,8 +116,8 @@ Future<void> showChapterContextMenu({
               label: push
                   ? context.l10n.pushKoReaderProgress
                   : context.l10n.pullKoReaderProgress,
-            ),
-          ),
+        ),
+      ),
       const PopupMenuDivider(),
       PopupMenuItem(
         enabled: previousChapters(bulkChapters, chapter).isNotEmpty,

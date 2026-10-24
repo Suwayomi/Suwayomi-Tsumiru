@@ -40,7 +40,9 @@ class SettingsTrackerTile extends ConsumerWidget {
         onPressed: () async {
           if (tracker.isLoggedIn) {
             await AppUtils.guard(
-              () => ref.read(trackerRepositoryProvider).logout(tracker.id),
+              () => ref
+                  .read(trackerRepositoryProvider)
+                  .logout(tracker.id),
               ref.read(toastProvider),
             );
             if (context.mounted) ref.invalidate(trackersProvider);

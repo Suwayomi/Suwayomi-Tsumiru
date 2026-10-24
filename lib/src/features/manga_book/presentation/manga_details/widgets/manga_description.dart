@@ -340,36 +340,36 @@ class MangaDescription extends HookConsumerWidget {
                   ),
                 ),
               if (showBackdrop)
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          cs.primary.withValues(alpha: 0.30),
-                          surface.withValues(alpha: 0.55),
-                        ],
-                      ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        cs.primary.withValues(alpha: 0.30),
+                        surface.withValues(alpha: 0.55),
+                      ],
                     ),
                   ),
                 ),
+              ),
               if (showBackdrop)
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          surface.withValues(alpha: 0.10),
-                          surface.withValues(alpha: 0.70),
-                          surface,
-                        ],
-                      ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        surface.withValues(alpha: 0.10),
+                        surface.withValues(alpha: 0.70),
+                        surface,
+                      ],
                     ),
                   ),
                 ),
+              ),
               if (twoColumn)
                 SeriesHeader(
                   manga: manga,
@@ -377,22 +377,22 @@ class MangaDescription extends HookConsumerWidget {
                   onLibraryPressed: toggleLibrary,
                 )
               else
-                Padding(
-                  // Clear only the status bar; the transparent app-bar icons float
-                  // over the top of the hero so the cover rides up into the backdrop
-                  // instead of leaving a dead toolbar-height band above it.
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.paddingOf(context).top + 8,
-                  ),
-                  child: MangaCoverDescriptiveListTile(
-                    manga: manga,
-                    showBadges: false,
-                    onTitleClicked: (query) =>
-                        openGlobalSearch(context, query: query),
-                    belowStatus: soonWidget,
-                    titleMaxLines: null,
-                  ),
+              Padding(
+                // Clear only the status bar; the transparent app-bar icons float
+                // over the top of the hero so the cover rides up into the backdrop
+                // instead of leaving a dead toolbar-height band above it.
+                padding: EdgeInsets.only(
+                  top: MediaQuery.paddingOf(context).top + 8,
                 ),
+                child: MangaCoverDescriptiveListTile(
+                  manga: manga,
+                  showBadges: false,
+                  onTitleClicked: (query) =>
+                      openGlobalSearch(context, query: query),
+                  belowStatus: soonWidget,
+                  titleMaxLines: null,
+                ),
+              ),
             ],
           ),
         Builder(
@@ -583,7 +583,7 @@ class MangaDescriptionBody extends StatelessWidget {
               onPressed: onEditNotes,
               icon: const Icon(Icons.edit_note, size: 16),
               label: Text(context.l10n.editNotes),
-            ),
+      ),
           ),
         if (hasNotes && description.isNotBlank)
           Padding(
@@ -593,7 +593,7 @@ class MangaDescriptionBody extends StatelessWidget {
               thickness: 1,
               color: context.theme.colorScheme.outlineVariant,
             ),
-          ),
+      ),
         if (description.isNotBlank) renderMarkdown(description),
       ],
     );

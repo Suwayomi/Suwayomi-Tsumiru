@@ -64,18 +64,18 @@ class MangaBookRepository {
         .getData((data) => {for (final m in data.metas.nodes) m.key: m.value});
     final forget = readWebUiValue(metas ?? {}, 'removeMangaFromCategories');
     final removed = await client
-        .mutate$UpdateManga(
-          Options$Mutation$UpdateManga(
-            variables: Variables$Mutation$UpdateManga(
+      .mutate$UpdateManga(
+        Options$Mutation$UpdateManga(
+          variables: Variables$Mutation$UpdateManga(
               withLibraryFields: false,
-              input: Input$UpdateMangaInput(
-                id: mangaId,
-                patch: Input$UpdateMangaPatchInput(inLibrary: false),
-              ),
+            input: Input$UpdateMangaInput(
+              id: mangaId,
+              patch: Input$UpdateMangaPatchInput(inLibrary: false),
             ),
           ),
-        )
-        .getData((data) => data.updateManga?.manga);
+        ),
+      )
+      .getData((data) => data.updateManga?.manga);
     if (removed == null || removed.user.inLibrary) {
       throw StateError('Library removal was not confirmed');
     }
@@ -105,26 +105,28 @@ class MangaBookRepository {
       .getData((data) {});
 
   // Mangas
-  Future<MangaDto?> getManga({required int mangaId}) => client
-      .query$GetManga(
-        Options$Query$GetManga(
+  Future<MangaDto?> getManga({
+    required int mangaId,
+  }) =>
+      client
+          .query$GetManga(Options$Query$GetManga(
           variables: Variables$Query$GetManga(
             withLibraryFields: false,
             id: mangaId,
           ),
-        ),
-      )
-      .getData((data) => data.manga);
+          ))
+          .getData((data) => data.manga);
 
   Future<List<CategoryDto>?> getMangaCategoryList({
     required int mangaId,
-  }) async => client
-      .query$GetMangaCategories(
-        Options$Query$GetMangaCategories(
-          variables: Variables$Query$GetMangaCategories(id: mangaId),
-        ),
-      )
-      .getData((data) => data.manga.categories.nodes);
+  }) async =>
+      client
+          .query$GetMangaCategories(
+            Options$Query$GetMangaCategories(
+              variables: Variables$Query$GetMangaCategories(id: mangaId),
+            ),
+          )
+          .getData((data) => data.manga.categories.nodes);
 
   Future<void> addMangaToCategory(int mangaId, int categoryId) => client
       .mutate$UpdateMangaCategories(
@@ -163,40 +165,47 @@ class MangaBookRepository {
     List<int> addTo = const [],
     List<int> removeFrom = const [],
     bool clearCategories = false,
-  }) => client
-      .mutate$UpdateMangasCategories(
-        Options$Mutation$UpdateMangasCategories(
-          variables: Variables$Mutation$UpdateMangasCategories(
-            input: Input$UpdateMangasCategoriesInput(
-              ids: mangaIds,
-              patch: Input$UpdateMangaCategoriesPatchInput(
+  }) =>
+      client
+          .mutate$UpdateMangasCategories(
+            Options$Mutation$UpdateMangasCategories(
+              variables: Variables$Mutation$UpdateMangasCategories(
+                input: Input$UpdateMangasCategoriesInput(
+                  ids: mangaIds,
+                  patch: Input$UpdateMangaCategoriesPatchInput(
                 clearCategories: clearCategories,
-                addToCategories: addTo,
-                removeFromCategories: removeFrom,
+                    addToCategories: addTo,
+                    removeFromCategories: removeFrom,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      )
-      .getData((data) {});
+          )
+          .getData((data) {});
 
   // Chapters
 
-  Future<ChapterDto?> getChapter({required int chapterId}) async => client
-      .query$GetChapter(
-        Options$Query$GetChapter(
-          variables: Variables$Query$GetChapter(id: chapterId),
-        ),
-      )
-      .getData((data) => data.chapter);
+  Future<ChapterDto?> getChapter({
+    required int chapterId,
+  }) async =>
+      client
+          .query$GetChapter(
+            Options$Query$GetChapter(
+              variables: Variables$Query$GetChapter(
+                id: chapterId,
+              ),
+            ),
+          )
+          .getData((data) => data.chapter);
 
-  Future<ChapterPagesDto?> getChapterPages({required int chapterId}) async =>
+  Future<ChapterPagesDto?> getChapterPages({
+    required int chapterId,
+  }) async =>
       client
           .mutate$GetChapterPages(
             Options$Mutation$GetChapterPages(
               variables: Variables$Mutation$GetChapterPages(
-                input: Input$FetchChapterPagesInput(chapterId: chapterId),
-              ),
+                  input: Input$FetchChapterPagesInput(chapterId: chapterId)),
             ),
           )
           .getData((data) => data.fetchChapterPages);
@@ -204,52 +213,61 @@ class MangaBookRepository {
   Future<void> putChapter({
     required int chapterId,
     required ChapterChange patch,
-  }) => client
-      .mutate$UpdateChapter(
-        Options$Mutation$UpdateChapter(
-          variables: Variables$Mutation$UpdateChapter(
-            input: Input$UpdateChapterInput(id: chapterId, patch: patch),
-          ),
-        ),
-      )
-      // Surface a failed mutation as a throw (like every other call here),
-      // so offline callers detect the failure and keep the change pending
-      // instead of clearing the dirty flag on a push that never landed.
-      .getData((data) {});
+  }) =>
+      client
+          .mutate$UpdateChapter(
+            Options$Mutation$UpdateChapter(
+              variables: Variables$Mutation$UpdateChapter(
+                input: Input$UpdateChapterInput(
+                  id: chapterId,
+                  patch: patch,
+                ),
+              ),
+            ),
+          )
+          // Surface a failed mutation as a throw (like every other call here),
+          // so offline callers detect the failure and keep the change pending
+          // instead of clearing the dirty flag on a push that never landed.
+          .getData((data) {});
 
   Future<void> patchMangaMeta({
     required int mangaId,
     required String key,
     required dynamic value,
-  }) async => client
-      .mutate$SetMangaMeta(
-        Options$Mutation$SetMangaMeta(
-          variables: Variables$Mutation$SetMangaMeta(
-            input: Input$SetMangaMetaInput(
-              meta: Input$MangaMetaTypeInput(
-                key: key,
-                mangaId: mangaId,
-                value: value,
+  }) async =>
+      client
+          .mutate$SetMangaMeta(
+            Options$Mutation$SetMangaMeta(
+              variables: Variables$Mutation$SetMangaMeta(
+                input: Input$SetMangaMetaInput(
+                  meta: Input$MangaMetaTypeInput(
+                    key: key,
+                    mangaId: mangaId,
+                    value: value,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      )
-      .getData((data) {});
+          )
+          .getData((data) {});
 
   /// Removes a per-series meta override so the app-wide default applies again.
   Future<void> deleteMangaMeta({
     required int mangaId,
     required String key,
-  }) async => client
-      .mutate$DeleteMangaMeta(
-        Options$Mutation$DeleteMangaMeta(
-          variables: Variables$Mutation$DeleteMangaMeta(
-            input: Input$DeleteMangaMetaInput(key: key, mangaId: mangaId),
-          ),
-        ),
-      )
-      .getData<Object>((data) => null);
+  }) async =>
+      client
+          .mutate$DeleteMangaMeta(
+            Options$Mutation$DeleteMangaMeta(
+              variables: Variables$Mutation$DeleteMangaMeta(
+                input: Input$DeleteMangaMetaInput(
+                  key: key,
+                  mangaId: mangaId,
+                ),
+              ),
+            ),
+          )
+          .getData<Object>((data) => null);
 
   /// Fetches the chapter list FROM THE SOURCE (the server re-scrapes the source
   /// site). Returns nothing if the source is down/gone — callers that need to
@@ -258,7 +276,9 @@ class MangaBookRepository {
       .mutate$GetChaptersByMangaId(
         Options$Mutation$GetChaptersByMangaId(
           variables: Variables$Mutation$GetChaptersByMangaId(
-            input: Input$FetchChaptersInput(mangaId: mangaId),
+            input: Input$FetchChaptersInput(
+              mangaId: mangaId,
+            ),
           ),
         ),
       )

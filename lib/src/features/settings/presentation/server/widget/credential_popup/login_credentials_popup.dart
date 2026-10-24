@@ -187,9 +187,9 @@ class LoginCredentialsPopup extends HookConsumerWidget {
         await performSignIn(
           ref,
           authType: authType,
-          serverBaseUrl: resolvedUrl,
-          username: username.text,
-          password: password.text,
+                serverBaseUrl: resolvedUrl,
+                username: username.text,
+                password: password.text,
         );
         if (context.mounted) Navigator.pop(context);
       } catch (e) {
@@ -237,29 +237,29 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                       },
               ),
             if (authType != AuthType.none) ...[
-              TextFormField(
-                controller: username,
-                validator: (v) => v.isBlank ? context.l10n.errorUserName : null,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  hintText: context.l10n.userName,
-                  border: const OutlineInputBorder(),
-                ),
+            TextFormField(
+              controller: username,
+              validator: (v) => v.isBlank ? context.l10n.errorUserName : null,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                hintText: context.l10n.userName,
+                border: const OutlineInputBorder(),
               ),
-              const Gap(4),
-              TextFormField(
-                controller: password,
-                validator: (v) => v.isBlank ? context.l10n.errorPassword : null,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) {
-                  if (!testing.value) doSave();
-                },
-                decoration: InputDecoration(
-                  hintText: context.l10n.password,
-                  border: const OutlineInputBorder(),
-                ),
+            ),
+            const Gap(4),
+            TextFormField(
+              controller: password,
+              validator: (v) => v.isBlank ? context.l10n.errorPassword : null,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) {
+                if (!testing.value) doSave();
+              },
+              decoration: InputDecoration(
+                hintText: context.l10n.password,
+                border: const OutlineInputBorder(),
               ),
+            ),
             ],
             const Gap(12),
             Text(

@@ -49,7 +49,9 @@ class DatabaseSettingsRepository {
     () => client
         .mutate$SetDatabaseSettings(
           Options$Mutation$SetDatabaseSettings(
-            variables: Variables$Mutation$SetDatabaseSettings(settings: patch),
+            variables: Variables$Mutation$SetDatabaseSettings(
+              settings: patch,
+            ),
           ),
         )
         .getData((data) => data.setSettings.settings),

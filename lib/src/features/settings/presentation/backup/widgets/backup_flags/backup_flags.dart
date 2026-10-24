@@ -58,14 +58,14 @@ class BackupFlags {
     includeUserSettings: supportsUserSettings
         ? includeUserSettings ?? true
         : null,
-    includeManga: includeManga,
-    includeCategories: includeCategories,
-    includeChapters: includeChapters,
-    includeTracking: includeTracking,
-    includeHistory: includeHistory,
-    includeClientData: includeClientData,
-    includeServerSettings: includeServerSettings,
-  );
+        includeManga: includeManga,
+        includeCategories: includeCategories,
+        includeChapters: includeChapters,
+        includeTracking: includeTracking,
+        includeHistory: includeHistory,
+        includeClientData: includeClientData,
+        includeServerSettings: includeServerSettings,
+      );
 
   Input$PartialSettingsTypeInput toAutoInput({
     bool supportsUserSettings = false,
@@ -73,14 +73,14 @@ class BackupFlags {
     autoBackupIncludeUserSettings: supportsUserSettings
         ? includeUserSettings ?? true
         : null,
-    autoBackupIncludeManga: includeManga,
-    autoBackupIncludeCategories: includeCategories,
-    autoBackupIncludeChapters: includeChapters,
-    autoBackupIncludeTracking: includeTracking,
-    autoBackupIncludeHistory: includeHistory,
-    autoBackupIncludeClientData: includeClientData,
-    autoBackupIncludeServerSettings: includeServerSettings,
-  );
+        autoBackupIncludeManga: includeManga,
+        autoBackupIncludeCategories: includeCategories,
+        autoBackupIncludeChapters: includeChapters,
+        autoBackupIncludeTracking: includeTracking,
+        autoBackupIncludeHistory: includeHistory,
+        autoBackupIncludeClientData: includeClientData,
+        autoBackupIncludeServerSettings: includeServerSettings,
+      );
 
   @override
   bool operator ==(Object other) =>

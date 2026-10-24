@@ -41,8 +41,10 @@ class SourceDisplayMode extends _$SourceDisplayMode
   @override
   // Persist against DisplayMode.values, not the curated sourceDisplayList —
   // the latter would be a second, reorderable wire format for the same index.
-  DisplayMode? build() =>
-      initialize(DBKeys.sourceDisplayMode, enumList: DisplayMode.values);
+  DisplayMode? build() => initialize(
+        DBKeys.sourceDisplayMode,
+        enumList: DisplayMode.values,
+      );
 }
 
 List<MangaDto> visibleSourceMangas(

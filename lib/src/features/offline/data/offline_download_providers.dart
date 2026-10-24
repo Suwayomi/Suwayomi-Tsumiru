@@ -407,14 +407,14 @@ Future<AsyncValue<void>> recordReadingProgress(
             return Future.value(const AsyncValue<void>.data(null));
           }
           return recordReadingProgressWithDependencies(
-            offlineEnabled: offline,
-            offlineDatabase: db,
-            repository: repository,
-            chapterId: chapterId,
-            lastPageRead: lastPageRead,
-            isRead: isRead,
-            completionChapterIds: completionChapterIds,
-            isCurrentSession: current,
+          offlineEnabled: offline,
+          offlineDatabase: db,
+          repository: repository,
+          chapterId: chapterId,
+          lastPageRead: lastPageRead,
+          isRead: isRead,
+          completionChapterIds: completionChapterIds,
+          isCurrentSession: current,
           );
         }),
       );
@@ -457,7 +457,7 @@ Future<AsyncValue<void>> recordReadingProgressWithDependencies({
       final cause = e is OperationMessageException ? e.exception : e;
       if (!isConnectionError(cause)) return result;
     } else if (result.hasError) {
-      return result;
+    return result;
     }
   }
 

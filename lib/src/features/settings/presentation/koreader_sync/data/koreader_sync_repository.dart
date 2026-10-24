@@ -211,24 +211,24 @@ Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) =>
     accountOrLegacySettings(
       ref,
       fromUser: (user) {
-        if (user == null) throw StateError('Missing account settings');
-        return (
-          strategyForward: user.koreaderSyncStrategyForward,
-          strategyBackward: user.koreaderSyncStrategyBackward,
-          checksumMethod: user.koreaderSyncChecksumMethod,
-          percentageTolerance: user.koreaderSyncPercentageTolerance,
-        );
+      if (user == null) throw StateError('Missing account settings');
+      return (
+        strategyForward: user.koreaderSyncStrategyForward,
+        strategyBackward: user.koreaderSyncStrategyBackward,
+        checksumMethod: user.koreaderSyncChecksumMethod,
+        percentageTolerance: user.koreaderSyncPercentageTolerance,
+      );
       },
       legacy: () async {
-        final settings = await ref
-            .watch(koreaderSyncRepositoryProvider)
-            .legacySettings();
-        if (settings == null) return null;
-        return (
-          strategyForward: settings.koreaderSyncStrategyForward,
-          strategyBackward: settings.koreaderSyncStrategyBackward,
-          checksumMethod: settings.koreaderSyncChecksumMethod,
-          percentageTolerance: settings.koreaderSyncPercentageTolerance,
-        );
+      final settings = await ref
+          .watch(koreaderSyncRepositoryProvider)
+          .legacySettings();
+      if (settings == null) return null;
+      return (
+        strategyForward: settings.koreaderSyncStrategyForward,
+        strategyBackward: settings.koreaderSyncStrategyBackward,
+        checksumMethod: settings.koreaderSyncChecksumMethod,
+        percentageTolerance: settings.koreaderSyncPercentageTolerance,
+      );
       },
     );

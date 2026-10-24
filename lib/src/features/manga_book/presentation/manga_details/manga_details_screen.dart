@@ -365,7 +365,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     PopupMenuItem(
                       onTap: () => openMangaNotes(context, data),
                       child: Text(context.l10n.notes),
-                    ),
+                  ),
                   PopupMenuItem(
                     onTap: () => refresh(true),
                     child: Text(context.l10n.refresh),

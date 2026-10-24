@@ -372,8 +372,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                           // SearchField no longer pads itself; keep the pre-refactor
                           // inset and large-tablet width cap here.
                           : SizedBox(
-                              width:
-                                  context.windowSizeClass >=
+                              width: context.windowSizeClass >=
                                       WindowSizeClass.expanded
                                   ? context.widthScale(scale: .5)
                                   : null,
@@ -477,48 +476,49 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                       showDuplicatesButton: true,
                     ),
                   ];
-                  final tabStrip = showTabBar && data.length.isGreaterThan(1)
-                      ? DefaultCategoryTabStrip(categories: data)
-                      : null;
+                  final tabStrip =
+                      showTabBar && data.length.isGreaterThan(1)
+                          ? DefaultCategoryTabStrip(categories: data)
+                          : null;
                   return TopBarSlot(
                     content: DesktopLibraryToolbar(trailing: trailing),
                     minWidth: libraryTopBarSlotMinWidth(trailing.length),
                     child: _libraryBody(
-                      ref,
-                      header: topBar
-                          ? tabStrip
-                          : desktop
-                          ? _desktopLibraryHeader(
-                              trailing: trailing,
-                              tabStrip: tabStrip,
-                            )
-                          : null,
-                      _groupedBody(
-                        useTabs: useTabs,
-                        sections: _categorySections(data),
-                        byCategory: true,
-                        showCounts: showCounts,
-                        tabViews: () => data.map((e) {
-                          final id = e.id.getValueOnNullOrNegative();
-                          final content = CategoryMangaList(
+                    ref,
+                    header: topBar
+                        ? tabStrip
+                        : desktop
+                        ? _desktopLibraryHeader(
+                            trailing: trailing,
+                            tabStrip: tabStrip,
+                          )
+                        : null,
+                _groupedBody(
+                  useTabs: useTabs,
+                  sections: _categorySections(data),
+                  byCategory: true,
+                  showCounts: showCounts,
+                  tabViews: () => data.map((e) {
+                    final id = e.id.getValueOnNullOrNegative();
+                    final content = CategoryMangaList(
+                      key: ValueKey(id),
+                      categoryId: id,
+                    );
+                    return showInlineHeaders
+                        ? _PagedSection(
                             key: ValueKey(id),
-                            categoryId: id,
-                          );
-                          return showInlineHeaders
-                              ? _PagedSection(
-                                  key: ValueKey(id),
-                                  section: (id: id, name: e.name),
-                                  byCategory: true,
-                                  showCount: showCounts,
-                                  child: content,
-                                )
-                              : content;
-                        }).toList(),
-                      ),
+                            section: (id: id, name: e.name),
+                            byCategory: true,
+                            showCount: showCounts,
+                            child: content,
+                          )
+                        : content;
+                  }).toList(),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
+            ),
             ),
           );
         }
@@ -671,112 +671,110 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                             pinned: true,
                             delegate: _SliverFixedHeaderDelegate(
                               height: showTabs ? 64 + 44 : 64,
-                              child: _desktopLibraryHeader(
-                                trailing: trailing,
-                                tabStrip: tabStrip,
-                              ),
-                            ),
-                          ),
-                        ];
-                      }
-                      return [
-                        SliverAppBar(
-                          pinned: true,
-                          floating: false,
-                          title: phone || !isSearchBarHidden
-                              ? _LibraryTitle(sections: _categorySections(data))
-                              : const _LibrarySearchBar(inAppBar: true),
-                          bottom: phone
-                              ? const PhoneSearchBoxBottom(
-                                  origin: PhoneSearchOrigin.library,
-                                )
-                              : null,
-                          actions: [
-                            _organizerButton(),
-                            SyncYomiSyncButton(
-                              onSynced: () => _refreshLibraryAfterSync(ref),
-                            ),
-                            Builder(
-                              builder: (context) {
-                                return UpdateStatusPopupMenu(
-                                  // Section-headers style has no "current" tab, so
-                                  // the menu targets the whole library there.
-                                  getCategory: () => useTabs && data.isNotBlank
-                                      ? data[DefaultTabController.of(
-                                          context,
-                                        ).index]
-                                      : null,
-                                  showDuplicatesButton: true,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        if (!phone)
-                          SliverToBoxAdapter(
-                            child: KeyedSubtree(
-                              key: searchBarKey,
-                              child: const _LibrarySearchBar(inAppBar: false),
-                            ),
-                          ),
-                        if (showTabs)
-                          SliverPersistentHeader(
-                            pinned: true,
-                            delegate: _SliverTabBarDelegate(
-                              TabBar(
-                                isScrollable: true,
-                                tabs: data
-                                    .map((e) => _CategoryTab(category: e))
-                                    .toList(),
-                                dividerColor: Colors.transparent,
-                              ),
-                            ),
-                          ),
-                      ];
-                    },
-                    // This Scaffold has no appBar (the header slivers replace it), so
-                    // its body still carries the status-bar padding and the grids
-                    // inside would re-apply it as list padding — a dead gap between
-                    // the tab bar and the first row. The header slivers consume that
-                    // inset; drop it for the body. The Builder matters: removePadding
-                    // must start from the MediaQuery inside the Scaffold body slot.
-                    body: Builder(
-                      builder: (context) => MediaQuery.removePadding(
-                        context: context,
-                        removeTop: true,
-                        child: _libraryBody(
-                          ref,
-                          _groupedBody(
-                            useTabs: useTabs,
-                            sections: _categorySections(data),
-                            byCategory: true,
-                            showCounts: showCounts,
-                            tabViews: () => data.map((e) {
-                              final id = e.id.getValueOnNullOrNegative();
-                              final content = CategoryMangaList(
-                                key: ValueKey(id),
-                                categoryId: id,
-                              );
-                              return showInlineHeaders
-                                  ? _PagedSection(
-                                      key: ValueKey(id),
-                                      section: (id: id, name: e.name),
-                                      byCategory: true,
-                                      showCount: showCounts,
-                                      child: content,
-                                    )
-                                  : content;
-                            }).toList(),
-                          ),
+                        child: _desktopLibraryHeader(
+                          trailing: trailing,
+                          tabStrip: tabStrip,
                         ),
                       ),
                     ),
+                  ];
+                }
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    title: phone || !isSearchBarHidden
+                        ? _LibraryTitle(sections: _categorySections(data))
+                        : const _LibrarySearchBar(inAppBar: true),
+                    bottom: phone
+                        ? const PhoneSearchBoxBottom(
+                            origin: PhoneSearchOrigin.library,
+                          )
+                        : null,
+                    actions: [
+                      _organizerButton(),
+                      SyncYomiSyncButton(
+                        onSynced: () => _refreshLibraryAfterSync(ref),
+                      ),
+                      Builder(
+                        builder: (context) {
+                          return UpdateStatusPopupMenu(
+                            // Section-headers style has no "current" tab, so
+                            // the menu targets the whole library there.
+                            getCategory: () => useTabs && data.isNotBlank
+                                ? data[DefaultTabController.of(context).index]
+                                : null,
+                            showDuplicatesButton: true,
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                );
+                  if (!phone)
+                    SliverToBoxAdapter(
+                      child: KeyedSubtree(
+                        key: searchBarKey,
+                        child: const _LibrarySearchBar(inAppBar: false),
+                      ),
+                    ),
+                  if (showTabs)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabBarDelegate(
+                        TabBar(
+                          isScrollable: true,
+                          tabs: data
+                              .map((e) => _CategoryTab(category: e))
+                              .toList(),
+                          dividerColor: Colors.transparent,
+                        ),
+                      ),
+                    ),
+                ];
               },
+              // This Scaffold has no appBar (the header slivers replace it), so
+              // its body still carries the status-bar padding and the grids
+              // inside would re-apply it as list padding — a dead gap between
+              // the tab bar and the first row. The header slivers consume that
+              // inset; drop it for the body. The Builder matters: removePadding
+              // must start from the MediaQuery inside the Scaffold body slot.
+              body: Builder(
+                builder: (context) => MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: _libraryBody(
+                    ref,
+                    _groupedBody(
+                      useTabs: useTabs,
+                      sections: _categorySections(data),
+                      byCategory: true,
+                      showCounts: showCounts,
+                      tabViews: () => data.map((e) {
+                        final id = e.id.getValueOnNullOrNegative();
+                        final content = CategoryMangaList(
+                          key: ValueKey(id),
+                          categoryId: id,
+                        );
+                        return showInlineHeaders
+                            ? _PagedSection(
+                                key: ValueKey(id),
+                                section: (id: id, name: e.name),
+                                byCategory: true,
+                                showCount: showCounts,
+                                child: content,
+                              )
+                            : content;
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         // A manual retry means "try the server again" — drop the offline pin.
@@ -878,8 +876,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                         // SearchField no longer pads itself; keep the pre-refactor
                         // inset and large-tablet width cap here.
                         : SizedBox(
-                            width:
-                                context.windowSizeClass >=
+                            width: context.windowSizeClass >=
                                     WindowSizeClass.expanded
                                 ? context.widthScale(scale: .5)
                                 : null,
@@ -1006,33 +1003,33 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                             tabStrip: tabStrip,
                           )
                         : null,
-                    _groupedBody(
-                      useTabs: useTabs,
-                      sections: _groupSections(tabs),
-                      byCategory: false,
-                      showCounts: showCounts,
-                      tabViews: () => tabs.map((t) {
-                        final content = _GroupedMangaList(
+              _groupedBody(
+                useTabs: useTabs,
+                sections: _groupSections(tabs),
+                byCategory: false,
+                showCounts: showCounts,
+                tabViews: () => tabs.map((t) {
+                  final content = _GroupedMangaList(
+                    key: ValueKey(t.id),
+                    tabId: t.id,
+                  );
+                  return showInlineHeaders
+                      ? _PagedSection(
                           key: ValueKey(t.id),
-                          tabId: t.id,
-                        );
-                        return showInlineHeaders
-                            ? _PagedSection(
-                                key: ValueKey(t.id),
-                                section: (id: t.id, name: t.name),
-                                byCategory: false,
-                                showCount: showCounts,
-                                child: content,
-                              )
-                            : content;
-                      }).toList(),
-                    ),
-                  ),
-                );
-              },
+                          section: (id: t.id, name: t.name),
+                          byCategory: false,
+                          showCount: showCounts,
+                          child: content,
+                        )
+                      : content;
+                }).toList(),
+              ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);
@@ -1172,28 +1169,28 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                               height: showTabBar && tabs.length > 1
                                   ? 64 + 44
                                   : 64,
-                              child: _desktopLibraryHeader(
-                                trailing: trailing,
-                                tabStrip: tabStrip,
-                              ),
-                            ),
-                          ),
-                        ];
-                      }
-                      return [
-                        SliverAppBar(
-                          pinned: true,
-                          floating: false,
-                          title: phone || !isSearchBarHidden
-                              ? _LibraryTitle(sections: _groupSections(tabs))
-                              : const _LibrarySearchBar(inAppBar: true),
-                          bottom: phone
-                              ? const PhoneSearchBoxBottom(
-                                  origin: PhoneSearchOrigin.library,
-                                )
-                              : null,
-                          actions: [
-                            _organizerButton(),
+                        child: _desktopLibraryHeader(
+                          trailing: trailing,
+                          tabStrip: tabStrip,
+                        ),
+                      ),
+                    ),
+                  ];
+                }
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    title: phone || !isSearchBarHidden
+                        ? _LibraryTitle(sections: _groupSections(tabs))
+                        : const _LibrarySearchBar(inAppBar: true),
+                    bottom: phone
+                        ? const PhoneSearchBoxBottom(
+                            origin: PhoneSearchOrigin.library,
+                          )
+                        : null,
+                    actions: [
+                      _organizerButton(),
                             Consumer(
                               builder: (context, ref, _) =>
                                   PopupMenuButton<void>(
@@ -1210,77 +1207,74 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                                     ],
                                   ),
                             ),
-                            SyncYomiSyncButton(
-                              onSynced: () => _refreshLibraryAfterSync(ref),
-                            ),
-                          ],
-                        ),
-                        if (!phone)
-                          SliverToBoxAdapter(
-                            child: KeyedSubtree(
-                              key: searchBarKey,
-                              child: const _LibrarySearchBar(inAppBar: false),
-                            ),
-                          ),
-                        if (showTabBar && tabs.length > 1)
-                          SliverPersistentHeader(
-                            pinned: true,
-                            delegate: _SliverTabBarDelegate(
-                              TabBar(
-                                isScrollable: true,
-                                tabs: tabs
-                                    .map(
-                                      (t) => _GroupTab(
-                                        tab: t,
-                                        showCount: showCounts,
-                                      ),
-                                    )
-                                    .toList(),
-                                dividerColor: Colors.transparent,
-                              ),
-                            ),
-                          ),
-                      ];
-                    },
-                    // See _DefaultLibraryStickySearch: drop the status-bar padding
-                    // the header slivers already consumed, from inside the body slot.
-                    body: Builder(
-                      builder: (context) => MediaQuery.removePadding(
-                        context: context,
-                        removeTop: true,
-                        child: _libraryBody(
-                          ref,
-                          grouped: true,
-                          _groupedBody(
-                            useTabs: useTabs,
-                            sections: _groupSections(tabs),
-                            byCategory: false,
-                            showCounts: showCounts,
-                            tabViews: () => tabs.map((t) {
-                              final content = _GroupedMangaList(
-                                key: ValueKey(t.id),
-                                tabId: t.id,
-                              );
-                              return showInlineHeaders
-                                  ? _PagedSection(
-                                      key: ValueKey(t.id),
-                                      section: (id: t.id, name: t.name),
-                                      byCategory: false,
-                                      showCount: showCounts,
-                                      child: content,
-                                    )
-                                  : content;
-                            }).toList(),
-                          ),
+                      SyncYomiSyncButton(
+                        onSynced: () => _refreshLibraryAfterSync(ref),
+                      ),
+                    ],
+                  ),
+                  if (!phone)
+                    SliverToBoxAdapter(
+                      child: KeyedSubtree(
+                        key: searchBarKey,
+                        child: const _LibrarySearchBar(inAppBar: false),
+                      ),
+                    ),
+                  if (showTabBar && tabs.length > 1)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabBarDelegate(
+                        TabBar(
+                          isScrollable: true,
+                          tabs: tabs
+                              .map(
+                                (t) => _GroupTab(tab: t, showCount: showCounts),
+                              )
+                              .toList(),
+                          dividerColor: Colors.transparent,
                         ),
                       ),
                     ),
-                  ),
-                );
+                ];
               },
+              // See _DefaultLibraryStickySearch: drop the status-bar padding
+              // the header slivers already consumed, from inside the body slot.
+              body: Builder(
+                builder: (context) => MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: _libraryBody(
+                    ref,
+                    grouped: true,
+                    _groupedBody(
+                      useTabs: useTabs,
+                      sections: _groupSections(tabs),
+                      byCategory: false,
+                      showCounts: showCounts,
+                      tabViews: () => tabs.map((t) {
+                        final content = _GroupedMangaList(
+                          key: ValueKey(t.id),
+                          tabId: t.id,
+                        );
+                        return showInlineHeaders
+                            ? _PagedSection(
+                                key: ValueKey(t.id),
+                                section: (id: t.id, name: t.name),
+                                byCategory: false,
+                                showCount: showCounts,
+                                child: content,
+                              )
+                            : content;
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);

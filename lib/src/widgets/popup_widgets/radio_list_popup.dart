@@ -69,7 +69,9 @@ class RadioList<T> extends StatelessWidget {
   Widget getRadioListTile(BuildContext context, T option) {
     return RadioListTile<T>(
       activeColor: context.theme.colorScheme.primary,
-      title: Text(getTitle?.call(option) ?? option.toString()),
+      title: Text(
+        getTitle?.call(option) ?? option.toString(),
+      ),
       subtitle: getSubtitle != null ? (Text(getSubtitle!(option))) : null,
       value: option,
       enabled: isOptionEnabled?.call(option) ?? true,
@@ -90,9 +92,8 @@ class RadioList<T> extends StatelessWidget {
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: optionList
-                .map((e) => getRadioListTile(context, e))
-                .toList(),
+            children:
+                optionList.map((e) => getRadioListTile(context, e)).toList(),
           ),
         ),
       ),

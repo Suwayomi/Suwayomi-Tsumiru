@@ -85,7 +85,8 @@ class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
   );
 
   @override
-  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+  Widget build(context, state) =>
+      DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
@@ -108,7 +109,8 @@ class SourcePreferenceRoute extends GoRouteData with $SourcePreferenceRoute {
   Widget get _screen => SourcePreferenceScreen(sourceId: sourceId);
 
   @override
-  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+  Widget build(context, state) =>
+      DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>

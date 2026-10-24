@@ -99,18 +99,19 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
 
   void _openSignIn() {
     if (_dialogOpen) return;
-    final navigatorContext = rootNavigatorKey.currentState?.overlay?.context;
-    if (navigatorContext == null) return;
+            final navigatorContext =
+                rootNavigatorKey.currentState?.overlay?.context;
+            if (navigatorContext == null) return;
     final mode =
         ref.read(authRecoveryTargetProvider) ??
         ref.read(authTypeKeyProvider) ??
         DBKeys.authType.initial;
     _dialogOpen = true;
     showDialog<void>(
-      context: navigatorContext,
+                context: navigatorContext,
       builder: (_) =>
           LoginCredentialsPopup(authType: mode, allowModeSelection: true),
-      animationStyle: navigatorContext.motionStyle,
+                animationStyle: navigatorContext.motionStyle,
     ).whenComplete(() => _dialogOpen = false);
   }
 

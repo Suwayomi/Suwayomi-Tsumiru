@@ -31,15 +31,15 @@ class BackupSettingsRepository {
   Future<String?> restoreBackup(MultipartFile file, BackupFlags flags) async {
     final supported = await userSettingsFlag() != null;
     return ferryClient
-        .mutate$RestoreBackup(
-          Options$Mutation$RestoreBackup(
-            variables: Variables$Mutation$RestoreBackup(
-              backup: file,
+          .mutate$RestoreBackup(
+            Options$Mutation$RestoreBackup(
+              variables: Variables$Mutation$RestoreBackup(
+                backup: file,
               flags: flags.toPartialInput(supportsUserSettings: supported),
+              ),
             ),
-          ),
-        )
-        .getData((data) => data.restoreBackup.id);
+          )
+          .getData((data) => data.restoreBackup.id);
   }
 
   Future<bool?> userSettingsFlag() async {
@@ -108,14 +108,14 @@ class BackupSettingsRepository {
   Future<String?> createBackup(BackupFlags flags) async {
     final supported = await userSettingsFlag() != null;
     return ferryClient
-        .mutate$CreateBackup(
-          Options$Mutation$CreateBackup(
-            variables: Variables$Mutation$CreateBackup(
+      .mutate$CreateBackup(
+        Options$Mutation$CreateBackup(
+          variables: Variables$Mutation$CreateBackup(
               flags: flags.toPartialInput(supportsUserSettings: supported),
-            ),
           ),
-        )
-        .getData((data) => data.createBackup.url);
+        ),
+      )
+      .getData((data) => data.createBackup.url);
   }
 
   Future<SettingsDto?> updateBackupLocation(String? backupPath) =>
