@@ -21,6 +21,7 @@ enum AppUrls {
     url:
         "https://api.github.com/repos/Suwayomi/Suwayomi-Tsumiru/releases/latest",
   ),
+  weblateTranslate(url: "https://hosted.weblate.org/engage/suwayomi/"),
   flareSolverr(
     url:
         "https://github.com/FlareSolverr/FlareSolverr?tab=readme-ov-file#installation",

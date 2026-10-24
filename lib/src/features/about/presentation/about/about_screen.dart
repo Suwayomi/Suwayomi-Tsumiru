@@ -30,6 +30,7 @@ import '../../domain/server_update/server_update.dart';
 import 'controllers/about_controller.dart';
 import 'widget/app_update_dialog.dart';
 import 'widget/clipboard_list_tile.dart';
+import 'widget/debug_information_tile.dart';
 import 'widget/media_launch_button.dart';
 
 class AboutScreen extends HookConsumerWidget {
@@ -124,6 +125,7 @@ class AboutScreen extends HookConsumerWidget {
     final toast = ref.watch(toastProvider);
     final aboutAsync = ref.watch(aboutProvider);
     final about = aboutAsync.value;
+    final webUi = ref.watch(aboutWebUIProvider).value;
     // revision is deprecated server-side: the version already carries it as the
     // patch number, so appending it printed the build number twice.
     final serverVer = about?.version;
@@ -211,6 +213,16 @@ class AboutScreen extends HookConsumerWidget {
                           );
                         },
                       ),
+                      ListTile(
+                        title: Text(context.l10n.helpTranslate),
+                        onTap: () async {
+                          await launchUrlInWeb(
+                            context,
+                            AppUrls.weblateTranslate.url,
+                            toast,
+                          );
+                        },
+                      ),
                       if (!isGooglePlayBuild)
                         ListTile(
                           title: Text(
@@ -273,6 +285,11 @@ class AboutScreen extends HookConsumerWidget {
                               toast: toast,
                             ),
                           ),
+                        DebugInformationTile(
+                          about: about,
+                          webUiFlavor: webUi?.channel.name,
+                          webUiVersion: webUi?.tag,
+                        ),
                       ],
                     ),
                   ],
@@ -282,11 +299,18 @@ class AboutScreen extends HookConsumerWidget {
                       alignment: WrapAlignment.spaceEvenly,
                       children: [
                         MediaLaunchButton(
-                          title: "${context.l10n.gitHub} ",
+                          title: context.l10n.githubTsumiru,
                           icon: Icon(BrandIcons.github),
                           url: AppUrls.sorayomiGithubUrl.url,
                           toast: toast,
                         ),
+                        if ((about?.github).isNotBlank)
+                          MediaLaunchButton(
+                            title: context.l10n.githubServer,
+                            icon: Icon(BrandIcons.github),
+                            url: about!.github,
+                            toast: toast,
+                          ),
                         if ((about?.discord).isNotBlank)
                           MediaLaunchButton(
                             title: context.l10n.discord,
