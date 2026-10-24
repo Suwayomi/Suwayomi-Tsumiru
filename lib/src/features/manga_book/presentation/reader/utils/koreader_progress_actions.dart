@@ -47,7 +47,7 @@ Future<void> applyKoSyncConflict({
     ref,
     mangaId: chapter.mangaId,
     chapterId: chapter.id,
-    lastPageRead: complete ? 0 : page,
+    lastPageRead: page,
     isRead: complete,
   );
   if (!context.mounted) return;
@@ -80,7 +80,7 @@ Future<void> syncKoReaderChapter({
           ref,
           mangaId: chapter.mangaId,
           chapterId: chapter.id,
-          lastPageRead: complete ? 0 : page,
+          lastPageRead: page,
           isRead: complete,
         );
         if (saved.hasError) throw saved.error!;

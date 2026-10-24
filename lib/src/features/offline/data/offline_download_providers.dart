@@ -433,7 +433,7 @@ Future<AsyncValue<void>> recordReadingProgressWithDependencies({
       repository: repository,
       chapterIds: completionChapterIds,
       isRead: true,
-      resetPosition: true,
+      resetPosition: false,
       manual: false,
       isCurrentSession: isCurrentSession,
     );
@@ -441,9 +441,10 @@ Future<AsyncValue<void>> recordReadingProgressWithDependencies({
     if (result.hasError && offlineEnabled && offlineDatabase != null) {
       final e = result.error!;
       final cause = e is OperationMessageException ? e.exception : e;
-      if (isConnectionError(cause)) return const AsyncValue.data(null);
+      if (!isConnectionError(cause)) return result;
+    } else if (result.hasError) {
+      return result;
     }
-    return result;
   }
 
   // Reading forward never un-reads: partial writes record position only (isRead

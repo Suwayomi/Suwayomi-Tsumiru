@@ -153,7 +153,7 @@ class ReaderScreen extends HookConsumerWidget {
         ref,
         mangaId: mangaId,
         chapterId: chapterValue.id,
-        lastPageRead: isReadingCompleted ? 0 : currentPage,
+        lastPageRead: currentPage,
         isRead: isReadingCompleted,
       );
       // An online-only user has no pending row to retry, so a failed push would

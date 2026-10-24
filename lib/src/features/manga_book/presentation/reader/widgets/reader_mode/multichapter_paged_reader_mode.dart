@@ -300,7 +300,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         ref,
         mangaId: manga.id,
         chapterId: chapterId,
-        lastPageRead: completed ? 0 : rel,
+        lastPageRead: rel,
         isRead: completed,
       );
       // Disposed during the await → the ref calls below would throw.
@@ -401,7 +401,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           offlineDatabase: offlineDbForFlush,
           repository: repoForFlush,
           chapterId: p.chapterId,
-          lastPageRead: isCompletion ? 0 : p.rel,
+          lastPageRead: p.rel,
           isRead: isCompletion,
           completionChapterIds: isCompletion
               ? expandIdsForDuplicates(allChaptersForFlush.value, [p.chapterId])
@@ -686,6 +686,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
               ref,
               manga.id,
               loaded[prevPos].chapter,
+              loaded[prevPos].pages.pages.length,
               completedChapterIds,
               context,
             );
@@ -910,6 +911,7 @@ void _markChapterRead(
   WidgetRef ref,
   int mangaId,
   ChapterDto chapter,
+  int pageCount,
   ObjectRef<Set<int>> completedChapterIds,
   BuildContext context,
 ) {
@@ -922,7 +924,7 @@ void _markChapterRead(
       ref,
       mangaId: mangaId,
       chapterId: chapter.id,
-      lastPageRead: 0,
+      lastPageRead: (pageCount - 1).clamp(0, 1 << 31),
       isRead: true,
     ).then((progressResult) {
       if (!context.mounted) return;

@@ -89,10 +89,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(jumpedTo, remotePage);
       expect(repository.writes, hasLength(1));
-      expect(
-        repository.writes.single.lastPageRead,
-        remotePage == 2 ? 0 : remotePage,
-      );
+      expect(repository.writes.single.lastPageRead, remotePage);
       if (remotePage == 2) expect(repository.writes.single.isRead, true);
     });
   }
