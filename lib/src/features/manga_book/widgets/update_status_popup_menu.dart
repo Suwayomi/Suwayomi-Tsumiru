@@ -17,6 +17,7 @@ import '../../library/data/default_category.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/presentation/library/widgets/library_random_entry.dart';
 import '../data/updates/updates_repository.dart';
+import '../presentation/manga_details/widgets/chapter_context_menu.dart';
 
 class UpdateStatusPopupMenu extends ConsumerWidget {
   const UpdateStatusPopupMenu({
@@ -39,11 +40,17 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
           if (showDuplicatesButton && !context.usesDesktopShell)
             PopupMenuItem(
               onTap: randomLibraryEntryAction(context, ref),
-              child: Text(context.l10n.openRandomEntry),
+              child: ChapterMenuRow(
+                icon: FluentIcons.arrow_shuffle_24_regular,
+                label: context.l10n.openRandomEntry,
+              ),
             ),
           if (category != null && defaultId != null && category.id != defaultId)
             PopupMenuItem(
-              child: Text(context.l10n.categoryUpdate),
+              child: ChapterMenuRow(
+                icon: FluentIcons.tag_24_regular,
+                label: context.l10n.categoryUpdate,
+              ),
               onTap: () {
                 ref.read(updateOptimisticProvider.notifier).arm();
                 ref
@@ -56,16 +63,25 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
               ref.read(updateOptimisticProvider.notifier).arm();
               ref.read(updatesRepositoryProvider).fetchUpdates();
             },
-            child: Text(context.l10n.globalUpdate),
+            child: ChapterMenuRow(
+              icon: FluentIcons.arrow_clockwise_24_regular,
+              label: context.l10n.globalUpdate,
+            ),
           ),
           PopupMenuItem(
             onTap: () => const LibraryUpdateErrorsRoute().push(context),
-            child: Text(context.l10n.libraryUpdateErrorsCount(failedCount)),
+            child: ChapterMenuRow(
+              icon: FluentIcons.error_circle_24_regular,
+              label: context.l10n.libraryUpdateErrorsCount(failedCount),
+            ),
           ),
           if (showDuplicatesButton)
             PopupMenuItem(
               onTap: () => const LibraryDuplicatesRoute().push(context),
-              child: Text(context.l10n.scanForDuplicates),
+              child: ChapterMenuRow(
+                icon: FluentIcons.copy_24_regular,
+                label: context.l10n.scanForDuplicates,
+              ),
             ),
         ];
       },

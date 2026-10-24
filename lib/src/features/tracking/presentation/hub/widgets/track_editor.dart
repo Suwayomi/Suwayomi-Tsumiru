@@ -15,6 +15,7 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../controller/manga_track_records_controller.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
@@ -124,20 +125,29 @@ class TrackEditor extends ConsumerWidget {
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: _MenuAction.changeEntry,
-                    child: Text(context.l10n.trackChangeEntry),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.edit_24_regular,
+                      label: context.l10n.trackChangeEntry,
+                    ),
                   ),
                   if (tracker.supportsPrivateTracking)
                     PopupMenuItem(
                       value: _MenuAction.togglePrivate,
-                      child: Text(
-                        trackRecord.private
+                      child: ChapterMenuRow(
+                        icon: trackRecord.private
+                            ? FluentIcons.eye_24_regular
+                            : FluentIcons.eye_off_24_regular,
+                        label: trackRecord.private
                             ? context.l10n.trackMarkPublic
                             : context.l10n.trackMarkPrivate,
                       ),
                     ),
                   PopupMenuItem(
                     value: _MenuAction.remove,
-                    child: Text(context.l10n.trackRemoveEntry),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.delete_24_regular,
+                      label: context.l10n.trackRemoveEntry,
+                    ),
                   ),
                 ],
                 popUpAnimationStyle: context.motionStyle,

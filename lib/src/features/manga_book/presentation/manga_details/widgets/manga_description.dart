@@ -35,6 +35,7 @@ import '../controller/manga_details_controller.dart';
 import '../controller/next_update_controller.dart';
 import '../manga_notes_screen.dart';
 import '../server_web_url.dart';
+import 'chapter_context_menu.dart';
 import 'chapter_download_presets_button.dart';
 import 'edit_manga_category_dialog.dart';
 import 'manga_action_button.dart';
@@ -476,15 +477,24 @@ class MangaDescription extends HookConsumerWidget {
                             itemBuilder: (context) => [
                               PopupMenuItem(
                                 value: 'categories',
-                                child: Text(context.l10n.categories),
+                                child: ChapterMenuRow(
+                                  icon: FluentIcons.tag_24_regular,
+                                  label: context.l10n.categories,
+                                ),
                               ),
                               PopupMenuItem(
                                 value: 'migrate',
-                                child: Text(context.l10n.migrate),
+                                child: ChapterMenuRow(
+                                  icon: FluentIcons.arrow_swap_24_regular,
+                                  label: context.l10n.migrate,
+                                ),
                               ),
                               PopupMenuItem(
                                 value: 'web',
-                                child: Text(context.l10n.webView),
+                                child: ChapterMenuRow(
+                                  icon: FluentIcons.globe_24_regular,
+                                  label: context.l10n.webView,
+                                ),
                               ),
                             ],
                             child: MangaActionButton(

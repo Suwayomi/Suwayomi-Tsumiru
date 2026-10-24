@@ -28,6 +28,7 @@ import '../../../browse_center/presentation/source/controller/source_controller.
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_server_identity_repository.dart';
 import '../../controller/bulk_migration_providers.dart';
@@ -772,15 +773,33 @@ class _ActionMenu extends StatelessWidget {
       itemBuilder: (context) => [
         PopupMenuItem(
           value: 'search',
-          child: Text(l10n.migrationSearchManually),
+          child: ChapterMenuRow(
+            icon: FluentIcons.search_24_regular,
+            label: l10n.migrationSearchManually,
+          ),
         ),
-        PopupMenuItem(value: 'skip', child: Text(l10n.migrationSkip)),
+        PopupMenuItem(
+          value: 'skip',
+          child: ChapterMenuRow(
+            icon: FluentIcons.dismiss_24_regular,
+            label: l10n.migrationSkip,
+          ),
+        ),
         if (hasMatch) ...[
           PopupMenuItem(
             value: 'migrate',
-            child: Text(l10n.migrationMigrateNow),
+            child: ChapterMenuRow(
+              icon: FluentIcons.arrow_swap_24_regular,
+              label: l10n.migrationMigrateNow,
+            ),
           ),
-          PopupMenuItem(value: 'copy', child: Text(l10n.migrationCopyNow)),
+          PopupMenuItem(
+            value: 'copy',
+            child: ChapterMenuRow(
+              icon: FluentIcons.copy_24_regular,
+              label: l10n.migrationCopyNow,
+            ),
+          ),
         ],
       ],
       popUpAnimationStyle: context.motionStyle,

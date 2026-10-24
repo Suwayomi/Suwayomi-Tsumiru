@@ -20,6 +20,7 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../browse_center/domain/language/flag_emoji.dart';
 import '../../../browse_center/domain/source/source_model.dart';
 import '../../../browse_center/presentation/source/controller/source_controller.dart';
+import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../controller/bulk_migration_providers.dart';
 import '../../domain/migration_models.dart';
 import '../widgets/migration_config_sheet.dart';
@@ -85,11 +86,17 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
           PopupMenuItem<void>(
             onTap: () => setSelected(
                 [for (final s in allSources) if (!s.isHidden) s.id]),
-            child: Text(l10n.migrationSelectEnabled),
+            child: ChapterMenuRow(
+              icon: FluentIcons.checkbox_checked_24_regular,
+              label: l10n.migrationSelectEnabled,
+            ),
           ),
           PopupMenuItem<void>(
             onTap: () => setSelected([for (final s in allSources) s.id]),
-            child: Text(l10n.migrationSelectAllSources),
+            child: ChapterMenuRow(
+              icon: FluentIcons.select_all_on_24_regular,
+              label: l10n.migrationSelectAllSources,
+            ),
           ),
         ],
         popUpAnimationStyle: context.motionStyle,

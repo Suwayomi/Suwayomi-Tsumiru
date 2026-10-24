@@ -19,6 +19,7 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
+import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../controller/extension_actions.dart';
@@ -201,14 +202,20 @@ class ExtensionListTileTailing extends StatelessWidget {
               PopupMenuItem(
                 enabled: canInstall && canUninstall,
                 value: _reinstall(context),
-                child: Text(context.l10n.reinstall),
+                child: ChapterMenuRow(
+                  icon: FluentIcons.arrow_clockwise_24_regular,
+                  label: context.l10n.reinstall,
+                ),
               ),
               PopupMenuItem(
                 value: () => _run(
                   context.l10n.uninstalling,
                   (actions) => actions.uninstall(extension.pkgName),
                 ),
-                child: Text(context.l10n.uninstall),
+                child: ChapterMenuRow(
+                  icon: FluentIcons.delete_24_regular,
+                  label: context.l10n.uninstall,
+                ),
               ),
             ],
             popUpAnimationStyle: context.motionStyle,

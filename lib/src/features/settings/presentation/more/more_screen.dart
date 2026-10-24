@@ -219,6 +219,7 @@ class MoreScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

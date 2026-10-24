@@ -19,6 +19,7 @@ import '../../../../account/data/account_providers.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
+import '../../manga_details/widgets/chapter_context_menu.dart';
 import '../controller/downloads_controller.dart';
 
 class DownloadProgressListTile extends HookConsumerWidget {
@@ -146,7 +147,10 @@ class DownloadProgressListTile extends HookConsumerWidget {
                   itemBuilder: (context) => [
                     if (isError)
                       PopupMenuItem(
-                        child: Text(context.l10n.retry),
+                        child: ChapterMenuRow(
+                          icon: FluentIcons.replay_24_regular,
+                          label: context.l10n.retry,
+                        ),
                         onTap: () => toggleChapterToQueue(
                           toast,
                           ref,
@@ -155,7 +159,10 @@ class DownloadProgressListTile extends HookConsumerWidget {
                         ),
                       ),
                     PopupMenuItem(
-                      child: Text(context.l10n.cancel),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.dismiss_24_regular,
+                        label: context.l10n.cancel,
+                      ),
                       onTap: () => toggleChapterToQueue(
                         toast,
                         ref,
@@ -165,14 +172,20 @@ class DownloadProgressListTile extends HookConsumerWidget {
                     ),
                     if (!index.isZero)
                       PopupMenuItem(
-                        child: Text(context.l10n.moveToTop),
+                        child: ChapterMenuRow(
+                          icon: FluentIcons.arrow_up_24_regular,
+                          label: context.l10n.moveToTop,
+                        ),
                         onTap: () => ref
                             .read(downloadsMapProvider.notifier)
                             .reorder(downloadUpdate.chapter.id, 0),
                       ),
                     if (index < downloadsCount - 1)
                       PopupMenuItem(
-                        child: Text(context.l10n.moveToBottom),
+                        child: ChapterMenuRow(
+                          icon: FluentIcons.arrow_down_24_regular,
+                          label: context.l10n.moveToBottom,
+                        ),
                         onTap: () => ref
                             .read(downloadsMapProvider.notifier)
                             .reorder(

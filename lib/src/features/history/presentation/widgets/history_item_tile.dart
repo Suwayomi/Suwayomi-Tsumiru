@@ -17,6 +17,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/web_route_link.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../domain/history_item.dart';
 import '../../domain/history_menu_action.dart';
 
@@ -169,7 +170,10 @@ class HistoryItemTile extends ConsumerWidget {
                       .map(
                         (action) => PopupMenuItem(
                           value: action,
-                          child: Text(action.toLocale(context)),
+                          child: ChapterMenuRow(
+                            icon: action.icon,
+                            label: action.toLocale(context),
+                          ),
                         ),
                       )
                       .toList(),

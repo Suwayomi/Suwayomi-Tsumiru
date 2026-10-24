@@ -24,6 +24,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
+import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
 import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
@@ -834,8 +835,12 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                                           context,
                                           ref,
                                         ),
-                                        child: Text(
-                                          context.l10n.openRandomEntry,
+                                        child: ChapterMenuRow(
+                                          icon: FluentIcons
+                                              .arrow_shuffle_24_regular,
+                                          label: context
+                                              .l10n
+                                              .openRandomEntry,
                                         ),
                                       ),
                                     ],
@@ -1065,8 +1070,12 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                                           context,
                                           ref,
                                         ),
-                                        child: Text(
-                                          context.l10n.openRandomEntry,
+                                        child: ChapterMenuRow(
+                                          icon: FluentIcons
+                                              .arrow_shuffle_24_regular,
+                                          label: context
+                                              .l10n
+                                              .openRandomEntry,
                                         ),
                                       ),
                                     ],

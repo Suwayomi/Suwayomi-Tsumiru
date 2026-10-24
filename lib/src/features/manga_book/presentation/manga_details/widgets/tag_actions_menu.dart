@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,6 +15,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../library/presentation/library/controller/library_controller.dart';
+import 'chapter_context_menu.dart';
 
 /// [context] must belong to the tapped chip so the menu anchors to it.
 Future<void> showTagActionsMenu(
@@ -36,10 +38,27 @@ Future<void> showTagActionsMenu(
     context: context,
     position: position,
     items: [
-      PopupMenuItem(value: 'search', child: Text(context.l10n.search)),
-      PopupMenuItem(value: 'global', child: Text(context.l10n.globalSearch)),
       PopupMenuItem(
-          value: 'copy', child: Text(context.l10n.copyToClipboard)),
+        value: 'search',
+        child: ChapterMenuRow(
+          icon: FluentIcons.search_24_regular,
+          label: context.l10n.search,
+        ),
+      ),
+      PopupMenuItem(
+        value: 'global',
+        child: ChapterMenuRow(
+          icon: FluentIcons.globe_search_24_regular,
+          label: context.l10n.globalSearch,
+        ),
+      ),
+      PopupMenuItem(
+        value: 'copy',
+        child: ChapterMenuRow(
+          icon: FluentIcons.copy_24_regular,
+          label: context.l10n.copyToClipboard,
+        ),
+      ),
     ],
     popUpAnimationStyle: context.motionStyle,
   );
