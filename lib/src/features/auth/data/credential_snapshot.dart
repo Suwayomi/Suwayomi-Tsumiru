@@ -130,6 +130,18 @@ class CredentialSnapshot {
     SharedPreferences prefs, {
     required bool invalidateOnFailure,
   }) async {
+    if (!changes.keys.any(kCredentialKeys.contains)) {
+      var complete = true;
+      for (final key in kEndpointKeys) {
+        if (!changes.containsKey(key)) continue;
+        final value = target[key];
+        final saved = value == null
+            ? await deleteSecure(_storage, key)
+            : await writeSecure(_storage, key, value);
+        if (!saved) complete = false;
+      }
+      return complete;
+    }
     var complete = true;
     for (final key in kCredentialKeys) {
       final value = target[key];
