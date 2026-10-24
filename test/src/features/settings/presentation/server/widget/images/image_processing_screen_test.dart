@@ -42,9 +42,7 @@ class _FakeServeRepository extends ServeConversionsRepository {
         ),
       );
 
-  final void Function(
-    List<Input$SettingsDownloadConversionTypeInput> inputs,
-  )
+  final void Function(List<Input$SettingsDownloadConversionTypeInput> inputs)
   onWrite;
 
   @override
@@ -58,8 +56,7 @@ class _FakeServeRepository extends ServeConversionsRepository {
 Future<void> _pumpEditor(
   WidgetTester tester,
   List<ServerConversion> Function() readStored,
-  void Function(List<Input$SettingsDownloadConversionTypeInput> inputs)
-  onWrite,
+  void Function(List<Input$SettingsDownloadConversionTypeInput> inputs) onWrite,
 ) async {
   final client = GraphQLClient(
     link: HttpLink('http://localhost/'),
@@ -93,18 +90,13 @@ Future<void> _pumpEditor(
 /// Compression fields of every rule card, including ones scrolled out of
 /// view below the fold.
 Finder _compressionFields(WidgetTester tester) => find.byWidgetPredicate(
-  (widget) =>
-      widget is TextField &&
-      widget.decoration?.labelText == 'Quality',
+  (widget) => widget is TextField && widget.decoration?.labelText == 'Quality',
   skipOffstage: false,
 );
 
 /// The jpeg rule's compression field (the last card; the first is the blank
 /// `default` rule, which Save drops because its target is empty).
-Future<void> _editRuleCompression(
-  WidgetTester tester,
-  String text,
-) async {
+Future<void> _editRuleCompression(WidgetTester tester, String text) async {
   final field = _compressionFields(tester).last;
   await tester.ensureVisible(field);
   await tester.pumpAndSettle();
@@ -157,7 +149,10 @@ void main() {
     // The editor shows exactly what the fake server now holds, and with no
     // pending edits Save is disabled again.
     expect(
-      tester.widget<TextField>(_compressionFields(tester).last).controller?.text,
+      tester
+          .widget<TextField>(_compressionFields(tester).last)
+          .controller
+          ?.text,
       '0.5',
     );
     expect(stored.single.compressionLevel, 0.5);
@@ -201,55 +196,53 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
 
-      expect(
-        find.text('Invalid input', skipOffstage: false),
-        findsNothing,
-      );
+      expect(find.text('Invalid input', skipOffstage: false), findsNothing);
       expect(_saveEnabled(tester), isTrue);
     },
   );
 
-  testWidgets('duplicate query params open the search editor as Invalid input', (
-    tester,
-  ) async {
-    final stored = [
-      ServerConversion(
-        mimeType: 'image/jpeg',
-        target: 'https://example.com/convert?a=1&a=2',
-      ),
-    ];
-    await _pumpEditor(tester, () => stored, (_) {});
-    expect(tester.takeException(), isNull);
+  testWidgets(
+    'duplicate query params open the search editor as Invalid input',
+    (tester) async {
+      final stored = [
+        ServerConversion(
+          mimeType: 'image/jpeg',
+          target: 'https://example.com/convert?a=1&a=2',
+        ),
+      ];
+      await _pumpEditor(tester, () => stored, (_) {});
+      expect(tester.takeException(), isNull);
 
-    final paramsButton = find.widgetWithText(
-      OutlinedButton,
-      'Search parameters (2)',
-      skipOffstage: false,
-    );
-    await tester.ensureVisible(paramsButton);
-    await tester.pumpAndSettle();
-    await tester.tap(paramsButton);
-    await tester.pumpAndSettle();
+      final paramsButton = find.widgetWithText(
+        OutlinedButton,
+        'Search parameters (2)',
+        skipOffstage: false,
+      );
+      await tester.ensureVisible(paramsButton);
+      await tester.pumpAndSettle();
+      await tester.tap(paramsButton);
+      await tester.pumpAndSettle();
 
-    // Re-enter the same target so ids are re-retained through _setTarget:
-    // each `a` occurrence must keep its own id instead of sharing one.
-    final targetField = find
-        .byWidgetPredicate(
-          (widget) =>
-              widget is TextField &&
-              widget.decoration?.labelText == 'Convert to',
-          skipOffstage: false,
-        )
-        .last;
-    await tester.ensureVisible(targetField);
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      targetField,
-      'https://example.com/convert?a=1&a=2',
-    );
-    await tester.pump();
-    expect(tester.takeException(), isNull);
+      // Re-enter the same target so ids are re-retained through _setTarget:
+      // each `a` occurrence must keep its own id instead of sharing one.
+      final targetField = find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is TextField &&
+                widget.decoration?.labelText == 'Convert to',
+            skipOffstage: false,
+          )
+          .last;
+      await tester.ensureVisible(targetField);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        targetField,
+        'https://example.com/convert?a=1&a=2',
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
 
-    expect(find.text('Invalid input', skipOffstage: false), findsOneWidget);
-  });
+      expect(find.text('Invalid input', skipOffstage: false), findsOneWidget);
+    },
+  );
 }
