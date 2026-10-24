@@ -206,6 +206,9 @@ enum DBKeys {
   // The release version the user chose to skip in the update prompt. The
   // prompt stays hidden until a release newer than this one appears.
   dismissedUpdateVersion(''),
+  // Last server version this device saw. Compared on launch for the "server
+  // updated" notice; empty until the first successful About fetch.
+  lastSeenServerVersion(''),
   updateProgressAfterReading(true),
   updateProgressManualMarkRead(true),
   // Library grid: explicit column count per orientation. 0 = Auto (falls back

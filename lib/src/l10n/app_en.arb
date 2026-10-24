@@ -2043,6 +2043,8 @@
   "globalUpdate": "Global update",
   "help": "Help",
   "helpTranslate": "Help translate",
+  "informAboutAvailableUpdate": "Inform about available update",
+  "informAboutVersionUpdate": "Inform about version update",
   "inLibrary": "In library",
   "includeCategories": "Categories",
   "includeChapters": "Chapters",
@@ -2796,6 +2798,15 @@
   "serverUnreachableAction": "Connection settings",
   "@serverUnreachableAction": {
     "description": "Button that opens the connection settings screen"
+  },
+  "serverUpdateAvailable": "Server update available",
+  "serverUpdatedTo": "Server updated to {version}",
+  "@serverUpdatedTo": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   },
   "offlineViewBannerTitle": "You're viewing offline",
   "@offlineViewBannerTitle": {

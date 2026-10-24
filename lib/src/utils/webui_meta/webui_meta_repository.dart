@@ -114,6 +114,19 @@ class WebUiMetaRepository {
     }
   }
 
+  Future<Map<String, String>> readGlobalMetas() async {
+    final nodes =
+        await client
+            .query$GetWebUiGlobalMetas(
+              Options$Query$GetWebUiGlobalMetas(
+                fetchPolicy: FetchPolicy.noCache,
+              ),
+            )
+            .getData((data) => data.metas.nodes) ??
+        [];
+    return {for (final node in nodes) node.key: node.value};
+  }
+
   Future<void> writeGlobalValue(
     String key,
     String? value,

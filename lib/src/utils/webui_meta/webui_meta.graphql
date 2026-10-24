@@ -33,3 +33,12 @@ mutation DeleteWebUiGlobalMetas($input: DeleteGlobalMetasInput!) {
     __typename
   }
 }
+
+query GetWebUiGlobalMetas {
+  metas(first: 100) {
+    nodes {
+      key
+      value
+    }
+  }
+}

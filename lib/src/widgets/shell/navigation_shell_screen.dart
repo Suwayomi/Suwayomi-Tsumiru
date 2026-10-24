@@ -12,11 +12,15 @@ import 'package:pub_semver/pub_semver.dart';
 
 import '../../constants/app_distribution.dart';
 import '../../features/about/data/about_repository.dart';
+import '../../features/about/data/server_update_alerts_repository.dart';
 import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
+import '../../features/account/data/account_providers.dart';
 import '../../features/offline/data/account_storage_recovery_state.dart';
 import '../../features/offline/presentation/account_storage_recovery_banner.dart';
+import '../../graphql/__generated__/schema.graphql.dart';
+import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
 import '../desktop/desktop_top_bar.dart';
@@ -68,6 +72,66 @@ class NavigationShellScreen extends HookConsumerWidget {
     );
   }
 
+  /// WebUI's server-update notices, once per launch: a short toast when the
+  /// server version changed since this device last saw it, and one with an
+  /// About action when a newer server is available. Server managers only;
+  /// every failure is silent so startup never breaks.
+  Future<void> checkServerUpdateAlerts({
+    required BuildContext context,
+    required WidgetRef ref,
+  }) async {
+    // Captured before the first await: the toast action below fires long
+    // after this method returns, when the build context is gone.
+    final goRouter = GoRouter.of(context);
+    final aboutLocation = const AboutRoute().location;
+    try {
+      final canManage = ref
+          .read(settledAccountAccessProvider)
+          .allows(Enum$UserPermission.MANAGE_SETTINGS);
+      final settings = canManage
+          ? await ref.read(serverUpdateAlertsRepositoryProvider).settings()
+          : null;
+      final about = await ref.read(aboutRepositoryProvider).getAbout();
+      if (!context.mounted) return;
+      final currentVersion = about?.version ?? '';
+      final decision = decideServerUpdateAlerts(
+        canManage: canManage,
+        currentVersion: currentVersion,
+        lastSeenVersion: ref.read(lastSeenServerVersionProvider),
+        informVersionUpdated: settings?.informVersionUpdated ?? true,
+        informAvailableUpdate: settings?.informAvailableUpdate ?? true,
+      );
+      if (decision.storeVersion) {
+        ref.read(lastSeenServerVersionProvider.notifier).update(currentVersion);
+      }
+      final toast = ref.read(toastProvider);
+      if (decision.showUpdatedNotice && context.mounted) {
+        toast?.show(context.l10n.serverUpdatedTo(currentVersion));
+      }
+      if (!decision.checkAvailable) return;
+      final updates = await ref
+          .read(aboutRepositoryProvider)
+          .checkServerUpdate();
+      if (!context.mounted) return;
+      String? newestTag;
+      for (final entry in updates ?? []) {
+        if (entry.channel == about?.buildType) {
+          newestTag = entry.tag;
+          break;
+        }
+      }
+      if (isNewerServerVersion(currentVersion, newestTag) && context.mounted) {
+        toast?.showWithAction(
+          context.l10n.serverUpdateAvailable,
+          actionLabel: context.l10n.about,
+          onAction: () => goRouter.push(aboutLocation),
+        );
+      }
+    } catch (_) {
+      // Launch notices never break startup.
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serverHosted = ref.watch(serverHostedWebProvider);
@@ -84,6 +148,8 @@ class NavigationShellScreen extends HookConsumerWidget {
             updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
             toast: ref.read(toastProvider),
           );
+          if (!context.mounted) return;
+          await checkServerUpdateAlerts(context: context, ref: ref);
         });
         return null;
       }

@@ -115,6 +115,15 @@ class DismissedUpdateVersion extends _$DismissedUpdateVersion
   String? build() => initialize(DBKeys.dismissedUpdateVersion);
 }
 
+/// The last server version this device saw. Compared on launch for the
+/// "server updated" notice; empty until the first successful About fetch.
+@riverpod
+class LastSeenServerVersion extends _$LastSeenServerVersion
+    with SharedPreferenceClientMixin<String> {
+  @override
+  String? build() => initialize(DBKeys.lastSeenServerVersion);
+}
+
 final startupWebRevisionProvider = FutureProvider<String?>(
   (ref) => kIsWeb ? readServedRevision() : null,
 );

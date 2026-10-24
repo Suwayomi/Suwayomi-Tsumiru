@@ -32,6 +32,7 @@ import 'widget/app_update_dialog.dart';
 import 'widget/clipboard_list_tile.dart';
 import 'widget/debug_information_tile.dart';
 import 'widget/media_launch_button.dart';
+import 'widget/server_update_alert_tiles.dart';
 
 class AboutScreen extends HookConsumerWidget {
   const AboutScreen({super.key});
@@ -285,6 +286,7 @@ class AboutScreen extends HookConsumerWidget {
                               toast: toast,
                             ),
                           ),
+                        const ServerUpdateAlertTiles(),
                         DebugInformationTile(
                           about: about,
                           webUiFlavor: webUi?.channel.name,
