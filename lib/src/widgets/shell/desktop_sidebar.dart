@@ -177,7 +177,7 @@ class DesktopSidebar extends ConsumerWidget {
           data: IconThemeData(
             color: selected
                 ? (navFill != null ? cs.onSurface : cs.primary)
-                : (navFill != null ? cs.onSurfaceVariant : cs.onSurface),
+                : cs.onSurface,
           ),
           child: badgedNavIcon(
             NavMotionIcon(data, selected: selected),
@@ -200,7 +200,7 @@ class DesktopSidebar extends ConsumerWidget {
         label: label,
         icon: Icon(
           incognito ? FluentIcons.incognito_24_filled : FluentIcons.incognito_24_regular,
-          color: navFill != null ? cs.onSurfaceVariant : cs.onSurface,
+          color: cs.onSurface,
         ),
         trailing: CompactSwitch(
           value: incognito,
@@ -221,7 +221,7 @@ class DesktopSidebar extends ConsumerWidget {
           FluentIcons.settings_24_regular,
           color: settingsSelected
               ? (navFill != null ? cs.onSurface : cs.primary)
-              : (navFill != null ? cs.onSurfaceVariant : cs.onSurface),
+              : cs.onSurface,
         ),
         onTap: () => const SettingsRoute().push(context),
         gapBelow: 0,

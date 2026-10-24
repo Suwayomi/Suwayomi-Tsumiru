@@ -10,7 +10,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../constants/app_theme.dart';
 import '../constants/gen/assets.gen.dart';
 import '../features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
-import '../utils/theme/app_theme_builder.dart';
 import '../utils/theme/theme_tokens.dart';
 
 /// Indigo Night uses original artwork; other themes tint shadows with their dark accent pair.
@@ -41,14 +40,11 @@ class TsumiruLogo extends ConsumerWidget {
           );
     final List<Color> stops;
     if (theme == AppTheme.custom) {
-      final gradientScheme = isDark
-          ? scheme
-          : schemeFor(
-              theme,
-              Brightness.dark,
-              Color(ref.watch(customThemeColorProvider) ?? 0xFF7C7BFF),
-            );
-      stops = [gradientScheme.primary, gradientScheme.secondary];
+      final seeded = ColorScheme.fromSeed(
+        seedColor: Color(ref.watch(customThemeColorProvider) ?? 0xFF7C7BFF),
+        brightness: Brightness.dark,
+      );
+      stops = [seeded.primary, seeded.secondary];
     } else {
       stops = tokensFor(theme, Brightness.dark).grad!.colors;
     }

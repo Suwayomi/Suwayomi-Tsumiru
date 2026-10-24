@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../constants/app_theme.dart';
 import 'app_color_scheme.dart';
 import 'brand.dart';
+import 'oklch_contrast.dart';
 import 'theme_tokens.dart';
 
 /// The [ColorScheme] a theme uses at [brightness]; Custom is seed-derived.
@@ -12,9 +13,25 @@ ColorScheme schemeFor(
   AppTheme theme,
   Brightness brightness,
   Color customSeed,
-) => theme == AppTheme.custom
-    ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
-    : schemeFromTokens(tokensFor(theme, brightness), brightness);
+) {
+  if (theme != AppTheme.custom) {
+    return schemeFromTokens(tokensFor(theme, brightness), brightness);
+  }
+  final seeded = ColorScheme.fromSeed(
+    seedColor: customSeed,
+    brightness: brightness,
+  );
+  if (brightness == Brightness.light) return seeded;
+  return seeded.copyWith(
+    primary: solveContrast(
+      seeded.primary,
+      seeded.surface,
+      contrastRatio(seeded.onSurfaceVariant, seeded.surface),
+      lighten: true,
+    ),
+    onPrimary: const Color(0xFF0A0A12),
+  );
+}
 
 /// Named themes use brand tokens; Custom is seed-derived. AMOLED affects dark mode only.
 ThemeData buildAppTheme({
@@ -30,16 +47,20 @@ ThemeData buildAppTheme({
     scheme = applyAmoled(scheme);
   }
 
+  final navFill =
+      tokens?.accentFill ??
+      (brightness == Brightness.dark
+          ? solveContrast(scheme.primary, scheme.onSurface, 7, lighten: false)
+          : null);
+
   // Named light themes use their own gradients and on-accent colors.
   final brandColors = BrandColors(
     gradient: tokens?.grad ?? schemeBrandGradient(scheme),
     onGradient: tokens?.onAccent ?? const Color(0xFF0B0D1A),
     success: brandSuccessColor(brightness),
     neutral: theme == AppTheme.mono && brightness == Brightness.light,
-    navSelectedFill: tokens?.accentFill,
+    navSelectedFill: navFill,
   );
-  // Dark token themes fill the selected nav indicator; others follow M3.
-  final navFill = tokens?.accentFill;
 
   final primary = scheme.primary;
   final outline = scheme.outlineVariant;

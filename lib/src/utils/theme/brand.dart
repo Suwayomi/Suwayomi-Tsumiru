@@ -42,7 +42,6 @@ class BrandColors extends ThemeExtension<BrandColors> {
   /// Monochrome light removes hues from genre chips and cover backdrops.
   final bool neutral;
 
-  /// Null keeps the legacy primary-tint nav; dark token themes set a fill.
   final Color? navSelectedFill;
 
   @override

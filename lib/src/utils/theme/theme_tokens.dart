@@ -48,7 +48,7 @@ const _indigoDark = ThemeTokens(
   danger: Color(0xFFFF6B6B),
   border: Color(0x14FFFFFF), // --panel-brd: white @ 0.08
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF47469E),
+  accentFill: Color(0xFF46459D),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -84,7 +84,7 @@ const _plumDark = ThemeTokens(
   danger: Color(0xFFFF7A6B),
   border: Color(0x17FFFFFF), // white @ 0.09
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF912360),
+  accentFill: Color(0xFF912460),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -98,12 +98,12 @@ const _regressionDark = ThemeTokens(
   ink: Color(0xFFDBE6FF),
   muted: Color(0xFF8FA2CC),
   faint: Color(0xFF5A6890),
-  accent: Color(0xFF69A4FE),
+  accent: Color(0xFF67A3FD),
   accent2: Color(0xFF6FD2FF),
   danger: Color(0xFFFF5D6C),
   border: Color(0x38508CFF),
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF0B4798),
+  accentFill: Color(0xFF094799),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -121,7 +121,7 @@ const _emberDark = ThemeTokens(
   danger: Color(0xFFFF5B5B),
   border: Color(0x14FFFFFF),
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF95202B),
+  accentFill: Color(0xFF95212B),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -139,7 +139,7 @@ const _synthwaveDark = ThemeTokens(
   danger: Color(0xFFFF5D73),
   border: Color(0x17FFFFFF),
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF8F2456),
+  accentFill: Color(0xFF8F2355),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -193,7 +193,7 @@ const _nordDark = ThemeTokens(
   danger: Color(0xFFBF616A),
   border: Color(0x1AFFFFFF),
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF1E5765),
+  accentFill: Color(0xFF1C5563),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -229,7 +229,7 @@ const _draculaDark = ThemeTokens(
   danger: Color(0xFFFF5555),
   border: Color(0x17FFFFFF),
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF634689),
+  accentFill: Color(0xFF63468A),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -247,7 +247,7 @@ const _monoDark = ThemeTokens(
   danger: Color(0xFFFF6B6B),
   border: Color(0x1AFFFFFF),
   onAccent: Color(0xFF0A0A12),
-  accentFill: Color(0xFF535358),
+  accentFill: Color(0xFF515156),
   grad: LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
