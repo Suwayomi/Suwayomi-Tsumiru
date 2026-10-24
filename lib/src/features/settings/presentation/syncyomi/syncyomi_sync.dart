@@ -69,14 +69,9 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final finished = terminal && startDate != requestedFrom.value;
   final pending = requested.value && !finished;
   final poll = pending || view.kind == SyncYomiStatusKind.syncing;
-  // True once the live subscription has delivered; while set, the socket is
-  // the status source and the query poll below stays parked. Any socket error
-  // clears it, so polling resumes as the fallback.
+  // Set once the socket delivers; while set, the timer poll stays parked.
   final socketLive = useState(false);
 
-  // Live status while a sync runs. The query above stays the initial value;
-  // each push just re-reads it. Errors (or an unavailable socket) leave
-  // [socketLive] cleared and the timer poll keeps the screen fresh.
   useEffect(() {
     if (!poll) {
       socketLive.value = false;
@@ -99,7 +94,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   }, [poll]);
 
   // Back off after ten minutes instead of giving up; a long sync is still live.
-  // Parked while the live subscription delivers; it is the polling fallback.
+  // Parked while the socket delivers; the polling fallback.
   useEffect(() {
     if (!poll || socketLive.value) return null;
     final deadline = DateTime.now().add(const Duration(minutes: 10));

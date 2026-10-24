@@ -133,11 +133,13 @@ void main() {
     'integer converters accept numeric WebUI values and default invalid ones',
     () {
       expect(encodeWebUiInt(42), '42');
-      for (final value in ['42', ' 42 ', '42.0', '4.2e1', '0x2a']) {
+      for (final value in ['42', ' 42 ', '42.0', '4.2e1']) {
         expect(decodeWebUiInt(value, defaultValue: 7), 42);
       }
       expect(decodeWebUiInt('', defaultValue: 7), 0);
-      expect(decodeWebUiInt('invalid', defaultValue: 7), 7);
+      for (final value in ['invalid', '0x2a', '0b101', '0o52', 'NaN']) {
+        expect(decodeWebUiInt(value, defaultValue: 7), 7);
+      }
     },
   );
 }

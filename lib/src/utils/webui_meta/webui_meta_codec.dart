@@ -53,10 +53,11 @@ String? readWebUiValue(Map<String, String> metas, String key) {
     set[lengthKey] = '$newChunkCount';
   }
 
-  var staleChunkCount = _webUiNumber(existingMetas[lengthKey]) ?? 0;
-  while (existingMetas.containsKey(
-    '${fullKey}_${_numberString(staleChunkCount)}',
-  )) {
+  final staleParsed = _webUiNumber(existingMetas[lengthKey]);
+  var staleChunkCount = staleParsed != null && staleParsed.isFinite
+      ? staleParsed.toInt()
+      : 0;
+  while (existingMetas.containsKey('${fullKey}_$staleChunkCount')) {
     staleChunkCount++;
   }
   if (newChunkCount > 0 && existingMetas.containsKey(fullKey)) {
@@ -90,16 +91,9 @@ num? _webUiNumber(String? value) {
   if (value == null) return null;
   final trimmed = value.trim();
   if (trimmed.isEmpty) return 0;
-  for (final (prefix, radix) in [('0x', 16), ('0b', 2), ('0o', 8)]) {
-    if (trimmed.toLowerCase().startsWith(prefix)) {
-      return int.tryParse(trimmed.substring(2), radix: radix);
-    }
-  }
+  if (!_decimalNumber.hasMatch(trimmed)) return null;
   final number = num.tryParse(trimmed);
   return number == null || number.isNaN ? null : number;
 }
 
-String _numberString(num value) =>
-    value.isFinite && value == value.truncateToDouble()
-    ? '${value.toInt()}'
-    : '$value';
+final _decimalNumber = RegExp(r'^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$');
