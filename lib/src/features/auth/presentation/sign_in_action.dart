@@ -15,6 +15,7 @@ import '../../offline/data/background/background_download_controller_shim.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_coordinator.dart';
 import '../data/auth_credentials_store.dart';
+import '../data/auth_recovery_target.dart';
 import '../data/auth_state.dart';
 import '../data/secure_credentials_provider.dart';
 
@@ -22,11 +23,8 @@ import '../data/secure_credentials_provider.dart';
 /// Connection settings screen. Neither surface reimplements login — they both
 /// call this so the wizard and the settings page behave identically.
 ///
-/// Records the username, clears the other auth modes' stored credentials (so a
-/// mode switch can't leave a stale token behind), then commits via the matching
-/// canonical path:
-///   * basic       — store the `Basic` header (no round-trip; validated by the
-///                   next real request, exactly as the settings screen does),
+/// Verifies and adopts the new sign-in before clearing obsolete credentials:
+///   * basic       — [AuthCoordinator.loginBasic] (verifies + persists header),
 ///   * simpleLogin — [AuthCoordinator.loginSimple] (verifies + persists cookie),
 ///   * uiLogin     — [AuthCoordinator.loginUi]     (verifies + persists tokens).
 ///
@@ -42,11 +40,7 @@ Future<void> performSignIn(
   // The notice below belongs to this attempt, not to an earlier one.
   resetCredentialWriteFailure();
   return ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
-    ref.read(authUsernameProvider.notifier).update(username);
     final store = ref.read(authCredentialsStoreProvider.notifier);
-    if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
-    if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();
-    if (authType != AuthType.basic) await store.clearBasicCredentials();
 
     final coordinator = ref.read(authCoordinatorProvider.notifier);
     switch (authType) {
@@ -73,9 +67,14 @@ Future<void> performSignIn(
           serverBaseUrl: serverBaseUrl,
         );
       case AuthType.none:
-        return;
+        break;
     }
+    if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
+    if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();
+    if (authType != AuthType.basic) await store.clearBasicCredentials();
+    ref.read(authUsernameProvider.notifier).update(username);
     ref.read(authTypeKeyProvider.notifier).update(authType);
+    ref.read(authRecoveryTargetProvider.notifier).set(null);
     ref.read(needsReauthProvider.notifier).set(false);
     // The sign-in works from memory for this run; say it cannot be saved
     // rather than leave the user expecting it next launch.

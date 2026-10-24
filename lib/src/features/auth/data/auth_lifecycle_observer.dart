@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../global_providers/global_providers.dart';
 import 'auth_coordinator.dart';
+import 'auth_recovery_target.dart';
 
 class AuthLifecycleObserver with WidgetsBindingObserver {
   AuthLifecycleObserver(this._ref);
@@ -18,6 +19,7 @@ class AuthLifecycleObserver with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
+    _ref.read(authModeReconcilerProvider).reconcile();
     final coord = _ref.read(authCoordinatorProvider.notifier);
     final gql = _ref.read(unauthenticatedGraphQlClientProvider);
     coord

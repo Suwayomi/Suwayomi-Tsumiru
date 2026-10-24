@@ -14,8 +14,10 @@ import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_notice.dart';
+import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_lifecycle_observer.dart';
+import '../data/auth_recovery_target.dart';
 import '../data/auth_state.dart';
 
 /// Layout-neutral host that surfaces a re-auth `MaterialBanner` via
@@ -47,6 +49,9 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
       if (ref.read(needsReauthProvider) ||
           ref.read(accountNoticeProvider) != null) {
         _showBanner();
+        if (ref.read(authRecoveryTargetProvider) != null) _openSignIn();
+      } else {
+        ref.read(authModeReconcilerProvider).reconcile();
       }
     });
   }
@@ -73,9 +78,6 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   }
 
   MaterialBanner _buildBanner() {
-    // Fall back to the stored default (as the GraphQL clients do) so a
-    // not-yet-hydrated pref reads as its real value, not null.
-    final authType = ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
     return MaterialBanner(
       content: Text(switch (ref.read(accountNoticeProvider)) {
         AccountNoticeKind.passwordUnconfirmed =>
@@ -96,25 +98,35 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
           // navigator, so `showDialog` with our own context finds nothing to
           // push onto and throws — leaving the only way back into the app
           // doing nothing at all when you click it.
-          onPressed: () {
-            final navigatorContext =
-                rootNavigatorKey.currentState?.overlay?.context;
-            if (navigatorContext == null) return;
-            if (authType == AuthType.simpleLogin ||
-                authType == AuthType.uiLogin) {
-              showDialog(
-                context: navigatorContext,
-                builder: (_) => LoginCredentialsPopup(authType: authType),
-                animationStyle: navigatorContext.motionStyle,
-              );
-            } else {
-              const ConnectionRoute().push(navigatorContext);
-            }
-          },
+          onPressed: _openSignIn,
           child: Text(context.l10n.authReauthenticate),
         ),
       ],
     );
+  }
+
+  bool _dialogOpen = false;
+
+  void _openSignIn() {
+    if (_dialogOpen) return;
+    final navigatorContext = rootNavigatorKey.currentState?.overlay?.context;
+    if (navigatorContext == null) return;
+    final mode =
+        ref.read(authRecoveryTargetProvider) ??
+        ref.read(authTypeKeyProvider) ??
+        DBKeys.authType.initial;
+    if (mode == AuthType.none) {
+      const ConnectionRoute().push(navigatorContext);
+      return;
+    }
+    _dialogOpen = true;
+    showDialog<void>(
+      context: navigatorContext,
+      builder: (_) => mode == AuthType.basic
+          ? const CredentialsPopup()
+          : LoginCredentialsPopup(authType: mode),
+      animationStyle: navigatorContext.motionStyle,
+    ).whenComplete(() => _dialogOpen = false);
   }
 
   @override
@@ -122,6 +134,9 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
     ref.listen<bool>(needsReauthProvider, (prev, next) {
       if (next || ref.read(accountNoticeProvider) != null) {
         _showBanner();
+        if (next) {
+          ref.read(authModeReconcilerProvider).reconcile(authFailure: true);
+        }
       } else {
         _clearBanner();
       }
@@ -129,6 +144,16 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
     ref.listen<AccountNoticeKind?>(accountNoticeProvider, (previous, next) {
       _clearBanner();
       if (next != null || ref.read(needsReauthProvider)) _showBanner();
+    });
+    ref.listen<AuthType?>(authRecoveryTargetProvider, (previous, next) {
+      _clearBanner();
+      if (next != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _showBanner();
+          _openSignIn();
+        });
+      }
     });
     return widget.child;
   }

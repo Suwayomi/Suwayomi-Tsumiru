@@ -28,7 +28,9 @@ import 'src/features/account/data/account_session_storage.dart';
 import 'src/features/account/presentation/account_session_host.dart';
 import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
+import 'src/features/auth/data/auth_recovery_target.dart';
 import 'src/features/auth/data/auth_session_transition.dart';
+import 'src/features/auth/data/auth_state.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/custom_headers_store.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
@@ -323,6 +325,12 @@ Future<void> _startApp() async {
         next.read(credentialsProvider.future),
         next.read(customHttpHeadersProvider.future),
       ]);
+      next
+          .read(authRecoveryTargetProvider.notifier)
+          .set(previous.read(authRecoveryTargetProvider));
+      next
+          .read(needsReauthProvider.notifier)
+          .set(previous.read(needsReauthProvider));
       await CatchupStateStore(sharedPreferences).setIdentityAuthorized(false);
       next
           .read(accountStorageRecoveryProvider.notifier)
@@ -495,11 +503,15 @@ void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
   Future<void> handleUri(Uri uri) async {
     if (uri.scheme != 'tsumiru' || uri.host != 'tracker-oauth') return;
     final container = currentContainer();
-    final current = container.read(authCredentialsStoreProvider.notifier).captureSession();
+    final current = container
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
     if (!current()) return;
     try {
       final toast = container.read(toastProvider);
-      final outcome = await container.read(nativeTrackerOAuthProvider).handleCallback(uri);
+      final outcome = await container
+          .read(nativeTrackerOAuthProvider)
+          .handleCallback(uri);
       if (!current()) return;
       final context = rootNavigatorKey.currentContext;
       if (context == null || !context.mounted) return;

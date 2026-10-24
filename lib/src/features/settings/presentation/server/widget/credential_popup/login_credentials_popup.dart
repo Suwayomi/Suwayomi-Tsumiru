@@ -15,6 +15,7 @@ import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../../../features/auth/data/auth_credentials_store.dart';
+import '../../../../../../features/auth/data/auth_recovery_target.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
@@ -176,20 +177,15 @@ class LoginCredentialsPopup extends HookConsumerWidget {
         }
         await ref.read(backgroundDownloadControllerProvider).changeIdentity(
           () async {
-            ref.read(authUsernameProvider.notifier).update(username.text);
             final store = ref.read(authCredentialsStoreProvider.notifier);
             final coordinator = ref.read(authCoordinatorProvider.notifier);
             if (authType == AuthType.simpleLogin) {
-              await store.clearUiLoginTokens();
-              await store.clearBasicCredentials();
               await coordinator.loginSimple(
                 serverBaseUrl: resolvedUrl,
                 username: username.text,
                 password: password.text,
               );
             } else if (authType == AuthType.uiLogin) {
-              await store.clearSimpleLoginCookie();
-              await store.clearBasicCredentials();
               await coordinator.loginUi(
                 gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
                 username: username.text,
@@ -197,6 +193,14 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                 serverBaseUrl: resolvedUrl,
               );
             }
+            if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
+            if (authType != AuthType.simpleLogin) {
+              await store.clearSimpleLoginCookie();
+            }
+            await store.clearBasicCredentials();
+            ref.read(authUsernameProvider.notifier).update(username.text);
+            ref.read(authTypeKeyProvider.notifier).update(authType);
+            ref.read(authRecoveryTargetProvider.notifier).set(null);
           },
         );
         if (context.mounted) Navigator.pop(context);

@@ -21,6 +21,7 @@ import '../constants/enum.dart';
 import '../constants/timeout_constants.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
+import '../features/auth/data/auth_recovery_target.dart';
 import '../features/auth/data/auth_session_status.dart';
 import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/custom_headers_store.dart';
@@ -289,6 +290,20 @@ GraphQLClient graphQlClient(Ref ref) {
   final reachabilityLink = Link.function((request, [forward]) {
     return forward!(request)
         .map((response) {
+          if (response.errors?.any(
+                (e) => isAuthenticationRequired(
+                  OperationException(graphqlErrors: [e]),
+                ),
+              ) ==
+              true) {
+            Future(() {
+              if (ref.mounted && isCurrentSession()) {
+                ref
+                    .read(authModeReconcilerProvider)
+                    .reconcile(authFailure: true);
+              }
+            });
+          }
           if (response.errors == null || response.errors!.isEmpty) {
             Future(() {
               try {
@@ -304,6 +319,15 @@ GraphQLClient graphQlClient(Ref ref) {
           return response;
         })
         .handleError((Object error) {
+          if (isAuthenticationRequired(error) || isBasicGatedNotFound(error)) {
+            Future(() {
+              if (ref.mounted && isCurrentSession()) {
+                ref
+                    .read(authModeReconcilerProvider)
+                    .reconcile(authFailure: true);
+              }
+            });
+          }
           // The inverse. Only the downloader used to set this, so everything else
           // kept paying its own retries to discover the same thing.
           if (isConnectionError(error)) {

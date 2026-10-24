@@ -1,0 +1,22 @@
+fragment SignInSettingsDto on SettingsType {
+  authMode
+  authUsername
+  authPassword
+  jwtAudience
+  jwtTokenExpiry
+  jwtRefreshExpiry
+}
+
+query SignInSettings {
+  settings { ...SignInSettingsDto }
+}
+
+mutation SetSignInSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: {settings: $settings}) {
+    settings { ...SignInSettingsDto }
+  }
+}
+
+query ServerSignInStatus {
+  settings { authMode jwtAudience }
+}

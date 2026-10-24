@@ -19,6 +19,7 @@ class RadioListPopup<T> extends StatelessWidget {
     required this.onChange,
     this.getOptionTitle,
     this.getOptionSubtitle,
+    this.isOptionEnabled,
   });
 
   final String title;
@@ -27,6 +28,7 @@ class RadioListPopup<T> extends StatelessWidget {
   final ValueChanged<T> onChange;
   final String Function(T)? getOptionTitle;
   final String Function(T)? getOptionSubtitle;
+  final bool Function(T)? isOptionEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,7 @@ class RadioListPopup<T> extends StatelessWidget {
         onChange: onChange,
         getTitle: getOptionTitle,
         getSubtitle: getOptionSubtitle,
+        isOptionEnabled: isOptionEnabled,
       ),
       actions: const [PopButton()],
     );
@@ -53,6 +56,7 @@ class RadioList<T> extends StatelessWidget {
     required this.onChange,
     this.getTitle,
     this.getSubtitle,
+    this.isOptionEnabled,
   });
 
   final List<T> optionList;
@@ -60,15 +64,15 @@ class RadioList<T> extends StatelessWidget {
   final ValueChanged<T> onChange;
   final String Function(T)? getTitle;
   final String Function(T)? getSubtitle;
+  final bool Function(T)? isOptionEnabled;
 
   Widget getRadioListTile(BuildContext context, T option) {
     return RadioListTile<T>(
       activeColor: context.theme.colorScheme.primary,
-      title: Text(
-        getTitle?.call(option) ?? option.toString(),
-      ),
+      title: Text(getTitle?.call(option) ?? option.toString()),
       subtitle: getSubtitle != null ? (Text(getSubtitle!(option))) : null,
       value: option,
+      enabled: isOptionEnabled?.call(option) ?? true,
     );
   }
 
@@ -86,8 +90,9 @@ class RadioList<T> extends StatelessWidget {
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children:
-                optionList.map((e) => getRadioListTile(context, e)).toList(),
+            children: optionList
+                .map((e) => getRadioListTile(context, e))
+                .toList(),
           ),
         ),
       ),
