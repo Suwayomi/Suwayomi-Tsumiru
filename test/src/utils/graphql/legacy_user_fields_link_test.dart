@@ -310,7 +310,7 @@ void main() {
     });
 
     test(
-      'auth sentinel from probe is not cached and forwards unchanged',
+      'auth sentinel from probe fails without forwarding and retries',
       () async {
         var probes = 0;
         var requests = 0;
@@ -326,10 +326,6 @@ void main() {
             );
           }
           requests++;
-          if (requests == 1) {
-            expect(source, query);
-            return http.Response('', 401);
-          }
           expect(source, isNot(contains('user {')));
           return http.Response(
             jsonEncode({
@@ -340,7 +336,8 @@ void main() {
             200,
           );
         });
-        expect(await post('retry-auth', client), same(gqlAuthError));
+        await expectLater(post('retry-auth', client), throwsStateError);
+        expect(requests, 0);
         for (var i = 0; i < 2; i++) {
           expect(await post('retry-auth', client), {
             'chapter': {
@@ -349,7 +346,7 @@ void main() {
           });
         }
         expect(probes, 2);
-        expect(requests, 3);
+        expect(requests, 2);
       },
     );
   });
@@ -701,7 +698,7 @@ void main() {
 
   for (final failure in ['network', 'graphql', 'missing fields']) {
     test(
-      '$failure probe failure forwards unchanged and retries next time',
+      '$failure probe failure rejects the request and retries next time',
       () async {
         final link = LegacyUserFieldsLink();
         final original = request('{ chapter { user { isRead } } }');
@@ -725,23 +722,24 @@ void main() {
             }
           } else {
             requests++;
-            if (requests == 1) {
-              expect(outgoing, same(original));
-            } else {
-              expect(
-                printNode(outgoing.operation.document),
-                isNot(contains('user {')),
-              );
-            }
+            expect(
+              printNode(outgoing.operation.document),
+              isNot(contains('user {')),
+            );
             yield const Response(data: {'chapter': null}, response: {});
           }
         }
 
-        for (var i = 0; i < 3; i++) {
+        await expectLater(
+          link.request(original, forward).first,
+          throwsStateError,
+        );
+        expect(requests, 0);
+        for (var i = 0; i < 2; i++) {
           await link.request(original, forward).first;
         }
         expect(probes, 2);
-        expect(requests, 3);
+        expect(requests, 2);
       },
     );
   }
