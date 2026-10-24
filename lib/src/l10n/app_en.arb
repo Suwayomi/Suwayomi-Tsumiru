@@ -4210,5 +4210,16 @@
   "hideLibraryEntries": "Hide entries already in library",
   "retryErroredPages": "Retry errored pages",
   "openChapterInWebView": "Open in WebView",
-  "shareChapterLink": "Share chapter link"
+  "shareChapterLink": "Share chapter link",
+  "koSyncLocationPrompt": "Sync to page {page} from device '{device}'?",
+  "@koSyncLocationPrompt": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  }
 }

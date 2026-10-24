@@ -39,6 +39,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import '../controller/auto_scroll_controller.dart';
 import '../controller/reader_controller.dart';
+import '../utils/koreader_progress_actions.dart';
 import '../utils/last_page_swipe_utils.dart';
 import '../utils/reader_mode_kind.dart';
 import 'chrome/reader_chrome.dart';
@@ -211,6 +212,34 @@ class ReaderWrapper extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final localSync = ref.watch(
+      localKoSyncProgressProvider(chapterId: chapter.id),
+    );
+    final handledSync = useRef(<int>{});
+    final conflict = chapterPages.syncConflict;
+    final localConflict = localSync.value?.syncConflict;
+    useEffect(() {
+      if ((conflict == null && localConflict == null) ||
+          handledSync.value.contains(chapter.id)) {
+        return null;
+      }
+      handledSync.value.add(chapter.id);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        unawaited(
+          applyKoSyncConflict(
+            context: context,
+            ref: ref,
+            chapter: chapter,
+            remotePage: conflict?.remotePage ?? localConflict!.remotePage,
+            deviceName: conflict?.deviceName ?? localConflict!.deviceName,
+            pageCount: chapterPages.pages.length,
+            onJump: onChanged,
+          ),
+        );
+      });
+      return null;
+    }, [chapter.id, conflict, localConflict]);
     final nextPrevChapterPair = ref.watch(
       getNextAndPreviousChaptersProvider(
         mangaId: manga.id,
