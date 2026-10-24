@@ -97,7 +97,7 @@ class SignInActions {
     final repository = ref.read(accountRepositoryProvider);
     int? after;
     do {
-      final page = await repository.users(
+      final page = await repository.usersForSignInPreflight(
         first: 100,
         after: after,
         search: proposed.username.trim(),

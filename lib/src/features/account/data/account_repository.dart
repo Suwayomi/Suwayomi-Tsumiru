@@ -97,8 +97,25 @@ class AccountRepository {
     required int first,
     int? after,
     String? search,
-  }) => _admin(
-    () => client
+  }) => _admin(() => _users(first: first, after: after, search: search));
+
+  Future<Query$Accounts$users?> usersForSignInPreflight({
+    required int first,
+    int? after,
+    required String search,
+  }) async {
+    final current = access?.call();
+    if (current == null || !current.allows(Enum$UserPermission.MANAGE_USERS)) {
+      throw const AccountPermissionDenied(Enum$UserPermission.MANAGE_USERS);
+    }
+    return _users(first: first, after: after, search: search);
+  }
+
+  Future<Query$Accounts$users?> _users({
+    required int first,
+    int? after,
+    String? search,
+  }) => client
         .query$Accounts(
           Options$Query$Accounts(
             fetchPolicy: FetchPolicy.networkOnly,
@@ -115,8 +132,7 @@ class AccountRepository {
             ),
           ),
         )
-        .getData((data) => data.users),
-  );
+        .getData((data) => data.users);
 
   Future<List<Fragment$AccountCodeDto>?> codes({int? forUserId}) => _admin(
     () => client
