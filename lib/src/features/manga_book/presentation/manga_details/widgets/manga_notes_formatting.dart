@@ -1,14 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Plain-Markdown editing helpers for series notes.
-///
-/// The editor is a plain text box on purpose: rich-text packages rewrite
-/// WebUI's Markdown on save (nested lists, escaping, headings). These operate
-/// on [TextEditingValue] so they stay pure and unit-testable; the toolbar
-/// assigns the result back to the controller.
-
-/// Wraps the selection in [marker] (`**` for bold, `*` for italic). With a
-/// collapsed selection inserts the marker pair and puts the cursor between.
 TextEditingValue applyInlineMarker(TextEditingValue value, String marker) {
   final selection = value.selection;
   final text = value.text;
@@ -38,8 +29,6 @@ TextEditingValue applyInlineMarker(TextEditingValue value, String marker) {
 
 final _numberedPrefix = RegExp(r'^\d+\. ');
 
-/// Toggles a `- ` prefix on every selected line. Lines already carrying the
-/// prefix lose it; otherwise blank lines are skipped and the rest gain it.
 TextEditingValue toggleBulletedList(TextEditingValue value) =>
     _toggleLinePrefix(
       value,
@@ -48,9 +37,6 @@ TextEditingValue toggleBulletedList(TextEditingValue value) =>
       addPrefix: (line, _) => '- $line',
     );
 
-/// Toggles a `1. `, `2. `, … prefix on every selected line, numbering the
-/// selected lines consecutively from 1. Lines already numbered lose it;
-/// partially numbered lines are renumbered instead of double-prefixed.
 TextEditingValue toggleNumberedList(TextEditingValue value) =>
     _toggleLinePrefix(
       value,

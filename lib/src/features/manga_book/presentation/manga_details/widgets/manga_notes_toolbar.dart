@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import 'manga_notes_formatting.dart';
 
-/// Bold / Italic / bulleted / numbered buttons inserting plain Markdown
-/// markers into [controller]. The phone page adds a character count beside
-/// this row; the desktop dialog shows it alone above the text field.
 class MangaNotesFormatToolbar extends StatelessWidget {
   const MangaNotesFormatToolbar({super.key, required this.controller});
 

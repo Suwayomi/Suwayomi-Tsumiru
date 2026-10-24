@@ -14,10 +14,6 @@ import '../../../../../utils/platform/current_platform_description.dart';
 import '../../../domain/about/about_dto.dart';
 import '../controllers/about_controller.dart';
 
-/// Plain-text client/server dump for bug reports, mirroring the WebUI About
-/// page's debug block: client name, version and platform, server name,
-/// version, channel and build time, plus the web interface flavour and
-/// version when the server reports one.
 String buildDebugInfoText({
   required String clientName,
   required String clientVersion,

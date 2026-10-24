@@ -24,8 +24,6 @@ class GeneralScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // App language moved to Appearance: a saved General link still carrying
-    // highlight=appLanguage lands on the row's new home instead.
     final highlight = GoRouter.maybeOf(
       context,
     )?.state.uri.queryParameters['highlight'];

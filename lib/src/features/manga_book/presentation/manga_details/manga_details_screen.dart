@@ -210,8 +210,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
       if (url != null) openInBrowser(url);
     }
 
-    // Series notes (WebUI-shared Markdown). Library entries only for the
-    // entry itself; notes already on a non-library series still display.
     void openMangaNotes(BuildContext context, MangaDto manga) {
       final dialog = MangaNotesDialog(
         mangaId: mangaId,

@@ -19,8 +19,6 @@ part 'about_controller.g.dart';
 Future<AboutDto?> about(Ref ref) =>
     ref.watch(aboutRepositoryProvider).getAbout();
 
-/// The running web interface's flavour and version, null when the server
-/// doesn't report one. Separated from [about] so it can fail on its own.
 @riverpod
 Future<Query$GetAboutWebUI$aboutWebUI?> aboutWebUI(Ref ref) =>
     ref.watch(aboutRepositoryProvider).getAboutWebUI();

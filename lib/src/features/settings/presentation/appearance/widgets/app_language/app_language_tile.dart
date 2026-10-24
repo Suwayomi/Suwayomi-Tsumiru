@@ -14,8 +14,6 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 
-/// App language row, moved here from General: both Komikku and WebUI list
-/// the language under Appearance.
 class AppLanguageTile extends ConsumerWidget {
   const AppLanguageTile({super.key});
 

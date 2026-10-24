@@ -21,17 +21,6 @@ import '../data/auth_recovery_target.dart';
 import '../data/auth_state.dart';
 import '../data/secure_credentials_provider.dart';
 
-/// The single sign-in routine shared by first-run onboarding and the
-/// Connection settings screen. Neither surface reimplements login — they both
-/// call this so the wizard and the settings page behave identically.
-///
-/// Verifies and adopts the new sign-in before clearing obsolete credentials:
-///   * basic       — [AuthCoordinator.loginBasic] (verifies + persists header),
-///   * simpleLogin — [AuthCoordinator.loginSimple] (verifies + persists cookie),
-///   * uiLogin     — [AuthCoordinator.loginUi]     (verifies + persists tokens).
-///
-/// Throws on rejection for ui/simple (bad credentials or wrong auth mode); the
-/// caller surfaces the error.
 Future<void> performSignIn(
   WidgetRef ref, {
   required AuthType authType,

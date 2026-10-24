@@ -48,9 +48,6 @@ class AboutRepository {
   Future<AboutDto?> getAbout() =>
       client.query$GetAbout().getData((a) => a.aboutServer);
 
-  /// The running web interface's flavour and version. Its own query so a
-  /// server that doesn't report it (or an older one without the field) only
-  /// hides the debug line instead of failing the whole About page.
   Future<Query$GetAboutWebUI$aboutWebUI?> getAboutWebUI() async {
     try {
       return await client
@@ -115,8 +112,6 @@ class DismissedUpdateVersion extends _$DismissedUpdateVersion
   String? build() => initialize(DBKeys.dismissedUpdateVersion);
 }
 
-/// The last server version this device saw. Compared on launch for the
-/// "server updated" notice; empty until the first successful About fetch.
 @riverpod
 class LastSeenServerVersion extends _$LastSeenServerVersion
     with SharedPreferenceClientMixin<String> {

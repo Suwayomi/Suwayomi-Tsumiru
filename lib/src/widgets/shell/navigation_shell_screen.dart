@@ -72,16 +72,10 @@ class NavigationShellScreen extends HookConsumerWidget {
     );
   }
 
-  /// WebUI's server-update notices, once per launch: a short toast when the
-  /// server version changed since this device last saw it, and one with an
-  /// About action when a newer server is available. Server managers only;
-  /// every failure is silent so startup never breaks.
   Future<void> checkServerUpdateAlerts({
     required BuildContext context,
     required WidgetRef ref,
   }) async {
-    // Captured before the first await: the toast action below fires long
-    // after this method returns, when the build context is gone.
     final goRouter = GoRouter.of(context);
     final aboutLocation = const AboutRoute().location;
     try {
@@ -128,7 +122,6 @@ class NavigationShellScreen extends HookConsumerWidget {
         );
       }
     } catch (_) {
-      // Launch notices never break startup.
     }
   }
 

@@ -10,11 +10,6 @@ import '../../../../utils/misc/toast/toast.dart';
 import 'widgets/manga_notes_save.dart';
 import 'widgets/manga_notes_toolbar.dart';
 
-/// Phone notes editor, following Komikku's full-screen page: an app bar with
-/// a back arrow, "Edit notes" title and the series title as subtitle; a
-/// multi-line autofocused borderless text field; and a bottom bar with the
-/// formatting buttons and the character count. Saves when leaving the page
-/// (back arrow or system back).
 class MangaNotesScreen extends HookConsumerWidget {
   const MangaNotesScreen({
     super.key,

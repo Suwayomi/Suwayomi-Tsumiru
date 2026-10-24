@@ -55,8 +55,6 @@ enum DBKeys {
   showNSFW(true),
   showRecommendations(true),
   recommendsInOverflow(false),
-  // Null until the user flips the Series page switch: single-column shows
-  // the cover backdrop, two-column hides it. Device-only, never synced.
   mangaThumbnailBackdrop(null),
   downloadedBadge(false),
   // On by default: the badge shipped always-on, so off would change behavior.
@@ -206,8 +204,6 @@ enum DBKeys {
   // The release version the user chose to skip in the update prompt. The
   // prompt stays hidden until a release newer than this one appears.
   dismissedUpdateVersion(''),
-  // Last server version this device saw. Compared on launch for the "server
-  // updated" notice; empty until the first successful About fetch.
   lastSeenServerVersion(''),
   updateProgressAfterReading(true),
   updateProgressManualMarkRead(true),

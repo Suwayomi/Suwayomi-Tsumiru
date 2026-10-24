@@ -36,16 +36,6 @@ import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
 import 'prompt_sign_in.dart';
 
-/// Connection-screen authentication, state-aware:
-///   * No auth configured  -> just the auth-mode picker.
-///   * Already signed in    -> "Signed in as the user" + Log out (no login form,
-///                             so we never re-run a login the server rejects).
-///   * Needs sign-in        -> inline username/password with Test + Sign in,
-///                             the same shape as the first-run (FTUE) flow.
-/// The authentication-mode row shared by the Connection page's
-/// Authentication card and its Account card: a plain settings row whose
-/// subtitle names the current mode and whose tap opens the mode choice
-/// dialog with the same options the dropdown offered.
 class ConnectionAuthTypeTile extends ConsumerWidget {
   const ConnectionAuthTypeTile({super.key});
 
@@ -100,8 +90,6 @@ class ConnectionAuthTypeTile extends ConsumerWidget {
   }
 }
 
-/// The web-only sign-in hint, kept next to the auth-mode row with the same
-/// padding the dropdown used: full inset inside a card, loose inset below one.
 class ConnectionAuthWebHint extends ConsumerWidget {
   const ConnectionAuthWebHint({super.key, this.inCard = false});
 

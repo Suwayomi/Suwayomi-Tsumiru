@@ -36,7 +36,6 @@ extension MangaExtensions on MangaDto {
   /// this, so it has to be derived.
   int get readChapterCount => chapters.totalCount - user.unreadCount;
 
-  /// The series notes WebUI stores in the manga meta (plain or chunked).
   String? get webUiNotes =>
       readWebUiValue({for (final m in meta) m.key: m.value}, 'notes');
 

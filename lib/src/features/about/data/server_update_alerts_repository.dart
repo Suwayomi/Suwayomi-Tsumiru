@@ -15,9 +15,6 @@ import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../account/data/account_permission.dart';
 
-/// WebUI's two server-update switches, stored as global `"true"`/`"false"`
-/// meta under the default profile. Absent keys mean on, matching WebUI's
-/// `SERVER_SETTINGS_METADATA_DEFAULT`.
 class ServerUpdateAlertSettings {
   const ServerUpdateAlertSettings({
     required this.informVersionUpdated,
@@ -28,7 +25,6 @@ class ServerUpdateAlertSettings {
   final bool informVersionUpdated;
   final bool informAvailableUpdate;
 
-  /// The fetched global metas, kept for follow-up writes.
   final Map<String, String> metas;
 }
 
@@ -84,10 +80,6 @@ final serverUpdateAlertSettingsProvider =
       (ref) => ref.watch(serverUpdateAlertsRepositoryProvider).settings(),
     );
 
-/// Pure launch triggers, mirroring WebUI's `ServerUpdateChecker`: the first
-/// launch with a known version only records it; a changed version records
-/// the new one and, when its switch is on, raises the short notice; the
-/// available-update network check runs only when its switch is on.
 ({bool showUpdatedNotice, bool storeVersion, bool checkAvailable})
 decideServerUpdateAlerts({
   required bool canManage,
@@ -123,8 +115,6 @@ decideServerUpdateAlerts({
   );
 }
 
-/// True when [candidate] parses as a version newer than [current]. Anything
-/// unparsable (or blank) means "no update", never a notice.
 bool isNewerServerVersion(String current, String? candidate) {
   final tag = candidate?.trim();
   if (tag.isBlank) return false;

@@ -15,9 +15,6 @@ import '../../../../../../widgets/compact_switch.dart';
 
 part 'manga_thumbnail_backdrop_tile.g.dart';
 
-/// Device-only cover-backdrop override for the series page. Null until the
-/// user flips the switch: then [resolveMangaThumbnailBackdrop] falls back to
-/// the layout default (on for single-column, off for two-column).
 @riverpod
 class MangaThumbnailBackdrop extends _$MangaThumbnailBackdrop
     with SharedPreferenceClientMixin<bool> {

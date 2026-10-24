@@ -34,7 +34,6 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   Enum$WebUIFlavor? _checkedFlavor;
   Timer? _pollTimer;
   StreamSubscription? _socketSub;
-  // Set once the socket delivers; while set, the timer poll stays parked.
   bool _socketLive = false;
   bool _busy = false;
   bool _installStarted = false;
@@ -86,7 +85,6 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     }
   }
 
-  /// Socket status pushes while [_installing]; errors fall back to polling.
   void _watchSocket() {
     _socketSub?.cancel();
     _socketSub = null;

@@ -8,10 +8,6 @@ import '../../../../../utils/misc/toast/toast.dart';
 import 'manga_notes_save.dart';
 import 'manga_notes_toolbar.dart';
 
-/// Desktop/web/tablet two-column notes editor, following WebUI's dialog:
-/// an "Edit notes" title with the series title as a muted subtitle, a
-/// bordered editor area with the formatting toolbar above the text field,
-/// and Cancel / Save actions (Save filled). Cancel discards the draft.
 class MangaNotesDialog extends HookConsumerWidget {
   const MangaNotesDialog({
     super.key,

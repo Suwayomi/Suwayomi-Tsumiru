@@ -254,8 +254,6 @@ class ServerImagesRoute extends GoRouteData with $ServerImagesRoute {
 class ServerSignInRoute extends GoRouteData with $ServerSignInRoute {
   const ServerSignInRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
   final String? highlight;
 
   Widget get _screen => const ServerSignInScreen();

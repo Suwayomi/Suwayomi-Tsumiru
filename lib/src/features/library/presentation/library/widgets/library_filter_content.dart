@@ -204,12 +204,6 @@ class LibraryFilterHeader extends ConsumerWidget {
   }
 }
 
-/// The eight tri-state filters with short headings: Downloaded (Any/Yes/No),
-/// Storage (Any/On Device/Remote), Read Status (Any/Unread/Read), Started,
-/// Bookmarked, Completed, Lewd and Duplicate chapters (Any/Yes/No).
-///
-/// Any=null, first option=true, second option=false on the existing
-/// providers, exactly as `TriStateFilterTile` maps them.
 class LibraryFilterSegments extends ConsumerWidget {
   const LibraryFilterSegments({super.key});
 

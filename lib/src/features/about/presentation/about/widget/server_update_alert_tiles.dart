@@ -15,9 +15,6 @@ import '../../../../../widgets/compact_switch.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../data/server_update_alerts_repository.dart';
 
-/// WebUI's two server-update switches, inside About's Server card next to
-/// "Check for server updates". Server managers only; anyone else (and any
-/// load failure) sees nothing.
 class ServerUpdateAlertTiles extends ConsumerWidget {
   const ServerUpdateAlertTiles({super.key});
 

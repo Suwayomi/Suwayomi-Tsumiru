@@ -278,9 +278,6 @@ class MangaDescription extends HookConsumerWidget {
       ],
     );
 
-    // Device-only override from the Appearance → Series page switch. Unset
-    // keeps the shipped behaviour: backdrop on single-column, plain header
-    // on two-column.
     final showBackdrop = resolveMangaThumbnailBackdrop(
       override: ref.watch(mangaThumbnailBackdropProvider),
       twoColumn: twoColumn,

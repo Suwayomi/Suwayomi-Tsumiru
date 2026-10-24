@@ -69,7 +69,6 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final finished = terminal && startDate != requestedFrom.value;
   final pending = requested.value && !finished;
   final poll = pending || view.kind == SyncYomiStatusKind.syncing;
-  // Set once the socket delivers; while set, the timer poll stays parked.
   final socketLive = useState(false);
 
   useEffect(() {
@@ -93,8 +92,6 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
     return () => sub?.cancel();
   }, [poll]);
 
-  // Back off after ten minutes instead of giving up; a long sync is still live.
-  // Parked while the socket delivers; the polling fallback.
   useEffect(() {
     if (!poll || socketLive.value) return null;
     final deadline = DateTime.now().add(const Duration(minutes: 10));
