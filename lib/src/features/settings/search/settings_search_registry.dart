@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_distribution.dart';
 import '../../../constants/app_theme.dart';
+import '../../../constants/enum.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
@@ -41,6 +42,8 @@ import '../presentation/server/widget/database/data/database_repository.dart';
 import '../presentation/server/widget/images/data/images_repository.dart';
 import '../presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
 import '../presentation/server/widget/opds/data/opds_repository.dart';
+import '../presentation/server/widget/sign_in/data/sign_in_repository.dart';
+import '../presentation/server/widget/sign_in/sign_in_section.dart';
 import '../presentation/server/widget/webview/data/webview_repository.dart';
 import '../presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import '../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
@@ -1567,6 +1570,120 @@ List<SettingsSearchEntry> get serverImagesSettingsSearchEntries => [
   ),
 ];
 
+List<SettingsSearchEntry> get serverSignInSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'serverAuthMode',
+    title: (l) => l.serverAuthMode,
+    breadcrumb: (l) => '${l.server} › ${l.serverSignIn}',
+    open: (c) => const ServerSignInRoute(highlight: 'serverAuthMode').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(signInSettingsProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value !=
+            AccountCapability.unknown,
+  ),
+  SettingsSearchEntry(
+    id: 'serverAuthUsername',
+    title: (l) => l.serverAuthUsername,
+    breadcrumb: (l) => '${l.server} › ${l.serverSignIn}',
+    open: (c) =>
+        const ServerSignInRoute(highlight: 'serverAuthUsername').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(signInSettingsProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value !=
+            AccountCapability.unknown &&
+        signInAdmin(
+          accounts:
+              ref.watch(signInAccountsCapabilityProvider).value ==
+              AccountCapability.supported,
+          mode:
+              ref.watch(signInSettingsProvider).value!.authMode ==
+                  Enum$AuthMode.UI_LOGIN
+              ? AuthType.uiLogin
+              : AuthType.none,
+          userId: ref.watch(currentAccountProvider)?.id,
+        ),
+  ),
+  SettingsSearchEntry(
+    id: 'serverAuthPassword',
+    title: (l) => l.serverAuthPassword,
+    breadcrumb: (l) => '${l.server} › ${l.serverSignIn}',
+    open: (c) =>
+        const ServerSignInRoute(highlight: 'serverAuthPassword').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(signInSettingsProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value !=
+            AccountCapability.unknown &&
+        signInAdmin(
+          accounts:
+              ref.watch(signInAccountsCapabilityProvider).value ==
+              AccountCapability.supported,
+          mode:
+              ref.watch(signInSettingsProvider).value!.authMode ==
+                  Enum$AuthMode.UI_LOGIN
+              ? AuthType.uiLogin
+              : AuthType.none,
+          userId: ref.watch(currentAccountProvider)?.id,
+        ),
+  ),
+  SettingsSearchEntry(
+    id: 'serverJwtAudience',
+    title: (l) => l.serverJwtAudience,
+    breadcrumb: (l) => '${l.server} › ${l.serverSignIn}',
+    open: (c) =>
+        const ServerSignInRoute(highlight: 'serverJwtAudience').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(signInSettingsProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value !=
+            AccountCapability.unknown &&
+        ref.watch(signInSettingsProvider).value!.authMode ==
+            Enum$AuthMode.UI_LOGIN,
+  ),
+  SettingsSearchEntry(
+    id: 'serverAccessExpiry',
+    title: (l) => l.serverAccessExpiry,
+    breadcrumb: (l) => '${l.server} › ${l.serverSignIn}',
+    open: (c) =>
+        const ServerSignInRoute(highlight: 'serverAccessExpiry').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(signInSettingsProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value !=
+            AccountCapability.unknown &&
+        ref.watch(signInSettingsProvider).value!.authMode ==
+            Enum$AuthMode.UI_LOGIN,
+  ),
+  SettingsSearchEntry(
+    id: 'serverRefreshExpiry',
+    title: (l) => l.serverRefreshExpiry,
+    breadcrumb: (l) => '${l.server} › ${l.serverSignIn}',
+    open: (c) =>
+        const ServerSignInRoute(highlight: 'serverRefreshExpiry').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(signInSettingsProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value != null &&
+        ref.watch(signInAccountsCapabilityProvider).value !=
+            AccountCapability.unknown &&
+        ref.watch(signInSettingsProvider).value!.authMode ==
+            Enum$AuthMode.UI_LOGIN,
+  ),
+];
+
 List<SettingsSearchEntry> get serverDatabaseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'databaseType',
@@ -1904,6 +2021,7 @@ List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...notificationsSettingsSearchEntries,
   ...backupSettingsSearchEntries,
   ...downloadsSettingsSearchEntries,
+  ...serverSignInSettingsSearchEntries,
   ...serverNetworkSettingsSearchEntries,
   ...serverWebInterfaceSettingsSearchEntries,
   ...serverOpdsSettingsSearchEntries,

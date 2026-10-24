@@ -68,6 +68,7 @@ import 'package:tsumiru/src/features/settings/presentation/server/server_images_
 import 'package:tsumiru/src/features/settings/presentation/server/server_logs_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_network_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_opds_screen.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/server_sign_in_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/server_web_interface_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/database/data/database_repository.dart';
@@ -78,6 +79,9 @@ import 'package:tsumiru/src/features/settings/presentation/server/widget/images/
 import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/data/misc_logs_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/misc_settings/graphql/__generated__/misc_logs.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/opds/data/opds_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/sign_in/data/sign_in_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/sign_in/graphql/__generated__/sign_in.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/sign_in/sign_in_section.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/data/webview_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/webview/graphql/__generated__/webview.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/sync/sync_screen.dart';
@@ -505,6 +509,19 @@ void main() {
           // every other conditional row in this fixture.
           flareSolverrFallbackProvider.overrideWith((ref) async => true),
           opdsSettingsProvider.overrideWith((ref) async => _opdsSettings()),
+          signInAccountsCapabilityProvider.overrideWith(
+            (ref) async => AccountCapability.unsupported,
+          ),
+          signInSettingsProvider.overrideWith(
+            (ref) async => Fragment$SignInSettingsDto(
+              authMode: Enum$AuthMode.UI_LOGIN,
+              authUsername: 'admin',
+              authPassword: 'secret',
+              jwtAudience: 'suwayomi',
+              jwtTokenExpiry: 'PT5M',
+              jwtRefreshExpiry: 'PT1440H',
+            ),
+          ),
           databaseSettingsProvider.overrideWith(
             (ref) async => Fragment$DatabaseSettingsDto(
               databaseType: Enum$DatabaseType.POSTGRESQL,
@@ -548,6 +565,11 @@ void main() {
         ],
       );
 
+      await pumpAndCheck(
+        await serverHubPageContainer(socksFlareOn: false),
+        const ServerSignInScreen(),
+        serverSignInSettingsSearchEntries,
+      );
       await pumpAndCheck(
         await serverHubPageContainer(socksFlareOn: true),
         const ServerNetworkScreen(),
