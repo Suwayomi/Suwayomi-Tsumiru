@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -19,7 +20,6 @@ import '../../utils/platform/platform_runtime.dart';
 import '../compact_switch.dart';
 import '../desktop/desktop_brand.dart';
 import '../desktop/desktop_top_bar.dart';
-import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
 
@@ -166,7 +166,7 @@ class DesktopSidebar extends ConsumerWidget {
         icon: IconTheme(
           data: IconThemeData(color: selected ? cs.primary : cs.onSurface),
           child: badgedNavIcon(
-            AnimatedNavIcon(vector: data.animatedIcon, selected: selected),
+            Icon(selected ? data.activeIcon : data.icon),
             data,
             downloadsPaused,
             extensionUpdates,
@@ -185,7 +185,7 @@ class DesktopSidebar extends ConsumerWidget {
         selected: false,
         label: label,
         icon: Icon(
-          incognito ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          incognito ? FluentIcons.incognito_24_filled : FluentIcons.incognito_24_regular,
           color: cs.onSurface,
         ),
         trailing: CompactSwitch(
@@ -204,7 +204,7 @@ class DesktopSidebar extends ConsumerWidget {
         selected: settingsSelected,
         label: label,
         icon: Icon(
-          Icons.settings_outlined,
+          FluentIcons.settings_24_regular,
           color: settingsSelected ? cs.primary : cs.onSurface,
         ),
         onTap: () => const SettingsRoute().push(context),

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -79,7 +80,7 @@ class TrackEditor extends ConsumerWidget {
                 imageUrl: tracker.icon,
                 size: const Size.square(20),
                 progressIndicatorBuilder: (_, _, _) =>
-                    const Icon(Icons.sync_rounded, size: 20),
+                    const Icon(FluentIcons.arrow_sync_24_regular, size: 20),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -117,7 +118,7 @@ class TrackEditor extends ConsumerWidget {
                   ),
                 ),
               PopupMenuButton<_MenuAction>(
-                icon: const Icon(Icons.more_vert_rounded),
+                icon: const Icon(FluentIcons.more_vertical_24_regular),
                 onSelected: (action) =>
                     _handleMenuAction(context, ref, repo, action),
                 itemBuilder: (context) => [
@@ -150,6 +151,9 @@ class TrackEditor extends ConsumerWidget {
         _EditorRow(
           label: context.l10n.trackStatus,
           child: DropdownButton<int>(
+            icon: const Icon(
+              FluentIcons.caret_down_24_filled,
+            ),
             value: tracker.statuses
                     .any((s) => s.value == trackRecord.status)
                 ? trackRecord.status
@@ -177,6 +181,9 @@ class TrackEditor extends ConsumerWidget {
         _EditorRow(
           label: context.l10n.trackScore,
           child: DropdownButton<String>(
+            icon: const Icon(
+              FluentIcons.caret_down_24_filled,
+            ),
             value: tracker.scores.contains(trackRecord.displayScore)
                 ? trackRecord.displayScore
                 : null,
@@ -388,6 +395,12 @@ class _DateRow extends StatelessWidget {
                     initialDate: date ?? DateTime.now(),
                     firstDate: DateTime(1900),
                     lastDate: DateTime(2100),
+                    switchToInputEntryModeIcon: const Icon(
+                      FluentIcons.edit_24_regular,
+                    ),
+                    switchToCalendarEntryModeIcon: const Icon(
+                      FluentIcons.calendar_24_regular,
+                    ),
                   );
                   if (picked != null) onPick(picked);
                 },
@@ -406,7 +419,7 @@ class _DateRow extends StatelessWidget {
           ),
           if (date != null)
             IconButton(
-              icon: const Icon(Icons.clear_rounded, size: 16),
+              icon: const Icon(FluentIcons.dismiss_24_regular, size: 16),
               onPressed: onClear,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,

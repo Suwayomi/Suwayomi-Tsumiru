@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -80,7 +81,7 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
           context.l10n.accountPasswordSignInRequired,
         null => context.l10n.authSessionExpired,
       }),
-      leading: const Icon(Icons.warning_amber_rounded),
+      leading: const Icon(FluentIcons.warning_24_regular),
       actions: [
         TextButton(
           onPressed: _openSignIn,

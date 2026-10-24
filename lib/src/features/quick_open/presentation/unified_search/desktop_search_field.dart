@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -374,7 +375,7 @@ class DesktopSearchField extends HookConsumerWidget {
                     border: InputBorder.none,
                     isDense: true,
                     hintText: hintText ?? l.unifiedSearchHint,
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    prefixIcon: const Icon(FluentIcons.search_24_regular, size: 20),
                     prefixIconConstraints: iconConstraints,
                     suffixIcon: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -385,7 +386,7 @@ class DesktopSearchField extends HookConsumerWidget {
                             iconSize: 20,
                             padding: const EdgeInsets.all(8),
                             constraints: iconConstraints,
-                            icon: const Icon(Icons.close_rounded),
+                            icon: const Icon(FluentIcons.dismiss_24_regular),
                             onPressed: () {
                               controller.clear();
                               onChanged('');

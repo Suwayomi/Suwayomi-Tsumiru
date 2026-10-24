@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -336,7 +337,7 @@ class InlineAuthSection extends HookConsumerWidget {
                 decoration: InputDecoration(
                   labelText: context.l10n.userName,
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.person_rounded),
+                  prefixIcon: const Icon(FluentIcons.person_24_regular),
                 ),
               ),
             ),
@@ -347,7 +348,7 @@ class InlineAuthSection extends HookConsumerWidget {
                 decoration: InputDecoration(
                   labelText: context.l10n.password,
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock_rounded),
+                  prefixIcon: const Icon(FluentIcons.lock_closed_24_regular),
                 ),
                 onSubmitted: (_) => signIn(),
               ),
@@ -392,11 +393,11 @@ class InlineAuthSection extends HookConsumerWidget {
                           : testConnection,
                       icon: testing.value
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
+                              width: 18,
+                              height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.wifi_tethering_rounded),
+                          : const Icon(FluentIcons.wifi_1_24_regular),
                       label: Text(context.l10n.authTestConnection),
                     ),
                   ),
@@ -406,11 +407,11 @@ class InlineAuthSection extends HookConsumerWidget {
                       onPressed: (busy.value || testing.value) ? null : signIn,
                       icon: busy.value
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
+                              width: 18,
+                              height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.login_rounded),
+                          : const Icon(FluentIcons.arrow_enter_20_regular),
                       label: Text(context.l10n.onboardingSignIn),
                     ),
                   ),

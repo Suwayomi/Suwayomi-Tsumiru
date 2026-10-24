@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -1230,7 +1231,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             errorBuilder: (context, error, stackTrace) => placeholderBox(
               child: Center(
                 child: Icon(
-                  Icons.broken_image_rounded,
+                  FluentIcons.image_off_24_regular,
                   color: context.theme.colorScheme.onSurfaceVariant,
                 ),
               ),

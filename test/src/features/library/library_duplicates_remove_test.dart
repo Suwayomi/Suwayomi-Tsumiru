@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -100,7 +101,7 @@ void main() {
       await _longPressCover(tester, 0);
       await _longPressCover(tester, 1);
       await tester.tap(
-        find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
+        find.widgetWithIcon(IconButton, FluentIcons.delete_24_regular),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Remove'));

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -38,8 +39,8 @@ class CustomCheckboxListTile extends ConsumerWidget {
           children: [
             Icon(
               checked
-                  ? Icons.check_box_rounded
-                  : Icons.check_box_outline_blank_rounded,
+                  ? FluentIcons.checkbox_checked_24_regular
+                  : FluentIcons.checkbox_unchecked_24_regular,
               color: checked
                   ? context.theme.colorScheme.primary
                   : context.theme.unselectedWidgetColor,

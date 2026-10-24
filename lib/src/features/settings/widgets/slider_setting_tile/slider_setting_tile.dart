@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 class SliderSettingTile<T> extends StatelessWidget {
@@ -36,7 +37,7 @@ class SliderSettingTile<T> extends StatelessWidget {
       title: Text(title),
       trailing: IconButton(
         onPressed: () => onChanged(defaultValue),
-        icon: const Icon(Icons.refresh_rounded),
+        icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
       ),
       subtitle: Row(
         children: [

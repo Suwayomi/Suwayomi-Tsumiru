@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
@@ -30,137 +31,137 @@ List<GoToTarget> appGoToTargets({
 }) => [
   GoToTarget(
     label: (l) => l.library,
-    icon: Icons.collections_bookmark_rounded,
+    icon: FluentIcons.library_24_regular,
     navigate: (c) => const LibraryRoute(categoryId: 0).go(c),
   ),
   GoToTarget(
     label: (l) => l.updates,
-    icon: Icons.new_releases_rounded,
+    icon: FluentIcons.news_24_regular,
     navigate: (c) => const UpdatesRoute().go(c),
   ),
   GoToTarget(
     label: (l) => l.browse,
-    icon: Icons.explore_rounded,
+    icon: FluentIcons.compass_northwest_24_regular,
     navigate: (c) => const BrowseSourceRoute().go(c),
   ),
   GoToTarget(
     label: (l) => l.downloads,
-    icon: Icons.download_rounded,
+    icon: FluentIcons.arrow_download_24_regular,
     navigate: (c) => const DownloadsRoute().go(c),
   ),
   GoToTarget(
     label: (l) => l.settings,
-    icon: Icons.settings_rounded,
+    icon: FluentIcons.settings_24_regular,
     navigate: (c) => const SettingsRoute().push(c),
   ),
   GoToTarget(
     label: (l) => l.general,
-    icon: Icons.tune_rounded,
+    icon: FluentIcons.options_24_regular,
     navigate: (c) => const GeneralSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.appearance,
-    icon: Icons.color_lens_rounded,
+    icon: FluentIcons.color_24_regular,
     navigate: (c) => const AppearanceSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.library,
-    icon: Icons.collections_bookmark_rounded,
+    icon: FluentIcons.library_24_regular,
     navigate: (c) => const LibrarySettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.downloads,
-    icon: Icons.download_rounded,
+    icon: FluentIcons.arrow_download_24_regular,
     navigate: (c) => const DownloadsSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   if (isAndroidNative)
     GoToTarget(
       label: (l) => l.notifications,
-      icon: Icons.notifications_rounded,
+      icon: FluentIcons.alert_24_regular,
       navigate: (c) => const NotificationsSettingsRoute().push(c),
       subtitle: (l) => l.settings,
     ),
   GoToTarget(
     label: (l) => l.reader,
-    icon: Icons.chrome_reader_mode_rounded,
+    icon: FluentIcons.book_open_24_regular,
     navigate: (c) => const ReaderSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   if (includeHotkeys)
     GoToTarget(
       label: (l) => l.keyboardShortcuts,
-      icon: Icons.keyboard_rounded,
+      icon: FluentIcons.keyboard_24_regular,
       navigate: (c) => const HotkeysSettingsRoute().push(c),
       subtitle: (l) => l.settings,
     ),
   GoToTarget(
     label: (l) => l.browse,
-    icon: Icons.explore_rounded,
+    icon: FluentIcons.compass_northwest_24_regular,
     navigate: (c) => const BrowseSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.backup,
-    icon: Icons.settings_backup_restore_rounded,
+    icon: FluentIcons.arrow_counterclockwise_24_regular,
     navigate: (c) => const BackupRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.syncyomi,
-    icon: Icons.cloud_sync_rounded,
+    icon: FluentIcons.cloud_sync_24_regular,
     navigate: (c) => const SyncYomiSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.koreaderSync,
-    icon: Icons.menu_book_rounded,
+    icon: FluentIcons.book_open_24_regular,
     navigate: (c) => const KoreaderSyncSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.tracking,
-    icon: Icons.sync_rounded,
+    icon: FluentIcons.arrow_sync_24_regular,
     navigate: (c) => const TrackingSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.server,
-    icon: Icons.computer_rounded,
+    icon: FluentIcons.desktop_24_regular,
     navigate: (c) => const ServerSettingsRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.connection,
-    icon: Icons.dns_rounded,
+    icon: FluentIcons.server_24_regular,
     navigate: (c) => const ConnectionRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   if (includeAccount)
     GoToTarget(
       label: (l) => l.accountTitle,
-      icon: Icons.person_rounded,
+      icon: FluentIcons.person_24_regular,
       navigate: (c) => const AccountRoute().push(c),
       subtitle: (l) => l.settings,
     ),
   GoToTarget(
     label: (l) => l.categories,
-    icon: Icons.label_rounded,
+    icon: FluentIcons.tag_24_regular,
     navigate: (c) => const EditCategoriesRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.extensionStores,
-    icon: Icons.extension_rounded,
+    icon: FluentIcons.puzzle_piece_24_regular,
     navigate: (c) => const ExtensionStoreRoute().push(c),
     subtitle: (l) => l.settings,
   ),
   GoToTarget(
     label: (l) => l.about,
-    icon: Icons.info_rounded,
+    icon: FluentIcons.info_24_regular,
     navigate: (c) => const AboutRoute().push(c),
     subtitle: (l) => l.settings,
   ),

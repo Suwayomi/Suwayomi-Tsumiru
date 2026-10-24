@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants/navigation_bar_data.dart';
@@ -14,10 +15,10 @@ Widget badgedNavIcon(
   bool downloadsPaused,
   int extensionUpdates,
 ) {
-  if (data.icon == Icons.download_outlined && downloadsPaused) {
+  if (data.icon == FluentIcons.arrow_download_24_regular && downloadsPaused) {
     return Badge(child: icon);
   }
-  if (data.icon == Icons.explore_outlined && extensionUpdates > 0) {
+  if (data.icon == FluentIcons.compass_northwest_24_regular && extensionUpdates > 0) {
     return Badge(label: Text('$extensionUpdates'), child: icon);
   }
   return icon;

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
@@ -23,7 +24,7 @@ Future<bool> confirmBulkDownload(
         context: context,
         builder: (ctx) => AlertDialog(
           icon: Icon(
-            toDevice ? Icons.save_alt_rounded : Icons.cloud_download_outlined,
+            toDevice ? FluentIcons.arrow_circle_down_24_regular : FluentIcons.cloud_arrow_down_24_regular,
             color: cs.primary,
           ),
           title: Text(

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -127,11 +128,14 @@ class SourceMangaListScreen extends HookConsumerWidget {
         final actions = <Widget>[
           IconButton(
             onPressed: () => showSearch.value = true,
-            icon: const Icon(Icons.search_rounded),
+            icon: const Icon(FluentIcons.search_24_regular),
           ),
           const SourceMangaDisplayIconPopup(),
           if (data?.homeUrl.isNotBlank ?? false)
             PopupMenuButton<void>(
+              icon: const Icon(
+                FluentIcons.more_vertical_24_regular,
+              ),
               itemBuilder: (_) => [
                 PopupMenuItem<void>(
                   onTap: () {
@@ -155,7 +159,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
               onPressed: () => SourcePreferenceRoute(
                 sourceId: sourceId,
               ).go(context),
-              icon: const Icon(Icons.settings_rounded),
+              icon: const Icon(FluentIcons.settings_24_regular),
             ),
         ];
         final toolbarBottom = Column(
@@ -306,7 +310,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
               sourceType == SourceType.SEARCH && filterList != null
                 ? Builder(
                     builder: (context) => FloatingActionButton.extended(
-                      icon: Icon(Icons.filter_alt_rounded),
+                      icon: Icon(FluentIcons.filter_24_regular),
                       onPressed: () => context.windowSizeClass >=
                               WindowSizeClass.medium
                           ? Scaffold.of(context).openEndDrawer()

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -191,6 +192,9 @@ class ExtensionListTileTailing extends StatelessWidget {
         // A third control squeezes the extension name off a phone screen.
         if (hasUpdate)
           PopupMenuButton<VoidCallback>(
+            icon: const Icon(
+              FluentIcons.more_vertical_24_regular,
+            ),
             enabled: canUninstall && running == null,
             onSelected: (selected) => selected(),
             itemBuilder: (context) => [
@@ -214,7 +218,7 @@ class ExtensionListTileTailing extends StatelessWidget {
             tooltip: canInstall && canUninstall
                 ? context.l10n.reinstall
                 : context.l10n.accountPermissionDenied,
-            icon: const Icon(Icons.restart_alt_rounded),
+            icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
             onPressed: canInstall && canUninstall && running == null
                 ? _reinstall(context)
                 : null,

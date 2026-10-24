@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/browse_center/domain/filter/filter_model.dart';
@@ -31,9 +32,9 @@ void main() {
   }
 
   const cases = [
-    (TriState.IGNORE, Icons.check_box_outline_blank_rounded, TriState.INCLUDE),
-    (TriState.INCLUDE, Icons.check_box_rounded, TriState.EXCLUDE),
-    (TriState.EXCLUDE, Icons.disabled_by_default_rounded, TriState.IGNORE),
+    (TriState.IGNORE, FluentIcons.checkbox_unchecked_24_regular, TriState.INCLUDE),
+    (TriState.INCLUDE, FluentIcons.checkbox_checked_24_regular, TriState.EXCLUDE),
+    (TriState.EXCLUDE, FluentIcons.dismiss_square_24_regular, TriState.IGNORE),
   ];
 
   for (final (state, icon, next) in cases) {

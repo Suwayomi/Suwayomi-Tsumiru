@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -94,21 +95,21 @@ void main() {
     // Default: expanded (labels beside icons), collapse chevron in the bar.
     expect(find.byType(DesktopSidebar), findsOneWidget);
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
-    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.byIcon(FluentIcons.chevron_left_24_regular), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // Collapse from the bar.
-    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
     await tester.pumpAndSettle();
 
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     expect(
-      find.byIcon(Icons.chevron_left),
+      find.byIcon(FluentIcons.chevron_left_24_regular),
       findsNothing,
       reason: 'collapsed bar shows the logo, not a chevron',
     );
     expect(
-      find.byIcon(Icons.chevron_right),
+      find.byIcon(FluentIcons.chevron_right_24_regular),
       findsNothing,
       reason: 'the sidebar itself carries no toggle',
     );
@@ -129,7 +130,7 @@ void main() {
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
 
     // Collapsed state persists across a rebuild.
-    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     await _pump(tester, prefs);
@@ -151,8 +152,8 @@ void main() {
     );
     expect(container.read(sidebarExpandedProvider), isTrue);
     expect(narrowPrefs.getBool('sidebarExpanded'), isNot(isFalse));
-    expect(find.byIcon(Icons.chevron_left), findsNothing);
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(find.byIcon(FluentIcons.chevron_left_24_regular), findsNothing);
+    expect(find.byIcon(FluentIcons.chevron_right_24_regular), findsNothing);
     expect(tester.takeException(), isNull);
 
     // Back at 1400 px the saved preference applies again.
@@ -190,7 +191,7 @@ void main() {
     );
 
     // Collapsed: icon-only row keeps the explicit label.
-    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
     await tester.pumpAndSettle();
     expect(find.text(l10n.library), findsNothing);
     expect(libraryRow(), findsOneWidget);

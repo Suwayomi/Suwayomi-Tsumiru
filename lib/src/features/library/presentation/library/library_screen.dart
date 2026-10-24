@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -202,7 +203,7 @@ Widget _organizerButton() => Builder(
         );
       }
     },
-    icon: const Icon(Icons.filter_list_rounded),
+    icon: const Icon(FluentIcons.filter_24_regular),
   ),
 );
 
@@ -322,7 +323,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                   actions: [
                                     IconButton(
                                       icon: const Icon(
-                                        Icons.help_outline_rounded,
+                                        FluentIcons.question_circle_24_regular,
                                       ),
                                       tooltip: context.l10n.searchTips,
                                       onPressed: () => showSearchTips(context),
@@ -353,7 +354,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                               ] else
                                 IconButton(
                                   onPressed: () => searchToggled.value = true,
-                                  icon: const Icon(Icons.search_rounded),
+                                  icon: const Icon(FluentIcons.search_24_regular),
                                 ),
                               _organizerButton(),
                               SyncYomiSyncButton(
@@ -776,7 +777,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                                 actions: [
                                   IconButton(
                                     icon: const Icon(
-                                      Icons.help_outline_rounded,
+                                      FluentIcons.question_circle_24_regular,
                                     ),
                                     tooltip: context.l10n.searchTips,
                                     onPressed: () => showSearchTips(context),
@@ -810,7 +811,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                             ] else
                               IconButton(
                                 onPressed: () => searchToggled.value = true,
-                                icon: const Icon(Icons.search_rounded),
+                                icon: const Icon(FluentIcons.search_24_regular),
                               ),
                             IconButton(
                               tooltip: context.l10n.migrationPickSourceTitle,
@@ -818,12 +819,15 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                                   const MigrationSourcePickerRoute().push(
                                     context,
                                   ),
-                              icon: const Icon(Icons.swap_horiz_rounded),
+                              icon: const Icon(FluentIcons.arrow_swap_24_regular),
                             ),
                             _organizerButton(),
                             Consumer(
                               builder: (context, ref, _) =>
                                   PopupMenuButton<void>(
+                                    icon: const Icon(
+                                      FluentIcons.more_vertical_24_regular,
+                                    ),
                                     itemBuilder: (_) => [
                                       PopupMenuItem<void>(
                                         onTap: randomLibraryEntryAction(
@@ -858,7 +862,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                     tooltip: bodyContext.l10n.migrationPickSourceTitle,
                     onPressed: () =>
                         const MigrationSourcePickerRoute().push(context),
-                    icon: const Icon(Icons.swap_horiz_rounded),
+                    icon: const Icon(FluentIcons.arrow_swap_24_regular),
                   ),
                   SyncYomiSyncButton(
                     onSynced: () => _refreshLibraryAfterSync(ref),
@@ -1052,6 +1056,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                             Consumer(
                               builder: (context, ref, _) =>
                                   PopupMenuButton<void>(
+                                    icon: const Icon(
+                                      FluentIcons.more_vertical_24_regular,
+                                    ),
                                     itemBuilder: (_) => [
                                       PopupMenuItem<void>(
                                         onTap: randomLibraryEntryAction(
@@ -1344,7 +1351,7 @@ class _LibrarySearchBar extends ConsumerWidget {
       autofocus: false,
       actions: [
         IconButton(
-          icon: const Icon(Icons.help_outline_rounded),
+          icon: const Icon(FluentIcons.question_circle_24_regular),
           tooltip: context.l10n.searchTips,
           onPressed: () => showSearchTips(context),
         ),

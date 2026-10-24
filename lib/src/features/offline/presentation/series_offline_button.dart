@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -38,14 +39,14 @@ class SeriesOfflineButton extends ConsumerWidget {
       active: onDevice || downloading,
       icon: downloading
           ? const SizedBox(
-              width: 18,
-              height: 18,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(
               onDevice
-                  ? Icons.offline_pin_rounded
-                  : Icons.download_for_offline_outlined,
+                  ? FluentIcons.checkmark_circle_24_filled
+                  : FluentIcons.arrow_circle_down_24_regular,
             ),
       label: downloading
           ? context.l10n.offlineDownloadingCount(inFlight)
@@ -119,11 +120,11 @@ class SeriesOfflineButton extends ConsumerWidget {
                   const Divider(height: 1),
                   for (final n in const [5, 10, 25])
                     ListTile(
-                      leading: const Icon(Icons.bookmark_add_outlined),
+                      leading: const Icon(FluentIcons.bookmark_add_24_regular),
                       title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
                       trailing:
                           (rule == OfflineKeepRule.nUnread && config.count == n)
-                          ? const Icon(Icons.check_rounded)
+                          ? const Icon(FluentIcons.checkmark_24_regular)
                           : null,
                       onTap: canDownload
                           ? () => _apply(
@@ -135,10 +136,10 @@ class SeriesOfflineButton extends ConsumerWidget {
                           : null,
                     ),
                   ListTile(
-                    leading: const Icon(Icons.menu_book_outlined),
+                    leading: const Icon(FluentIcons.book_open_24_regular),
                     title: Text(sheetContext.l10n.keepOfflineAllUnread),
                     trailing: rule == OfflineKeepRule.allUnread
-                        ? const Icon(Icons.check_rounded)
+                        ? const Icon(FluentIcons.checkmark_24_regular)
                         : null,
                     onTap: canDownload
                         ? () => _apply(
@@ -150,10 +151,10 @@ class SeriesOfflineButton extends ConsumerWidget {
                         : null,
                   ),
                   ListTile(
-                    leading: const Icon(Icons.library_books_outlined),
+                    leading: const Icon(FluentIcons.library_24_regular),
                     title: Text(sheetContext.l10n.keepOfflineAll),
                     trailing: rule == OfflineKeepRule.all
-                        ? const Icon(Icons.check_rounded)
+                        ? const Icon(FluentIcons.checkmark_24_regular)
                         : null,
                     onTap: canDownload
                         ? () => _apply(
@@ -168,7 +169,7 @@ class SeriesOfflineButton extends ConsumerWidget {
                     const Divider(height: 1),
                     ListTile(
                       leading: Icon(
-                        Icons.delete_outline_rounded,
+                        FluentIcons.delete_24_regular,
                         color: sheetContext.theme.colorScheme.error,
                       ),
                       title: Text(

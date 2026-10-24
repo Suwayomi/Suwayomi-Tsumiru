@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -33,7 +34,7 @@ class ServerUnreachableBanner extends ConsumerWidget {
     if (!unreachable) {
       return MaterialBanner(
         content: Text(context.l10n.offlineViewBannerTitle),
-        leading: const Icon(Icons.cloud_off_rounded),
+        leading: const Icon(FluentIcons.cloud_off_24_regular),
         actions: [
           TextButton(
             onPressed: goOnline,
@@ -45,7 +46,7 @@ class ServerUnreachableBanner extends ConsumerWidget {
 
     return MaterialBanner(
       content: Text(context.l10n.serverUnreachableTitle),
-      leading: const Icon(Icons.cloud_off_rounded),
+      leading: const Icon(FluentIcons.cloud_off_24_regular),
       actions: [
         TextButton(
           onPressed: () => const ConnectionRoute().push(context),

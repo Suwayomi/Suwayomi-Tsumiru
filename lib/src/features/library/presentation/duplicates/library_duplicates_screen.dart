@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -144,7 +145,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
     final title = Text(context.l10n.duplicatedEntries);
     final actions = <Widget>[
       IconButton(
-        icon: const Icon(Icons.refresh_rounded),
+        icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
         tooltip: context.l10n.scanForDuplicates,
         onPressed: () => ref.read(scanProvider.notifier).rescan(),
       ),
@@ -175,7 +176,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
                   leading: [
                     IconButton(
                       tooltip: context.l10n.cancel,
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const Icon(FluentIcons.dismiss_24_regular),
                       onPressed: clearSelection,
                     ),
                     Text(
@@ -188,7 +189,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
                       tooltip: offline
                           ? context.l10n.duplicatesRemoveOfflineTooltip
                           : context.l10n.remove,
-                      icon: const Icon(Icons.delete_outline_rounded),
+                      icon: const Icon(FluentIcons.delete_24_regular),
                       onPressed: offline ? null : removeSelection,
                     ),
                   ],
@@ -217,7 +218,7 @@ class _OfflineBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialBanner(
       content: Text(context.l10n.duplicatesOfflineTitleOnly),
-      leading: const Icon(Icons.cloud_off_rounded),
+      leading: const Icon(FluentIcons.cloud_off_24_regular),
       actions: [
         TextButton(
           onPressed: onReconnect,

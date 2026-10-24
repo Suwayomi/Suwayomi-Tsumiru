@@ -6,6 +6,7 @@
 
 import 'dart:io';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:network_info_plus/network_info_plus.dart';
@@ -71,7 +72,7 @@ class ServerSearchButton extends ConsumerWidget {
     final addPort = ref.watch(serverPortToggleProvider).ifNull();
     if (!addPort) return const SizedBox.shrink();
     return AsyncTextButton(
-      icon: const Icon(Icons.search_rounded),
+      icon: const Icon(FluentIcons.search_24_regular),
       onPressed: port != null
           ? () async {
               final value = await getServerAddress(port);

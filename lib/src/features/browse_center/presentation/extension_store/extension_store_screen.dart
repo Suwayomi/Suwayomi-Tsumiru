@@ -4,11 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
+import '../../../../constants/brand_icons.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
@@ -51,7 +53,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.extensionStores);
     final actions = <Widget>[
-      IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: refresh),
+      IconButton(icon: const Icon(FluentIcons.arrow_clockwise_24_regular), onPressed: refresh),
     ];
     final scaffold = Scaffold(
       appBar: topBar
@@ -77,7 +79,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                       ),
                       animationStyle: context.motionStyle,
                     ),
-              child: const Icon(Icons.add_rounded),
+              child: const Icon(FluentIcons.add_24_regular),
             ),
       body: WebSelectionArea(
         child: Center(
@@ -101,7 +103,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                             kStoreHelpUrl,
                             ref.read(toastProvider),
                           ),
-                          icon: const Icon(Icons.help_outline_rounded),
+                          icon: const Icon(FluentIcons.question_circle_24_regular),
                           label: Text(context.l10n.help),
                         ),
                       );
@@ -117,7 +119,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                             for (final store in stores)
                               ListTile(
                                 leading: const Icon(
-                                  Icons.extension_rounded,
+                                  FluentIcons.puzzle_piece_24_regular,
                                   size: 48,
                                 ),
                                 title: Text(store.name),
@@ -126,7 +128,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                   children: [
                                     if (store.contactWebsite.isNotBlank)
                                       IconButton(
-                                        icon: const Icon(Icons.public_rounded),
+                                        icon: const Icon(FluentIcons.globe_24_regular),
                                         onPressed: () => launchUrlInWeb(
                                           context,
                                           store.contactWebsite,
@@ -135,7 +137,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                       ),
                                     if (store.contactDiscord != null)
                                       IconButton(
-                                        icon: const Icon(Icons.discord_rounded),
+                                        icon: const Icon(BrandIcons.discord),
                                         onPressed: () => launchUrlInWeb(
                                           context,
                                           store.contactDiscord!,
@@ -143,7 +145,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                         ),
                                       ),
                                     IconButton(
-                                      icon: const Icon(Icons.copy_rounded),
+                                      icon: const Icon(FluentIcons.copy_24_regular),
                                       onPressed: () async {
                                         await Clipboard.setData(
                                           ClipboardData(text: store.indexUrl),
@@ -156,7 +158,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                       },
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.delete_rounded),
+                                      icon: const Icon(FluentIcons.delete_24_regular),
                                       onPressed: !canManage
                                           ? null
                                           : () => showDialog(

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -34,7 +35,7 @@ class OfflineServerMismatchBanner extends ConsumerWidget {
             ? context.l10n.offlineServerMismatchDisabled
             : context.l10n.offlineServerMismatch,
       ),
-      leading: const Icon(Icons.dns_rounded),
+      leading: const Icon(FluentIcons.server_24_regular),
       actions: [
         if (!mismatch.dismissed)
           TextButton(

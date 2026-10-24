@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -43,7 +44,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
                   ),
                 for (final n in kOfflineBufferSizes)
                   ListTile(
-                    leading: const Icon(Icons.bookmark_add_outlined),
+                    leading: const Icon(FluentIcons.bookmark_add_24_regular),
                     title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
                     onTap: canDownload
                         ? () => Navigator.pop(sheetContext, (
@@ -54,7 +55,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
                         : null,
                   ),
                 ListTile(
-                  leading: const Icon(Icons.menu_book_outlined),
+                  leading: const Icon(FluentIcons.book_open_24_regular),
                   title: Text(sheetContext.l10n.keepOfflineAllUnread),
                   onTap: canDownload
                       ? () => Navigator.pop(sheetContext, (
@@ -65,7 +66,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
                       : null,
                 ),
                 ListTile(
-                  leading: const Icon(Icons.library_books_outlined),
+                  leading: const Icon(FluentIcons.library_24_regular),
                   title: Text(sheetContext.l10n.keepOfflineAll),
                   onTap: canDownload
                       ? () => Navigator.pop(sheetContext, (
@@ -77,7 +78,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.bookmark_remove_outlined),
+                  leading: const Icon(FluentIcons.bookmark_off_24_regular),
                   title: Text(sheetContext.l10n.manageDownloadsStopKeep),
                   onTap: () => Navigator.pop(sheetContext, (
                     rule: OfflineKeepRule.off,
@@ -87,7 +88,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
                 ),
                 ListTile(
                   leading: Icon(
-                    Icons.delete_outline_rounded,
+                    FluentIcons.delete_24_regular,
                     color: sheetContext.theme.colorScheme.error,
                   ),
                   title: Text(

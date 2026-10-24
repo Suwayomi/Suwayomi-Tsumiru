@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
@@ -200,7 +201,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                   children: [
                     IconButton(
                       tooltip: l10n.migrationSettings,
-                      icon: const Icon(Icons.settings_outlined),
+                      icon: const Icon(FluentIcons.settings_24_regular),
                       onPressed: () => _openSettings(
                         context,
                         r,
@@ -212,8 +213,8 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                       tooltip: l10n.migrationActionCopy,
                       icon: Icon(
                         single
-                            ? Icons.content_copy_outlined
-                            : Icons.copy_all_outlined,
+                            ? FluentIcons.copy_24_regular
+                            : FluentIcons.copy_select_24_regular,
                       ),
                       onPressed: complete
                           ? () => _confirm(context, r, deleteSource: false)
@@ -222,7 +223,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                     IconButton(
                       tooltip: l10n.migrationActionMigrate,
                       icon: Icon(
-                        single ? Icons.done_outlined : Icons.done_all_outlined,
+                        single ? FluentIcons.checkmark_24_regular : FluentIcons.checkmark_starburst_24_regular,
                       ),
                       onPressed: complete
                           ? () => _confirm(context, r, deleteSource: true)
@@ -547,7 +548,7 @@ class _Row extends StatelessWidget {
                 latestChapter: entry.fromLatestChapter,
               ),
             ),
-            const Expanded(flex: 1, child: Icon(Icons.arrow_forward)),
+            const Expanded(flex: 1, child: Icon(FluentIcons.arrow_right_24_regular)),
             Expanded(flex: 5, child: _ResultCard(entry: entry)),
             SizedBox(
               width: 40,
@@ -591,7 +592,7 @@ class _ResultCard extends StatelessWidget {
                   borderRadius: KBorderRadius.r8.radius,
                 ),
                 child: Icon(
-                  Icons.broken_image_outlined,
+                  FluentIcons.image_off_24_regular,
                   color: context.theme.colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -744,7 +745,7 @@ class _ActionMenu extends StatelessWidget {
     if (entry.phase == BulkEntryPhase.searching ||
         entry.phase == BulkEntryPhase.queued) {
       return IconButton(
-        icon: const Icon(Icons.close),
+        icon: const Icon(FluentIcons.dismiss_24_regular),
         onPressed: () => runner.skip(entry.fromMangaId),
       );
     }
@@ -755,7 +756,7 @@ class _ActionMenu extends StatelessWidget {
     }
     final hasMatch = entry.toMangaId != null;
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert),
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
       onSelected: (value) {
         switch (value) {
           case 'search':

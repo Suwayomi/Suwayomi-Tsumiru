@@ -23,6 +23,7 @@ dependencies:
   file: ^7.0.0
   file_picker: ^13.1.0
   flex_color_picker: 3.8.0
+  fluentui_system_icons: ^1.1.273
   flutter:
     sdk: flutter
   flutter_android_volume_keydown:

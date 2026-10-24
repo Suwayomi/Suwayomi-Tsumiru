@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -199,16 +200,15 @@ class _SyncYomiSyncAction extends HookConsumerWidget {
     if (sync.running) {
       return IconButton(
         tooltip: syncYomiStepName(context, sync.step),
-        icon: const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
+        icon: SizedBox.square(
+          dimension: IconTheme.of(context).size ?? 24,
+          child: const CircularProgressIndicator(strokeWidth: 2),
         ),
         onPressed: null,
       );
     }
     return IconButton(
-      icon: const Icon(Icons.cloud_sync_rounded),
+      icon: const Icon(FluentIcons.cloud_sync_24_regular),
       tooltip: context.l10n.syncYomiSyncNow,
       onPressed: sync.start,
     );

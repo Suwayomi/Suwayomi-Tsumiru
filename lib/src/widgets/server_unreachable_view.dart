@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -48,7 +49,7 @@ class ServerUnreachableView extends ConsumerWidget {
     final webAuthBlocked = ref.watch(webAuthBlockedProvider);
     final isWeb = ref.watch(isWebProvider);
     return Emoticons(
-      iconData: Icons.cloud_off_rounded,
+      iconData: FluentIcons.cloud_off_24_regular,
       title: context.l10n.serverUnreachableTitle,
       subTitle: webNotFoundVerdict && isWeb
           ? context.l10n.webServerAuthUnconfirmed
@@ -61,7 +62,7 @@ class ServerUnreachableView extends ConsumerWidget {
         children: [
           FilledButton.tonalIcon(
             onPressed: () => const ConnectionRoute().push(context),
-            icon: const Icon(Icons.settings_ethernet_rounded),
+            icon: const Icon(FluentIcons.plug_connected_24_regular),
             label: Text(context.l10n.serverUnreachableAction),
           ),
           if (offlineEscape && hasCatalog) const ViewOfflineButton(),
@@ -83,7 +84,7 @@ class ViewOfflineButton extends ConsumerWidget {
         ref.watch(offlineCatalogAvailableProvider).value ?? false;
     if (!hasCatalog) return const SizedBox.shrink();
     return TextButton.icon(
-      icon: const Icon(Icons.cloud_off_rounded),
+      icon: const Icon(FluentIcons.cloud_off_24_regular),
       label: Text(context.l10n.viewOffline),
       onPressed: () => ref.read(viewOfflineNowProvider.notifier).set(true),
     );

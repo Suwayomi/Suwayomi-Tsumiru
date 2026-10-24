@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -73,7 +74,7 @@ class AsyncReaderPaddingSlider extends HookConsumerWidget {
       return;
     }, []);
     return SliderSettingTile(
-      icon: Icons.width_wide_rounded,
+      icon: FluentIcons.auto_fit_width_24_regular,
       title: context.l10n.readerPadding,
       value: padding,
       getSliderLabel: (val) => (val * 2.5).toStringAsFixed(2),

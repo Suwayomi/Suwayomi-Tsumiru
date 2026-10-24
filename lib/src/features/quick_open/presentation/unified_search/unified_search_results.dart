@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -33,7 +34,7 @@ List<GoToTarget> _categoryTargets(WidgetRef ref) => [
   for (final c in ref.watch(visibleCategoryListProvider).value ?? const [])
     GoToTarget(
       label: (_) => c.name,
-      icon: Icons.folder_rounded,
+      icon: FluentIcons.folder_24_regular,
       // push rebuilds LibraryScreen for the chosen category; go reuses its current tab controller.
       navigate: (ctx) => LibraryRoute(categoryId: c.id).push(ctx),
     ),
@@ -300,7 +301,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
                 action: () => onSetQuery(ex),
                 tile: (onTap) => ListTile(
                   dense: true,
-                  leading: const Icon(Icons.bolt_rounded),
+                  leading: const Icon(FluentIcons.flash_24_regular),
                   title: Text(ex),
                   onTap: onTap,
                 ),
@@ -315,7 +316,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
                 tile: (onTap) => ListTile(
                   dense: true,
                   leading: Icon(
-                    s.isKey ? Icons.data_object_rounded : Icons.tune_rounded,
+                    s.isKey ? FluentIcons.braces_24_regular : FluentIcons.options_24_regular,
                   ),
                   title: Text(s.display),
                   onTap: onTap,
@@ -394,7 +395,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
                 close();
               },
               tile: (onTap) => ListTile(
-                leading: const Icon(Icons.travel_explore_rounded),
+                leading: const Icon(FluentIcons.globe_search_24_regular),
                 title: Text(l.unifiedSearchAllSources(plainQuery)),
                 onTap: onTap,
               ),

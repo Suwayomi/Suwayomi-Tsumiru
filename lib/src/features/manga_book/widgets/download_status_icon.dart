@@ -4,12 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../constants/app_sizes.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
@@ -124,9 +124,13 @@ class DownloadStatusIcon extends HookConsumerWidget {
     }, [downloadUpdate != null]);
 
     if (isLoading.value) {
-      return Padding(
-        padding: KEdgeInsets.h8.size,
+      final box = resolveIconButtonBox(context);
+      return SizedBox(
+        width: box.width,
+        height: box.height,
+        child: Center(
         child: MiniCircularProgressIndicator(color: context.iconColor),
+        ),
       );
     } else {
       if (downloadUpdate != null) {
@@ -136,7 +140,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
             onPressed: !canDownload
                 ? null
                 : () => toggleChapterToQueue(toast, ref, isError: true),
-            icon: const Icon(Icons.replay_rounded),
+            icon: const Icon(FluentIcons.replay_24_regular),
           );
         } else if (downloadUpdate.state == DownloadState.QUEUED) {
           // Use a determinate ring for queued chapters to avoid per-frame animation on every visible row.
@@ -150,7 +154,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
                     value: downloadUpdate.progress,
                     color: context.iconColor,
                   )
-                : Icon(Icons.schedule_rounded, color: context.iconColor),
+                : Icon(FluentIcons.clock_24_regular, color: context.iconColor),
           );
         } else {
           return IconButton(
@@ -169,7 +173,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
       } else {
         if (isDownloaded) {
           return IconButton(
-            icon: brandGradientIcon(context, Icons.cloud_done_rounded),
+            icon: brandGradientIcon(context, FluentIcons.cloud_checkmark_24_filled),
             onPressed: () async {
               if (!await confirmAction(
                     context,
@@ -211,7 +215,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
           }
           return IconButton(
             icon: Icon(
-              Icons.cloud_download_outlined,
+              FluentIcons.cloud_arrow_down_24_regular,
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
             tooltip: canDownload ? null : context.l10n.accountPermissionDenied,

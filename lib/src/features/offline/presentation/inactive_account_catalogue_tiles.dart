@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -41,7 +42,7 @@ class InactiveAccountCatalogueTiles extends ConsumerWidget {
                 ),
                 trailing: IconButton(
                   tooltip: context.l10n.delete,
-                  icon: const Icon(Icons.delete_outline),
+                  icon: const Icon(FluentIcons.delete_24_regular),
                   onPressed: () => _remove(context, ref, catalogue),
                 ),
               ),

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -76,7 +77,7 @@ class LibraryMangaDisplay extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Row(
               children: [
-                const Icon(Icons.grid_view_rounded, size: 20),
+                const Icon(FluentIcons.layout_column_three_24_regular, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Slider(
@@ -131,7 +132,7 @@ class LibraryMangaDisplay extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Row(
               children: [
-                const Icon(Icons.format_size_rounded, size: 20),
+                const Icon(FluentIcons.text_font_size_24_regular, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Slider(

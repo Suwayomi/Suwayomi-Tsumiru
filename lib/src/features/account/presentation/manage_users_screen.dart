@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -63,7 +64,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                             labelText: context.l10n.accountSearchUsers,
                             suffixIcon: IconButton(
                               tooltip: context.l10n.search,
-                              icon: const Icon(Icons.search),
+                              icon: const Icon(FluentIcons.search_24_regular),
                               onPressed: () {
                                 cursors.value = [null];
                                 query.value = search.text.trim();
@@ -82,7 +83,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                         child: SettingsGroupCard(
                           children: [
                             SettingsGroupRow(
-                              icon: Icons.person_add_outlined,
+                              icon: FluentIcons.person_add_24_regular,
                               title: context.l10n.accountCreateUser,
                               onTap: () async {
                                 await showDialog<void>(
@@ -96,7 +97,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                               },
                             ),
                             SettingsGroupRow(
-                              icon: Icons.key_outlined,
+                              icon: FluentIcons.key_24_regular,
                               title: context.l10n.accountCodes,
                               onTap: () =>
                                   const AccountCodesRoute().push<void>(context),
@@ -137,7 +138,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                                           trailing: IconButton(
                                             tooltip: context.l10n.delete,
                                             icon: const Icon(
-                                              Icons.delete_outline_rounded,
+                                              FluentIcons.delete_24_regular,
                                             ),
                                             onPressed: () => showDialog<void>(
                                               context: context,

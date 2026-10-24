@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -159,7 +160,7 @@ class _BadgeLayoutRow extends StatelessWidget {
             index: index,
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              child: Icon(Icons.drag_handle_rounded),
+              child: Icon(FluentIcons.re_order_24_regular),
             ),
           ),
           Expanded(
@@ -175,8 +176,8 @@ class _BadgeLayoutRow extends StatelessWidget {
             onPressed: onToggleSide,
             icon: Icon(
               isRight
-                  ? Icons.format_align_right_rounded
-                  : Icons.format_align_left_rounded,
+                  ? FluentIcons.text_align_right_24_regular
+                  : FluentIcons.text_align_left_24_regular,
             ),
           ),
         ],

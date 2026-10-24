@@ -9,7 +9,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../constants/app_sizes.dart';
 import '../constants/gen/assets.gen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
@@ -88,21 +87,52 @@ class SorayomiShimmerIndicator extends StatelessWidget {
   }
 }
 
+Size resolveIconButtonBox(BuildContext context) {
+  final theme = Theme.of(context);
+  final style = IconButtonTheme.of(context).style;
+  const states = <WidgetState>{};
+  final fixed = style?.fixedSize?.resolve(states);
+  if (fixed != null && fixed.width.isFinite && fixed.height.isFinite) {
+    return fixed;
+  }
+  final density = style?.visualDensity ?? theme.visualDensity;
+  final tapTarget = style?.tapTargetSize ?? theme.materialTapTargetSize;
+  final adjustment = density.baseSizeAdjustment;
+  if (tapTarget == MaterialTapTargetSize.shrinkWrap) {
+    final minimum = style?.minimumSize?.resolve(states) ?? const Size(40, 40);
+    final icon = resolveIconButtonIconSize(context);
+    final width = minimum.width + adjustment.dx;
+    final height = minimum.height + adjustment.dy;
+    return Size(width > icon ? width : icon, height > icon ? height : icon);
+  }
+  return Size(
+    kMinInteractiveDimension + adjustment.dx,
+    kMinInteractiveDimension + adjustment.dy,
+  );
+}
+
+double resolveIconButtonIconSize(BuildContext context) =>
+    IconButtonTheme.of(context).style?.iconSize?.resolve({}) ??
+    IconTheme.of(context).size ??
+    24.0;
+
 class MiniCircularProgressIndicator extends StatelessWidget {
   const MiniCircularProgressIndicator({
     super.key,
     this.color,
     this.value,
     this.padding,
+    this.size,
   });
   final Color? color;
   final double? value;
   final EdgeInsetsGeometry? padding;
+  final double? size;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: padding ?? KEdgeInsets.a8.size,
+        padding: padding ?? EdgeInsets.zero,
         child: SizedBox.square(
-          dimension: 16,
+          dimension: size ?? resolveIconButtonIconSize(context),
           child: CircularProgressIndicator(
             strokeWidth: 3,
             color: color,

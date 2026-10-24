@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -261,7 +262,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   for (ChapterDto i in chapterList) i.id: i,
                 });
               },
-              icon: const Icon(Icons.select_all_rounded),
+              icon: const Icon(FluentIcons.select_all_on_24_regular),
             ),
             IconButton(
               onPressed: () {
@@ -271,7 +272,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     if (!selectedChapters.value.containsKey(i.id)) i.id: i,
                 });
               },
-              icon: const Icon(Icons.flip_to_back_rounded),
+              icon: const Icon(FluentIcons.arrow_swap_24_regular),
             ),
             MultiSelectPopupButton(
               filteredChapterList: filteredChapterList,
@@ -282,7 +283,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
             if (!twoColumn && data != null)
               IconButton(
                 tooltip: context.l10n.webView,
-                icon: const Icon(Icons.public_rounded),
+                icon: const Icon(FluentIcons.globe_24_regular),
                 onPressed: () =>
                     MangaDescription.openInBrowser(context, ref, data),
               ),
@@ -299,14 +300,14 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     sheetAnimationStyle: context.motionStyle,
                   );
                 },
-                icon: const Icon(Icons.filter_list_rounded),
+                icon: const Icon(FluentIcons.filter_24_regular),
               ),
             if (!twoColumn)
               PopupMenuButton(
                 shape: RoundedRectangleBorder(
                   borderRadius: KBorderRadius.r16.radius,
                 ),
-                icon: const Icon(Icons.more_vert_rounded),
+                icon: const Icon(FluentIcons.more_vertical_24_regular),
                 itemBuilder: (context) => [
                   if (ref.watch(showRecommendationsProvider).ifNull(true) &&
                       ref.watch(recommendsInOverflowProvider).ifNull(false))
@@ -354,25 +355,25 @@ class MangaDetailsScreen extends HookConsumerWidget {
             if (twoColumn && inLibrary && data != null)
               IconButton(
                 tooltip: context.l10n.notes,
-                icon: const Icon(Icons.edit_note_rounded),
+                icon: const Icon(FluentIcons.note_edit_24_regular),
                 onPressed: () => openMangaNotes(context, data),
               ),
             if (twoColumn && inLibrary)
               IconButton(
                 tooltip: context.l10n.migrate,
-                icon: const Icon(Icons.sync_alt_rounded),
+                icon: const Icon(FluentIcons.arrow_swap_24_regular),
                 onPressed: () => startMigration(context, mangaId, data),
               ),
             if (twoColumn && inLibrary)
               IconButton(
                 tooltip: context.l10n.editCategory,
-                icon: const Icon(Icons.label_outline_rounded),
+                icon: const Icon(FluentIcons.tag_24_regular),
                 onPressed: openEditCategories,
               ),
             if (twoColumn && data?.realUrl != null)
               IconButton(
                 tooltip: context.l10n.share,
-                icon: const Icon(Icons.share_rounded),
+                icon: const Icon(FluentIcons.share_24_regular),
                 onPressed: () => shareSeries(context, data!),
               ),
           ];
@@ -396,7 +397,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   ? AppBar(
                       leading: IconButton(
                         onPressed: () => selectedChapters.value = ({}),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(FluentIcons.dismiss_24_regular),
                       ),
                       title: Text(
                         context.l10n.numSelected(selectedChapters.value.length),
@@ -460,7 +461,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                             ? context.l10n.resume
                             : context.l10n.start,
                       ),
-                      icon: const Icon(Icons.play_arrow_rounded),
+                      icon: const Icon(FluentIcons.play_24_regular),
                       onPressed: () {
                         ReaderRoute(
                           mangaId: firstUnreadChapter.mangaId,
@@ -537,7 +538,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               content: DesktopTitleSlot(
                 leading: IconButton(
                   onPressed: () => selectedChapters.value = ({}),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(FluentIcons.dismiss_24_regular),
                 ),
                 title: Text(
                   context.l10n.numSelected(selectedChapters.value.length),
@@ -592,7 +593,7 @@ class MultiSelectPopupButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton(
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
-      icon: const Icon(Icons.more_vert_rounded),
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
       itemBuilder: (context) => [
         PopupMenuItem(
           onTap: () {

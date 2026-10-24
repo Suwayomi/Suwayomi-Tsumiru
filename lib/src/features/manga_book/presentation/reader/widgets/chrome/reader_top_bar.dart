@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -72,7 +73,7 @@ class ReaderTopBar extends ConsumerWidget {
               ),
             ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded),
+              icon: const Icon(FluentIcons.more_vertical_24_regular),
               onSelected: (action) async {
                 switch (action) {
                   case 'retry':
@@ -155,7 +156,7 @@ class ReaderTopBar extends ConsumerWidget {
                         ref.read(toastProvider),
                       );
                     },
-                    icon: const Icon(Icons.public_rounded),
+                    icon: const Icon(FluentIcons.globe_24_regular),
                   ),
           ],
         ),

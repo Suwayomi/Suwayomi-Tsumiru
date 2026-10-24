@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -30,7 +31,7 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
     final defaultId = ref.watch(settledDefaultCategoryIdProvider);
     final failedCount = ref.watch(failedUpdateCountProvider).value ?? 0;
     return PopupMenuButton(
-      icon: const Icon(Icons.more_vert_rounded),
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
       itemBuilder: (context) {
         final category = getCategory?.call();

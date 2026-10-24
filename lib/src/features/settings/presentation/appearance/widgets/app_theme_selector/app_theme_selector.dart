@@ -1,4 +1,5 @@
 import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -87,14 +88,14 @@ class ThemeSelector extends HookConsumerWidget {
               if (title != null) Expanded(child: title!) else const Spacer(),
               if (canScroll) ...[
                 arrow(
-                  icon: Icons.chevron_left_rounded,
+                  icon: FluentIcons.chevron_left_24_regular,
                   tooltip: context.l10n.back,
                   enabled: offset > 0,
                   onPressed: () => scrollBy(-1),
                 ),
                 const SizedBox(width: 8),
                 arrow(
-                  icon: Icons.chevron_right_rounded,
+                  icon: FluentIcons.chevron_right_24_regular,
                   tooltip: context.l10n.next,
                   enabled: offset < maxExtent,
                   onPressed: () => scrollBy(1),
@@ -200,7 +201,7 @@ class _ThemeCard extends StatelessWidget {
                   _dot(accent2),
                   const Spacer(),
                   if (selected)
-                    Icon(Icons.check_circle, size: 18, color: accent),
+                    Icon(FluentIcons.checkmark_circle_24_filled, size: 18, color: accent),
                 ],
               ),
               const SizedBox(height: 10),

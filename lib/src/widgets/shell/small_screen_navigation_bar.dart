@@ -10,7 +10,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../constants/navigation_bar_data.dart';
 import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
-import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 
 class SmallScreenNavigationBar extends ConsumerWidget {
@@ -30,9 +29,19 @@ class SmallScreenNavigationBar extends ConsumerWidget {
     bool downloadsPaused,
     int extensionUpdates,
   ) {
-    final icon = AnimatedNavIcon(vector: data.animatedIcon, selected: selected);
     return NavigationDestination(
-      icon: badgedNavIcon(icon, data, downloadsPaused, extensionUpdates),
+      icon: badgedNavIcon(
+        Icon(data.icon),
+        data,
+        downloadsPaused,
+        extensionUpdates,
+      ),
+      selectedIcon: badgedNavIcon(
+        Icon(data.activeIcon),
+        data,
+        downloadsPaused,
+        extensionUpdates,
+      ),
       label: data.label(context),
       tooltip: data.label(context),
     );

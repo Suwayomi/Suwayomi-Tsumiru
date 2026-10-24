@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
@@ -19,12 +20,12 @@ class MangaNotesFormatToolbar extends StatelessWidget {
       children: [
         IconButton(
           tooltip: context.l10n.bold,
-          icon: const Icon(Icons.format_bold_rounded),
+          icon: const Icon(FluentIcons.text_bold_24_regular),
           onPressed: () => apply((value) => applyInlineMarker(value, '**')),
         ),
         IconButton(
           tooltip: context.l10n.italic,
-          icon: const Icon(Icons.format_italic_rounded),
+          icon: const Icon(FluentIcons.text_italic_24_regular),
           onPressed: () => apply((value) => applyInlineMarker(value, '*')),
         ),
         SizedBox(
@@ -37,12 +38,12 @@ class MangaNotesFormatToolbar extends StatelessWidget {
         ),
         IconButton(
           tooltip: context.l10n.bulletedList,
-          icon: const Icon(Icons.format_list_bulleted_rounded),
+          icon: const Icon(FluentIcons.text_bullet_list_ltr_24_regular),
           onPressed: () => apply(toggleBulletedList),
         ),
         IconButton(
           tooltip: context.l10n.numberedList,
-          icon: const Icon(Icons.format_list_numbered_rounded),
+          icon: const Icon(FluentIcons.text_number_list_ltr_24_regular),
           onPressed: () => apply(toggleNumberedList),
         ),
       ],

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -11,6 +12,7 @@ import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/network/graphql_errors.dart';
+import '../../../widgets/custom_circular_progress_indicator.dart';
 import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
@@ -46,21 +48,21 @@ class OfflineSaveButton extends ConsumerWidget {
       ),
       OfflineDeviceState.downloaded => IconButton(
         tooltip: 'Remove from device',
-        icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
+        icon: Icon(FluentIcons.checkmark_circle_24_filled, color: cs.primary),
         onPressed: () => confirmDeleteChapterFromDevice(ref, chapterId),
       ),
       OfflineDeviceState.error => IconButton(
         tooltip: canDownload
             ? 'Save failed — retry'
             : context.l10n.accountPermissionDenied,
-        icon: Icon(Icons.error_outline_rounded, color: cs.error),
+        icon: Icon(FluentIcons.error_circle_24_regular, color: cs.error),
         onPressed: canDownload ? () => _save(context, ref) : null,
       ),
       OfflineDeviceState.none || OfflineDeviceState.orphaned => IconButton(
         tooltip: canDownload
             ? 'Save to device'
             : context.l10n.accountPermissionDenied,
-        icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
+        icon: Icon(FluentIcons.arrow_circle_down_24_regular, color: cs.onSurfaceVariant),
         onPressed: canDownload ? () => _save(context, ref) : null,
       ),
     };
@@ -97,7 +99,7 @@ class _CancelOnTap extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Tooltip(
     message: context.l10n.cancel,
     child: InkResponse(
-      radius: 20,
+      radius: Material.defaultSplashRadius,
       onTap: () => deleteChapterFromDevice(ref, chapterId),
       child: child,
     ),
@@ -110,13 +112,14 @@ class _QueuedIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final box = resolveIconButtonBox(context);
     return SizedBox(
-      width: 40,
-      height: 40,
+      width: box.width,
+      height: box.height,
       child: Center(
         child: Icon(
-          Icons.schedule_rounded,
-          size: 18,
+          FluentIcons.clock_24_regular,
+          size: resolveIconButtonIconSize(context),
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
@@ -133,13 +136,13 @@ class _DownloadingIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(offlineChapterProgressProvider(chapterId));
     final value = (progress == null || progress <= 0.0) ? null : progress;
+    final box = resolveIconButtonBox(context);
     return SizedBox(
-      width: 40,
-      height: 40,
+      width: box.width,
+      height: box.height,
       child: Center(
-        child: SizedBox(
-          width: 18,
-          height: 18,
+        child: SizedBox.square(
+          dimension: resolveIconButtonIconSize(context),
           child: CircularProgressIndicator(strokeWidth: 2, value: value),
         ),
       ),

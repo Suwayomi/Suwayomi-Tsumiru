@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
@@ -26,7 +27,7 @@ class SettingsSearchResultRow extends StatelessWidget {
     final l = context.l10n;
     final cs = context.colorScheme;
     return ListTile(
-      leading: Icon(Icons.tune_rounded, color: cs.onSurfaceVariant),
+      leading: Icon(FluentIcons.options_24_regular, color: cs.onSurfaceVariant),
       title: Text.rich(
         TextSpan(
           children: settingsTitleSpans(

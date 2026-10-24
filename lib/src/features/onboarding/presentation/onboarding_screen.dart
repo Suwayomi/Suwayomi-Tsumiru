@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:graphql/client.dart';
@@ -374,17 +375,17 @@ class _ThemeStep extends ConsumerWidget {
             segments: [
               ButtonSegment(
                 value: ThemeMode.system,
-                icon: const Icon(Icons.brightness_auto_rounded),
+                icon: const Icon(FluentIcons.dark_theme_24_regular),
                 label: Text(context.l10n.themeModeSystem),
               ),
               ButtonSegment(
                 value: ThemeMode.light,
-                icon: const Icon(Icons.light_mode_rounded),
+                icon: const Icon(FluentIcons.weather_sunny_24_regular),
                 label: Text(context.l10n.themeModeLight),
               ),
               ButtonSegment(
                 value: ThemeMode.dark,
-                icon: const Icon(Icons.dark_mode_rounded),
+                icon: const Icon(FluentIcons.weather_moon_24_regular),
                 label: Text(context.l10n.themeModeDark),
               ),
             ],
@@ -512,7 +513,7 @@ class _ServerPickerSheet extends StatelessWidget {
             const Divider(height: 1),
             for (final server in servers)
               ListTile(
-                leading: const Icon(Icons.dns_outlined),
+                leading: const Icon(FluentIcons.server_24_regular),
                 title: Text(_serverLabel(server)),
                 onTap: () => Navigator.pop(context, server),
               ),
@@ -1076,7 +1077,7 @@ class _ServerStep extends HookConsumerWidget {
             labelText: context.l10n.serverUrl,
             hintText: 'http://192.168.0.10:4567',
             border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.dns_rounded),
+            prefixIcon: const Icon(FluentIcons.server_24_regular),
           ),
           onChanged: (_) {
             capabilityGeneration.value++;
@@ -1091,11 +1092,11 @@ class _ServerStep extends HookConsumerWidget {
               onPressed: busy ? null : searchNetwork,
               icon: state.value == _TestState.searching
                   ? const SizedBox(
-                      width: 16,
-                      height: 16,
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.search_rounded, size: 18),
+                  : const Icon(FluentIcons.search_24_regular, size: 18),
               label: Text(
                 state.value == _TestState.searching
                     ? context.l10n.onboardingSearching
@@ -1115,14 +1116,14 @@ class _ServerStep extends HookConsumerWidget {
           onPressed: busy ? null : testConnection,
           icon: state.value == _TestState.testing
               ? SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: cs.onPrimary,
                   ),
                 )
-              : const Icon(Icons.wifi_tethering_rounded),
+              : const Icon(FluentIcons.wifi_1_24_regular),
           label: Text(
             state.value == _TestState.testing
                 ? context.l10n.onboardingCheckingConnection
@@ -1152,7 +1153,10 @@ class _ServerStep extends HookConsumerWidget {
             expandedInsets: EdgeInsets.zero,
             requestFocusOnTap: false,
             label: Text(context.l10n.onboardingAuthMode),
-            leadingIcon: const Icon(Icons.shield_rounded),
+            leadingIcon: const Icon(FluentIcons.shield_24_regular),
+            trailingIcon: const Icon(
+              FluentIcons.caret_down_24_filled,
+            ),
             inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
             ),
@@ -1218,7 +1222,7 @@ class _ServerStep extends HookConsumerWidget {
             decoration: InputDecoration(
               labelText: context.l10n.userName,
               border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.person_rounded),
+              prefixIcon: const Icon(FluentIcons.person_24_regular),
             ),
           ),
           const SizedBox(height: 8),
@@ -1229,7 +1233,7 @@ class _ServerStep extends HookConsumerWidget {
             decoration: InputDecoration(
               labelText: context.l10n.password,
               border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.lock_rounded),
+              prefixIcon: const Icon(FluentIcons.lock_closed_24_regular),
             ),
             onSubmitted: (_) => signIn(),
           ),
@@ -1254,7 +1258,7 @@ class _ServerStep extends HookConsumerWidget {
             const SizedBox(height: 8),
             _StatusRow(
               color: cs.error,
-              icon: Icons.error_rounded,
+              icon: FluentIcons.error_circle_24_regular,
               text: context.l10n.onboardingCredsRejected,
             ),
           ],
@@ -1263,14 +1267,14 @@ class _ServerStep extends HookConsumerWidget {
             onPressed: busy ? null : signIn,
             icon: busy
                 ? SizedBox(
-                    width: 16,
-                    height: 16,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: cs.onPrimary,
                     ),
                   )
-                : const Icon(Icons.login_rounded),
+                : const Icon(FluentIcons.arrow_enter_20_regular),
             label: Text(
               state.value == _TestState.signingIn
                   ? context.l10n.onboardingSigningIn
@@ -1293,7 +1297,7 @@ class _ServerStep extends HookConsumerWidget {
               );
               onVerifiedChanged(true);
             },
-            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            icon: const Icon(FluentIcons.open_24_regular, size: 18),
             label: Text(context.l10n.onboardingNoServerLink),
           ),
         ),
@@ -1324,7 +1328,7 @@ List<Widget> _buildTestStatus(
       return [
         _StatusRow(
           color: BrandColors.of(context).success,
-          icon: Icons.check_circle_rounded,
+          icon: FluentIcons.checkmark_circle_24_regular,
           text: (version != null && version.isNotEmpty)
               // The server version includes "v"; localization supplies its own prefix.
               ? context.l10n.onboardingConnected(
@@ -1336,7 +1340,7 @@ List<Widget> _buildTestStatus(
           const SizedBox(height: 6),
           _StatusRow(
             color: cs.onSurfaceVariant,
-            icon: Icons.dns_rounded,
+            icon: FluentIcons.server_24_regular,
             text: context.l10n.onboardingFoundAt(addr),
           ),
         ],
@@ -1346,14 +1350,14 @@ List<Widget> _buildTestStatus(
       return [
         _StatusRow(
           color: cs.tertiary,
-          icon: Icons.lock_rounded,
+          icon: FluentIcons.lock_closed_24_regular,
           text: context.l10n.onboardingNeedsLogin,
         ),
         if (addr != null) ...[
           const SizedBox(height: 6),
           _StatusRow(
             color: cs.onSurfaceVariant,
-            icon: Icons.dns_rounded,
+            icon: FluentIcons.server_24_regular,
             text: context.l10n.onboardingFoundAt(addr),
           ),
         ],
@@ -1363,7 +1367,7 @@ List<Widget> _buildTestStatus(
       return [
         _StatusRow(
           color: cs.tertiary,
-          icon: Icons.lock_rounded,
+          icon: FluentIcons.lock_closed_24_regular,
           text: unsupportedFromNotFound
               ? context.l10n.webServerAuthUnconfirmed
               : context.l10n.webUnsupportedAuthMode,
@@ -1374,7 +1378,7 @@ List<Widget> _buildTestStatus(
       return [
         _StatusRow(
           color: cs.tertiary,
-          icon: Icons.help_outline_rounded,
+          icon: FluentIcons.question_circle_24_regular,
           text: context.l10n.onboardingResolvedUnconfirmed(addr ?? ''),
         ),
       ];
@@ -1383,7 +1387,7 @@ List<Widget> _buildTestStatus(
       return [
         _StatusRow(
           color: cs.error,
-          icon: Icons.error_rounded,
+          icon: FluentIcons.error_circle_24_regular,
           text: (errorDetail?.isNotEmpty ?? false)
               ? errorDetail!
               : context.l10n.onboardingNotReached,
@@ -1392,7 +1396,7 @@ List<Widget> _buildTestStatus(
           const SizedBox(height: 6),
           _StatusRow(
             color: cs.onSurfaceVariant,
-            icon: Icons.lightbulb_outline_rounded,
+            icon: FluentIcons.lightbulb_24_regular,
             text: context.l10n.onboardingNotReachedHttpsHint,
           ),
         ],
@@ -1436,7 +1440,7 @@ class _FinishStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 48),
-        Icon(Icons.rocket_launch_rounded, size: 64, color: cs.primary),
+        Icon(FluentIcons.rocket_24_regular, size: 64, color: cs.primary),
         const SizedBox(height: 24),
         Text(
           context.l10n.onboardingDoneTitle,

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -24,7 +25,7 @@ class CopyCrashLogTile extends ConsumerWidget {
       title: Text(context.l10n.copyCrashLog),
       subtitle: Text(context.l10n.copyCrashLogSubtitle),
       trailing: IconButton(
-        icon: const Icon(Icons.delete_outline_rounded),
+        icon: const Icon(FluentIcons.delete_24_regular),
         tooltip: context.l10n.clearCrashLog,
         onPressed: () async {
           clearCrashLog(await initCrashLog());

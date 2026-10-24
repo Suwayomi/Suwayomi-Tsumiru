@@ -6,6 +6,7 @@
 
 // ignore_for_file: prefer_const_constructors
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -190,7 +191,7 @@ Future<ProviderContainer> _pumpLibrary(
 /// the label text that only full mode shows.
 Finder _filterButton() => find.descendant(
   of: find.byType(DesktopLibraryToolbar),
-  matching: find.byIcon(Icons.filter_list_rounded),
+  matching: find.byIcon(FluentIcons.filter_24_regular),
 );
 
 Future<void> _openFilterPanel(WidgetTester tester) async {

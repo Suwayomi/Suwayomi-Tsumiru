@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -60,30 +61,30 @@ class SettingsScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.tune_outlined,
+                      icon: FluentIcons.options_24_regular,
                       title: context.l10n.general,
                       onTap: () => const GeneralSettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.palette_outlined,
+                      icon: FluentIcons.color_24_regular,
                       title: context.l10n.appearance,
                       onTap: () =>
                           const AppearanceSettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.chrome_reader_mode_outlined,
+                      icon: FluentIcons.book_open_24_regular,
                       title: context.l10n.reader,
                       onTap: () => const ReaderSettingsRoute().push(context),
                     ),
                     if (isKeyboardRuntime)
                       SettingsGroupRow(
-                        icon: Icons.keyboard_outlined,
+                        icon: FluentIcons.keyboard_24_regular,
                         title: context.l10n.keyboardShortcuts,
                         onTap: () => const HotkeysSettingsRoute().push(context),
                       ),
                     if (isAndroidNative)
                       SettingsGroupRow(
-                        icon: Icons.notifications_outlined,
+                        icon: FluentIcons.alert_24_regular,
                         title: context.l10n.notifications,
                         onTap: () =>
                             const NotificationsSettingsRoute().push(context),
@@ -94,27 +95,27 @@ class SettingsScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.collections_bookmark_outlined,
+                      icon: FluentIcons.library_24_regular,
                       title: context.l10n.library,
                       onTap: () => const LibrarySettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.download_outlined,
+                      icon: FluentIcons.arrow_download_24_regular,
                       title: context.l10n.downloads,
                       onTap: () => const DownloadsSettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.sync_outlined,
+                      icon: FluentIcons.arrow_sync_24_regular,
                       title: context.l10n.tracking,
                       onTap: () => const TrackingSettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.explore_outlined,
+                      icon: FluentIcons.compass_northwest_24_regular,
                       title: context.l10n.browse,
                       onTap: () => const BrowseSettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.settings_backup_restore_outlined,
+                      icon: FluentIcons.arrow_counterclockwise_24_regular,
                       title: context.l10n.backup,
                       onTap: () => const BackupRoute().push(context),
                     ),
@@ -124,18 +125,18 @@ class SettingsScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.dns_outlined,
+                      icon: FluentIcons.server_24_regular,
                       title: context.l10n.connection,
                       subtitle: showAccount ? account?.username : null,
                       onTap: () => const ConnectionRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.cloud_sync_outlined,
+                      icon: FluentIcons.cloud_sync_24_regular,
                       title: context.l10n.sync,
                       onTap: () => const SyncRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.admin_panel_settings_outlined,
+                      icon: FluentIcons.desktop_24_regular,
                       title: context.l10n.server,
                       onTap: () => const ServerSettingsRoute().push(context),
                     ),
@@ -145,7 +146,7 @@ class SettingsScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.build_outlined,
+                      icon: FluentIcons.wrench_24_regular,
                       title: context.l10n.advanced,
                       onTap: () => const AdvancedRoute().push(context),
                     ),

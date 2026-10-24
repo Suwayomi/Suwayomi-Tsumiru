@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -98,7 +99,7 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
               children: [
                 IconButton(
                   tooltip: l10n.migrationFilterObsolete,
-                  icon: const Icon(Icons.new_releases_outlined),
+                  icon: const Icon(FluentIcons.warning_24_regular),
                   color: obsoleteOnly.value
                       ? context.theme.colorScheme.error
                       : null,
@@ -108,8 +109,8 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                   tooltip: l10n.migrationSortMode,
                   icon: Icon(
                     sortMode.value == _SortMode.alphabetical
-                        ? Icons.sort_by_alpha
-                        : Icons.numbers,
+                        ? FluentIcons.text_sort_ascending_24_regular
+                        : FluentIcons.number_symbol_24_regular,
                   ),
                   onPressed: () =>
                       sortMode.value = sortMode.value == _SortMode.alphabetical
@@ -119,7 +120,7 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                 IconButton(
                   tooltip: l10n.migrationSortDirection,
                   icon: Icon(
-                    ascending.value ? Icons.arrow_upward : Icons.arrow_downward,
+                    ascending.value ? FluentIcons.arrow_sort_up_24_regular : FluentIcons.arrow_sort_down_24_regular,
                   ),
                   onPressed: () => ascending.value = !ascending.value,
                 ),
@@ -227,7 +228,7 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
 
     final topBar = showsMergedTopBar(context);
     final closeSelection = IconButton(
-      icon: const Icon(Icons.close),
+      icon: const Icon(FluentIcons.dismiss_24_regular),
       onPressed: () => selection.value = const {},
     );
     final title = Text(
@@ -236,13 +237,13 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
     final actions = <Widget>[
       IconButton(
         tooltip: l10n.migrationSelectAllSources,
-        icon: const Icon(Icons.select_all),
+        icon: const Icon(FluentIcons.select_all_on_24_regular),
         onPressed: () => selection.value = {for (final m in mangas) m.id},
       ),
       if (selecting)
         IconButton(
           tooltip: l10n.migrationInvertSelection,
-          icon: const Icon(Icons.flip_to_back),
+          icon: const Icon(FluentIcons.arrow_swap_24_regular),
           onPressed: () => selection.value = {
             for (final m in mangas)
               if (!selection.value.contains(m.id)) m.id,
@@ -286,7 +287,7 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: checked ? const Icon(Icons.check_circle) : null,
+                  trailing: checked ? const Icon(FluentIcons.checkmark_circle_24_filled) : null,
                   onTap: () {
                     if (selecting) {
                       toggle(m.id);
@@ -310,7 +311,7 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                       mangaIds: selection.value.toList(),
                     ),
                   ).push(context),
-                  icon: const Icon(Icons.swap_horiz),
+                  icon: const Icon(FluentIcons.arrow_swap_24_regular),
                   label: Text(l10n.migrate),
                 ),
               ),

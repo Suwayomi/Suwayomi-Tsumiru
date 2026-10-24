@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -29,7 +30,7 @@ class ServerUnauthorizedView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final webAuthBlocked = ref.watch(webAuthBlockedProvider);
     return Emoticons(
-      iconData: Icons.lock_outline_rounded,
+      iconData: FluentIcons.lock_closed_24_regular,
       title: context.l10n.serverSignedOutTitle,
       subTitle: webAuthBlocked ? context.l10n.webUnsupportedAuthMode : message,
       button: Column(
@@ -38,7 +39,7 @@ class ServerUnauthorizedView extends ConsumerWidget {
         children: [
           FilledButton.tonalIcon(
             onPressed: () => const ConnectionRoute().push(context),
-            icon: const Icon(Icons.settings_ethernet_rounded),
+            icon: const Icon(FluentIcons.plug_connected_24_regular),
             label: Text(context.l10n.serverUnreachableAction),
           ),
           if (offlineEscape) const ViewOfflineButton(),

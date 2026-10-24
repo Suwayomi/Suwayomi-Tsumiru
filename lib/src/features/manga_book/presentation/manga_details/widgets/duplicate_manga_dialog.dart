@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // The caller navigates after the dialog closes; [onOpenEntry] reports the target before openedEntry.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -269,11 +270,11 @@ class _DuplicateCard extends StatelessWidget {
                   ),
                   if (author.isNotBlank)
                     _DetailRow(
-                      icon: Icons.person_outline_rounded,
+                      icon: FluentIcons.person_24_regular,
                       text: author!,
                     ),
                   if (showArtist)
-                    _DetailRow(icon: Icons.brush_rounded, text: artist!),
+                    _DetailRow(icon: FluentIcons.paint_brush_24_regular, text: artist!),
                   _DetailRow(icon: status.icon, text: status.toLocale(context)),
                   if (isCertain) ...[
                     const Gap(4),

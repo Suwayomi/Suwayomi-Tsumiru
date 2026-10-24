@@ -201,7 +201,11 @@ class BrandButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Center(
                 child: loading
-                    ? MiniCircularProgressIndicator(color: brand.onGradient)
+                    ? MiniCircularProgressIndicator(
+                        size: 16,
+                        padding: const EdgeInsets.all(8),
+                        color: brand.onGradient,
+                      )
                     : _brandRow(
                         context: context,
                         label: label,

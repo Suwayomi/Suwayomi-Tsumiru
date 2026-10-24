@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -88,7 +89,7 @@ class HistoryItemTile extends ConsumerWidget {
                         children: [
                           if (timeString.isNotEmpty) ...[
                             Icon(
-                              Icons.access_time,
+                              FluentIcons.clock_24_regular,
                               size: 14,
                               color: context.theme.colorScheme.onSurfaceVariant,
                             ),
@@ -109,8 +110,8 @@ class HistoryItemTile extends ConsumerWidget {
                             const SizedBox(width: 8),
                             Icon(
                               _isChapterCompleted()
-                                  ? Icons.check_circle
-                                  : Icons.bookmark,
+                                  ? FluentIcons.checkmark_circle_24_filled
+                                  : FluentIcons.bookmark_24_regular,
                               size: 14,
                               color: _isChapterCompleted()
                                   ? context.theme.colorScheme.secondary
@@ -154,7 +155,7 @@ class HistoryItemTile extends ConsumerWidget {
                 ),
                 PopupMenuButton<HistoryMenuAction>(
                   icon: Icon(
-                    Icons.more_vert,
+                    FluentIcons.more_vertical_24_regular,
                     color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                   onSelected: (action) {

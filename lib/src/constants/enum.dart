@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -400,12 +401,12 @@ enum ChapterDisplay {
 }
 
 enum DisplayMode {
-  grid(Icons.grid_view_rounded),
-  list(Icons.view_list_rounded),
-  descriptiveList(Icons.view_list_rounded),
-  coverOnly(Icons.view_comfy_rounded),
+  grid(FluentIcons.grid_24_regular),
+  list(FluentIcons.apps_list_24_regular),
+  descriptiveList(FluentIcons.apps_list_detail_24_regular),
+  coverOnly(FluentIcons.image_multiple_24_regular),
   // Persisted by index: append only.
-  comfortableGrid(Icons.view_module_rounded);
+  comfortableGrid(FluentIcons.layout_cell_four_24_regular);
 
   static const List<DisplayMode> sourceDisplayList = [
     DisplayMode.grid,
@@ -501,12 +502,12 @@ enum LibraryGroupStyle {
 
 /// Persisted by index.
 enum LibraryGridStyle {
-  uniform(Icons.grid_view_rounded),
+  uniform(FluentIcons.grid_24_regular),
 
   /// Rows align to the tallest cover; individual cover heights follow the art.
-  nonUniform(Icons.grid_goldenratio_rounded),
+  nonUniform(FluentIcons.layout_column_three_24_regular),
 
-  staggered(Icons.dashboard_rounded);
+  staggered(FluentIcons.board_24_regular);
 
   const LibraryGridStyle(this.icon);
   final IconData icon;
@@ -521,13 +522,13 @@ enum LibraryGridStyle {
 }
 
 enum MangaStatus {
-  unknown("UNKNOWN", Icons.block_outlined),
-  ongoing("ONGOING", Icons.schedule_rounded),
-  completed("COMPLETED", Icons.done_all_rounded),
-  licensed("LICENSED", Icons.shield_rounded),
-  publishingFinished("PUBLISHING_FINISHED", Icons.publish_rounded),
-  cancelled("CANCELLED", Icons.cancel_rounded),
-  onHiatus("ON_HIATUS", Icons.pause_circle_rounded);
+  unknown("UNKNOWN", FluentIcons.prohibited_24_regular),
+  ongoing("ONGOING", FluentIcons.clock_24_regular),
+  completed("COMPLETED", FluentIcons.checkmark_starburst_24_regular),
+  licensed("LICENSED", FluentIcons.shield_24_regular),
+  publishingFinished("PUBLISHING_FINISHED", FluentIcons.arrow_upload_24_regular),
+  cancelled("CANCELLED", FluentIcons.dismiss_circle_24_regular),
+  onHiatus("ON_HIATUS", FluentIcons.pause_circle_24_regular);
 
   final IconData icon;
   final String title;

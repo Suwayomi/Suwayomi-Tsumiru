@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -70,7 +71,7 @@ class MangaBadgesRow extends ConsumerWidget {
               side: BadgeSide.left,
               segments: [
                 _iconSegment(
-                  Icons.collections_bookmark_rounded,
+                  FluentIcons.library_24_regular,
                   scheme.primary,
                   scheme.onPrimary,
                   height,
@@ -127,7 +128,7 @@ class MangaBadgesRow extends ConsumerWidget {
           return (
             decoration: BoxDecoration(gradient: brand.gradient),
             child: Icon(
-              Icons.offline_pin_rounded,
+              FluentIcons.checkmark_circle_24_filled,
               color: brand.onGradient,
               size: height * .8,
             ),
@@ -161,7 +162,7 @@ class MangaBadgesRow extends ConsumerWidget {
           // Local Source has no extension icon to fetch.
           return isLocal
               ? _iconSegment(
-                  Icons.folder_rounded,
+                  FluentIcons.folder_24_regular,
                   scheme.secondary,
                   scheme.onSecondary,
                   height,
@@ -478,7 +479,7 @@ class _SourceIcon extends StatelessWidget {
             // Contain non-square extension icons so the full glyph remains visible.
             fit: BoxFit.contain,
             progressIndicatorBuilder: (_, _, _) =>
-                Center(child: Icon(Icons.extension_rounded, size: size * .8)),
+                Center(child: Icon(FluentIcons.puzzle_piece_24_regular, size: size)),
           ),
         ),
       ),

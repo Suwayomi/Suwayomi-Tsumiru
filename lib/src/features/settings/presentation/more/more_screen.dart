@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -71,7 +72,7 @@ class MoreScreen extends ConsumerWidget {
         ConnectionAuthStatus.signInNeeded =>
           context.l10n.connectionAuthSignInNeeded,
       };
-      const chevron = Icon(Icons.chevron_right_rounded);
+      const chevron = Icon(FluentIcons.chevron_right_24_regular);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -80,7 +81,7 @@ class MoreScreen extends ConsumerWidget {
             children: [
               if (showAccount)
                 SettingsGroupRow(
-                  icon: Icons.person_outlined,
+                  icon: FluentIcons.person_24_regular,
                   title: account?.username ?? context.l10n.accountTitle,
                   subtitle: host.isEmpty ? null : host,
                   trailing: chevron,
@@ -88,7 +89,7 @@ class MoreScreen extends ConsumerWidget {
                 )
               else
                 SettingsGroupRow(
-                  icon: Icons.dns_outlined,
+                  icon: FluentIcons.server_24_regular,
                   title: host.isEmpty ? context.l10n.connection : host,
                   subtitle: statusLabel,
                   trailing: chevron,
@@ -97,7 +98,7 @@ class MoreScreen extends ConsumerWidget {
               if (showAccount && hasStoredCredentials)
                 ListTile(
                   leading: Icon(
-                    Icons.logout_outlined,
+                    FluentIcons.sign_out_24_regular,
                     color: context.theme.colorScheme.error,
                   ),
                   title: Text(
@@ -147,7 +148,7 @@ class MoreScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.visibility_off_outlined,
+                      icon: FluentIcons.incognito_24_regular,
                       title: context.l10n.incognitoMode,
                       subtitle: context.l10n.incognitoModeDescription,
                       trailing: CompactSwitch(
@@ -160,21 +161,21 @@ class MoreScreen extends ConsumerWidget {
                           .set(!incognito),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.label_outlined,
+                      icon: FluentIcons.tag_24_regular,
                       title: context.l10n.categories,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () => const EditCategoriesRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.history_outlined,
+                      icon: FluentIcons.history_24_regular,
                       title: context.l10n.history,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () => const HistoryRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.settings_backup_restore_outlined,
+                      icon: FluentIcons.arrow_counterclockwise_24_regular,
                       title: context.l10n.backup,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () => const BackupRoute().push(context),
                     ),
                   ],
@@ -183,16 +184,16 @@ class MoreScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.color_lens_outlined,
+                      icon: FluentIcons.color_24_regular,
                       title: context.l10n.appearance,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () =>
                           const AppearanceSettingsRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.settings_outlined,
+                      icon: FluentIcons.settings_24_regular,
                       title: context.l10n.settings,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () => const SettingsRoute().push(context),
                     ),
                   ],
@@ -201,15 +202,15 @@ class MoreScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.info_outlined,
+                      icon: FluentIcons.info_24_regular,
                       title: context.l10n.about,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () => const AboutRoute().push(context),
                     ),
                     SettingsGroupRow(
-                      icon: Icons.help_outline_rounded,
+                      icon: FluentIcons.question_circle_24_regular,
                       title: context.l10n.help,
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () => launchUrlInWeb(
                         context,
                         AppUrls.tachideskHelp.url,

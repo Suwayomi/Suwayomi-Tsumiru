@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -34,7 +35,7 @@ class AccountStorageRecoveryBanner extends ConsumerWidget {
         children: [
           MaterialBanner(
             leading: Icon(
-              failed ? Icons.error_outline : Icons.download_rounded,
+              failed ? FluentIcons.error_circle_24_regular : FluentIcons.arrow_download_24_regular,
             ),
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,8 +192,8 @@ class _ProgressChoicesState extends State<_ProgressChoices> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(
                       choices[conflict.chapterId] == original
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
+                          ? FluentIcons.radio_button_24_filled
+                          : FluentIcons.circle_24_regular,
                     ),
                     title: Text(
                       original

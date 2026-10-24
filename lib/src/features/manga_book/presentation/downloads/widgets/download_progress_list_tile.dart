@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -132,6 +133,9 @@ class DownloadProgressListTile extends HookConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 PopupMenuButton(
+                  icon: const Icon(
+                    FluentIcons.more_vertical_24_regular,
+                  ),
                   enabled: canDownload,
                   tooltip: canDownload
                       ? null
@@ -183,7 +187,7 @@ class DownloadProgressListTile extends HookConsumerWidget {
                   index: index,
                   enabled: canDownload,
                   child: Icon(
-                    Icons.drag_handle_rounded,
+                    FluentIcons.re_order_24_regular,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),

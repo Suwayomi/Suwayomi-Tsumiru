@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -204,7 +205,7 @@ class _HeadTile extends StatelessWidget {
                       Row(
                         children: [
                           if ((chapter.user.isBookmarked).ifNull()) ...[
-                            const Icon(Icons.bookmark_rounded, size: 20),
+                            const Icon(FluentIcons.bookmark_24_filled, size: 20),
                             const SizedBox(width: 4),
                           ],
                           Expanded(
@@ -253,8 +254,8 @@ class _HeadTile extends StatelessWidget {
                                   const SizedBox(width: 2),
                                   Icon(
                                     isExpanded
-                                        ? Icons.expand_less_rounded
-                                        : Icons.expand_more_rounded,
+                                        ? FluentIcons.chevron_up_24_regular
+                                        : FluentIcons.chevron_down_24_regular,
                                     size: 14,
                                     color: context.theme.colorScheme.primary,
                                   ),
@@ -346,7 +347,7 @@ class _TailTile extends StatelessWidget {
             child: Row(
               children: [
                 if ((chapter.user.isBookmarked).ifNull()) ...[
-                  const Icon(Icons.bookmark_rounded, size: 16),
+                  const Icon(FluentIcons.bookmark_24_filled, size: 20),
                   const SizedBox(width: 4),
                 ],
                 Expanded(

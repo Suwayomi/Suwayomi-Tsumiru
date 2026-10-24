@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -12,6 +13,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../features/auth/data/custom_headers_store.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/fluent_expansion_tile.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
 
@@ -50,7 +52,7 @@ class CustomHeadersSection extends HookConsumerWidget {
     }
 
     Widget headerRow(MapEntry<String, String> entry) => ListTile(
-      leading: compact ? const Icon(Icons.key_rounded) : null,
+      leading: compact ? const Icon(FluentIcons.key_24_regular) : null,
       title: Text(entry.key),
       subtitle: Text(
         entry.value.isEmpty ? '—' : '••••••••',
@@ -61,12 +63,12 @@ class CustomHeadersSection extends HookConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.edit_rounded),
+            icon: const Icon(FluentIcons.edit_24_regular),
             onPressed: () => addOrEdit(existingName: entry.key),
           ),
           IconButton(
             icon: Icon(
-              Icons.delete_rounded,
+              FluentIcons.delete_24_regular,
               color: Theme.of(context).colorScheme.error,
             ),
             onPressed: () =>
@@ -106,7 +108,7 @@ class CustomHeadersSection extends HookConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: OutlinedButton.icon(
                 onPressed: () => addOrEdit(),
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(FluentIcons.add_24_regular),
                 label: Text(context.l10n.customHeaderAdd),
               ),
             ),
@@ -118,7 +120,7 @@ class CustomHeadersSection extends HookConsumerWidget {
               SettingsHighlightTarget(
                 id: 'customHeaders',
                 child: ListTile(
-                  leading: const Icon(Icons.add_rounded),
+                  leading: const Icon(FluentIcons.add_24_regular),
                   title: Text(context.l10n.customHeaderAdd),
                   onTap: () => addOrEdit(),
                 ),
@@ -128,7 +130,7 @@ class CustomHeadersSection extends HookConsumerWidget {
       ],
     );
     if (!compact) return editor;
-    return ExpansionTile(
+    return FluentExpansionTile(
       dense: true,
       expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
       tilePadding: KEdgeInsets.h16.size,

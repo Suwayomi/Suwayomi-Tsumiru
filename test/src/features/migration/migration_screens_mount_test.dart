@@ -10,6 +10,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -286,7 +287,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump();
     expect(find.text(l10n.migrationListNoMatch), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.tap(find.byIcon(FluentIcons.more_vertical_24_regular));
     await tester.pumpAndSettle();
     expect(find.text(l10n.migrationSearchManually), findsOneWidget);
     expect(tester.takeException(), isNull);

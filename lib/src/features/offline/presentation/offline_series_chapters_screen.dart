@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -72,7 +73,7 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
                       fit: BoxFit.cover,
                       size: const Size(32, 42),
                     )
-                  : const Icon(Icons.book_outlined),
+                  : const Icon(FluentIcons.book_24_regular),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -159,12 +160,12 @@ class _ActiveChapterTile extends ConsumerWidget {
     Widget leading;
     if (isDownloading) {
       leading = SizedBox(
-        width: 36,
-        height: 36,
+        width: 24,
+        height: 24,
         child: Center(
           child: SizedBox(
-            width: 20,
-            height: 20,
+            width: 24,
+            height: 24,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
               value: (progress == null || progress <= 0) ? null : progress,
@@ -174,7 +175,7 @@ class _ActiveChapterTile extends ConsumerWidget {
       );
     } else {
       leading = Icon(
-        Icons.schedule_rounded,
+        FluentIcons.clock_24_regular,
         color: context.theme.colorScheme.onSurfaceVariant,
       );
     }
@@ -207,7 +208,7 @@ class _DownloadedChapterTile extends ConsumerWidget {
 
     return ListTile(
       leading: Icon(
-        Icons.offline_pin_rounded,
+        FluentIcons.checkmark_circle_24_filled,
         color: isRead
             ? context.theme.colorScheme.onSurfaceVariant
             : context.theme.colorScheme.primary,
@@ -230,7 +231,7 @@ class _DownloadedChapterTile extends ConsumerWidget {
           : null,
       trailing: IconButton(
         tooltip: context.l10n.offlineChapterDelete,
-        icon: const Icon(Icons.delete_outline_rounded),
+        icon: const Icon(FluentIcons.delete_24_regular),
         onPressed: () => confirmDeleteChapterFromDevice(ref, chapter.id),
       ),
       onTap: () => ReaderRoute(
@@ -255,13 +256,13 @@ class _FailedChapterTile extends ConsumerWidget {
         .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     return ListTile(
       leading: Icon(
-        Icons.error_outline_rounded,
+        FluentIcons.error_circle_24_regular,
         color: context.theme.colorScheme.error,
       ),
       title: Text(chapter.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: canDownload ? null : Text(context.l10n.accountPermissionDenied),
       trailing: TextButton.icon(
-        icon: const Icon(Icons.replay_rounded, size: 18),
+        icon: const Icon(FluentIcons.replay_24_regular, size: 18),
         label: Text(context.l10n.offlineChapterRetry),
         onPressed: canDownload
             ? () => saveChapterToDevice(ref, chapter.id)

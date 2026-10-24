@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
@@ -20,7 +21,7 @@ class ReaderChapterGapWarning extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
-          Icons.warning_amber_rounded,
+          FluentIcons.warning_24_regular,
           color: context.theme.colorScheme.error,
         ),
         const SizedBox(width: 12),

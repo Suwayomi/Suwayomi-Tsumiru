@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -89,7 +90,7 @@ class ConnectionScreen extends HookConsumerWidget {
                   IconButton(
                     tooltip: context.l10n.refresh,
                     onPressed: busy.value || !hasCredentials ? null : refresh,
-                    icon: const Icon(Icons.refresh_rounded),
+                    icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
                   ),
               ],
             ),
@@ -139,7 +140,7 @@ class ConnectionScreen extends HookConsumerWidget {
                       if (cleartext)
                         ListTile(
                           leading: Icon(
-                            Icons.lock_open_rounded,
+                            FluentIcons.lock_open_24_regular,
                             color: context.theme.colorScheme.error,
                           ),
                           subtitle: Text(
@@ -197,7 +198,7 @@ class ConnectionScreen extends HookConsumerWidget {
           IconButton(
             tooltip: context.l10n.refresh,
             onPressed: busy.value || !hasCredentials ? null : refresh,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
           ),
       ],
       child: scaffold,

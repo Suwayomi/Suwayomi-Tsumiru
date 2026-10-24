@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -120,18 +121,18 @@ class ChapterListTile extends HookConsumerWidget {
         return read ? Icons.remove_done_rounded : Icons.done_rounded;
       case ChapterSwipeAction.toggleBookmark:
         return bookmarked
-            ? Icons.bookmark_remove_outlined
-            : Icons.bookmark_add_outlined;
+            ? FluentIcons.bookmark_24_filled
+            : FluentIcons.bookmark_24_regular;
       case ChapterSwipeAction.download:
         if (!canDownload) return null;
         if (queueEntry != null) {
           return queueEntry.state == DownloadState.ERROR
-              ? Icons.cloud_download_outlined
-              : Icons.file_download_off_outlined;
+              ? FluentIcons.cloud_arrow_down_24_regular
+              : FluentIcons.arrow_download_off_24_regular;
         }
         return downloaded
-            ? Icons.delete_outline_rounded
-            : Icons.cloud_download_outlined;
+            ? FluentIcons.delete_24_regular
+            : FluentIcons.cloud_arrow_down_24_regular;
       case ChapterSwipeAction.disabled:
         return null;
     }
@@ -174,7 +175,7 @@ class ChapterListTile extends HookConsumerWidget {
             children: [
               if (chapter.user.isBookmarked.ifNull()) ...[
                 Icon(
-                  Icons.bookmark_rounded,
+                  FluentIcons.bookmark_24_filled,
                   color: chapter.user.isRead.ifNull()
                       ? readColor
                       : context.iconColor,
@@ -366,7 +367,15 @@ class ChapterListTile extends HookConsumerWidget {
                 padding: const EdgeInsets.only(right: 4),
                 child: Stack(
                   children: [
-                    Row(
+                    IconButtonTheme(
+                      data: IconButtonThemeData(
+                        style: IconButton.styleFrom(
+                          iconSize: 20,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                      child: Row(
                       children: [
                         if (selectionMode)
                           Checkbox(
@@ -420,7 +429,7 @@ class ChapterListTile extends HookConsumerWidget {
                                     tooltip: context.l10n.removeBookmark,
                                     onPressed: toggleBookmark,
                                     icon: Icon(
-                                      Icons.bookmark_rounded,
+                                      FluentIcons.bookmark_24_filled,
                                       color: cs.primary,
                                     ),
                                   ),
@@ -435,20 +444,26 @@ class ChapterListTile extends HookConsumerWidget {
                                     tooltip: context.l10n.bookmark,
                                     onPressed: toggleBookmark,
                                     icon: Icon(
-                                      Icons.bookmark_outline_rounded,
+                                      FluentIcons.bookmark_24_regular,
                                       color: cs.onSurfaceVariant,
                                     ),
                                   ),
                                 )
                               : null,
                         ),
-                        OfflineSaveButton(chapterId: chapter.id),
+                        SizedBox(
+                          width: 32,
+                          child: OfflineSaveButton(chapterId: chapter.id),
+                        ),
                         if (!manga.isLocalSource)
-                          DownloadStatusIcon(
+                          SizedBox(
+                            width: 32,
+                            child: DownloadStatusIcon(
                             updateData: updateData,
                             chapter: chapter,
                             mangaId: manga.id,
                             isDownloaded: chapter.user.isDownloaded.ifNull(),
+                          ),
                           ),
                         SizedBox(
                           width: 32,
@@ -467,7 +482,7 @@ class ChapterListTile extends HookConsumerWidget {
                                 tooltip: context.l10n.more,
                                 onPressed: openOptions,
                                 icon: Icon(
-                                  Icons.more_vert_rounded,
+                                  FluentIcons.more_vertical_24_regular,
                                   color: cs.onSurfaceVariant,
                                 ),
                               ),
@@ -475,6 +490,7 @@ class ChapterListTile extends HookConsumerWidget {
                           ),
                         ),
                       ],
+                    ),
                     ),
                     if (isCurrent &&
                         chapter.pageCount > 0 &&

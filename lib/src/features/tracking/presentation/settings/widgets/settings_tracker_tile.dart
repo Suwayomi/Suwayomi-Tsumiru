@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -28,7 +29,7 @@ class SettingsTrackerTile extends ConsumerWidget {
         imageUrl: tracker.icon,
         size: const Size.square(40),
         progressIndicatorBuilder: (_, _, _) =>
-            const Icon(Icons.sync_rounded, size: 40),
+            const Icon(FluentIcons.arrow_sync_24_regular, size: 40),
       ),
       title: Text(tracker.name),
       subtitle: tracker.isLoggedIn && tracker.isTokenExpired

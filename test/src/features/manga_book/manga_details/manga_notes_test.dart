@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -49,11 +50,11 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'draft');
-    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.tap(find.byIcon(FluentIcons.arrow_left_24_regular));
     await tester.pumpAndSettle();
     expect(find.byType(MangaNotesScreen), findsOneWidget);
     expect(find.text('draft'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.tap(find.byIcon(FluentIcons.arrow_left_24_regular));
     await tester.pumpAndSettle();
     expect(find.byType(MangaNotesScreen), findsNothing);
     expect(server['webUI_notes'], 'draft');

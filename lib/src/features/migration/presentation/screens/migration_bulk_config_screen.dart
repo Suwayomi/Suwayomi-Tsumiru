@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -67,16 +68,19 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
     final actions = <Widget>[
       IconButton(
         tooltip: l10n.migrationSelectPinned,
-        icon: const Icon(Icons.push_pin_outlined),
+        icon: const Icon(FluentIcons.pin_24_regular),
         onPressed: () =>
             setSelected([for (final s in allSources) if (s.isPinned) s.id]),
       ),
       IconButton(
         tooltip: l10n.migrationSelectNone,
-        icon: const Icon(Icons.deselect),
+        icon: const Icon(FluentIcons.select_all_off_24_regular),
         onPressed: () => setSelected(const []),
       ),
       PopupMenuButton<void>(
+        icon: const Icon(
+          FluentIcons.more_vertical_24_regular,
+        ),
         itemBuilder: (context) => [
           PopupMenuItem<void>(
             onTap: () => setSelected(
@@ -108,7 +112,7 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
                     .update(selectedIds.value);
                 _openSheet(context, ref);
               },
-              icon: const Icon(Icons.arrow_forward),
+              icon: const Icon(FluentIcons.arrow_right_24_regular),
               label: Text(l10n.migrationContinue),
             ),
       body: Column(
@@ -292,7 +296,7 @@ class _SourceCard extends StatelessWidget {
                 index: dragIndex!,
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.drag_handle),
+                  child: Icon(FluentIcons.re_order_24_regular),
                 ),
               ),
             ],

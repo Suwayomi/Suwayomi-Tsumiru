@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -88,7 +89,7 @@ class NumberSlider extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: value != min ? () => onChanged(value - 1) : null,
-                  icon: const Icon(Icons.remove_rounded),
+                  icon: const Icon(FluentIcons.subtract_24_regular),
                 ),
                 Expanded(
                   child: SliderTheme(
@@ -107,7 +108,7 @@ class NumberSlider extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: value != max ? () => onChanged(value + 1) : null,
-                  icon: const Icon(Icons.add_rounded),
+                  icon: const Icon(FluentIcons.add_24_regular),
                 ),
               ],
             ),

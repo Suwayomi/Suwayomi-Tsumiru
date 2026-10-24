@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -89,6 +90,14 @@ ThemeData buildAppTheme({
             : Brightness.dark,
         systemNavigationBarDividerColor: Colors.transparent,
       ),
+    ),
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (context) => Icon(
+        FluentIcons.arrow_left_24_regular,
+        semanticLabel: MaterialLocalizations.of(context).backButtonTooltip,
+      ),
+      closeButtonIconBuilder: (context) =>
+          const Icon(FluentIcons.dismiss_24_regular),
     ),
     tabBarTheme: const TabBarThemeData(tabAlignment: TabAlignment.center),
     navigationBarTheme: NavigationBarThemeData(

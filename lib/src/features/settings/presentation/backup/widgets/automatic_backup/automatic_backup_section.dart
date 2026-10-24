@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -130,6 +131,12 @@ class AutomaticBackupSection extends ConsumerWidget {
                                 data.backupTime.toTimeOfDay ??
                                 const TimeOfDay(hour: 0, minute: 0),
                             context: context,
+                            switchToInputEntryModeIcon: const Icon(
+                              FluentIcons.edit_24_regular,
+                            ),
+                            switchToTimerEntryModeIcon: const Icon(
+                              FluentIcons.clock_24_regular,
+                            ),
                           );
                           if (backupTime != null) {
                             final result = await AppUtils.guard(

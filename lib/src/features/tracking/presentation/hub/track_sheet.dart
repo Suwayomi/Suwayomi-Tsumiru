@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:collection/collection.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -107,7 +108,7 @@ class TrackSheetContent extends ConsumerWidget {
           const SizedBox(height: 4),
 
           ListTile(
-            leading: const Icon(Icons.manage_accounts_outlined),
+            leading: const Icon(FluentIcons.person_accounts_24_regular),
             title: Text(context.l10n.manageTrackers),
             onTap: () {
               Navigator.of(context).pop();
@@ -159,7 +160,7 @@ class _EmptyLoginState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.sync_disabled_rounded, size: 48),
+          const Icon(FluentIcons.arrow_sync_dismiss_24_regular, size: 48),
           const SizedBox(height: 12),
           Text(
             context.l10n.noTrackersLoggedIn,
@@ -222,7 +223,7 @@ class _TrackerCard extends ConsumerWidget {
                   imageUrl: tracker.icon,
                   size: const Size.square(24),
                   progressIndicatorBuilder: (_, _, _) =>
-                      const Icon(Icons.sync_rounded, size: 24),
+                      const Icon(FluentIcons.arrow_sync_24_regular, size: 24),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -233,7 +234,7 @@ class _TrackerCard extends ConsumerWidget {
                 ),
                 if (rec != null)
                   IconButton(
-                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    icon: const Icon(FluentIcons.arrow_clockwise_24_regular, size: 20),
                     tooltip: context.l10n.refresh,
                     onPressed: () => _refresh(context, ref),
                   ),
@@ -302,7 +303,7 @@ class _LoggedOutBoundCard extends StatelessWidget {
                   imageUrl: tracker.icon,
                   size: const Size.square(24),
                   progressIndicatorBuilder: (_, _, _) =>
-                      const Icon(Icons.sync_rounded, size: 24),
+                      const Icon(FluentIcons.arrow_sync_24_regular, size: 24),
                 ),
                 const SizedBox(width: 8),
                 Expanded(

@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -20,7 +21,7 @@ class DownloadStallBanner extends ConsumerWidget {
         'background' => context.l10n.notificationDownloadsPausedBackground,
         _ => context.l10n.notificationDownloadsPausedService,
       }),
-      leading: const Icon(Icons.cloud_off_rounded),
+      leading: const Icon(FluentIcons.cloud_off_24_regular),
       actions: [
         TextButton(
           onPressed: () => ref

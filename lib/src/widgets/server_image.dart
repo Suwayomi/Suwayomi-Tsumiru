@@ -6,6 +6,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -225,7 +226,7 @@ class ServerImage extends HookConsumerWidget {
           errorBuilder: (ctx, error, stack) => AppUtils.wrapOn(
             wrapper,
             Icon(
-              Icons.broken_image_rounded,
+              FluentIcons.image_off_24_regular,
               color: ctx.theme.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -271,7 +272,7 @@ class ServerImage extends HookConsumerWidget {
           errorBuilder: (context, error, stackTrace) => AppUtils.wrapOn(
             wrapper,
             Icon(
-              Icons.broken_image_rounded,
+              FluentIcons.image_off_24_regular,
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -284,7 +285,7 @@ class ServerImage extends HookConsumerWidget {
       return AppUtils.wrapOn(
         wrapper,
         Icon(
-          Icons.broken_image_rounded,
+          FluentIcons.image_off_24_regular,
           color: context.theme.colorScheme.onSurfaceVariant,
         ),
       );
@@ -403,7 +404,7 @@ class ServerImage extends HookConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.broken_image_rounded,
+                    FluentIcons.image_off_24_regular,
                     color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                   const Gap(32),
@@ -420,7 +421,7 @@ class ServerImage extends HookConsumerWidget {
         return AppUtils.wrapOn(
           wrapper,
           Icon(
-            Icons.broken_image_rounded,
+            FluentIcons.image_off_24_regular,
             color: context.theme.colorScheme.onSurfaceVariant,
           ),
         );
