@@ -4197,5 +4197,6 @@
   "serverSignInDays": "{count, plural, =1{1 day} other{{count} days}}",
   "@serverSignInDays": {"placeholders": {"count": {"type": "int"}}},
   "databaseSchema": "Schema",
-  "hikariMaxPoolSize": "Maximum connections"
+  "hikariMaxPoolSize": "Maximum connections",
+  "includeUserSettings": "User settings"
 }

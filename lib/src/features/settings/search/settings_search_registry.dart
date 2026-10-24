@@ -27,6 +27,7 @@ import '../controller/server_controller.dart';
 import '../presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
 import '../presentation/backup/data/backup_settings_repository.dart';
+import '../presentation/backup/widgets/backup_flags/backup_flags_dialog.dart';
 import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../presentation/downloads/data/downloads_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
@@ -845,6 +846,18 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
 /// as the screen). The permission gate only disables the automatic rows'
 /// editors, so it adds no further gate.
 List<SettingsSearchEntry> get backupSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'includeUserSettings',
+    title: (l) => l.includeUserSettings,
+    breadcrumb: (l) => '${l.backup} › ${l.backupData}',
+    open: openBackupUserSettings,
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        _canManageSettings(ref) &&
+        ref.watch(autoBackupFlagsProvider).value != null &&
+        ref.watch(backupUserSettingsProvider).value != null,
+  ),
+
   SettingsSearchEntry(
     id: 'createBackup',
     title: (l) => l.createBackupTitle,

@@ -28,6 +28,7 @@ class AutomaticBackupSection extends ConsumerWidget {
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.MANAGE_SETTINGS);
     final repository = ref.watch(backupSettingsRepositoryProvider);
+    final userSettings = ref.watch(backupUserSettingsProvider).value;
     final autoFlags = ref.watch(autoBackupFlagsProvider).value;
 
     return automaticBackupSettings.showUiWhenData(context, (data) {
@@ -38,6 +39,8 @@ class AutomaticBackupSection extends ConsumerWidget {
           ? null
           : summarizeBackupFlags(
               entries: [
+                if (userSettings != null)
+                  (context.l10n.includeUserSettings, userSettings),
                 (context.l10n.includeManga, autoFlags.autoBackupIncludeManga),
                 (
                   context.l10n.includeChapters,
@@ -172,7 +175,9 @@ class AutomaticBackupSection extends ConsumerWidget {
                             final flags = await showBackupFlagsDialog(
                               context,
                               title: context.l10n.backupData,
-                              initial: BackupFlags.fromAuto(autoFlags),
+                              initial: BackupFlags.fromAuto(
+                                autoFlags,
+                              ).copyWith(includeUserSettings: userSettings),
                             );
                             if (flags == null || !context.mounted) return;
                             final result = await AppUtils.guard(
@@ -181,6 +186,7 @@ class AutomaticBackupSection extends ConsumerWidget {
                             );
                             if (result != null && context.mounted) {
                               ref.invalidate(autoBackupFlagsProvider);
+                              ref.invalidate(backupUserSettingsProvider);
                             }
                           }
                         : null,

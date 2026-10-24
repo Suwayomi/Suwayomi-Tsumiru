@@ -45,6 +45,7 @@ void main() {
         overrides: [
           backupSettingsRepositoryProvider.overrideWithValue(spy),
           toastProvider.overrideWithValue(null),
+          backupUserSettingsProvider.overrideWith((ref) async => null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
