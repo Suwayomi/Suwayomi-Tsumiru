@@ -3097,6 +3097,23 @@
   "@keepOfflineAll": {
     "description": "Keep-offline rule: keep every chapter on device"
   },
+  "keepOfflineNextUnreadShort": "{count} unread",
+  "@keepOfflineNextUnreadShort": {
+    "description": "Short keep-offline status on the series page button",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keepOfflineAllUnreadShort": "All unread",
+  "@keepOfflineAllUnreadShort": {
+    "description": "Short keep-offline status on the series page button"
+  },
+  "keepOfflineAllShort": "All chapters",
+  "@keepOfflineAllShort": {
+    "description": "Short keep-offline status on the series page button"
+  },
   "offlineDownloadAction": "Offline",
   "@offlineDownloadAction": {
     "description": "Series offline button label when nothing is downloaded yet"

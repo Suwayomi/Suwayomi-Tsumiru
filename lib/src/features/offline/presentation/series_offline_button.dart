@@ -60,9 +60,9 @@ class SeriesOfflineButton extends ConsumerWidget {
 
   String? _ruleLabel(BuildContext context, OfflineKeepRule? rule, int? count) =>
       switch (rule) {
-        OfflineKeepRule.all => context.l10n.keepOfflineAll,
-        OfflineKeepRule.allUnread => context.l10n.keepOfflineAllUnread,
-        OfflineKeepRule.nUnread => context.l10n.keepOfflineNextUnread(
+        OfflineKeepRule.all => context.l10n.keepOfflineAllShort,
+        OfflineKeepRule.allUnread => context.l10n.keepOfflineAllUnreadShort,
+        OfflineKeepRule.nUnread => context.l10n.keepOfflineNextUnreadShort(
           count ?? 5,
         ),
         OfflineKeepRule.off || null => null,
