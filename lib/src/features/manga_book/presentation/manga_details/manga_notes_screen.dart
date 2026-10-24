@@ -14,7 +14,7 @@ import 'widgets/manga_notes_toolbar.dart';
 /// a back arrow, "Edit notes" title and the series title as subtitle; a
 /// multi-line autofocused borderless text field; and a bottom bar with the
 /// formatting buttons and the character count. Saves when leaving the page
-/// (back arrow or system back), like Komikku's onDispose.
+/// (back arrow or system back).
 class MangaNotesScreen extends HookConsumerWidget {
   const MangaNotesScreen({
     super.key,
@@ -35,9 +35,8 @@ class MangaNotesScreen extends HookConsumerWidget {
     final saved = useRef(false);
     final leaving = useRef(false);
 
-    Future<void> save() async {
-      if (saved.value) return;
-      saved.value = true;
+    Future<bool> save() async {
+      if (saved.value) return true;
       final ok = await persistMangaNotes(
         client: ref.read(graphQlClientProvider),
         mangaId: mangaId,
@@ -47,26 +46,21 @@ class MangaNotesScreen extends HookConsumerWidget {
           if (context.mounted) refreshMangaAfterNotes(ref, mangaId);
         },
       );
+      saved.value = ok;
       if (!ok && context.mounted) {
         ref
             .read(toastProvider)
             ?.showError(context.l10n.errorSomethingWentWrong);
       }
+      return ok;
     }
-
-    // Dispose covers every exit path (app-bar back, system back, and the
-    // route going away underneath), mirroring Komikku's onDispose save.
-    useEffect(() {
-      return () {
-        unawaited(save());
-      };
-    }, const []);
 
     Future<void> leave() async {
       if (leaving.value) return;
       leaving.value = true;
-      await save();
-      if (context.mounted) Navigator.of(context).pop();
+      final ok = await save();
+      leaving.value = false;
+      if (ok && context.mounted) Navigator.of(context).pop();
     }
 
     return PopScope(

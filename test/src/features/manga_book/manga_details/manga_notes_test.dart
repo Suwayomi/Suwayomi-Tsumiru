@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_notes_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/manga_notes_formatting.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/manga_notes_save.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/webui_meta/webui_meta_codec.dart';
 
 TextEditingValue valueOf(String text, [int? base, int? extent]) =>
@@ -14,6 +18,56 @@ TextEditingValue valueOf(String text, [int? base, int? extent]) =>
     );
 
 void main() {
+  testWidgets('failed notes save retains the draft and can be retried', (
+    tester,
+  ) async {
+    var attempts = 0;
+    final server = <String, String>{};
+    final working = _fakeMetaClient(server);
+    final client = GraphQLClient(
+      link: Link.function((request, [forward]) {
+        if (++attempts == 1) throw Exception('down');
+        return working.link.request(request);
+      }),
+      cache: GraphQLCache(),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [graphQlClientProvider.overrideWithValue(client)],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const MangaNotesScreen(
+                    mangaId: 7,
+                    seriesTitle: 'Series',
+                    initialNotes: '',
+                    existingMetas: {},
+                  ),
+                ),
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'draft');
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+    expect(find.byType(MangaNotesScreen), findsOneWidget);
+    expect(find.text('draft'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+    expect(find.byType(MangaNotesScreen), findsNothing);
+    expect(server['webUI_notes'], 'draft');
+  });
+
   test('bold wraps the selection and italic inserts a pair on empty text', () {
     final wrapped = applyInlineMarker(valueOf('hello world', 6, 11), '**');
     expect(wrapped.text, 'hello **world**');
