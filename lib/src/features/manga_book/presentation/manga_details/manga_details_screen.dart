@@ -164,6 +164,15 @@ class MangaDetailsScreen extends HookConsumerWidget {
       return;
     }, []);
 
+    void openEditCategories() => Future.microtask(() {
+      if (!context.mounted) return null;
+      return showDialog(
+        context: context,
+        builder: (context) => EditMangaCategoryDialog(mangaId: mangaId),
+        animationStyle: context.motionStyle,
+      );
+    });
+
     void startMigration(BuildContext context, int mangaId, dynamic manga) {
       if (manga == null) return;
 
@@ -243,6 +252,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
           // The phone AppBar's toolbars, shared with the merged desktop bar so
           // both show the same controls. Medium windows keep the phone body but
           // suppress the AppBar, so the bar must carry these instead.
+          final inLibrary = data?.user.inLibrary.ifNull() ?? false;
           final selectionActions = [
             IconButton(
               onPressed: () {
@@ -308,15 +318,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       child: Text(context.l10n.seeRecommendations),
                     ),
                   PopupMenuItem(
-                    onTap: () => Future.microtask(() {
-                      if (!context.mounted) return null;
-                      return showDialog(
-                        context: context,
-                        builder: (context) =>
-                            EditMangaCategoryDialog(mangaId: mangaId),
-                        animationStyle: context.motionStyle,
-                      );
-                    }),
+                    onTap: openEditCategories,
                     child: Text(context.l10n.editCategory),
                   ),
                   PopupMenuItem(
@@ -343,6 +345,24 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   ),
                 ],
                 popUpAnimationStyle: context.motionStyle,
+              ),
+            if (twoColumn && inLibrary)
+              IconButton(
+                tooltip: context.l10n.migrate,
+                icon: const Icon(Icons.sync_alt_rounded),
+                onPressed: () => startMigration(context, mangaId, data),
+              ),
+            if (twoColumn && inLibrary)
+              IconButton(
+                tooltip: context.l10n.editCategory,
+                icon: const Icon(Icons.label_outline_rounded),
+                onPressed: openEditCategories,
+              ),
+            if (twoColumn && data?.realUrl != null)
+              IconButton(
+                tooltip: context.l10n.share,
+                icon: const Icon(Icons.share_rounded),
+                onPressed: () => shareSeries(context, data!),
               ),
           ];
           final scaffold = FocusScope(
