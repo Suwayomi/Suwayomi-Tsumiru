@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/webui_meta/webui_meta_codec.dart';
+import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
-
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
@@ -105,6 +107,17 @@ class _ServerDownloadsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final downloadAheadLimit = ref.watch(downloadAheadLimitProvider);
+    final canWriteMeta = ref.watch(webUiSettingsProvider).hasValue;
+    Future<void> writeAhead(int limit) async {
+      await AppUtils.guard(
+        () => ref
+            .read(webUiSettingsProvider.notifier)
+            .write('downloadAheadLimit', encodeWebUiInt(limit)),
+        ref.read(toastProvider),
+      );
+    }
+
     final repository = ref.watch(downloadsSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final personalSettings = ref.watch(personalSettingsProvider);
@@ -312,6 +325,41 @@ class _ServerDownloadsTab extends ConsumerWidget {
                             ),
                           ),
                         ),
+                    ],
+                  ),
+                  SettingsGroupHeading(label: context.l10n.downloadAhead),
+                  SettingsGroupCard(
+                    children: [
+                      SettingsHighlightTarget(
+                        id: 'autoDownloadWhileReading',
+                        child: SettingsPropTile(
+                          title: context.l10n.autoDownloadWhileReading,
+                          type: SettingsPropType.switchTile(
+                            value: downloadAheadLimit != 0,
+                            onChanged: canWriteMeta
+                                ? (value) => writeAhead(value ? 2 : 0)
+                                : null,
+                          ),
+                        ),
+                      ),
+                      SettingsHighlightTarget(
+                        id: 'downloadAheadLimit',
+                        child: SettingsPropTile(
+                          title: context.l10n.downloadAheadLimit,
+                          subtitle:
+                              '${downloadAheadLimit == 0 ? 2 : downloadAheadLimit}',
+                          type: SettingsPropType.numberPicker(
+                            min: 2,
+                            max: 10,
+                            value: downloadAheadLimit == 0
+                                ? 2
+                                : downloadAheadLimit,
+                            onChanged: canWriteMeta && downloadAheadLimit != 0
+                                ? writeAhead
+                                : null,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],

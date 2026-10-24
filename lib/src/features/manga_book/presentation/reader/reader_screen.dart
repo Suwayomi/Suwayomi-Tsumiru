@@ -38,6 +38,7 @@ import '../manga_details/controller/scanlator_dedup.dart';
 import 'controller/auto_webtoon.dart';
 import 'controller/display_cutout.dart';
 import 'controller/reader_controller.dart';
+import 'utils/download_ahead.dart';
 import 'utils/flush_progress_on_lifecycle.dart';
 import 'widgets/chrome/reader_chrome.dart';
 import 'widgets/reader_mode/infinity_continuous/multichapter_continuous_reader_mode.dart';
@@ -59,6 +60,7 @@ class ReaderScreen extends HookConsumerWidget {
   final bool openAtEnd;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    watchDownloadAhead(ref);
     final mangaProvider = mangaWithIdProvider(mangaId: mangaId);
     final chapterProviderWithIndex = chapterProvider(chapterId: chapterId);
     final chapterPages = ref.watch(chapterPagesProvider(chapterId: chapterId));
@@ -192,6 +194,14 @@ class ReaderScreen extends HookConsumerWidget {
         initialEmitConsumed.value = true;
         return;
       }
+
+      unawaited(
+        downloadAhead(ref, mangaId, chapterValue.id, index).catchError((
+          Object error,
+        ) {
+          debugPrint('$error');
+        }),
+      );
 
       // Skip if chapter is already read or if we're going backwards
       if ((chapterValue.user.isRead).ifNull() ||

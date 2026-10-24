@@ -4203,5 +4203,8 @@
   "ignoreFilters": "Ignore filters when searching",
   "fuzzySearch": "Fuzzy search",
   "cleanupDatabase": "Cleanup database",
-  "cleanupDatabaseConfirm": "Remove non-library entries from categories?"
+  "cleanupDatabaseConfirm": "Remove non-library entries from categories?",
+  "downloadAhead": "Download ahead",
+  "autoDownloadWhileReading": "Auto download while reading",
+  "downloadAheadLimit": "Number of unread chapters to download"
 }

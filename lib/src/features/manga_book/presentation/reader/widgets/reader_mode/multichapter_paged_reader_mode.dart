@@ -33,6 +33,7 @@ import '../../../manga_details/controller/scanlator_dedup.dart';
 import '../../controller/auto_scroll_controller.dart';
 import '../../controller/reader_controller.dart';
 import '../../controller/reader_settings_model.dart';
+import '../../utils/download_ahead.dart';
 import '../../utils/reader_initial_page.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous/infinity_continuous_feedback.dart';
@@ -87,6 +88,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    watchDownloadAhead(ref);
     bool readerToastsEnabled() =>
         ref.read(readerFeedbackToastsProvider).ifNull(true);
 
@@ -336,6 +338,12 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     }
 
     void scheduleVisibleProgress(int chapterId, int rel) {
+      unawaited(
+        downloadAhead(ref, manga.id, chapterId, rel).catchError((Object error) {
+          debugPrint('$error');
+        }),
+      );
+
       if (ref.read(incognitoModeProvider)) return;
       latestProgress.value = (chapterId: chapterId, rel: rel);
       progressDebounce.value?.cancel();

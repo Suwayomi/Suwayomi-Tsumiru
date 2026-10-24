@@ -45,6 +45,7 @@ import '../../../../manga_details/controller/scanlator_dedup.dart';
 import '../../../controller/auto_scroll_controller.dart';
 import '../../../controller/reader_controller.dart';
 import '../../../controller/reader_settings_model.dart';
+import '../../../utils/download_ahead.dart';
 import '../../../utils/flush_progress_on_lifecycle.dart';
 import '../../../utils/reader_initial_page.dart';
 import '../../mouse_wheel_speed.dart';
@@ -135,6 +136,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    watchDownloadAhead(ref);
     // Whether the reader feedback snackbars are enabled (user setting). Read
     // live so toggling the setting applies without reopening the reader.
     bool readerToastsEnabled() =>
@@ -381,6 +383,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }
 
     void scheduleVisibleProgress(int chapterId, int rel) {
+      unawaited(
+        downloadAhead(ref, manga.id, chapterId, rel).catchError((Object error) {
+          debugPrint('$error');
+        }),
+      );
+
       if (ref.read(incognitoModeProvider)) return;
       latestProgress.value = (chapterId: chapterId, rel: rel);
       progressDebounce.value?.cancel();

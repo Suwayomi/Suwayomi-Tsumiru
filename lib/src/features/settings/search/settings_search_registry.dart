@@ -961,6 +961,29 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
 /// (now under Storage) a "› Storage" one.
 List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
+    id: 'autoDownloadWhileReading',
+    title: (l) => l.autoDownloadWhileReading,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadAhead}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'autoDownloadWhileReading',
+      tab: 0,
+    ).push(c),
+    visible: (ref, _) => _serverReachable(ref),
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'downloadAheadLimit',
+    title: (l) => l.downloadAheadLimit,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadAhead}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'downloadAheadLimit',
+      tab: 0,
+    ).push(c),
+    visible: (ref, _) => _serverReachable(ref),
+    tabIndex: 0,
+  ),
+
+  SettingsSearchEntry(
     id: 'downloadLocation',
     title: (l) => l.downloadLocation,
     breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
