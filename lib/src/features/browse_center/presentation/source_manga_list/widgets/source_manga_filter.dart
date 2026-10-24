@@ -17,7 +17,7 @@ class SourceMangaFilter extends HookWidget {
   const SourceMangaFilter({
     super.key,
     required this.filters,
-    this.query,
+    this.currentQuery,
     this.onSavedSearchSelected,
     required this.sourceId,
     required this.appliedChanges,
@@ -25,7 +25,7 @@ class SourceMangaFilter extends HookWidget {
     required this.onReset,
   });
   final List<Filter> filters;
-  final String? query;
+  final String? Function()? currentQuery;
   final void Function(String?, List<FilterChange>)? onSavedSearchSelected;
   final String sourceId;
   final List<FilterChange> appliedChanges;
@@ -87,7 +87,7 @@ class SourceMangaFilter extends HookWidget {
               if (onSavedSearchSelected == null) return const SizedBox.shrink();
               return SavedSourceSearches(
                 sourceId: sourceId,
-                query: query,
+                currentQuery: currentQuery ?? () => null,
                 currentChanges: () =>
                     filterChangeMap.value.values.expand((v) => v).toList(),
                 onSelected: onSavedSearchSelected!,

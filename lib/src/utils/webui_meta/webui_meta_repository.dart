@@ -83,12 +83,7 @@ class WebUiMetaRepository {
     }
   }
 
-  Future<void> writeSourceValue(
-    String sourceId,
-    String key,
-    String? value, [
-    Map<String, String>? existingMetas,
-  ]) async {
+  Future<Map<String, String>> readSourceMetas(String sourceId) async {
     final nodes = await client
         .query$GetWebUiSourceMetas(
           Options$Query$GetWebUiSourceMetas(
@@ -98,8 +93,17 @@ class WebUiMetaRepository {
         )
         .getData((data) => data.source.meta);
     if (nodes == null) throw StateError('Could not read source metadata');
+    return {for (final node in nodes) node.key: node.value};
+  }
+
+  Future<void> writeSourceValue(
+    String sourceId,
+    String key,
+    String? value, [
+    Map<String, String>? existingMetas,
+  ]) async {
     final plan = planWebUiWrite(
-      {for (final node in nodes) node.key: node.value},
+      await readSourceMetas(sourceId),
       key,
       value,
     );

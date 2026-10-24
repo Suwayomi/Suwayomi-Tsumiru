@@ -26,12 +26,12 @@ class SavedSourceSearches extends HookConsumerWidget {
   const SavedSourceSearches({
     super.key,
     required this.sourceId,
-    required this.query,
+    required this.currentQuery,
     required this.currentChanges,
     required this.onSelected,
   });
   final String sourceId;
-  final String? query;
+  final String? Function() currentQuery;
   final List<FilterChange> Function() currentChanges;
   final void Function(String?, List<FilterChange>) onSelected;
   @override
@@ -42,22 +42,50 @@ class SavedSourceSearches extends HookConsumerWidget {
         for (final meta in source.meta) meta.key: meta.value,
     };
     final savedValue = readWebUiValue(metas, 'savedSearches');
-    final searches = savedValue == null
-        ? <String, dynamic>{}
-        : jsonDecode(savedValue) as Map<String, dynamic>;
+    Map<String, dynamic> searches;
+    try {
+      searches = _decodeSavedSearches(savedValue);
+    } on FormatException {
+      searches = {};
+    }
     final saving = useState(false);
     final nameController = useTextEditingController();
-    Future<void> writeSearches(Map<String, dynamic> next) async {
+    Future<void> writeSearch(String name, Map<String, dynamic>? search) async {
       saving.value = true;
       try {
         await AppUtils.guard(() async {
-          await WebUiMetaRepository(
-            ref.read(graphQlClientProvider),
-          ).writeSourceValue(
+          final repository = WebUiMetaRepository(ref.read(graphQlClientProvider));
+          var latestMetas = await repository.readSourceMetas(sourceId);
+          var next = _decodeSavedSearches(
+            readWebUiValue(latestMetas, 'savedSearches'),
+          );
+          if (!context.mounted) return;
+          if (search != null) {
+            if (next.containsKey(name)) {
+              if (!await confirmAction(
+                    context,
+                    title: context.l10n.confirmOverwriteSearchTitle,
+                    message: context.l10n.confirmOverwriteSearchMessage,
+                    action: context.l10n.confirmOverwriteAction,
+                  ) ||
+                  !context.mounted) {
+                return;
+              }
+              latestMetas = await repository.readSourceMetas(sourceId);
+              next = _decodeSavedSearches(
+                readWebUiValue(latestMetas, 'savedSearches'),
+              );
+            }
+            next[name] = search;
+          } else {
+            next.remove(name);
+          }
+          if (!context.mounted) return;
+          await repository.writeSourceValue(
             sourceId,
             'savedSearches',
             jsonEncode(next),
-            metas,
+            latestMetas,
           );
           ref.invalidate(sourceProvider(sourceId));
         }, ref.read(toastProvider));
@@ -93,23 +121,10 @@ class SavedSourceSearches extends HookConsumerWidget {
         ),
       );
       if (name == null || !context.mounted) return;
-      if (searches.containsKey(name)) {
-        if (!await confirmAction(
-              context,
-              title: context.l10n.confirmOverwriteSearchTitle,
-              message: context.l10n.confirmOverwriteSearchMessage,
-              action: context.l10n.confirmOverwriteAction,
-            ) ||
-            !context.mounted) {
-          return;
-        }
-      }
-      await writeSearches({
-        ...searches,
-        name: {
-          if (query != null) 'query': query,
+      final query = currentQuery();
+      await writeSearch(name, {
+        'query': ?query,
           'filters': filtersToWebUi(currentChanges()),
-        },
       });
     }
 
@@ -132,8 +147,7 @@ class SavedSourceSearches extends HookConsumerWidget {
         ),
       );
       if (confirmed == true && context.mounted) {
-        final next = {...searches}..remove(name);
-        await writeSearches(next);
+        await writeSearch(name, null);
       }
     }
 
@@ -182,4 +196,25 @@ class SavedSourceSearches extends HookConsumerWidget {
       ),
     );
   }
+}
+
+Map<String, dynamic> _decodeSavedSearches(String? value) {
+  if (value == null) return {};
+  final decoded = jsonDecode(value);
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('Invalid saved searches');
+  }
+  for (final search in decoded.values) {
+    if (search is! Map<String, dynamic> ||
+        (search['query'] != null && search['query'] is! String) ||
+        (search['filters'] != null && search['filters'] is! List)) {
+      throw const FormatException('Invalid saved search');
+    }
+    try {
+      filtersFromWebUi(search['filters'] as List? ?? []);
+    } catch (_) {
+      throw const FormatException('Invalid saved search filters');
+    }
+  }
+  return decoded;
 }

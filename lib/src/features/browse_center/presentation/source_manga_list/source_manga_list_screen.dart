@@ -81,6 +81,11 @@ class SourceMangaListScreen extends HookConsumerWidget {
     final source = ref.watch(sourceProvider(sourceId));
 
     final query = useState(initialQuery);
+    final searchDraft = useRef(initialQuery);
+    useEffect(() {
+      searchDraft.value = query.value;
+      return null;
+    }, [query.value]);
     final showSearch = useState(initialQuery.isNotBlank);
     final sourcePages = useMemoized(() => SourcePageSequence<MangaDto>());
     final controller = useServerPagingController<MangaDto>(
@@ -205,6 +210,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     child: SearchField(
                       key: ValueKey(query.value),
                       initialText: query.value,
+                      onChanged: (value) => searchDraft.value = value,
                       onClose: () => showSearch.value = (false),
                       onSubmitted: (val) {
                         if (sourceType == SourceType.SEARCH) {
@@ -259,7 +265,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                       filters: filterList.toList(),
                     sourceId: sourceId,
                     appliedChanges: appliedFilter,
-                      query: query.value,
+                      currentQuery: () => searchDraft.value,
                       onSavedSearchSelected: (savedQuery, changes) {
                         Navigator.pop(context);
                         appliedFilterNotifier.apply(changes);
@@ -310,7 +316,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                               filters: filterList.toList(),
                                 sourceId: sourceId,
                                 appliedChanges: appliedFilter,
-                              query: query.value,
+                              currentQuery: () => searchDraft.value,
                               onSavedSearchSelected: (savedQuery, changes) {
                                 Navigator.pop(context);
                                 appliedFilterNotifier.apply(changes);
