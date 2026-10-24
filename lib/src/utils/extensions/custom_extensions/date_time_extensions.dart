@@ -33,23 +33,7 @@ enum DateGroupKeys implements LocaleEnum {
   }
 }
 
-/// Calendar-day gap between [date] and now, e.g. 1 for "yesterday" no matter
-/// the time of day either side of the boundary falls on.
-///
-/// `DateTime.now().difference(date).inDays` looks equivalent but isn't: it's
-/// a rolling 24-hour count, not a calendar-day count. A chapter fetched late
-/// yesterday evening can be under 24 real hours old by the time it's viewed
-/// early this morning, so that rolling duration reports 0 — "Today" — even
-/// though a calendar midnight separates the two. This under-counts by
-/// exactly one for anything that isn't actually today, which is why
-/// yesterday's items looked like today's, the day before looked like
-/// yesterday's, and so on, one slot too recent all the way down.
-///
-/// Diffing two local midnights directly has its own trap: a DST transition
-/// makes one local day 23 or 25 real hours long, which can shift `.inDays`
-/// by one right on that day. Re-anchoring both dates as UTC calendar dates
-/// (same year/month/day, no timezone offset applied) before subtracting
-/// keeps the day count a pure calendar difference either way.
+/// Calendar-day gap: UTC-anchored local dates avoid both rolling-24-hour and DST errors.
 int _calendarDaysAgo(DateTime date) {
   final now = DateTime.now();
   final today = DateTime.utc(now.year, now.month, now.day);
@@ -84,7 +68,6 @@ extension DateTimeExtensions on DateTime {
         microsecond ?? this.microsecond,
       );
 
-// /////////////////////////////////////////////////////////////////////////////
 
   DateTime get startOfDay => DateTime(year, month, day);
 
@@ -103,7 +86,6 @@ extension DateTimeExtensions on DateTime {
   bool isSameDay(DateTime date) =>
       day == date.day && month == date.month && year == date.year;
 
-// /////////////////////////////////////////////////////////////////////////////
 
   DateTime get firstDayOfWeek => subtract(
         Duration(days: (weekday - 1)),
@@ -118,7 +100,6 @@ extension DateTimeExtensions on DateTime {
         end: lastDayOfWeek,
       );
 
-// /////////////////////////////////////////////////////////////////////////////
 
   DateTime get firstDayOfMonth => DateTime(year, month);
 
@@ -129,7 +110,6 @@ extension DateTimeExtensions on DateTime {
         end: lastDayOfMonth,
       );
 
-// /////////////////////////////////////////////////////////////////////////////
 
   DateTime get firstDayOfFinYear => DateTime(
         month >= 4 ? year : year - 1,
@@ -147,7 +127,6 @@ extension DateTimeExtensions on DateTime {
         end: lastDayOfFinYear,
       );
 
-// /////////////////////////////////////////////////////////////////////////////
 
   static DateTime max(DateTime a, DateTime b) => a.compareTo(b) > 0 ? a : b;
 
@@ -166,8 +145,7 @@ extension DateTimeExtensions on DateTime {
     }
   }
 
-  /// Finer-grained relative time (minutes / hours, then days) for things like
-  /// "Library last updated: 8 hours ago".
+  /// Relative time in minutes/hours, then days.
   String convertToTimeAgo(BuildContext context) {
     final diff = DateTime.now().difference(this);
     if (diff.inMinutes < 1) {
@@ -188,19 +166,16 @@ extension DateTimeExtensions on DateTime {
     }
   }
 
-  /// Check if this date is today
   bool get isToday {
     final now = DateTime.now();
     return isSameDay(now);
   }
 
-  /// Check if this date is yesterday
   bool get isYesterday {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
     return isSameDay(yesterday);
   }
 
-  /// Get a formatted date string for grouping purposes
   String dateGroupString(BuildContext context) {
     if (isToday) return context.l10n.today;
     if (isYesterday) return context.l10n.yesterday;
@@ -209,28 +184,22 @@ extension DateTimeExtensions on DateTime {
     final difference = now.difference(this).inDays;
 
     if (difference < 0) {
-      // Future date (shouldn't happen but handle gracefully)
       return DateGroupKeys.recentlyRead.toLocale(context);
     } else if (difference < 7) {
-      // Show day of week for the past week
       return toDayString;
     } else {
-      // For older items, show the specific date
       return toDateString;
     }
   }
 
-  /// Get the number of days between this date and now
   int get daysSinceNow => DateTime.now().difference(this).inDays;
 
-  /// Check if this date is within the past week (excluding today and yesterday)
   bool get isWithinPastWeek {
     final days = daysSinceNow;
     return days >= 2 && days < 7;
   }
 
-  /// Get a simple key for grouping without needing context
-  /// This provides non-localized keys that can be used for data grouping
+  /// Non-localized keys for grouping; weekday keys are localized by the UI.
   String get dateGroupKey {
     if (isToday) return DateGroupKeys.today.value;
     if (isYesterday) return DateGroupKeys.yesterday.value;
@@ -238,10 +207,8 @@ extension DateTimeExtensions on DateTime {
     if (daysSinceNow < 0) {
       return DateGroupKeys.recentlyRead.value;
     } else if (isWithinPastWeek) {
-      // Use weekday number for grouping, will be localized in UI
       return 'week_$weekday';
     } else {
-      // Use date string for older items
       return toDateString;
     }
   }

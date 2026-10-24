@@ -12,9 +12,7 @@ import 'package:window_manager/window_manager.dart';
 import 'window_geometry.dart';
 import 'window_geometry_store.dart';
 
-/// Saves window size/maximized state to prefs when the user changes it.
-/// Debounced because `onWindowResize` fires continuously on Linux (there is no
-/// end-of-resize `onWindowResized` there).
+/// Debounce resize saves: Linux emits continuous onWindowResize, never onWindowResized.
 class WindowGeometryListener with WindowListener {
   WindowGeometryListener(this._prefs);
   final SharedPreferences _prefs;
@@ -49,7 +47,6 @@ class WindowGeometryListener with WindowListener {
         WindowGeometry(size: size, maximized: false),
       );
     } else {
-      // Keep the last saved size; only flip the maximized flag.
       final existing = loadWindowGeometry(_prefs);
       await saveWindowGeometry(
         _prefs,
@@ -75,7 +72,6 @@ class WindowGeometryListener with WindowListener {
     try {
       await _flush().timeout(const Duration(seconds: 2));
     } catch (_) {
-      // Best-effort save; shutdown proceeds regardless.
     } finally {
       await windowManager.destroy();
     }
@@ -87,7 +83,6 @@ class WindowGeometryListener with WindowListener {
       try {
         await running;
       } catch (_) {
-        // Fall through to the final save below.
       }
     }
     await _persistNow();

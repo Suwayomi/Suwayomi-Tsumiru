@@ -9,11 +9,7 @@ import 'package:flutter/material.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
 
-/// A titled row of covers that pages horizontally on wide layouts.
-///
-/// Pass [itemCount] and [itemBuilder] for a list, or [child] for a caller-owned
-/// loading, error or empty body. Arrows and the edge fade only appear while the
-/// list overflows. With no [title] the arrows sit above the list instead.
+/// Supply items or a caller-owned child; arrows/fade appear only on overflow.
 class CoverRowSection extends StatefulWidget {
   const CoverRowSection({
     super.key,
@@ -171,7 +167,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
                 onPressed: widget.onSeeAll,
                 child: Text(context.l10n.seriesSeeAll),
               ),
-            // Reserved at all times so See all lines up across sections.
+            // Reserve space to align See all across sections.
             SizedBox(
               width: _arrowAreaWidth,
               child: showArrows
@@ -262,7 +258,6 @@ class _CoverRowSectionState extends State<CoverRowSection> {
   @override
   Widget build(BuildContext context) {
     var body = _body(context);
-    // A caller-owned body (loading, error, empty) keeps its natural height.
     if (widget.height != null && widget.itemCount != null) {
       body = SizedBox(height: widget.height, child: body);
     }
@@ -285,8 +280,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
   }
 }
 
-/// Always renders the same tree, so toggling the fade never reparents the
-/// scrollable and resets its offset.
+/// Keep the scrollable in place when toggling fade so its offset survives.
 @visibleForTesting
 class CoverRowEdgeFade extends StatelessWidget {
   const CoverRowEdgeFade({
@@ -306,9 +300,8 @@ class CoverRowEdgeFade extends StatelessWidget {
       fit: StackFit.passthrough,
       clipBehavior: Clip.none,
       children: [
-        // Drops the child's partly covered edge pixel at fractional widths.
         ClipRect(child: child),
-        // Overhangs by 1 px so the fractional edge pixel is fully covered.
+        // Overhang 1 px to cover fractional edge pixels.
         Positioned(
           top: 0,
           bottom: 0,

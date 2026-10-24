@@ -12,10 +12,6 @@ import '../utils/extensions/custom_extensions.dart';
 import 'emoticons.dart';
 import 'server_unreachable_view.dart';
 
-/// Shown when the server rejected the app's credentials — the auth sibling of
-/// [ServerUnreachableView], and it points at the same screen, because signing
-/// in again is the only thing that fixes it. Without this, Refresh is the only
-/// action and it can only fail the same way.
 class ServerUnauthorizedView extends ConsumerWidget {
   const ServerUnauthorizedView({
     super.key,

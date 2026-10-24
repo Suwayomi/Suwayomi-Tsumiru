@@ -12,10 +12,7 @@ import '../constants/gen/assets.gen.dart';
 import '../features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../utils/theme/app_theme_builder.dart';
 
-/// The full-colour Tsumiru mark. Dark themes keep the cream foreground and tint
-/// the brush shadow with the theme's accent pair; light themes tint the on-light
-/// shadow with the same theme's dark accent pair. Indigo Night uses its artwork
-/// untouched.
+/// Indigo Night uses original artwork; other themes tint shadows with their dark accent pair.
 class TsumiruLogo extends ConsumerWidget {
   const TsumiruLogo({super.key, required this.size});
 

@@ -12,19 +12,7 @@ import '../../features/manga_book/data/updates/updates_repository.dart';
 
 part 'update_banner_state.g.dart';
 
-/// Optimistic "an update was just requested" flag.
-///
-/// A user-triggered update (pull-to-refresh, the overflow menu, the Updates
-/// FAB) takes ~1.5s before the server reports it as running, and the banner
-/// then adds its own 1s appear-debounce on top — so without this the banner
-/// sat blank for a couple of seconds after a pull and the action felt dead.
-///
-/// Callers [arm] this the instant they fire an update, which shows the banner
-/// immediately (bypassing the debounce). It then hands back to the real
-/// running signal: [onRealRunning] releases the optimistic hold once the
-/// genuine run has been seen to start and then end, and a safety timeout
-/// releases it for updates that never register as running (nothing to check /
-/// failed to start).
+/// Arm immediately on request; release after the real run ends or the safety timeout expires.
 @Riverpod(keepAlive: true)
 class UpdateOptimistic extends _$UpdateOptimistic {
   Timer? _safety;
@@ -37,18 +25,13 @@ class UpdateOptimistic extends _$UpdateOptimistic {
   }
 
   void arm() {
-    // Seed from the current run state: if an update is ALREADY running (a
-    // second pull mid-run), treat it as already-seen so the next idle edge
-    // releases the hold — otherwise the change-only running stream never
-    // re-delivers `true` and only the safety timeout would clear it.
+    // Seed current running state: a second arm mid-run must still release on the next idle edge.
     _sawRealRunning = ref.read(updateRunningSocketProvider).value ?? false;
     _safety?.cancel();
     _safety = Timer(const Duration(seconds: 12), _clear);
     state = true;
   }
 
-  /// Feed the real server running state so the optimistic hold releases once
-  /// the genuine run has started and then ended.
   void onRealRunning(bool running) {
     if (!state) return;
     if (running) {
@@ -65,11 +48,7 @@ class UpdateOptimistic extends _$UpdateOptimistic {
   }
 }
 
-/// Whether the update banner is currently on screen. Published by the banner,
-/// read by the app shell to drop the now-redundant status-bar inset on the
-/// content below — the banner occupies that space while it's shown, and
-/// without this the pushed-down screen's own app bar reserves the status-bar
-/// strip a second time, leaving a dead gap under the banner.
+/// Published visibility lets the shell omit the status-bar inset already occupied by the banner.
 @Riverpod(keepAlive: true)
 class UpdateBannerVisible extends _$UpdateBannerVisible {
   @override

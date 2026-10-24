@@ -20,7 +20,6 @@ Size kCalculateAppBarBottomSize(List<bool> checks) {
   return Size.fromHeight(kAppBarBottomHeight * multiplier);
 }
 
-/// Constant sizes to be used in the app (paddings, gaps, rounded corners etc.)
 enum KEdgeInsets {
   a2(EdgeInsets.all(2)),
   a4(EdgeInsets.all(4)),
@@ -69,54 +68,37 @@ enum KRadius {
   final Radius radius;
 }
 
-/// Manga covers are 2:3, matching Komikku's `MangaCover.Book`.
 const kMangaCoverAspectRatio = 2 / 3;
 
-/// Height reserved for the two-line title under a comfortable-grid cover.
 const kGridTitleExtent = 44.0;
 
-/// Total inset the tile's Card takes out of each axis — Flutter's default card
-/// margin of 4 on all four sides. The cell is grown by this so the artwork
-/// inside the card, not the cell, is what ends up at 2:3.
+/// Flutter's default Card margin removes 4 px from each edge.
 const kMangaCoverCardInset = 8.0;
 
-/// Cover width in the descriptive list tile — manga details header and the
-/// library's list view.
 const kDescriptiveCoverWidth = 120.0;
 
-/// Cover width in the horizontal result strips (global search, migration).
 const kShortSearchCoverWidth = 144.0;
 
-/// Gap plus the two-line bodySmall title under a recommendation cover.
 const kRecommendsTitleExtent = 36.0;
 
-/// Cover width in the compact list tile, which draws the image directly.
 const kCompactCoverWidth = 60.0;
 
-/// Padding around a list tile's cover.
 const kListTilePadding = 8.0;
 
-/// Height a fixed-width cover box needs for its artwork to land on 2:3. Pass
-/// `coverInset: 0` where the cover is drawn directly rather than inside the
-/// tile's Card. Use this instead of hard-coding a height next to a width.
+/// Pass coverInset: 0 when drawing artwork directly rather than inside a Card.
 double mangaCoverBoxHeight(
   double width, {
   double coverInset = kMangaCoverCardInset,
 }) =>
     max(0.0, width - coverInset) / kMangaCoverAspectRatio + coverInset;
 
-/// Row heights for the two list views. Derived, because the covers grew when
-/// they were corrected to 2:3 and a stale literal here clips the tile.
 final kDescriptiveTileExtent =
     mangaCoverBoxHeight(kDescriptiveCoverWidth) + kListTilePadding * 2;
 final kCompactTileExtent =
     mangaCoverBoxHeight(kCompactCoverWidth, coverInset: 0) +
         kListTilePadding * 2;
 
-/// Row height comes from the resolved column width, so the cover keeps its 2:3
-/// shape at every column count. Deriving it the other way round — a fixed cell
-/// ratio, cover takes what's left — cropped the art, and in the comfortable
-/// grid the error grew as columns got narrower.
+/// Derive height from resolved cover width to preserve 2:3 at every column count.
 SliverGridRegularTileLayout _coverTileLayout(
   SliverConstraints constraints, {
   required int crossAxisCount,
@@ -143,7 +125,6 @@ SliverGridRegularTileLayout _coverTileLayout(
   );
 }
 
-/// Width-driven columns (the "auto" library layout).
 class MangaCoverGridDelegate extends SliverGridDelegate {
   const MangaCoverGridDelegate({
     required this.maxCrossAxisExtent,
@@ -158,8 +139,7 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
   final double crossAxisSpacing;
   final double titleExtent;
 
-  /// Zero for grids that draw the cover directly instead of wrapping it in the
-  /// tile's Card, which is what eats the default margin.
+  /// Zero when drawing the cover directly, without Card margins.
   final double coverInset;
 
   @override
@@ -186,7 +166,6 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
       oldDelegate.coverInset != coverInset;
 }
 
-/// Fixed column count (the user set one in library settings).
 class MangaCoverFixedCountGridDelegate extends SliverGridDelegate {
   const MangaCoverFixedCountGridDelegate({
     required this.crossAxisCount,
@@ -218,7 +197,6 @@ class MangaCoverFixedCountGridDelegate extends SliverGridDelegate {
       oldDelegate.titleExtent != titleExtent;
 }
 
-/// [titleBelow] (comfortable grid) adds the title block under the cover.
 SliverGridDelegate mangaCoverGridDelegate(
   double? size, {
   bool titleBelow = false,

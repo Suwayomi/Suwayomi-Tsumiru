@@ -9,9 +9,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
-/// HTTP client whose CONNECT phase fails fast. The per-request timeout exists
-/// for servers slow to answer, but a connection that can't even be established
-/// in [connectionTimeout] is dead — waiting the full request window (and its
-/// retries) on it is what made a dead network mean minutes of spinner.
+/// Limits connection establishment independently of the full response timeout.
 http.Client createFastConnectClient(Duration connectionTimeout) =>
     IOClient(HttpClient()..connectionTimeout = connectionTimeout);

@@ -39,8 +39,7 @@ class SearchField extends HookWidget {
   final bool autofocus;
   final List<Widget>? actions;
 
-  /// Colour recognized DSL metatag prefixes (`tag:`, `genre:`, `rating:`…) as
-  /// the user types, so the search box reads as a query language, not free text.
+  /// Highlight recognized DSL prefixes in the theme accent.
   final bool highlightDsl;
 
   final SearchFieldHintBehavior hintBehavior;
@@ -129,9 +128,6 @@ class SearchField extends HookWidget {
   }
 }
 
-/// Text controller that renders recognized DSL metatag prefixes
-/// (`tag:`, `genre:`, `rating:`…, plus a leading `-`) in the theme accent as the
-/// user types, so the library search box reads as a query language.
 class DslSearchController extends TextEditingController {
   DslSearchController({super.text});
 
@@ -154,8 +150,7 @@ class DslSearchController extends TextEditingController {
     final children = <TextSpan>[];
     var last = 0;
     for (final m in _pattern.allMatches(text)) {
-      // group(1) is the leading boundary (start/space/comma) — keep it normal;
-      // colour the `-?key:` prefix.
+      // Keep group(1), the leading boundary, outside the colored prefix.
       final keyStart = m.start + (m.group(1)?.length ?? 0);
       if (keyStart > last) {
         children.add(TextSpan(text: text.substring(last, keyStart), style: base));

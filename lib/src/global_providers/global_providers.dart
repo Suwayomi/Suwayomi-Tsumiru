@@ -42,9 +42,7 @@ import '../utils/network/timeout_http_client.dart';
 
 part 'global_providers.g.dart';
 
-/// A request that may have reached the server must never be replayed after a
-/// handover: mutations could otherwise run twice. GraphQL reads are safe to
-/// send once to the newly-selected endpoint.
+/// Replay only reads after handover: a mutation may already have reached the server.
 bool _isGraphQlRead(http.BaseRequest request) {
   if (request is! http.Request) return false;
   try {
@@ -109,11 +107,9 @@ final _legacyUserFieldsDetectionProvider =
 GraphQLClient graphQlClient(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
-  // Watched so a credential change still rebuilds the client and drops cached
-  // results; the value itself is read per request, below.
+  // Watch credentials to drop cached results on change; read their value per request.
   ref.watch(credentialsProvider);
 
-  // Timeout settings
   final timeoutMs =
       ref.watch(serverRequestTimeoutProvider) ??
       DBKeys.serverRequestTimeout.initial as int;
@@ -122,17 +118,10 @@ GraphQLClient graphQlClient(Ref ref) {
       ref.watch(autoRefreshRetryDelayProvider) ??
       DBKeys.autoRefreshRetryDelay.initial as int;
 
-  // Every attempt gets the FULL timeout. Subdividing the budget into
-  // delay-sized attempts (the old model) rapid-fires aborts while the server
-  // keeps fetching each one from the source; the stacked fetches have been
-  // observed to drive a server to 2GB RAM / 70% CPU. Few, full-length
-  // attempts keep retry pressure bounded.
+  // Client aborts leave server fetches running, so each retry gets the full timeout.
   final effectiveTimeoutMs = timeoutMs;
   final retryCount = autoRetry ? TimeoutConstants.autoRefreshMaxRetries : 0;
 
-  // Generic custom headers (e.g. Cloudflare Zero Trust service tokens) sent
-  // with every Suwayomi-server request. Watching here rebuilds the client
-  // when they change.
   final customHeaders = ref.watch(customHttpHeadersProvider).value ?? const {};
 
   Link link = HttpLink(
@@ -189,17 +178,9 @@ GraphQLClient graphQlClient(Ref ref) {
     ),
   );
 
-  // Auto retry is handled by TimeoutHttpClient retries instead of RetryLink
+  // TimeoutHttpClient owns retries; do not add RetryLink retries.
 
-  // Basic authentication link.
-  //
-  // Reads the credential per request rather than capturing whatever the
-  // snapshot held when the client was built: secure storage resolves
-  // asynchronously, so a client built during that gap carried no
-  // Authorization header and every early request came back 401 — briefly on a
-  // good launch, and until something happened to rebuild the client after a
-  // fresh sign-in. The ui/simple links already await their credentials the
-  // same way.
+  // Await credentials per request because secure storage resolves asynchronously.
   if (authType == AuthType.basic) {
     final AuthLink authLink = AuthLink(
       getToken: () async {
@@ -210,17 +191,11 @@ GraphQLClient graphQlClient(Ref ref) {
     link = authLink.concat(link);
   }
 
-  // simple_login / ui_login link.
   if (authType == AuthType.simpleLogin || authType == AuthType.uiLogin) {
     final suwayomiAuthLink = SuwayomiAuthLink(
       isCurrentSession: isCurrentSession,
       authType: () => authType,
       getHeaders: () async {
-        // ui_login requests are authorised up front: a token expired or about
-        // to be is refreshed before the request (joining any refresh in
-        // flight), and one that has expired and can't be refreshed stops the
-        // request here instead of sending it to be rejected.
-        // See AuthCoordinator.usableUiAccessToken.
         final Map<String, String>? base;
         if (authType == AuthType.uiLogin) {
           final token = await ref
@@ -231,8 +206,7 @@ GraphQLClient graphQlClient(Ref ref) {
               );
           base = token == null ? null : {'Authorization': 'Bearer $token'};
         } else {
-          // Read via `.future` defensively in case a caller invokes a GraphQL
-          // operation before main()'s eager preload finishes.
+          // Await settings even if a request precedes the eager preload.
           final snapshot = await ref.read(authCredentialsStoreProvider.future);
           base = snapshot.simpleLoginCookieHeader;
         }
@@ -243,16 +217,11 @@ GraphQLClient graphQlClient(Ref ref) {
         return applyCustomHeaders(Map<String, String>.from(base), custom);
       },
       refreshAccessToken: () async {
-        // Refresh path only applies to ui_login. For simple_login the
-        // Link short-circuits before invoking this callback, so any
-        // value works; AuthFailure is the most semantically truthful.
+        // simple_login short-circuits before this ui_login-only refresh callback.
         if (authType != AuthType.uiLogin) {
           return const RefreshAuthFailure();
         }
-        // Use a NON-authed GraphQL client to avoid recursion: the refresh
-        // mutation must NOT go through SuwayomiAuthLink itself. The
-        // AuthCoordinator owns single-flight dedup (R2-3), so both Link
-        // instances (query + subscription) share one refresh through it.
+        // Refresh through an unauthenticated client to avoid recursive auth; the coordinator deduplicates.
         final rawClient = GraphQLClient(
           link: HttpLink(
             Endpoints.baseApi(
@@ -283,10 +252,7 @@ GraphQLClient graphQlClient(Ref ref) {
     link = suwayomiAuthLink.concat(link);
   }
 
-  // Any successful server answer proves reachability. Without this the
-  // offline latch only cleared on library refresh gestures, so one transient
-  // blip could pin details/reader offline until the user happened to pull the
-  // library. Deferred a tick: responses can arrive while a provider builds.
+  // Defer reachability updates because responses may arrive during provider builds.
   final reachabilityLink = Link.function((request, [forward]) {
     return forward!(request)
         .map((response) {
@@ -328,8 +294,6 @@ GraphQLClient graphQlClient(Ref ref) {
               }
             });
           }
-          // The inverse. Only the downloader used to set this, so everything else
-          // kept paying its own retries to discover the same thing.
           if (isConnectionError(error)) {
             Future(() {
               try {
@@ -359,41 +323,17 @@ GraphQLClient graphQlClient(Ref ref) {
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.noCache),
     ),
-    // The package layers its own query timeout (default 5s) on top of the
-    // HTTP client's; without this the Server Request Timeout setting can't
-    // reach past 5s ("TimeoutException ... No stream event"). Sized to cover
-    // the HTTP layer's whole retry window plus 2s grace, so the HTTP layer
-    // always resolves first and keeps its error semantics.
+    // Cover the HTTP retry window plus 2s so GraphQL's own timeout cannot preempt it.
     queryRequestTimeout: Duration(
       milliseconds:
           timeoutMs * (retryCount + 1) + retryDelayMs * retryCount + 2000,
     ),
-    // In-memory only: the default fetch policy is noCache, so a persisted
-    // store is write-only bloat (its Hive box grew ~100 MB/week and its
-    // whole-file load OOM-crashed startup).
+    // noCache makes a persisted store write-only; keep it in memory.
     cache: GraphQLCache(store: InMemoryStore()),
   );
 }
 
-// keepAlive: autoDispose tied the websocket's life to whatever screen happened
-// to be watching a subscription, so navigating tore the socket down and the
-// next screen opened a fresh one. Measured against the server: 2 handshakes per
-// 10 min idle, 53 while navigating.
-/// The ui_login `connection_init` payload.
-///
-/// The server resolves the socket's user once, from this payload, and keeps
-/// it for the connection's whole life: an expired access token makes the
-/// socket a visitor, and every @RequireAuth subscription on it
-/// (updateStatusChanged, downloadStatusChanged) then fails "Unauthorized"
-/// until it reconnects. Access tokens last 5 minutes by default and the first
-/// subscription starts at launch, before any HTTP call has refreshed the
-/// stored one — so without [refreshIfDue] a session opened after a pause lost
-/// its live updates (and the library re-read they trigger) entirely.
-///
-/// A failed refresh still opens the connection, as a visitor: blocking it
-/// would only trade a visitor socket for none. The expired token itself is
-/// not sent, since the server can only reject it; the socket reconnects once
-/// a live token lands (`reconnect reason=visitor-bind`).
+/// The server binds socket identity at connect; refresh first and omit expired tokens on failure.
 Future<Map<String, dynamic>> uiLoginSocketPayload({
   required bool Function() isCurrentSession,
   required Future<void> Function() refreshIfDue,
@@ -426,9 +366,7 @@ Future<Map<String, dynamic>> uiLoginSocketPayload({
       : <String, dynamic>{};
 }
 
-/// `expIn=<s>` for the token a socket authenticates with (negative: the
-/// server binds this socket as a visitor), `token=none` without one. Never
-/// the token itself.
+/// Log token expiry, never the token itself.
 @visibleForTesting
 String describeSocketToken(String? token, {DateTime? now}) {
   if (token == null || token.isEmpty) return 'token=none';
@@ -437,8 +375,7 @@ String describeSocketToken(String? token, {DateTime? now}) {
   return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
 }
 
-/// Whether the server would bind a socket sending [token] to its user. A token
-/// without a readable expiry counts as live: there's nothing to wait for.
+/// Tokens without a readable expiry count as live.
 @visibleForTesting
 bool socketTokenIsLive(String? token, {DateTime? now}) {
   if (token == null || token.isEmpty) return false;
@@ -446,9 +383,6 @@ bool socketTokenIsLive(String? token, {DateTime? now}) {
   return exp == null || exp.isAfter(now ?? DateTime.now().toUtc());
 }
 
-/// The socket resolves its user once, at connect: these lines show what it
-/// was bound with, so an "Unauthorized" subscription later in the session can
-/// be traced to the connect that caused it.
 void _wsAuthLog(String event) =>
     recordDiagnostic('[${DateTime.now().toIso8601String()}] ws-auth: $event\n');
 
@@ -457,9 +391,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider).value;
-  // Only the cookie: it's pinned into the handshake at build time. The
-  // ui_login token is read per-connect in initialPayload, so watching it just
-  // rebuilt the socket on every refresh and killed the live subscriptions.
+  // Watch only the handshake cookie; per-connect tokens must not rebuild live subscriptions.
   final socketCookie = ref.watch(
     authCredentialsStoreProvider.select((s) => s.value?.simpleLoginCookie),
   );
@@ -471,26 +403,12 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     isWebsocket: true,
   );
 
-  // Authenticate the SOCKET itself, not a per-operation Link. A header /
-  // context Link (AuthLink / SuwayomiAuthLink) never reaches the WebSocket,
-  // so it leaves the connection unauthenticated and every @RequireAuth
-  // subscription (downloadStatusChanged, updateStatusChanged) fails with
-  // "Unauthorized".
-  //
-  // graphql-transport-ws carries auth two ways, matching Suwayomi-Server:
-  //   * ui_login  -> connection_init payload `{Authorization: <bare token>}`
-  //                  (server `onInit` does NOT strip "Bearer "; the WebUI
-  //                  sends the bare token, so we do too).
-  //   * simple_login / basic -> the WS handshake (upgrade) headers.
+  // Socket auth: ui_login uses connection_init {Authorization: <bare token>}; basic/simple use upgrade headers.
   dynamic initialPayload;
   Map<String, String>? handshakeHeaders;
-  // Whether this socket's latest connect sent no live token.
   var boundAsVisitor = false;
   if (authType == AuthType.uiLogin) {
-    // This provider rebuilds at launch as async settings load, disposing the
-    // socket it built — often while that socket's connect is still awaiting
-    // the refresh. Its payload no longer matters then, but touching `ref`
-    // would throw, so the callbacks check `ref.mounted` first.
+    // Async settings can dispose this socket during refresh; check ref.mounted before accessing ref.
     initialPayload = () => uiLoginSocketPayload(
       isCurrentSession: isCurrentSession,
       refreshIfDue: () async {
@@ -498,10 +416,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
           _wsAuthLog('connect-refresh skipped=provider-disposed');
           return;
         }
-        // An endpoint handover rebuilds this socket from inside the handover's
-        // zone, so the refresh would be refused on the spot instead of waiting
-        // for the handover to finish. Nothing awaits a socket connect, so it
-        // can't be the handover waiting on itself.
+        // Socket connects are not awaited by handover, so refresh may safely wait outside its zone.
         final coordinator = ref.read(authCoordinatorProvider.notifier);
         final gql = ref.read(unauthenticatedGraphQlClientProvider);
         final outcome = await ref
@@ -524,7 +439,6 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
       },
       readToken: () async {
         if (!ref.mounted) {
-          // Sends an empty payload: the server binds a visitor socket.
           _wsAuthLog('connect-token skipped=provider-disposed');
           return null;
         }
@@ -535,11 +449,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
         return token;
       },
     );
-    // A socket bound as a visitor stays one until it reconnects, and nothing
-    // made it reconnect: HTTP recovered with the next refresh, but live
-    // updates stayed dead for the session. Rebuild it once a live token lands.
-    // Only then: a token expiring on a socket already bound doesn't matter,
-    // and rebuilding on every refresh would kill the subscriptions for nothing.
+    // A visitor-bound socket needs reconnection when a live token arrives; other refreshes need none.
     ref.listen(
       authCredentialsStoreProvider.select((s) => s.value?.uiAccessToken),
       (_, token) {
@@ -557,7 +467,6 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   } else if (authType == AuthType.basic && credentials.isNotBlank) {
     handshakeHeaders = {'Authorization': credentials!};
   }
-  // Custom headers (e.g. Cloudflare Zero Trust) also guard the WS upgrade.
   final customWsHeaders =
       ref.watch(customHttpHeadersProvider).value ?? const {};
   if (customWsHeaders.isNotEmpty) {
@@ -575,8 +484,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
       headers: handshakeHeaders,
     ),
   );
-  // Close the previous socket when this provider rebuilds (auth/url changed) or
-  // is disposed, so a re-auth doesn't leak the old connection.
+  // Close replaced sockets to avoid leaking connections.
   ref.onDispose(() => unawaited(wsLink.dispose().catchError((_) {})));
 
   final loggerLink = LoggerLink().concat(
@@ -594,9 +502,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.noCache),
     ),
-    // Same package-level timeout as the query client (default is a hard 5s).
+    // Cover the same retry window as the HTTP query client.
     queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
-    // In-memory only, matching the query client.
     cache: GraphQLCache(store: InMemoryStore()),
   );
 }

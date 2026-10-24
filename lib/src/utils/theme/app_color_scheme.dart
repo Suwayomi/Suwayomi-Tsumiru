@@ -2,27 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'theme_tokens.dart';
 
-/// Builds a complete Material 3 [ColorScheme] EXPLICITLY from brand
-/// [ThemeTokens]. Every role is set from the theme's own hexes — there is NO
-/// `ColorScheme.fromSeed` and Material derives no colors. Elevated surfaces are
-/// the theme's `bg2` (the theme maps every elevated surface to bg2); the few M3
-/// container roles the theme doesn't name are simple lerps of the theme's own
-/// accent over its background (deterministic, never Material's tonal palette).
+/// Maps brand tokens to Material roles; unnamed containers interpolate accent over background.
 ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
   Color mix(Color a, Color b, double amt) => Color.lerp(a, b, amt)!;
 
-  // theme-kit's light blocks name --on-accent / --accent-bg, so use them
-  // verbatim. The dark blocks name neither, and fall back to the derived
-  // values so the dark scheme is unchanged.
+  // Light themes supply accent background/on-accent tokens; dark themes derive them.
   final accentBg = t.accentBg;
 
   return ColorScheme(
     brightness: brightness,
-    // Brand accents (verbatim)
     primary: t.accent,
-    // Contrast against the accent, not always white: a light accent (e.g. the
-    // Monochrome theme's near-white grey) needs dark text so the unread-count
-    // badge and other primary-filled elements stay legible.
+    // Light accents need dark content for contrast.
     onPrimary: accentBg != null
         ? t.onAccent!
         : ThemeData.estimateBrightnessForColor(t.accent) == Brightness.light
@@ -42,7 +32,6 @@ ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
     onError: Colors.white,
     errorContainer: mix(t.danger, t.bg, 0.72),
     onErrorContainer: t.danger,
-    // Surfaces (verbatim): base = bg, every elevated surface = bg2
     surface: t.bg,
     onSurface: t.ink,
     onSurfaceVariant: t.muted,
@@ -53,22 +42,19 @@ ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
     surfaceContainer: t.bg2,
     surfaceContainerHigh: t.bg2,
     surfaceContainerHighest: t.bg2,
-    // Lines
     outline: t.faint,
     outlineVariant: t.border,
-    // Misc roles (from the theme's own colors)
     inverseSurface: t.ink,
     onInverseSurface: t.bg,
     inversePrimary: t.accent,
     scrim: Colors.black,
     shadow: Colors.black,
-    // No elevation tinting — keep surfaces exactly as specified above.
+    // Preserve token surface colors without elevation tinting.
     surfaceTint: Colors.transparent,
   );
 }
 
-/// Layers AMOLED pure-black on a DARK [ColorScheme]: backgrounds → black,
-/// elevated containers → stepped near-black. Accents and on-colors unchanged.
+/// AMOLED changes dark surfaces only; accents and content colors stay unchanged.
 ColorScheme applyAmoled(ColorScheme dark) {
   return dark.copyWith(
     surface: const Color(0xFF000000),

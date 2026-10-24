@@ -7,10 +7,6 @@
 import 'graphql_cache_guard_stub.dart'
     if (dart.library.io) 'graphql_cache_guard_io.dart' as platform;
 
-/// Delete the legacy on-disk GraphQL cache box, returning its size in bytes
-/// (null when absent). The cache is in-memory now (the default fetch policy is
-/// noCache, so persisting it was write-only bloat); older installs carry a box
-/// file of unbounded size — up to GBs — whose whole-file load OOM-crashed
-/// startup.
+/// Delete the legacy disk cache without loading it; return its byte size, or null when absent.
 Future<int?> deleteLegacyGraphqlCacheBox() =>
     platform.deleteLegacyGraphqlCacheBox();

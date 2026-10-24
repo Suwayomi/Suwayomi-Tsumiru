@@ -43,24 +43,18 @@ class MangaCoverDescriptiveListTile extends StatefulWidget {
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
 
-  /// When non-null, a play button is overlaid on the cover that opens the next
-  /// unread chapter.
+  /// Non-null adds a button opening the next unread chapter.
   final VoidCallback? onContinueReading;
   final ValueChanged<String?>? onTitleClicked;
   final bool selected;
-  /// Optional widget rendered below the status/source line (details screen only).
-  /// When null — the default for library/browse callers — nothing is rendered.
   final Widget? belowStatus;
 
-  /// Forwarded to the cover tile.
   final bool outlineOnCovers;
 
-  /// Library list-size multiplier. Scales the cover box; the caller scales the
-  /// text through a [MediaQuery] textScaler so the row grows as one unit.
+  /// Scale covers here; callers must scale row text through MediaQuery.
   final double scale;
 
-  /// Null lets the title wrap to its full length, which is what the details
-  /// screen wants (Mihon caps it nowhere). List rows keep 2 so they stay even.
+  /// Null allows the title to wrap fully.
   final int? titleMaxLines;
 
   @override
@@ -163,8 +157,7 @@ class _MangaCoverDescriptiveListTileState
                           onTap: widget.onTitleClicked != null
                               ? () => widget.onTitleClicked!(widget.manga.title)
                               : null,
-                          // Skia collapses an uncapped ellipsis to one line, so
-                          // uncapped text has to clip instead.
+                          // Skia uncapped ellipsis collapses to one line; use clip for wrapping.
                           child: Text(
                             widget.manga.title,
                             style: context.textTheme.titleLarge,
@@ -240,24 +233,6 @@ class _MangaCoverDescriptiveListTileState
                           Gap(4),
                           widget.belowStatus!,
                         ],
-                        // if (showLastReadChapter) ...[
-                        //   Padding(
-                        //     padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-                        //     child: Text(
-                        //       manga.lastChapterRead?.name ?? "",
-                        //       overflow: TextOverflow.ellipsis,
-                        //       style: context.textTheme.bodySmall,
-                        //     ),
-                        //   ),
-                        //   Padding(
-                        //     padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        //     child: Text(
-                        //       manga.lastReadAt.toDaysAgoFromSeconds ?? "",
-                        //       overflow: TextOverflow.ellipsis,
-                        //       style: context.textTheme.bodySmall,
-                        //     ),
-                        //   ),
-                        // ],
                         if (widget.showBadges)
                           context.windowSizeClass >= WindowSizeClass.medium
                               ? MangaChipsRow(

@@ -23,26 +23,11 @@ import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
 
-/// Whether the sidebar shows expanded rows at this window size class:
-/// below [WindowSizeClass.large] it shows collapsed whatever the user chose,
-/// and returns to their choice at large and above. The saved preference
-/// itself never changes.
+/// Below large, collapse without changing the saved preference.
 bool sidebarIsExpanded(BuildContext context, bool preference) =>
     preference && context.windowSizeClass >= WindowSizeClass.large;
 
-/// Wide-desktop-only navigation sidebar (shown when [usesDesktopShell]).
-///
-/// Expanded (208 px): 40 px rows with icon + label and 2 px gaps. Collapsed
-/// (60 px, 80 px on macOS so the traffic lights fit above the column): 44 px
-/// icon-only rows with 6 px gaps, the label as a hover [Tooltip]. After the
-/// destinations a flexible gap pins the foot to the bottom: a divider, then
-/// an Incognito row with a switch and a Settings row. Collapsed, the foot
-/// shows the same two rows as icon-only buttons (the switch hides and the
-/// Incognito icon reflects on/off). The logo header lives in the desktop top
-/// bar above the sidebar, so the sidebar starts directly under the bar; on
-/// macOS the header moves into the sidebar as its first row, since the
-/// traffic lights take the bar's top-left corner.
-/// Width animates over 200 ms unless reduced motion is requested.
+/// Native macOS moves the brand row below its traffic lights; other platforms keep it in the top bar.
 class DesktopSidebar extends ConsumerWidget {
   const DesktopSidebar({
     super.key,
@@ -56,8 +41,7 @@ class DesktopSidebar extends ConsumerWidget {
   static const double expandedWidth = 208;
   static const double collapsedWidth = 60;
 
-  /// Collapsed width on macOS, so the traffic-lights inset above still lines
-  /// up with the column.
+  /// Wider on macOS to align with the traffic-lights inset.
   static const double macCollapsedWidth = 80;
 
   static const double _rowHeight = 40;
@@ -65,9 +49,7 @@ class DesktopSidebar extends ConsumerWidget {
   static const double _rowGap = 2;
   static const double _collapsedRowGap = 6;
 
-  /// The sidebar's width for this state. [expanded] is the effective state
-  /// ([sidebarIsExpanded]), not the raw preference. [isMacOS] defaults to the
-  /// test-overridable platform check.
+  /// expanded is the effective state; isMacOS defaults to the test-overridable check.
   static double widthFor({required bool expanded, bool? isMacOS}) {
     if (expanded) return expandedWidth;
     return (isMacOS ?? isMacOSRuntime) ? macCollapsedWidth : collapsedWidth;
@@ -85,12 +67,8 @@ class DesktopSidebar extends ConsumerWidget {
 
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
     final expanded = sidebarIsExpanded(context, preference);
-    // The traffic-lights inset exists only on native macOS; web and tablets
-    // always use the logo column.
     final isMacOS = isDesktopPlatform && isMacOSRuntime;
-    // The bar's top-left corner is free only while it shows as one row. In
-    // the two-row fallback (narrow window, sidebar forced collapsed) the title
-    // bar already carries the logo, so the sidebar starts with the nav rows.
+    // Two-row mode already has a title-bar logo; only the merged macOS bar needs a sidebar brand.
     final showBrandRow = isMacOS && desktopTopBarShowsMergedRow(context, ref);
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
     void collapse() => ref.read(sidebarExpandedProvider.notifier).update(false);
@@ -99,16 +77,7 @@ class DesktopSidebar extends ConsumerWidget {
     final selectedBg = cs.primary.withValues(alpha: 0.22);
     final hoverBg = cs.onSurface.withValues(alpha: 0.05);
 
-    // The width animates between the two rest widths. The wide content (icon
-    // + label rows) cannot lay out in a narrow bar, so the content follows
-    // the live width and flips at the midpoint: every frame shows content
-    // that fits its frame, and rest states always match the pref.
-    //
-    // Branch 5 (More) has no destination row: its settings pages light the
-    // Settings foot row instead, so the selected index never shifts for the
-    // remaining destinations. The phone-only /more/history keeps the
-    // History row lit. Without a router above (widget tests) the branch
-    // index alone decides.
+    // Switch content at the animated width midpoint; keep Settings mapped to the hidden More branch.
     final path = GoRouter.maybeOf(context)?.state.uri.path ?? '';
     final onPhoneHistory = path == const HistoryRoute().location;
     bool isSettingsPath(String p) =>
@@ -238,16 +207,12 @@ class DesktopSidebar extends ConsumerWidget {
           Icons.settings_outlined,
           color: settingsSelected ? cs.primary : cs.onSurface,
         ),
-        // Same entry as the More screen's Settings row: a push opens the
-        // settings window at >= 840 and the full page below.
         onTap: () => const SettingsRoute().push(context),
         gapBelow: 0,
       );
     }
 
-    // The destinations scroll when a short window can't fit them, while the
-    // foot stays pinned to the bottom. The foot lives outside the scroll
-    // view, so it is always visible.
+    // Scroll destinations separately so the footer remains visible in short windows.
     return LayoutBuilder(
       builder: (context, constraints) => TweenAnimationBuilder<double>(
         tween: Tween<double>(

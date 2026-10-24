@@ -1,6 +1,5 @@
 part of '../router_config.dart';
 
-//
 class MangaRoute extends GoRouteData with $MangaRoute {
   const MangaRoute({required this.mangaId, this.categoryId});
   final int mangaId;

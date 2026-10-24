@@ -7,26 +7,16 @@ import '../../utils/extensions/custom_extensions.dart';
 import '../desktop/desktop_top_bar.dart';
 import 'big_screen_navigation_bar.dart';
 
-/// Back button for the AppBars of routes inside [DetailNavigationShellRoute].
-///
-/// Those routes are pages in the shell's own Navigator, so their
-/// `ModalRoute.canPop` is false even when GoRouter has a page underneath;
-/// AppBar then drops its implied leading and the screen has no way back. Read
-/// the GoRouter stack instead, and fall back to GoRouter's pop when the shell
-/// Navigator is at its root.
+/// Shell ModalRoute.canPop misses outer pages; consult GoRouter for back navigation.
 Widget? detailNavigationBackButton(BuildContext context) {
   final router = GoRouter.maybeOf(context);
   if (router == null) {
-    // Not under GoRouter (a screen mounted on its own): the enclosing
-    // Navigator is the only stack there is.
     return Navigator.of(context).canPop() ? const BackButton() : null;
   }
   return router.canPop()
       ? BackButton(
           onPressed: () async {
-            // The shell Navigator goes first, so a blocking PopScope there
-            // (an active selection) still runs. At the shell root it cannot
-            // pop, and GoRouter's stack takes over.
+            // Let the shell PopScope handle selection before falling back to GoRouter at its root.
             if (await Navigator.of(context).maybePop()) return;
             router.pop();
           },
@@ -71,8 +61,7 @@ class DetailNavigationShellScreen extends ConsumerWidget {
         child: Column(
           children: [
             if (showsMergedTopBar(context)) const DesktopTopBar(),
-            // Keyed so a breakpoint toggle moves the body instead of
-            // remounting it: the page keeps its scroll, focus and drafts.
+            // Move the keyed body across breakpoints without remounting scroll, focus or drafts.
             Expanded(
               key: const ValueKey('shellBody'),
               child: Row(

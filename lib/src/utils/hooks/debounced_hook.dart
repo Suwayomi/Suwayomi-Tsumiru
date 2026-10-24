@@ -8,12 +8,7 @@ import 'dart:async';
 
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-/// Returns [value], but only propagates a change after [value] has stayed the
-/// same for [delay]. Initialized to the first [value] (unlike flutter_hooks'
-/// `useDebounced`, which starts null). While [value] keeps changing (e.g.
-/// dragging a desktop window resize), it holds the previous settled value — so a
-/// consumer keyed on it (like an image's decode resolution) doesn't churn every
-/// frame.
+/// Starts at value, then holds the last settled value until changes stop for delay.
 T useSettled<T>(T value, Duration delay) {
   final settled = useState<T>(value);
   useEffect(() {

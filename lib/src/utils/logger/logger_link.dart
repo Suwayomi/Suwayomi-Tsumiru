@@ -5,10 +5,7 @@ import 'package:graphql/client.dart';
 
 import 'logger.dart';
 
-/// Counts GraphQL operations in debug builds so query volume can be measured
-/// rather than guessed — the app caches nothing (`FetchPolicy.noCache`), so
-/// every screen rebuild re-asks the server the same question and nobody knew
-/// what that costs. Debug-only; release builds pay nothing.
+/// Counts GraphQL operations in debug builds only.
 class GraphQLRequestStats {
   static final Map<String, int> _counts = {};
   static int total = 0;
@@ -18,8 +15,7 @@ class GraphQLRequestStats {
     _counts[operation] = (_counts[operation] ?? 0) + 1;
   }
 
-  /// Operations by call count, most-repeated first. A high count for a
-  /// slow-changing operation is a caching candidate; a volatile one is not.
+  /// Call counts, most frequent first.
   static String report() {
     final sorted = _counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -41,8 +37,7 @@ class LoggerLink extends Link {
   @override
   Stream<Response> request(Request request, [NextLink? forward]) {
     if (kDebugMode) {
-      // operationName is null for these requests, so read it off the document:
-      // the generated operations carry their name on the definition node.
+      // Generated requests omit operationName; read it from the definition node.
       final name =
           request.operation.operationName ??
           request.operation.document.definitions

@@ -9,10 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/motion/reduce_motion.dart';
 
-/// Nav destination icon that plays its vector forward on select and in
-/// reverse on deselect (Komikku's trigger model). Mounting already-selected
-/// renders the settled end frame without animating, so rebuilds that reshape
-/// the tree (badge toggling, rail collapse, bar<->rail swap) never replay.
+/// Animate selection changes; mounting selected shows the settled frame without replaying.
 class AnimatedNavIcon extends StatefulWidget {
   const AnimatedNavIcon({
     super.key,
@@ -66,8 +63,7 @@ class _AnimatedNavIconState extends State<AnimatedNavIcon>
       progress: _controller,
       size: Size.square(size),
       applyTheme: true,
-      // The bar provides per-state colors via a local IconTheme; AnimatedVector
-      // by itself only reads the global theme, so resolve here.
+      // AnimatedVector ignores the local IconTheme; resolve per-state colors here.
       color: iconTheme.color,
     );
   }

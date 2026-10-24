@@ -41,8 +41,7 @@ class _BrowserImageCacheManager extends CacheManager {
 
   final http.Client client;
 
-  // A replaced manager can still serve loads already in progress; closing its
-  // client or cache store would fail them with "Client is already closed".
+  // Replaced managers may still have active loads; closing their client/store would fail them.
   @override
   Future<void> dispose() async {}
 }

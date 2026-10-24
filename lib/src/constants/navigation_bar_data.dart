@@ -16,7 +16,6 @@ class NavigationBarData {
   final IconData activeIcon;
   final AnimatedVectorData animatedIcon;
 
-  // Static list for phone/small screens (History under More)
   static final phoneNavList = [
     NavigationBarData(
       icon: Icons.collections_bookmark_outlined,
@@ -50,7 +49,6 @@ class NavigationBarData {
     ),
   ];
 
-  // Static list for tablet/large screens (History between Updates and Browse)
   static final tabletNavList = [
     NavigationBarData(
       icon: Icons.collections_bookmark_outlined,
@@ -90,10 +88,7 @@ class NavigationBarData {
     ),
   ];
 
-  // Static list for the desktop sidebar (More lives in the sidebar foot as
-  // Settings instead). Same order as the shell branches, so a branch index
-  // needs no translation: Library(0), Updates(1), History(2), Browse(3),
-  // Downloads(4).
+  // Branch order must match the shell so navigation indices need no translation.
   static final desktopNavList = [
     NavigationBarData(
       icon: Icons.collections_bookmark_outlined,
@@ -127,14 +122,12 @@ class NavigationBarData {
     ),
   ];
 
-  // Dynamic navigation list based on context
   static List<NavigationBarData> getNavList(BuildContext context) {
     return context.windowSizeClass >= WindowSizeClass.medium
         ? tabletNavList
         : phoneNavList;
   }
 
-  // Legacy navList for backward compatibility - defaults to phone layout
   static final navList = phoneNavList;
 
   NavigationBarData({

@@ -28,7 +28,6 @@ class MangaChipsRow extends ConsumerWidget {
     final unreadBadge =
         (ref.watch(unreadBadgeStyleProvider) ?? UnreadBadgeMode.count)
             .isVisible;
-    // final languageBadge = ref.watch(languageBadgeProvider) .ifNull()));
     return Padding(
       padding: KEdgeInsets.v8.size,
       child: Wrap(
@@ -64,15 +63,6 @@ class MangaChipsRow extends ConsumerWidget {
                   ),
               ],
             ),
-            // if ((manga.source?.lang?.code) != null && languageBadge)
-            //   ClipRRect(
-            //     borderRadius: KBorderRadius.r16.radius,
-            //     child: Badge(
-            //       text: manga.source!.lang!.code!,
-            //       color: context.theme.colorScheme.tertiary,
-            //       textColor: context.theme.colorScheme.onTertiary,
-            //     ),
-            //   )
           ],
         ],
       ),

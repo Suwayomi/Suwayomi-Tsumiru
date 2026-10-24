@@ -1,25 +1,4 @@
-// Vendored from the `zoom_view` package (v1.0.2, https://github.com/yakagami/zoom_view)
-// so the reader can control pinch and scale limits independently and live.
-//
-// Local changes vs upstream:
-//   * `minScale` / `maxScale` are read live from the widget in the scale gesture
-//     (upstream froze them into `late final` fields at initState, so changing
-//     "disable zoom out" needed a reader restart).
-//   * Added `pinchEnabled`: when false the pinch/scale gesture is ignored (so
-//     double-tap-to-zoom still works with pinch turned off), and the zoom level
-//     resets to 1x when it flips off.
-//   * Pinch-scale now re-centers on the live `details.localFocalPoint` on every
-//     update instead of the point frozen at `onScaleStart` (upstream bug: that
-//     point is whichever finger touches down FIRST, since Flutter doesn't
-//     restart the gesture when the second one joins, so the zoom drifted away
-//     from the actual pinch center — #372).
-//   * Every computed scroll target is clamped to `[minScrollExtent,
-//     maxScrollExtent]` before `jumpTo` (upstream bug: near a content edge,
-//     the target could exceed the scrollable range; `jumpTo` doesn't clamp,
-//     so Flutter's own out-of-range correction only kicked in on a later
-//     frame and snapped straight to the boundary with no regard for the
-//     tapped/pinched focal point — #372).
-//
+// Vendored zoom_view v1.0.2: https://github.com/yakagami/zoom_view
 // Upstream license (MIT):
 //   Copyright 2024
 //   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -33,7 +12,6 @@ import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-/// A controller for a [ZoomView] that allows programmatic control over the zoom level.
 class ZoomViewController {
   _ZoomViewState? _state;
 
@@ -45,17 +23,14 @@ class ZoomViewController {
     _state = null;
   }
 
-  /// Whether the controller is currently attached to a [ZoomView].
   bool get isAttached => _state != null;
 
-  /// The current scale of the attached [ZoomView].
   double get scale {
     if (!isAttached) return 1.0;
     return 1 / _state!._scale;
   }
 
-  /// Returns the current [DragMode] of the [ZoomView]. When [ZoomView.onScaleEnd]
-  /// is called, this will be the DragMode of the last gesture.
+  /// After onScaleEnd, retains the last gesture mode.
   DragMode get dragMode {
     if (!isAttached) {
       throw ("Controler is not attached to a ZoomView");
@@ -63,7 +38,6 @@ class ZoomViewController {
     return _state!._dragMode;
   }
 
-  /// Sets the scale of the attached [ZoomView].
   void setScale(double newScale, {Offset? focalPoint}) {
     if (!isAttached) return;
     final state = _state!;
@@ -129,7 +103,6 @@ class ZoomViewController {
     state._updateLastScale(internalNewScale);
   }
 
-  /// Sets the scale of the attached [ZoomView] to a new value with an animation.
   void setScaleWithAnimation(
     double newScale, {
     Duration duration = const Duration(milliseconds: 150),
@@ -156,8 +129,7 @@ class ZoomViewController {
       return;
     }
 
-    // Detach any listeners from a still-running animation before starting a new
-    // one, so a rapid second double-tap (or a pan mid-zoom) doesn't stack them.
+    // Detach listeners from interrupted animations before starting another.
     state._clearScaleAnimationListeners();
     state._masterAnimationController.stop();
     state._masterAnimationController.duration = duration;
@@ -226,9 +198,7 @@ class ZoomViewController {
         secondFrame = false;
       }
       if (firstFrame) {
-        //the first and second frame jumps have the same value,
-        // so we only play the first frame but on the second tick,
-        // otherwise the view crashes into the viewport and flickers
+        // Skip the duplicate first tick so viewport geometry can settle.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (state.mounted) {
             state._verticalController.jumpTo(currentEffectiveVerticalPixels);
@@ -245,7 +215,6 @@ class ZoomViewController {
 
     void statusListener(status) {
       if (status == AnimationStatus.completed) {
-        //ensure final value is correct
         setScale(1 / internalNewScale, focalPoint: focus);
         state._updateLastScale(internalNewScale);
         state._clearScaleAnimationListeners();
@@ -258,26 +227,21 @@ class ZoomViewController {
   }
 }
 
-///Wrapper for [ZoomView] that handles the controller automatically
 class ZoomListView extends StatefulWidget {
   final ListView child;
   final double minScale;
   final double maxScale;
 
-  /// If true, enables double tap dragging to zoom.
   final bool doubleTapDrag;
 
-  /// If true, enables double tap to zoom using the [gestureHandler] or a default one.
   final bool doubleTapZoom;
 
-  /// Callback invoked any time the scale of the [ZoomView] changes.
   final ValueChanged<double>? onScaleChanged;
 
-  /// Optional controller. If not provided, one is created internally.
+  /// Created internally when omitted.
   final ZoomViewController? zoomViewController;
 
-  /// Optional gesture handler. If [doubleTapZoom] is true and this is null,
-  /// a default handler is created zooming to min(maxScale, 3.0).
+  /// Defaults to zooming to min(maxScale, 3.0) when doubleTapZoom is enabled.
   final ZoomViewGestureHandler? gestureHandler;
 
   const ZoomListView({
@@ -356,12 +320,9 @@ class _ZoomListViewState extends State<ZoomListView> {
 
 enum DragMode { pan, doubleTapDrag, pinchScale, none }
 
-///Details for the [ZoomView.onScaleEnd] callback.
 final class ZoomViewScaleEndDetails {
-  ///The number of pointers that were on the screen when the scale gesture ended.
   final int pointerCount;
 
-  ///The final scale of the [ZoomView] when the gesture ended.
   final double scale;
 
   ZoomViewScaleEndDetails({
@@ -370,8 +331,7 @@ final class ZoomViewScaleEndDetails {
   });
 }
 
-///Allows a ListView or other Scrollables that implement ScrollPosition and
-///jumpTo(offset) in their controller to be zoomed and scrolled.
+/// Requires a ScrollPosition and jumpTo-capable controller on the wrapped scrollable.
 class ZoomView extends StatefulWidget {
   const ZoomView({
     super.key,
@@ -390,53 +350,34 @@ class ZoomView extends StatefulWidget {
     this.onScaleEnd,
   });
 
-  /// Callback invoked after a double tap.
-  /// The [TapDownDetails] from the gesture are provided.
-  /// This is commonly used with [ZoomViewGestureHandler.onDoubleTap].
   final void Function(TapDownDetails details)? onDoubleTap;
   final Widget child;
   final ScrollController controller;
 
-  /// A controller to programmatically control the zoom level.
   final ZoomViewController? zoomViewController;
 
-  ///scrollAxis must be set to Axis.horizontal if the Scrollable is horizontal
+  /// Must match the wrapped scrollable axis.
   final Axis scrollAxis;
 
-  ///Must be set to true if the wrapped Scrollable itself is built with
-  ///`reverse: true` (e.g. an RTL manga's page list). The scrollable's own
-  ///`pixels` still increase in the same logical direction either way, but
-  ///which SCREEN direction that corresponds to flips — so every focal-point
-  ///recentering formula below, which maps a screen-space drag/pinch delta on
-  ///[scrollAxis] onto a `pixels` delta, needs its sign flipped to match.
-  ///Only [scrollAxis] itself is affected: the cross axis is ZoomView's own
-  ///synthetic pan controller, never the wrapped (possibly reversed) list.
+  /// Must match wrapped reverse; mirror focal coordinates only on scrollAxis, never the synthetic cross axis.
   final bool reverse;
 
-  ///The maximum scale that the ZoomView can be zoomed to. Set to double.infinity to allow infinite zoom in
+  /// double.infinity allows unlimited zoom in.
   final double maxScale;
 
-  ///The minimum scale that the ZoomView can be zoomed to. Set to 0 to allow infinite zoom out
+  /// Zero allows unlimited zoom out.
   final double minScale;
 
-  ///If true, enables double tap dragging to zoom.
   final bool doubleTapDrag;
 
-  ///Forces the vertical and horizontal scrollables to stop panning any time
-  ///a pointer touches the screen. This is needed when the Scale gesture does
-  ///not automatically win the arena and the scrollables are still scrolling
-  ///from a previous fling gesture.
+  /// Stop flings on pointer down when the scale recognizer may not win the arena.
   final bool forceHoldOnPointerDown;
 
-  ///If false, the pinch/scale gesture is ignored so two fingers never zoom.
-  ///Double-tap-to-zoom (via [onDoubleTap]) still works. The zoom level resets
-  ///to 1x when this flips from true to false.
+  /// Disabling pinch resets to 1x; double-tap zoom remains available.
   final bool pinchEnabled;
 
-  ///Callback invoked any time the scale of the [ZoomView] changes.
   final void Function(double scale)? onScaleChanged;
 
-  ///Callback invoked when a scale gesture ends.
   final void Function(ZoomViewScaleEndDetails details)? onScaleEnd;
 
   @override
@@ -469,8 +410,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
       oldWidget.zoomViewController?._detach();
       widget.zoomViewController?._attach(this);
     }
-    // Turning pinch off resets any current zoom back to 1x. Deferred a frame so
-    // the layout (context.size) is available.
+    // Defer the pinch-off reset until layout supplies context.size.
     if (oldWidget.pinchEnabled && !widget.pinchEnabled && _scale != 1) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _resetScaleToOne();
@@ -478,13 +418,10 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
     }
   }
 
-  /// Snaps the zoom back to 1x, correcting the scroll offsets the same way
-  /// [ZoomViewController.setScale] does.
   void _resetScaleToOne() {
     final size = context.size;
     if (size == null) return;
-    // Both scroll positions must be attached before we read pixels / jumpTo —
-    // during a mode transition a child scrollable can be momentarily detached.
+    // Mode transitions may briefly detach a controller; check both before reading pixels.
     if (!_verticalController.hasClients || !_horizontalController.hasClients) {
       return;
     }
@@ -550,25 +487,17 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  ///The current scale of the ZoomView
   double _scale = 1;
 
-  ///The scale of the ZoomView before the last scale update event
   double _lastScale = 1;
 
-  ///Used for trackpad pointerEvents to determine if the user is panning or scaling
   late TrackPadState _trackPadState;
 
-  ///Total distance the trackpad has moved vertically since the last scale start event
   Size _globalTrackpadDistance = Size.zero;
 
   late final AnimationController _masterAnimationController;
 
-  // The listener + status listener registered by the currently-running
-  // setScaleWithAnimation. Tracked so a new zoom (or an interrupting pan) can
-  // detach the previous ones first — a stopped (never "completed") animation
-  // otherwise leaves them attached and the next run drives several accumulated
-  // listeners that fight over _scale.
+  // Stopped animations never complete; track listeners so interruptions can detach them.
   VoidCallback? _activeScaleListener;
   void Function(AnimationStatus)? _activeScaleStatusListener;
 
@@ -591,9 +520,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
   late final _TouchHandler _verticalTouchHandler;
   late final _TouchHandler _horizontalTouchHandler;
 
-  // Internal scale bounds are inverted (internal = 1 / userScale), so the
-  // MAX user scale maps to the MIN internal value and vice-versa. Read live
-  // from the widget so "disable zoom out" applies without a reader restart.
+  // Internal scale is 1/userScale, so user min/max map to internal max/min.
   double get _minInternalScale => 1 / widget.maxScale;
   double get _maxInternalScale => 1 / widget.minScale;
 
@@ -626,8 +553,6 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
       builder: (BuildContext context, BoxConstraints constraints) {
         double height = constraints.maxHeight;
         double width = constraints.maxWidth;
-        //The listener is needed to determine the input type
-        //and for forceHoldOnPointerDown and for reseting the DragMode.
         return Listener(
           behavior: HitTestBehavior.translucent,
           onPointerUp: (PointerUpEvent event) {
@@ -700,12 +625,10 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   double dy = (_previousDragPosition!.dy - currentDragPosition.dy);
 
                   if (dx.abs() > dy.abs()) {
-                    // Ignore horizontal drags
                     return;
                   }
                   final newScale = _clampDouble(
-                    //divided by 2 so that dragging from the middle of the screen
-                    //to the bottom results in 2x scale
+                    // A drag from screen center to bottom represents 2x scale.
                     _lastScale + (dy / (height / 2)),
                     _minInternalScale,
                     _maxInternalScale,
@@ -767,8 +690,6 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   _verticalTouchHandler.handleDragUpdate(verticalDetails);
                   _horizontalTouchHandler.handleDragUpdate(horizontalDetails);
                 case DragMode.pinchScale:
-                  // Honour a live pinch-off even if the gesture was already in
-                  // pinch mode when the setting flipped.
                   if (!widget.pinchEnabled) {
                     _dragMode = DragMode.none;
                     break;
@@ -778,19 +699,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     _minInternalScale,
                     _maxInternalScale,
                   );
-                  // Live focal point, not the one captured at onScaleStart: a
-                  // pinch's midpoint drifts as the two fingers move (rarely
-                  // perfectly static), and onScaleStart itself fires off
-                  // whichever finger touches down FIRST — Flutter doesn't
-                  // restart the gesture when the second one joins — so a
-                  // frozen point anchors the zoom whenever the fingers'
-                  // midpoint moves from where the first finger happened to
-                  // land, rather than the actual pinch center (#372). Also
-                  // clamped to what's actually scrollable right now: near a
-                  // content edge, jumpTo would otherwise accept an offset
-                  // beyond the available range and let Flutter's own,
-                  // unrelated-to-the-focal-point correction snap it back on
-                  // a later frame (#372).
+                  // onScaleStart uses the first finger; live focal points track the actual pinch midpoint.
                   final verticalOffset = _clampScrollTarget(
                     axis: Axis.vertical,
                     scrollAxis: widget.scrollAxis,
@@ -823,12 +732,10 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                               reverse: widget.reverse,
                             ),
                   );
-                  //This is the main logic to actually perform the scaling
                   _updateScale(newScale);
                   _verticalController.jumpTo(verticalOffset);
                   _horizontalController.jumpTo(horizontalOffset);
                 case DragMode.none:
-                // do nothing
               }
             },
             onScaleEnd: (ScaleEndDetails details) {
@@ -873,8 +780,6 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
             child: Column(
               children: [
                 Expanded(
-                  //When scale decreases, the SizedBox will shrink and the FittedBox
-                  //will scale the child to fit the maximum constraints of the ZoomView
                   child: FittedBox(
                     fit: BoxFit.fill,
                     child: SizedBox(
@@ -884,8 +789,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                         child: ScrollConfiguration(
                           behavior: const ScrollBehavior().copyWith(
                             overscroll: false,
-                            //Disable all inputs on the list as we will handle them
-                            //ourselves using the gesture detector and scroll controllers
+                            // The gesture detector owns input; disable competing scrollable drag recognizers.
                             dragDevices: <PointerDeviceKind>{},
                             scrollbars: false,
                           ),
@@ -917,30 +821,22 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
   }
 }
 
-/// keeps record of the state of a trackpad. Should be set to none if
-/// the PointerDeviceKind is not a trackpad
+/// Use none for non-trackpad input.
 enum TrackPadState { none, waiting, pan, scale }
 
-/// Handles the logic for a double tap zoom.
-/// This should be used with the [ZoomView.onDoubleTap] callback.
 final class ZoomViewGestureHandler {
   int _index = 0;
   final List<double> zoomLevels;
   final Duration duration;
   final ZoomViewController controller;
 
-  /// Creates a handler for double tap gestures.
-  ///
-  /// [controller] is the [ZoomViewController] that this handler will control.
-  /// [zoomLevels] is a list of zoom scales to cycle through on each double tap.
-  /// [duration] is the animation duration for the zoom.
+  /// Cycle zoomLevels on each double tap.
   ZoomViewGestureHandler({
     required this.controller,
     required this.zoomLevels,
     this.duration = const Duration(milliseconds: 150),
   });
 
-  /// The method to be passed to [ZoomView.onDoubleTap].
   void onDoubleTap(TapDownDetails details) {
     if (!controller.isAttached) return;
 
@@ -1030,49 +926,13 @@ double _clampDouble(double x, double min, double max) {
   return x;
 }
 
-/// Clamps a computed scroll target to what [controller] can actually scroll
-/// to right now, so a zoom step near a content edge can't request an offset
-/// beyond the available range. Without this, `jumpTo` would still accept the
-/// out-of-range value (it forces `pixels` directly, no clamping), and
-/// Flutter's own scroll-position correction only snaps it back on a later
-/// layout pass — with no regard for the focal point the zoom was trying to
-/// keep in place. That delayed, uncontrolled correction is what let a zoom
-/// near a top/bottom (or left/right) edge drift the tapped/pinched content
-/// out from under the finger instead of staying put (#372).
+/// jumpTo does not clamp; constrain targets before applying focal-point zoom.
 double _clampToScrollExtent(ScrollController controller, double value) {
   final position = controller.position;
   return _clampDouble(value, position.minScrollExtent, position.maxScrollExtent);
 }
 
-/// Clamps a computed scroll target for the controller bound to [axis]
-/// (Axis.horizontal or Axis.vertical — i.e. which physical direction, not
-/// which reader mode) to what will actually be scrollable once
-/// [newInternalScale] takes effect.
-///
-/// The MAIN axis (the one equal to [scrollAxis]) keeps using
-/// [_clampToScrollExtent]: its scroll range comes from `widget.child`'s own
-/// content, which ZoomView has no way to compute analytically.
-///
-/// The CROSS axis (perpendicular to [scrollAxis]) is different: it's
-/// ZoomView's own synthetic pan, and its scrollable range is pure geometry —
-/// [rawCrossDimension] (the fixed, unscaled viewport size on that axis)
-/// minus the viewport that axis actually gets once zoomed
-/// (`rawCrossDimension * newInternalScale`; see `_effectivePixels`'s doc for
-/// why that's the viewport size). Every caller here computes this target
-/// and calls `_updateScale` practically back-to-back, and `_updateScale`'s
-/// `setState()` does not re-layout synchronously — so reading the cross
-/// axis's `ScrollPosition.maxScrollExtent` at this point still reflects the
-/// PREVIOUS frame's scale, not the one about to apply. That staleness is
-/// harmless for the main axis, whose range is normally far larger than one
-/// animation step could cross, but the cross axis starts at EXACTLY zero
-/// range at 1x and must grow from there the instant a zoom-in begins.
-/// Clamping that first frame's target against the stale (zero) extent
-/// stalls it at zero — and because every caller here tracks a running
-/// position across frames rather than recomputing an absolute one each
-/// time, every later frame's delta then compounds on that wrong baseline
-/// instead of the right one, producing a large, persistent drift on
-/// whichever screen axis ISN'T scrollAxis (reported: pinch/double-tap zoom
-/// not staying anchored to the touched point, worse in horizontal mode).
+/// Compute cross-axis bounds at the new scale; ScrollPosition still reports the previous frame's extent.
 double _clampScrollTarget({
   required Axis axis,
   required Axis scrollAxis,
@@ -1090,15 +950,7 @@ double _clampScrollTarget({
   return _clampDouble(value, 0.0, maxExtent);
 }
 
-/// The controller for the axis perpendicular to [scrollAxis] is a local,
-/// synthetic [ScrollController] that sits at pixel 0 until the user pans it,
-/// even though the [FittedBox]/[SizedBox] around it already centers the
-/// enlarged content on that axis once zoomed past 1x — so a fresh zoom step
-/// must treat that axis's "current" offset as the centering offset, not the
-/// stale raw scroll position. The controller for [scrollAxis] itself is the
-/// real scrollable (e.g. the reader's page/strip position) and must always
-/// use its actual pixels: overriding it with the centering formula would
-/// discard wherever the user had actually scrolled to.
+/// Below 1x, synthetic cross-axis pixels must include centering; main-axis pixels retain reader position.
 ({double horizontal, double vertical}) _effectivePixels({
   required Axis scrollAxis,
   required double currentInternalScale,
@@ -1120,33 +972,7 @@ double _clampScrollTarget({
   }
 }
 
-/// The focal-point coordinate on [axis] to actually use in every
-/// recentering formula below, correcting for [reverse].
-///
-/// Every formula in this file is built from terms like
-/// `pixels + delta * focus.dx`, which assumes increasing `pixels` moves
-/// content in the same screen direction as increasing screen coordinates.
-/// That holds for the MAIN axis (the one equal to [scrollAxis]) only when
-/// the wrapped scrollable is NOT reversed — Flutter paints a reversed
-/// sliver's `AxisDirection` by measuring from the OPPOSITE physical edge of
-/// the viewport, i.e. (conceptually) `screenPos = dimension - (pixels-relative
-/// position)` instead of `screenPos = (pixels-relative position)`. Naively
-/// negating the whole delta term does NOT correct for this — it's a
-/// reflection of the coordinate around the viewport's own extent, not a
-/// sign flip of the delta — verified against the actual `RenderSliverList`
-/// paint offsets by direct measurement (see the zoom-view-reverse
-/// investigation notes): reversed, `pixels` increasing by N moves a fixed
-/// content point by +N on screen (not -N as non-reversed does), AND the
-/// reversed formula carries an extra `+dimension` term that does not scale
-/// with zoom the way the rest of the expression does. Reflecting the focal
-/// coordinate itself (`dimension - raw`) before it enters the existing
-/// (already-correct-for-non-reverse) formula reproduces the right target in
-/// both cases without duplicating the formula.
-///
-/// [dimension] is the full unscaled viewport size along [axis] (`width` for
-/// horizontal, `height` for vertical). The cross axis is ZoomView's own
-/// synthetic pan controller, never the wrapped (possibly reversed) list, so
-/// [reverse] never applies there — [raw] passes through unchanged.
+/// Reflect focal coordinates as dimension-raw only on the reversed main axis; negating the delta is insufficient.
 double _mainAxisFocalCoord({
   required double raw,
   required double dimension,

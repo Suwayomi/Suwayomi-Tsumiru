@@ -1,21 +1,17 @@
 part of '../router_config.dart';
 
-// History Branch for tablet navigation
 class HistoryBranch extends StatefulShellBranchData {
   const HistoryBranch();
   static final $initialLocation = const HistoryTabRoute().location;
 }
 
-// History route for tablet navigation tab
 class HistoryTabRoute extends GoRouteData with $HistoryTabRoute {
   const HistoryTabRoute();
   @override
   Widget build(context, state) => const HistoryScreen();
 }
 
-// History route for phone navigation (under More). Full screen and pushed,
-// like every other More entry: left inside the More tab, it stayed stacked
-// there after switching tabs, and Back on the library tab then exited nothing.
+// Push phone History full-screen so it is not retained inside the More branch.
 class HistoryRoute extends GoRouteData with $HistoryRoute {
   const HistoryRoute();
 

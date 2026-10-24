@@ -24,23 +24,7 @@ import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import 'update_banner_state.dart';
 
-/// App-root "Updating library…" strip, shown while a global/category update
-/// runs. Mirrors Komikku's `AppStateBanners` "updating" strip
-/// (`eu.kanade.presentation.components.Banners.kt`, `IndexingDownloadBanner`)
-/// and reuses [IncognitoBanner]'s placement convention.
-///
-/// On/off and the percentage both come from the one progress feed
-/// ([updateProgressSocketProvider]): on/off through
-/// [updateRunningSocketProvider], which changes only on the running edges,
-/// and the counts straight off it. The server keeps those counts in memory,
-/// so the feed stays prompt during a large library update. (The deprecated
-/// full-status feed this replaced resolved every series of every job list on
-/// each push and went silent mid-run, which is why on/off used to ride a
-/// separate running-only feed.)
-///
-/// `isRunning` is debounced 1000ms **symmetrically** (both edges), matching
-/// Komikku's `Flow<Boolean>.debounce(1000L)` in `BannerProgressStatus.kt` —
-/// a run that finishes inside that window never flashes the banner at all.
+/// Both running edges are debounced 1000 ms, hiding runs shorter than that window.
 class UpdateProgressBanner extends HookConsumerWidget {
   const UpdateProgressBanner({super.key});
 
@@ -57,8 +41,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
         (progress) => progress.whenData((value) => value?.isRunning),
       ),
     );
-    // Never trust a frozen frame from before a socket error — once the
-    // stream errors, prefer a fresh one-shot read until it recovers.
+    // After a socket error, use a fresh one-shot read rather than its frozen frame.
     final effectiveRun = runSocket.hasError ? runFallback : runSocket;
 
     final l10n = context.l10n;
@@ -66,18 +49,15 @@ class UpdateProgressBanner extends HookConsumerWidget {
       if (next.hasError && !(previous?.hasError ?? false)) {
         ref.invalidate(updateProgressSummaryProvider);
       }
-      // Hand the optimistic hold back to the real running signal.
       final running = next.value;
       if (running != null) {
         ref.read(updateOptimisticProvider.notifier).onRealRunning(running);
       }
-      // Update just finished — notify if any series failed (Komikku parity).
       if ((previous?.value ?? false) && running == false) {
         _notifyUpdateErrors(ref, l10n);
       }
     });
-    // Re-query the one-shot fallback on resume, so a running-state fetched
-    // while backgrounded (or long before a socket error) isn't shown stale.
+    // Refresh fallback state on resume; backgrounded snapshots may be stale.
     useOnAppLifecycleStateChange((previous, current) {
       if (current == AppLifecycleState.resumed) {
         ref.invalidate(updateProgressSummaryProvider);
@@ -90,9 +70,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
     final timer = useRef<Timer?>(null);
     useEffect(() {
       timer.value?.cancel();
-      // Cancel the local `t`, not `timer.value` — by the time this dispose
-      // runs (after the *next* effect body already reassigned timer.value),
-      // reading timer.value here would cancel the wrong (new) timer.
+      // Cancel the local timer: a newer effect may already have replaced timer.value.
       final t = Timer(_debounce, () {
         debouncedRunning.value = rawRunning;
       });
@@ -100,17 +78,11 @@ class UpdateProgressBanner extends HookConsumerWidget {
       return t.cancel;
     }, [rawRunning]);
 
-    // Optimistic hold shows the banner the instant an update is triggered,
-    // before the server confirms it's running and before the appear-debounce.
-    // The user's "hide the banner" preference folds in here (not an early
-    // return) so that toggling it off mid-update publishes visible=false and
-    // the shell restores the status-bar inset it dropped.
+    // Fold visibility preference in here so hiding mid-update still restores shell insets.
     final armed = ref.watch(updateOptimisticProvider);
     final visible = showPref && (debouncedRunning.value || armed);
 
-    // Publish visibility so the shell can drop the redundant status-bar inset
-    // on the content below while the banner occupies that space. Deferred to a
-    // post-frame callback — writing a provider during build is disallowed.
+    // Publish visibility after the frame; provider writes during build are disallowed.
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
@@ -119,9 +91,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
       return null;
     }, [visible]);
 
-    // Counts only once the real run is confirmed (not merely armed): during
-    // the optimistic window there are none yet, so the banner shows the
-    // indeterminate "Updating library…".
+    // Counts are unavailable until the real run starts; the optimistic phase is indeterminate.
     UpdateProgressDto? status;
     if (visible && debouncedRunning.value) {
       final socket = ref.watch(updateProgressSocketProvider);
@@ -131,12 +101,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
           : fallback.value;
     }
 
-    // The colour fills up behind the status bar and the content pads below it
-    // (Komikku's `windowInsetsPadding(statusBars)`). On phone the banner draws
-    // into the status bar, so take the top inset from the raw window (shell-nav
-    // descendants read MediaQuery insets as 0 — see project_shell_nav_bottom_
-    // inset). On tablet the shell already wraps everything in a SafeArea, so
-    // the banner is below the status bar and must add no inset of its own.
+    // Phone insets come from FlutterView; tablet SafeArea already reserves the status bar.
     final topInset = context.windowSizeClass >= WindowSizeClass.medium
         ? 0.0
         : View.of(context).viewPadding.top / View.of(context).devicePixelRatio;
@@ -188,8 +153,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
   }
 }
 
-/// Notifies when a just-finished library update left failures (Komikku parity).
-/// Best-effort + foreground-observed (our update runs server-side). Android only.
+/// Best-effort Android notification of failures in a foreground-observed server update.
 Future<void> _notifyUpdateErrors(WidgetRef ref, AppLocalizations l10n) async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
   try {
@@ -226,6 +190,5 @@ Future<void> _notifyUpdateErrors(WidgetRef ref, AppLocalizations l10n) async {
       sessionFingerprint: config.sessionFingerprint,
     );
   } catch (_) {
-    // Best-effort — a missed error toast is not data loss.
   }
 }

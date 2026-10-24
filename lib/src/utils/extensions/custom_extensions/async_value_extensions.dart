@@ -39,16 +39,10 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
     Widget Function(Widget)? wrapper,
     bool showGenericError = false,
     bool addScaffoldWrapper = false,
-    // A dependency change routes `when()` through `loading()` for one frame,
-    // swapping the `data` Scaffold for the `wrapper` one and back — which closes
-    // anything the user had open (e.g. the library organizer's endDrawer). Pass
-    // true to keep the previous data on screen.
+    // Keep previous data during dependency reloads so open drawers retain their Scaffold.
     bool skipLoadingOnReload = false,
     Widget? loadingWidget,
-    // Offer "View offline" on every failure view, unreachable or not — the
-    // error stays on screen, the pin is the user's bypass. Only for screens
-    // that actually honor the offline pin (the library) — elsewhere the
-    // button would flip a switch this screen ignores.
+    // Offer the offline bypass only on screens that honor the pin.
     bool offlineEscapeHatch = false,
   }) {
     if (addScaffoldWrapper) {
@@ -59,9 +53,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
       skipError: true,
       skipLoadingOnReload: skipLoadingOnReload,
       error: (error, trace) {
-        // A genuine "can't reach the server" failure gets a dedicated view
-        // that points at Connection settings, instead of a blank/opaque error
-        // (the connection exception's own message is empty).
+        // Connection exceptions have empty messages; show the dedicated connection view.
         final unwrapped = error is OperationMessageException
             ? error.exception
             : error;
@@ -93,9 +85,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
         final message = isPermissionDenied(unwrapped)
             ? context.l10n.accountPermissionDenied
             : error.toString().trim();
-        // The server rejected our credentials. Refresh alone can only fail the
-        // same way, so send the user where signing in actually happens — the
-        // same treatment a server we can't reach already gets.
+        // Rejected credentials need sign-in rather than another refresh.
         final lower = message.toLowerCase();
         if (isPermissionDenied(unwrapped) ||
             lower.contains('unauthor') ||
@@ -118,7 +108,6 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
             title: showGenericError || message.isBlank
                 ? context.l10n.errorSomethingWentWrong
                 : message,
-            // An empty button still reserves spacing in Emoticons.
             button: (refresh == null && !offlineEscapeHatch)
                 ? null
                 : Column(

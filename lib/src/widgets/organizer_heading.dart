@@ -8,8 +8,6 @@ import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
 
-/// Compact section header (24dp/tight padding, primary-tinted `labelLarge`)
-/// shared by the library organizer's tabs and the tri-state filter rows.
 class OrganizerHeading extends StatelessWidget {
   const OrganizerHeading(this.text, {super.key});
   final String text;
@@ -28,8 +26,6 @@ class OrganizerHeading extends StatelessWidget {
   }
 }
 
-/// Explanatory line under an [OrganizerHeading], for controls whose gesture
-/// isn't obvious.
 class OrganizerHint extends StatelessWidget {
   const OrganizerHint(this.text, {super.key});
   final String text;

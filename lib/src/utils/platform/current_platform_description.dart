@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Web-safe entry point for the OS name/version string used in the copied
-// debug-log header. The real implementation needs `dart:io` (native only); on
-// web this swaps in a stub so callers that compile for web still build.
+// Conditional import keeps dart:io out of web builds.
 export 'current_platform_description_stub.dart'
     if (dart.library.io) 'current_platform_description_io.dart';

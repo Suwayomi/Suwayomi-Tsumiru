@@ -18,36 +18,22 @@ import '../shell/sidebar_expanded.dart';
 import 'desktop_brand.dart';
 import 'desktop_title_bar.dart';
 
-/// Height of the merged window bar: the title bar and the page toolbar as one
-/// row. Matches the desktop page toolbars (64 px rows with 40 px controls).
 const double kDesktopTopBarHeight = 64;
 
-/// Gap between the brand block, the page toolbar and the window buttons.
 const double kDesktopTopBarGap = 10;
 
-/// Width of the minimise / maximise-restore / close cluster: three buttons at
-/// window_manager's 46 px minimum width each.
+/// Three window_manager caption buttons at its 46 px minimum each.
 const double kWindowButtonsWidth = 3 * 46;
 
-/// Minimum search-field width the merged bar keeps before falling back to two
-/// rows.
 const double kTopBarSearchMinWidth = 200;
 
-/// The merged bar shows wherever the desktop shell shows ([usesDesktopShell]),
-/// on every platform: native desktop, web in a browser, and Android/iPad
-/// tablets. A landscape phone keeps its icon rail and its own app bars. The
-/// single gate for the shells, [DesktopWindowScaffold], the slot wiring and
-/// the page AppBar suppression, so they cannot disagree.
+/// Shared desktop-shell gate for merged bars, slots and page AppBar suppression.
 bool showsMergedTopBar(BuildContext context) =>
     SettingsPaneScope.maybeOf(context) != null || context.usesDesktopShell;
 
-/// The current route's matched location, or null outside a router (plain
-/// widget tests that pump the bar on its own).
+/// Null outside a router.
 String? _matchedLocationOrNull(BuildContext context) {
-  // Checked before GoRouterState.of: without a router above, `of` does not
-  // throw — its route-walk keeps finding the plain MaterialPageRoute above a
-  // nested Navigator and spins forever, hanging the frame. With a router
-  // present the walk ends at the first go_router page as before.
+  // Check router presence first: GoRouterState.of can loop on a plain nested Navigator.
   if (GoRouter.maybeOf(context) == null) return null;
   try {
     return GoRouterState.of(context).matchedLocation;
@@ -56,43 +42,28 @@ String? _matchedLocationOrNull(BuildContext context) {
   }
 }
 
-/// The active leaf route's matched location: the top-most page's match from
-/// the router's current configuration. The host bar sits in the shell above
-/// its Navigator, so `GoRouterState.of` there reports the shell's own match,
-/// which keeps the initial location after a push inside the shell (the shell
-/// page is unchanged while the new page registers under the leaf's
-/// location). Reading the router's current full match instead tracks pushes
-/// and pops; without a router it falls back to the shell lookup above.
+/// Read the active leaf from router configuration; the shell's own match stays unchanged on inner pushes.
 String _activeLeafLocation(BuildContext context) {
   final router = GoRouter.maybeOf(context);
   if (router != null) {
     try {
       return router.state.matchedLocation;
     } catch (_) {
-      // Fall through to the shell lookup.
     }
   }
   return _matchedLocationOrNull(context) ?? '';
 }
 
-/// Whether the merged one-row bar is showing at this build, using the same
-/// decision [DesktopTopBar] makes. The macOS sidebar draws its brand row only
-/// alongside it: in the two-row fallback the title bar already carries the
-/// logo, and the narrow layout forces the sidebar collapsed.
+/// Shared one-row decision; macOS needs its sidebar brand only alongside the merged row.
 bool desktopTopBarShowsMergedRow(BuildContext context, WidgetRef ref) =>
     _topBarLayout(context, ref, _activeLeafLocation(context)).merged;
 
-/// The bar's layout decision for [location]: the parts it draws and whether
-/// the one-row layout fits or the two rows stack.
 _TopBarLayout _topBarLayout(
   BuildContext context,
   WidgetRef ref,
   String location,
 ) {
   final width = MediaQuery.sizeOf(context).width;
-  // Window chrome (drag area, caption buttons, traffic-lights inset) exists
-  // only on native desktop. Web and tablets show the same bar and sidebar
-  // without it; the breakpoint then drops the buttons' width like macOS.
   final native = isDesktopPlatform;
   final isMacOS = native && isMacOSRuntime;
   final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
@@ -108,7 +79,6 @@ _TopBarLayout _topBarLayout(
           topBarBreakpoint(
             brandWidth: brandWidth,
             slotMinWidth: entry.minWidth,
-            // No caption buttons off native desktop, like macOS.
             isMacOS: isMacOS || !native,
           );
   return (
@@ -128,12 +98,7 @@ typedef _TopBarLayout = ({
   TopBarSlotEntry? entry,
 });
 
-/// Window width at and above which the title bar and the page toolbar merge
-/// into one 64 px bar. Below it the two rows stack: the 40 px title bar with
-/// the toolbar below it. Built from the same widths and gaps as the bar
-/// itself, like Tsumige's `oneBarBreakpoint`: the brand block (the sidebar's
-/// current width), the page toolbar at its minimum, the window buttons (not
-/// macOS) and one gap between each part.
+/// Merge breakpoint derived from brand, minimum toolbar, caption buttons and gaps.
 double topBarBreakpoint({
   required double brandWidth,
   required double slotMinWidth,
@@ -145,14 +110,9 @@ double topBarBreakpoint({
     kDesktopTopBarGap +
     (isMacOS ? 0 : kWindowButtonsWidth + kDesktopTopBarGap);
 
-/// Minimum width of a back-arrow-plus-title toolbar: the back button, a gap,
-/// a short title that ellipsizes, plus one 48 px slot per action on the
-/// right. Pages with a search field or wider controls pass their own value.
 double titleTopBarSlotMinWidth(int actionCount) =>
     48.0 + kDesktopTopBarGap + 120.0 + actionCount * 48.0;
 
-/// Minimum width of a search-field toolbar: a usable search box, one 48 px
-/// slot per action and the gaps between the controls.
 double searchTopBarSlotMinWidth(int actionCount, [bool hasLeading = false]) =>
     kTopBarSearchMinWidth +
     (hasLeading ? 48.0 + kDesktopTopBarGap : 0) +
@@ -180,12 +140,7 @@ EdgeInsets? settingsPagePadding(
   ).add(padding ?? EdgeInsets.zero).resolve(Directionality.of(context));
 }
 
-/// Wraps a standard back-arrow title page for the desktop top bar: without
-/// the merged bar [child] is returned unchanged; with it the page's AppBar
-/// must be null and its toolbar shows in the shell bar instead. The page
-/// passes the same leading, title and actions its AppBar uses (usually
-/// [detailNavigationBackButton] for the leading). Pages whose title slot is
-/// wider than back-plus-title (a search box) pass their own [minWidth].
+/// With the merged bar, suppress the page AppBar and provide its toolbar; otherwise return child unchanged.
 Widget titleTopBarSlot({
   required bool topBar,
   Widget? leading,
@@ -222,8 +177,6 @@ Widget titleTopBarSlot({
             ),
           ),
           if (pane.tabs != null) pane.tabs!,
-          // The window's own bottom spacing, applied once here so every
-          // page ends 24 px below its last card without per-page padding.
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24),
@@ -247,8 +200,6 @@ Widget titleTopBarSlot({
   },
 );
 
-/// The toolbar row for a search page: the search box left-aligned at up to
-/// 720 px with the page's actions after it, matching the AppBar layout.
 Widget desktopSearchSlotContent({
   Widget? leading,
   required Widget search,
@@ -269,10 +220,7 @@ Widget desktopSearchSlotContent({
   ],
 );
 
-/// The toolbar row for a back-arrow page: back button, title and the page's
-/// actions, matching the AppBar layout. The page passes its own leading
-/// (usually [detailNavigationBackButton]) because the bar sits outside the
-/// page's Navigator, where the AppBar's implied back button cannot reach.
+/// Supply the page's back button: this toolbar sits outside its Navigator.
 class DesktopTitleSlot extends StatelessWidget {
   const DesktopTitleSlot({
     super.key,
@@ -295,11 +243,7 @@ class DesktopTitleSlot extends StatelessWidget {
   );
 }
 
-/// One page's toolbar content, registered by route so the host always shows
-/// the current route's toolbar: during a push both pages are mounted, and the
-/// outgoing entry is ignored once the location moves on. Each slot instance
-/// registers its own entry, so duplicate locations stack newest-last and the
-/// host shows the top of the stack.
+/// Route-keyed toolbars stack newest-last so duplicate-location pushes keep separate entries.
 class TopBarSlotEntry {
   const TopBarSlotEntry({
     required this.content,
@@ -307,21 +251,16 @@ class TopBarSlotEntry {
     this.slotKey = 'default',
   });
 
-  /// The toolbar row, built by the page so it keeps the page's state (search
-  /// focus, sort/filter panels anchored to their buttons, selection count).
   final Widget content;
 
-  /// The toolbar's minimum width, for the one-bar/two-row breakpoint.
   final double minWidth;
 
-  /// Distinguishes swapped toolbars on one route (normal vs selection mode).
+  /// Distinguishes normal and selection toolbars on the same route.
   final Object slotKey;
 }
 
 class TopBarSlotRegistry extends Notifier<Map<String, List<TopBarSlotEntry>>> {
-  /// False once this container (and the registry with it) is disposed, so
-  /// deferred slot removals can skip the dead notifier. A plain field: safe
-  /// to read after disposal, unlike any notifier access.
+  /// Plain disposal flag remains safe to read after notifier disposal.
   bool alive = true;
 
   @override
@@ -331,11 +270,7 @@ class TopBarSlotRegistry extends Notifier<Map<String, List<TopBarSlotEntry>>> {
     return const {};
   }
 
-  /// Publishes [entry] under [routeKey], replacing this slot's [previous]
-  /// instance when it re-publishes. Each location holds a stack: pushing the
-  /// same location twice registers two instances under one key (a route
-  /// pattern key is not unique per push), and the earlier registration stays
-  /// behind when the newer page pops.
+  /// Replace only this slot instance; duplicate locations retain earlier registrations.
   void setEntry(
     String routeKey,
     TopBarSlotEntry? previous,
@@ -349,9 +284,7 @@ class TopBarSlotRegistry extends Notifier<Map<String, List<TopBarSlotEntry>>> {
     state = {...state, routeKey: entries};
   }
 
-  /// Removes [entry] only while it is still registered under [routeKey]: a
-  /// slot that re-published meanwhile owns a newer instance the stale
-  /// removal must not clear, and entries stacked below it stay registered.
+  /// Remove only the still-registered instance so stale removals cannot clear replacements.
   void removeEntry(String routeKey, TopBarSlotEntry entry) {
     final entries = state[routeKey];
     if (entries == null ||
@@ -373,18 +306,9 @@ final topBarSlotRegistryProvider =
       TopBarSlotRegistry.new,
     );
 
-/// Counts the displayed merged desktop top bars, so [DesktopWindowScaffold]
-/// knows when its standalone title strip is redundant. The bar draws itself
-/// only inside the navigation shells, and each bar registers only while its
-/// own route is on top and ticking: routes pushed above the shells (reader,
-/// onboarding) leave the shell mounted offstage, which unregisters and keeps
-/// the strip with its window controls and drag area. A count, not a flag:
-/// shell transitions can mount the incoming bar before the outgoing one
-/// unmounts.
+/// Count displayed bars, not mounted shells: transitions overlap and offstage shells need no bar.
 class MergedTopBarRegistry extends Notifier<int> {
-  /// False once this container (and the registry with it) is disposed, so
-  /// deferred removals can skip the dead notifier. A plain field: safe to
-  /// read after disposal, unlike any notifier access.
+  /// Plain disposal flag remains safe to read after notifier disposal.
   bool alive = true;
 
   @override
@@ -408,10 +332,7 @@ class MergedTopBarRegistry extends Notifier<int> {
 final mergedTopBarRegistryProvider =
     NotifierProvider<MergedTopBarRegistry, int>(MergedTopBarRegistry.new);
 
-/// Registers [content] as the current route's toolbar for the desktop top
-/// bar. Renders [child] unchanged; the content itself is shown by
-/// [DesktopTopBar], keyed by route so the outgoing page's toolbar fades out
-/// with the page and two toolbars never show at once.
+/// Register content by route; child stays in place while the host shows the active toolbar.
 class TopBarSlot extends ConsumerStatefulWidget {
   const TopBarSlot({
     super.key,
@@ -449,11 +370,7 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
     );
     if (_scheduled) return;
     _scheduled = true;
-    // Post-frame: the host bar is an ancestor that may still be building, and
-    // publishing synchronously would setState it mid-build. The latest entry
-    // wins: a second schedule before the frame only moves [_entry] forward.
-    // Re-publishing swaps this slot's own previous instance, so stacked
-    // duplicates under one location keep the earlier registrations.
+    // Publish post-frame to avoid rebuilding the ancestor mid-build; replace only this slot instance.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       if (!mounted) return;
@@ -477,8 +394,7 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Inherited lookups (the route location) are only legal here, not in
-    // initState. The registry is captured too: `ref` is unusable in dispose.
+    // Inherited lookups belong here; capture the registry because ref is unusable in dispose.
     _registry = ref.read(topBarSlotRegistryProvider.notifier);
     _schedulePublish();
   }
@@ -491,17 +407,12 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
 
   @override
   void dispose() {
-    // Deferred like publishing: unmounting runs inside the frame that
-    // navigates away, where touching the provider throws. Only the published
-    // instance is removed: a never-published pending entry owns nothing, and
-    // stacked duplicates under the same location keep theirs.
+    // Defer provider changes during unmount; remove only this slot's published instance.
     final registry = _registry;
     final routeKey = _publishedKey;
     final entry = _publishedEntry;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (entry == null) return;
-      // Whole-tree teardown disposes the container with the tree; the
-      // registry is gone, so there is nothing to clean.
       if (!registry.alive) return;
       registry.removeEntry(routeKey, entry);
     });
@@ -512,13 +423,7 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// The desktop window bar: `[brand block | page toolbar slot | window
-/// buttons]` in one 64 px row, or the two-row fallback (40 px title bar plus
-/// the toolbar row) when the window is too narrow. On native desktop a
-/// [DragToMoveArea] sits behind the controls across the whole bar, so every
-/// empty part drags the window and double-clicking maximises/restores, as
-/// the title bar does; off native desktop there are no window buttons, no
-/// drag area and no macOS inset, and the brand block always shows the logo.
+/// Merge brand, toolbar and native controls when they fit; otherwise use two rows.
 class DesktopTopBar extends ConsumerStatefulWidget {
   const DesktopTopBar({super.key});
 
@@ -531,14 +436,10 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   bool _scheduled = false;
   bool _shown = false;
 
-  /// One key per shown toolbar, kept across builds so the slot content keeps
-  /// its State when the one-bar/two-row switch moves it between ancestors.
+  /// Preserve toolbar State while moving it between one-row and two-row ancestors.
   final Map<String, GlobalKey> _slotContentKeys = {};
 
-  /// Whether this bar's route currently shows it: the route on top of its
-  /// Navigator and not held offstage. Routes pushed above the shells (the
-  /// reader on the navigator above them) leave the shell mounted offstage, so
-  /// a bare mount count would keep hiding the standalone strip there.
+  /// Track displayed routes: a shell can remain mounted offstage beneath the reader.
   bool _isBarVisible() {
     final route = ModalRoute.of(context);
     final pages = route?.navigator?.widget.pages ?? const <Page>[];
@@ -557,17 +458,10 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // The registry is captured here: `ref` is unusable in dispose. Published
-    // post-frame: the window scaffold watches this registry, and publishing
-    // synchronously would setState it mid-build. ModalRoute and TickerMode
-    // subscribe here, so a push or pop above this bar re-runs this and the
-    // registration follows what is displayed, not what stays mounted.
+    // Capture the registry before disposal; publish displayed state post-frame to avoid ancestor setState.
     _registry = ref.read(mergedTopBarRegistryProvider.notifier);
     _wantVisible = _isBarVisible();
-    // Idempotent per mounted bar: a dependency change while the registered
-    // state already matches (theme, MediaQuery) schedules nothing, so the
-    // count cannot grow past one show per bar balanced by one hide on
-    // dispose. Only a flip of the desired state needs a reconcile.
+    // Reconcile only visibility changes so registrations stay balanced.
     if (_scheduled || _wantVisible == _shown) return;
     _scheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -585,10 +479,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
 
   @override
   void dispose() {
-    // Deferred like publishing: unmounting runs inside the frame that
-    // navigates away, where touching the provider throws. Balanced with the
-    // scheduled show above: a show skipped for a dead mount schedules no
-    // hide, and the registry itself clamps at zero.
+    // Defer removal during unmount and balance only registrations that were actually published.
     final registry = _registry;
     final wasShown = _shown;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -599,13 +490,9 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
 
   @override
   Widget build(BuildContext context) {
-    // `GoRouter.of` does not subscribe, and the shell's own match never
-    // changes on push/pop inside it, so rebuild off the router delegate and
-    // read the leaf from the current configuration each time. Outside a
-    // router (plain widget tests) the location never changes either.
+    // GoRouter.of does not subscribe; listen to the delegate for inner pushes and pops.
     final delegate = GoRouter.maybeOf(context)?.routerDelegate;
     if (delegate == null) {
-      // Outside a router (plain widget tests) both sides use the empty key.
       return _buildBar(context, ref, _matchedLocationOrNull(context) ?? '');
     }
     return ListenableBuilder(
@@ -628,8 +515,6 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const DesktopTitleBar(),
-          // The page toolbars are bare rows; the merged bar's surface has to
-          // come from here so the row never goes transparent.
           Container(
             height: kDesktopTopBarHeight,
             color: theme.colorScheme.surface,
@@ -643,8 +528,6 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
       color: theme.colorScheme.surface,
       child: Stack(
         children: [
-          // Native desktop only: the empty bar drags the window (and a
-          // double-click maximises). Web and tablets have no window to drag.
           if (native)
             const Positioned.fill(
               child: DragToMoveArea(child: SizedBox.expand()),
@@ -674,11 +557,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     String location,
   ) {
     if (entry == null) return const SizedBox.shrink();
-    // The one-bar and two-row layouts give this slot different ancestors
-    // (Container/Stack vs Column), which would remount stateful controls on
-    // every breakpoint crossing: the search field owns its focus node, so
-    // focus and the open dropdown would die on resize. The stable GlobalKey
-    // reparents the same subtree instead, keeping State, focus and text.
+    // A stable GlobalKey preserves toolbar focus and State when resize changes its ancestors.
     final key = '$location#${entry.slotKey}';
     return AnimatedSwitcher(
       duration: context.reduceMotion
@@ -696,12 +575,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   }
 }
 
-/// The bar's left end, exactly the sidebar's current width so the column
-/// lines up: logo plus name with the collapse chevron at its right end when
-/// expanded, the logo alone (tap to expand) when collapsed. macOS leaves this
-/// block empty for the traffic lights; its brand row is the sidebar's first
-/// item instead. The width animates with the same tween as the sidebar, so
-/// the two stay in sync.
+/// Match the animated sidebar width; macOS leaves this block free for traffic lights.
 class _BrandBlock extends ConsumerWidget {
   const _BrandBlock({required this.width, required this.isMacOS});
 
@@ -729,9 +603,6 @@ class _BrandBlock extends ConsumerWidget {
         return SizedBox(
           width: animatedWidth,
           height: kDesktopTopBarHeight,
-          // macOS: the traffic lights keep this corner; the brand row is the
-          // first item of the sidebar. The block still animates with the
-          // sidebar's width so the layout below stays aligned.
           child: isMacOS
               ? const SizedBox.expand()
               : showExpanded

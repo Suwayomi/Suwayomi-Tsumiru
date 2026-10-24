@@ -1,6 +1,5 @@
 part of '../router_config.dart';
 
-// Library Branch
 class LibraryBranch extends StatefulShellBranchData {
   static final $initialLocation = const LibraryRoute(categoryId: 0).location;
   const LibraryBranch();

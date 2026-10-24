@@ -11,9 +11,7 @@ import 'package:path_provider/path_provider.dart';
 // Hive lowercased the box name ("graphqlClientStore") for its file names.
 const _legacyFiles = ['graphqlclientstore.hive', 'graphqlclientstore.lock'];
 
-/// Returns the deleted box's size in bytes (null when there was none), so the
-/// caller can log how big the file had grown — the number that diagnoses the
-/// startup-OOM class from a single crash-log line.
+/// Deleted box size in bytes, or null when absent.
 Future<int?> deleteLegacyGraphqlCacheBox() async {
   try {
     final docs = await getApplicationDocumentsDirectory();
@@ -26,7 +24,7 @@ Future<int?> deleteLegacyGraphqlCacheBox() async {
     }
     return boxBytes;
   } catch (_) {
-    // Best-effort: a failed cleanup must never block startup.
+    // Cache cleanup must never block startup.
     return null;
   }
 }

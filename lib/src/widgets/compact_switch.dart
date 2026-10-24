@@ -3,22 +3,13 @@ import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
 
-/// Scale applied to switches on the desktop shell ([ContextExtensions.usesDesktopShell]).
 const double kDesktopSwitchScale = 0.75;
 
-/// Measured Material 3 `Switch` RenderBox sizes on Flutter 3.47.7: a bare
-/// `Switch` (padded tap target) is 60x48, while the shrink-wrapped switch
-/// inside `SwitchListTile` is 60x40. The wrappers below keep these layout
-/// sizes times [kDesktopSwitchScale] so rows neither grow nor leave a gap.
+/// Flutter 3.47.7 switch sizes: 60×48 bare, 60×40 inside SwitchListTile.
 const Size kBareSwitchSize = Size(60, 48);
 const Size kTileSwitchSize = Size(60, 40);
 
-/// A [Switch] that draws at [kDesktopSwitchScale] on the desktop shell.
-///
-/// Phone/compact layouts get the plain `Switch` unchanged. On desktop the
-/// switch is painted scaled inside a matching scaled box, so the row keeps
-/// no leftover height or right-hand gap. Colours, states and callbacks are
-/// untouched; hit testing still flows through the scaled switch.
+/// Scale desktop paint and layout together; compact layouts use the plain Switch.
 class CompactSwitch extends StatelessWidget {
   const CompactSwitch({
     super.key,
@@ -97,14 +88,7 @@ class CompactSwitch extends StatelessWidget {
   }
 }
 
-/// A [SwitchListTile] that draws its switch at [kDesktopSwitchScale] on the
-/// desktop shell.
-///
-/// Phone/compact layouts get the plain `SwitchListTile` unchanged. On desktop
-/// the row is a [ListTile] with the same title, subtitle, padding and tap
-/// behaviour as `SwitchListTile`, plus the scaled switch where the tile puts
-/// it (leading stays leading, everything else goes trailing, matching
-/// `SwitchListTile`'s own placement).
+/// Scale the desktop switch while retaining SwitchListTile placement; compact layouts use it unchanged.
 class CompactSwitchListTile extends StatelessWidget {
   const CompactSwitchListTile({
     super.key,
@@ -173,11 +157,7 @@ class CompactSwitchListTile extends StatelessWidget {
   }
 }
 
-/// Paints [child] (a full-size switch) at [kDesktopSwitchScale] inside a box
-/// of the correspondingly scaled size, so surrounding rows keep no leftover
-/// height or gap. [FittedBox] lays the switch out at its natural size and
-/// then scales paint and hit testing uniformly; a [Transform.scale] under
-/// the tight box would squeeze the switch before scaling it.
+/// FittedBox scales natural switch layout and hit testing; Transform.scale would squeeze it first.
 class _ScaledSwitchBox extends StatelessWidget {
   const _ScaledSwitchBox({required this.baseSize, required this.child});
 

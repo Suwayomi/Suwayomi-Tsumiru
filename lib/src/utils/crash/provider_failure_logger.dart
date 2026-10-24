@@ -10,16 +10,7 @@ import '../network/graphql_errors.dart';
 import 'diagnostics.dart';
 import 'redact_tokens.dart';
 
-/// Writes provider failures to the debug log.
-///
-/// A provider error is caught by Riverpod and shown in place (an error view in
-/// a list, a snackbar…), so it never reaches `FlutterError.onError` and the
-/// debug log had no trace of it — only its message on screen, with no stack.
-///
-/// Connection errors are skipped: they are the expected outcome of every read
-/// while the server is unreachable. Each provider/error pair is logged once
-/// per session, since Riverpod retries failing providers and a rebuild loop
-/// would otherwise flood the log.
+/// Log failures caught by Riverpod, excluding connection errors; deduplicate per provider/error per session.
 final class ProviderFailureLogger extends ProviderObserver {
   ProviderFailureLogger({DateTime Function()? now})
     : _now = now ?? DateTime.now;

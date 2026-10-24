@@ -5,24 +5,15 @@ import '../../widgets/custom_circular_progress_indicator.dart';
 import '../../widgets/hover_tap_target.dart';
 import '../motion/reduce_motion.dart';
 
-/// Brand visual language — the SINGLE source for the things Flutter's Material
-/// [ThemeData] cannot express (gradients + glow). Gradients come from the
-/// active theme's own theme-kit `--grad` via [BrandColors]; the glow derives
-/// from the active [ColorScheme], which is built from the same tokens. Every
-/// named theme + Custom works for free.
-///
-/// Do NOT inline gradients/colors at call sites — use these components.
+/// Shared brand gradients and glow; use these components instead of inlining colors.
 
-/// The gradient used when a theme ships no `--grad` (every dark set, plus
-/// Custom): theme-kit's original `linear-gradient(135deg, accent, accent2)`,
-/// 135° == top-left → bottom-right, accent first.
+/// Default 135° gradient: accent at top-left, accent2 at bottom-right.
 LinearGradient schemeBrandGradient(ColorScheme cs) => LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [cs.primary, cs.secondary],
 );
 
-/// The brand glow. Mirrors theme-kit `--glow` (accent at ~35%) as a soft shadow.
 List<BoxShadow> brandGlow(ColorScheme cs) => [
   BoxShadow(
     color: cs.primary.withValues(alpha: 0.35),
@@ -32,9 +23,7 @@ List<BoxShadow> brandGlow(ColorScheme cs) => [
   ),
 ];
 
-/// The active theme's `--grad` and `--on-accent`, registered by
-/// [buildAppTheme]. Read this instead of inlining a gradient — the light themes
-/// each have their own, and a few run in the opposite direction.
+/// Active theme gradient and on-accent color; light themes may reverse gradient direction.
 class BrandColors extends ThemeExtension<BrandColors> {
   const BrandColors({
     required this.gradient,
@@ -45,15 +34,11 @@ class BrandColors extends ThemeExtension<BrandColors> {
 
   final Gradient gradient;
 
-  /// Text/icon colour on top of [gradient].
   final Color onGradient;
 
-  /// Positive-status colour (server connected, migration finished). See
-  /// [brandSuccessColor] for why this needs its own token.
   final Color success;
 
-  /// Colourless UI (Monochrome light): genre chips and cover backdrops drop
-  /// their hues.
+  /// Monochrome light removes hues from genre chips and cover backdrops.
   final bool neutral;
 
   @override
@@ -91,41 +76,32 @@ class BrandColors extends ThemeExtension<BrandColors> {
   }
 }
 
-/// Positive-status colour. No [ColorScheme] role means "success", and
-/// `Colors.green` is ~1.7:1 on a light surface, so each brightness gets a
-/// green that clears 4.5:1 against its own surface.
+/// Success green meets 4.5:1 contrast against the surface at each brightness.
 Color brandSuccessColor(Brightness brightness) => brightness == Brightness.dark
     ? const Color(0xFF34E0A1)
     : const Color(0xFF00754A);
 
-/// Star-rating colour. Amber is conventional and reads on dark surfaces; on a
-/// light one it drops to ~1.8:1, so light takes a darker amber at 3:1.
+/// Star amber darkens in light mode to meet 3:1 contrast.
 Color brandStarColor(Brightness brightness) =>
     brightness == Brightness.dark ? Colors.amber : const Color(0xFFB7791F);
 
-/// Colours for content drawn on the cover art rather than the theme surface.
-/// Theme-independent on purpose: the art underneath is, so these must not
-/// follow the light/dark scheme.
+/// Colors over cover art remain independent of the app theme.
 abstract final class OnImage {
   static const text = Colors.white;
   static const shadow = Colors.black;
   static const scrim = Color(0xAA000000);
 }
 
-/// The single reader-chrome surface (top/bottom bars, seekbars, skip buttons) so
-/// the chrome reads uniform. Near-opaque — 0.9 dark / 0.95 light; a
-/// lower alpha washes out over white webtoon pages.
+/// Shared reader chrome surface; high opacity preserves contrast over white pages.
 Color readerNavSurface(ColorScheme cs) =>
     cs.surface.withValues(alpha: cs.brightness == Brightness.dark ? 0.9 : 0.95);
 
-/// A lighter, more vibrant accent for text/outline actions (links, "Uninstall").
-/// Light mode keeps the deep primary; lightening it would undo its contrast.
+/// Brighten dark-mode text actions only; light mode retains primary contrast.
 Color brandBrightAccent(ColorScheme cs) => cs.brightness == Brightness.light
     ? cs.primary
     : Color.lerp(cs.primary, Colors.white, 0.22)!;
 
-/// Deterministic hue (0-360) for a label — same genre always gets the same
-/// color. Mirrors the playground's `hueFor`: h = (h*31 + codeUnit) % 360.
+/// Stable label hue in 0–360 degrees.
 double brandHueFor(String label) {
   var h = 0;
   for (final c in label.codeUnits) {
@@ -134,8 +110,6 @@ double brandHueFor(String label) {
   return h.toDouble();
 }
 
-/// An icon painted with the brand gradient (for the downloaded check-circle,
-/// etc.). Single source — do not inline ShaderMask + gradient at call sites.
 Widget brandGradientIcon(
   BuildContext context,
   IconData icon, {
@@ -168,8 +142,7 @@ Widget _brandRow({
         ),
         const SizedBox(width: 8),
       ],
-      // Flexible so a long label (e.g. "Downloading 14") ellipsises instead
-      // of overflowing the button's width.
+      // Flexible allows long button labels to ellipsize.
       Flexible(
         child: DefaultTextStyle.merge(
           style: TextStyle(
@@ -187,7 +160,6 @@ Widget _brandRow({
   );
 }
 
-/// Primary action — brand gradient + glow, dark content. (No Material fill.)
 class BrandButton extends StatelessWidget {
   const BrandButton({
     super.key,
@@ -248,7 +220,6 @@ class BrandButton extends StatelessWidget {
   }
 }
 
-/// Secondary action — translucent glass fill + accent border + bright text.
 class BrandGlassButton extends StatelessWidget {
   const BrandGlassButton({
     super.key,
@@ -303,9 +274,6 @@ class BrandGlassButton extends StatelessWidget {
   }
 }
 
-/// Small circular **glass** brand button — translucent fill + accent border +
-/// bright accent glyph. Single source for round brand actions (reader
-/// chapter-end jumps, etc.).
 class BrandCircleButton extends StatelessWidget {
   const BrandCircleButton({
     super.key,
@@ -344,10 +312,7 @@ class BrandCircleButton extends StatelessWidget {
   }
 }
 
-/// Filled round icon button for the reader vertical nav. Filled
-/// with [color] (the shared [readerNavSurface] so it matches the bar capsule
-/// exactly), glyph in the theme `primary`. [quarterTurns] rotates the icon so
-/// the chapter skip glyphs point up / down like the vertical slider.
+/// Filled reader navigation button; quarterTurns rotates chapter-skip glyphs.
 class BrandFilledCircleButton extends StatelessWidget {
   const BrandFilledCircleButton({
     super.key,
@@ -400,11 +365,7 @@ typedef ChipColors = ({Color fill, Color border, Color text});
 
 final _lightChipColors = <int, ChipColors>{};
 
-/// Fill / border / text for a genre chip at [hue].
-///
-/// Light mode uses HCT rather than HSL because HSL lightness is not perceived
-/// lightness: one value that suits blue leaves yellow and cyan at ~1:1 against
-/// a light surface. HCT tone holds every hue at the same contrast (~6.5:1).
+/// Genre chip colors use HCT in light mode to maintain contrast across hues.
 ChipColors brandChipColors(double hue, Brightness brightness) {
   if (brightness == Brightness.dark) {
     return (
@@ -413,16 +374,14 @@ ChipColors brandChipColors(double hue, Brightness brightness) {
       text: HSLColor.fromAHSL(1, hue, 0.85, 0.78).toColor(),
     );
   }
-  // Hct.from runs a solver per call, so memoize — brandHueFor yields whole
-  // degrees, capping this at 360 entries.
+  // Cache the HCT solver result; integer hues bound this to 360 entries.
   return _lightChipColors.putIfAbsent(hue.round(), () {
-    // Hue read back from the dark chip's color so a genre keeps its color
-    // family across modes.
+    // Retain the genre color family across light and dark modes.
     final hct = Hct.fromInt(
       HSLColor.fromAHSL(1, hue, 0.85, 0.55).toColor().toARGB32(),
     ).hue;
     return (
-      // Opaque, so contrast holds whichever light theme's surface is behind.
+      // Opaque fill keeps contrast independent of the theme surface.
       fill: Color(Hct.from(hct, 40, 92).toInt()),
       border: Color(Hct.from(hct, 40, 80).toInt()),
       text: Color(Hct.from(hct, 50, 34).toInt()),
@@ -430,8 +389,6 @@ ChipColors brandChipColors(double hue, Brightness brightness) {
   });
 }
 
-/// Genre / tag chip — fill tinted with a UNIQUE per-label color
-/// (hue derived from the label, so every genre is visually distinct).
 class BrandChip extends StatelessWidget {
   const BrandChip({super.key, required this.label, this.onTap});
 
@@ -489,7 +446,6 @@ class BrandChip extends StatelessWidget {
   }
 }
 
-/// Floating action — brand gradient + glow pill, dark content.
 class BrandFab extends StatelessWidget {
   const BrandFab({
     super.key,

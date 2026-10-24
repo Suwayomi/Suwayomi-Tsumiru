@@ -11,8 +11,6 @@ import 'package:hooks_riverpod/misc.dart';
 import '../utils/extensions/custom_extensions.dart';
 import 'organizer_heading.dart';
 
-/// The three states of a library / chapter filter, as an explicit set rather
-/// than `bool?`.
 enum FilterState {
   /// Don't filter on this (persisted as null).
   any,
@@ -35,8 +33,6 @@ enum FilterState {
         FilterState.excluded => false,
       };
 
-  /// Generic fallback label, used only where a call site doesn't supply a
-  /// contextual one (see [TriStateFilterTile.includedLabel]).
   String toLocale(BuildContext context) => switch (this) {
         FilterState.any => context.l10n.filterStateAny,
         FilterState.included => context.l10n.filterStateIncluded,
@@ -44,9 +40,6 @@ enum FilterState {
       };
 }
 
-/// A filter row whose state is picked from three labelled pills, under a
-/// section heading naming what's being filtered — rather than a checkbox
-/// cycling `null → true → false` behind one glyph.
 class TriStateFilterTile extends ConsumerWidget {
   const TriStateFilterTile({
     super.key,
@@ -57,13 +50,10 @@ class TriStateFilterTile extends ConsumerWidget {
     this.excludedLabel,
   });
 
-  /// Names the axis being filtered — "Read Status", not "Unread"; the pills
-  /// below name the values on it.
+  /// Label the filter axis; the pills label its possible values.
   final String header;
 
-  /// Reads any `bool?` provider: mutation flows through [onChanged], so the
-  /// loose listenable type is enough — and riverpod_generator 4's provider
-  /// classes no longer subtype the public NotifierProvider this would need.
+  /// Reads a bool? provider; mutations flow through onChanged.
   final ProviderListenable<bool?> provider;
   final ValueChanged<bool?> onChanged;
 
@@ -100,8 +90,6 @@ class TriStateFilterTile extends ConsumerWidget {
                   showCheckmark: false,
                   visualDensity: VisualDensity.compact,
                   label: Text(_labelFor(context, state)),
-                  // Exclusion keeps the error tint the tri-state checkbox used,
-                  // so the meaning of the colour carries over.
                   selectedColor: state == FilterState.excluded
                       ? scheme.errorContainer
                       : null,

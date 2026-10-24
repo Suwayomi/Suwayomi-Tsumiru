@@ -12,15 +12,13 @@ import '../../features/offline/data/offline_server_identity_repository.dart';
 
 final isWebProvider = Provider<bool>((ref) => kIsWeb);
 
-/// The page origin, or null when the app isn't served over http(s), as
-/// under the test runner.
+/// Null when not served over HTTP(S).
 String? pageOriginOrNull() {
   final base = Uri.base;
   return base.scheme == 'http' || base.scheme == 'https' ? base.origin : null;
 }
 
-/// True when [serverAddress] is on the page's own origin, so the server
-/// already authenticated the browser before the app loaded.
+/// Same-origin hosting means the server already authenticated the browser.
 bool isSameOriginServer({
   required String? pageOrigin,
   required String serverAddress,
@@ -35,7 +33,6 @@ bool isSameOriginServer({
       page.port == server.port;
 }
 
-/// Served by the Suwayomi server itself: the browser is already signed in.
 final webSameOriginProvider = Provider<bool>(
   (ref) =>
       ref.watch(isWebProvider) &&

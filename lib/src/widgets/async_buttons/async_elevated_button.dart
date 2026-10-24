@@ -4,8 +4,6 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../utils/theme/brand.dart';
 
-/// The app's primary filled button. Renders the brand gradient component
-/// (single source) — not a Material ElevatedButton — so it is never flat.
 class AsyncElevatedButton extends HookWidget {
   const AsyncElevatedButton({
     super.key,

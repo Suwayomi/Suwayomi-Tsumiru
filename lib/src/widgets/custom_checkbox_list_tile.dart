@@ -11,14 +11,7 @@ import 'package:hooks_riverpod/misc.dart';
 
 import '../utils/extensions/custom_extensions.dart';
 
-/// Compact on/off row backed by a `bool?` preference provider.
-///
-/// Not a Material [CheckboxListTile]: its forced ~48px tap target made these
-/// rows tower over the neighbouring filter rows. Tri-state filters use
-/// `TriStateFilterTile` instead.
-// Reads any bool? provider: mutation flows through onChanged, so the loose
-// ProviderListenable type is enough — and riverpod_generator 4's provider
-// classes no longer subtype the public NotifierProvider this used to require.
+/// Compact bool? row; mutation flows through onChanged rather than a concrete provider type.
 class CustomCheckboxListTile extends ConsumerWidget {
   const CustomCheckboxListTile({
     super.key,

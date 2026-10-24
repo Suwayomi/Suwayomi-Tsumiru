@@ -4,18 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// ISO-639 language code → flag emoji, for the library's language badge.
-///
-/// System emoji rather than bundled drawables, so the badge is crisp at any
-/// density with no assets. Codes with a region (`pt-BR`, `zh-Hant`) are matched
-/// whole first, then by their base language.
+/// Match region codes before base languages; use system emoji for flags.
 library;
 
 /// Suwayomi's local source reports this instead of a real language code.
 const String kLocalSourceLang = 'localsourcelang';
 
-/// Region overrides for codes whose flag differs from their base language.
-/// Keys are lower-cased and `-`-separated.
+/// Lowercase, hyphen-separated region overrides.
 const Map<String, String> _regionCountries = {
   'pt-br': 'BR',
   'pt-pt': 'PT',
@@ -37,8 +32,6 @@ const Map<String, String> _regionCountries = {
   'sr-latn': 'RS',
 };
 
-/// Base language → country whose flag stands in for it. Codes with no country
-/// are omitted.
 const Map<String, String> _languageCountries = {
   'af': 'ZA',
   'am': 'ET',
@@ -122,9 +115,7 @@ const Map<String, String> _languageCountries = {
   'zu': 'ZA',
 };
 
-/// The flag emoji for [langCode], or null when the code maps to no flag — the
-/// badge falls back to the uppercase code then. Accepts `es`, `pt-BR`,
-/// `zh_Hant`, `PT-br` — anything the server reports as a source language.
+/// Accepts case-insensitive hyphen/underscore codes; null means no mapped flag.
 String? languageFlagEmoji(String? langCode) {
   if (langCode == null || langCode.isEmpty) return null;
   final normalized = langCode.trim().toLowerCase().replaceAll('_', '-');
@@ -137,9 +128,7 @@ String? languageFlagEmoji(String? langCode) {
   return country == null ? null : _flagFromCountryCode(country);
 }
 
-/// English display names for the "By language" grouping labels. Neither Dart
-/// nor `intl` exposes an ISO-639 name table, so this mirrors the
-/// [_languageCountries] key set.
+/// English names for the language grouping; keep keys aligned with _languageCountries.
 const Map<String, String> _languageNames = {
   'af': 'Afrikaans',
   'am': 'Amharic',
@@ -225,9 +214,7 @@ const Map<String, String> _languageNames = {
   'zu': 'Zulu',
 };
 
-/// The region suffix worth keeping in a display name, so `pt-BR` reads
-/// "Portuguese (BR)". Script subtags (Hans/Hant) and numeric UN M.49 codes read
-/// fine uppercased as-is; anything longer is noise.
+/// Preserve region/script/numeric subtags in display labels; omit longer suffixes.
 String? _regionSuffix(String normalized) {
   final parts = normalized.split('-');
   if (parts.length < 2) return null;
@@ -235,8 +222,7 @@ String? _regionSuffix(String normalized) {
   return region.length <= 4 ? region.toUpperCase() : null;
 }
 
-/// A human label for [langCode] — "Japanese", "Portuguese (BR)", or the
-/// uppercase code when unmapped.
+/// Falls back to the uppercase code when unmapped.
 String languageDisplayName(String? langCode) {
   if (langCode == null || langCode.isEmpty) return '';
   final normalized = langCode.trim().toLowerCase().replaceAll('_', '-');

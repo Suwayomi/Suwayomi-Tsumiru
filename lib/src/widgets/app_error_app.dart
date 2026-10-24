@@ -10,12 +10,7 @@ import 'package:flutter/services.dart';
 import '../utils/crash/copy_crash_log.dart';
 import '../utils/motion/reduce_motion.dart';
 
-/// A self-contained fallback screen shown when the app fails to start —
-/// instead of a blank white window with no clue. Kept dependency-light (its own
-/// [MaterialApp]) so it renders even if the failure happened before/around the
-/// real app's first frame. The full error + stack are written to a log file
-/// ([logPath]); the "Copy log" button puts it on the clipboard so a user can
-/// paste it into a bug report without needing to reach the app's private files.
+/// Self-contained startup fallback; must render before app dependencies are ready.
 class AppErrorApp extends StatelessWidget {
   const AppErrorApp({super.key, required this.message, this.logPath});
 
@@ -52,7 +47,6 @@ class AppErrorApp extends StatelessWidget {
                     const SizedBox(height: 20),
                     FilledButton.icon(
                       onPressed: () async {
-                        // Fall back to the message if the log is unreadable.
                         final log = crashLogForClipboard(logPath) ?? message;
                         await Clipboard.setData(ClipboardData(text: log));
                         if (context.mounted) {

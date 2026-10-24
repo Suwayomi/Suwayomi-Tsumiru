@@ -35,8 +35,7 @@ extension ReduceMotionContext on BuildContext {
       : null;
 }
 
-/// Merges the OS flag with [appReduceMotionProvider] into [MediaQuery] and
-/// [Theme]. Always mounted, so toggling the flag never remounts the subtree.
+/// Always mounted so changing reduced motion never remounts the subtree.
 class ReduceMotionScope extends ConsumerWidget {
   const ReduceMotionScope({super.key, required this.child});
 
@@ -81,8 +80,7 @@ class _NoPageTransitionBuilder extends PageTransitionsBuilder {
   ) => ReducedRouteTransition(animation: animation, child: child);
 }
 
-/// Keeps a route's page mounted but unpainted while the route pops, so the
-/// page underneath shows at once instead of after the 300 ms reverse.
+/// Keep popping pages mounted but unpainted to reveal the page below immediately.
 class ReducedRouteTransition extends StatelessWidget {
   const ReducedRouteTransition({
     super.key,

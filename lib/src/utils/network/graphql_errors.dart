@@ -74,9 +74,7 @@ bool isBasicGatedNotFound(Object error) {
       error.snippet.trim() == 'Not Found';
 }
 
-/// The server answered with a body that isn't JSON — a proxy/gateway error
-/// page, an HTML 500, etc. Carries the status so the UI can say "server error"
-/// instead of a raw "Unexpected character (at offset 0)".
+/// Non-JSON response retaining the HTTP status for user-facing errors.
 class ServerNotJsonException implements Exception {
   const ServerNotJsonException(this.statusCode, this.snippet);
   final int statusCode;
@@ -85,8 +83,6 @@ class ServerNotJsonException implements Exception {
   String toString() => 'Server returned a non-JSON response (HTTP $statusCode)';
 }
 
-/// HttpLink response decoder that turns a non-JSON body into a clear typed
-/// error instead of the default parser FormatException.
 Map<String, dynamic>? tsumiruHttpResponseDecoder(http.Response response) {
   final body = utf8.decode(response.bodyBytes, allowMalformed: true);
   try {
@@ -102,25 +98,19 @@ Map<String, dynamic>? tsumiruHttpResponseDecoder(http.Response response) {
   }
 }
 
-/// True only when the request never reached the Suwayomi server — the one
-/// case where falling back to the offline cache is right. The server itself
-/// answering with an error (500/parse/auth) is not this, but a reverse proxy
-/// answering FOR an unreachable upstream (502/503/504) is: the user's server
-/// is down, only the middleman is talking.
+/// Unreachable origin only: includes proxy gateway errors, excludes server parse/auth/500 errors.
 bool isConnectionError(Object error) {
   if (error is OperationException) {
     final link = error.linkException;
     if (link is HttpLinkServerException &&
         isGatewayStatus(link.response.statusCode)) {
-      // A gateway status is the middleman speaking for a dead origin even
-      // when its body happens to parse (some balancers emit JSON errors).
+      // A gateway error still means unreachable origin when its body is valid JSON.
       return true;
     }
     if (link is ServerException && link.parsedResponse == null) {
       return _isSocketLike(link.originalException);
     }
-    // A response-decoder throw (our ServerNotJsonException) arrives wrapped
-    // in the PARSER exception, a sibling of ServerException — not inside it.
+    // Decoder errors arrive inside the parser exception, not ServerException.
     if (link is ResponseFormatException) {
       return _isSocketLike(link.originalException);
     }

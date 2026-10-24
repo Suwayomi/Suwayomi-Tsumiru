@@ -15,8 +15,7 @@ const _kHeight = 'window.height';
 const _kMaximized = 'window.maximized';
 
 WindowGeometry loadWindowGeometry(SharedPreferences prefs) {
-  // getDouble/getBool throw on a wrong-typed key; this runs before the window
-  // is shown, so a corrupt pref must degrade to defaults, not abort startup.
+  // Wrong-typed preferences throw; use defaults so corruption cannot abort startup.
   try {
     final w = prefs.getDouble(_kWidth);
     final h = prefs.getDouble(_kHeight);

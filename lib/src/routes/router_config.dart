@@ -115,7 +115,6 @@ abstract class Routes {
   static const sourceMangaType = '$sourceManga/:sourceType';
   static const sourcePreference = '$sourceManga/preference';
 
-  // More
   static const more = '/more';
   static const settings = 'settings';
   static const librarySettings = 'library';
@@ -147,7 +146,6 @@ abstract class Routes {
   static const koreaderSyncSettings = 'koreader-sync';
   static const hotkeysSettings = 'hotkeys';
 
-  // Commons
   static const mangaRoute = '/manga/:mangaId';
   static const reader = 'chapter/:chapterId';
   static const libraryUpdateErrors = "/library-update-errors";
@@ -157,7 +155,6 @@ abstract class Routes {
   static const recommendsBrowse = '/recommends/:mangaId/:providerName';
   static const onboarding = '/onboarding';
 
-  // Migration
   static const migrationGlobalSearch = '/migration/global-search';
   static const migrationBulkConfig = '/migration/bulk-config';
   static const migrationBulkRun = '/migration/bulk-run';
@@ -165,12 +162,7 @@ abstract class Routes {
   static const migrationSourceManga = '/migration/source-manga';
 }
 
-/// Where to land after an identity change (sign-out, a new server address, a
-/// new auth mode). Swapping the session rebuilds the router at its initial
-/// location, which is the Library — unauthorized, with no way back to sign-in
-/// but the user's own navigation. The rebuilt router consumes this instead.
-///
-/// Deliberately outside the container: the container is what gets replaced.
+/// Identity changes replace the container; keep the next initial location outside it.
 String? _pendingRouteAfterIdentityChange;
 
 void routeAfterIdentityChange(String location) {
@@ -187,8 +179,6 @@ GoRouter routerConfig(Ref ref) {
     initialLocation: const LibraryRoute(categoryId: 0).location,
     navigatorKey: rootNavigatorKey,
     redirect: (context, state) {
-      // First-run gate: until onboarding is finished, send everything to the
-      // wizard (and keep finished users out of it).
       final complete = ref.read(onboardingCompleteProvider) ?? false;
       final atOnboarding =
           state.matchedLocation == const OnboardingRoute().location;
@@ -201,9 +191,7 @@ GoRouter routerConfig(Ref ref) {
         _pendingRouteAfterIdentityChange = null;
         if (state.matchedLocation != pending) return pending;
       }
-      // Desktop dropped the More tab: an exact /more (deep link, typed
-      // address, stale bookmark) lands on Library instead. Pages that live
-      // under More (settings, history, about, connection, ...) keep working.
+      // Redirect only the removed desktop /more entry; nested settings routes remain valid.
       if (state.matchedLocation == const MoreRoute().location &&
           context.usesDesktopShell) {
         return const LibraryRoute(categoryId: 0).location;
@@ -446,7 +434,6 @@ class QuickSearchRoute extends ShellRouteData {
       navigationShellPage(context, state, builder(context, state, navigator));
 }
 
-// Shell Routes
 class NavigationShellRoute extends StatefulShellRouteData {
   const NavigationShellRoute();
 

@@ -47,8 +47,6 @@ class NavigationShellScreen extends HookConsumerWidget {
     versionResult.whenOrNull(
       data: (version) {
         if (version == null) return;
-        // Respect a version the user chose to skip: only prompt again once a
-        // release newer than the skipped one is available.
         final dismissed = ref.read(dismissedUpdateVersionProvider);
         if (dismissed != null && dismissed.isNotEmpty) {
           Version? skipped;
@@ -181,14 +179,11 @@ class NavigationShellScreen extends HookConsumerWidget {
       };
     }, [serverHosted]);
 
-    // Handle different navigation indices for tablet vs phone
     int getAdjustedIndex(int index) {
       if (context.windowSizeClass >= WindowSizeClass.medium) {
-        // Tablet: Library(0), Updates(1), History(2), Browse(3), Downloads(4), More(5)
         return index;
       } else {
-        // Phone: Library(0), Updates(1), Browse(2), Downloads(3), More(4)
-        // Skip history index (2) by adjusting indices
+        // Phone navigation omits the History branch.
         if (index >= 2) {
           return index +
               1; // Browse becomes 3, Downloads becomes 4, More becomes 5
@@ -201,7 +196,6 @@ class NavigationShellScreen extends HookConsumerWidget {
       if (context.windowSizeClass >= WindowSizeClass.medium) {
         return index;
       } else {
-        // Convert back: if index > 2, subtract 1 to skip history
         if (index > 2) {
           return index - 1;
         }
@@ -209,22 +203,14 @@ class NavigationShellScreen extends HookConsumerWidget {
       }
     }
 
-    // Branch 0 (Library) is home. Android Back from any other tab returns here
-    // instead of exiting; only Library-at-root exits (#102). goBranch itself
-    // builds no back-stack.
+    // goBranch builds no back stack; Back from a non-home root must select Library.
     const homeBranch = 0;
     void switchTo(int navBarIndex) {
       final target = getAdjustedIndex(navBarIndex);
       child.goBranch(target, initialLocation: target == child.currentIndex);
     }
 
-    // While the update banner occupies the top (incl. the status-bar strip),
-    // drop the redundant status-bar inset on the content below so the pushed-
-    // down screen's own app bar doesn't reserve it a second time (dead gap).
-    // A Builder is required to get the context inside the Scaffold's body.
-    // There, resizeToAvoidBottomInset has already consumed the keyboard inset.
-    // Using the outer context passes unconsumed insets down, making nested
-    // Scaffolds apply the keyboard padding twice and overflow the layout.
+    // Use body context after Scaffold consumes keyboard insets; the banner already reserves the status bar.
     final updateBannerVisible = ref.watch(updateBannerVisibleProvider);
     final bannerVisible =
         updateBannerVisible ||
@@ -242,15 +228,12 @@ class NavigationShellScreen extends HookConsumerWidget {
     final Widget scaffold;
     if (context.windowSizeClass >= WindowSizeClass.medium) {
       scaffold = Scaffold(
-        // No bottom bar here, so the rail + content would draw under the system
-        // navigation controls (and any landscape cutout). SafeArea keeps both
-        // out of that unusable strip so the controls never overlap a cover.
+        // Without a bottom bar, protect rail/content from system navigation controls and cutouts.
         body: SafeArea(
           child: Column(
             children: [
               if (showsMergedTopBar(context)) const DesktopTopBar(),
-              // Keyed so a breakpoint toggle moves the body instead of
-              // remounting it: the page keeps its scroll, focus and drafts.
+              // Move the keyed body across breakpoints without remounting scroll, focus or drafts.
               Expanded(
                 key: const ValueKey('shellBody'),
                 child: Row(
@@ -296,15 +279,9 @@ class NavigationShellScreen extends HookConsumerWidget {
       );
     }
 
-    // Intercept the hardware Back BEFORE go_router's own handler: go_router
-    // 14.x doesn't route Back to a shell PopScope when a branch is at its root,
-    // so it exits the app instead of returning to the home tab (flutter
-    // #145290/#188018). BackButtonListener fires on the legacy back path (which
-    // the manifest forces on via enableOnBackInvokedCallback=false).
+    // go_router 14.x skips shell PopScope at branch roots; intercept the manifest-enabled legacy Back path.
     return BackButtonListener(
       onBackButtonPressed: () async {
-        // Within a branch (a pushed route) or on home → let the default handler
-        // pop the route or exit. On any other tab at its root, go home instead.
         if (child.currentIndex != homeBranch &&
             !GoRouter.of(context).canPop()) {
           child.goBranch(homeBranch);
