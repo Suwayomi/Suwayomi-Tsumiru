@@ -66,7 +66,10 @@ Future<List<MangaDto>> upcomingLibraryMangas(Ref ref) async {
       .watch(graphQlClientProvider)
       .query$GetLibraryMangas(
         Options$Query$GetLibraryMangas(
-          variables: Variables$Query$GetLibraryMangas(withFirstUnread: false),
+          variables: Variables$Query$GetLibraryMangas(
+            withLibraryFields: false,
+            withFirstUnread: false,
+          ),
         ),
       )
       .getData((data) => data.mangas.nodes);
@@ -89,31 +92,34 @@ Future<UpcomingData> upcoming(Ref ref) async {
   const batchSize = 8;
   for (var i = 0; i < mangas.length; i += batchSize) {
     final batch = mangas.sublist(i, math.min(i + batchSize, mangas.length));
-    final results = await Future.wait(batch.map((m) async {
-      if (m.status == Enum$MangaStatus.COMPLETED) return null;
-      try {
-        final nodes = await client
-            .query$RecentChapterDates(Options$Query$RecentChapterDates(
-                variables:
-                    Variables$Query$RecentChapterDates(mangaId: m.id)))
-            .getData((d) => d.chapters.nodes);
-        if (nodes == null || nodes.isEmpty) return null;
-        final releases = <ChapterRelease>[
-          for (final c in nodes)
-            (
-              uploadMs: int.tryParse(c.uploadDate) ?? 0,
-              fetchMs: int.tryParse(c.fetchedAt) ?? 0,
-            ),
-        ];
-        final next = predictNextUpdate(releases, now: now).nextUpdate;
-        if (next == null) return null;
-        return (manga: m, date: next);
-      } catch (_) {
-        return null;
-      }
-    }));
-    entries.addAll(
-        results.whereType<({MangaDto manga, DateTime date})>());
+    final results = await Future.wait(
+      batch.map((m) async {
+        if (m.status == Enum$MangaStatus.COMPLETED) return null;
+        try {
+          final nodes = await client
+              .query$RecentChapterDates(
+                Options$Query$RecentChapterDates(
+                  variables: Variables$Query$RecentChapterDates(mangaId: m.id),
+                ),
+              )
+              .getData((d) => d.chapters.nodes);
+          if (nodes == null || nodes.isEmpty) return null;
+          final releases = <ChapterRelease>[
+            for (final c in nodes)
+              (
+                uploadMs: int.tryParse(c.uploadDate) ?? 0,
+                fetchMs: int.tryParse(c.fetchedAt) ?? 0,
+              ),
+          ];
+          final next = predictNextUpdate(releases, now: now).nextUpdate;
+          if (next == null) return null;
+          return (manga: m, date: next);
+        } catch (_) {
+          return null;
+        }
+      }),
+    );
+    entries.addAll(results.whereType<({MangaDto manga, DateTime date})>());
   }
   return buildUpcomingData(entries, today: now);
 }

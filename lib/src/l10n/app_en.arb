@@ -4223,5 +4223,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "duplicateChapters": "Duplicate chapters"
 }

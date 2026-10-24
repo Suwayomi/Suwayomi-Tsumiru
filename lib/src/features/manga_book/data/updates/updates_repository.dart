@@ -41,25 +41,26 @@ typedef UpdatesPage = ({List<ChapterWithMangaDto> nodes, bool hasNextPage});
 Input$BooleanFilterInput? _equals(bool? value) =>
     value == null ? null : Input$BooleanFilterInput(equalTo: value);
 
-Input$ChapterFilterInput updatesFilterInput(UpdatesFilter filter) =>
-    Input$ChapterFilterInput(
-      inLibrary: Input$BooleanFilterInput(equalTo: true),
-      isDownloaded: _equals(filter.downloaded),
-      isRead: filter.unread == null ? null : _equals(!filter.unread!),
-      isBookmarked: _equals(filter.bookmarked),
-      // Komikku treats a finished chapter as neither started nor not-started, so
-      // both sides of this filter also require unread (updatesView.sq).
-      and: filter.started == null
-          ? null
-          : [
-              Input$ChapterFilterInput(isRead: _equals(false)),
-              Input$ChapterFilterInput(
-                lastPageRead: filter.started!
-                    ? Input$IntFilterInput(greaterThan: 0)
-                    : Input$IntFilterInput(equalTo: 0),
-              ),
-            ],
-    );
+Input$ChapterFilterInput updatesFilterInput(
+  UpdatesFilter filter,
+) => Input$ChapterFilterInput(
+  inLibrary: Input$BooleanFilterInput(equalTo: true),
+  isDownloaded: _equals(filter.downloaded),
+  isRead: filter.unread == null ? null : _equals(!filter.unread!),
+  isBookmarked: _equals(filter.bookmarked),
+  // Komikku treats a finished chapter as neither started nor not-started, so
+  // both sides of this filter also require unread (updatesView.sq).
+  and: filter.started == null
+      ? null
+      : [
+          Input$ChapterFilterInput(isRead: _equals(false)),
+          Input$ChapterFilterInput(
+            lastPageRead: filter.started!
+                ? Input$IntFilterInput(greaterThan: 0)
+                : Input$IntFilterInput(equalTo: 0),
+          ),
+        ],
+);
 
 class UpdatesRepository {
   const UpdatesRepository(this.client, this.subscriptionClient);
@@ -85,32 +86,29 @@ class UpdatesRepository {
   Future<ChapterPageWithMangaDto?> _getRecentChaptersWindow(
     int pageNo,
     UpdatesFilter filter,
-  ) =>
-      client
-          .query$GetChapterWithMangaPage(
-            Options$Query$GetChapterWithMangaPage(
-              variables: Variables$Query$GetChapterWithMangaPage(
-                filter: updatesFilterInput(filter),
-                first: updatesPageSize + 1,
-                offset: pageNo * updatesPageSize,
-                order: [
-                  Input$ChapterOrderInput(
-                    by: Enum$ChapterOrderBy.FETCHED_AT,
-                    byType: Enum$SortOrder.DESC,
-                  ),
-                  Input$ChapterOrderInput(
-                    by: Enum$ChapterOrderBy.SOURCE_ORDER,
-                    byType: Enum$SortOrder.DESC,
-                  ),
-                ],
+  ) => client
+      .query$GetChapterWithMangaPage(
+        Options$Query$GetChapterWithMangaPage(
+          variables: Variables$Query$GetChapterWithMangaPage(
+            filter: updatesFilterInput(filter),
+            first: updatesPageSize + 1,
+            offset: pageNo * updatesPageSize,
+            order: [
+              Input$ChapterOrderInput(
+                by: Enum$ChapterOrderBy.FETCHED_AT,
+                byType: Enum$SortOrder.DESC,
               ),
-            ),
-          )
-          .getData((data) => data.chapters);
+              Input$ChapterOrderInput(
+                by: Enum$ChapterOrderBy.SOURCE_ORDER,
+                byType: Enum$SortOrder.DESC,
+              ),
+            ],
+          ),
+        ),
+      )
+      .getData((data) => data.chapters);
 
-  Future<void> fetchUpdates({
-    int? categoryId,
-  }) async {
+  Future<void> fetchUpdates({int? categoryId}) async {
     if (categoryId != null) {
       await client.mutate$UpdateCategoryMangas(
         Options$Mutation$UpdateCategoryMangas(
@@ -131,12 +129,12 @@ class UpdatesRepository {
   }
 
   Future<void> stopUpdates() => client.mutate$StopCategoryUpdate(
-        Options$Mutation$StopCategoryUpdate(
-          variables: Variables$Mutation$StopCategoryUpdate(
-            input: Input$UpdateStopInput(),
-          ),
-        ),
-      );
+    Options$Mutation$StopCategoryUpdate(
+      variables: Variables$Mutation$StopCategoryUpdate(
+        input: Input$UpdateStopInput(),
+      ),
+    ),
+  );
 
   /// The current run's progress, read once. See [updateProgressSubscription].
   Future<UpdateProgressDto?> updateProgress() async => client
@@ -151,14 +149,17 @@ class UpdatesRepository {
           .query$LibraryUpdateFailures(
             Options$Query$LibraryUpdateFailures(
               variables: Variables$Query$LibraryUpdateFailures(
+                withLibraryFields: false,
                 withFirstUnread: false,
               ),
             ),
           )
-          .getData((data) => [
-                for (final update in data.libraryUpdateStatus.mangaUpdates)
-                  if (update.status == Enum$MangaJobStatus.FAILED) update.manga,
-              ])) ??
+          .getData(
+            (data) => [
+              for (final update in data.libraryUpdateStatus.mangaUpdates)
+                if (update.status == Enum$MangaJobStatus.FAILED) update.manga,
+            ],
+          )) ??
       const [];
 
   /// How many series failed in the most recent run, without fetching them.
@@ -189,8 +190,9 @@ class UpdatesRepository {
 
 @riverpod
 UpdatesRepository updatesRepository(Ref ref) => UpdatesRepository(
-    ref.watch(graphQlClientProvider),
-    ref.watch(graphQlSubscriptionClientProvider));
+  ref.watch(graphQlClientProvider),
+  ref.watch(graphQlSubscriptionClientProvider),
+);
 
 /// One-shot read of [updateProgressSocketProvider]'s data, for when the
 /// socket is down or hasn't delivered yet.

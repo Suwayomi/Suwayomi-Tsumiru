@@ -29,6 +29,7 @@ class MangaBookRepository {
       .mutate$UpdateManga(
         Options$Mutation$UpdateManga(
           variables: Variables$Mutation$UpdateManga(
+            withLibraryFields: false,
             input: Input$UpdateMangaInput(
               id: mangaId,
               patch: Input$UpdateMangaPatchInput(inLibrary: true),
@@ -69,6 +70,7 @@ class MangaBookRepository {
         .mutate$UpdateManga(
           Options$Mutation$UpdateManga(
             variables: Variables$Mutation$UpdateManga(
+              withLibraryFields: false,
               input: Input$UpdateMangaInput(
                 id: mangaId,
                 patch: Input$UpdateMangaPatchInput(inLibrary: false),
@@ -103,7 +105,10 @@ class MangaBookRepository {
   Future<MangaDto?> getManga({required int mangaId}) => client
       .query$GetManga(
         Options$Query$GetManga(
-          variables: Variables$Query$GetManga(id: mangaId),
+          variables: Variables$Query$GetManga(
+            withLibraryFields: false,
+            id: mangaId,
+          ),
         ),
       )
       .getData((data) => data.manga);

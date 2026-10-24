@@ -131,6 +131,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
       final result = await client.mutate$FetchSourceManga(
         Options$Mutation$FetchSourceManga(
           variables: Variables$Mutation$FetchSourceManga(
+            withLibraryFields: false,
             withFirstUnread: false,
             input: Input$FetchSourceMangaInput(
               source: sourceId,
@@ -165,7 +166,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
     try {
       final sourceMangaResult = await client.query$GetManga(
         Options$Query$GetManga(
-          variables: Variables$Query$GetManga(id: fromMangaId),
+          variables: Variables$Query$GetManga(
+            withLibraryFields: false,
+            id: fromMangaId,
+          ),
         ),
       );
 
@@ -185,7 +189,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
 
       final targetMangaResult = await client.query$GetManga(
         Options$Query$GetManga(
-          variables: Variables$Query$GetManga(id: toMangaId),
+          variables: Variables$Query$GetManga(
+            withLibraryFields: false,
+            id: toMangaId,
+          ),
         ),
       );
 
@@ -446,6 +453,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
         final updateLibraryResult = await client.mutate$UpdateManga(
           Options$Mutation$UpdateManga(
             variables: Variables$Mutation$UpdateManga(
+              withLibraryFields: false,
               input: Input$UpdateMangaInput(
                 id: toMangaId,
                 patch: Input$UpdateMangaPatchInput(inLibrary: true),
@@ -492,6 +500,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
     final removeFromLibraryResult = await client.mutate$UpdateManga(
       Options$Mutation$UpdateManga(
         variables: Variables$Mutation$UpdateManga(
+          withLibraryFields: false,
           input: Input$UpdateMangaInput(
             id: fromMangaId,
             patch: Input$UpdateMangaPatchInput(inLibrary: false),
@@ -535,6 +544,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
     final result = await client.mutate$UpdateManga(
       Options$Mutation$UpdateManga(
         variables: Variables$Mutation$UpdateManga(
+          withLibraryFields: false,
           input: Input$UpdateMangaInput(
             id: mangaId,
             patch: Input$UpdateMangaPatchInput(inLibrary: true),
@@ -553,7 +563,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
     final trackerRepo = TrackerRepository(client);
     final targetResult = await client.query$GetManga(
       Options$Query$GetManga(
-        variables: Variables$Query$GetManga(id: toMangaId),
+        variables: Variables$Query$GetManga(
+          withLibraryFields: false,
+          id: toMangaId,
+        ),
       ),
     );
     final targetInLibrary =

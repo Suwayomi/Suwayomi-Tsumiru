@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:diacritic/diacritic.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -75,6 +76,9 @@ List<MangaDto> applyLibraryFilterSort(
   required Set<String> filterTagsExclude,
   required MangaSort sortedBy,
   required bool sortedDirection,
+  bool? duplicateChapters,
+  Map<String, bool?> statusFilters = const {},
+  Map<String, bool?> sourceFilters = const {},
   int seed = 0,
   bool ignoreFilters = false,
   bool fuzzySearch = false,
@@ -99,6 +103,20 @@ List<MangaDto> applyLibraryFilterSort(
         manga.filterFields(trackerNames),
         fuzzy: fuzzySearch,
       );
+    }
+    bool matches(Map<String, bool?> filters, String value) {
+      final included = filters.entries.where((e) => e.value == true);
+      return filters[value] != false &&
+          (included.isEmpty || included.any((e) => e.key == value));
+    }
+
+    if (duplicateChapters != null &&
+        (manga.hasDuplicateChapters ?? false) != duplicateChapters) {
+      return false;
+    }
+    if (!matches(statusFilters, manga.status.name) ||
+        !matches(sourceFilters, manga.sourceId)) {
+      return false;
     }
     if (mangaFilterUnread != null &&
         (mangaFilterUnread ^ manga.user.unreadCount.isGreaterThan(0))) {
@@ -290,7 +308,11 @@ List<MangaDto> applyLibraryFilterSort(
 /// side counts as changed.
 bool libraryEntryOutdated(MangaDto? listed, MangaDto? fresh) {
   if (listed == null || fresh == null) return true;
-  return fresh.copyWith(age: listed.age, chaptersAge: listed.chaptersAge) !=
+  return fresh.copyWith(
+        age: listed.age,
+        chaptersAge: listed.chaptersAge,
+        hasDuplicateChapters: listed.hasDuplicateChapters,
+      ) !=
       listed;
 }
 
@@ -368,6 +390,9 @@ class CategoryMangaListWithQueryAndFilter
                 query: query,
                 ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
                 fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
+                duplicateChapters: ref.watch(libraryDuplicateChaptersProvider),
+                statusFilters: ref.watch(libraryEntryFiltersProvider('status')),
+                sourceFilters: ref.watch(libraryEntryFiltersProvider('source')),
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,
@@ -782,6 +807,9 @@ class GroupedMangaListWithQueryAndFilter
                 query: query,
                 ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
                 fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
+                duplicateChapters: ref.watch(libraryDuplicateChaptersProvider),
+                statusFilters: ref.watch(libraryEntryFiltersProvider('status')),
+                sourceFilters: ref.watch(libraryEntryFiltersProvider('source')),
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,
@@ -810,4 +838,38 @@ class GroupedMangaListWithQueryAndFilter
       loading: (e) => e,
     );
   }
+}
+
+@riverpod
+class LibraryDuplicateChapters extends _$LibraryDuplicateChapters {
+  @override
+  bool? build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    const key = 'mangaFilterDuplicateChapters';
+    listenSelf((_, next) {
+      if (next == null) {
+        prefs.remove(key);
+      } else {
+        prefs.setBool(key, next);
+      }
+    });
+    return prefs.getBool(key);
+  }
+
+  void update(bool? value) => state = value;
+}
+
+@riverpod
+class LibraryEntryFilters extends _$LibraryEntryFilters {
+  @override
+  Map<String, bool?> build(String kind) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final key = 'mangaFilter_$kind';
+    listenSelf((_, next) => prefs.setString(key, jsonEncode(next)));
+    final value = prefs.getString(key);
+    if (value == null) return {};
+    return (jsonDecode(value) as Map<String, dynamic>).cast<String, bool?>();
+  }
+
+  void update(Map<String, bool?> value) => state = value;
 }

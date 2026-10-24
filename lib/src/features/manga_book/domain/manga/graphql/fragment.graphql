@@ -31,6 +31,8 @@ fragment MangaDto on MangaType {
   chapters {
     totalCount
   }
+  # Only the library requests this; old offline snapshots omit it.
+  hasDuplicateChapters @include(if: $withLibraryFields)
   chaptersAge
   chaptersLastFetchedAt
   description

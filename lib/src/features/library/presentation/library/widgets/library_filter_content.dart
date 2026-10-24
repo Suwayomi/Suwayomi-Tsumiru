@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
@@ -203,9 +204,9 @@ class LibraryFilterHeader extends ConsumerWidget {
   }
 }
 
-/// The seven tri-state filters with short headings: Downloaded (Any/Yes/No),
+/// The eight tri-state filters with short headings: Downloaded (Any/Yes/No),
 /// Storage (Any/On Device/Remote), Read Status (Any/Unread/Read), Started,
-/// Bookmarked, Completed and Lewd (Any/Yes/No).
+/// Bookmarked, Completed, Lewd and Duplicate chapters (Any/Yes/No).
 ///
 /// Any=null, first option=true, second option=false on the existing
 /// providers, exactly as `TriStateFilterTile` maps them.
@@ -267,6 +268,13 @@ class LibraryFilterSegments extends ConsumerWidget {
           provider: libraryMangaFilterLewdProvider,
           onChanged: ref.read(libraryMangaFilterLewdProvider.notifier).update,
         ),
+        LibraryTriStateSegment(
+          heading: context.l10n.duplicateChapters,
+          provider: libraryDuplicateChaptersProvider,
+          onChanged: ref.read(libraryDuplicateChaptersProvider.notifier).update,
+        ),
+        const LibraryEntryFilter(kind: 'status'),
+        const LibraryEntryFilter(kind: 'source'),
       ],
     );
   }
@@ -277,6 +285,7 @@ class LibraryFilterSegments extends ConsumerWidget {
 int watchLibraryFilterActiveCount(WidgetRef ref) {
   var count = 0;
   for (final provider in [
+    libraryDuplicateChaptersProvider,
     libraryMangaFilterDownloadedProvider,
     libraryMangaFilterOfflineProvider,
     libraryMangaFilterUnreadProvider,
@@ -293,11 +302,22 @@ int watchLibraryFilterActiveCount(WidgetRef ref) {
   for (final value in ref.watch(libraryTrackerFiltersProvider).values) {
     if (value != null) count++;
   }
+  for (final kind in ['status', 'source']) {
+    count += ref
+        .watch(libraryEntryFiltersProvider(kind))
+        .values
+        .where((v) => v != null)
+        .length;
+  }
   return count;
 }
 
 /// Clears every library filter back to its inactive value.
 void resetLibraryFilters(WidgetRef ref) {
+  ref.read(libraryDuplicateChaptersProvider.notifier).update(null);
+  for (final kind in ['status', 'source']) {
+    ref.read(libraryEntryFiltersProvider(kind).notifier).update({});
+  }
   ref.read(libraryMangaFilterDownloadedProvider.notifier).update(null);
   ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
   ref.read(libraryMangaFilterUnreadProvider.notifier).update(null);
@@ -847,6 +867,56 @@ class CategoryFilterDialog extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(context.l10n.close),
         ),
+      ],
+    );
+  }
+}
+
+class LibraryEntryFilter extends ConsumerWidget {
+  const LibraryEntryFilter({super.key, required this.kind});
+  final String kind;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(libraryEntryFiltersProvider(kind));
+    final all = ref.watch(libraryMangaListProvider).value ?? const [];
+    final labels = kind == 'status'
+        ? {
+            for (final status in MangaStatus.values)
+              status.title: status.toLocale(context),
+          }
+        : {
+            for (final manga in all)
+              manga.sourceId:
+                  manga.source?.displayName ??
+                  manga.source?.name ??
+                  manga.sourceId,
+          };
+    final entries = labels.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    return ExpansionTile(
+      title: Text(
+        kind == 'status' ? context.l10n.trackStatus : context.l10n.source,
+      ),
+      children: [
+        for (final entry in entries)
+          ListTile(
+            leading: Icon(switch (selected[entry.key]) {
+              true => Icons.check_box_rounded,
+              false => Icons.disabled_by_default_rounded,
+              null => Icons.check_box_outline_blank_rounded,
+            }),
+            title: Text(entry.value),
+            onTap: () =>
+                ref.read(libraryEntryFiltersProvider(kind).notifier).update({
+                  ...selected,
+                  entry.key: switch (selected[entry.key]) {
+                    null => true,
+                    true => false,
+                    false => null,
+                  },
+                }),
+          ),
       ],
     );
   }
