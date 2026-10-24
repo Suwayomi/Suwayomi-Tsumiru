@@ -81,6 +81,8 @@ void main() {
           koreaderSyncRepositoryProvider.overrideWithValue(koReader),
         ],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Consumer(
             builder: (context, ref, _) => TextButton(
               onPressed: () => syncKoReaderChapter(
@@ -98,6 +100,12 @@ void main() {
       ),
     );
     await tester.tap(find.text('Push'));
+    await tester.pumpAndSettle();
+    expect(koReader.pushes, 0);
+    expect(progress.writes, isEmpty);
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Push progress to KOReader'),
+    );
     await tester.pumpAndSettle();
     expect(koReader.pushes, 1);
     expect(progress.writes.single.lastPageRead, 2);

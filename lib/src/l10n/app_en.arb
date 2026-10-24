@@ -4243,6 +4243,8 @@
   "confirmImageCacheMessage": "This clears cached images on the server and this device.",
   "confirmWebViewCacheMessage": "This clears WebView cookies and cache and may sign you out of sources.",
   "confirmUninstallMessage": "This removes the extension and its sources from the server.",
+  "confirmKoPushMessage": "This replaces the chapter’s KOReader progress with your current progress.",
+  "confirmKoPullMessage": "This replaces the chapter’s local and server progress with KOReader progress.",
   "confirmClearQueueTitle": "Clear download queue",
   "confirmClearQueueMessage": "This removes all chapters from the server download queue.",
   "confirmDeleteBothDownloadsMessage": "This deletes the downloaded chapter from the server and this device, including matching scanlator copies.",

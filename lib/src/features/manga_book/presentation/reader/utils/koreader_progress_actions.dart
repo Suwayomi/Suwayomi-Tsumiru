@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../../offline/data/server_reachability.dart';
 import '../../../../settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
@@ -69,6 +70,22 @@ Future<void> syncKoReaderChapter({
   ValueChanged<int>? onJump,
 }) async {
   if (!koSyncOnline(ref)) return;
+  if (!await confirmAction(
+        context,
+        title: push
+            ? context.l10n.pushKoReaderProgress
+            : context.l10n.pullKoReaderProgress,
+        message: push
+            ? context.l10n.confirmKoPushMessage
+            : context.l10n.confirmKoPullMessage,
+        action: push
+            ? context.l10n.pushKoReaderProgress
+            : context.l10n.pullKoReaderProgress,
+      ) ||
+      !context.mounted ||
+      !koSyncOnline(ref)) {
+    return;
+  }
   try {
     final repository = ref.read(koreaderSyncRepositoryProvider);
     if (push) {
