@@ -116,19 +116,6 @@ double brandHueFor(String label) {
   return h.toDouble();
 }
 
-Widget brandGradientIcon(
-  BuildContext context,
-  IconData icon, {
-  double size = 24,
-}) {
-  return ShaderMask(
-    blendMode: BlendMode.srcIn,
-    shaderCallback: (bounds) =>
-        BrandColors.of(context).gradient.createShader(bounds),
-    child: Icon(icon, size: size, color: Colors.white),
-  );
-}
-
 Widget _brandRow({
   required BuildContext context,
   required Widget label,
