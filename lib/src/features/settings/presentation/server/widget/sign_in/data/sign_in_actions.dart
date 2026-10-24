@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../../../../routes/router_config.dart';
 import '../../../../../../account/data/account_permission.dart';
 import '../../../../../../account/data/account_providers.dart';
 import '../../../../../../auth/data/auth_coordinator.dart';
@@ -222,6 +223,7 @@ class SignInActions {
     }
 
     try {
+      routeAfterIdentityChange(const ServerSignInRoute().location);
       await background.changeIdentity(() async {
         await SignInExecutor(
           write: () async {
