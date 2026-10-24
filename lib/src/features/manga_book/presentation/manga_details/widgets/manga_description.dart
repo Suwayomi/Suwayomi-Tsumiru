@@ -32,6 +32,7 @@ import '../../../../tracking/presentation/hub/track_sheet.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../controller/manga_details_controller.dart';
 import '../controller/next_update_controller.dart';
+import '../manga_notes_screen.dart';
 import '../server_web_url.dart';
 import 'chapter_download_presets_button.dart';
 import 'edit_manga_category_dialog.dart';
@@ -219,6 +220,20 @@ class MangaDescription extends HookConsumerWidget {
             child: MangaDescriptionBody(
               description: manga.description ?? '',
               notes: notes,
+              onEditNotes: !twoColumn && inLibrary
+                  ? () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => MangaNotesScreen(
+                          mangaId: manga.id,
+                          seriesTitle: manga.title,
+                          initialNotes: notes ?? '',
+                          existingMetas: {
+                            for (final meta in manga.meta) meta.key: meta.value,
+                          },
+                        ),
+                      ),
+                    )
+                  : null,
               isExpanded: expanded,
               showToggle: showToggle,
               onToggleExpanded: toggleExpanded,
@@ -526,6 +541,7 @@ class MangaDescriptionBody extends StatelessWidget {
     required this.isExpanded,
     required this.onToggleExpanded,
     this.onOpenLink,
+    this.onEditNotes,
     this.showToggle = true,
   });
 
@@ -535,6 +551,7 @@ class MangaDescriptionBody extends StatelessWidget {
   final bool showToggle;
   final VoidCallback onToggleExpanded;
   final ValueChanged<String>? onOpenLink;
+  final VoidCallback? onEditNotes;
 
   @override
   Widget build(BuildContext context) {
@@ -559,6 +576,15 @@ class MangaDescriptionBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (hasNotes) renderMarkdown(notes!),
+        if (hasNotes && isExpanded && onEditNotes != null)
+          Align(
+            alignment: Alignment.center,
+            child: TextButton.icon(
+              onPressed: onEditNotes,
+              icon: const Icon(Icons.edit_note, size: 16),
+              label: Text(context.l10n.editNotes),
+            ),
+          ),
         if (hasNotes && description.isNotBlank)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
