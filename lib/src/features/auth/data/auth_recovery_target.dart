@@ -31,7 +31,11 @@ class AuthModeReconciler {
   bool _reading = false;
 
   Future<void> reconcile({bool authFailure = false}) async {
-    if (!authFailure || _reading) return;
+    if (!authFailure ||
+        _reading ||
+        ref.read(authRecoveryTargetProvider) != null) {
+      return;
+    }
     final store = ref.read(authCredentialsStoreProvider.notifier);
     if (store.identityChanging) return;
     _reading = true;
@@ -88,7 +92,9 @@ class AuthModeReconciler {
     } finally {
       _reading = false;
       if (ref.mounted && current()) {
-        ref.read(authRecoveryTargetProvider.notifier).set(target);
+        ref
+            .read(authRecoveryTargetProvider.notifier)
+            .set(ref.read(authRecoveryTargetProvider) ?? target);
         ref.read(needsReauthProvider.notifier).set(true);
       }
     }

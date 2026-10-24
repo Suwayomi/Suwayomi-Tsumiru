@@ -81,6 +81,13 @@ void main() {
           expect(container.read(authTypeKeyProvider), AuthType.uiLogin);
           expect(store.uiLoginTokens()?.accessToken, 'old');
           expect(store.sessionEpoch, epoch);
+          container
+              .read(authRecoveryTargetProvider.notifier)
+              .set(AuthType.uiLogin);
+          await container
+              .read(authModeReconcilerProvider)
+              .reconcile(authFailure: true);
+          expect(container.read(authRecoveryTargetProvider), AuthType.uiLogin);
         },
       );
     }

@@ -126,17 +126,19 @@ class SignInActions {
     required bool admin,
     required bool web,
   }) async {
-    final access = ref.read(settledAccountAccessProvider);
+    // The default Server tab can unmount this widget during the handover.
+    final container = ProviderScope.containerOf(ref.context, listen: false);
+    final access = container.read(settledAccountAccessProvider);
     final permissions = AccountPermissionGuard(() => access);
     permissions.require(Enum$UserPermission.MANAGE_SETTINGS);
-    final raw = ref.read(unauthenticatedGraphQlClientProvider);
-    final address = ref.read(currentServerAddressProvider);
-    final store = ref.read(authCredentialsStoreProvider.notifier);
-    final old = await ref.read(authCredentialsStoreProvider.future);
-    final basic = await ref.read(credentialsProvider.future);
-    final coordinator = ref.read(authCoordinatorProvider.notifier);
-    final background = ref.read(backgroundDownloadControllerProvider);
-    final oldMode = ref.read(authTypeKeyProvider) ?? AuthType.none;
+    final raw = container.read(unauthenticatedGraphQlClientProvider);
+    final address = container.read(currentServerAddressProvider);
+    final store = container.read(authCredentialsStoreProvider.notifier);
+    final old = await container.read(authCredentialsStoreProvider.future);
+    final basic = await container.read(credentialsProvider.future);
+    final coordinator = container.read(authCoordinatorProvider.notifier);
+    final background = container.read(backgroundDownloadControllerProvider);
+    final oldMode = container.read(authTypeKeyProvider) ?? AuthType.none;
     final oldHeaders = switch (oldMode) {
       AuthType.none => <String, String>{},
       AuthType.basic => {'Authorization': ?basic},
@@ -215,8 +217,8 @@ class SignInActions {
     }
 
     void requestSignIn(AuthType mode) {
-      ref.read(authRecoveryTargetProvider.notifier).set(mode);
-      ref.read(needsReauthProvider.notifier).set(true);
+      container.read(authRecoveryTargetProvider.notifier).set(mode);
+      container.read(needsReauthProvider.notifier).set(true);
     }
 
     try {
@@ -257,19 +259,21 @@ class SignInActions {
             } else if (effective.mode == AuthType.simpleLogin) {
               await store.saveSimpleLoginCookie(cookie!);
             } else if (effective.mode == AuthType.basic) {
-              await ref.read(credentialsProvider.notifier).set(header!);
+              await container.read(credentialsProvider.notifier).set(header!);
             }
           },
           commit: (mode) async {
-            ref.read(authTypeKeyProvider.notifier).update(mode);
+            container.read(authTypeKeyProvider.notifier).update(mode);
             if (mode != AuthType.uiLogin) await store.clearUiLoginTokens();
             if (mode != AuthType.simpleLogin) {
               await store.clearSimpleLoginCookie();
             }
             if (mode != AuthType.basic) await store.clearBasicCredentials();
-            ref.read(authUsernameProvider.notifier).update(effectiveUsername);
-            ref.read(authRecoveryTargetProvider.notifier).set(null);
-            ref.read(needsReauthProvider.notifier).set(false);
+            container
+                .read(authUsernameProvider.notifier)
+                .update(effectiveUsername);
+            container.read(authRecoveryTargetProvider.notifier).set(null);
+            container.read(needsReauthProvider.notifier).set(false);
           },
           invalidateUi: store.clearUiLoginTokens,
           requestSignIn: requestSignIn,
@@ -290,7 +294,7 @@ class SignInActions {
         );
       });
     } finally {
-      ref.invalidate(signInSettingsProvider);
+      container.invalidate(signInSettingsProvider);
     }
   }
 }
