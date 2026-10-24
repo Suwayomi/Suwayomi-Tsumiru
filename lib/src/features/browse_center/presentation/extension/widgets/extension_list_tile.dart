@@ -15,6 +15,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../domain/content_rating.dart';
@@ -100,6 +101,18 @@ class ExtensionListTileTailing extends StatelessWidget {
     Future<void> Function(ExtensionActions actions) action,
   ) async {
     try {
+      if (label == ref.context.l10n.uninstalling) {
+        final context = ref.context;
+        if (!await confirmAction(
+              context,
+              title: context.l10n.uninstall,
+              message: context.l10n.confirmUninstallMessage,
+              action: context.l10n.uninstall,
+            ) ||
+            !context.mounted) {
+          return;
+        }
+      }
       runningAction.value = label;
       await AppUtils.guard(
         () => action(ref.read(extensionActionsProvider)),

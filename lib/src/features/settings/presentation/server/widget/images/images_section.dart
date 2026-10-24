@@ -8,6 +8,7 @@ import '../../../../../../routes/router_config.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/cover_cache/cover_cache.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../search/settings_search_registry.dart';
@@ -91,6 +92,16 @@ class ImagesSection extends HookConsumerWidget {
                     title: Text(context.l10n.imageProcessingClearCache),
                     onTap: canManage && !clearing.value
                         ? () async {
+                            if (!await confirmAction(
+                                  context,
+                                  title: context.l10n.imageProcessingClearCache,
+                                  message:
+                                      context.l10n.confirmImageCacheMessage,
+                                  action: context.l10n.clearCache,
+                                ) ||
+                                !context.mounted) {
+                              return;
+                            }
                             clearing.value = true;
                             try {
                               await repository.clearCachedImages();

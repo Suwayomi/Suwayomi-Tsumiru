@@ -7,6 +7,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/compact_switch.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../search/settings_search_registry.dart';
 import '../../../../widgets/settings_group_card/settings_group_card.dart';
@@ -68,6 +69,16 @@ class WebViewSection extends HookConsumerWidget {
                     title: Text(context.l10n.clearCookiesAndCache),
                     onTap: canManage && !clearing.value
                         ? () async {
+                            if (!await confirmAction(
+                                  context,
+                                  title: context.l10n.clearCookiesAndCache,
+                                  message:
+                                      context.l10n.confirmWebViewCacheMessage,
+                                  action: context.l10n.clearCookiesAndCache,
+                                ) ||
+                                !context.mounted) {
+                              return;
+                            }
                             clearing.value = true;
                             try {
                               await repository.clearCookiesAndCache();

@@ -4235,5 +4235,12 @@
   "extensionLibrary": "Library",
   "extensionStore": "Store",
   "extensionVersion": "Version",
-  "extensionLanguage": "Language"
+  "extensionLanguage": "Language",
+  "confirmDatabaseTitle": "Change database settings",
+  "confirmDatabaseMessage": "Changing these settings can disconnect the server or switch its database.",
+  "confirmNetworkTitle": "Change server network",
+  "confirmNetworkMessage": "Changing this setting can make the server unreachable.",
+  "confirmImageCacheMessage": "This clears cached images on the server and this device.",
+  "confirmWebViewCacheMessage": "This clears WebView cookies and cache and may sign you out of sources.",
+  "confirmUninstallMessage": "This removes the extension and its sources from the server."
 }

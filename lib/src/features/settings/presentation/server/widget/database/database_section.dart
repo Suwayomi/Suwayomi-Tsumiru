@@ -8,6 +8,7 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../search/settings_search_registry.dart';
@@ -41,6 +42,15 @@ class DatabaseSection extends ConsumerWidget {
     Future<void> save(
       Future<Fragment$DatabaseSettingsDto?> Function() action,
     ) async {
+      if (!await confirmAction(
+            context,
+            title: context.l10n.confirmDatabaseTitle,
+            message: context.l10n.confirmDatabaseMessage,
+            action: context.l10n.save,
+          ) ||
+          !context.mounted) {
+        return;
+      }
       final result = await AppUtils.guard(action, ref.read(toastProvider));
       if (result != null && context.mounted) {
         ref.invalidate(databaseSettingsProvider);
