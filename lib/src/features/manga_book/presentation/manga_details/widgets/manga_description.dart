@@ -208,14 +208,16 @@ class MangaDescription extends HookConsumerWidget {
             ),
           );
 
+    final notes = manga.webUiNotes;
     Widget descriptionSection(bool expanded, bool showToggle) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (manga.description.isNotBlank)
+        if (manga.description.isNotBlank || notes.isNotBlank)
           Padding(
             padding: KEdgeInsets.a16.size,
             child: MangaDescriptionBody(
-              description: manga.description!,
+              description: manga.description ?? '',
+              notes: notes,
               isExpanded: expanded,
               showToggle: showToggle,
               onToggleExpanded: toggleExpanded,
@@ -502,6 +504,7 @@ class MangaDescriptionBody extends StatelessWidget {
   const MangaDescriptionBody({
     super.key,
     required this.description,
+    this.notes,
     required this.isExpanded,
     required this.onToggleExpanded,
     this.onOpenLink,
@@ -509,6 +512,7 @@ class MangaDescriptionBody extends StatelessWidget {
   });
 
   final String description;
+  final String? notes;
   final bool isExpanded;
   final bool showToggle;
   final VoidCallback onToggleExpanded;
@@ -519,16 +523,35 @@ class MangaDescriptionBody extends StatelessWidget {
     final textStyle = DefaultTextStyle.of(context).style;
     final fontSize = textStyle.fontSize ?? 14;
     final lineHeight = fontSize * (textStyle.height ?? 1.4);
-    final markdownBody = MarkdownBody(
-      data: description,
+    final styleSheet = MarkdownStyleSheet.fromTheme(context.theme).copyWith(
+      p: textStyle,
+      a: textStyle.copyWith(color: context.theme.colorScheme.primary),
+    );
+    MarkdownBody renderMarkdown(String data) => MarkdownBody(
+      data: data,
       selectable: kIsWeb,
       onTapLink: (_, href, _) {
         if (href.isNotBlank) onOpenLink?.call(href!);
       },
-      styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
-        p: textStyle,
-        a: textStyle.copyWith(color: context.theme.colorScheme.primary),
-      ),
+      styleSheet: styleSheet,
+    );
+    final hasNotes = notes.isNotBlank;
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (hasNotes) renderMarkdown(notes!),
+        if (hasNotes && description.isNotBlank)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: context.theme.colorScheme.outlineVariant,
+            ),
+          ),
+        if (description.isNotBlank) renderMarkdown(description),
+      ],
     );
 
     return Column(
@@ -536,16 +559,16 @@ class MangaDescriptionBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (isExpanded)
-          markdownBody
+          content
         else
           Stack(
             children: [
               ClipRect(
                 child: SizedBox(
-                  height: lineHeight * 5,
+                  height: lineHeight * (hasNotes ? 6 : 5),
                   child: SingleChildScrollView(
                     physics: const NeverScrollableScrollPhysics(),
-                    child: markdownBody,
+                    child: content,
                   ),
                 ),
               ),

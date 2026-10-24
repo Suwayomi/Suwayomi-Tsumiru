@@ -10,6 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../../constants/enum.dart';
 import '../../../../features/library/domain/library_search_query.dart';
+import '../../../../utils/webui_meta/webui_meta_codec.dart';
 import 'graphql/__generated__/fragment.graphql.dart';
 
 part 'manga_model.freezed.dart';
@@ -34,6 +35,10 @@ extension MangaExtensions on MangaDto {
   /// Chapters finished. The server reports the total and the unread count, not
   /// this, so it has to be derived.
   int get readChapterCount => chapters.totalCount - user.unreadCount;
+
+  /// The series notes WebUI stores in the manga meta (plain or chunked).
+  String? get webUiNotes =>
+      readWebUiValue({for (final m in meta) m.key: m.value}, 'notes');
 
   /// Suwayomi's Local source has the fixed id "0". Its files already live on
   /// the server, so server-download actions don't apply (Komikku hides them
