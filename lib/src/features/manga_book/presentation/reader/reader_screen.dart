@@ -63,6 +63,7 @@ class ReaderScreen extends HookConsumerWidget {
     watchDownloadAhead(ref);
     final mangaProvider = mangaWithIdProvider(mangaId: mangaId);
     final chapterProviderWithIndex = chapterProvider(chapterId: chapterId);
+    ref.watch(localKoSyncProgressProvider(chapterId: chapterId));
     final chapterPages = ref.watch(chapterPagesProvider(chapterId: chapterId));
     final manga = ref.watch(mangaProvider);
     final chapter = ref.watch(chapterProviderWithIndex);

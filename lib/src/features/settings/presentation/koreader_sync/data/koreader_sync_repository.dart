@@ -96,6 +96,18 @@ class KoreaderSyncRepository {
     return status?.isLoggedIn ?? false;
   }
 
+  Future<Mutation$PullKoSyncProgress$pullKoSyncProgress?> pullProgress(
+    int chapterId,
+  ) => ferryClient
+      .mutate$PullKoSyncProgress(
+        Options$Mutation$PullKoSyncProgress(
+          variables: Variables$Mutation$PullKoSyncProgress(
+            input: Input$PullKoSyncProgressInput(chapterId: chapterId),
+          ),
+        ),
+      )
+      .getData((data) => data.pullKoSyncProgress);
+
   Future<bool> updateStrategyForward(Enum$KoreaderSyncConflictStrategy value) =>
       _write(
         Input$PartialUserSettingsTypeInput(koreaderSyncStrategyForward: value),

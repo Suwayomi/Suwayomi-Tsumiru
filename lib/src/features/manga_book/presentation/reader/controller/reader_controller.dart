@@ -14,6 +14,8 @@ import '../../../../offline/data/offline_read_fallback.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../../offline/data/offline_types.dart';
 import '../../../../offline/data/server_reachability.dart';
+import '../../../../settings/presentation/koreader_sync/data/graphql/__generated__/koreader_sync.graphql.dart';
+import '../../../../settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
@@ -97,4 +99,26 @@ Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {
   return ref
       .watch(mangaBookRepositoryProvider)
       .getChapterPages(chapterId: chapterId);
+}
+
+@riverpod
+Future<Mutation$PullKoSyncProgress$pullKoSyncProgress?> localKoSyncProgress(
+  Ref ref, {
+  required int chapterId,
+}) async {
+  if (ref.watch(viewOfflineNowProvider) ||
+      ref.watch(serverUnreachableProvider)) {
+    return null;
+  }
+  final db = ref.watch(offlineReadDatabaseProvider);
+  if (db == null || !await chapterCompleteOnDevice(db, chapterId)) return null;
+  try {
+    final status = await ref.watch(koSyncStatusProvider.future);
+    if (!status.isLoggedIn || !ref.mounted) return null;
+    return await ref
+        .read(koreaderSyncRepositoryProvider)
+        .pullProgress(chapterId);
+  } catch (_) {
+    return null;
+  }
 }

@@ -91,3 +91,10 @@ mutation UpdateKoreaderSyncPercentageTolerance(
     }
   }
 }
+
+mutation PullKoSyncProgress($input: PullKoSyncProgressInput!) {
+  pullKoSyncProgress(input: $input) {
+    chapter { ...ChapterDto }
+    syncConflict { deviceName remotePage }
+  }
+}
