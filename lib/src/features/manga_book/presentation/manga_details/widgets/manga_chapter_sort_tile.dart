@@ -29,8 +29,6 @@ class MangaChapterSortTile extends ConsumerWidget {
     final sortedDirection = ref.watch(
       mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId),
     );
-    // The sort is per-manga server meta: a failed write (e.g. offline) must
-    // say so rather than silently not sticking.
     void showError(AsyncValue<void> result) {
       if (context.mounted) result.showToastOnError(ref.read(toastProvider));
     }

@@ -20,9 +20,7 @@ typedef MangaDto = Fragment$MangaDto;
 
 typedef MangaBaseDto = Fragment$MangaBaseDto;
 
-/// A series' last read chapter carries only what reading progress needs.
 extension LastReadChapterProgress on Fragment$MangaDto$user$lastReadChapter {
-  /// Same rule as the full chapter's `hasReadingProgress`.
   bool get hasReadingProgress =>
       user.isRead || user.lastPageRead > 0 || user.lastReadAt != '0';
 }
@@ -32,29 +30,19 @@ extension MangaExtensions on MangaDto {
     for (final metaItem in meta) metaItem.key: metaItem.value,
   });
 
-  /// Chapters finished. The server reports the total and the unread count, not
-  /// this, so it has to be derived.
   int get readChapterCount => chapters.totalCount - user.unreadCount;
 
   String? get webUiNotes =>
       readWebUiValue({for (final m in meta) m.key: m.value}, 'notes');
 
-  /// Suwayomi's Local source has the fixed id "0". Its files already live on
-  /// the server, so server-download actions don't apply (Komikku hides them
-  /// for local/stub sources too — MangaScreen.kt gates on isLocalOrStub).
+  /// Suwayomi Local source ID "0" already holds server files, so server downloads do not apply.
   bool get isLocalSource => sourceId == '0';
 
-  /// Whether this manga matches [query] under the library search DSL. Used by
-  /// quick-search; the library list parses the query once instead (see
-  /// applyLibraryFilterSort).
+  /// Matches the library search DSL; list filtering should parse the query once.
   bool query([String? query]) =>
       LibrarySearchQuery.parse(query).matches(filterFields());
 
-  /// Flattened field view used by the library search DSL (see
-  /// [LibrarySearchQuery]). Resolves meta once so rating/tags come from the same
-  /// build as the rest of the fields. [trackerNames] maps tracker id → service
-  /// name so the `tracked:<service>` metatag can resolve; pass it empty (the
-  /// default) when only the bool `tracked:` form is needed.
+  /// [trackerNames] resolves tracked:<service>; an empty map supports only the boolean tracked: form.
   LibraryFilterFields filterFields([Map<int, String> trackerNames = const {}]) {
     final m = metaData;
     return LibraryFilterFields(
@@ -107,9 +95,7 @@ abstract class MangaMeta with _$MangaMeta {
       fromJson: MangaMeta.fromJsonToStringList,
     )
     List<String>? preferredScanlators,
-    // Tsumiru-only chapter sort mode with no WebUI equivalent — see
-    // webui_chapter_sort_meta.dart, which handles webUI_sortBy/webUI_reverse
-    // separately (deliberately NOT part of this typed meta class).
+    // This Tsumiru-only sort flag is separate from webUI_sortBy/webUI_reverse.
     @JsonKey(
       name: "flutter_chapterSortIsAlphabetical",
       fromJson: MangaMeta.fromJsonToBool,
@@ -127,8 +113,7 @@ abstract class MangaMeta with _$MangaMeta {
   static int? fromJsonToInt(dynamic val) =>
       val is String ? int.tryParse(val) : null;
 
-  /// User tags are stored as a JSON string array in the (String-typed) meta
-  /// store. Bad/legacy values decode to null rather than throwing.
+  /// User tags are JSON arrays in string-valued meta; invalid values decode to null.
   static List<String>? fromJsonToStringList(dynamic val) {
     if (val is! String || val.isEmpty) return null;
     try {
@@ -167,9 +152,7 @@ enum MangaMetaKeys {
   rating("flutter_rating"),
   tags("flutter_tags"),
   preferredScanlators("flutter_preferredScanlators"),
-  // Tsumiru-only chapter sort mode with no WebUI equivalent — see
-  // webui_chapter_sort_meta.dart, which deliberately does NOT route the
-  // webUI_sortBy/webUI_reverse keys through this enum (foreign namespace).
+  // Keep this Tsumiru-only flag separate from the WebUI sort keys.
   chapterSortAlphabetical("flutter_chapterSortIsAlphabetical");
 
   const MangaMetaKeys(this.key);

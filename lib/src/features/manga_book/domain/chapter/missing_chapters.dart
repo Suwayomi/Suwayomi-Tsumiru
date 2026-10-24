@@ -6,8 +6,7 @@
 
 import 'dart:math';
 
-/// Whole chapters skipped from [lower] up to [higher]. Going backwards (such as
-/// a season restart) is not a skip. Includes chapters hidden by filters.
+/// Counts skipped whole chapters, including filtered chapters; backwards numbering is not a gap.
 int chapterGap({required double? higher, required double? lower}) {
   if (higher == null ||
       lower == null ||
@@ -20,11 +19,7 @@ int chapterGap({required double? higher, required double? lower}) {
   return max(0, higher.floor() - lower.floor() - 1);
 }
 
-/// A contiguous run of whole chapter numbers absent from a chapter catalogue.
-///
-/// [lowerChapter] and [higherChapter] are the present chapter numbers on either
-/// side. The lower bound is zero when chapters before the first available one
-/// are missing.
+/// Bounds are present chapters; [lowerChapter] is zero for a gap before the first chapter.
 class MissingChapterRange {
   const MissingChapterRange({
     required this.lowerChapter,
@@ -39,10 +34,7 @@ class MissingChapterRange {
   String get id => '$lowerChapter-$higherChapter';
 }
 
-/// Finds missing whole-numbered chapters using the same decimal semantics as
-/// Mihon: chapter 8.5 counts as chapter 8 when checking the gap to chapter 10.
-/// Unknown chapter numbers (negative values) are ignored, and repeated numbers
-/// from multiple scanlators count only once.
+/// Floors decimals (8.5 counts as 8), ignores negative numbers, and counts duplicates once.
 List<MissingChapterRange> findMissingChapterRanges(
   Iterable<double> chapterNumbers,
 ) {

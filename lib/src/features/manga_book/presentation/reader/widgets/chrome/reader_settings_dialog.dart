@@ -35,8 +35,7 @@ class ReaderSettingsPreview extends _$ReaderSettingsPreview {
   void onTabChanged(int index) => state = index == 2 ? _pageVisible : _shown;
 }
 
-/// C2: the modal barrier stays a REAL gesture-blocking barrier on every tab;
-/// only its color is remapped, so drags can never leak to the viewer below.
+/// Keep the modal barrier blocking gestures even when its colour is transparent.
 class _ReaderSettingsSheetRoute<T> extends ModalBottomSheetRoute<T> {
   _ReaderSettingsSheetRoute({
     required super.builder,
@@ -60,8 +59,7 @@ class _ReaderSettingsSheetRoute<T> extends ModalBottomSheetRoute<T> {
   }
 }
 
-/// Opens the reader settings sheet and owns its full dismissal contract (C3):
-/// one idempotent restore runs on every dismiss path via [Future.whenComplete].
+/// Restore preview state once on every dismiss path through Future.whenComplete.
 Future<void> showReaderSettingsSheet({
   required BuildContext context,
   required WidgetRef ref,
@@ -94,15 +92,14 @@ Future<void> showReaderSettingsSheet({
     if (dismissed) return;
     dismissed = true;
     subscription.close();
-    // Clear the app-global preview drafts first, even if disposed, so they
-    // don't bleed into the next reader's sliders.
+    // Clear global drafts even after disposal so the next reader cannot inherit them.
     final brightnessDraft = readerBrightnessPreview.value;
     final colorDraft = readerColorFilterPreview.value;
     readerBrightnessPreview.value = null;
     readerColorFilterPreview.value = null;
     // Reader gone (e.g. volume-key chapter change) → ref is dead.
     if (!context.mounted) return;
-    // Flush any live slider draft the dismissal interrupted mid-drag (§2.4).
+    // Commit any slider draft interrupted by sheet dismissal.
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
     if (brightnessDraft != null) model.setCustomBrightnessValue(brightnessDraft);
     if (colorDraft != null) model.setColorFilterValue(colorDraft);
@@ -113,7 +110,6 @@ Future<void> showReaderSettingsSheet({
   return navigator.push(route).whenComplete(dismiss);
 }
 
-/// 3-tab live-preview settings sheet replacing the reader's old side drawer.
 class ReaderSettingsDialog extends HookConsumerWidget {
   const ReaderSettingsDialog({
     super.key,
@@ -123,8 +119,7 @@ class ReaderSettingsDialog extends HookConsumerWidget {
 
   final int mangaId;
 
-  /// The wrapper's live padding notifier — shared so slider drags
-  /// keep updating the open reader immediately, exactly like the old drawer.
+  /// Share the live padding notifier so slider changes update the open reader.
   final ValueNotifier<double> readerPadding;
 
   @override
@@ -143,9 +138,7 @@ class ReaderSettingsDialog extends HookConsumerWidget {
       initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.95,
-      // I7: the sheet's scroll controller is deliberately attached to NOTHING —
-      // sharing it across the tabs is a hard "attached to multiple scroll
-      // views" crash. Each tab owns its own scroll view (primary: false).
+      // Do not attach the sheet controller to multiple tabs; each tab owns its scroll view.
       builder: (context, _) => Material(
         color: context.theme.colorScheme.surface,
         clipBehavior: Clip.antiAlias,

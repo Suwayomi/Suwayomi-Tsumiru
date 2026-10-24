@@ -16,18 +16,15 @@ import '../../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../reader_chapter_gap_warning.dart';
 import 'infinity_continuous_config.dart';
 
-/// UI feedback components for infinity continuous reader mode
 class InfinityContinuousFeedback {
   const InfinityContinuousFeedback._();
 
-  /// Shows feedback when user tries to scroll past the last chapter
   static void showEndOfMangaFeedback(
     BuildContext context,
     ObjectRef<DateTime?> lastFeedbackTime,
   ) {
     final now = DateTime.now();
 
-    // Debounce to prevent spam
     if (lastFeedbackTime.value != null &&
         now.difference(lastFeedbackTime.value!) <
             InfinityContinuousConfig.feedbackCooldown) {
@@ -65,14 +62,12 @@ class InfinityContinuousFeedback {
     );
   }
 
-  /// Shows feedback when user tries to scroll past the first chapter
   static void showStartOfMangaFeedback(
     BuildContext context,
     ObjectRef<DateTime?> lastFeedbackTime,
   ) {
     final now = DateTime.now();
 
-    // Debounce to prevent spam
     if (lastFeedbackTime.value != null &&
         now.difference(lastFeedbackTime.value!) <
             InfinityContinuousConfig.feedbackCooldown) {
@@ -110,7 +105,6 @@ class InfinityContinuousFeedback {
     );
   }
 
-  /// Shows feedback when loading next chapter
   static void showLoadingNextChapterFeedback(
     BuildContext context,
     String chapterName,
@@ -150,7 +144,6 @@ class InfinityContinuousFeedback {
     );
   }
 
-  /// Shows feedback when loading previous chapter
   static void showLoadingPreviousChapterFeedback(
     BuildContext context,
     String chapterName,
@@ -190,7 +183,6 @@ class InfinityContinuousFeedback {
     );
   }
 
-  /// Shows feedback when next chapter is successfully loaded
   static void showNextChapterLoadedFeedback(
     BuildContext context,
     String chapterName,
@@ -226,7 +218,6 @@ class InfinityContinuousFeedback {
     );
   }
 
-  /// Shows feedback when previous chapter is successfully loaded
   static void showPreviousChapterLoadedFeedback(
     BuildContext context,
     String chapterName,
@@ -262,7 +253,6 @@ class InfinityContinuousFeedback {
     );
   }
 
-  /// Shows feedback when chapter loading fails
   static void showChapterLoadFailedFeedback(
     BuildContext context,
     String chapterName, {
@@ -301,7 +291,6 @@ class InfinityContinuousFeedback {
   }
 }
 
-/// Chapter separator widget for infinity continuous mode
 class InfinityContinuousChapterSeparator extends StatelessWidget {
   const InfinityContinuousChapterSeparator({
     super.key,
@@ -415,7 +404,6 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
     );
   }
 
-  /// Get separator information for the given index
   static ({String chapterName, bool isChapterStart, int gapCount})?
   getSeparatorInfo(
     int index,
@@ -426,7 +414,6 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
     for (int i = 0; i < loadedChapters.length; i++) {
       final chapterData = loadedChapters[i];
 
-      // Only show separator at the end of a chapter (except the last one)
       if (index == currentIndex + chapterData.pages.pages.length - 1 &&
           i < loadedChapters.length - 1) {
         return (

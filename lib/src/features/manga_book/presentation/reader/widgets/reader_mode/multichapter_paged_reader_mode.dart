@@ -49,14 +49,6 @@ typedef _LoadedChapter = ({
   int chapterId,
 });
 
-/// Multi-chapter paged reader (LTR/RTL/vertical, single & double-page).
-///
-/// The paged counterpart of [MultiChapterContinuousReaderMode]: prev/current/
-/// next chapters live in ONE [PagedReaderViewport], so crossing a chapter
-/// boundary is a page turn inside the same pager (no `pushReplacement`, no route
-/// slide, no per-chapter system-UI toggle). This host owns chapter loading, the
-/// per-visible-chapter progress engine, and the idle-gated window swap; the
-/// viewport owns the gesture/zoom/snap machinery.
 class MultiChapterPagedReaderMode extends HookConsumerWidget {
   const MultiChapterPagedReaderMode({
     super.key,
@@ -77,9 +69,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
   final ChapterPagesDto chapterPages;
   final String readerScanlatorGroup;
 
-  /// Accepted for signature parity with the single-chapter reader; this host
-  /// owns progress itself (like the webtoon multi-chapter reader) and ignores
-  /// it — ReaderScreen's debounce stays inert for this path.
+  /// Ignored: this host records progress itself; ReaderScreen debounce stays inactive.
   final ValueSetter<int>? onPageChanged;
   final bool reverse;
   final Axis scrollDirection;
@@ -93,10 +83,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     bool readerToastsEnabled() =>
         ref.read(readerFeedbackToastsProvider).ifNull(true);
 
-    // Chapter loads are kicked off from a hook effect, where reading an
-    // inherited widget (context.l10n, which the feedback toasts use) throws
-    // `_debugIsInitHook`. Defer the toast to a post-frame so it runs in a safe
-    // phase, and never let a feedback failure abort the load itself.
+    // Defer feedback outside hook initialization, where inherited l10n lookups are invalid.
     void deferFeedback(VoidCallback show) {
       if (!readerToastsEnabled()) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -110,11 +97,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final controller = useMemoized(() => PagedReaderController());
     final settings = ref.watch(readerEffectiveSettingsProvider(manga.id));
 
-    // Komikku parity (ExhUtils / ReaderActivity autoscroll loop): in paged
-    // modes the shared auto-scroll toggle turns one page per interval
-    // (moveToNext), with no smooth glide — that's webtoon-only. It reads its
-    // own "auto advance" interval, which defaults slower than webtoon scroll,
-    // and stops once the last page is reached.
     final autoAdvanceActive = ref.watch(autoScrollActiveProvider);
     final autoAdvanceInterval =
         ref.watch(autoAdvanceIntervalSecondsProvider) ??
@@ -131,8 +113,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       return timer.cancel;
     }, [autoAdvanceActive, autoAdvanceInterval]);
 
-    // Backgrounding the app would otherwise keep turning pages (and writing
-    // progress) while the user isn't looking — mirror the continuous engine.
+    // Stop auto-advance in background so it cannot turn pages and write progress unseen.
     useEffect(() {
       final listener = AppLifecycleListener(
         onHide: () => ref.read(autoScrollActiveProvider.notifier).stop(),
@@ -143,10 +124,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
     final isHorizontal = scrollDirection == Axis.horizontal;
     final isLandscape = context.width > context.height;
-    // An explicit page-layout choice (the bottom-bar toggle) always wins.
-    // "Dual page spread in landscape" only augments Automatic, and respects
-    // landscape — otherwise it forced dual everywhere and made the toggle a
-    // no-op.
+    // Explicit page layout wins; landscape spread only augments Automatic.
     final wantDouble =
         isHorizontal &&
         switch (settings.pageLayout) {
@@ -165,7 +143,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final loadedChapters = useState<List<_LoadedChapter>>([
       (pages: chapterPages, chapter: chapter, chapterId: chapter.id),
     ]);
-    // Mirror so the once-bound callbacks always read the latest list.
     final loadedRef = useRef<List<_LoadedChapter>>(loadedChapters.value);
     loadedRef.value = loadedChapters.value;
 
@@ -189,12 +166,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final lastStartFeedbackTime = useRef<DateTime?>(null);
     final completedChapterIds = useRef<Set<int>>({});
 
-    // Session protection: protect each chapter opened in this reader from
-    // reconcile eviction. Discarded on dispose; never accumulates across sessions.
     final sessionChapterIds = useRef<Set<int>>({});
     final sessionNotifier = ref.read(sessionReadChaptersProvider.notifier);
-    // Mirrored into a ref each build so the deferred callbacks below never
-    // have to touch `ref` themselves — `ref` throws if it outlives the widget.
     final incognitoRef = useRef(ref.watch(incognitoModeProvider));
     incognitoRef.value = ref.watch(incognitoModeProvider);
     useEffect(() {
@@ -203,59 +176,38 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         if (!active || incognitoRef.value) return;
         if (!sessionChapterIds.value.contains(id)) {
           sessionChapterIds.value = {...sessionChapterIds.value, id};
-          // The provider container can be torn down (route pop racing app/test
-          // shutdown) between scheduling this microtask and it running; there is
-          // nothing left to protect at that point, so ignore the disposed-ref
-          // error rather than crash on a benign teardown race.
+          // The container may be disposed before this microtask; ignore that teardown race.
           try {
             sessionNotifier.record(id);
           } catch (_) {
-            // UnmountedRefException (internal riverpod type, not exported):
-            // container disposed before this microtask ran.
           }
         }
       }
 
-      // Record the initial chapter on a microtask — modifying Riverpod state
-      // synchronously during a build (even inside useEffect) is not allowed.
-      // A microtask (unlike addPostFrameCallback) is guaranteed to drain
-      // before this build/dispose call stack unwinds, regardless of whether
-      // another frame gets scheduled.
+      // Defer build-time provider writes to a microtask, which does not need another scheduled frame.
       Future.microtask(() => doRecord(currentVisibleChapter.value.id));
-      // Record on subsequent chapter changes. ValueNotifier listeners fire
-      // outside the build phase so provider state can be updated safely.
       void onChanged() => doRecord(currentVisibleChapter.value.id);
       currentVisibleChapter.addListener(onChanged);
       return () {
         active = false;
         currentVisibleChapter.removeListener(onChanged);
-        // Disposal can occur during a build phase; defer the state change.
-        // Same teardown race as above: the container may already be gone by
-        // the time this runs (e.g. widget torn down at test/app shutdown with
-        // no further frame or microtask flush to run this sooner).
+        // Disposal may occur during build; defer and tolerate an already-disposed container.
         Future.microtask(() {
           try {
             sessionNotifier.discard(sessionChapterIds.value);
           } catch (_) {
-            // UnmountedRefException (internal riverpod type, not exported):
-            // container disposed before this microtask ran.
           }
         });
       };
     }, const []);
 
-    // Direction of the last position change, so a chapter loads only when the
-    // user reads TOWARD its edge — never on initial open of a short chapter.
+    // Load neighbours only when reading toward an edge, never on the initial short-chapter view.
     final lastProgress = useRef<({int id, int rel})?>(null);
 
-    // A window swap staged by a completed load, applied only when the viewport
-    // is idle (onIdle) so it never disrupts an in-progress drag/animation. A
-    // prepend shifts every index; committing mid-gesture would jump the page.
+    // Commit staged window swaps only while idle; prepending mid-gesture would shift page indices.
     final pending = useRef<List<_LoadedChapter>?>(null);
 
-    // watch, not a one-time read: on cold open the filtered list is still
-    // loading, so a read-once pinned both neighbours null for the session.
-    // Mirrored into a ref for the once-bound preload effect below.
+    // Watch the loading chapter list and mirror it for the once-bound preload effect.
     final nextPrevChapterPair =
         useRef<({ChapterDto? first, ChapterDto? second})?>(null);
     nextPrevChapterPair.value = ref.watch(
@@ -273,10 +225,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       return null;
     }
 
-    // --- reading-progress recording (per VISIBLE chapter) ----------------
-    // Ported from MultiChapterContinuousReaderMode: record progress for the
-    // chapter currently on screen, not the chapter the reader was opened with,
-    // through the offline-safe recordReadingProgress path.
     final progressDebounce = useRef<Timer?>(null);
     final latestProgress = useRef<({int chapterId, int rel, int generation})?>(
       null,
@@ -319,13 +267,11 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         isRead: completed,
         generation: generation,
       );
-      // Disposed during the await → the ref calls below would throw.
       if (!context.mounted ||
           progressQueue(chapterId).generation != generation) {
         return;
       }
-      // Online-only users have no dirty row to retry, so a failed push would
-      // vanish — surface it instead of losing progress silently.
+      // Surface failed pushes for online-only users because they have no dirty row to retry.
       if (progressResult.hasError) {
         ref
             .read(toastProvider)
@@ -349,8 +295,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           ),
         );
       }
-      // Fired off a scroll/visibility notification — defer past the frame or
-      // it trips the Riverpod-3 modify-during-build assert.
+      // Defer invalidation outside scroll/layout notifications to avoid writes during build.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) ref.invalidate(readingHistoryProvider);
       });
@@ -390,9 +335,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       }
     }
 
-    // The first run is the on-mount restore, not a page turn — skip it so
-    // opening a chapter already sitting on its last page (e.g. paging back into
-    // it, or openAtEnd) doesn't mark it read and wipe the resume point.
+    // Skip the restore emit so opening at the last page cannot complete the chapter.
     final initialProgressConsumed = useRef<bool>(false);
     useEffect(() {
       if (!initialProgressConsumed.value) {
@@ -406,9 +349,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       return null;
     }, [currentChapterPageIndex.value, currentVisibleChapter.value.id]);
 
-    // Flush any pending debounced progress on teardown, straight to the on-
-    // device catalog (captured at build so it never touches ref while
-    // disposing). Ported verbatim from the webtoon reader.
+    // Capture the DB before teardown and flush pending progress without touching ref.
     final offlineEnabledForFlush = ref.read(offlineEnabledProvider);
     final offlineDbForFlush = offlineEnabledForFlush
         ? ref.read(offlineDatabaseProvider)
@@ -453,7 +394,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       };
     }, const []);
 
-    // --- chapter loading (staged; committed on viewport idle) ------------
 
     Future<void> loadNextChapter(ChapterDto next) async {
       if (loadingNext.value || hasReachedEnd.value) return;
@@ -461,9 +401,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       final staged = pending.value;
       if (staged != null && staged.any((e) => e.chapterId == next.id)) return;
       loadingNext.value = true;
-      // Hold a listener: chapterPages is autoDispose with no other subscriber
-      // for the neighbour, so an unheld read gets disposed mid-fetch under
-      // Riverpod 3. Closed in finally so retries can't leak subscriptions.
+      // Hold the autoDispose neighbour provider during fetch; close in finally so retries cannot leak listeners.
       final sub = ref.listenManual(
         chapterPagesProvider(chapterId: next.id),
         (_, _) {},
@@ -485,8 +423,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         }
         if (!context.mounted) return;
         if (pages == null) {
-          // No pages is a transient/empty result, not the end of the manga —
-          // drop the cached null so the next gesture refetches; don't latch.
+          // An empty fetch is retryable, not the end of the manga; invalidate without latching.
           ref.invalidate(chapterPagesProvider(chapterId: next.id));
           return;
         }
@@ -503,8 +440,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           ),
         );
       } catch (_) {
-        // Transient failure — leave unlatched and refetchable so the next
-        // gesture retries instead of dead-ending the boundary for the session.
+        // Invalidate transient failures so the next gesture can retry.
         if (context.mounted) {
           ref.invalidate(chapterPagesProvider(chapterId: next.id));
         }
@@ -520,7 +456,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       final staged = pending.value;
       if (staged != null && staged.any((e) => e.chapterId == prev.id)) return;
       loadingPrevious.value = true;
-      // Same held-subscription + finally-close treatment as loadNextChapter.
       final sub = ref.listenManual(
         chapterPagesProvider(chapterId: prev.id),
         (_, _) {},
@@ -558,7 +493,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           ),
         );
       } catch (_) {
-        // Transient failure — leave unlatched and refetchable.
         if (context.mounted) {
           ref.invalidate(chapterPagesProvider(chapterId: prev.id));
         }
@@ -568,9 +502,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       }
     }
 
-    // Commit a staged swap while the viewport is idle. Deferred to a microtask
-    // so it never runs inside the viewport's own build/re-anchor pass (a
-    // setState-during-build). Idempotent: the first run clears `pending`.
+    // Commit idle swaps in a microtask to avoid setState during viewport build/re-anchor.
     void commitPendingIfAny() {
       if (pending.value == null) return;
       Future.microtask(() {
@@ -582,8 +514,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       });
     }
 
-    // Preload the neighbour the user is reading toward, Komikku-style: within
-    // ~5 pages of the visible chapter's far edge and moving that way.
     useEffect(
       () {
         final visibleId = currentVisibleChapter.value.id;
@@ -621,8 +551,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           unawaited(loadPreviousChapter(pair!.second!));
         }
         return null;
-        // Also keyed on neighbour ids: cold open has the pair null while the
-        // filtered list loads, so this reruns once it resolves.
+        // Rerun when neighbour IDs resolve after the initial chapter-list load.
       },
       [
         currentChapterPageIndex.value,
@@ -632,10 +561,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       ],
     );
 
-    // --- display window --------------------------------------------------
 
-    // Window-edge adjacency: whether an unloaded chapter sits before the first
-    // / after the last loaded chapter, so we show a boundary card there.
     final firstLoadedId = loadedChapters.value.first.chapterId;
     final lastLoadedId = loadedChapters.value.last.chapterId;
     final headAdjacency = ref.watch(
@@ -705,15 +631,12 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       ],
     );
 
-    // First-build display index for the opening chapter's initial page. Computed
-    // once against the first window (opening chapter only).
     final initialDisplayIndex = useMemoized(() {
       final raw = initialChapterPageIndex;
       final d = window.chapterRawToDisplay(chapter.id, raw);
       return d >= 0 ? d : window.firstDisplayOf(chapter.id).clamp(0, 1 << 30);
     }, const []);
 
-    // --- viewport callbacks ----------------------------------------------
 
     void onChapterPageChanged(int chapterId, int raw) {
       if (currentVisibleChapter.value.id != chapterId) {
@@ -723,7 +646,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         final newPos = loaded.indexWhere((e) => e.chapterId == chapterId);
         if (newPos >= 0) {
           currentVisibleChapter.value = loaded[newPos].chapter;
-          // Forward boundary crossing: the chapter just left is finished.
           if (prevPos >= 0 && newPos > prevPos) {
             _markChapterRead(
               ref,
@@ -757,12 +679,10 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     }
 
     void onReachedEndEdge() {
-      // Explicit fallback trigger: the scroll-toward-edge preloader needs a
-      // forward movement tick, which openAtEnd / a one-page chapter never give.
+      // Opening at the end or in a one-page chapter gives no forward tick to trigger preloading.
       final nextToLoad = tailAdjacency?.first;
       if (nextToLoad != null && !hasReachedEnd.value) {
-        // onIdle already fired when the edge bounce settled, before the fetch
-        // finished — commit explicitly or the swap waits for the next swipe.
+        // Idle may precede fetch completion; commit explicitly when the load lands.
         unawaited(
           loadNextChapter(nextToLoad).then((_) {
             if (context.mounted) commitPendingIfAny();
@@ -779,11 +699,9 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     }
 
     void onReachedStartEdge() {
-      // Explicit fallback trigger: opening at page 0 and paging back gives no
-      // backward tick for the preloader, so it would dead-end otherwise.
+      // Opening at page zero gives no backward preloader tick; trigger the load explicitly.
       final prevToLoad = headAdjacency?.second;
       if (prevToLoad != null && !hasReachedStart.value) {
-        // Commit once the fetch lands (see onReachedEndEdge).
         unawaited(
           loadPreviousChapter(prevToLoad).then((_) {
             if (context.mounted) commitPendingIfAny();
@@ -808,8 +726,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     }
 
     Widget transitionBuilder(TransitionDisplay t) {
-      // End card shows the finished chapter; start/interior show the chapter
-      // being entered.
       final name = t.isEnd
           ? nameForChapter(t.fromChapterId)
           : nameForChapter(t.toChapterId);
@@ -834,7 +750,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       );
     }
 
-    // --- ReaderWrapper (fed the VISIBLE-chapter view) --------------------
 
     final visibleChapterPages = InfinityContinuousUtils.createChapterPagesDto(
       loadedChapters.value,
@@ -872,9 +787,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       onPrevious: controller.previous,
       onNext: controller.next,
-      // Same auto-motion toggle as webtoon, but here it drives auto-advance;
-      // in vertical paged this makes Space toggle it, in horizontal the utils
-      // bar switch does. Speed keys tune the separate auto-advance interval.
       onToggleAutoScroll: () =>
           ref.read(autoScrollActiveProvider.notifier).toggle(),
       onAutoScrollFaster: () {
@@ -897,9 +809,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       handlesOwnChapterNavigation: true,
       isAtFirstBoundary: () => controller.isAtFirst,
       isAtLastBoundary: () => controller.isAtLast,
-      // jumpToRaw is scoped to the currently DISPLAYED chapter internally, so
-      // the last-page bound must come from visibleChapterPages, not the
-      // originally-opened chapterPages param.
+      // Bound jumps by the visible chapter page count; controller raw indices are chapter-relative.
       onJumpToFirst: () => controller.jumpToRaw(0),
       onJumpToLast: () =>
           controller.jumpToRaw(visibleChapterPages.pages.length - 1),
@@ -947,9 +857,6 @@ ReaderMode _pagedReaderMode(Axis axis, bool reverse) {
       : ReaderMode.singleHorizontalLTR;
 }
 
-/// Mark [chapter] read once and reconcile the relevant providers, tracking
-/// already-marked ids so repeated boundary crossings don't re-fire the mutation.
-/// Ported from MultiChapterContinuousReaderMode.
 void _markChapterRead(
   WidgetRef ref,
   int mangaId,
@@ -997,9 +904,7 @@ void _markChapterRead(
       );
     }),
   );
-  // Deliberately do NOT invalidate chapterProvider / mangaChapterList here —
-  // that would remount the reader mid-read. Read-state is tracked in-session
-  // via completedChapterIds; ReaderScreen refreshes on exit (its PopScope).
+  // Do not invalidate chapter providers mid-read: remounting resets the reader; refresh on exit.
 }
 
 class _PagedChapterTransition extends StatelessWidget {

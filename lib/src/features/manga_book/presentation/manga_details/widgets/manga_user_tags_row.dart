@@ -48,8 +48,6 @@ Future<void> _showAddTagDialog(
   }
 }
 
-/// A compact "+" chip that opens the add-tag dialog. Sits at the front of the
-/// genre chips so adding a tag reads as part of the tag list, not a stray button.
 class AddUserTagChip extends ConsumerWidget {
   const AddUserTagChip({super.key, required this.mangaId});
 
@@ -76,9 +74,6 @@ class AddUserTagChip extends ConsumerWidget {
   }
 }
 
-/// The user's own tags for a manga: deletable chips styled distinctly from the
-/// source genre chips. Hidden entirely when there are none — the add affordance
-/// lives inline with the genre chips as [AddUserTagChip].
 class MangaUserTagsRow extends ConsumerWidget {
   const MangaUserTagsRow({super.key, required this.mangaId});
 

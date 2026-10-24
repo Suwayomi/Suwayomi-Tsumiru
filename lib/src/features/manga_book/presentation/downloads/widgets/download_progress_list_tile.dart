@@ -52,7 +52,6 @@ class DownloadProgressListTile extends HookConsumerWidget {
         }
       })).showToastOnError(toast);
     } catch (e) {
-      //
     }
   }
 

@@ -15,21 +15,7 @@ import 'package:flutter/services.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../utils/wheel_scroll.dart';
 
-/// Glides mouse wheel scrolling inside [child] by [speed].
-///
-/// A wheel notch moves 53px on desktop, which reads slower than the browser the
-/// WebUI runs in. Trackpads already send fine-grained deltas, so only a mouse is
-/// touched — the same distinction WebUI makes before it remaps wheel input.
-///
-/// Flutter's [Scrollable] would otherwise jump straight to the notch target,
-/// which a notched wheel shows as a staircase. Registering the event with the
-/// pointer signal resolver from a sibling painted on top means ours is the
-/// first registration of the hit test and the Scrollable's own jump is dropped
-/// (`pointer_signal_resolver.dart`: the first registered callback wins).
-///
-/// Wheel events only move a target. A ticker follows it with exponential
-/// smoothing, so a hi-res wheel sending an event every 15ms extends one motion
-/// instead of restarting it.
+/// Register above the scrollable so the first-wins signal resolver suppresses its jump; leave trackpads unchanged.
 class MouseWheelSpeed extends StatefulWidget {
   const MouseWheelSpeed({
     super.key,
@@ -55,13 +41,11 @@ class MouseWheelSpeed extends StatefulWidget {
 
 class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     with TickerProviderStateMixin {
-  /// Time constant of the follow: each frame closes this much of the remaining
-  /// distance, so a single notch settles in roughly 150 to 200ms.
+  /// Exponential smoothing time constant; one notch settles in roughly 150..200ms.
   static const _tau = 0.06;
   static const _settleDistance = 0.5;
 
-  /// Where the running follow is headed. A notch arriving before it lands
-  /// extends this instead of closing the gap that is still left.
+  /// Accumulate new notches at the target so unfinished travel is not lost.
   double? _pendingTarget;
   ScrollPosition? _pendingOn;
   Ticker? _ticker;
@@ -71,8 +55,7 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
   /// first wheel event is not held back.
   bool _primed = false;
 
-  /// True while our own `jumpTo` is dispatching notifications, so the
-  /// external-scroll listener doesn't mistake the follow for a takeover.
+  /// Guard follower jumps so their notifications cannot be mistaken for user takeover.
   bool _applying = false;
 
   /// Cached in [didChangeDependencies] because [ScrollConfiguration.of]
@@ -103,9 +86,7 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     // fling, auto scroll, keyboard) stops it, so the two never fight.
     return NotificationListener<ScrollNotification>(
       onNotification: _onScrollNotification,
-      // The listener must be the first hit in the tree for the resolver to give
-      // it the event: a Stack tests its last child first, so it sits above the
-      // strip without taking any pointer events from it.
+      // Stack hit-tests the last child first; register above the strip to win wheel resolution.
       child: Stack(
         fit: StackFit.passthrough,
         children: [
@@ -131,10 +112,7 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     return false;
   }
 
-  /// Mirrors `Scrollable._pointerSignalEventDelta` (`scrollable.dart:933-951`):
-  /// with a pointer axis modifier held, a mouse wheel reads the other axis, so
-  /// Shift + wheel scrolls a horizontal strip. Trackpads already send both
-  /// axes and are not flipped.
+  /// Match Scrollable axis modifiers (scrollable.dart:933-951); do not flip trackpad axes.
   double _axisDelta(PointerScrollEvent event) {
     final pressed = HardwareKeyboard.instance.logicalKeysPressed;
     final flipAxes =
@@ -193,9 +171,7 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     event.respond(allowPlatformDefault: false);
 
     if (!mounted) return;
-    // A glide is user scrolling: auto scroll yields to it the same way it does
-    // to the platform's own wheel jump, which reports a direction change. The
-    // reduce-motion jump below is user scrolling too, so it reports the same.
+    // Report user scrolling for glides and reduced-motion jumps so auto-scroll yields.
     _notifyUserScroll(position, target);
     if (context.reduceMotion) {
       _stopFollower();
@@ -256,9 +232,7 @@ class _MouseWheelSpeedState extends State<MouseWheelSpeed>
     _apply(position, pixels + (target - pixels) * (1 - math.exp(-dt / _tau)));
   }
 
-  /// Moves in whole jumps. Each jump reports start, update and end for that
-  /// frame, which keeps progress and boundary listeners seeing ordinary
-  /// scrolling; the flag keeps those same reports from stopping the follow.
+  /// Dispatch ordinary scroll notifications for each jump, guarded against stopping the follower itself.
   void _apply(ScrollPosition position, double pixels) {
     if (position.pixels == pixels) return;
     _applying = true;

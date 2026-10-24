@@ -10,23 +10,12 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-/// Flushes the reader's pending (debounced) progress on app background and on
-/// exit.
-///
-/// The reader otherwise only flushes on a Flutter route-pop or widget dispose.
-/// Neither fires when a desktop window is closed straight from the reader, so
-/// the last buffered page was silently lost. `onHide` covers web tab-hide/close,
-/// desktop minimize, and mobile background (the `hidden` state precedes
-/// `paused`, so onPause would only double-fire). `onExitRequested` covers a
-/// desktop window-close; it fires while the tree is still mounted, so [flush]
-/// can safely use `ref`. Both go through [flush], which is bounded and swallows
-/// errors so a slow or failing write can neither wedge nor abort the close.
+/// Flush on hidden/exitRequested with bounded, error-tolerant writes; window close may skip pop/dispose.
 void useFlushProgressOnAppLifecycle(Future<void> Function() flush) {
   final flushRef = useRef(flush);
   flushRef.value = flush;
   useEffect(() {
-    // A failed/slow write must not surface as an unhandled async error on
-    // background, nor abort the window close by erroring out of onExitRequested.
+    // A failed flush must neither raise an unhandled background error nor abort window close.
     Future<void> safeFlush() async {
       try {
         await flushRef.value().timeout(const Duration(seconds: 3));

@@ -138,10 +138,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
             icon: const Icon(Icons.replay_rounded),
           );
         } else if (downloadUpdate.state == DownloadState.QUEUED) {
-          // Waiting its turn, not downloading. An indeterminate spinner here
-          // repaints every frame, so queueing a series set every visible row
-          // animating until its turn came. A determinate ring doesn't animate
-          // at all, so a chapter paused partway keeps showing how far it got.
+          // Use a determinate ring for queued chapters to avoid per-frame animation on every visible row.
           return IconButton(
             tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
             onPressed: !canDownload
@@ -171,13 +168,9 @@ class DownloadStatusIcon extends HookConsumerWidget {
       } else {
         if (isDownloaded) {
           return IconButton(
-            // Cloud = the SERVER copy; solid indigo = "you have it".
             icon: brandGradientIcon(context, Icons.cloud_done_rounded),
             onPressed: () async {
-              // Captured up front: the network mutation below can outlive
-              // this icon (the chapter row it belongs to can disappear once
-              // the delete resolves). `ref.read` throws once that happens; a
-              // container obtained now stays valid regardless.
+              // Capture the container before awaiting deletion; the chapter row and its ref may disappear.
               final containerRead = ProviderScope.containerOf(
                 context,
                 listen: false,
@@ -194,7 +187,6 @@ class DownloadStatusIcon extends HookConsumerWidget {
               );
               result.showToastOnError(toast);
               if (!result.hasError) {
-                // Same selected set (device ⊆ server).
                 await cascadeServerDeleteToDevice(containerRead, deleteIds);
               }
               await newUpdatePair(ref, (value) => isLoading.value = value);
@@ -208,7 +200,6 @@ class DownloadStatusIcon extends HookConsumerWidget {
             );
           }
           return IconButton(
-            // Muted outline = a "get it on the server" button.
             icon: Icon(
               Icons.cloud_download_outlined,
               color: context.theme.colorScheme.onSurfaceVariant,
@@ -218,8 +209,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
                 ? null
                 : () async {
                     isEnqueuing.value = true;
-                    // Held until the queue feed reports the chapter, but not forever
-                    // if the feed is down or the server skips it.
+                    // Wait for the queue feed, bounded to handle a disconnected feed or a skipped chapter.
                     if (await toggleChapterToQueue(toast, ref, isAdd: true)) {
                       await Future.delayed(const Duration(seconds: 10));
                     }

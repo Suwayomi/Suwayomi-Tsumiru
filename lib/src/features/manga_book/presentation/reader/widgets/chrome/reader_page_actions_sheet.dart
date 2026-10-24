@@ -26,14 +26,6 @@ import '../../../../../auth/data/auth_credentials_store.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import 'image_clipboard.dart';
 
-/// "Show actions on long tap": long-pressing a reader page opens this
-/// page-actions bar — a compact horizontal row of icon buttons docked at the
-/// bottom. On mobile it's a single-page set:
-/// Copy (the image itself, to the clipboard), Share image, Save to gallery.
-/// "Set as cover" is omitted — Suwayomi exposes no cover mutation
-/// (schema `UpdateMangaPatchInput` is `inLibrary`-only). "Open in web" is shown
-/// only on desktop/web, where native image actions can't run, so it's the
-/// one universally-working fallback there.
 Future<void> showReaderPageActionsSheet({
   required BuildContext context,
   required WidgetRef ref,
@@ -108,9 +100,7 @@ Future<void> showReaderPageActionsSheet({
     await resolvePageFile(extraPageIndex!),
   );
 
-  // gal is mobile-only, so both extra actions are gated to real Android/iOS.
-  // defaultTargetPlatform (not dart:io Platform) so widget tests can drive the
-  // mobile path without faking the production gate.
+  // Native image actions require Android/iOS; defaultTargetPlatform also permits platform-specific tests.
   final isMobile =
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
@@ -288,8 +278,6 @@ Future<void> showReaderPageActionsSheet({
 
 Future<File> _combineSpreadImages(File firstFile, File secondFile) async {
   final tempDir = await getTemporaryDirectory();
-  // Sweep spread PNGs left by earlier shares/saves so they don't accumulate —
-  // each call leaves at most the one file it's about to hand off.
   await _cleanStaleSpreadTemps(tempDir);
   final outputPath =
       '${tempDir.path}/tsumiru-spread-${DateTime.now().microsecondsSinceEpoch}.png';
@@ -347,9 +335,6 @@ void _combineSpreadImagesSync(List<String> paths) {
   File(paths[2]).writeAsBytesSync(img.encodePng(canvas), flush: true);
 }
 
-/// Builds the fully-qualified page image URL the reader would fetch, mirroring
-/// [ServerImage]'s URL assembly (base + relative path, optional ui_login
-/// `?token=`). Returns null for out-of-range or offline (`file://`) pages.
 class _PageActionsSheet extends StatelessWidget {
   const _PageActionsSheet({required this.rows});
 

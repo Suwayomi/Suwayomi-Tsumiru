@@ -6,14 +6,12 @@
 
 import 'dart:math' as math;
 
-/// Maximum predicted interval, in days.
 const int kMaxFetchIntervalDays = 28;
 
 /// One chapter's relevant timestamps, epoch milliseconds (0 = absent).
 typedef ChapterRelease = ({int uploadMs, int fetchMs});
 
-/// Result of [predictNextUpdate]: the estimated release [intervalDays] and the
-/// projected [nextUpdate] (null when there's no usable date history).
+/// [nextUpdate] is null when there is no usable date history.
 class NextUpdatePrediction {
   const NextUpdatePrediction({required this.intervalDays, this.nextUpdate});
 
@@ -29,15 +27,7 @@ class NextUpdatePrediction {
   }
 }
 
-/// Predict when a manga's next chapter is due, from its own release history.
-///
-/// The release [intervalDays] is computed as the median gap between recent
-/// distinct release days (upload dates, falling back to fetch dates, else a
-/// 7-day default), clamped to 1..28 days.
-///
-/// The next date projects forward WHOLE cycles from the latest release to the
-/// next future occurrence, so a series whose last chapter is weeks old still
-/// reports a real "in N days" rather than flooring to "Soon".
+/// Uses median upload-day gaps, then fetch-day gaps, else 7 days; clamps to 1..28 and projects whole cycles forward.
 NextUpdatePrediction predictNextUpdate(
   List<ChapterRelease> chapters, {
   DateTime? now,
@@ -46,13 +36,9 @@ NextUpdatePrediction predictNextUpdate(
 
   final latestDate = _latestReleaseStartOfDay(chapters);
   if (latestDate == null) {
-    // No dated chapters at all → no estimate.
     return NextUpdatePrediction(intervalDays: interval, nextUpdate: null);
   }
 
-  // Project forward whole cycles to the next FUTURE date: a series whose
-  // last chapter is long past still gets a real upcoming date instead of
-  // flooring to "Soon".
   final nowTime = now ?? DateTime.now();
   final timeSinceLatest = math.max(0, nowTime.difference(latestDate).inDays);
   final cycle =
@@ -63,9 +49,7 @@ NextUpdatePrediction predictNextUpdate(
   );
 }
 
-/// When a series has missed many
-/// expected cycles, widen the effective interval (doubling) so we don't keep
-/// predicting an imminent release for something long-dormant. Capped at 28.
+/// Widen overdue intervals up to 28 days to avoid imminent predictions for dormant series.
 int _increaseInterval(int delta, int timeSinceLatest, int increaseWhenOver) {
   if (delta >= kMaxFetchIntervalDays) return kMaxFetchIntervalDays;
   final cycle = (timeSinceLatest ~/ delta) + 1;
@@ -96,8 +80,7 @@ int _calculateInterval(List<ChapterRelease> chapters) {
   return interval.clamp(1, kMaxFetchIntervalDays);
 }
 
-/// Most recent [window] distinct release days (start-of-day, descending) for a
-/// given timestamp, ignoring absent (<= 0) values.
+/// Recent distinct days, newest first, ignoring absent timestamps (<= 0).
 List<DateTime> _recentDistinctDays(
   List<ChapterRelease> chapters,
   int Function(ChapterRelease) pick,
@@ -119,9 +102,7 @@ List<DateTime> _recentDistinctDays(
   return days;
 }
 
-/// Median gap (days) between consecutive [days] (descending). Needs >= 3 days
-/// (i.e. >= 2 gaps) to be meaningful; null otherwise. Uses the
-/// lower-median of the gap list.
+/// Uses the lower median; fewer than three distinct days gives no estimate.
 int? _medianGapDays(List<DateTime> days) {
   if (days.length < 3) return null;
   final gaps = <int>[
@@ -136,7 +117,6 @@ DateTime? _latestReleaseStartOfDay(List<ChapterRelease> chapters) {
     if (c.uploadMs > latest) latest = c.uploadMs;
   }
   if (latest == 0) {
-    // No upload dates — fall back to the newest fetch date.
     for (final c in chapters) {
       if (c.fetchMs > latest) latest = c.fetchMs;
     }

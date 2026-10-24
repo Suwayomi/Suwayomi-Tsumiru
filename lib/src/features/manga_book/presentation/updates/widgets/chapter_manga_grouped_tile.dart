@@ -19,9 +19,7 @@ import '../../../domain/chapter/chapter_model.dart';
 import '../../../widgets/download_status_icon.dart';
 import '../controller/updates_grouping_controller.dart';
 
-/// A head + N collapsible tail chapters for the same manga on the same day.
-///
-/// When [tail] is empty this behaves exactly like [ChapterMangaListTile].
+/// An empty [tail] behaves like ChapterMangaListTile.
 class ChapterMangaGroupedTile extends HookConsumerWidget {
   const ChapterMangaGroupedTile({
     super.key,
@@ -39,16 +37,11 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
   /// Additional chapters for this manga on the same day (already sorted).
   final List<ChapterWithMangaDto> tail;
 
-  /// Returns the no-arg updatePair callback for a given chapter.
   final Future<void> Function() Function(ChapterWithMangaDto) updatePairFor;
 
   final Future<void> Function() refreshManga;
 
-  /// Whether a given chapter (head OR any tail member) is selected. Queried
-  /// per-chapter rather than taking one precomputed bool for the whole group:
-  /// the head and each tail chapter have their own id and can be selected
-  /// independently, so a single shared bool would highlight every tail row
-  /// whenever only the head is selected (and vice versa).
+  /// Selection is per chapter: head and tail rows can be selected independently.
   final bool Function(ChapterWithMangaDto) isSelectedFor;
   final bool canTapSelect;
   final ValueChanged<ChapterWithMangaDto> toggleSelect;
@@ -58,8 +51,6 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
     final groupingMode =
         ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.disabled;
 
-    // Each group starts expanded or collapsed based on the persisted setting.
-    // The user can toggle independently of the global default.
     final isExpanded = useState(groupingMode == UpdatesGroupingMode.expanded);
     useEffect(() {
       isExpanded.value = groupingMode == UpdatesGroupingMode.expanded;
@@ -115,9 +106,6 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Head tile — the representative chapter, with an optional expand toggle
-// ---------------------------------------------------------------------------
 
 class _HeadTile extends StatelessWidget {
   const _HeadTile({
@@ -146,7 +134,6 @@ class _HeadTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
     final color = (chapter.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
@@ -295,9 +282,6 @@ class _HeadTile extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Tail tile — a lightweight row without the cover image
-// ---------------------------------------------------------------------------
 
 class _TailTile extends StatelessWidget {
   const _TailTile({
@@ -318,14 +302,12 @@ class _TailTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
     final color = (chapter.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapter.manga;
 
-    // Indented to align with the text column of the head tile.
-    // 16 (h-pad) + 56 (cover) + 12 (gap) = 84
+    // Align with head text: 16px padding + 56px cover + 12px gap.
     const leadingIndent = 84.0;
 
     return Material(

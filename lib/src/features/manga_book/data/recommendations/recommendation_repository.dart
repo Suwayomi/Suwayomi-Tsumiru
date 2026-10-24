@@ -26,7 +26,6 @@ import 'recommendation_provider.dart';
 
 part 'recommendation_repository.g.dart';
 
-// Komikku's RecommendationPagingSource.createSources order.
 const _allProviders = <RecommendationProvider>[
   AnilistProvider(),
   MangaUpdatesCommunityProvider(),
@@ -38,8 +37,7 @@ const _allProviders = <RecommendationProvider>[
 
 Duration? _noRecommendationRetry(int retryCount, Object error) => null;
 
-/// The recommendation context (title, tracker remote ids, source) for [mangaId]
-/// plus the providers that apply to it. Built once and shared by every section.
+/// Shared recommendation context and applicable providers for [mangaId].
 @Riverpod(retry: _noRecommendationRetry)
 Future<({RecommendationContext ctx, List<RecommendationProvider> providers})?>
 recommendationSetup(Ref ref, int mangaId) async {
@@ -73,10 +71,7 @@ recommendationSetup(Ref ref, int mangaId) async {
   );
 }
 
-/// Every applicable provider's recommendations for [mangaId], flattened and
-/// deduped, for the inline Suggestions row on the manga details page. Suwayomi
-/// has no related/similar source query (what Komikku uses there), so this
-/// reuses the tracker engine instead; completed results can show immediately.
+/// Flattens and deduplicates recommendations from all applicable providers.
 @riverpod
 AsyncValue<List<Recommendation>> mangaRecommendations(Ref ref, int mangaId) {
   final setup = ref.watch(recommendationSetupProvider(mangaId));
@@ -114,12 +109,7 @@ AsyncValue<List<Recommendation>> mangaRecommendations(Ref ref, int mangaId) {
   return AsyncData(recommendations);
 }
 
-/// One provider's recommendations for [mangaId]; each screen section watches
-/// its own so they load, error, and empty independently (Komikku's per-source
-/// RecommendationItemResult).
-///
-/// A successful pull is cached, so a later failure serves the last-good list
-/// instead of an error.
+/// Caches successful results so a later failure serves the last successful list.
 @Riverpod(retry: _noRecommendationRetry)
 Future<List<Recommendation>> providerRecommendations(
   Ref ref,
@@ -159,7 +149,6 @@ Future<List<Recommendation>> providerRecommendations(
     final recs = await provider
         .fetch(setup.ctx)
         .timeout(const Duration(seconds: 30));
-    // Komikku de-dupes each source's list by url.
     final seen = <String>{};
     final deduped = [
       for (final r in recs)

@@ -8,8 +8,6 @@ import 'dart:convert';
 
 import '../recommendation_provider.dart';
 
-// Ports exh/md/similar/MangaDexSimilarPagingSource + SimilarHandler: pull
-// similar ids from similarmanga.com, then resolve them through the MangaDex API.
 const _similarApi = 'https://api.similarmanga.com/similar/';
 const _mangadexApi = 'https://api.mangadex.org';
 const _coverCdn = 'https://uploads.mangadex.org';
@@ -28,7 +26,6 @@ class MangaDexProvider extends RecommendationProvider {
 
   @override
   Future<List<Recommendation>> fetch(RecommendationContext ctx) async {
-    // MdUtil.getMangaId: the uuid is the last path segment of the manga url.
     final uuid = ctx.mangaUrl!.replaceAll(RegExp(r'/+$'), '').split('/').last;
     final similar =
         await ctx.client.get(Uri.parse('$_similarApi$uuid.json'));

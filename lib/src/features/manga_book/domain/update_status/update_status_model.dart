@@ -7,7 +7,6 @@
 import '../../../../utils/extensions/custom_extensions.dart';
 import 'graphql/__generated__/fragment.graphql.dart';
 
-/// A library update's progress, as the server counts it.
 typedef UpdateProgressDto = Fragment$UpdateProgressDto;
 
 extension UpdateProgressExt on UpdateProgressDto {

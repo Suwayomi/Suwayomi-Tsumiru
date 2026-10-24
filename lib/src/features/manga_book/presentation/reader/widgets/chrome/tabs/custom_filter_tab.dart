@@ -18,18 +18,12 @@ int _argbChannel(int argb, int shift) => (argb >> shift) & 0xFF;
 int _withArgbChannel(int argb, int shift, int value) =>
     (argb & ~(0xFF << shift)) | (value << shift);
 
-/// Moving a colour channel (R/G/B, shift ≠ 24) while Alpha is 0 would be
-/// invisible — the colour is fully transparent. Bump Alpha to full so the tint
-/// shows immediately; the user can then dial Alpha back for subtlety.
+/// Make transparent tints visible when a colour channel changes; alpha edits keep their chosen value.
 int _ensureVisibleAlpha(int argb, int shift) =>
     (shift != 24 && _argbChannel(argb, 24) == 0)
     ? _withArgbChannel(argb, 24, 255)
     : argb;
 
-/// Custom-filter tab: custom brightness,
-/// RGBA color filter + blend mode, grayscale, inverted colors. Sliders
-/// live-preview through the channels in reader_preview_channel.dart and
-/// commit on onChangeEnd.
 class CustomFilterTab extends ConsumerWidget {
   const CustomFilterTab({super.key, required this.mangaId});
 
@@ -70,7 +64,6 @@ class CustomFilterTab extends ConsumerWidget {
           onChanged: model.setCustomColorFilter,
         ),
         if (settings.customColorFilter) ...[
-          // Slider order R/G/B/A over one packed ARGB pref.
           for (final (title, shift) in [
             (context.l10n.colorFilterRed, 16),
             (context.l10n.colorFilterGreen, 8),
@@ -139,9 +132,7 @@ class CustomFilterTab extends ConsumerWidget {
   }
 }
 
-/// Live-preview slider: onChanged writes ONLY the preview channel (the overlay
-/// repaints; no riverpod write, no tab/viewer rebuild); onChangeEnd commits.
-/// The ValueListenableBuilder keeps the thumb tracking the draft.
+/// Preview writes repaint the overlay only; commit the setting on drag end.
 class _PreviewSlider extends StatelessWidget {
   const _PreviewSlider({
     required this.title,
@@ -216,7 +207,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Single-select chip row.
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
 

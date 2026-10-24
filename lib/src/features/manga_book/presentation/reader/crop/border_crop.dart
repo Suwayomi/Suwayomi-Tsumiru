@@ -6,8 +6,7 @@
 
 import 'dart:typed_data';
 
-/// Content rectangle in PIXEL coords. [left]/[top] inclusive, [right]/[bottom]
-/// exclusive, so [width]/[height] are the trimmed dimensions.
+/// Pixel bounds: left/top inclusive, right/bottom exclusive.
 class ContentRect {
   const ContentRect({
     required this.left,
@@ -28,22 +27,13 @@ class ContentRect {
   String toString() => 'ContentRect($left, $top, $right, $bottom)';
 }
 
-// A line counts as a border line when at most this fraction of its pixels
-// differ from the reference color — tolerates JPEG ringing along the edge.
+// Tolerate JPEG edge ringing when classifying border pixels.
 const double _maxNonBorderFraction = 0.01;
 
-// Reject a crop that keeps less than this fraction of the original area, which
-// signals a runaway trim on a near-uniform page rather than a real border.
+// Reject near-uniform pages that would lose more than 90% of their area.
 const double _minRetainedAreaFraction = 0.10;
 
-/// Detects uniform border lines around the content and returns the inner
-/// content rect, or null when nothing should be cropped.
-///
-/// The border reference color is the TOP-LEFT corner pixel; a pixel is a
-/// "border" pixel when each of its R/G/B channels is within [threshold] of the
-/// reference. Rows/columns that are (near-)entirely border pixels are trimmed
-/// from each side; left/right are scanned only within the found [top,bottom)
-/// band.
+/// Trims pixels within [threshold] of the top-left colour; returns null when no crop applies.
 ContentRect? findContentRect(
   Uint8List rgba,
   int width,
@@ -54,7 +44,6 @@ ContentRect? findContentRect(
     return null;
   }
 
-  // Reference color = top-left corner pixel.
   final refR = rgba[0];
   final refG = rgba[1];
   final refB = rgba[2];
@@ -90,7 +79,6 @@ ContentRect? findContentRect(
   while (top < height && isBorderRow(top)) {
     top++;
   }
-  // Whole image is border → nothing meaningful to keep.
   if (top >= height) return null;
 
   var bottom = height;
@@ -107,7 +95,6 @@ ContentRect? findContentRect(
     right--;
   }
 
-  // Nothing trimmed on any side → no border.
   if (top == 0 && bottom == height && left == 0 && right == width) {
     return null;
   }
@@ -116,7 +103,6 @@ ContentRect? findContentRect(
   final newHeight = bottom - top;
   if (newWidth <= 0 || newHeight <= 0) return null;
 
-  // Runaway-crop guard.
   final retained = (newWidth * newHeight) / (width * height);
   if (retained < _minRetainedAreaFraction) return null;
 

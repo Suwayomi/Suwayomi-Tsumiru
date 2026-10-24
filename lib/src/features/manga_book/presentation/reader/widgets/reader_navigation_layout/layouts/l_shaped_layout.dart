@@ -25,8 +25,7 @@ class LShapedLayout extends StatelessWidget {
   final Color? leftColor;
   final Color? rightColor;
 
-  // Vertical-axis zones (top/bottom rows); fall back to the horizontal
-  // assignments so callers without axis-wise invert keep the old behavior.
+  // Top/bottom callbacks fall back to horizontal assignments when axis-wise inversion is absent.
   final VoidCallback? onTopTap;
   final VoidCallback? onBottomTap;
   final Color? topColor;

@@ -70,8 +70,7 @@ double autoScrollDelta({
   return pxPerMs * dtMs;
 }
 
-/// Next interval boundary after [elapsed]. Komikku sleeps a full interval
-/// between glides, so a drag costs at most the remainder of one.
+/// Next auto-scroll interval boundary; user drags yield only until that boundary.
 Duration autoScrollResumeAt(Duration elapsed, int intervalSeconds) {
   if (intervalSeconds <= 0) return elapsed;
   final periodMs = intervalSeconds * 1000;
@@ -86,24 +85,7 @@ typedef _LoadedChapter = ({
   int chapterId,
 });
 
-/// Multi-chapter webtoon reader built on ``ScrollablePositionedList``.
-///
-/// Replaces the homegrown plain-``ListView`` reader. SPL gives us reliable
-/// index-based navigation and visible item reporting, but its underlying scroll
-/// position is still pixel based: when an async image above the viewport changes
-/// height, Flutter does not anchor the currently visible page for us. This
-/// widget records rendered page heights and compensates above-viewport resize
-/// deltas so the webtoon strip the user is reading stays visually pinned.
-///
-/// Multi-chapter handling:
-///   * Forward (next chapter) is APPENDED — front indices are unchanged,
-///     so SPL needs no re-anchor and the transition is seamless.
-///   * Backward (previous chapter) is PREPENDED — every index shifts up
-///     by the new chapter's page count, so right after the insert we
-///     ``jumpTo`` the same content at its new index + alignment. The old
-///     reader deferred this by two frames (postFrame + endOfFrame) which
-///     showed one frame of wrong content; we re-anchor without the
-///     double-defer.
+/// Compensate above-viewport image resizes and re-anchor after prepends to preserve reading position.
 class MultiChapterContinuousReaderMode extends HookConsumerWidget {
   const MultiChapterContinuousReaderMode({
     super.key,
@@ -130,16 +112,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
   final ReaderMode effectiveReaderMode;
   final bool openAtEnd;
 
-  /// Minimum gap between edge-overscroll boundary attempts. Widget tests
-  /// can't advance wall-clock time, so they shrink this.
+  /// Injectable edge-overscroll cooldown because widget tests cannot advance wall-clock time.
   @visibleForTesting
   static Duration edgeAttemptCooldown = const Duration(seconds: 4);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     watchDownloadAhead(ref);
-    // Whether the reader feedback snackbars are enabled (user setting). Read
-    // live so toggling the setting applies without reopening the reader.
     bool readerToastsEnabled() =>
         ref.read(readerFeedbackToastsProvider).ifNull(true);
     final ItemScrollController itemScrollController = useMemoized(
@@ -166,22 +145,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final loadedRef = useRef<List<_LoadedChapter>>(loadedChapters.value);
     loadedRef.value = loadedChapters.value;
 
-    // Per-page measured rendered height, keyed by image URL. Page images load
-    // with no intrinsic height, so a page that gets disposed on a long scroll
-    // re-enters as a tiny placeholder and then grows on decode — which yanks
-    // the scroll backward to the top of the previous strip. Recording each
-    // page's true height the first time it lays out lets us reserve that exact
-    // height in the placeholder on re-entry, so the strip never collapses and
-    // the scroll stays put. Reader-scoped so it survives item dispose/rebuild.
+    // Keep measured page extents across item disposal so re-entry placeholders cannot shift the viewport.
     final pageHeights = useRef<Map<String, double>>(<String, double>{});
     // Bumped each time a new ordered prefetch sweep starts, so a stale sweep
     // (from before a seek / chapter load) cancels itself.
     final prefetchGen = useRef<int>(0);
-    // True while a programmatic jump (seek / prepend re-anchor) is still
-    // settling. The position listener otherwise reads its transient positions
-    // as a user scroll and can auto-load a neighbour chapter mid-seek — which
-    // shifts every index and bounces the landing (the single-tap seek bug).
-    // The isAdjustingScroll flag below (+ adjustIdleTimer) is that guard.
+    // Suppress neighbour loads while programmatic jumps settle so transient positions cannot shift indices.
     final isAdjustingScroll = useRef<bool>(false);
     final adjustIdleTimer = useRef<Timer?>(null);
 
@@ -215,38 +184,28 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         if (!active || incognitoRef.value) return;
         if (!sessionChapterIds.value.contains(id)) {
           sessionChapterIds.value = {...sessionChapterIds.value, id};
-          // The provider container can be torn down (route pop racing app/test
-          // shutdown) between scheduling this microtask and it running; there is
-          // nothing left to protect at that point, so ignore the disposed-ref
-          // error rather than crash on a benign teardown race.
+          // The container may be disposed before this microtask; ignore that teardown race.
           try {
             sessionNotifier.record(id);
           } catch (_) {
-            // UnmountedRefException (internal riverpod type, not exported):
-            // container disposed before this microtask ran.
+            // The internal UnmountedRefException type is not exported.
           }
         }
       }
 
-      // A microtask (unlike addPostFrameCallback) is guaranteed to drain
-      // before this build/dispose call stack unwinds, regardless of whether
-      // another frame gets scheduled.
+      // Use a microtask so the update runs even if no further frame is scheduled.
       Future.microtask(() => doRecord(currentVisibleChapter.value.id));
       void onChanged() => doRecord(currentVisibleChapter.value.id);
       currentVisibleChapter.addListener(onChanged);
       return () {
         active = false;
         currentVisibleChapter.removeListener(onChanged);
-        // Disposal can occur during a build phase; defer the state change.
-        // Same teardown race as above: the container may already be gone by
-        // the time this runs (e.g. widget torn down at test/app shutdown with
-        // no further frame or microtask flush to run this sooner).
+        // Disposal may occur during build; defer and tolerate an already-disposed container.
         Future.microtask(() {
           try {
             sessionNotifier.discard(sessionChapterIds.value);
           } catch (_) {
-            // UnmountedRefException (internal riverpod type, not exported):
-            // container disposed before this microtask ran.
+            // The internal UnmountedRefException type is not exported.
           }
         });
       };
@@ -258,15 +217,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // only when the user scrolls TOWARD an edge — never on initial open.
     final lastTop = useRef<({int index, double edge})?>(null);
 
-    // Edge-overscroll trigger state: deliberate-pull accumulation + cooldown.
     final edgeOverscrollAccum = useRef<double>(0);
     final lastEdgeOverscrollAt = useRef<DateTime?>(null);
     final lastEdgeAttemptAt = useRef<DateTime?>(null);
 
-    // WATCH, not a one-time read: on a cold open the filtered chapter list is
-    // still loading, so a read-once here pinned both neighbours to null for
-    // the whole session (no next/previous chapter ever loaded). Mirrored into
-    // a ref so the once-bound scroll listener below reads the live value.
+    // Watch the loading chapter list and mirror it for the once-bound position listener.
     final nextPrevChapterPair =
         useRef<({ChapterDto? first, ChapterDto? second})?>(null);
     nextPrevChapterPair.value = ref.watch(
@@ -276,10 +231,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         readerScanlatorGroup: readerScanlatorGroup,
       ),
     );
-    // A missing neighbour is only the end for the list it came from. The list
-    // served while the server is unreachable lacks chapters that aren't on the
-    // device, and it reloads once the server is back; latched for good, the
-    // next chapter never loaded again that session.
+    // Do not latch a missing neighbour across list reloads; offline lists may omit server chapters.
     useEffect(
       () {
         if (nextPrevChapterPair.value?.first != null) {
@@ -296,14 +248,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       ],
     );
 
-    // --- reading-progress recording -------------------------------------
-    // Record progress for the CURRENTLY VISIBLE chapter, not the chapter the
-    // reader was opened with. In a multi-chapter session the visible chapter
-    // changes as you scroll across boundaries; the old code forwarded a
-    // visible-chapter-relative page index up to ReaderScreen, which wrote it to
-    // the OPENED chapter's id — corrupting that chapter's resume state and
-    // losing the visible chapter's. We also go through the offline-safe
-    // recordReadingProgress path so a read made offline is queued, not lost.
+    // Record progress for the visible chapter through the offline-safe write path.
     final progressDebounce = useRef<Timer?>(null);
     final latestProgress = useRef<({int chapterId, int rel, int generation})?>(
       null,
@@ -333,20 +278,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           progressQueue(chapterId).syncing) {
         return;
       }
-      // Debounce can fire after the reader's gone.
       if (!context.mounted) return;
       if (ref.read(incognitoModeProvider)) return;
-      // We've already moved past this chapter — a late debounced partial must
-      // not revert what the boundary mark-read recorded for it. Let that path
-      // own the chapter's final state.
+      // A late partial write must not undo the final state recorded at a chapter boundary.
       if (chapterId != currentVisibleChapter.value.id) return;
-      // Already finished this session (by us or the boundary handler): don't
-      // re-record or re-fire side effects.
       if (completedChapterIds.value.contains(chapterId)) return;
       final lc = loadedById(chapterId);
       if (lc == null) return;
-      // Already read in a prior session: leave it alone (mirrors the single-page
-      // reader, which skips progress writes for read chapters).
       if (lc.chapter.user.isRead.ifNull()) return;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
@@ -364,13 +302,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         isRead: completed,
         generation: generation,
       );
-      // Disposed during the await → the ref calls below would throw.
       if (!context.mounted ||
           progressQueue(chapterId).generation != generation) {
         return;
       }
-      // Online-only users have no dirty row to retry, so a failed push would
-      // vanish — surface it instead of losing progress silently.
+      // Surface failed pushes for online-only users because they have no dirty row to retry.
       if (progressResult.hasError) {
         ref
             .read(toastProvider)
@@ -394,8 +330,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ),
         );
       }
-      // Fired off a scroll/visibility notification — defer past the frame or
-      // it trips the Riverpod-3 modify-during-build assert.
+      // Defer invalidation outside scroll/layout notifications to avoid writes during build.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) ref.invalidate(readingHistoryProvider);
       });
@@ -437,9 +372,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-    // Skip the first run (on-mount restore, not a page turn) so opening a
-    // chapter already on its last page doesn't instantly fire delete-on-read/
-    // tracker. Matches the paged engine's guard.
+    // Skip the restore emit so opening on the last page does not complete the chapter.
     final initialProgressConsumed = useRef<bool>(false);
     useEffect(() {
       if (!initialProgressConsumed.value) {
@@ -453,12 +386,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [currentChapterPageIndex.value, currentVisibleChapter.value.id]);
 
-    // Flush any pending debounced progress when the reader is torn down, so
-    // exiting mid-chapter still saves the visible chapter's position. The db +
-    // flags are captured at build so the teardown never touches `ref` after the
-    // element starts disposing; the write goes straight to the on-device
-    // catalog (left dirty, so it up-syncs on reconnect) instead of the
-    // ref-dependent recordReadingProgress path.
+    // Capture DB and flags before teardown; flush directly to the dirty catalog without touching ref.
     final offlineEnabledForFlush = ref.read(offlineEnabledProvider);
     final offlineDbForFlush = offlineEnabledForFlush
         ? ref.read(offlineDatabaseProvider)
@@ -475,13 +403,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ReaderProgressQueue.new,
         );
         if (queue.syncing || p.generation != queue.generation) return;
-        // Already finished (an earlier in-session completion): nothing to flush.
         if (completedChapterIds.value.contains(p.chapterId)) return;
         if (incognitoForFlush || offlineDbForFlush == null) return;
-        // If the pending position is itself a completion (last page), write
-        // isRead:true — so a teardown that races the still-in-flight completion
-        // write (which may not have updated completedChapterIds yet) records the
-        // read instead of reverting it to unread. Otherwise save the partial.
+        // A teardown racing completion must preserve the completed state rather than write unread.
         final lc = loadedById(p.chapterId);
         final pageCount = lc?.pages.pages.length ?? 0;
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
@@ -503,9 +427,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       };
     }, const []);
 
-    // Desktop window-close fires neither a route-pop nor a reliable dispose,
-    // and the teardown flush above is offline-only; flush the visible position
-    // to the server on background/exit too.
+    // Flush to the server on hidden/exit; desktop close may skip pop/dispose and teardown is offline-only.
     useFlushProgressOnAppLifecycle(() async {
       progressDebounce.value?.cancel();
       final p = latestProgress.value;
@@ -529,33 +451,19 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isZoomOutDisabled = ref
         .watch(longStripDisableZoomOutProvider)
         .ifNull();
-    // readerIsZoomedInProvider is reset on mount/unmount so a leftover `true`
-    // from a previous reader session (e.g. the user closed it mid-zoom)
-    // can't wrongly disable DirectionalSwipeGestureHandler's chapter-swipe
-    // recognizers in a fresh session that hasn't zoomed yet.
+    // Reset zoom state on mount/unmount so a previous session cannot disable chapter swipes.
     useEffect(() {
-      // Captured once, up front: `ref` is unsafe to touch from a hook's
-      // dispose callback (the widget is already unmounting by then), so the
-      // notifier itself — not `ref` — has to be what the cleanup closure
-      // holds onto.
+      // Capture the notifier before teardown; ref is unsafe during hook disposal.
       final notifier = ref.read(readerIsZoomedInProvider.notifier);
       notifier.state = false;
       return () => notifier.state = false;
     }, const []);
-    // Auto-crop borders. Render-only: the crop
-    // provider's async decode is handled by the imageBuilder's frameBuilder
-    // below, which still reserves placeholderHeight and measures the cropped
-    // strip — the scroll/height math is untouched.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
     final bool alwaysShowTransition = ref
         .watch(alwaysShowChapterTransitionProvider)
         .ifNull(true);
-    // Long-strip scale caps the strip width. Render-only, and the decode size
-    // follows it so a capped strip isn't decoded at full width.
     final WebtoonScaleType scaleType =
         ref.watch(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen;
-    // Under originalSize each page caps itself at its native width instead of
-    // a strip-wide column, so the width limit has nothing to add there.
     final bool pagesAtNaturalSize = scaleType == WebtoonScaleType.originalSize;
     final bool widthLimitInPixels = ref
         .watch(longStripWidthLimitUsePixelsProvider)
@@ -584,20 +492,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       widthLimit,
     );
     final bool isHorizontal = scrollDirection == Axis.horizontal;
-    // The dimension along the scroll axis (height for a vertical strip,
-    // width for a horizontal one) — this is what a page reserves/grows along.
     final double mainAxisExtent = isHorizontal ? context.width : context.height;
-    // The dimension a page is capped to across the scroll axis. The
-    // width-limit settings above are vertical-strip-specific (no per-mode
-    // settings surface exists for continuousHorizontalLTR/RTL, which are
-    // legacy-orphan modes), so a horizontal strip simply fills the full
-    // viewport height instead.
+    // Width limits apply only to vertical strips; horizontal strips use viewport height.
     final double crossAxisExtent = isHorizontal
         ? context.height
         : maxContentWidth;
-    // Read via ref (like loadedRef) so a once-bound closure — e.g. the
-    // positions listener's loadNext/PreviousChapter — can't re-seed heights
-    // at a width superseded by a later scale/limit change.
+    // Once-bound callbacks read live layout parameters so old closures cannot reserve stale widths.
     final layoutParams = useRef<({bool naturalSize, double columnWidth})>((
       naturalSize: pagesAtNaturalSize,
       columnWidth: crossAxisExtent,
@@ -627,11 +527,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final stripInMotion = useRef<bool>(false);
     final bool chromeVisible = ref.watch(readerChromeVisibleProvider) ?? false;
 
-    // Decode a page's image off-screen AND record its true rendered height from
-    // the decoded aspect ratio. Caching the height
-    // is the load-bearing part: a page then ALWAYS lays out at its real height —
-    // even before its widget is built, and even if its bitmap was later evicted
-    // — so it never resizes on landing/scroll-in and never shoves the viewport.
+    // Cache decoded aspect-derived extents before display so pages cannot resize on arrival.
     Future<void> decodeAndCacheHeight(String url, int gen) async {
       if (pageHeights.value.containsKey(url)) return;
       final provider = serverPageImageProvider(ref, url);
@@ -652,9 +548,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final info = await completer.future;
       final w = info.image.width;
       final h = info.image.height;
-      // The gen re-check matters: a decode that outlives its sweep carries a
-      // stale width (scale/limit changed meanwhile), and the containsKey guard
-      // above would pin its wrong reservation until the page really renders.
+      // Reject a superseded decode so its old width cannot enter the reservation cache.
       if (w > 0 && h > 0 && context.mounted && prefetchGen.value == gen) {
         // Read via layoutParams, not closure capture, so a sweep started by
         // an old build still reserves at the current width.
@@ -668,8 +562,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 crossAxisSize,
               )
             : layout.columnWidth;
-        // Vertical: cross-axis is width(w), main-axis is height(h). Horizontal
-        // is the mirror image — cross-axis is height(h), main-axis is width(w).
+        // Cross/main axes are width/height vertically and height/width horizontally.
         pageHeights.value[url] = isHorizontal
             ? renderedCrossAxis * w / h
             : renderedCrossAxis * h / w;
@@ -677,10 +570,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       info.dispose();
     }
 
-    // Decode pages ONCE, off-screen and ahead of the viewport, in reading order
-    // — so a page is already decoded AND its height is known before it's
-    // reached/jumped-to; nothing resizes on/above screen. A generation token
-    // cancels an in-flight sweep when a new one starts (seek / chapter load).
+    // Prefetch in reading order; a new seek or chapter load cancels the old sweep by generation.
     void prefetchPagesFrom(int startGlobalIndex) {
       final gen = ++prefetchGen.value;
       Future(() async {
@@ -702,7 +592,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       });
     }
 
-    // Global (across all loaded chapters) index of the page being read now.
     int currentGlobalIndex() {
       var cumulative = 0;
       for (final c in loadedRef.value) {
@@ -714,7 +603,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return currentChapterPageIndex.value;
     }
 
-    // Start the ordered prefetch once, after the first layout.
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) prefetchPagesFrom(currentChapterPageIndex.value);
@@ -722,9 +610,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return () => adjustIdleTimer.value?.cancel();
     }, const []);
 
-    // Open a short window during which the position listener won't auto-load a
-    // neighbour chapter. Called around programmatic jumps so their settle
-    // motion isn't mistaken for the user scrolling toward an edge.
+    // Suppress neighbour loading while a programmatic jump settles.
     void markScrollAdjusting() {
       isAdjustingScroll.value = true;
       adjustIdleTimer.value?.cancel();
@@ -737,15 +623,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     void jumpToIndex({required int index, double alignment = 0}) {
       if (!itemScrollController.isAttached) return;
       itemScrollController.jumpTo(index: index, alignment: alignment);
-      // Re-seed the decode order from the new position so the pages we just
-      // jumped onto (and the ones ahead) are decoded before they're scrolled
-      // past — otherwise a far jump lands on undecoded strips that resize.
       prefetchPagesFrom(index);
     }
 
-    // Stale heights after a scale/width change are the shove/seek hazard the
-    // cache exists to prevent, so drop them and re-anchor on the current page.
-    // First build is the initial sweep's job, not this effect's.
+    // Clear stale extents and re-anchor after scale/width changes; skip the initial sweep.
     final lastLayoutKey = useRef<(WebtoonScaleType, double)?>(null);
     useEffect(() {
       final key = (scaleType, crossAxisExtent);
@@ -771,7 +652,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [scaleType, crossAxisExtent]);
 
-    // --- chapter loading -------------------------------------------------
 
     Future<void> loadNextChapter(ChapterDto next) async {
       if (loadingNext.value || hasReachedEnd.value) return;
@@ -784,12 +664,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             next.name,
           );
         }
-        // Hold a subscription for the whole fetch: chapterPages is autoDispose
-        // and nothing else listens to the NEIGHBOUR chapter's instance, so
-        // under Riverpod 3 an unheld read gets disposed mid-fetch and its
-        // future never completes (the "loading…" that never loads). The
-        // timeout releases the loading guard; the held fetch finishes and
-        // caches for the next attempt.
+        // Hold the autoDispose neighbour provider until fetch completion so timeout retries can reuse its result.
         final sub = ref.listenManual(
           chapterPagesProvider(chapterId: next.id),
           (_, _) {},
@@ -805,7 +680,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           return;
         }
         if (pages == null) {
-          // Drop the cached null so the next gesture refetches.
           ref.invalidate(chapterPagesProvider(chapterId: next.id));
           return;
         }
@@ -814,7 +688,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ...loadedChapters.value,
           (pages: pages, chapter: next, chapterId: next.id),
         ];
-        // Decode the appended chapter's pages ahead of the user reaching them.
         prefetchPagesFrom(currentGlobalIndex());
         if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showNextChapterLoadedFeedback(
@@ -823,8 +696,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           );
         }
       } catch (_) {
-        // Transient failure — leave unlatched and refetchable so the next
-        // gesture retries.
+        // Invalidate transient failures so the next gesture can retry.
         ref.invalidate(chapterPagesProvider(chapterId: next.id));
       } finally {
         loadingNext.value = false;
@@ -842,7 +714,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             prev.name,
           );
         }
-        // Same held-subscription + timeout treatment as loadNextChapter above.
         final sub = ref.listenManual(
           chapterPagesProvider(chapterId: prev.id),
           (_, _) {},
@@ -863,25 +734,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
         final newPageCount = pages.pages.length;
 
-        // Capture the page currently anchoring the viewport so we can
-        // re-pin it after every index shifts up by ``newPageCount``. The
-        // leading edge is kept UNCLAMPED for that purpose: jumpTo's
-        // alignment only supports [0, 1] (it aligns the item's top edge to
-        // a point within the viewport — see ItemScrollController.jumpTo),
-        // so a tall page we're deep inside of — routine on long-strip
-        // webtoon content — has a leading edge far below -1.0. Clamping
-        // that into range used to silently discard how far into the page
-        // we'd scrolled, so the re-anchor landed on the page's TOP instead
-        // of where we actually were. We jump to the top (alignment 0, the
-        // one value the API guarantees) and then nudge down by the exact
-        // pixel depth separately below.
+        // Keep unclamped anchor depth; jumpTo supports only [0, 1] alignment, so restore pixel depth separately.
         final positions = positionsListener.itemPositions.value.toList()
           ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
         int? anchorIndex;
         double anchorLeadingEdge = 0.0;
         for (final p in positions) {
-          // First item whose top edge is at/below the viewport top is the
-          // natural anchor; fall back to the first reported position.
           if (p.itemTrailingEdge > 0) {
             anchorIndex = p.index;
             anchorLeadingEdge = p.itemLeadingEdge;
@@ -889,8 +747,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           }
         }
         anchorIndex ??= positions.isNotEmpty ? positions.first.index : null;
-        // Pixels already scrolled past the anchor's top edge (0 if its top
-        // is still at/below the viewport top — nothing to restore then).
         double intoAnchorPixels = 0;
         try {
           if (anchorLeadingEdge < 0) {
@@ -899,23 +755,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 scrollOffsetController.position.viewportDimension;
           }
         } catch (_) {
-          // Not laid out yet — landing on the item's top is the best we can do.
         }
 
         loadedChapters.value = [
           (pages: pages, chapter: prev, chapterId: prev.id),
           ...loadedChapters.value,
         ];
-        // Indices just shifted up by newPageCount; drop the stale
-        // direction sample so the next tick re-derives it cleanly.
+        // Prepending shifts indices, invalidating the previous direction sample.
         lastTop.value = null;
 
-        // Re-anchor across two frames: the first lands the shifted item's
-        // top edge at the viewport top (the only alignment jumpTo actually
-        // supports); the second — once that layout has settled and pixels
-        // reflects it — nudges down by the exact depth we'd read into it,
-        // so a tall page lands back at precisely the same visual spot
-        // instead of resetting to its top. No animation either frame.
+        // Re-anchor the shifted item first, then restore its pixel depth after layout settles.
         if (anchorIndex != null) {
           final target = anchorIndex + newPageCount;
           // Guard the re-anchor jump too: its settle motion must not be read
@@ -946,15 +795,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           );
         }
       } catch (_) {
-        // Transient failure — leave unlatched and refetchable so the next
-        // gesture retries.
+        // Invalidate transient failures so the next gesture can retry.
         ref.invalidate(chapterPagesProvider(chapterId: prev.id));
       } finally {
         loadingPrevious.value = false;
       }
     }
 
-    // --- position tracking ----------------------------------------------
 
     useEffect(() {
       void listener() {
@@ -967,8 +814,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             .toList();
         if (positions.isEmpty) return;
 
-        // Most-visible page → current global index (last page wins once its
-        // bottom reaches the viewport, so short trailing pages still complete).
+        // The last page wins once its bottom reaches the viewport so short trailing pages can complete.
         final globalIdx = InfinityContinuousUtils.selectCurrentIndex(
           positions,
           total,
@@ -977,7 +823,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         );
         if (globalIdx == null) return;
 
-        // Map the global index to (chapter, page-within-chapter).
         int cumulative = 0;
         for (final ch in loaded) {
           final count = ch.pages.pages.length;
@@ -994,8 +839,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               );
               currentVisibleChapter.value = ch.chapter;
               lastVisibleChapterId.value = ch.chapter.id;
-              // Forward boundary crossing: the chapter we just left is
-              // finished → mark it read.
               if (prevPos >= 0 && newPos > prevPos) {
                 final left = loaded[prevPos].chapter;
                 _markChapterRead(
@@ -1013,30 +856,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           cumulative += count;
         }
 
-        // A programmatic jump (seek / prepend re-anchor) is still settling —
-        // its transient positions must not look like the user scrolling to an
-        // edge, or we'd auto-load a neighbour chapter and shift the indices
-        // out from under the jump. Skip edge handling until it settles, and
-        // drop the stale direction sample so the first real tick starts clean.
+        // Ignore jump-settling positions and clear the direction sample before resuming edge handling.
         if (isAdjustingScroll.value) {
           lastTop.value = null;
           return;
         }
 
-        // Boundary prefetch triggers — gated on scroll DIRECTION so that
-        // opening a chapter (at page 0, or a short chapter) never auto-
-        // loads a neighbour. A neighbour loads only when the user is
-        // actively scrolling toward that edge.
-        //
-        // minIdx/maxIdx use a stricter visibility floor than the raw
-        // sliver filter above: a page whose edge has only just grazed the
-        // viewport (as little as one rendered pixel) otherwise counts as
-        // "on screen" here, so a fast fling through a long chapter — more
-        // scrolling per gesture — can transiently report the tail page
-        // while the reader, by the 40%-visible standard selectCurrentIndex
-        // uses for progress, is still several pages behind. Falls back to
-        // the raw list if nothing clears the floor (e.g. several short
-        // pages sharing the screen, none individually over threshold).
+        // Load neighbours only toward the scroll direction, using a visibility floor to ignore grazed page edges.
         final strictlyVisible = positions
             .where(
               (p) =>
@@ -1060,13 +886,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         bool scrollingUp = false;
         bool scrollingDown = false;
         if (prevTop != null) {
-          // A fixed viewport-fraction epsilon (the previous 0.0015, ~1px on
-          // a typical phone) shrinks to nothing on tall viewports, letting
-          // ordinary sub-pixel layout jitter — e.g. a page-height
-          // correction landing while that page sits at the viewport top —
-          // masquerade as a deliberate scroll. Measure in real pixels
-          // instead, converting to the viewport-fraction units itemLeadingEdge
-          // uses.
+          // Measure direction thresholds in pixels so viewport size cannot turn layout jitter into scrolling.
           double viewportHeight = 0;
           try {
             viewportHeight = scrollOffsetController.position.viewportDimension;
@@ -1120,10 +940,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
       positionsListener.itemPositions.addListener(listener);
       return () => positionsListener.itemPositions.removeListener(listener);
-      // Bind once; the listener reads loadedRef for the live chapter list.
     }, const []);
 
-    // --- navigation ------------------------------------------------------
 
     void jumpToChapterRelative(int chapterIdx) {
       final globalIndex =
@@ -1135,19 +953,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
       currentChapterPageIndex.value = chapterIdx;
-      // Jump IMMEDIATELY — itemScrollController.jumpTo(index:), no await, so the
-      // landing is instant instead of deferred. The old
-      // path awaited ~10 sequential off-screen image decodes BEFORE jumping —
-      // a multi-second window (2.4s on-device, worse under download load) in
-      // which the position listener auto-loaded a neighbour chapter and shifted
-      // every index out from under the pending jump, so a single tap landed in
-      // the wrong chapter and bounced. Page heights are already estimated from
-      // measured siblings, so the landing is stable without pre-decoding.
+      // Jump before background decoding so neighbour loads cannot shift the pending target indices.
       markScrollAdjusting();
       lastTop.value = null;
       itemScrollController.jumpTo(index: globalIndex, alignment: 0);
-      // Decode forward from the new position in the background so the pages the
-      // user is about to scroll into are ready.
       prefetchPagesFrom(globalIndex);
     }
 
@@ -1195,18 +1004,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           );
         }
       } catch (_) {
-        // Attached but not laid out yet (no ScrollPosition) — skip this press.
       }
     }
 
-    // --- auto-scroll engine -----------------------------------------------
-    //
-    // Smooth mode drives per-frame pixel deltas straight on the
-    // ScrollPosition; jump mode reuses handlePageNavigation on a periodic
-    // timer (Komikku's scrollDown() analog). Both hold while the chrome is up
-    // and yield to a user drag until the next interval boundary, so only the
-    // toggle switches auto-scroll off — plus reaching the end of the last
-    // loaded chapter, and the app-lifecycle listener below.
+    // Auto-scroll pauses for chrome and user drags; resume at the next interval boundary.
 
     bool atLastLoadedPage() =>
         hasReachedEnd.value &&
@@ -1240,18 +1041,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         programmaticScroll.value = true;
         pos.jumpTo(target.clamp(pos.minScrollExtent, pos.maxScrollExtent));
       } catch (_) {
-        // Attached but not laid out yet (no ScrollPosition) — skip this tick.
       } finally {
-        // A throw mid-jump would otherwise latch the guard on and every later
-        // drag would read as the engine's own motion.
+        // Always release the programmatic-scroll guard, including when a jump throws.
         programmaticScroll.value = false;
       }
     }
 
-    // useSingleTickerProvider's TickerProvider only permits ONE createTicker
-    // call per hook instance (a second call asserts) — so the Ticker itself
-    // is built exactly once via useMemoized and then just started/stopped as
-    // the active/smooth state changes, never recreated.
+    // Create the ticker once; useSingleTickerProvider permits only one createTicker call per hook.
     final autoScrollTickerProvider = useSingleTickerProvider();
     final autoScrollTicker = useMemoized(
       () => autoScrollTickerProvider.createTicker(onAutoScrollTick),
@@ -1269,8 +1065,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [autoScrollActive, smoothAutoScroll, chromeVisible]);
 
-    // Jump mode (smoothAutoScroll off): periodic page-advance instead of a
-    // per-frame glide.
     useEffect(
       () {
         Timer? timer;
@@ -1301,8 +1095,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       ],
     );
 
-    // The ticker outlives both effects above (it's created once); stop and
-    // dispose it only on the widget's own teardown.
+    // Dispose the shared ticker only on widget teardown, after both mode effects.
     useEffect(() {
       return () {
         if (autoScrollTicker.isActive) autoScrollTicker.stop();
@@ -1310,8 +1103,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       };
     }, const []);
 
-    // Backgrounding the app mid-glide would otherwise leave auto-scroll
-    // running (and writing progress) while the user isn't looking.
+    // Stop auto-scroll in background so it cannot keep writing progress unseen.
     useEffect(() {
       final listener = AppLifecycleListener(
         onHide: () => ref.read(autoScrollActiveProvider.notifier).stop(),
@@ -1320,12 +1112,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return listener.dispose;
     }, const []);
 
-    // --- build -----------------------------------------------------------
 
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
 
-    // Smart scale centres a narrower strip on wide screens (cross-axis: width
-    // for a vertical strip, height for a horizontal one).
     Widget capWidth(Widget page) {
       final containerExtent = isHorizontal ? context.height : context.width;
       if (crossAxisExtent >= containerExtent) return page;
@@ -1336,7 +1125,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
-    // Space so the last page clears the navigation bar and the bottom menu.
     Widget buildEndOfStrip(BuildContext context) {
       final pair = nextPrevChapterPair.value;
       final trailingSpace =
@@ -1385,17 +1173,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             ? SizedBox(width: fallbackMainAxisExtent)
             : SizedBox(height: fallbackMainAxisExtent);
       }
-      // Reserve the page's true main-axis extent so a strip never grows on
-      // decode and shoves the scroll backward. Priority:
-      //   1. this exact page's measured extent (re-entry), else
-      //   2. the AVERAGE of pages already measured in this session — manhwa
-      //      strips in a chapter are near-uniform, so this places an unloaded
-      //      page within a few px of its real extent (the key fix: a page that
-      //      loads while ABOVE the viewport barely changes size, so it doesn't
-      //      push the reader back — the failure mode the 0.7-screen guess caused
-      //      when real strips are 2-4 screens tall), else
-      //   3. a one-screen fallback for the very first page (the anchor, which
-      //      grows forward and never jumps the reader).
+      // Reserve measured extent, then sibling average, then one viewport so decode cannot shift earlier pages.
       final measured = pageHeights.value;
       final double? avgExtent = measured.isEmpty
           ? null
@@ -1419,7 +1197,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         fit: fit,
         appendApiToUrl: false,
         cropBorders: cropBorders,
-        // Decode at on-screen size, not the ~800×15000 source (#196 GPU cost).
         memCacheWidth: isHorizontal
             ? null
             : (crossAxisExtent * MediaQuery.devicePixelRatioOf(context))
@@ -1439,7 +1216,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         imageBuilder: (context, imageProvider) {
           final image = Image(
             image: imageProvider,
-            // scaleDown = lay out at native size, shrink to fit, never enlarge.
             fit: pagesAtNaturalSize ? BoxFit.scaleDown : fit,
             width: pagesAtNaturalSize
                 ? null
@@ -1447,10 +1223,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             height: pagesAtNaturalSize
                 ? null
                 : (isHorizontal ? double.infinity : null),
-            // A page file deleted while still loaded (e.g. delete-on-read, then
-            // scrolling back to it offline) would otherwise throw and paint
-            // Flutter's red error widget for every page. Show a stable-extent
-            // broken-image placeholder instead.
+            // Deleted offline files need stable-extent placeholders when the user scrolls back.
             errorBuilder: (context, error, stackTrace) => placeholderBox(
               child: Center(
                 child: Icon(
@@ -1459,19 +1232,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 ),
               ),
             ),
-            // Reserve the page's extent UNTIL the bitmap decodes. The network path
-            // gets this for free via progressIndicatorBuilder, but the offline
-            // (file://) ServerImage branch skips that and renders the bare Image —
-            // which is 0px until the local file decodes, then pops to full
-            // extent. A wall of pages popping 0->real around a seek lands the jump
-            // on the wrong page (offline-only seek bug). Reserving placeholderExtent
-            // keeps every page size-stable, so jumpTo(index) lands true.
+            // Reserve offline page extent until decode; file:// bypasses the network progress placeholder.
             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
               if (frame == null && !wasSynchronouslyLoaded) {
                 return placeholderBox();
               }
-              // Only measure the REAL decoded image — never the placeholder — so a
-              // strip re-entering the viewport reserves its true extent.
+              // Measure decoded images only so re-entry reserves real extent rather than placeholder size.
               return MeasureSize(
                 onChange: (size) {
                   final extent = isHorizontal ? size.width : size.height;
@@ -1482,9 +1248,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               );
             },
           );
-          // Load-bearing: without Center, the list's tight cross-axis extent
-          // pins scaleDown's layout box at full size (letterboxed) instead
-          // of letting it shrink to native.
+          // Center loosens cross-axis constraints so scaleDown can shrink to native size.
           return pagesAtNaturalSize ? Center(child: image) : image;
         },
       );
@@ -1498,10 +1262,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
-    // continuousVertical is the "Long strip with gaps" mode in settings.
-    // continuousHorizontalLTR/RTL have no equivalent gaps setting (they're
-    // legacy-orphan modes with no dedicated settings surface), so they follow
-    // webtoon's no-gap default.
+    // Only continuousVertical exposes gaps; horizontal legacy modes use the webtoon no-gap default.
     final pageGap = effectiveReaderMode == ReaderMode.continuousVertical
         ? const Gap(kLongStripPageGap)
         : const SizedBox.shrink();
@@ -1539,16 +1300,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ? context.width * InfinityContinuousConfig.horizontalCacheMultiplier
           : context.height * InfinityContinuousConfig.verticalCacheMultiplier,
       itemBuilder: (context, index) => capWidth(buildItem(context, index)),
-      // Transition cards follow the strip's column width — a full-width card
-      // interrupting a 30% strip reads as a glitch.
       separatorBuilder: (context, index) =>
           capWidth(buildSeparator(context, index)),
     );
 
-    // A real user drag/fling yields the strip until the next interval boundary
-    // instead of ending auto-scroll, so the reader can nudge the page without
-    // re-arming the toggle. The engine's own jumps are excluded via the
-    // programmaticScroll guard set around them.
+    // User drags yield until the next interval; exclude guarded programmatic jumps.
     final autoScrollAwareList = NotificationListener<UserScrollNotification>(
       onNotification: (notification) {
         if (!programmaticScroll.value &&
@@ -1576,13 +1332,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       ),
     );
 
-    // Pinned at the scroll clamp a drag moves nothing, so the position
-    // listener above never ticks and the direction-gated boundary triggers
-    // can never fire — a resume landing on page 0 was an upward dead-end.
-    // Clamping physics still reports every blocked drag as overscroll, so
-    // treat edge overscroll as the boundary gesture. Gated on a deliberate
-    // pull (accumulated distance) and a per-attempt cooldown so a failing
-    // fetch retries calmly instead of on every blocked drag pixel.
+    // Clamped drags emit no position change; use accumulated overscroll with cooldown to trigger boundary loads.
     final edgeAwareList = NotificationListener<OverscrollNotification>(
       onNotification: (n) {
         if (isAdjustingScroll.value || programmaticScroll.value) return false;
@@ -1663,7 +1413,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               scrollAxis: scrollDirection,
               reverse: reverse,
               maxScale: InfinityContinuousConfig.maxZoomScale,
-              // Long-strip min zoom-out rate is 0.5 unless disabled.
               minScale: isZoomOutDisabled ? 1 : 0.5,
               pinchEnabled: isPinchToZoomEnabled,
               doubleTapToZoom: isDoubleTapZoomEnabled,
@@ -1696,9 +1445,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       onNext: () => handlePageNavigation(isNext: true),
       onViewportScrollForward: () => handleViewportScroll(forward: true),
       onViewportScrollBackward: () => handleViewportScroll(forward: false),
-      // Reuse the slider-jump primitive (chapter-relative index -> global) so
-      // currentChapterPageIndex/prefetch/scroll-adjust guard stay in sync,
-      // rather than calling itemScrollController.jumpTo directly.
+      // Use the shared jump path to keep page index, prefetch, and scroll-adjust guards in sync.
       onJumpToFirst: () => jumpToChapterRelative(0),
       onJumpToLast: () => jumpToChapterRelative(
         (loadedById(currentVisibleChapter.value.id)?.pages.pages.length ??
@@ -1728,9 +1475,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
   }
 }
 
-/// Mark [chapter] read once and reconcile the relevant providers. Tracks
-/// already-marked ids in [completedChapterIds] so repeated boundary
-/// crossings don't re-fire the mutation.
 void _markChapterRead(
   WidgetRef ref,
   int mangaId,
@@ -1739,8 +1483,6 @@ void _markChapterRead(
   ObjectRef<Set<int>> completedChapterIds,
   BuildContext context,
 ) {
-  // Incognito: don't mark chapters read or fire history/tracker/delete on a
-  // boundary crossing — leave no trace (parity with ReaderScreen's writes).
   if (ref.read(incognitoModeProvider)) return;
   if (ref.read(readerProgressQueuesProvider)[chapter.id]?.syncing ?? false) {
     return;
@@ -1748,11 +1490,7 @@ void _markChapterRead(
   if (chapter.user.isRead.ifNull()) return;
   if (completedChapterIds.value.contains(chapter.id)) return;
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};
-  // Record through the offline-safe path: persists to the on-device catalog
-  // first (survives offline + restart), then pushes to the server and up-syncs
-  // on reconnect. Previously this used a raw putChapter mutation, so a chapter
-  // finished at a boundary while offline was never queued and the read was
-  // silently lost.
+  // Persist boundary completion locally before pushing so offline reads remain queued.
   unawaited(
     recordReadingProgress(
       ref,
@@ -1768,7 +1506,6 @@ void _markChapterRead(
             .read(toastProvider)
             ?.showError(context.l10n.errorSomethingWentWrong);
       }
-      // Push progress to external trackers (fire-and-forget).
       unawaited(
         maybeTrackProgressOnReadFetch(
           ref.read,
@@ -1777,8 +1514,6 @@ void _markChapterRead(
           manual: false,
         ),
       );
-      // The chapter just crossed is behind the reader now — queue its
-      // auto-delete for reader exit (Komikku's timing).
       unawaited(
         noteChapterFinishedInReader(
           ref,
@@ -1788,12 +1523,7 @@ void _markChapterRead(
       );
     }),
   );
-  // NOTE: deliberately do NOT invalidate chapterProvider / mangaChapterList
-  // here. Doing so while reading rebuilds ReaderScreen through an async reload,
-  // which remounts this list and re-applies initialScrollIndex (now 0 from the
-  // mark-read above) — yanking the reader back to the start of the opening
-  // chapter. Read-state is tracked in-session via completedChapterIds, and
-  // ReaderScreen refreshes these providers on exit (its PopScope).
+  // Do not invalidate chapter providers mid-read: remounting resets scroll; refresh on reader exit.
 }
 
 class _PageLoc {

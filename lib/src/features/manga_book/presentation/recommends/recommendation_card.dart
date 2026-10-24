@@ -26,8 +26,6 @@ MangaDto? matchLibraryRecommendation(String title, List<MangaDto>? library) {
   return null;
 }
 
-/// A single recommendation cover card. Tapping opens the series page when the
-/// recommended title already matches a library entry, else searches globally.
 class RecommendationCard extends HookConsumerWidget {
   const RecommendationCard({super.key, required this.rec, this.width = 96});
 

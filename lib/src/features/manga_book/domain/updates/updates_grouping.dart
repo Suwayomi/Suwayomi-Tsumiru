@@ -7,9 +7,7 @@
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../chapter/chapter_model.dart';
 
-/// One display row on the Updates page: a representative [head] chapter, plus
-/// any further same-manga/same-day chapters folded into [tail]. An ungrouped
-/// chapter is an entry with an empty [tail].
+/// An ungrouped chapter has an empty [tail].
 class UpdatesGroupedEntry {
   const UpdatesGroupedEntry({required this.head, required this.tail});
 
@@ -19,15 +17,7 @@ class UpdatesGroupedEntry {
   int get mangaId => head.mangaId;
 }
 
-/// Groups consecutive chapters that share the same manga and the same calendar
-/// day into [UpdatesGroupedEntry] records. Ungrouped chapters become an entry
-/// with an empty tail. Grouping only merges strictly consecutive rows — a
-/// manga interrupted by a different one in between starts a new group.
-///
-/// Each run is kept in original (chronological) order until it is closed, so
-/// [pickGroupHead] always sees the group's true member order — folding the
-/// head choice into the run incrementally would let an already-superseded
-/// pick reappear once later reads/unreads are added.
+/// Groups only consecutive same-manga/same-day rows; choose the head after collecting the full run.
 List<UpdatesGroupedEntry> groupUpdatesForDisplay(
   List<ChapterWithMangaDto> items,
 ) {
@@ -58,16 +48,7 @@ UpdatesGroupedEntry _closeRun(List<ChapterWithMangaDto> run) {
   );
 }
 
-/// Picks the representative chapter for a group: the most recently released
-/// unread chapter, or the most recently released chapter if all are already
-/// read — matching WebUI behaviour.
-///
-/// Chosen by explicit [ChapterWithMangaDto.fetchedAt]/[sourceOrder]
-/// comparison rather than by list position (first/last): the real feed
-/// (`UpdatesRepository.getRecentChaptersPage`) orders chapters newest-first,
-/// so "last in the list" is actually the OLDEST chapter in a group, not the
-/// newest — using list position here previously picked the oldest unread
-/// chapter as the headline instead of the newest.
+/// Chooses the newest unread release, or newest release if all are read; requires a nonempty list.
 ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
   assert(chapters.isNotEmpty);
   final unread = [
@@ -78,10 +59,7 @@ ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
   return candidates.reduce((a, b) => _releasedAfter(b, a) ? b : a);
 }
 
-/// True when [a] was released strictly after [b] — by [fetchedAt], falling
-/// back to [sourceOrder] (ascending = chronological reading order, see
-/// offline_download_providers.dart's `inReadingOrder` sort) to break ties
-/// within the same fetch batch.
+/// Break equal fetch timestamps by sourceOrder, which increases in reading order.
 bool _releasedAfter(ChapterWithMangaDto a, ChapterWithMangaDto b) {
   final fetchedCompare = (int.tryParse(a.fetchedAt) ?? 0).compareTo(
     int.tryParse(b.fetchedAt) ?? 0,
@@ -90,20 +68,7 @@ bool _releasedAfter(ChapterWithMangaDto a, ChapterWithMangaDto b) {
   return a.sourceOrder.compareTo(b.sourceOrder) > 0;
 }
 
-/// Flat indices that should carry a date header: the first occurrence of
-/// each calendar day in [items], in scan order.
-///
-/// The feed is normally sorted newest-first, so days only ever appear in one
-/// contiguous run — but `UpdatesRepository.getRecentChaptersPage` pages
-/// through a live, growing table with plain offset pagination (its own doc
-/// comment on `updatesPageSize` notes "the offset step must match, or pages
-/// overlap and the list repeats rows"), so a background update arriving
-/// mid-scroll can shift the offset window and re-surface a "today" row again
-/// after the list has already moved on into "yesterday". Keying headers off
-/// "first time this day was seen" instead of "does this row's day differ
-/// from the row right before it" means a stray repeat like that just folds
-/// silently into the day it belongs to instead of opening a second header
-/// for a day already shown further up.
+/// Headers mark the first occurrence of each day; live offset pagination can repeat days out of order.
 Set<int> dateHeaderIndices(List<ChapterWithMangaDto> items) {
   final seenDays = <int>{};
   final headerIndices = <int>{};
@@ -118,12 +83,7 @@ Set<int> dateHeaderIndices(List<ChapterWithMangaDto> items) {
   return headerIndices;
 }
 
-/// Maps each group's head flat-list index to its position in [groups] —
-/// computed once for the whole result and shared, instead of every row's
-/// `itemBuilder` call doing its own O(groups) scan to answer "is this flat
-/// index a group head, and if so which group?" A flat index absent from the
-/// map is a tail member (or out of range): the caller should render nothing
-/// for it, since its group already rendered at the head's index.
+/// Maps head flat indices to display indices; absent entries are tails and should render nothing.
 Map<int, int> headFlatIndexToDisplayIndex(List<UpdatesGroupedEntry> groups) {
   final map = <int, int>{};
   var flatCursor = 0;

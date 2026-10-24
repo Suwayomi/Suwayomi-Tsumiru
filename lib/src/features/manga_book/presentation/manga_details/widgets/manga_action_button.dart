@@ -8,11 +8,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 
-/// Compact icon-over-label action button for the manga-details action row: a
-/// weight-1 TextButton wrapping a centered Column of a 20dp icon, a 4dp gap and
-/// a 12sp centered label. Active items use the primary color; the rest recede.
-///
-/// Put each in an [Expanded] so the row's items share width evenly.
 class MangaActionButton extends StatelessWidget {
   const MangaActionButton({
     super.key,
@@ -22,13 +17,11 @@ class MangaActionButton extends StatelessWidget {
     this.active = false,
   });
 
-  /// Usually an [Icon]; may be any widget (e.g. a progress spinner). Its colour
-  /// and 20dp size are applied via [IconTheme].
+  /// [IconTheme] supplies the icon colour and 20dp size, including for non-Icon widgets.
   final Widget icon;
   final String label;
   final VoidCallback? onPressed;
 
-  /// Highlight (primary colour) when the action's state is "on".
   final bool active;
 
   @override

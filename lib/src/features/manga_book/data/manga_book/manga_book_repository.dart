@@ -39,9 +39,7 @@ class MangaBookRepository {
       )
       .getData((data) => data.updateManga?.manga);
 
-  /// Add many series to the library in one request (bulk favorite from browse).
-  /// Returns the ids the server confirmed — may be fewer than [mangaIds]
-  /// on a partial apply.
+  /// Returns only server-confirmed IDs; a partial apply may return fewer than [mangaIds].
   Future<List<int>> addMangasToLibrary(List<int> mangaIds) => client
       .mutate$UpdateMangas(
         Options$Mutation$UpdateMangas(
@@ -96,11 +94,9 @@ class MangaBookRepository {
           ),
         ),
       )
-      // Surface failure as a throw so callers don't cascade a device delete
-      // when the server delete didn't actually happen.
+      // Throw on server failure so callers do not delete the device copy.
       .getData((data) {});
 
-  // Mangas
   Future<MangaDto?> getManga({
     required int mangaId,
   }) =>
@@ -154,8 +150,7 @@ class MangaBookRepository {
       )
       .getData((data) {});
 
-  /// Bulk category edit across many series in one request: add [addTo] and
-  /// remove [removeFrom] on every id in [mangaIds]. Empty lists are no-ops.
+  /// Empty [addTo] and [removeFrom] lists are no-ops.
   Future<void> updateMangasCategories(
     List<int> mangaIds, {
     List<int> addTo = const [],
@@ -179,7 +174,6 @@ class MangaBookRepository {
           )
           .getData((data) {});
 
-  // Chapters
 
   Future<ChapterDto?> getChapter({
     required int chapterId,
@@ -221,9 +215,7 @@ class MangaBookRepository {
               ),
             ),
           )
-          // Surface a failed mutation as a throw (like every other call here),
-          // so offline callers detect the failure and keep the change pending
-          // instead of clearing the dirty flag on a push that never landed.
+          // Throw on failure so offline callers keep the change pending.
           .getData((data) {});
 
   Future<void> patchMangaMeta({
@@ -265,9 +257,7 @@ class MangaBookRepository {
           )
           .getData<Object>((data) => null);
 
-  /// Fetches the chapter list FROM THE SOURCE (the server re-scrapes the source
-  /// site). Returns nothing if the source is down/gone — callers that need to
-  /// survive a dead source should fall back to [getStoredChapterList].
+  /// Re-scrapes the source; fall back to [getStoredChapterList] if the source is unavailable.
   Future<List<ChapterDto>?> getChapterList(int mangaId) async => client
       .mutate$GetChaptersByMangaId(
         Options$Mutation$GetChaptersByMangaId(
@@ -280,9 +270,7 @@ class MangaBookRepository {
       )
       .getData((data) => data.fetchChapters?.chapters);
 
-  /// Scrapes the source for metadata + chapters together; on Tachiyomix 1.6+
-  /// servers the chapters-only fetch stopped populating metadata as a side
-  /// effect.
+  /// Fetches metadata and chapters; Tachiyomix 1.6+ chapters-only fetches do not populate metadata.
   Future<List<ChapterDto>?> getMangaAndChapterList(int mangaId) async => client
       .mutate$GetMangaAndChaptersByMangaId(
         Options$Mutation$GetMangaAndChaptersByMangaId(
@@ -297,9 +285,7 @@ class MangaBookRepository {
       )
       .getData((data) => data.fetchMangaAndChapters?.chapters);
 
-  /// Reads the chapters the server already has STORED for this entry, without
-  /// touching the source. Works whenever the server is reachable, even if the
-  /// source is down — this is what the WebUI shows.
+  /// Reads stored server chapters without contacting the source.
   Future<List<ChapterDto>?> getStoredChapterList(int mangaId) async => client
       .query$GetChapterPage(
         Options$Query$GetChapterPage(
@@ -317,8 +303,7 @@ class MangaBookRepository {
       .getData((data) => data.chapters.nodes);
 }
 
-// keepAlive so a captured repository ref can't be disposed out from under an
-// in-flight progress write (pairs with the keepAlive graphQlClient).
+// Keep the repository alive across in-flight progress writes.
 @Riverpod(keepAlive: true)
 MangaBookRepository mangaBookRepository(Ref ref) =>
     MangaBookRepository(ref.watch(graphQlClientProvider));

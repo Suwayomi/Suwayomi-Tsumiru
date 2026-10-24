@@ -36,13 +36,8 @@ class SingleChapterActionIcon extends ConsumerWidget {
       onPressed: () async {
         final bookmark = change.isBookmarked;
         if (bookmark != null) {
-          // Bookmark toggles go through the offline-aware path (#33): recorded
-          // on-device + dirty-flagged, so they stick offline and sync later.
           await recordBookmark(ref, chapterId: chapterId, isBookmarked: bookmark);
         } else if (change.isRead != null) {
-          // Read-state toggles use the same offline-aware write-through as the
-          // bulk action (no production caller sends isRead here today; wired for
-          // consistency and future use).
           final ok = await recordReadState(
             ref,
             chapterIds: [chapterId],

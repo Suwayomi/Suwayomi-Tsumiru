@@ -18,9 +18,6 @@ import '../../../../../../settings/presentation/reader/widgets/reader_left_hande
 import '../../../controller/reader_settings_model.dart';
 import 'int_slider_tile.dart';
 
-/// General tab: background color,
-/// page number, seekbar chain, fullscreen, keep-screen-on, long-tap actions,
-/// chapter transition, flash-on-page-change, Auto Webtoon Mode.
 class GeneralTab extends ConsumerWidget {
   const GeneralTab({super.key, required this.mangaId});
 
@@ -30,7 +27,6 @@ class GeneralTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(readerSettingsModelProvider(mangaId));
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
-    // Pre-existing globals not folded into the settings model.
     final forceHorizontal = ref
         .watch(forceHorizontalSeekbarProvider)
         .ifNull(false);
@@ -170,7 +166,6 @@ class GeneralTab extends ConsumerWidget {
   }
 }
 
-/// Indented dependent toggle, shown only while its parent condition holds.
 class _SubSwitchTile extends StatelessWidget {
   const _SubSwitchTile({
     required this.title,
@@ -216,7 +211,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Single-select chip row.
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
 

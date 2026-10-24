@@ -4,29 +4,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Pure display-list mapping for the horizontal paged viewer.
-///
-/// The paged PageView reports the RAW page index outward (read-tracking,
-/// seekbar "N / M", jumpToPage). Double-page / dual-split change what a
-/// PageView *item* is — a spread (two pages) or a half of a wide page — so
-/// this builds an internal DISPLAY LIST and translates display-index ↔
-/// raw-page. Kept pure (no Flutter deps) so the index contract is unit-tested.
-///
-/// Double-page mode chunks pages into pairs, isolating wide pages as their
-/// own full-width "solo" spread, then splits them for dual-page view.
+/// Maps display spreads and split halves to raw page indices used by progress and seeking.
 library;
 
-/// Which portion of a source page a display slot renders.
 enum PageHalf { full, left, right }
 
-/// One source-page fragment occupying a slot in a display entry.
 class PageUnit {
   const PageUnit(this.raw, {this.half = PageHalf.full});
 
   /// Raw index into `chapterPages.pages`.
   final int raw;
 
-  /// full page, or a split half of a wide page (before invert is applied).
   final PageHalf half;
 
   @override
@@ -40,7 +28,6 @@ class PageUnit {
   String toString() => 'PageUnit($raw, ${half.name})';
 }
 
-/// A single PageView item: one or two [PageUnit]s shown side by side.
 class SpreadEntry {
   const SpreadEntry(this.first, [this.second]);
 
@@ -53,9 +40,7 @@ class SpreadEntry {
   /// the reading-first source page (seekbar contract).
   int get primaryRaw => first.raw;
 
-  /// The furthest raw page in this slot (read-progress). A spread shows both
-  /// pages, so progress is the last, not the first — else a double-page
-  /// chapter's final spread never reports its last page and never marks read.
+  /// Report the furthest raw page in a spread so its final page can complete the chapter.
   int get progressRaw => second?.raw ?? first.raw;
 
   @override
@@ -70,7 +55,6 @@ class SpreadEntry {
       'SpreadEntry($first${second == null ? '' : ', $second'})';
 }
 
-/// The built display list plus the display↔raw translation the viewer needs.
 class SpreadMapping {
   const SpreadMapping(this.entries);
 
@@ -79,25 +63,21 @@ class SpreadMapping {
   int get length => entries.length;
   bool get isEmpty => entries.isEmpty;
 
-  /// display position → raw source page (the primary/reading-first page).
-  /// Clamped so an out-of-range controller page never throws.
+  /// Returns the reading-first raw page, clamping out-of-range display indices.
   int displayToRaw(int displayIndex) {
     if (entries.isEmpty) return 0;
     final i = displayIndex.clamp(0, entries.length - 1).toInt();
     return entries[i].primaryRaw;
   }
 
-  /// display position → the furthest raw page it shows (read-progress contract,
-  /// see [SpreadEntry.progressRaw]). Clamped like [displayToRaw].
+  /// Returns the furthest raw page for progress, clamping like [displayToRaw].
   int displayToProgressRaw(int displayIndex) {
     if (entries.isEmpty) return 0;
     final i = displayIndex.clamp(0, entries.length - 1).toInt();
     return entries[i].progressRaw;
   }
 
-  /// raw source page → display position that shows it. Matches either slot, so
-  /// jumpToPage(rawSecondOfPair) lands on the pair that contains it; a wide
-  /// split page (two entries share the raw) lands on its first half.
+  /// Matches either page of a pair; split pages resolve to their first half.
   int rawToDisplay(int rawIndex) {
     for (var i = 0; i < entries.length; i++) {
       final e = entries[i];
@@ -107,15 +87,7 @@ class SpreadMapping {
   }
 }
 
-/// Builds the display list.
-///
-/// - [pageCount]: raw page count.
-/// - [doublePages]: pair consecutive units side by side (resolved from
-///   pageLayout / automatic-orientation / trueDualPageSpread by the caller).
-/// - [splitWide]: split each WIDE page into two half units.
-/// - [splitInvert]: swap which half of a split wide page shows first.
-/// - [isWide]: predicate — is raw page N a wide (landscape) page. Unknown pages
-///   should return false; the viewer refines this as image dims resolve.
+/// Pairs units when [doublePages]; wide pages split with [splitWide], otherwise stay solo; unknown width is false.
 SpreadMapping buildSpreadMapping({
   required int pageCount,
   required bool doublePages,
@@ -125,7 +97,6 @@ SpreadMapping buildSpreadMapping({
 }) {
   if (pageCount <= 0) return const SpreadMapping([]);
 
-  // Stage A — split: a wide page becomes two consecutive half units.
   final units = <PageUnit>[];
   for (var raw = 0; raw < pageCount; raw++) {
     if (splitWide && isWide(raw)) {
@@ -138,14 +109,11 @@ SpreadMapping buildSpreadMapping({
     }
   }
 
-  // Stage B — single: one entry per unit.
   if (!doublePages) {
     return SpreadMapping([for (final u in units) SpreadEntry(u)]);
   }
 
-  // Stage B — double: greedily pair units. A full-width WIDE page isolates
-  // (solos) and breaks the pairing run. Split halves are
-  // never "wide" (half != full) so they pair normally.
+  // Full wide pages break pairing; split halves pair normally.
   bool wideSolo(PageUnit u) => u.half == PageHalf.full && isWide(u.raw);
 
   final entries = <SpreadEntry>[];

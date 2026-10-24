@@ -73,22 +73,11 @@ class ReaderScreen extends HookConsumerWidget {
     final providerContainer = ProviderScope.containerOf(context, listen: false);
     final incognitoMode = ref.watch(incognitoModeProvider);
 
-    // The engines take the opening chapter and its pages once, then track the
-    // chapter being read and the page reached in their own state. These
-    // providers reload on any dependency change — an endpoint switch between
-    // LAN and external, a reachability flip — even for a chapter read from
-    // disk. Handing that reload to the tree remounted the engine back at the
-    // opening chapter, so the opening data is pinned for the screen's life.
+    // Pin opening data for this screen lifetime; dependency reloads must not remount the reader.
     final pinnedChapter = _usePinned(chapter.value, chapterId);
     final pinnedChapterPages = _usePinned(chapterPages.value, chapterId);
 
-    // Auto reading mode: a Default-mode long-strip series (manhwa/manhua/
-    // webtoon) opens in webtoon scroll THIS session; never written to meta.
-    // Null when auto-detect is off, the series has an explicit per-series mode,
-    // or it isn't long-strip — in which case the per-series/global default
-    // takes over below. Auto never picks a page direction (LTR/RTL).
-    // Genres and source come from the first load: a reload served from another
-    // source must not flip the mode, which would swap the engine mid-read.
+    // Pin auto-detection inputs so a metadata reload cannot switch viewer engines mid-read.
     final mangaData = manga.value;
     final autoSource = _usePinned(mangaData, mangaId);
     final autoReaderMode = mangaData == null || autoSource == null
@@ -100,8 +89,7 @@ class ReaderScreen extends HookConsumerWidget {
             sourceName: autoSource.source?.name,
           );
     final toast = ref.watch(toastProvider);
-    // Resolve the l10n string in build (safe); the effect runs during hook-init
-    // where an inherited-widget lookup (context.l10n) throws _debugIsInitHook.
+    // Resolve l10n during build; inherited-widget lookup is invalid during hook initialization.
     final autoWebtoonSnack = context.l10n.autoWebtoonSnack;
     useEffect(() {
       if (autoReaderMode == ReaderMode.webtoon) {
@@ -111,24 +99,20 @@ class ReaderScreen extends HookConsumerWidget {
     }, [autoReaderMode]);
 
     final debounce = useRef<Timer?>(null);
-    // Latest page reached, so we can flush it on exit (the debounce below would
-    // otherwise drop the last few pages if you back out before it fires).
+    // Keep the latest page for an exit flush before the debounce fires.
     final latestPage = useRef<int>(-1);
     final progressQueue = ref
         .read(readerProgressQueuesProvider)
         .putIfAbsent(chapterId, ReaderProgressQueue.new);
     final progressGeneration = useRef(progressQueue.generation);
-    // The first onPageChanged is the on-mount restore, not a page turn.
-    // Counting it as reading would mark a chapter opened at its last page read.
+    // The initial emit restores position; counting it as reading can complete a chapter on open.
     final initialEmitConsumed = useRef<bool>(false);
     // Set once a flush has run, so the unmount cleanup doesn't re-flush after a
     // PopScope pop already did.
     final didFlush = useRef<bool>(false);
 
     final updateLastRead = useCallback((int currentPage) async {
-      // Incognito: leave no trace. Skip every progress/history write (covers
-      // both the debounced call and the PopScope flush). The PopScope's own
-      // provider invalidations still run — they're outside this callback.
+      // Incognito suppresses progress/history writes while exit invalidations still run.
       if (incognitoMode ||
           progressQueue.syncing ||
           progressGeneration.value != progressQueue.generation) {
@@ -138,10 +122,8 @@ class ReaderScreen extends HookConsumerWidget {
       final chapterPagesValue = pinnedChapterPages;
       if (chapterValue == null || chapterPagesValue == null) return;
 
-      // Use the actual loaded pages count, not the chapter's pageCount metadata
       final actualPageCount = chapterPagesValue.pages.length;
 
-      // Only mark as completed if we've reached the actual last page
       final isReadingCompleted =
           (currentPage >= (actualPageCount - 1)) && actualPageCount > 0;
 
@@ -156,8 +138,7 @@ class ReaderScreen extends HookConsumerWidget {
         );
       }
 
-      // Persist locally first (survives offline + app restart), then push to
-      // the server; if offline it stays pending and up-syncs on reconnect.
+      // Persist locally before pushing so offline progress survives restart and syncs later.
       final progressResult = await recordReadingProgress(
         ref,
         mangaId: mangaId,
@@ -166,16 +147,12 @@ class ReaderScreen extends HookConsumerWidget {
         isRead: isReadingCompleted,
         generation: progressGeneration.value,
       );
-      // An online-only user has no pending row to retry, so a failed push would
-      // otherwise vanish. Surface it instead of saving progress into a void.
+      // Online-only users have no pending retry row, so surface failed pushes.
       if (progressResult.hasError && context.mounted) {
         toast?.showError(context.l10n.errorSomethingWentWrong);
       }
 
-      // Auto-delete waits for reader exit (Komikku's timing): finishing a
-      // chapter resolves and queues its delete; the PopScope flush runs it.
-      // Awaited so a chapter completed by the pop-time flush still lands in
-      // the queue before that same pop drains it.
+      // Await the delete enqueue so the pop-time flush includes chapters completed on exit.
       if (isReadingCompleted && context.mounted) {
         await noteChapterFinishedInReader(
           ref,
@@ -184,10 +161,7 @@ class ReaderScreen extends HookConsumerWidget {
         );
       }
 
-      // Invalidate history to refresh the reading progress. Defer past the
-      // current frame: this callback can resume inside a build (an upstream
-      // await doesn't guarantee otherwise), and invalidating mid-build throws
-      // the Riverpod-3 modify-during-build assert.
+      // Defer history invalidation because this callback may resume during build.
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => providerContainer.invalidate(readingHistoryProvider),
       );
@@ -218,7 +192,6 @@ class ReaderScreen extends HookConsumerWidget {
         }),
       );
 
-      // Skip if chapter is already read or if we're going backwards
       if ((chapterValue.user.isRead).ifNull() ||
           (chapterValue.user.lastPageRead).getValueOnNullOrNegative() >=
               index) {
@@ -233,7 +206,6 @@ class ReaderScreen extends HookConsumerWidget {
         finalDebounce?.cancel();
       }
 
-      // Use actual loaded pages count instead of chapter metadata
       final actualPageCount = chapterPagesValue.pages.length;
 
       if (index >= (actualPageCount - 1) && actualPageCount > 0) {
@@ -247,23 +219,20 @@ class ReaderScreen extends HookConsumerWidget {
       return;
     }, [pinnedChapter, pinnedChapterPages, updateLastRead]);
 
-    // Hold the latest updateLastRead so the []-deps unmount cleanup below flushes
-    // with current chapter data, not the stale callback captured at first build.
+    // The unmount callback must read the latest chapter data, not its first-build closure.
     final updateRef = useRef(updateLastRead);
     updateRef.value = updateLastRead;
     useEffect(() {
       return () {
         debounce.value?.cancel();
-        // Chapter-skip uses pushReplacement (no PopScope pop), so flush the
-        // pending page here or it's lost. Skip if the pop path already did.
+        // Chapter changes use pushReplacement without a pop callback; flush pending progress on teardown.
         if (!didFlush.value && latestPage.value >= 0) {
           unawaited(updateRef.value(latestPage.value));
         }
       };
     }, []);
 
-    // Desktop window-close fires neither the PopScope pop nor a reliable
-    // dispose, so also flush the buffered page on background/exit.
+    // Desktop window close may skip pop/dispose; flush on background and exit too.
     useFlushProgressOnAppLifecycle(() async {
       debounce.value?.cancel();
       if (latestPage.value >= 0) {
@@ -272,23 +241,16 @@ class ReaderScreen extends HookConsumerWidget {
     });
 
     useEffect(() {
-      // Fullscreen OFF keeps the OS bars for the whole session (read once at
-      // mount; ReaderChrome handles live changes on chrome transitions).
       final fullscreen =
           ref.read(readerFullscreenProvider) ??
           DBKeys.readerFullscreen.initial as bool;
       SystemChrome.setEnabledSystemUIMode(
         hiddenChromeUiMode(fullscreen: fullscreen),
       );
-      // Don't restore the OS bars on dispose: a chapter change is a
-      // pushReplacement (old screen disposes as the new one mounts), so
-      // restoring here flashes the system bars mid-transition. They're restored
-      // on a real exit in the pop handler below instead.
+      // Restore OS bars only on real exit; chapter pushReplacement mounts a new reader during disposal.
       return null;
     }, []);
 
-    // Draw reader content into the display cutout (notch/punch-hole) when opted
-    // in; restore the default window mode on exit. Android-only native attr.
     final underCutout =
         ref.watch(drawUnderCutoutProvider) ??
         DBKeys.drawUnderCutout.initial as bool;
@@ -297,10 +259,7 @@ class ReaderScreen extends HookConsumerWidget {
       return () => setDrawUnderCutout(false);
     }, [underCutout]);
 
-    // Rotation lock: applied once the per-series ?? global value resolves
-    // (null until the manga loads, Default never touches the platform).
-    // Companion to the immersive effect above — same lifecycle, different
-    // platform surface, so the two can't race.
+    // Apply rotation once the per-series/global setting resolves; Default leaves the platform unchanged.
     final readerOrientation = mangaData == null
         ? null
         : mangaData.metaData.readerOrientation ??
@@ -310,18 +269,11 @@ class ReaderScreen extends HookConsumerWidget {
       final lock = readerOrientation?.deviceOrientations;
       if (lock == null) return null;
       SystemChrome.setPreferredOrientations(lock);
-      // Restore the app-wide state on exit — that's portrait-locked when the
-      // global "Lock to portrait" toggle is on, fully unlocked otherwise.
       final forcePortrait = ref.read(forcePortraitProvider).ifNull();
       return () => applyForcePortrait(forcePortrait);
     }, [readerOrientation]);
 
-    // Keep the screen awake while reading when the user opted in. The cleanup
-    // only exists when we actually enabled (returning null when off), so leaving
-    // the reader — or flipping the toggle off mid-read — releases the wakelock
-    // and we never disable one we didn't take. Calls are fire-and-forget and
-    // their errors ignored, so a platform hiccup (e.g. no foreground activity
-    // during a transition) can never crash the reader.
+    // Release only a wakelock acquired by this reader; ignore platform transition errors.
     final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(true);
     useEffect(() {
       if (!keepScreenOn) return null;
@@ -339,16 +291,11 @@ class ReaderScreen extends HookConsumerWidget {
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
-          // Leaving the reader for real — bring the OS bars back (kept hidden
-          // across chapter transitions by dropping the dispose-time restore).
           SystemChrome.setEnabledSystemUIMode(
             SystemUiMode.manual,
             overlays: SystemUiOverlay.values,
           );
-          // Flush the latest page reached so progress isn't lost to a pending
-          // debounce when you back out. AWAIT it so the read write lands before
-          // we invalidate the lists below — otherwise they re-fetch the stale
-          // (pre-read) state and the unread badge/count comes back wrong.
+          // Await the progress flush before invalidating lists so they refetch the saved read state.
           debounce.value?.cancel();
           try {
             if (latestPage.value >= 0) {
@@ -356,25 +303,17 @@ class ReaderScreen extends HookConsumerWidget {
               await updateLastRead(latestPage.value);
             }
           } finally {
-            // Deferred while-reading deletes run now — leaving the reader is
-            // the point where the just-read chapters may be deleted. Container-
-            // driven: the server round-trip outlives this route's ref.
+            // Drain read deletes on reader exit through the container; writes may outlive the route ref.
             unawaited(flushPendingReadDeletes(providerContainer));
             // Re-reconcile with the normal (not +1) deleteWhileReading slots
             // so the boundary buffer from the last chapter boundary is released.
             unawaited(reconcileMangaContainer(providerContainer, mangaId));
-            // The write above lands first (awaited); defer the list refreshes
-            // past this frame — invalidating during the pop's build phase trips
-            // the Riverpod-3 modify-during-build assert.
+            // Defer post-write invalidation past the pop build phase.
             WidgetsBinding.instance.addPostFrameCallback((_) {
               providerContainer.invalidate(chapterProviderWithIndex);
               providerContainer.invalidate(
                 mangaChapterListProvider(mangaId: mangaId),
               );
-              // Refresh the library's per-category lists so the unread badge
-              // updates even when the reader was opened directly (e.g. the
-              // continue-reading button), bypassing the manga-details screen
-              // that would otherwise do this on its own pop (#282).
               providerContainer.invalidate(libraryMangaListProvider);
               providerContainer.invalidate(categoryMangaListProvider);
             });
@@ -388,8 +327,7 @@ class ReaderScreen extends HookConsumerWidget {
           bottom: !ignoreSafeArea,
           left: !ignoreSafeArea,
           right: !ignoreSafeArea,
-          // The manga stays live (a reading-mode change from the settings sheet
-          // must apply) but keeps its data on screen while it reloads.
+          // Keep manga data visible during reloads while allowing live reading-mode changes.
           child: manga.showUiWhenData(
             context,
             (data) {
@@ -643,7 +581,6 @@ class ReaderScreen extends HookConsumerWidget {
   }
 }
 
-/// The first non-null [value] seen for [key], held from then on.
 T? _usePinned<T extends Object>(T? value, int key) {
   final pinned = useRef<({int key, T value})?>(null);
   final current = pinned.value;

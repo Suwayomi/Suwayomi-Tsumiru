@@ -11,10 +11,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 
-/// The manga's page in the Suwayomi server's own WebUI (vs the source site's
-/// realUrl) — built from the server web root, no /api segment. Returns null
-/// when no server is configured. Shared by the manga-details open-in-browser
-/// actions and the description's "Web View" button.
+/// Uses the server web root without /api; returns null when no server is configured.
 String? serverMangaWebUrl(WidgetRef ref, int mangaId) {
   final base = Endpoints.baseApi(
     baseUrl: ref.read(serverUrlProvider),

@@ -9,16 +9,10 @@ import 'dart:convert';
 import '../../../../library/domain/duplicate_matcher.dart';
 import '../recommendation_provider.dart';
 
-// Official MyAnimeList API v2 — goes direct to MAL, avoiding Jikan's chronic
-// upstream 504s (Komikku still uses Jikan and fails whenever MAL's proxy does).
-// Read-only, app-level client id only — no per-user OAuth.
+// Uses an app-level client ID without per-user OAuth.
 const _endpoint = 'https://api.myanimelist.net/v2';
 
-// Public client id for the `X-MAL-CLIENT-ID` header — kept out of source. CI
-// patches this empty default with the repo secret at build time (a single step,
-// so every platform incl. fastforge/flatpak picks it up); local dev passes
-// --dart-define=MAL_CLIENT_ID=... to override it. With no key the provider hides
-// (see [appliesTo]) rather than erroring on every fetch.
+// CI patches this default; local builds can pass --dart-define=MAL_CLIENT_ID=... .
 const _clientId = String.fromEnvironment(
   'MAL_CLIENT_ID',
   defaultValue: '',
@@ -35,7 +29,6 @@ class MyAnimeListProvider extends TrackerRecommendationProvider {
   @override
   String get trackerKey => 'myanimelist';
 
-  // No client id (unconfigured build) → hide the section instead of 403-ing.
   @override
   bool appliesTo(RecommendationContext ctx) => _clientId.isNotEmpty;
 

@@ -10,9 +10,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../settings/presentation/reader/widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
 
-/// Whether a reading mode is paged (page-flip) rather than continuous/webtoon
-/// scroll. Single source of truth for the gesture routing and the bottom
-/// controls, which must agree on what counts as "paged".
+/// Shared paged-mode classification for gesture routing and bottom controls.
 bool isPagedReaderMode(ReaderMode mode) => switch (mode) {
       ReaderMode.singleHorizontalLTR ||
       ReaderMode.singleHorizontalRTL ||
@@ -26,8 +24,7 @@ bool isPagedReaderMode(ReaderMode mode) => switch (mode) {
         false,
     };
 
-/// Whether a mode reads right-to-left. Lives here so the page-transition
-/// direction and the spatial tap zones can't drift apart.
+/// Shared RTL classification for page transitions and tap zones.
 bool isRTLReaderMode(ReaderMode mode) => switch (mode) {
       ReaderMode.singleHorizontalRTL ||
       ReaderMode.continuousHorizontalRTL =>
@@ -41,9 +38,7 @@ bool isRTLReaderMode(ReaderMode mode) => switch (mode) {
         false,
     };
 
-/// What the "Default" tap-zone setting resolves to for a given mode.
-/// Komikku (`PagerConfig.defaultNavigation`): right-and-left for horizontal
-/// paged, L-shaped for everything else.
+/// Default is right-and-left for horizontal paging, L-shaped for other modes.
 ReaderNavigationLayout defaultNavigationFor(ReaderMode mode) => switch (mode) {
       ReaderMode.singleHorizontalLTR ||
       ReaderMode.singleHorizontalRTL ||
@@ -57,10 +52,7 @@ ReaderNavigationLayout defaultNavigationFor(ReaderMode mode) => switch (mode) {
         ReaderNavigationLayout.lShaped,
     };
 
-/// The tap-zone layout actually in force: the series' own choice if it made
-/// one, else that viewer's setting, with Default resolved to a real layout.
-/// Reader, settings sheet, and chapter separator all go through this so
-/// they can't disagree about whether zones are on.
+/// Resolves per-series, then viewer default, then the concrete default layout.
 ReaderNavigationLayout effectiveNavigationLayout(
   WidgetRef ref, {
   required ReaderMode mode,

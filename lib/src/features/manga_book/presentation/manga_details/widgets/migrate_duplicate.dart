@@ -18,16 +18,7 @@ import '../../../../migration/domain/migration_models.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/manga/manga_model.dart';
 
-/// Migrates an existing library entry [from] into the manga being added [to],
-/// driven entirely by the shipped bulk-migration runner so its dirty-state
-/// gate, crash journal, auth-pause, and device-local carry all apply — the raw
-/// copy/remove sequence would skip every one of those safeties.
-///
-/// Manual-target path (Komikku's dialog-migrate): [overrideTarget] pins the
-/// candidate as the target, so no source search runs. Tracking carries by
-/// design (recorded decision); every other flag stays at its shipped default
-/// (chapters/categories/reader/offline on, downloads off, deleteSource true).
-/// Returns true when the migrate completed.
+/// Uses the migration runner and pinned target to preserve safety gates; returns true on completion.
 Future<bool> migrateDuplicateIntoCandidate(
   WidgetRef ref,
   BuildContext context, {
@@ -48,8 +39,7 @@ Future<bool> migrateDuplicateIntoCandidate(
     ],
     targetSourceIds: [to.sourceId],
     options: const MigrationOption(migrateTracking: true),
-    // Route through the container so the device reconcile still lands if this
-    // dialog's widget is disposed before the migrate finishes.
+    // Use the container so reconciliation survives dialog disposal.
     onSourceRemoved: (id) => reconcileMangaContainer(container, id),
   );
   runner.overrideTarget(from.id, to.id, to.title);
@@ -67,8 +57,7 @@ Future<bool> migrateDuplicateIntoCandidate(
     ),
   );
 
-  // commitOne can throw CancelledException where the batch commit() swallows
-  // it; the finally keeps the non-dismissible progress dialog from stranding.
+  // commitOne can throw CancelledException; finally must close the non-dismissible dialog.
   var done = false;
   try {
     await runner.commitOne(from.id, deleteSource: true);
@@ -76,8 +65,7 @@ Future<bool> migrateDuplicateIntoCandidate(
   } finally {
     if (context.mounted) {
       Navigator.of(context).pop(); // dismiss the progress dialog
-      // A migrate adds the candidate to the library and removes the source, so
-      // the list must refetch; skip it if we're gone (the ref would be disposed).
+      // Migration changes library membership, so invalidate the list on success.
       if (done) ref.invalidate(libraryMangaListProvider);
     }
   }
@@ -91,8 +79,6 @@ bool _isDone(BulkMigrationRunner runner, int fromMangaId) {
   return false;
 }
 
-/// Non-dismissible progress while the one migrate copies/removes — the
-/// single-entry analogue of the bulk run screen's MigrationProgressDialog.
 class _SingleMigrationProgressDialog extends StatelessWidget {
   const _SingleMigrationProgressDialog({
     required this.runner,

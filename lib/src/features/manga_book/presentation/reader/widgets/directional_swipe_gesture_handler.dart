@@ -61,34 +61,11 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // In vertical (webtoon / continuous / vertical-paged) modes the SingleTouch*
-    // swipe recognizers are dead no-ops — their handlers early-return for
-    // Axis.vertical (see :158 and :328), because chapter changes there are
-    // driven by scroll / infinite-scroll, not a horizontal swipe. But they still
-    // ENTER the gesture arena, and on a single-finger vertical drag they can win
-    // it away from the reader's ZoomView scale recognizer. On iOS the platform
-    // supplies no touch slop (DeviceGestureSettings.touchSlop is null), so the
-    // drag recognizer's 18px slop is crossed before ZoomView's 36px pan slop —
-    // the drag recognizer wins, ZoomView never starts its synthetic scroll, and
-    // forceHoldOnPointerDown leaves the list frozen. That is the confirmed
-    // iOS-only "webtoon won't scroll" bug. Since these recognizers do nothing in
-    // vertical mode, don't register them at all here, leaving ZoomView's scale
-    // recognizer the sole single-finger owner. Horizontal/paged modes keep them.
+    // Omit vertical swipe recognizers; on iOS their smaller slop can steal drags from ZoomView.
     if (scrollDirection == Axis.vertical) {
       return _wrapWithTapAndLongPress(child);
     }
-    // Horizontal continuous mode has the same conflict while the reader is
-    // zoomed in: a single-finger drag then means "pan around the zoomed
-    // page", not "swipe to change page/chapter", but these recognizers would
-    // still enter the arena for it and can win it away from ZoomView exactly
-    // like the vertical case above. Unlike vertical, horizontal genuinely
-    // needs them at 1x, so they can't be dropped outright — each recognizer
-    // instead self-rejects new pointers while isZoomedIn() is true (mirrors
-    // the multi-touch self-rejection they already do), which changes their
-    // runtime behaviour without ever changing the widget tree shape — doing
-    // that structurally (e.g. conditionally omitting the RawGestureDetector)
-    // would tear down and remount the whole page list every time the zoom
-    // level crosses 1x, visibly jolting the reading position.
+    // Reject pointers while zoomed instead of rebuilding the detector, which would remount the page list.
     bool isZoomedIn() => ref.read(readerIsZoomedInProvider);
     final bool useAdvancedGestures =
         lastPageSwipeEnabled && !readerSwipeChapterToggle;
@@ -97,8 +74,6 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
         : _buildChapterSwipeHandler(context, isZoomedIn);
   }
 
-  /// Tap + long-press wrapper shared by every mode. These don't fight
-  /// multi-touch, so they're always safe to layer over the reader content.
   Widget _wrapWithTapAndLongPress(Widget child) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -196,9 +171,6 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
     required BuildContext context,
     required SwipeDirection direction,
   }) {
-    // In webtoon / vertical-scroll modes a horizontal swipe changing chapter
-    // is a terrible experience, so ignore it — the vertical scroll (and
-    // infinite scroll) handle moving between chapters there.
     if (scrollDirection == Axis.vertical) return;
 
     if (!lastPageSwipeEnabled) return;
@@ -355,8 +327,6 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
     required DragEndDetails details,
     required Axis allowedAxis,
   }) {
-    // Manga-only gesture: in vertical/webtoon modes a horizontal swipe must
-    // not change chapter (vertical scroll + infinite scroll handle that).
     if (scrollDirection == Axis.vertical) return;
 
     if (readerSwipeChapterToggle) {

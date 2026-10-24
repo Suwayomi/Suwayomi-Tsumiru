@@ -58,8 +58,7 @@ class MangaDescription extends HookConsumerWidget {
   final AsyncCallback removeMangaFromLibrary;
   final AsyncCallback addMangaToLibrary;
 
-  /// "Web View" → choose the source site (realUrl) or the Suwayomi server's
-  /// WebUI page for this manga. With no source page, opens the server directly.
+  /// With no source realUrl, opens the server WebUI directly; otherwise offers both.
   static void openInBrowser(
     BuildContext context,
     WidgetRef ref,
@@ -375,9 +374,7 @@ class MangaDescription extends HookConsumerWidget {
                 )
               else
               Padding(
-                // Clear only the status bar; the transparent app-bar icons float
-                // over the top of the hero so the cover rides up into the backdrop
-                // instead of leaving a dead toolbar-height band above it.
+                // Clear only the status-bar inset so the hero can extend behind the transparent app bar.
                 padding: EdgeInsets.only(
                   top: MediaQuery.paddingOf(context).top + 8,
                 ),

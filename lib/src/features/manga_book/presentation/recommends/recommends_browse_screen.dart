@@ -17,8 +17,6 @@ import '../../data/recommendations/recommendation_repository.dart';
 import 'recommendation_error_message.dart';
 import 'recommendation_loading.dart';
 
-/// Komikku's BrowseRecommendsScreen: one provider's full recommendation list as
-/// a cover grid, opened from a section header on the recommendations screen.
 class RecommendsBrowseScreen extends ConsumerWidget {
   const RecommendsBrowseScreen({
     super.key,
@@ -28,8 +26,7 @@ class RecommendsBrowseScreen extends ConsumerWidget {
 
   final int mangaId;
 
-  /// The provider [key] (name+category), not the display name — MangaUpdates
-  /// ships two providers under one name, so the lookup must be by key.
+  /// Uses name+category, since MangaUpdates shares a display name across two providers.
   final String providerName;
 
   @override
@@ -47,8 +44,6 @@ class RecommendsBrowseScreen extends ConsumerWidget {
         break;
       }
     }
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final barTitle = Text(title);
     final scaffold = Scaffold(
@@ -66,8 +61,6 @@ class RecommendsBrowseScreen extends ConsumerWidget {
             ? Emoticons(title: context.l10n.noResultFound)
             : GridView.builder(
                 padding: KEdgeInsets.a8.size,
-                // The cover is drawn straight into the cell here, no Card, so
-                // there is no margin to compensate for.
                 gridDelegate: const MangaCoverGridDelegate(
                   maxCrossAxisExtent: 120,
                   titleExtent: kRecommendsTitleExtent,

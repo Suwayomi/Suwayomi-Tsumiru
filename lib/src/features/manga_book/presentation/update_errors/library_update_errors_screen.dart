@@ -25,8 +25,6 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final failed = ref.watch(failedUpdatesProvider);
     final count = failed.value?.length;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(
       count == null
@@ -88,8 +86,6 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
   }
 }
 
-/// A pill button that sends a series into the migration flow — a failed update
-/// often means the source is gone, and swapping it is the fix.
 class _MigrateButton extends StatelessWidget {
   const _MigrateButton({required this.onPressed});
   final VoidCallback onPressed;

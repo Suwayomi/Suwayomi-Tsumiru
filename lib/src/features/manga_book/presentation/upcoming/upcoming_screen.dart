@@ -23,8 +23,6 @@ import '../../domain/manga/manga_model.dart';
 import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
 
-/// "Upcoming" calendar: predicted next-release dates across the library, on a
-/// month grid with a date-grouped list below.
 class UpcomingScreen extends HookConsumerWidget {
   const UpcomingScreen({super.key});
 
@@ -35,8 +33,6 @@ class UpcomingScreen extends HookConsumerWidget {
     final itemScrollController = useMemoized(ItemScrollController.new);
     final upcoming = ref.watch(upcomingProvider);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.upcoming);
     final actions = <Widget>[
@@ -94,9 +90,7 @@ class UpcomingScreen extends HookConsumerWidget {
             );
           }
 
-          // Flatten into a single scrollable list: calendar, then for each day
-          // group a header followed by its manga rows. Track where each day's
-          // header lands so tapping a calendar day can scroll to it.
+          // Track flattened day-header indices so calendar taps can scroll to the matching group.
           final rows = <_Row>[const _CalendarRow()];
           final dateToIndex = <DateTime, int>{};
           for (final g in data.groups) {

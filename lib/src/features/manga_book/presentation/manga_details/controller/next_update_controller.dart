@@ -11,8 +11,7 @@ import 'manga_details_controller.dart';
 
 part 'next_update_controller.g.dart';
 
-/// Predicted next-chapter date for a manga, derived from its loaded chapter
-/// list (upload/fetch timestamps). Null when there are no chapters yet.
+/// Null when no chapters are available for a release prediction.
 @riverpod
 NextUpdatePrediction? mangaNextUpdate(Ref ref, {required int mangaId}) {
   final chapters =

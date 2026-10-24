@@ -47,14 +47,9 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
     final prevColorTween = ColorTween(
       begin: showFlash ? Colors.blue : null,
     ).animate(animationController).value;
-    // Callers resolve this (see effectiveNavigationLayout); an unresolved
-    // value just draws nothing rather than falling back here and risking
-    // disagreement with the reader.
+    // Callers resolve Default; unresolved layouts draw nothing to stay consistent with the reader.
     final layout = navigationLayout;
 
-    // Replays on every layout change, not just the first build, so picking a
-    // different one flashes the zones for it too (Komikku's
-    // navigationModeChanged).
     useEffect(() {
       if (reduceMotion) {
         animationController.value = 1;
@@ -63,12 +58,8 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
       }
       return;
     }, [layout, reduceMotion]);
-    // Axis-wise inversion: horizontal swaps the
-    // left/right zones, vertical swaps the L-shaped top/bottom rows.
     final TapInvert invert =
         tapInvert ?? ref.watch(readerTapInvertCompatProvider);
-    // "Smaller tap zones": shrinks the active edge regions (0.25 vs
-    // 0.33 of the axis), widening the center dead-zone.
     final bool smaller = ref.watch(smallerTapZonesProvider) ?? false;
     final invertH = invert.invertsHorizontal;
     final invertV = invert.invertsVertical;

@@ -11,14 +11,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../brand_page_seekbar.dart';
 
-/// The reader's floating vertical seek bar content, shown in webtoon/vertical
-/// mode.
-///
-/// This widget renders the seek-bar column (previous-chapter button ↑ + track +
-/// next-chapter button ↓). It does **not** own a [Positioned] — the caller
-/// ([ReaderChrome]) is responsible for wrapping it in a [Positioned] whose
-/// [top] and [bottom] are derived from the measured [ChromeExtents], so the
-/// seekbar never overlaps the top or bottom chrome bars.
+/// The caller positions this bar using measured ChromeExtents to clear the top and bottom chrome.
 class ReaderSideSeekBar extends StatelessWidget {
   const ReaderSideSeekBar({
     super.key,
@@ -31,7 +24,6 @@ class ReaderSideSeekBar extends StatelessWidget {
 
   final int currentIndex;
 
-  /// Total page count (may be from infinity-scroll total or chapter page count).
   final int pageCount;
 
   final ValueChanged<int> onChanged;

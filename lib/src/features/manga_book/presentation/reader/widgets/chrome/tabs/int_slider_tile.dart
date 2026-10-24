@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 
-/// Discrete int slider with a trailing value readout.
 class IntSliderTile extends StatelessWidget {
   const IntSliderTile({
     super.key,

@@ -6,17 +6,7 @@
 
 import 'package:flutter/widgets.dart';
 
-/// Maps the previous/next chapter actions onto the two chapter buttons that
-/// flank the horizontal seek bar.
-///
-/// In RTL the story advances leftward, so the left-pointing glyph has to move
-/// forward or it contradicts every other control on screen. Komikku's
-/// ChapterNavigator performs the same swap; its vertical navigator does not,
-/// and neither do we — the side seekbar only renders in vertical-scroll modes,
-/// which are never RTL.
-///
-/// A null callback means there is no chapter that way; the button renders
-/// disabled.
+/// RTL swaps horizontal previous/next buttons; null callbacks disable unavailable directions.
 ({VoidCallback? leading, VoidCallback? trailing}) chapterNavCallbacks({
   required bool isRtl,
   required VoidCallback? onPreviousChapter,

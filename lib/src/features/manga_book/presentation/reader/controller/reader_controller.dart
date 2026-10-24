@@ -25,20 +25,16 @@ part 'reader_controller.g.dart';
 
 @riverpod
 class Chapter extends _$Chapter {
-  // Bumped on every build so an answer from a superseded read (an explicit
-  // refresh while the background fetch was still in flight) can't overwrite
-  // the value the user is now looking at.
+  // Reject a superseded fetch so it cannot overwrite a newer refresh.
   int _buildId = 0;
 
   @override
   FutureOr<ChapterDto?> build({required int chapterId}) async {
     final buildId = ++_buildId;
     final db = ref.watch(offlineReadDatabaseProvider);
-    // Watched before the first await so a new endpoint or custom header
-    // rebuilds this provider and the refetch goes through the new repository.
+    // Watch before await so endpoint/header changes rebuild with the new repository.
     final repository = ref.watch(mangaBookRepositoryProvider);
-    // Offline: a downloaded chapter must still open when the server is
-    // unreachable, so fall back to the on-device catalog row.
+    // Downloaded chapters must open from the catalog when the server is unreachable.
     return chapterMetaWithOfflineFallback(
       fetch: () => repository.getChapter(chapterId: chapterId),
       // Only read the native-only DB when offline is available (never on web).
@@ -48,9 +44,7 @@ class Chapter extends _$Chapter {
           ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       chapterId: chapterId,
-      // A complete device copy opens from the catalog instantly; the server row
-      // then refreshes it in the background, without a second network wait. A
-      // chapter not on the device keeps the network-first read unchanged.
+      // Complete device copies open immediately from the catalog, then refresh in background.
       deviceCopyOnDisk: db == null
           ? null
           : () => chapterCompleteOnDevice(db, chapterId),
@@ -64,9 +58,7 @@ class Chapter extends _$Chapter {
 
 @riverpod
 Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {
-  // Offline: if this chapter is downloaded on-device, serve its pages from disk
-  // (as file:// URIs that ServerImage renders locally) instead of the server.
-  // Falls through to the network when not downloaded / offline is unavailable.
+  // Complete on-device downloads use file:// pages; otherwise fall back to the server.
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   if (offlineDb != null) {
     var local = await ref

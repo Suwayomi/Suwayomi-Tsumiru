@@ -11,7 +11,6 @@ import 'graphql/__generated__/fragment.graphql.dart';
 
 typedef ChapterDto = Fragment$ChapterDto;
 
-// Matches Komikku's formatter: up to 3 decimals, trailing zeros dropped.
 final _chapterNumberFormat = NumberFormat('#.###', 'en_US');
 
 typedef ChapterWithMangaDto = Fragment$ChapterWithMangaDto;

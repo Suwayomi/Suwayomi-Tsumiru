@@ -8,11 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auto_scroll_controller.g.dart';
 
-/// Whether hands-free auto-scroll is currently running in the reader.
-///
-/// Session-scoped (autoDispose): resets to off each time the reader is
-/// opened. Flipped by the keyboard trigger and the on-screen utils bar;
-/// watched by the reader-mode ticker to drive the scroll loop.
+/// Session-scoped; resets to off when the reader is closed.
 @riverpod
 class AutoScrollActive extends _$AutoScrollActive {
   @override

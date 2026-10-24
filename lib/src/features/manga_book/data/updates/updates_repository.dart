@@ -20,12 +20,10 @@ import './graphql/__generated__/query.graphql.dart';
 
 part 'updates_repository.g.dart';
 
-/// Rows per page. The offset step must match, or pages overlap and the list
-/// repeats rows.
+/// Pagination offsets must advance by this size to avoid overlapping pages.
 const int updatesPageSize = 50;
 
-/// One page of the Updates feed: at most [updatesPageSize] chapters, newest
-/// first, and whether another page follows.
+/// At most [updatesPageSize] chapters, newest first, with a flag for another page.
 typedef UpdatesPage = ({List<ChapterWithMangaDto> nodes, bool hasNextPage});
 
 /// Splits a window fetched as [pageSize] + 1 rows into the page and whether
@@ -47,8 +45,7 @@ Input$ChapterFilterInput updatesFilterInput(UpdatesFilter filter) =>
       isDownloaded: _equals(filter.downloaded),
       isRead: filter.unread == null ? null : _equals(!filter.unread!),
       isBookmarked: _equals(filter.bookmarked),
-      // Komikku treats a finished chapter as neither started nor not-started, so
-      // both sides of this filter also require unread (updatesView.sq).
+      // Finished chapters count as neither started nor not-started (updatesView.sq).
       and: filter.started == null
           ? null
           : [
@@ -66,14 +63,9 @@ class UpdatesRepository {
 
   final GraphQLClient client;
   final GraphQLClient subscriptionClient;
-  // Downloads
 
-  // Updates
 
-  /// Asks for one row more than a page rather than for `pageInfo` or
-  /// `totalCount`: those cost the server a COUNT and two sorted lookups over
-  /// every matching chapter on each request, where the extra row alone says
-  /// whether another page follows. That leaves one query per page.
+  /// Fetch one extra row to detect another page without the server cost of COUNT/pageInfo.
   Future<UpdatesPage?> getRecentChaptersPage({
     int pageNo = 0,
     UpdatesFilter filter = kNoUpdatesFilter,
@@ -138,14 +130,11 @@ class UpdatesRepository {
         ),
       );
 
-  /// The current run's progress, read once. See [updateProgressSubscription].
   Future<UpdateProgressDto?> updateProgress() async => client
       .query$UpdateProgress(Options$Query$UpdateProgress())
       .getData((data) => data.libraryUpdateStatus.jobsInfo);
 
-  /// Series that failed in the most recent run. Reads the server's current
-  /// status API — the deprecated `updateStatus` job lists hang on a live
-  /// server, which is what left the old summary screen spinning.
+  /// Reads current failure status; the deprecated updateStatus job lists can hang.
   Future<List<MangaDto>> failedUpdates() async =>
       (await client
           .query$LibraryUpdateFailures(
@@ -162,7 +151,6 @@ class UpdatesRepository {
               ])) ??
       const [];
 
-  /// How many series failed in the most recent run, without fetching them.
   Future<int?> failedUpdateCount() async => client
       .query$LibraryUpdateFailureCount(
         Options$Query$LibraryUpdateFailureCount(),
@@ -178,9 +166,7 @@ class UpdatesRepository {
       .query$LastUpdateTimestamp(Options$Query$LastUpdateTimestamp())
       .getData((data) => data.lastUpdateTimestamp.timestamp);
 
-  /// Live progress of library updates: whether one runs and how far it got,
-  /// pushed at most once a second. The server keeps these counts in memory,
-  /// so a push costs it no query, however large the library.
+  /// Live progress is pushed at most once a second from server memory, without a query.
   Stream<UpdateProgressDto?> updateProgressSubscription() => subscriptionClient
       .subscribe$UpdateProgressChange(
         Options$Subscription$UpdateProgressChange(),
@@ -193,8 +179,7 @@ UpdatesRepository updatesRepository(Ref ref) => UpdatesRepository(
     ref.watch(graphQlClientProvider),
     ref.watch(graphQlSubscriptionClientProvider));
 
-/// One-shot read of [updateProgressSocketProvider]'s data, for when the
-/// socket is down or hasn't delivered yet.
+/// One-shot fallback when [updateProgressSocketProvider] has not delivered data.
 @riverpod
 Future<UpdateProgressDto?> updateProgressSummary(Ref ref) =>
     ref.watch(updatesRepositoryProvider).updateProgress();
@@ -203,16 +188,12 @@ Future<UpdateProgressDto?> updateProgressSummary(Ref ref) =>
 Future<String?> libraryLastUpdated(Ref ref) =>
     ref.watch(updatesRepositoryProvider).lastUpdateTimestamp();
 
-/// The single live progress subscription. Everything that follows a run reads
-/// it, directly or through [updateRunningSocketProvider], so the server runs
-/// one subscription per app instead of one per feature.
+/// Share one progress subscription across features to avoid duplicate server subscriptions.
 @riverpod
 Stream<UpdateProgressDto?> updateProgressSocket(Ref ref) =>
     ref.watch(updatesRepositoryProvider).updateProgressSubscription();
 
-/// Whether a library update is running, off [updateProgressSocketProvider].
-/// Changes only when that does: progress is pushed every second during a
-/// run, and listeners here act on the running edges.
+/// Emits running-state changes from the progress socket, ignoring count-only ticks.
 @riverpod
 AsyncValue<bool?> updateRunningSocket(Ref ref) => ref.watch(
   updateProgressSocketProvider.select(
@@ -224,7 +205,6 @@ AsyncValue<bool?> updateRunningSocket(Ref ref) => ref.watch(
 Future<List<MangaDto>> failedUpdates(Ref ref) =>
     ref.watch(updatesRepositoryProvider).failedUpdates();
 
-/// For badges and menu labels; [failedUpdatesProvider] is for the errors list.
 @riverpod
 Future<int> failedUpdateCount(Ref ref) async =>
     await ref.watch(updatesRepositoryProvider).failedUpdateCount() ?? 0;

@@ -35,25 +35,7 @@ import 'reader_utils_bar.dart';
 SystemUiMode hiddenChromeUiMode({required bool fullscreen}) =>
     fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge;
 
-/// Stack-based host that layers the reader chrome (top bar, bottom controls,
-/// side seek bar) over the viewer content.
-///
-/// All three chrome bars are **always mounted**. A single [AnimationController]
-/// (200 ms) drives their show/hide via [SlideTransition] + [FadeTransition],
-/// so top and bottom move in perfect lockstep — no more "instant-pop top,
-/// sliding bottom" desync (Bug B). The slide runs the full
-/// 200 ms on [Curves.fastOutSlowIn] while the fade completes faster (~150 ms
-/// via an [Interval]) for a snappier feel.
-///
-/// The OS system-bar transition (edgeToEdge ↔ immersiveSticky) is slaved to
-/// the controller's [AnimationStatus] via a status listener, so the OS bars
-/// move *with* the Material bars rather than snapping at `t=0` (C1).
-///
-/// [visibility] (owned by [ReaderWrapper]) remains the single source of truth —
-/// the controller is a pure render concern driven by a [useEffect].
-///
-/// [onOpenSettings] opens the 3-tab settings bottom sheet
-/// (`showReaderSettingsSheet`), which replaced the old endDrawer.
+/// Keep all chrome bars mounted and animate together; OS bars follow animation status.
 class ReaderChrome extends HookConsumerWidget {
   const ReaderChrome({
     super.key,
@@ -87,19 +69,14 @@ class ReaderChrome extends HookConsumerWidget {
   /// For infinity-scroll mode; null means use [chapterPages.chapter.pageCount].
   final int? totalPageCount;
 
-  /// Source of truth for chrome visibility (the [useState] from [ReaderWrapper]).
-  /// The controller tracks this notifier; [visibility] is never written here.
+  /// Tracks [visibility] without writing it; ReaderWrapper owns visibility.
   final ValueNotifier<bool> visibility;
 
-  /// Owned by [ReaderWrapper]; toggled by [ReaderTopBar]'s tune button.
-  /// Expands [ReaderUtilsBar] beneath the top bar.
+  /// ReaderWrapper owns this notifier; the top-bar tune button toggles it.
   final ValueNotifier<bool> utilsBarExpanded;
 
-  /// True when the horizontal bottom seek bar should be shown (paged / landscape).
   final bool useBottomSeekBar;
 
-  /// True when the vertical side seek bar should be shown (webtoon / vertical,
-  /// non-landscape phone).
   final bool showSideSeekBar;
 
   final Axis scrollDirection;
@@ -110,9 +87,7 @@ class ReaderChrome extends HookConsumerWidget {
 
   final ReaderMode resolvedReaderMode;
 
-  /// True only in modes that actually mount an auto-scroll/auto-advance engine.
-  /// The utils bar (and its toggle) is hidden otherwise, so it's never a dead
-  /// control.
+  /// Enable only when an auto-scroll/advance engine is mounted.
   final bool autoScrollSupported;
   final bool reverseSeekBar;
   final ValueChanged<int> onChanged;
@@ -121,19 +96,14 @@ class ReaderChrome extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ── Single animation controller that drives ALL three bars ────────────────
-    //
-    // initialValue seeds from the current visibility so there is no flash when
-    // the widget first mounts (the reader opens with chrome visible by default).
+    // Seed animation from visibility to avoid a flash on mount.
     final reduceMotion = context.reduceMotion;
     final controller = useAnimationController(
       duration: const Duration(milliseconds: 200),
       initialValue: visibility.value ? 1.0 : 0.0,
     );
 
-    // A16 (targetSdk 36) forces edge-to-edge and ignores statusBar/navBar colors,
-    // so we don't set them; the bars paint their own surface behind the system
-    // bars. Kept: icon brightness + contrastEnforced:false (3-button nav scrim).
+    // Android 16 forces edge-to-edge and ignores bar colours; paint surfaces behind the system bars.
     final darkIcons = context.theme.colorScheme.brightness == Brightness.light;
     final readerOverlayStyle = SystemUiOverlayStyle(
       systemStatusBarContrastEnforced: false,
@@ -145,22 +115,7 @@ class ReaderChrome extends HookConsumerWidget {
           : Brightness.light,
     );
 
-    // ── C1: OS system-bar sync — driven from controller status, not raw bool ──
-    //
-    // Registering the listener here (not in reader_wrapper.dart) lets us tie
-    // the OS-bar transition to the *actual* animation progress:
-    //   • controller starts going forward → show OS bars (edgeToEdge) so the
-    //     status-bar clock appears *with* the sliding Material top bar.
-    //   • animation completes in reverse (dismissed) → hide OS bars
-    //     (immersiveSticky) so they vanish *after* the slide-out finishes.
-    //
-    // The old visibility→SystemUiMode useEffect in reader_wrapper.dart has been
-    // removed; this listener is now the sole driver of the toggle.
-    // reader_screen.dart's mount/unmount immersive effect is left untouched —
-    // it sets the initial immersiveSticky state and restores on exit; the two
-    // do not conflict because reader_screen sets on mount (once) while this
-    // listener updates only on animation-status transitions.
-    // Fullscreen OFF keeps the OS bars up even while the chrome is hidden.
+    // Show OS bars when chrome enters and hide after dismissal; fullscreen off leaves them visible.
     final fullscreen =
         ref.watch(readerFullscreenProvider) ??
         DBKeys.readerFullscreen.initial as bool;
@@ -168,11 +123,9 @@ class ReaderChrome extends HookConsumerWidget {
       void onStatus(AnimationStatus status) {
         switch (status) {
           case AnimationStatus.forward:
-            // Slide-in starting → show OS bars so they appear with the chrome.
             SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
             SystemChrome.setSystemUIOverlayStyle(readerOverlayStyle);
           case AnimationStatus.dismissed:
-            // Slide-out complete → hide OS bars after the chrome has gone.
             SystemChrome.setEnabledSystemUIMode(
               hiddenChromeUiMode(fullscreen: fullscreen),
             );
@@ -184,9 +137,7 @@ class ReaderChrome extends HookConsumerWidget {
 
       controller.addStatusListener(onStatus);
 
-      // Sync OS bars to the initial chrome state (status listeners only fire on
-      // transitions, so the first frame needs an explicit apply). Re-runs when
-      // the fullscreen pref flips, so a hidden-chrome reader updates live.
+      // Apply initial OS-bar state explicitly; status listeners fire only on transitions.
       SystemChrome.setEnabledSystemUIMode(
         visibility.value
             ? SystemUiMode.edgeToEdge
@@ -197,7 +148,6 @@ class ReaderChrome extends HookConsumerWidget {
       return () => controller.removeStatusListener(onStatus);
     }, [controller, darkIcons, fullscreen]);
 
-    // ── Drive the controller from the visibility notifier ─────────────────────
     useEffect(() {
       void onVisibilityChanged() {
         if (reduceMotion) {
@@ -217,12 +167,6 @@ class ReaderChrome extends HookConsumerWidget {
       return () => visibility.removeListener(onVisibilityChanged);
     }, [visibility, controller, reduceMotion]);
 
-    // Two curves off the ONE controller: slide = tween(200) and
-    // fade = tween(150) (the fade is FASTER than the
-    // slide), both on FastOutSlowIn (Material standard) rather than a flat
-    // easeInOut. The fade uses an Interval covering the first 150/200 = 0.75 of
-    // the timeline so it completes in ~150 ms while the bar slides over 200 ms —
-    // this quicker fade is what makes the bars feel snappy on the way in.
     final slide = useMemoized(
       () => CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
       [controller],
@@ -235,17 +179,7 @@ class ReaderChrome extends HookConsumerWidget {
       [controller],
     );
 
-    // ── Side seekbar positioning ──────────────────────────────────────────────
-    //
-    // [ChromeExtents.topInset]    = system status-bar inset + measured top-bar
-    //                               height (dp). [ChromeExtents.bottomInset] =
-    //                               system nav-bar inset + measured bottom-bar
-    //                               height (already includes the nav clearance
-    //                               baked inside the bottom controls).
-    //
-    // Adding 8 dp of breathing room keeps the seekbar from kissing the bar edge.
-    // When [forceHorizontalSeekbar] is true, the vertical side seekbar is hidden
-    // and the horizontal bottom seekbar serves all modes (including webtoon).
+    // Measured extents already include navigation clearance; add only the 8dp breathing room.
     final extents = ref.watch(chromeExtentsProvider);
     final forceHorizontal = ref
         .watch(forceHorizontalSeekbarProvider)
@@ -253,35 +187,21 @@ class ReaderChrome extends HookConsumerWidget {
     final leftHanded = ref
         .watch(leftHandedVerticalSeekbarProvider)
         .ifNull(false);
-    // "Show page number": a subtle "n / m" pill near the bottom, always
-    // mounted (outside the animated bars) so it stays visible while reading.
     final showPageNumber = ref.watch(showPageNumberProvider).ifNull(true);
     final pageCount = totalPageCount ?? chapterPages.chapter.pageCount;
 
     return ValueListenableBuilder<bool>(
       valueListenable: visibility,
-      // We still listen to visibility so the Stack rebuilds when it changes
-      // (controls IgnorePointer and keeps reactive state in sync).
       builder: (context, visible, _) {
         return Stack(
           children: [
-            // ── Custom filter overlays ────────────────────────────────────────
-            // Lowest chrome layer: tints only the page beneath. Below the flash
-            // (which must stay visible with filters on) and below the bars
-            // (which must never get tinted).
+            // Tint only the page: filters stay below flash and chrome bars.
             const Positioned.fill(child: ReaderColorOverlays()),
 
-            // ── Flash on page change ──────────────────────────────────────────
-            // Chrome-layer leaf under the bars; IgnorePointer inside, so it can
-            // never eat taps or touch the frozen viewer engines.
             Positioned.fill(
               child: ReaderFlashOverlay(currentIndex: currentIndex),
             ),
 
-            // ── Page-number indicator ─────────────────────────────────────────
-            // Always-mounted leaf gated only by the pref (NOT the chrome
-            // animation), so it stays visible while reading. Sits under the
-            // bottom bar in the Stack, so the visible menu covers it.
             if (showPageNumber && pageCount > 0)
               Positioned(
                 left: 0,
@@ -303,20 +223,7 @@ class ReaderChrome extends HookConsumerWidget {
                 ),
               ),
 
-            // ── Top bar + utils bar ──────────────────────────────────────────
-            // SlideTransition from Offset(0, -1) (fully above viewport) → zero.
-            // FadeTransition from 0 → 1, driven by the same curved animation.
-            // IgnorePointer when dismissed so the hidden bar doesn't eat taps.
-            //
-            // ReaderUtilsBar rides in the same Column as the top bar so it
-            // slides/fades as one rigid unit with it — its own expand/collapse
-            // is a separate, local AnimatedSize.
-            //
-            // MeasureSize now wraps BOTH bars (moved down from ReaderTopBar
-            // alone) so chromeExtentsProvider's topInset covers the
-            // utils bar's height too when it's expanded — otherwise the side
-            // seekbar's `top` offset would sit above the top bar only and
-            // overlap the expanded utils bar.
+            // Measure both top and utils bars so the side seek bar clears expanded controls.
             Positioned(
               top: 0,
               left: 0,
@@ -353,9 +260,6 @@ class ReaderChrome extends HookConsumerWidget {
                             chapter: chapter,
                             onBack: () => context.pop(),
                           ),
-                          // Komikku-style pulldown, shown only where an
-                          // auto-scroll/advance engine is actually mounted so
-                          // the toggle is never a dead control.
                           if (autoScrollSupported)
                             ReaderUtilsBar(
                               expanded: utilsBarExpanded,
@@ -369,18 +273,7 @@ class ReaderChrome extends HookConsumerWidget {
               ),
             ),
 
-            // ── Side seek bar (webtoon) ───────────────────────────────────────
-            // Shown when the caller signals vertical mode AND the user has NOT
-            // toggled [forceHorizontalSeekbar] on.  The [Positioned] edges are
-            // derived from the measured [ChromeExtents] so the seekbar never
-            // overlaps the top or bottom chrome bars (Bug A fix).
-            //
-            // [top]    = e.topInset + 8 dp breathing room.
-            // [bottom] = e.bottomInset + 8 dp breathing room.
-            //            (bottomInset already includes the nav-bar clearance
-            //             that the bottom controls bake in.)
-            //
-            // Fade only — no slide, to avoid fighting the seek gesture.
+            // Fade the side seek bar without sliding to avoid fighting seek gestures.
             if (showSideSeekBar && !forceHorizontal)
               Positioned(
                 right: leftHanded ? null : 6,
@@ -388,11 +281,7 @@ class ReaderChrome extends HookConsumerWidget {
                 top: extents.topInset + 8,
                 bottom: extents.bottomInset + 8,
                 width: 56,
-                // Fade-only (no slide), so at opacity 0 it still hit-tests. The
-                // enclosing builder only rebuilds on visibility changes, not on
-                // the fade settling — AnimatedBuilder re-evaluates `ignoring` on
-                // the final dismissed tick so a tap on this edge column after
-                // hiding re-shows the menu instead of scrubbing.
+                // Re-evaluate hit testing on the final fade tick so hidden controls cannot intercept taps.
                 child: AnimatedBuilder(
                   animation: controller,
                   builder: (context, child) => IgnorePointer(
@@ -413,10 +302,6 @@ class ReaderChrome extends HookConsumerWidget {
                 ),
               ),
 
-            // ── Bottom controls ───────────────────────────────────────────────
-            // SlideTransition from Offset(0, 1) (fully below viewport) → zero.
-            // The nav-inset padding is applied INSIDE the bottom controls,
-            // so it slides as one rigid unit with the bar — no stutter.
             Positioned(
               bottom: 0,
               left: 0,
@@ -457,8 +342,6 @@ class ReaderChrome extends HookConsumerWidget {
   }
 }
 
-/// Subtle "n / m" pill, styled off the shared reader-nav surface token so it
-/// matches the bar capsules.
 class _PageNumberIndicator extends StatelessWidget {
   const _PageNumberIndicator({
     required this.currentPage,

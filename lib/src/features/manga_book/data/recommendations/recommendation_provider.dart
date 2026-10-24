@@ -7,8 +7,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-/// One recommended title. Mirrors the fields Komikku's SManga recommendations
-/// carry (title + cover + the provider's own url).
 class Recommendation {
   const Recommendation({
     required this.title,
@@ -19,8 +17,7 @@ class Recommendation {
 
   final String title;
 
-  /// Provider grouping shown as a section header, e.g. "Community
-  /// recommendations" or "Similar titles" (Komikku's per-source category).
+  /// Section header, such as "Community recommendations" or "Similar titles".
   final String category;
   final String? coverUrl;
   final String? sourceUrl;
@@ -40,8 +37,6 @@ class Recommendation {
   );
 }
 
-/// Everything a provider needs to decide between an exact tracker-id lookup and
-/// a title search, mirroring Komikku's TrackerRecommendationPagingSource.
 class RecommendationContext {
   const RecommendationContext({
     required this.title,
@@ -51,11 +46,10 @@ class RecommendationContext {
     required this.client,
   });
 
-  /// The manga's title (Komikku uses `ogTitle`), the search fallback key.
+  /// Fallback search key when no tracker ID is available.
   final String title;
 
-  /// Lowercased tracker name -> the manga's remote id on that tracker, from its
-  /// track records. Empty when the series isn't tracked there.
+  /// Lowercased tracker names mapped to remote IDs; absent trackers have no entry.
   final Map<String, String> remoteIdByTracker;
 
   final String sourceName;
@@ -78,8 +72,6 @@ class RecommendationAllFailed implements Exception {
   final List<RecommendationProviderFailure> failures;
 }
 
-/// A provider's HTTP call returned a non-200. Surfaced per-section as an error
-/// (Komikku parity) instead of an empty list — a flaky upstream isn't "no recs".
 class RecommendationHttpException implements Exception {
   const RecommendationHttpException(this.statusCode);
   final int statusCode;
@@ -91,13 +83,10 @@ abstract class RecommendationProvider {
   String get name;
   String get category;
 
-  /// Unique lookup id. [name] alone collides — MangaUpdates ships two providers
-  /// (community + similar) under the same name — so the per-provider Riverpod
-  /// family must key on name+category, or one silently shadows the other.
+  /// MangaUpdates shares a name across two providers, so keys must include category.
   String get key => '$name|$category';
 
-  /// Source-specific providers (Comick, MangaDex) override this; tracker
-  /// providers apply everywhere.
+  /// Tracker providers apply everywhere; source-specific providers override this.
   bool appliesTo(RecommendationContext ctx) => true;
 
   /// True only for providers reachable from browsers (CORS allows AniList).
@@ -112,13 +101,11 @@ bool appliesOnPlatform(
   bool isWeb = kIsWeb,
 }) => (!isWeb || provider.supportsWeb) && provider.appliesTo(ctx);
 
-/// Base for providers backed by a tracker: query by the manga's remote id when
-/// it's tracked there, otherwise search by title (Komikku's id-or-search rule).
+/// Looks up the remote tracker ID when available, otherwise searches by title.
 abstract class TrackerRecommendationProvider extends RecommendationProvider {
   const TrackerRecommendationProvider();
 
-  /// Lowercased tracker name this provider matches against (`anilist`,
-  /// `myanimelist`, `mangaupdates`).
+  /// Lowercased tracker name, such as `anilist` or `myanimelist`.
   String get trackerKey;
 
   Future<List<Recommendation>> fetchById(

@@ -72,9 +72,7 @@ class ReaderInputCallbacks {
 
   final VoidCallback onTap;
 
-  /// Null when nothing consumes a long press. The recognizers are then never
-  /// registered, so a slow tap stays a tap instead of losing the gesture arena
-  /// to a handler that would have done nothing with it.
+  /// Null omits long-press recognition so slow taps are not stolen by a no-op handler.
   final ValueChanged<Offset>? onLongPressStart;
   final ValueChanged<Offset>? onLongPressMoveUpdate;
   final VoidCallback? onLongPressEnd;
@@ -87,9 +85,7 @@ class ReaderInputCallbacks {
   final TapInvert tapInvert;
   final bool smallerTapZones;
 
-  /// Whether an adjacent chapter exists to move to — lets the paged viewport
-  /// decide before animating, so it doesn't slide a page fully off-screen only
-  /// to bounce back when there's no chapter there.
+  /// Check adjacency before animating so a missing chapter cannot cause a full-page turn then bounce.
   final bool Function() hasNextBoundary;
   final bool Function() hasPreviousBoundary;
 }
@@ -113,8 +109,6 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
-/// Whether the reader chrome is on screen. Public so the long strip can hold
-/// auto-scroll while it is up.
 final readerChromeVisibleProvider = StateProvider.autoDispose<bool?>((Ref ref) {
   final link = ref.keepAlive();
   Timer? timer;
@@ -186,10 +180,7 @@ class ReaderWrapper extends HookConsumerWidget {
   final List<int>? spreadPageIndexes;
   final ReaderMode? effectiveReaderMode;
 
-  /// When true the child (a multi-chapter host) crosses chapter boundaries
-  /// itself inside one continuous pager, so the reading-flow boundary must NOT
-  /// `pushReplacement` a fresh chapter — it falls through to the child's
-  /// onNext/onPrevious instead.
+  /// Multi-chapter hosts own boundary navigation; fall through to their callbacks instead of pushReplacement.
   final bool handlesOwnChapterNavigation;
 
   bool _shouldUseVerticalTransition(ReaderMode readerMode) {
@@ -262,11 +253,7 @@ class ReaderWrapper extends HookConsumerWidget {
     );
     final invertTap = ref.watch(invertTapProvider).ifNull();
 
-    // Webtoon (vertical) normally uses the vertical side seek bar, but on a phone
-    // in landscape there's no vertical room for it to be usable — fall back to
-    // the standard horizontal bottom bar. Two General-tab prefs
-    // adjust the chain: force-horizontal wins everywhere; the landscape
-    // sub-toggle keeps the side seekbar on a landscape phone.
+    // Use horizontal seeking on landscape phones unless overridden; force-horizontal always wins.
     final screenSize = MediaQuery.sizeOf(context);
     final isLandscapePhone =
         screenSize.shortestSide < 600 && screenSize.width > screenSize.height;
@@ -280,8 +267,6 @@ class ReaderWrapper extends HookConsumerWidget {
         scrollDirection == Axis.vertical &&
         !forceHorizontalSeekbar &&
         (!isLandscapePhone || landscapeVerticalSeekbar);
-    // Exactly one seekbar: whenever the side seekbar is out, the horizontal
-    // bottom one serves (paged, landscape fallback, forced horizontal).
     final useBottomSeekBar = !showSideSeekBar;
 
     final bool volumeTap = ref.watch(volumeTapProvider).ifNull();
@@ -301,8 +286,6 @@ class ReaderWrapper extends HookConsumerWidget {
     final visibility = useState(
       sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(),
     );
-    // Komikku-style utils bar (auto-scroll control): starts collapsed each
-    // reader open, unlike chrome visibility which persists across chapters.
     final utilsBarExpanded = useState(false);
     final mangaReaderPadding = useState(
       manga.metaData.readerPadding ?? localMangaReaderPadding,
@@ -313,8 +296,6 @@ class ReaderWrapper extends HookConsumerWidget {
     final mangaReaderNavigationLayout =
         manga.metaData.readerNavigationLayout ??
         ReaderNavigationLayout.defaultNavigation;
-    // Per-series 4-value tap-invert; null lets the layout fall back to the
-    // global compat value (new key ?? legacy bool).
     final mangaTapInvert = manga.metaData.readerTapInvert;
 
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
@@ -452,12 +433,6 @@ class ReaderWrapper extends HookConsumerWidget {
       ],
     );
 
-    // NOTE: The visibility→SystemUiMode transition is now driven by
-    // ReaderChrome's AnimationController status listener (Inc-1), not here.
-    // edgeToEdge is requested when the controller starts going forward;
-    // immersiveSticky is requested when it reaches dismissed — so the OS bars
-    // move *with* the animated Material bars rather than snapping at t=0 (C1).
-    // reader_screen.dart's mount/unmount immersive effect is left untouched.
 
     final canSwipeAcrossChapterBoundary =
         lastPageSwipeEnabled || readerSwipeChapterToggle;
@@ -481,9 +456,7 @@ class ReaderWrapper extends HookConsumerWidget {
         return;
       }
       gapConfirmationPending.value = true;
-      // Timers keep running behind modal routes. Stop both paged auto-advance
-      // and continuous auto-scroll before asking; the reader can restart them
-      // explicitly after deciding, without changing position behind Cancel.
+      // Stop auto-motion before modal prompts because timers keep running behind routes.
       ref.read(autoScrollActiveProvider.notifier).stop();
       unawaited(() async {
         try {
@@ -515,10 +488,7 @@ class ReaderWrapper extends HookConsumerWidget {
       return true;
     }
 
-    // openAtEnd belongs to backward boundary crossings, where the reader is
-    // still moving through the story and the last page is the next thing they
-    // should see. An explicit "previous chapter" command resumes that chapter
-    // instead, matching Komikku's loadPreviousChapter.
+    // Backward boundary crossings use openAtEnd; explicit previous-chapter commands resume saved progress.
     bool pushPreviousChapter({
       bool openAtEnd = false,
       bool visualTransitionShown = false,
@@ -544,8 +514,6 @@ class ReaderWrapper extends HookConsumerWidget {
     }
 
     bool tryNextChapter() {
-      // Host owns in-window chapter crossing: don't push a fresh route; let the
-      // reading-flow boundary fall through to the child's controller.
       if (handlesOwnChapterNavigation) return false;
       if (!canSwipeAcrossChapterBoundary) return false;
       return pushNextChapter(
@@ -611,14 +579,11 @@ class ReaderWrapper extends HookConsumerWidget {
       pushNextChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
-    // Feeds _BoundarySwipeDetector only: every call site is an overscroll past
-    // the first page, which is a backward crossing rather than a command.
     final onPreviousChapter = useCallback(() {
       pushPreviousChapter(openAtEnd: true);
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
-    // Managed (not autofocus) so re-requesting focus after the settings
-    // sheet closes (below) has a node to hand it back to.
+    // Keep a managed focus node to restore focus after settings dismissal.
     final readerFocusNode = useFocusNode(debugLabel: 'reader-scroll');
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -653,7 +618,6 @@ class ReaderWrapper extends HookConsumerWidget {
         ),
       ),
       child: Scaffold(
-        // Reader background pref; default black.
         backgroundColor:
             (ref.watch(readerBackgroundColorKeyProvider) ??
                     DBKeys.readerBackgroundColor.initial
@@ -699,9 +663,7 @@ class ReaderWrapper extends HookConsumerWidget {
                         return null;
                       },
                     ),
-                    // Null falls back to page nav so paged/other modes that
-                    // don't supply viewport scroll keep working. Intentionally
-                    // ignores invertTap — arrow-down always scrolls down.
+                    // Without a viewport callback, fall back to page navigation; down always means down regardless of tap inversion.
                     ViewportScrollForwardIntent:
                         CallbackAction<ViewportScrollForwardIntent>(
                           onInvoke: (intent) {
@@ -716,8 +678,6 @@ class ReaderWrapper extends HookConsumerWidget {
                             return null;
                           },
                         ),
-                    // Nullable callbacks: any non-continuous vertical mode
-                    // that doesn't supply these is a safe no-op.
                     AutoScrollToggleIntent:
                         CallbackAction<AutoScrollToggleIntent>(
                           onInvoke: (intent) {
@@ -764,8 +724,7 @@ class ReaderWrapper extends HookConsumerWidget {
                             final gate = ref.read(
                               readerTapArrestsFlingProvider.notifier,
                             );
-                            // Cleared on use: only the long strip arms it, so a
-                            // stale true would swallow taps in the paged reader.
+                            // Consume and clear the fling-arrest flag so it cannot suppress a later paged-reader tap.
                             if (gate.state) {
                               gate.state = false;
                               return;
@@ -816,10 +775,6 @@ class ReaderWrapper extends HookConsumerWidget {
                 ),
               ),
             ),
-            // Chrome: top bar, bottom controls, and optional side seek bar.
-            // All chrome is managed by ReaderChrome, which applies the same
-            // visibility conditional as before (still instant show/hide; the
-            // synchronized animation is a later increment).
             Positioned.fill(
               child: ReaderChrome(
                 readerScanlatorGroup: readerScanlatorGroup ?? '',
@@ -948,9 +903,7 @@ class _BoundarySwipeDetectorState extends State<_BoundarySwipeDetector> {
 
   void _checkScrollAttemptAtBoundary(ScrollMetrics metrics) {
     if (metrics is PageMetrics) {
-      // PageView-based readers (horizontal modes). Derive the last index from
-      // the scroll extent, not the raw page count, so edge-swipe chapter nav is
-      // correct under double-page/split (item count != raw page count).
+      // Use display extent for the last index; spreads/splits make raw page count differ from item count.
       final currentPage = metrics.page?.round() ?? 0;
       final lastPageIndex = metrics.viewportDimension > 0
           ? (metrics.maxScrollExtent / metrics.viewportDimension).round()
@@ -1124,8 +1077,6 @@ class ReaderView extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pageActionsOpen = useState(false);
 
-    // "Show actions on long tap" (default ON): long-press opens the
-    // page-actions sheet. OFF: long-press does nothing.
     final readWithLongTap =
         ref.watch(readWithLongTapProvider) ?? DBKeys.readWithLongTap.initial;
 
@@ -1183,13 +1134,10 @@ class ReaderView extends HookConsumerWidget {
       seriesOverride: mangaReaderNavigationLayout,
     );
 
-    // Komikku's showNavigationOverlayOnStart plus its new-user one-shot.
-    // Read once and held, not watched: watching would clear the flag and
-    // take the flash away in the same frame it was granted.
+    // Latch the one-shot hint at open so clearing its flag cannot remove the overlay in the same frame.
     final overlayAlways = ref.watch(showTapZonesOverlayProvider).ifNull();
     final unseenAtOpen = useRef<bool?>(null);
     unseenAtOpen.value ??= ref.read(tapZonesOverlayUnseenProvider).ifNull(true);
-    // No point spending the one-shot on a layout that draws nothing.
     final zonesAreVisible =
         resolvedNavigationLayout != ReaderNavigationLayout.disabled;
     final showZonesOnOpen =
@@ -1223,7 +1171,6 @@ class ReaderView extends HookConsumerWidget {
       content = ReaderInputScope(
         callbacks: ReaderInputCallbacks(
           onTap: toggleVisibility,
-          // Off means nobody wants the gesture, so it is never claimed.
           onLongPressStart: readWithLongTap ? handleLongPressStart : null,
           onLongPressCancel: readWithLongTap ? handleLongPressCancel : null,
           onNext: onNext,
@@ -1244,8 +1191,6 @@ class ReaderView extends HookConsumerWidget {
         onPreviousChapterCommand: onPreviousChapterCommand,
         readerScanlatorGroup: readerScanlatorGroup,
         onTap: toggleVisibility,
-        // Null when nothing consumes it, so the recognizer is never registered
-        // and a slow tap isn't lost to the long-press arena.
         onLongPressStart: readWithLongTap
             ? (details) => handleLongPressStart(details.localPosition)
             : null,

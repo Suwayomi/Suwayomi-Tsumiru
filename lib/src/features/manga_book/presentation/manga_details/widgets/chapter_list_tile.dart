@@ -55,14 +55,11 @@ class ChapterListTile extends HookConsumerWidget {
   final bool canTapSelect;
   final bool isSelected;
 
-  /// One-line desktop row with hover actions; enabled from the large window
-  /// size class (1200) up.
   final bool desktop;
 
-  /// Whether any selection is active (shows checkboxes on desktop).
   final bool selectionMode;
 
-  /// The chapter Resume would open: accent bar, tint and progress line.
+  /// Marks the chapter Resume would open.
   final bool isCurrent;
 
   /// Desktop tap handler; [shift] is true for a Shift-click range extend.
@@ -71,8 +68,7 @@ class ChapterListTile extends HookConsumerWidget {
   /// Desktop right-click handler with the global tap position.
   final ValueChanged<Offset>? onSecondaryTapAt;
 
-  /// Desktop ⋮ handler with the menu anchor, computed from the button, plus
-  /// a focus-return callback the row guards with its own mounted state.
+  /// The row guards the menu focus-return callback with its mounted state.
   final ChapterMenuOpener? onOpenMenu;
 
   @override
@@ -148,7 +144,6 @@ class ChapterListTile extends HookConsumerWidget {
     final scanlator = chapter.scanlator.isNotBlank
         ? chapter.scanlator!
         : context.l10n.unknownScanlator;
-    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
     final readColor = context.theme.colorScheme.onSurface.withValues(
       alpha: 0.38,
     );
@@ -235,8 +230,6 @@ class ChapterListTile extends HookConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               OfflineSaveButton(chapterId: chapter.id),
-              // Local source: the files are already on the server, so there is
-              // nothing to download there (Komikku parity).
               if (!manga.isLocalSource)
                 DownloadStatusIcon(
                   updateData: updateData,
@@ -550,7 +543,6 @@ class _ChapterSwipeRow extends StatefulWidget {
 
 class _ChapterSwipeRowState extends State<_ChapterSwipeRow>
     with SingleTickerProviderStateMixin {
-  // Komikku parity: the action background flips at a 56px drag.
   static const double _threshold = 56;
   double _offset = 0;
   Tween<double> _tween = Tween(begin: 0, end: 0);

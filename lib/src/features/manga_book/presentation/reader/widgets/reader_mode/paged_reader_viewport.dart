@@ -58,7 +58,6 @@ class _StrandRecord {
 
 enum _PanDirection { left, right, up, down }
 
-/// Public so the zone geometry can be tested against the overlay.
 enum TapAction { previous, next, menu }
 
 class PagedReaderController {
@@ -80,21 +79,12 @@ class PagedReaderController {
 
   bool get isAtLast => _state?.isAtLastDisplay ?? false;
 
-  /// Strands the pager [progress] of a turn from its slot. Test-only, and the
-  /// only way in: every reachable path that abandons a turn now re-rests the
-  /// pager, which is why the reported stranding has never been traced.
+  /// Test-only displacement by [progress] of one page turn.
   @visibleForTesting
   void debugStrand(double progress) => _state?._debugStrand(progress);
 }
 
-/// Continuous multi-chapter paged viewport.
-///
-/// Renders a [PagedDisplayWindow] — the prev/current/next chapters composed
-/// into ONE display list with virtual transition cards between them — so paging
-/// across a chapter boundary is just a page turn inside the same pager (no route
-/// rebuild). The host swaps in a fresh window (append/prepend a chapter) and
-/// this widget re-anchors to the same content on [didUpdateWidget]. Progress is
-/// reported as `(chapterId, raw)` so the host can address the VISIBLE chapter.
+/// Re-anchors to visible content when the host replaces the chapter window; reports chapter-relative progress.
 class PagedReaderViewport extends StatefulWidget {
   const PagedReaderViewport({
     super.key,
@@ -127,8 +117,7 @@ class PagedReaderViewport extends StatefulWidget {
     this.clock = DateTime.now,
   });
 
-  /// Wall clock behind the double-tap window. Injectable because the test
-  /// binding's fake clock moves timers but not [DateTime.now].
+  /// Injectable wall clock: widget-test timers advance without changing DateTime.now.
   final DateTime Function() clock;
 
   final PagedReaderController controller;
@@ -140,11 +129,8 @@ class PagedReaderViewport extends StatefulWidget {
   final BoxFit pageFit;
   final Size? pageSize;
 
-  /// Original size — pages rest at 1:1 with their source pixels and pan, rather
-  /// than being fitted to the screen.
   final bool pagesAtNaturalSize;
 
-  /// How far a mouse wheel notch pans a page that overflows the screen.
   final double mouseScrollSpeed;
 
   final CenterMarginType centerMargin;
@@ -153,21 +139,16 @@ class PagedReaderViewport extends StatefulWidget {
   final bool reversePair;
   final bool cropBorders;
 
-  /// Reports a wide (landscape) page for the given chapter so the host can
-  /// re-chunk that chapter's mapping. Chapter-scoped: two chapters can each
-  /// have a wide page 0.
+  /// Chapter-scoped: two chapters may each have a wide page at raw index zero.
   final void Function(int chapterId, int raw, bool isWide) onPageWide;
 
   /// Reports the current reading position as `(chapterId, furthest raw page)`
   /// — the read-progress contract, addressed to the visible chapter.
   final void Function(int chapterId, int raw) onChapterPageChanged;
 
-  /// Builds the card shown for a virtual chapter-boundary transition slot.
   final Widget Function(TransitionDisplay) transitionBuilder;
 
-  /// Fired whenever the viewport settles onto a page (mount, page turn, jump,
-  /// re-anchor, or a bounce). The host uses this to apply an idle-gated window
-  /// swap without disrupting an in-progress drag/animation.
+  /// Fires after every settle, including mount/jump/bounce, so the host can apply staged window swaps.
   final VoidCallback? onIdle;
 
   /// The outer edges of the window just bounce; these let the host surface
@@ -193,7 +174,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const double _pageTurnVelocity = 650;
   static const double _panFlingVelocity = 700;
   static const double _panFlingDistanceFactor = 0.2;
-  // Android's double-tap timeout. Komikku uses the same value.
+  // Android double-tap timeout in milliseconds.
   static const int _doubleTapWindowMs = 300;
   // Must outlast _doubleTapWindow, or a slow double tap fires both actions.
   static const Duration _tapDelay = Duration(
@@ -209,9 +190,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const Duration _doubleTapZoomDuration = Duration(milliseconds: 200);
   static const Curve _settleCurve = Curves.easeOutCubic;
 
-  /// Far above [_pageTurnThreshold] on purpose: that one reads release intent,
-  /// which a stranding gives no evidence of. Below this we snap back — repeating
-  /// a page is recoverable, skipping one is not.
+  /// A stranded turn needs a higher commit threshold than release intent to avoid skipping a page.
   static const double _restCommitThreshold = 0.9;
 
   static const Duration _diagnosticInterval = Duration(seconds: 5);
@@ -233,22 +212,16 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// and the rest guard would pre-empt the commit.
   bool _commitPending = false;
 
-  /// Recorded at each stop rather than inferred: the touch path stops the
-  /// animation directly, not via [_abandonMotion], so one guess goes stale.
   String _lastMotionStop = 'none';
   _StrandRecord? _strand;
   DateTime? _lastDiagnosticAt;
   int _diagnosticCount = 0;
   Size _viewportSize = Size.zero;
   final Map<int, Offset> _pointers = {};
-  // Keyed by (chapterId, page identity), not display index — a late wide page
-  // re-chunks a chapter's mapping and shifts display indices, and two chapters
-  // can share a raw index, so the chapter disambiguates equal raws.
+  // Key by chapter and page identity; wide-page remapping shifts display indices.
   final Map<({int chapterId, PageUnit unit}), _PageZoomController>
   _zoomControllers = {};
 
-  /// Decoded pixel sizes per page, under the same key as [_zoomControllers] and
-  /// for the same reason.
   final Map<({int chapterId, PageUnit unit}), Map<int, Size>> _naturalSizes =
       {};
 
@@ -341,9 +314,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       oldWidget.controller._detach(this);
       widget.controller._attach(this);
     }
-    // The host makes a NEW window instance per swap (append/prepend). Re-anchor
-    // to the same content so a prepend that shifts every index doesn't jump the
-    // page the user is reading.
+    // Re-anchor on window replacement so prepending cannot move the visible content.
     if (!identical(oldWidget.window, widget.window)) {
       _reanchor(oldWidget.window);
       _clearPendingTap();
@@ -366,7 +337,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _reanchor(PagedDisplayWindow oldWindow) {
-    // In-flight motion still targets the OLD window.
     _abandonMotion('reanchor');
 
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
@@ -383,10 +353,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       // wide page is decoded) must not turn the notice into the next page.
       target = widget.window.items.indexOf(item);
       if (target < 0 && (item.isStart || item.isEnd)) {
-        // Preload can replace an outer boundary with an interior transition.
-        // Preserve the known side: end cards leave the same chapter, start
-        // cards enter the same chapter. Never match an interior card by only
-        // one side, as that could move it to a different chapter boundary.
+        // Match interior transitions by both chapters; boundary cards preserve their one known side.
         target = widget.window.items.indexWhere(
           (candidate) =>
               candidate is TransitionDisplay &&
@@ -395,8 +362,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
                   : candidate.toChapterId == item.toChapterId),
         );
       }
-      // Only fall back to chapter pages if the transition no longer exists
-      // (e.g. a seamless neighbour was loaded, or transitions were disabled).
       if (target < 0 && item.toChapterId != null) {
         target = widget.window.firstDisplayOf(item.toChapterId!);
       }
@@ -408,21 +373,16 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         ? target
         : _clampDisplay(widget.initialDisplayIndex);
     _dragOffset = 0;
-    // Runs inside didUpdateWidget; a sync emit would setState an ancestor
-    // mid-build. Defer (like commitPendingIfAny).
+    // didUpdateWidget runs during build; defer ancestor notification.
     Future.microtask(() {
       if (mounted) _emitRawPage();
     });
   }
 
-  /// Abandons whatever is still moving — a turn, a pan fling, a zoom. A turn
-  /// left running writes its old position over wherever we land next, then
-  /// finishes by committing the page IT was aiming at; a zoom left running
-  /// keeps scaling a page that is no longer the one on screen.
+  /// Stop old motion before replacing its target; stale completions must not commit another page.
   void _abandonMotion(String reason) {
     _motionGeneration++;
-    // Nothing takes over here, so no completion is owed — leaving this set would
-    // mute the rest guard for good.
+    // Abandoned motion owes no completion; clear this so the rest guard can run.
     _commitPending = false;
     _lastMotionStop = reason;
     _pageAnimation.stop();
@@ -485,15 +445,11 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _notifyIdle();
   }
 
-  /// True when [index] is a transition card or out of range — no zoom / pages /
-  /// long-press there.
   bool _isTransitionSlot(int index) {
     if (index < 0 || index >= widget.window.length) return true;
     return widget.window.items[index] is! SpreadDisplay;
   }
 
-  /// The chapter shown at the current slot; scans outward when the slot is a
-  /// transition card so a seek still resolves to a chapter.
   int? _currentChapterId() {
     final here = widget.window.displayToChapterRaw(_displayIndex);
     if (here != null) return here.chapterId;
@@ -519,8 +475,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
   }
 
-  /// Original size can't zoom out past 1:1 — that's what the setting means,
-  /// and it's Mihon's rule too (SCALE_TYPE_ORIGINAL_SIZE pins minimum zoom).
+  /// Original size pins minimum zoom at 1:1.
   double get _minMultiplier =>
       widget.disableZoomOut || widget.pagesAtNaturalSize ? 1 : 0.5;
 
@@ -554,9 +509,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _onPointerDown(PointerDownEvent event) {
-    // A touch that lands mid-settle is an interrupt, not a nav tap — remember
-    // so the ensuing tap is swallowed (the in-flight turn still commits on
-    // cancel, so we must not also fire a second tap action on top of it).
+    // A touch interrupting a settle must not also fire navigation after the turn commits.
     if (_pointers.isEmpty) {
       _interruptedByAnimation =
           _pageAnimation.isAnimating ||
@@ -587,9 +540,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _velocityPointer = null;
     _velocityTracker = null;
     if (_pointers.length == 2) {
-      // A gesture is either a turn or a zoom, decided once. A second finger
-      // landing mid-turn must not seize it — that abandons the turn partway and
-      // leaves the pager between two pages.
+      // Choose turn or zoom once; a second finger must not abandon an in-progress page turn.
       if (_dragOwner == _DragOwner.pager || _dragOffset != 0) return;
       final zoom = _currentZoomOrNull;
       if (zoom == null) return;
@@ -632,9 +583,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
 
     if (_dragOwner == null && _totalDrag.distance > _touchSlop) {
-      // Claim the drag only if the page can pan along the axis being swiped —
-      // otherwise a bit of vertical drift lets a page with only vertical
-      // overflow swallow a swipe meant to turn it.
+      // Only claim panning on an axis with room; cross-axis drift must not swallow a page-turn swipe.
       if (_currentZoomOrNull?.canPanAlong(_totalDrag) ?? false) {
         _dragOwner = _DragOwner.page;
       } else {
@@ -677,7 +626,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _pointers.remove(event.pointer);
     if (_longPressActive) {
       _finishLongPress();
-      // This return skips the displaced-pager net further down.
       _enforcePagerRest();
       return;
     }
@@ -688,8 +636,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         _settleAfterGesture(releaseVelocity);
         _resetGesture();
       } else if (_pointers.length == 1) {
-        // Dropped back to one finger — resume single-touch from it. With 2+
-        // still down we stay in multi-touch (and `.single` would throw).
+        // Resume single-touch only with one remaining pointer; .single throws with multiple fingers.
         _lastSinglePosition = _pointers.values.single;
       }
       return;
@@ -720,10 +667,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _resetGesture();
   }
 
-  /// Wheel pans the page while it has room, then turns once it runs out. A
-  /// page fitted to the screen has no room, so a notch turns it straight away —
-  /// the WebUI can get away with scroll-only because the browser gives it a
-  /// scrollable viewer; here that would leave the wheel doing nothing.
+  /// Wheel input pans while room remains, then turns pages.
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     if (event.kind != PointerDeviceKind.mouse) return;
@@ -754,9 +698,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _resetGesture();
   }
 
-  /// Lands whatever the gesture left mid-move. A pinch that resolves into a
-  /// one-finger drag still carries the pager, and letting go has to settle it
-  /// or it stays parked between two pages for good.
+  /// Settle residual pager motion even when the gesture ends as a one-finger pan.
   void _settleAfterGesture(Offset releaseVelocity) {
     if (_dragOwner == _DragOwner.page) {
       _settlePagePan(releaseVelocity);
@@ -818,8 +760,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _claimLongPressArena() {}
 
-  /// Re-bases the pinch on the fingers currently down, so scale and pan are
-  /// measured from where they are now rather than a pair that has since changed.
+  /// Rebase pinch distance and offset whenever the pointer pair changes.
   void _capturePinchBaseline(_PageZoomController zoom) {
     final points = _pointers.values.toList();
     if (points.length < 2) return;
@@ -832,7 +773,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _handlePinch() {
     if (!widget.pinchEnabled || widget.disableZoomIn) return;
-    // The turn owns this gesture; extra fingers ride along without zooming.
     if (_dragOwner == _DragOwner.pager) return;
     final zoom = _currentZoomOrNull;
     if (zoom == null) return;
@@ -866,8 +806,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _handleTap(Offset position) {
-    // No double-tap-to-zoom → nothing to disambiguate, so act immediately
-    // instead of holding every tap for _tapDelay (a felt page-turn latency).
+    // Without double-tap zoom, act immediately rather than delaying navigation.
     if (!widget.doubleTapToZoom || widget.disableZoomIn) {
       _handleSingleTap(position);
       return;
@@ -917,17 +856,11 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _animateZoomTo(zoom, zoom.scaleAroundTarget(target, position));
   }
 
-  /// Animate a page's zoom to a target scale/offset (double-tap), so it eases
-  /// in instead of snapping — matching the webtoon reader's zoom feel.
   void _animateZoomTo(
     _PageZoomController zoom,
     ({double scale, Offset offset}) end,
   ) {
-    // reset() drives the controller to `dismissed`, which fires the status
-    // listener that clears these tweens — so it has to run BEFORE we build them.
-    // A second double-tap arrives with the controller sitting at `completed`, so
-    // resetting after assignment would null the tweens it just created and the
-    // zoom would never animate (page stuck zoomed).
+    // Reset before assigning tweens: reset fires the listener that clears them.
     _zoomAnimation
       ..stop()
       ..reset();
@@ -1005,9 +938,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _animateOffsetTo(0);
   }
 
-  // One display slot (single page, spread, or transition card) always travels a
-  // full viewport, so the turn threshold is the full extent — halving it for
-  // spreads made them commit a turn at half the drag distance.
+  // Each display slot travels one full viewport, including spreads.
   double get _pageTurnExtent => _axisExtent;
 
   double _mainAxisDelta(Offset offset) =>
@@ -1062,8 +993,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _animateToDisplay(int targetDisplay) {
-    // The window's OUTER edges just bounce (the host surfaces start/end-of-manga
-    // feedback). Interior transition cards are ordinary slots and page normally.
+    // Outer window edges bounce; interior transition cards page normally.
     if (targetDisplay < 0) {
       widget.onReachedStartEdge?.call();
       _animateOffsetTo(0);
@@ -1124,8 +1054,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _commitPending = true;
     _pageAnimation.forward().whenCompleteOrCancel(() {
       if (generation != _motionGeneration) {
-        // Only a strand if nothing took over: a turn superseded by the next one
-        // is ordinary, and logging it would bury the real event.
         if (!_commitPending && _dragOffset != 0) {
           _recordStrand(target: target, generation: generation);
           _scheduleRestCheck();
@@ -1170,9 +1098,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     });
   }
 
-  /// The pager must never come to rest between two slots. Enforced here rather
-  /// than at each site that can abandon a turn, so a stranding heals whatever
-  /// caused it — including causes we have not found.
+  /// Enforce resting on a slot regardless of which path abandoned motion.
   void _enforcePagerRest() {
     if (_dragOffset == 0) return;
     if (_pointers.isNotEmpty) return;
@@ -1259,7 +1185,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         _viewportSize = nextViewport;
         _syncZoomBounds();
         if (resized) _republishVisibleMetrics();
-        // Catch-all: a stranding from a path we never found heals next frame.
         if (_dragOffset != 0) _scheduleRestCheck();
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -1317,9 +1242,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     return ClipRect(
       child: _ZoomedDisplayEntry(
         controller: _zoomControllerFor(index),
-        // Only the focused page applies its zoom/pan transform. A neighbor still
-        // carries whatever zoom/pan it was left with; applying that off-screen
-        // drags it partly back into view, overlapping the current page.
+        // Only transform the focused page; retained off-screen zoom/pan would overlap it.
         active: active,
         child: DoublePageView(
           entry: spread.entry,
@@ -1341,17 +1264,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     );
   }
 
-  /// Feeds the decoded page size to its zoom controller, so pan bounds match
-  /// the page's real extent instead of an assumed full-viewport size.
   void _recordNaturalSize(
     int index,
     SpreadDisplay spread,
     int raw,
     Size natural,
   ) {
-    // An already-decoded page reports during build (the image stream fires its
-    // listener synchronously on a cache hit); notifying the zoom then would
-    // rebuild mid-build. Publish after the frame instead.
+    // Cache-hit image listeners can fire during build; publish zoom metrics after the frame.
     if (SchedulerBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1376,9 +1295,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _publishPageMetrics(index, spread);
   }
 
-  /// Recomputes a page's laid-out size from what has decoded so far. Depends on
-  /// the viewport, so it has to run again after a rotation or resize — the
-  /// image doesn't decode a second time to trigger it.
+  /// Recompute metrics on resize/rotation because the image may not decode again.
   void _publishPageMetrics(int index, SpreadDisplay spread) {
     final naturals =
         _naturalSizes[(chapterId: spread.chapterId, unit: spread.entry.first)];
@@ -1409,8 +1326,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
   }
 
-  /// The box one page is laid out in — half the screen for a pair, less the
-  /// center margin that [DoublePageView] puts between them.
   Size _slotSize(SpreadDisplay spread) {
     if (!spread.entry.isPair) {
       return Size(_viewportSize.width, _viewportSize.height);
@@ -1456,8 +1371,7 @@ class _ZoomedDisplayEntry extends StatelessWidget {
 
   final _PageZoomController controller;
 
-  /// True only for the focused page. A neighbor renders at base fit so its
-  /// retained zoom/pan can't displace it into the viewport.
+  /// Only the focused page applies retained zoom/pan; neighbours render at base fit.
   final bool active;
   final Widget child;
 
@@ -1493,8 +1407,7 @@ class _PageZoomController extends ChangeNotifier {
   /// the page is assumed to fill the viewport.
   Size? _content;
 
-  /// Resting scale. Original size rests at 1:1 with the source pixels, which is
-  /// usually larger than the fitted page — so the page opens pannable.
+  /// Original size rests at source-pixel 1:1, so it can pan without zooming.
   double _baseScale = 1;
 
   double _scale;
@@ -1510,8 +1423,7 @@ class _PageZoomController extends ChangeNotifier {
 
   Offset get offset => _offset;
 
-  /// Whether the page has room left to pan — decides if a drag belongs to it
-  /// or turns the page. Original size pans at rest, so it isn't "zoomed past 1".
+  /// Panning capacity, including Original size at rest, determines gesture ownership.
   bool get isActive => _maxPan != Offset.zero;
 
   set offset(Offset value) {
@@ -1563,8 +1475,7 @@ class _PageZoomController extends ChangeNotifier {
     setScaleOffset(t.scale, t.offset);
   }
 
-  /// The (scale, offset) that [setScaleAround] would land on — without applying
-  /// it, so the viewport can animate toward it.
+  /// Returns the target scale/offset without applying it, for animated zoom.
   ({double scale, Offset offset}) scaleAroundTarget(
     double targetScale,
     Offset focal,
@@ -1604,7 +1515,6 @@ class _PageZoomController extends ChangeNotifier {
     return _clampOffset(next) != _offset;
   }
 
-  /// Whether [drag]'s dominant axis is one the page can still travel along.
   bool canPanAlong(Offset drag) => canPanBy(
     drag.dx.abs() >= drag.dy.abs() ? Offset(drag.dx, 0) : Offset(0, drag.dy),
   );
@@ -1651,8 +1561,6 @@ class _PageZoomController extends ChangeNotifier {
   }
 }
 
-/// Which action a tap at [position] lands on. Pure, so the zone geometry can
-/// be tested against the overlay that draws it.
 @visibleForTesting
 TapAction tapActionForZone({
   required Offset position,
@@ -1689,7 +1597,6 @@ TapAction tapActionForZone({
           : position.dy >= size.height - edgeHeight
           ? leftAction
           : TapAction.menu,
-    // Komikku's kindlish layout: menu across the top, left/right below it.
     ReaderNavigationLayout.kindlish =>
       position.dy < edgeHeight
           ? TapAction.menu
