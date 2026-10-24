@@ -20,7 +20,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/web_auth_mode.dart';
-import '../../../../widgets/section_title.dart';
+import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../account/data/account_actions.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../account/data/server_account_capability.dart';
@@ -30,6 +30,7 @@ import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/presentation/auth_failure_text.dart';
 import '../../../offline/data/background/background_download_controller_shim.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
@@ -41,15 +42,12 @@ import 'prompt_sign_in.dart';
 ///                             so we never re-run a login the server rejects).
 ///   * Needs sign-in        -> inline username/password with Test + Sign in,
 ///                             the same shape as the first-run (FTUE) flow.
-/// The authentication-mode picker shared by the Connection page's
-/// Authentication section and its Account card.
-class ConnectionAuthTypePicker extends ConsumerWidget {
-  const ConnectionAuthTypePicker({super.key, this.inCard = false});
-
-  /// When true, the picker sits inside a SettingsGroupCard: the dropdown
-  /// gets 16 px padding on all sides (so its floating label clears the row
-  /// above) and the web-only hint sits below it at the same 16 px inset.
-  final bool inCard;
+/// The authentication-mode row shared by the Connection page's
+/// Authentication card and its Account card: a plain settings row whose
+/// subtitle names the current mode and whose tap opens the mode choice
+/// dialog with the same options the dropdown offered.
+class ConnectionAuthTypeTile extends ConsumerWidget {
+  const ConnectionAuthTypeTile({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,8 +55,8 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
     final isWeb = ref.watch(isWebProvider);
     final authChoices = connectionAuthChoices(isWeb: isWeb);
 
-    Future<void> onAuthModeChanged(AuthType? next) async {
-      if (next == null || next == authType) return;
+    Future<void> onAuthModeChanged(AuthType next) async {
+      if (next == authType) return;
       stayOnConnectionAfterIdentityChange();
       await ref.read(backgroundDownloadControllerProvider).changeIdentity(
         () async {
@@ -78,46 +76,51 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
       );
     }
 
-    final dropdown = SettingsHighlightTarget(
+    return SettingsHighlightTarget(
       id: 'authentication',
-      child: DropdownMenu<AuthType>(
-        key: ValueKey(authType),
-        initialSelection: authType,
-        expandedInsets: EdgeInsets.zero,
-        requestFocusOnTap: false,
-        label: Text(context.l10n.authType),
-        leadingIcon: const Icon(Icons.security_rounded),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+      child: ListTile(
+        title: Text(context.l10n.authType),
+        subtitle: Text(authType.toLocale(context)),
+        onTap: () => showDialog(
+          context: context,
+          builder: (dialogContext) => RadioListPopup<AuthType>(
+            title: context.l10n.authType,
+            optionList: authChoices,
+            value: authType,
+            getOptionTitle: (option) => option.toLocale(dialogContext),
+            onChange: (option) {
+              Navigator.pop(dialogContext);
+              onAuthModeChanged(option);
+            },
+          ),
+          animationStyle: context.motionStyle,
         ),
-        dropdownMenuEntries: authChoices
-            .map((t) => DropdownMenuEntry(value: t, label: t.toLocale(context)))
-            .toList(),
-        onSelected: onAuthModeChanged,
       ),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // M3 DropdownMenu (not the legacy DropdownButtonFormField, whose menu
-        // anchors the selected item over the field and can open upward, wider
-        // than the field). Opens below, sized to the field. Keyed by authType
-        // so it re-seeds when the auth mode is changed elsewhere (e.g. logout).
-        if (inCard)
-          Padding(padding: const EdgeInsets.all(16), child: dropdown)
-        else
-          dropdown,
-        if (isWeb && !ref.watch(webSameOriginProvider))
-          Padding(
-            padding: inCard
-                ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
-                : const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: Text(
-              context.l10n.webUiLoginOnlyHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-      ],
+  }
+}
+
+/// The web-only sign-in hint, kept next to the auth-mode row with the same
+/// padding the dropdown used: full inset inside a card, loose inset below one.
+class ConnectionAuthWebHint extends ConsumerWidget {
+  const ConnectionAuthWebHint({super.key, this.inCard = false});
+
+  final bool inCard;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isWeb = ref.watch(isWebProvider);
+    if (!isWeb || ref.watch(webSameOriginProvider)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: inCard
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+          : const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Text(
+        context.l10n.webUiLoginOnlyHint,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
     );
   }
 }
@@ -304,8 +307,11 @@ class InlineAuthSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!accountMode) SectionTitle(title: context.l10n.authentication),
-        if (!accountMode) pad(const ConnectionAuthTypePicker()),
+        if (!accountMode) ...[
+          SettingsGroupHeading(label: context.l10n.authentication),
+          const SettingsGroupCard(children: [ConnectionAuthTypeTile()]),
+          const ConnectionAuthWebHint(),
+        ],
         if (authType != AuthType.none) ...[
           if (signedIn) ...[
             ListTile(
