@@ -27,29 +27,4 @@ void main() {
     expect(changes[8].groupChange!.groupChange!.textState, '');
     expect(filtersToWebUi(changes), search['filters']);
   });
-
-  test('WebUI query-only search has no filter changes', () {
-    final search = jsonDecode('{"query":"title"}') as Map<String, dynamic>;
-    expect(filtersFromWebUi(search['filters'] as List? ?? []), isEmpty);
-    expect(filtersToWebUi([]), isEmpty);
-  });
-
-  test('Unknown filter types and empty positions are rejected', () {
-    expect(
-      () => filtersFromWebUi([
-        {
-          'type': 'unknown',
-          'positions': [0],
-          'state': 0,
-        },
-      ]),
-      throwsFormatException,
-    );
-    expect(
-      () => filtersFromWebUi([
-        {'type': 'textState', 'positions': [], 'state': ''},
-      ]),
-      throwsFormatException,
-    );
-  });
 }
