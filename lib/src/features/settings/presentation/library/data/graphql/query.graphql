@@ -39,3 +39,10 @@ mutation ToggleExcludeCompleted($excludeCompleted: Boolean = false) {
     }
   }
 }
+
+query NonLibraryCategorizedMangas {
+  mangas(filter: {inLibrary: {equalTo: false}, categoryId: {isNull: false}}) { nodes { id } }
+}
+mutation CleanupLibraryCategories($input: UpdateMangasCategoriesInput!) {
+  updateMangasCategories(input: $input) { mangas { id } }
+}

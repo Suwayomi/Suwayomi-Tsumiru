@@ -62,6 +62,8 @@ extension MangaExtensions on MangaDto {
       title: title,
       author: author,
       artist: artist,
+      sourceId: sourceId,
+      description: description,
       genres: genre.toList(),
       unreadCount: user.unreadCount,
       downloadCount: user.downloadCount,

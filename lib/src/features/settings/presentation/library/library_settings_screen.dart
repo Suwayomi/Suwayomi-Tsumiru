@@ -6,12 +6,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
@@ -33,6 +33,7 @@ import '../../data/user_settings.dart';
 import '../../domain/settings/settings.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
+import '../../widgets/webui_switch_tile.dart';
 import 'data/library_settings_repository.dart';
 import 'widgets/refresh_chapters_from_source_tile/refresh_chapters_from_source_tile.dart';
 import 'widgets/show_update_progress_banner/show_update_progress_banner.dart';
@@ -141,6 +142,10 @@ class LibrarySettingsScreen extends ConsumerWidget {
                               onTap: () =>
                                   const EditCategoriesRoute().push(context),
                             ),
+                          ),
+                          WebUiSwitchTile(
+                            setting: 'removeMangaFromCategories',
+                            title: context.l10n.removeMangaFromCategories,
                           ),
                           SettingsHighlightTarget(
                             id: 'defaultCategory',
@@ -306,21 +311,6 @@ class LibrarySettingsScreen extends ConsumerWidget {
                                     ),
                             ),
                           ),
-                          SettingsHighlightTarget(
-                            id: 'duplicatedEntries',
-                            child: ListTile(
-                              title: Text(context.l10n.duplicatedEntries),
-                              onTap: () =>
-                                  context.windowSizeClass >=
-                                      WindowSizeClass.expanded
-                                  ? const SettingsLibraryDuplicatesRoute().push(
-                                      context,
-                                    )
-                                  : const LibraryDuplicatesRoute().push(
-                                      context,
-                                    ),
-                            ),
-                          ),
                           const ShowUpdateProgressBannerTile(),
                         ],
                       ),
@@ -358,6 +348,14 @@ class LibrarySettingsScreen extends ConsumerWidget {
                           );
                           return SettingsGroupCard(
                             children: [
+                              WebUiSwitchTile(
+                                setting: 'ignoreFilters',
+                                title: context.l10n.ignoreFilters,
+                              ),
+                              WebUiSwitchTile(
+                                setting: 'fuzzySearch',
+                                title: context.l10n.fuzzySearch,
+                              ),
                               SettingsHighlightTarget(
                                 id: 'chapterSwipeToLeft',
                                 child: ListTile(
@@ -398,7 +396,63 @@ class LibrarySettingsScreen extends ConsumerWidget {
                           );
                         },
                       ),
-                      // SectionTitle(title: context.l10n.advanced),
+                      SettingsGroupHeading(label: context.l10n.advanced),
+                      SettingsGroupCard(
+                        children: [
+                          SettingsHighlightTarget(
+                            id: 'cleanupDatabase',
+                            child: ListTile(
+                              title: Text(context.l10n.cleanupDatabase),
+                              onTap: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  animationStyle: context.motionStyle,
+                                  builder: (context) => AlertDialog(
+                                    title: Text(context.l10n.cleanupDatabase),
+                                    content: Text(
+                                      context.l10n.cleanupDatabaseConfirm,
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: Text(context.l10n.cancel),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: Text(context.l10n.ok),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed != true || !context.mounted) {
+                                  return;
+                                }
+                                await AppUtils.guard(
+                                  repository.cleanupDatabase,
+                                  ref.read(toastProvider),
+                                );
+                              },
+                            ),
+                          ),
+                          SettingsHighlightTarget(
+                            id: 'duplicatedEntries',
+                            child: ListTile(
+                              title: Text(context.l10n.duplicatedEntries),
+                              onTap: () =>
+                                  context.windowSizeClass >=
+                                      WindowSizeClass.expanded
+                                  ? const SettingsLibraryDuplicatesRoute().push(
+                                      context,
+                                    )
+                                  : const LibraryDuplicatesRoute().push(
+                                      context,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

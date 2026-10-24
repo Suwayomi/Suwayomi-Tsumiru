@@ -16,6 +16,7 @@ import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
+import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../browse_center/domain/content_rating.dart';
 import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
@@ -75,6 +76,8 @@ List<MangaDto> applyLibraryFilterSort(
   required MangaSort sortedBy,
   required bool sortedDirection,
   int seed = 0,
+  bool ignoreFilters = false,
+  bool fuzzySearch = false,
   Map<int, double> trackerScales = const {},
   Map<int, bool?> trackerFilters = const {},
   Map<int, String> trackerNames = const {},
@@ -91,6 +94,12 @@ List<MangaDto> applyLibraryFilterSort(
 
   bool filter(MangaDto manga) {
     if (mangaIds != null && !mangaIds.contains(manga.id)) return false;
+    if (ignoreFilters && !searchQuery.isEmpty) {
+      return searchQuery.matches(
+        manga.filterFields(trackerNames),
+        fuzzy: fuzzySearch,
+      );
+    }
     if (mangaFilterUnread != null &&
         (mangaFilterUnread ^ manga.user.unreadCount.isGreaterThan(0))) {
       return false;
@@ -168,7 +177,7 @@ List<MangaDto> applyLibraryFilterSort(
       );
       if (pref ^ hasTracker) return false;
     }
-    if (!searchQuery.matches(fields)) return false;
+    if (!searchQuery.matches(fields, fuzzy: fuzzySearch)) return false;
     return true;
   }
 
@@ -357,6 +366,8 @@ class CategoryMangaListWithQueryAndFilter
             : applyLibraryFilterSort(
                 e.value!,
                 query: query,
+                ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
+                fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,
@@ -769,6 +780,8 @@ class GroupedMangaListWithQueryAndFilter
                 e.value!,
                 mangaIds: mangaIds,
                 query: query,
+                ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
+                fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,

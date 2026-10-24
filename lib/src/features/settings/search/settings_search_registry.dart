@@ -194,6 +194,38 @@ List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [
 
 List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
+    id: 'removeMangaFromCategories',
+    title: (l) => l.removeMangaFromCategories,
+    breadcrumb: (l) => '${l.library} › ${l.categories}',
+    open: (c) => const LibrarySettingsRoute(
+      highlight: 'removeMangaFromCategories',
+    ).push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'ignoreFilters',
+    title: (l) => l.ignoreFilters,
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
+    open: (c) => const LibrarySettingsRoute(highlight: 'ignoreFilters').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'fuzzySearch',
+    title: (l) => l.fuzzySearch,
+    breadcrumb: (l) => '${l.library} › ${l.settingsSectionBehavior}',
+    open: (c) => const LibrarySettingsRoute(highlight: 'fuzzySearch').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'cleanupDatabase',
+    title: (l) => l.cleanupDatabase,
+    breadcrumb: (l) => '${l.library} › ${l.advanced}',
+    open: (c) =>
+        const LibrarySettingsRoute(highlight: 'cleanupDatabase').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+
+  SettingsSearchEntry(
     id: 'categories',
     title: (l) => l.categories,
     breadcrumb: (l) => '${l.library} › ${l.categories}',
@@ -255,7 +287,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'duplicatedEntries',
     title: (l) => l.duplicatedEntries,
-    breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
+    breadcrumb: (l) => '${l.library} › ${l.advanced}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'duplicatedEntries').push(c),
     visible: (ref, _) => _serverReachable(ref),

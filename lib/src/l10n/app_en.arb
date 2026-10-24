@@ -4198,5 +4198,10 @@
   "@serverSignInDays": {"placeholders": {"count": {"type": "int"}}},
   "databaseSchema": "Schema",
   "hikariMaxPoolSize": "Maximum connections",
-  "includeUserSettings": "User settings"
+  "includeUserSettings": "User settings",
+  "removeMangaFromCategories": "Forget manga categories",
+  "ignoreFilters": "Ignore filters when searching",
+  "fuzzySearch": "Fuzzy search",
+  "cleanupDatabase": "Cleanup database",
+  "cleanupDatabaseConfirm": "Remove non-library entries from categories?"
 }

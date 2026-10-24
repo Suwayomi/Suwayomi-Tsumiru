@@ -26,6 +26,8 @@
 /// group.
 library;
 
+import 'package:diacritic/diacritic.dart';
+
 /// Flat, GraphQL-free view of the fields the DSL can match against. Keeps the
 /// parser/evaluator pure and trivially unit-testable.
 class LibraryFilterFields {
@@ -40,6 +42,8 @@ class LibraryFilterFields {
     this.userTags = const [],
     this.status,
     this.sourceName,
+    this.sourceId,
+    this.description,
     this.trackers = const {},
   });
 
@@ -57,6 +61,8 @@ class LibraryFilterFields {
 
   /// The source's display name.
   final String? sourceName;
+  final String? sourceId;
+  final String? description;
 
   /// Lowercased names of the tracker services this manga is bound to.
   final Set<String> trackers;
@@ -93,19 +99,19 @@ const List<String> librarySearchMetatagKeys = [
 ];
 
 _Field? _fieldFor(String key) => switch (key) {
-      'tag' => _Field.tag,
-      'genre' => _Field.genre,
-      'author' => _Field.author,
-      'artist' => _Field.artist,
-      'title' => _Field.title,
-      'unread' => _Field.unread,
-      'downloaded' => _Field.downloaded,
-      'rating' => _Field.rating,
-      'status' => _Field.status,
-      'source' => _Field.source,
-      'tracked' => _Field.tracked,
-      _ => null,
-    };
+  'tag' => _Field.tag,
+  'genre' => _Field.genre,
+  'author' => _Field.author,
+  'artist' => _Field.artist,
+  'title' => _Field.title,
+  'unread' => _Field.unread,
+  'downloaded' => _Field.downloaded,
+  'rating' => _Field.rating,
+  'status' => _Field.status,
+  'source' => _Field.source,
+  'tracked' => _Field.tracked,
+  _ => null,
+};
 
 class LibrarySearchQuery {
   const LibrarySearchQuery(this.terms);
@@ -114,7 +120,8 @@ class LibrarySearchQuery {
 
   bool get isEmpty => terms.isEmpty;
 
-  bool matches(LibraryFilterFields f) => terms.every((t) => t.matches(f));
+  bool matches(LibraryFilterFields f, {bool fuzzy = false}) =>
+      terms.every((t) => t.matches(f, fuzzy: fuzzy));
 
   static LibrarySearchQuery parse(String? raw) {
     if (raw == null || raw.trim().isEmpty) return const LibrarySearchQuery([]);
@@ -233,8 +240,8 @@ class SearchTerm {
     _Field? field,
     this.value,
     List<SearchTerm>? alternatives,
-  })  : _field = field,
-        _alternatives = alternatives;
+  }) : _field = field,
+       _alternatives = alternatives;
 
   factory SearchTerm._text(String text, bool negated) =>
       SearchTerm._(negated: negated, text: text.toLowerCase());
@@ -251,19 +258,31 @@ class SearchTerm {
   final String? value;
   final List<SearchTerm>? _alternatives;
 
-  bool matches(LibraryFilterFields f) {
-    final res = _rawMatch(f);
+  bool matches(LibraryFilterFields f, {bool fuzzy = false}) {
+    final res = _rawMatch(f, fuzzy: fuzzy);
     // A null result means the term imposes no constraint (an unparseable value,
     // e.g. a half-typed `-unread:t`). Negation must NOT flip it to hide-all.
     if (res == null) return true;
     return negated ? !res : res;
   }
 
-  bool? _rawMatch(LibraryFilterFields f) {
+  bool? _rawMatch(LibraryFilterFields f, {bool fuzzy = false}) {
     final alts = _alternatives;
-    if (alts != null) return alts.any((a) => a.matches(f));
+    if (alts != null) return alts.any((a) => a.matches(f, fuzzy: fuzzy));
     final t = text;
     if (t != null) {
+      if (fuzzy) {
+        return [
+          f.title,
+          if (f.author != null) f.author!,
+          if (f.artist != null) f.artist!,
+          if (f.sourceName != null) f.sourceName!,
+          if (f.sourceId != null) f.sourceId!,
+          if (f.description != null) f.description!,
+          ...f.genres,
+          ...f.userTags,
+        ].any((value) => fuzzyLibraryWordMatches(t, value));
+      }
       return f.title.toLowerCase().contains(t) ||
           (f.author?.toLowerCase().contains(t) ?? false) ||
           f.genres.any((g) => g.toLowerCase().contains(t)) ||
@@ -300,7 +319,9 @@ class SearchTerm {
         final lv = v.toLowerCase();
         // Match the exact enum name, or a partial like `hiatus` → `on_hiatus`
         // and `finished` → `publishing_finished`.
-        return ns == lv || ns.replaceAll('_', ' ').contains(lv) || ns.contains(lv);
+        return ns == lv ||
+            ns.replaceAll('_', ' ').contains(lv) ||
+            ns.contains(lv);
       case _Field.source:
         return f.sourceName?.toLowerCase().contains(v.toLowerCase());
       case _Field.tracked:
@@ -314,10 +335,10 @@ class SearchTerm {
   }
 
   static bool? _parseBool(String v) => switch (v.toLowerCase()) {
-        'true' || 'yes' || '1' => true,
-        'false' || 'no' || '0' => false,
-        _ => null,
-      };
+    'true' || 'yes' || '1' => true,
+    'false' || 'no' || '0' => false,
+    _ => null,
+  };
 
   static final _ratingSpec = RegExp(r'^(>=|<=|>|<|=)?\s*(\d+)$');
 
@@ -325,7 +346,9 @@ class SearchTerm {
     final m = _ratingSpec.firstMatch(spec.trim());
     if (m == null) return null; // unparseable → no constraint
     final n = int.tryParse(m.group(2)!);
-    if (n == null) return null; // overflow (very long digit run) → no constraint
+    if (n == null) {
+      return null;
+    }
     return switch (m.group(1) ?? '=') {
       '>=' => actual >= n,
       '<=' => actual <= n,
@@ -334,4 +357,28 @@ class SearchTerm {
       _ => actual == n,
     };
   }
+}
+
+bool fuzzyLibraryWordMatches(String query, String text) {
+  final needle = removeDiacritics(query.toLowerCase());
+  final haystack = removeDiacritics(text.toLowerCase());
+  if (haystack.contains(needle)) return true;
+  if (needle.isEmpty) return true;
+  var previous = List<int>.filled(haystack.length + 1, 0);
+  for (var i = 1; i <= needle.length; i++) {
+    final row = List<int>.filled(haystack.length + 1, i);
+    for (var j = 1; j <= haystack.length; j++) {
+      final substitution =
+          previous[j - 1] + (needle[i - 1] == haystack[j - 1] ? 0 : 1);
+      final insertion = row[j - 1] + 1;
+      final deletion = previous[j] + 1;
+      row[j] = [
+        substitution,
+        insertion,
+        deletion,
+      ].reduce((a, b) => a < b ? a : b);
+    }
+    previous = row;
+  }
+  return previous.any((distance) => distance / needle.length <= 0.35);
 }

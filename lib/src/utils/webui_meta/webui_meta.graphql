@@ -35,10 +35,14 @@ mutation DeleteWebUiGlobalMetas($input: DeleteGlobalMetasInput!) {
 }
 
 query GetWebUiGlobalMetas {
-  metas(first: 100) {
+  metas {
     nodes {
       key
       value
     }
   }
+}
+
+query WebUiGlobalSettings {
+  metas { nodes { key value } }
 }
