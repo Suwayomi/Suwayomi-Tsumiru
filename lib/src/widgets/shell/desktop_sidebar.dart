@@ -21,6 +21,7 @@ import '../compact_switch.dart';
 import '../desktop/desktop_brand.dart';
 import '../desktop/desktop_top_bar.dart';
 import 'nav_badges.dart';
+import 'nav_motion_icon.dart';
 import 'sidebar_expanded.dart';
 
 /// Below large, collapse without changing the saved preference.
@@ -166,7 +167,7 @@ class DesktopSidebar extends ConsumerWidget {
         icon: IconTheme(
           data: IconThemeData(color: selected ? cs.primary : cs.onSurface),
           child: badgedNavIcon(
-            Icon(selected ? data.activeIcon : data.icon),
+            NavMotionIcon(data, selected: selected),
             data,
             downloadsPaused,
             extensionUpdates,

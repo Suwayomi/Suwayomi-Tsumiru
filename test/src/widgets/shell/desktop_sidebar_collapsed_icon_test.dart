@@ -83,6 +83,15 @@ void main() {
     );
     // Five destinations: More left the desktop sidebar for the foot below.
     expect(icons, findsNWidgets(5));
+    // The selected destination settles on its filled glyph.
+    expect(
+      find.byIcon(NavigationBarData.desktopNavList[0].activeIcon),
+      findsOneWidget,
+    );
+    expect(
+      find.byIcon(NavigationBarData.desktopNavList[0].icon),
+      findsNothing,
+    );
     for (var i = 0; i < 5; i++) {
       expect(
         tester.getSize(icons.at(i)),

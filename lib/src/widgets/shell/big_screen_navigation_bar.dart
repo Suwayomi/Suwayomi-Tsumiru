@@ -15,6 +15,7 @@ import '../../utils/extensions/custom_extensions.dart';
 import '../tsumiru_logo.dart';
 import 'desktop_sidebar.dart';
 import 'nav_badges.dart';
+import 'nav_motion_icon.dart';
 
 class BigScreenNavigationBar extends ConsumerWidget {
   const BigScreenNavigationBar({
@@ -33,19 +34,9 @@ class BigScreenNavigationBar extends ConsumerWidget {
     bool downloadsPaused,
     int extensionUpdates,
   ) {
+    final icon = NavMotionIcon(data, selected: selected);
     return NavigationRailDestination(
-      icon: badgedNavIcon(
-        Icon(data.icon),
-        data,
-        downloadsPaused,
-        extensionUpdates,
-      ),
-      selectedIcon: badgedNavIcon(
-        Icon(data.activeIcon),
-        data,
-        downloadsPaused,
-        extensionUpdates,
-      ),
+      icon: badgedNavIcon(icon, data, downloadsPaused, extensionUpdates),
       label: Text(data.label(context)),
     );
   }

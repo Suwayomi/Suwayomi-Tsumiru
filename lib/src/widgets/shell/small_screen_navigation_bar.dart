@@ -11,6 +11,7 @@ import '../../constants/navigation_bar_data.dart';
 import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
 import 'nav_badges.dart';
+import 'nav_motion_icon.dart';
 
 class SmallScreenNavigationBar extends ConsumerWidget {
   const SmallScreenNavigationBar({
@@ -29,19 +30,9 @@ class SmallScreenNavigationBar extends ConsumerWidget {
     bool downloadsPaused,
     int extensionUpdates,
   ) {
+    final icon = NavMotionIcon(data, selected: selected);
     return NavigationDestination(
-      icon: badgedNavIcon(
-        Icon(data.icon),
-        data,
-        downloadsPaused,
-        extensionUpdates,
-      ),
-      selectedIcon: badgedNavIcon(
-        Icon(data.activeIcon),
-        data,
-        downloadsPaused,
-        extensionUpdates,
-      ),
+      icon: badgedNavIcon(icon, data, downloadsPaused, extensionUpdates),
       label: data.label(context),
       tooltip: data.label(context),
     );
