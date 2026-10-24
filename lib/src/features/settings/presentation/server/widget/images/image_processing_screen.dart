@@ -234,8 +234,6 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
         child: ListView(
           padding: settingsPagePadding(context, const EdgeInsets.all(16)),
           children: [
-            Text(context.l10n.imageProcessingIntro),
-            const SizedBox(height: 16),
             for (var i = 0; i < _rules!.length; i++)
               _RuleCard(
                 key: ValueKey(_rules![i].rule.id),
