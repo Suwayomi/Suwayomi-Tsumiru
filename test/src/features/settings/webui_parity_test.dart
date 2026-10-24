@@ -505,7 +505,15 @@ void main() {
                 },
               });
             case 'UpdateManga':
-              return _data({'updateManga': null});
+              final manga = _manga(1, title: 'Series');
+              return _data({
+                'updateManga': {
+                  '__typename': 'UpdateMangaPayload',
+                  'manga': manga
+                      .copyWith(user: manga.user.copyWith(inLibrary: false))
+                      .toJson(),
+                },
+              });
             default:
               throw StateError('Unexpected request');
           }
@@ -517,10 +525,20 @@ void main() {
               .length,
           forget ? 1 : 0,
         );
-        expect(link.requests.last.variables['input'], {
-          'id': 1,
-          'patch': {'inLibrary': false},
-        });
+        expect(link.requests.map(_name).toList(), [
+          'GetWebUiGlobalMetas',
+          'UpdateManga',
+          if (forget) 'UpdateMangasCategories',
+        ]);
+        expect(
+          link.requests
+              .singleWhere((request) => _name(request) == 'UpdateManga')
+              .variables['input'],
+          {
+            'id': 1,
+            'patch': {'inLibrary': false},
+          },
+        );
       }
     },
   );

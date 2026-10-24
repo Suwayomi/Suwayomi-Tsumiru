@@ -58,15 +58,12 @@ class MangaBookRepository {
 
   Future<void> removeMangaFromLibrary(int mangaId) async {
     final metas = await client
-        .query$WebUiGlobalSettings(
-          Options$Query$WebUiGlobalSettings(fetchPolicy: FetchPolicy.noCache),
+        .query$GetWebUiGlobalMetas(
+          Options$Query$GetWebUiGlobalMetas(fetchPolicy: FetchPolicy.noCache),
         )
         .getData((data) => {for (final m in data.metas.nodes) m.key: m.value});
     final forget = readWebUiValue(metas ?? {}, 'removeMangaFromCategories');
-    if (forget != null && decodeWebUiBool(forget)) {
-      await updateMangasCategories([mangaId], clearCategories: true);
-    }
-    await client
+    final removed = await client
         .mutate$UpdateManga(
           Options$Mutation$UpdateManga(
             variables: Variables$Mutation$UpdateManga(
@@ -79,6 +76,12 @@ class MangaBookRepository {
           ),
         )
         .getData((data) => data.updateManga?.manga);
+    if (removed == null || removed.user.inLibrary) {
+      throw StateError('Library removal was not confirmed');
+    }
+    if (forget != null && decodeWebUiBool(forget)) {
+      await updateMangasCategories([mangaId], clearCategories: true);
+    }
   }
 
   Future<void> modifyBulkChapters(ChapterBatch batch) => client
