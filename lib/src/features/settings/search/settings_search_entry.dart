@@ -9,23 +9,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 
-/// One searchable setting: a row in the Settings search section that opens
-/// its page scrolled to the matching tile.
-///
-/// [id] is stable across renames and doubles as the `highlight` query value
-/// the page's [SettingsHighlightTarget] matches on. [breadcrumb] names the
-/// page and, where the page has section headers, the section
-/// ("Library › Global Update"). [open] pushes the page's typed route with the
-/// id. [visible] mirrors exactly when the tile is rendered on its screen —
-/// platform gates, "only when another switch is on" gates — using the same
-/// providers the screen reads, so search never offers a tile that isn't
-/// there. Tiles that render disabled (permission gates) still count as
-/// visible: the tile is on screen, just not tappable.
-///
-/// [tabIndex] is for tabbed pages (Downloads): the tab the tile lives on.
-/// [open] passes it to the route as the `tab` query value and the page
-/// selects that tab alongside the highlight, so any tabbed settings page can
-/// reuse the same two-parameter pattern.
+/// [id] is stable across renames and identifies the tile to highlight.
+/// [visible] must match tile mounting conditions; disabled tiles remain searchable.
+/// [open] must select [tabIndex] for tabbed pages before seeking the highlight.
 class SettingsSearchEntry {
   const SettingsSearchEntry({
     required this.id,
@@ -46,13 +32,10 @@ class SettingsSearchEntry {
   final int? tabIndex;
 }
 
-/// Maximum settings rows per query, Komikku's rule.
 const int kSettingsSearchLimit = 10;
 
-/// Case-insensitive substring match on title and subtitle, in registry order,
-/// capped at [kSettingsSearchLimit]. Empty queries match nothing. Visibility
-/// is decided by [isVisible] so hosts can pass their ref+context while unit
-/// tests pass a stub.
+/// Matches title/subtitle substrings case-insensitively in registry order, up to [kSettingsSearchLimit].
+/// Empty queries match nothing; [isVisible] supplies tile visibility.
 List<SettingsSearchEntry> matchSettingsEntries({
   required List<SettingsSearchEntry> entries,
   required AppLocalizations l,
@@ -73,9 +56,7 @@ List<SettingsSearchEntry> matchSettingsEntries({
   return out;
 }
 
-/// Splits [title] around the first case-insensitive occurrence of [query] so
-/// a row can paint the match in the primary colour. Returns a single plain
-/// span when the query is blank or only matches the subtitle.
+/// Highlights the first case-insensitive title match; blank or subtitle-only matches stay plain.
 List<TextSpan> settingsTitleSpans({
   required String title,
   required String query,

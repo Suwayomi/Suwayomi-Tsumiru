@@ -83,9 +83,7 @@ class ImagesSection extends HookConsumerWidget {
             children: [
               SettingsHighlightTarget(
                 id: 'imagesClearCache',
-                // Explicit boundary: without it the engine folds this tappable
-                // row into a neighbouring switch row (same guard as the OPDS,
-                // WebView and Misc rows).
+                // Keep this row separate from neighboring switches in the semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,

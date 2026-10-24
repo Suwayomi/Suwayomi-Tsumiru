@@ -21,21 +21,14 @@ class SuwayomiAuthLink extends Link {
     this.isCurrentSession,
   });
 
-  /// Returns the current AuthType.
   final AuthType Function() authType;
 
-  /// Returns the headers to inject for the current auth mode, or null if
-  /// nothing should be injected. Called per request.
+  /// Called per request; null means no auth headers.
   final Future<Map<String, String>?> Function() getHeaders;
 
-  /// Performs a refresh and returns a typed [RefreshOutcome]. Called only
-  /// for ui_login on 401. The implementation in `AuthCoordinator`
-  /// handles single-flighting across both Link instances; this Link does
-  /// not need its own Completer.
+  /// UI Login refresh after a 401; AuthCoordinator shares one in-flight refresh across links.
   final Future<RefreshOutcome> Function() refreshAccessToken;
 
-  /// Invoked when the link concludes the session is dead. Implementations
-  /// typically set NeedsReauth=true.
   final void Function() onNeedsReauth;
 
   final bool Function()? isCurrentSession;
@@ -55,10 +48,7 @@ class SuwayomiAuthLink extends Link {
       headers = await getHeaders();
     } catch (error) {
       _checkSession();
-      // Header fetch failed before the request left. A thrown HTTP 401/403
-      // still belongs on the refresh path; anything else (e.g. a disposed-ref
-      // StateError from provider churn) is not an auth failure — rethrow so it
-      // surfaces as a normal error instead of vanishing.
+      // Refresh only auth failures; disposed refs and other header errors must propagate.
       if (_isThrownAuthError(error)) {
         yield* _handle401(request, next, originalError: error);
         return;
@@ -66,7 +56,6 @@ class SuwayomiAuthLink extends Link {
       rethrow;
     }
     _checkSession();
-    // Local copy so it promotes to non-null inside the capturing closure below.
     final resolvedHeaders = headers;
     final withHeaders = resolvedHeaders == null
         ? request
@@ -79,11 +68,7 @@ class SuwayomiAuthLink extends Link {
             ),
           );
 
-    // Iterate the forwarded stream. We inspect only the FIRST event to
-    // decide whether we have a 401 → retry case; every other event flows
-    // through unchanged. Using `await next(withHeaders).first` would
-    // cancel the subscription after one event, silently killing any
-    // GraphQL subscription that doesn't immediately fail.
+    // Inspect the first event without using .first, which would cancel GraphQL subscriptions.
     Response? first401;
     try {
       var sawFirst = false;
@@ -92,11 +77,7 @@ class SuwayomiAuthLink extends Link {
         if (!sawFirst) {
           sawFirst = true;
           if (_is401(response)) {
-            // Cache the 401 and break out to handle refresh/retry below.
-            // We're cancelling the upstream stream here — that's fine for
-            // queries/mutations (they only emit one response anyway) and
-            // for subscriptions a 401 means the server rejected the
-            // connection, so there's nothing useful to keep streaming.
+            // A first-event 401 rejects the subscription, so cancel it before refreshing.
             first401 = response;
             break;
           }
@@ -105,10 +86,7 @@ class SuwayomiAuthLink extends Link {
       }
     } catch (error) {
       _checkSession();
-      // HttpLink THROWS on a non-200 (a real HTTP 401/403), so that auth
-      // failure never reaches `_is401` (which only sees 200-with-errors
-      // bodies). Route a thrown 401/403 into the same refresh path; let any
-      // transient error (socket/timeout/5xx) escape unchanged.
+      // HttpLink throws on HTTP 401/403 instead of emitting a GraphQL error response.
       if (_isThrownAuthError(error)) {
         yield* _handle401(request, next, originalError: error);
         return;
@@ -121,10 +99,7 @@ class SuwayomiAuthLink extends Link {
     }
   }
 
-  /// Runs the ui_login refresh + single-retry state machine after a 401,
-  /// regardless of how the 401 arrived: as a 200-with-errors [Response]
-  /// (`originalResponse`) or as a thrown HTTP 401/403 (`originalError`). On a
-  /// dead session it surfaces the original failure in whichever form it came.
+  // Preserve the original failure shape whether auth failed via HTTP or GraphQL.
   Stream<Response> _handle401(
     Request request,
     NextLink forward, {
@@ -132,7 +107,6 @@ class SuwayomiAuthLink extends Link {
     Object? originalError,
   }) async* {
     _checkSession();
-    // simple_login / basic have no refresh path.
     if (authType() != AuthType.uiLogin) {
       _checkSession();
       onNeedsReauth();
@@ -140,27 +114,21 @@ class SuwayomiAuthLink extends Link {
       return;
     }
 
-    // ui_login: delegate refresh to AuthCoordinator. The coordinator owns the
-    // single-flight Completer (R2-3) so concurrent 401s in the query and
-    // subscription clients share one refresh.
     _checkSession();
     final outcome = await refreshAccessToken();
     _checkSession();
     switch (outcome) {
       case RefreshAuthFailure():
-        // Refresh token rejected; tokens already cleared by the coordinator.
         _checkSession();
         onNeedsReauth();
         yield* _surfaceOriginal(originalResponse, originalError);
         return;
       case RefreshTransientFailure():
-        // Network / server error — DON'T mark the session dead. Surface the
-        // original failure; the next request retries the refresh.
+        // Transient refresh failures must not mark the session dead.
         yield* _surfaceOriginal(originalResponse, originalError);
         return;
       case RefreshSuccess(:final newAccessToken):
-        // Retry once with the fresh token. R2-4: re-check the retried
-        // response for a second 401 (either form) and treat that as dead.
+        // Retry once; a second auth failure marks the session dead.
         final retried = request.updateContextEntry<HttpLinkHeaders>(
           (HttpLinkHeaders? entry) => HttpLinkHeaders(
             headers: <String, String>{
@@ -187,7 +155,6 @@ class SuwayomiAuthLink extends Link {
         } catch (error) {
           _checkSession();
           if (!_isThrownAuthError(error)) rethrow;
-          // Second auth failure after a fresh token = dead session.
           _checkSession();
           onNeedsReauth();
           rethrow;
@@ -202,8 +169,6 @@ class SuwayomiAuthLink extends Link {
     }
   }
 
-  /// Re-emits the original 401 to the caller: as a yielded [Response] when it
-  /// arrived that way, otherwise by rethrowing the original exception.
   Stream<Response> _surfaceOriginal(
     Response? originalResponse,
     Object? originalError,

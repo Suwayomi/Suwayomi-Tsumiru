@@ -12,9 +12,6 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_webtoon_prefs.g.dart';
 
-// Global long-strip prefs, consumed by the long-strip renderer
-// (multichapter_continuous_reader_mode.dart). The frozen boundary there is the
-// scroll/position/index math, not these render knobs (docs/architecture/reader.md).
 
 @riverpod
 class WebtoonScaleTypeKey extends _$WebtoonScaleTypeKey
@@ -52,7 +49,6 @@ class CropBordersWebtoon extends _$CropBordersWebtoon
   bool? build() => initialize(DBKeys.cropBordersWebtoon);
 }
 
-/// Own key for "Long strip with gaps".
 @riverpod
 class CropBordersGaps extends _$CropBordersGaps
     with SharedPreferenceClientMixin<bool> {
@@ -91,8 +87,7 @@ class AutoAdvanceIntervalSeconds extends _$AutoAdvanceIntervalSeconds
   int? build() => initialize(DBKeys.autoAdvanceIntervalSeconds);
 }
 
-// Webtoon wide-page split (+invert): persists for a later engine PR — the
-// frozen webtoon engine can't remap 1 page → 2 entries yet.
+// Stored for future support; the webtoon engine cannot split one page into two entries.
 
 @riverpod
 class DualPageSplitWebtoon extends _$DualPageSplitWebtoon

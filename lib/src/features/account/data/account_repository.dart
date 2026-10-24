@@ -74,19 +74,12 @@ class AccountRepository {
         return permissions;
       });
 
-  /// [stillWanted] tells whether the caller still uses the answer. An endpoint
-  /// switch replaces the GraphQL client and rebuilds the provider asking, and
-  /// the superseded build's query dies with the old client ("Cannot use the
-  /// Ref of graphQlClientProvider after it has been disposed"). That answer is
-  /// thrown away, so it isn't logged as a failed check.
+  /// [stillWanted] suppresses obsolete results when an endpoint switch disposes the original client.
   Future<AccountCapability> capability({bool Function()? stillWanted}) async {
     final result = await client.query$AccountCapability();
     final capability = classifyAccountResponse(result);
     if (capability == AccountCapability.unknown &&
         (stillWanted?.call() ?? true)) {
-      // accountAccessProvider turns `unknown` into "Could not verify account
-      // support", which fails the library's default category and category
-      // lists; the response that caused it was dropped.
       recordDiagnostic(
         redactTokens(
           '[${DateTime.now().toIso8601String()}] account-capability: unknown '

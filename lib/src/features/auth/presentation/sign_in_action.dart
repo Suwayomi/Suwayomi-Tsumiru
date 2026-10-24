@@ -28,7 +28,6 @@ Future<void> performSignIn(
   required String username,
   required String password,
 }) {
-  // The notice below belongs to this attempt, not to an earlier one.
   resetCredentialWriteFailure();
   return ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
@@ -36,9 +35,6 @@ Future<void> performSignIn(
     final coordinator = ref.read(authCoordinatorProvider.notifier);
     switch (authType) {
       case AuthType.basic:
-        // Verifies before persisting, like the other two modes: basic_auth has
-        // no login round-trip, so storing blind reported a successful sign-in
-        // for credentials the server refuses.
         await coordinator.loginBasic(
           serverBaseUrl: serverBaseUrl,
           username: username,
@@ -77,8 +73,7 @@ Future<void> performSignIn(
     ref.read(authTypeKeyProvider.notifier).update(authType);
     ref.read(authRecoveryTargetProvider.notifier).set(null);
     ref.read(needsReauthProvider.notifier).set(false);
-    // The sign-in works from memory for this run; say it cannot be saved
-    // rather than leave the user expecting it next launch.
+    // Sign-in remains active in memory even when it cannot be saved for next launch.
     if (credentialWriteFailedThisRun) {
       final context = rootNavigatorKey.currentContext;
       if (context != null && context.mounted) {

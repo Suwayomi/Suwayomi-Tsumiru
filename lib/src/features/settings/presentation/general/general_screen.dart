@@ -35,8 +35,6 @@ class GeneralScreen extends ConsumerWidget {
       });
     }
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.general);
     final scaffold = Scaffold(
@@ -57,17 +55,11 @@ class GeneralScreen extends ConsumerWidget {
                       id: 'lockToPortrait',
                       child: ForcePortraitTile(),
                     ),
-                    // Moved here from Library: it changes the header of every
-                    // page, so it is an app setting, not a library one. Same
-                    // provider and tile, just a new home.
                     const SettingsHighlightTarget(
                       id: 'persistentSearchBar',
                       child: PersistentSearchBarTile(),
                     ),
-                    // A keyboard shortcut is the only way to open quick
-                    // search, so on a touch device this switch turned on
-                    // something unreachable. Same gate the Keyboard shortcuts
-                    // entry already uses.
+                    // Quick search requires a keyboard shortcut to open.
                     if (isKeyboardRuntime)
                       const SettingsHighlightTarget(
                         id: 'quickSearch',

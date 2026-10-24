@@ -9,9 +9,7 @@ import 'package:flutter/material.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/deferred_int_slider_tile.dart';
 
-/// Long-strip "Maximum width" control: one always-visible slider with a
-/// %-of-window / absolute-px unit switch (Houdoku model). 100% is the off
-/// position; a px cap wider than the window is naturally inert.
+/// 100% disables the cap; pixel limits wider than the window have no effect.
 class LongStripWidthLimitSlider extends StatelessWidget {
   const LongStripWidthLimitSlider({
     super.key,
@@ -57,8 +55,7 @@ class LongStripWidthLimitSlider extends StatelessWidget {
         onSelectionChanged:
             enabled ? (s) => onUnitChanged(s.first) : null,
       ),
-      // Clamped and snapped to the grid: an unsanitized stored pref would
-      // otherwise trip the Slider's range assert or hop on first touch.
+      // Sanitize stored preferences to the slider range and tick grid.
       value: usePixels
           ? ((px.clamp(200, 2000) - 200) / 50).round() * 50 + 200
           : percent.clamp(10, 100),

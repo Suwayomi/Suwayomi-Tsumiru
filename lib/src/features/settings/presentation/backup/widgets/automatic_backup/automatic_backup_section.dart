@@ -83,8 +83,6 @@ class AutomaticBackupSection extends ConsumerWidget {
               SettingsHighlightTarget(
                 id: 'backupLocation',
                 child: SettingsPropTile(
-                  // The title used to read socksHost (copy-paste); the hint,
-                  // description, and value are all the backup path.
                   title: context.l10n.backupLocation,
                   subtitle: data.backupPath.isNotBlank
                       ? data.backupPath

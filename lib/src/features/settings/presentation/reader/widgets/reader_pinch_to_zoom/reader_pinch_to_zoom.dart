@@ -16,8 +16,7 @@ class PinchToZoom extends _$PinchToZoom with SharedPreferenceClientMixin<bool> {
   bool? build() => initialize(DBKeys.pinchToZoom);
 }
 
-// Per-viewer pinch, seeded from the global pref above. See the note in
-// reader_zoom_toggles.dart.
+// Seed each viewer from the global preference until it has its own value.
 
 @riverpod
 class PagedPinchToZoom extends _$PagedPinchToZoom
@@ -39,5 +38,3 @@ class LongStripPinchToZoom extends _$LongStripPinchToZoom
       );
 }
 
-// The old single pinch switch is gone: paged and long strip each have their
-// own now. PinchToZoom itself stays as the migration source for both.

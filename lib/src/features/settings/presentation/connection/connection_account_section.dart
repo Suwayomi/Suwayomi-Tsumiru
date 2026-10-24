@@ -22,10 +22,6 @@ import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
 import 'inline_auth_section.dart';
 
-/// The Account block of the Connection page, shown on servers with user
-/// accounts: the Account card (the Account screen's rows, minus Manage users
-/// which moved to the Server hub), the sign-in fields while signed out, and
-/// the Sign out / Sign in card.
 class ConnectionAccountSection extends ConsumerWidget {
   const ConnectionAccountSection({super.key});
 

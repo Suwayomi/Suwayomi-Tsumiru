@@ -56,10 +56,7 @@ class ConnectionAuthTypeTile extends ConsumerWidget {
             await store.clearSimpleLoginCookie();
             await store.clearBasicCredentials();
           }
-          // No "Session expired" banner here. Nothing expired: the user just
-          // picked a different mode and is standing on the sign-in fields, so
-          // the banner only flashed across the top and then went away. A real
-          // expiry still raises it from the request paths that meet the 401.
+          // A deliberate mode change does not indicate session expiry.
           ref.read(needsReauthProvider.notifier).set(false);
           ref.read(authTypeKeyProvider.notifier).update(next);
         },
@@ -116,9 +113,7 @@ class ConnectionAuthWebHint extends ConsumerWidget {
 class InlineAuthSection extends HookConsumerWidget {
   const InlineAuthSection({super.key, this.accountMode = false});
 
-  /// When true, the Account card above already shows the auth-mode picker,
-  /// the signed-in state and the sign-out action, so this section only
-  /// renders the needs-sign-in fields (or nothing while signed in).
+  /// Hides controls already shown by the Account card; shows only sign-in fields.
   final bool accountMode;
 
   @override
@@ -156,9 +151,7 @@ class InlineAuthSection extends HookConsumerWidget {
     final message = useState<String?>(null);
     final isError = useState(false);
 
-    // The server ROOT, not the API base: sign-in and the auth probe append
-    // their own paths (`/login.html`, `api/graphql`), so an `/api/v1` here
-    // posts Simple Login to `/api/v1/login.html` and 404s.
+    // Use the server root: sign-in and probes append /login.html and api/graphql.
     String resolvedBaseUrl() => Endpoints.baseApi(
       baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
       port: ref.read(serverPortProvider),
@@ -166,7 +159,6 @@ class InlineAuthSection extends HookConsumerWidget {
       appendApiToUrl: false,
     );
 
-    // Validate the entered credentials WITHOUT committing them.
     Future<void> testConnection() async {
       if (username.text.trim().isEmpty || password.text.isEmpty) {
         isError.value = true;
@@ -203,7 +195,6 @@ class InlineAuthSection extends HookConsumerWidget {
       }
     }
 
-    // Commit the credentials. On success the section flips to "Signed in".
     Future<void> signIn() async {
       if (username.text.trim().isEmpty || password.text.isEmpty) {
         isError.value = true;
@@ -277,16 +268,12 @@ class InlineAuthSection extends HookConsumerWidget {
       message.value = null;
     }
 
-    // A mode change elsewhere (the Account card picker, logout) resets the
-    // sign-in fields, like the inline picker used to do inline.
     useEffect(() {
       message.value = null;
       password.clear();
       return null;
     }, [authType]);
 
-    // In account mode the Account card above already shows the picker, the
-    // signed-in state and the sign-out action.
     if (accountMode && signedIn) return const SizedBox.shrink();
 
     Padding pad(Widget child) =>

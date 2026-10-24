@@ -60,9 +60,7 @@ class WebViewSection extends HookConsumerWidget {
             if (canClear)
               SettingsHighlightTarget(
                 id: 'clearWebViewCache',
-                // Explicit boundary: without it the web engine folds this row
-                // into the switch row above, exposing the whole section as one
-                // button with a nested switch instead of two controls.
+                // Keep this row separate from the switch above in the web semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,

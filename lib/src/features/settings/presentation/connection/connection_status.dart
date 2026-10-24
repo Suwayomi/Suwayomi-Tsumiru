@@ -6,9 +6,7 @@
 
 import '../../../../constants/enum.dart';
 
-/// Renders the server address shown on the More page's Connection tile,
-/// e.g. `myserver.local:4567`. Scheme is stripped; the port is appended
-/// only when the user has the port toggle enabled.
+/// Strips the scheme and appends [port] only when [portToggle] is enabled.
 String formatServerHost(String? url, int? port, bool portToggle) {
   var host = (url ?? '').trim();
   if (host.isEmpty) return '';
@@ -19,11 +17,8 @@ String formatServerHost(String? url, int? port, bool portToggle) {
   return host;
 }
 
-/// The auth state surfaced on the Connection tile subtitle.
 enum ConnectionAuthStatus { signedIn, noAuth, signInNeeded }
 
-/// `signInNeeded` takes priority so a broken/expired session is visible on
-/// More even while an auth type is still configured.
 ConnectionAuthStatus connectionAuthStatus(AuthType? authType, bool needsReauth) {
   if (needsReauth) return ConnectionAuthStatus.signInNeeded;
   if (authType == null || authType == AuthType.none) {

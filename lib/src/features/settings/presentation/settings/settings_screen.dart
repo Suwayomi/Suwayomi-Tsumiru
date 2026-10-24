@@ -26,8 +26,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final showAccount = ref.watch(showAccountEntryProvider);
     final account = ref.watch(currentAccountProvider);
-    // Phone searches from the app-bar entry (or the box under the title when
-    // the persistent setting is on), like More does.
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();

@@ -47,7 +47,6 @@ class AboutScreen extends HookConsumerWidget {
     toast?.show(context.l10n.searchingForUpdates);
     AsyncValue.guard(updateCallback).then((value) {
       toast?.close();
-      // Left the About screen before the check resolved → context is dead.
       if (!context.mounted) return;
       try {
         value.whenOrNull(
@@ -127,8 +126,7 @@ class AboutScreen extends HookConsumerWidget {
     final aboutAsync = ref.watch(aboutProvider);
     final about = aboutAsync.value;
     final webUi = ref.watch(aboutWebUIProvider).value;
-    // revision is deprecated server-side: the version already carries it as the
-    // patch number, so appending it printed the build number twice.
+    // Server version already includes revision as its patch number.
     final serverVer = about?.version;
     final packageInfo = ref.watch(packageInfoProvider);
     final serverHosted = ref.watch(serverHostedWebProvider);
@@ -140,12 +138,8 @@ class AboutScreen extends HookConsumerWidget {
       return;
     }, [aboutAsync.value]);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.about);
-    // Inside the settings window the About page trades the large centred
-    // logo for a compact left-aligned header under the pane title.
     final inSettingsWindow = SettingsPaneScope.maybeOf(context) != null;
     final scaffold = Scaffold(
       appBar: topBar

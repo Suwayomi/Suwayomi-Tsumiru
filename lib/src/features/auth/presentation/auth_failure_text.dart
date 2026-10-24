@@ -9,9 +9,6 @@ import 'package:flutter/widgets.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../data/auth_coordinator.dart';
 
-/// The one place a sign-in failure becomes words, shared by every surface that
-/// signs in. Kept together so a failure can't read as "is your URL pointing at
-/// the Suwayomi API?" on one screen and as a rejected password on another.
 String authFailureText(BuildContext context, TestConnectionFailureKind kind) =>
     switch (kind) {
       TestConnectionFailureKind.browserSession =>

@@ -24,9 +24,7 @@ class ForcePortrait extends _$ForcePortrait
   bool? build() => initialize(DBKeys.forcePortrait);
 }
 
-/// Apply the portrait-lock preference to the system. Only phones honour it
-/// (landscape on a phone currently renders poorly); tablets, desktop and web
-/// always keep every orientation regardless of the setting.
+/// Applies portrait lock on phones only; other platforms retain all orientations.
 void applyForcePortrait(bool forcePortrait) {
   final views = WidgetsBinding.instance.platformDispatcher.views;
   final shortestSide = views.isEmpty

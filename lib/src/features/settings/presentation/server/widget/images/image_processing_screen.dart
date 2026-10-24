@@ -48,9 +48,7 @@ class _RuleState {
   bool showSearchParams = false;
   bool showHeaders = false;
 
-  /// Unparsable text is invalid and blocks Save instead of being silently dropped.
-  /// Only fields visible for the current target mode count: hidden fields keep
-  /// their stale text but must not block Save after a mode switch.
+  /// Invalid numeric text blocks Save only for fields visible in the current target mode.
   bool get hasInvalidNumericInput {
     switch (rule.mode) {
       case ImageConversionTargetMode.disabled:
@@ -93,10 +91,7 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
       final inputs = toServerConversionInputs(
         _rules!.map((r) => r.rule).toList(),
       );
-      // Await the refreshed server value before rebuilding: invalidating and
-      // clearing `_rules` in the same setState rebuilds from the stale list
-      // (Riverpod still hands out the old data while refreshing), so the
-      // editor would revert to the pre-save values.
+      // Await fresh data before rebuilding; Riverpod retains the old value during refresh.
       final List<ServerConversion>? records;
       if (_isDownload) {
         await ref

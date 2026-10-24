@@ -10,17 +10,12 @@ import './graphql/__generated__/global_meta.graphql.dart';
 
 part 'delete_chapters_settings_repository.g.dart';
 
-/// The server stores Suwayomi-WebUI's client settings in its global-meta store.
-/// These three keys drive the WebUI's "Delete chapters" download settings; we
-/// read and write the SAME keys so the toggles stay in sync with the WebUI.
-/// Global keys carry no per-device segment (unlike e.g. `webUI_4_pageScaleMode`).
+/// Shared WebUI global-meta keys; these have no per-device segment.
 const kDeleteChaptersManuallyMarkedReadKey =
     'webUI_deleteChaptersManuallyMarkedRead';
 const kDeleteChaptersWhileReadingKey = 'webUI_deleteChaptersWhileReading';
 const kDeleteChaptersWithBookmarkKey = 'webUI_deleteChaptersWithBookmark';
 
-/// Suwayomi's "Delete chapters" settings, mirrored from the server's global
-/// meta. Defaults match the WebUI's (all off / disabled).
 class DeleteChaptersSettings {
   const DeleteChaptersSettings({
     this.deleteManuallyMarkedRead = false,
@@ -28,19 +23,14 @@ class DeleteChaptersSettings {
     this.deleteWithBookmark = false,
   });
 
-  /// Delete a chapter's download when it is manually marked read.
   final bool deleteManuallyMarkedRead;
 
-  /// Delete the Nth chapter behind the one being read (0 = disabled, 1 = the
-  /// last read chapter, 2 = second-to-last, … up to 5). Matches the WebUI's
-  /// numeric select.
+  /// 0 disables deletion; 1 deletes the last read chapter, 2 the second-to-last, up to 5.
   final int deleteWhileReading;
 
-  /// Allow the two rules above to delete chapters that are bookmarked.
   final bool deleteWithBookmark;
 
-  /// Parse the three settings out of the server's global-meta map (key → raw
-  /// JSON-encoded value). Missing keys fall back to the WebUI defaults.
+  /// Missing global-meta keys use the disabled defaults.
   factory DeleteChaptersSettings.fromMeta(Map<String, String> byKey) =>
       DeleteChaptersSettings(
         deleteManuallyMarkedRead:
@@ -72,9 +62,7 @@ class DeleteChaptersSettingsRepository {
       .query$GlobalMetas(Options$Query$GlobalMetas())
       .getData((data) => data.metas.nodes);
 
-  /// Values are stored JSON-encoded (e.g. `"true"`, `"0"`), matching how the
-  /// WebUI serializes them, so a write here is read back correctly by either
-  /// client.
+  /// Values must be JSON-encoded for WebUI compatibility.
   Future<void> setGlobalMeta(String key, String value) => ferryClient
       .mutate$SetGlobalMeta(
         Options$Mutation$SetGlobalMeta(
@@ -104,7 +92,6 @@ class DeleteChaptersSettingsController
   }
 
   Future<void> _write(String key, String value, DeleteChaptersSettings next) async {
-    // Optimistic: reflect the toggle immediately, then persist to the server.
     final previous = state;
     state = AsyncData(next);
     try {
@@ -112,7 +99,6 @@ class DeleteChaptersSettingsController
           .read(deleteChaptersSettingsRepositoryProvider)
           .setGlobalMeta(key, value);
     } catch (_) {
-      // The server didn't take it — revert so the UI doesn't lie about state.
       state = previous;
       rethrow;
     }
@@ -140,11 +126,7 @@ class DeleteChaptersSettingsController
       );
 }
 
-// --- ON-DEVICE delete settings (independent of the server settings above) ----
-// A SEPARATE set of toggles that govern deleting THIS phone's downloaded copies
-// as you read. Stored in local shared prefs (offline-safe, Tsumiru-only) — never
-// coupled to the server's global-meta settings. All default off, same shape as
-// the server settings so the two UI sections are identical.
+// Device copies use local preferences independently of server deletion settings.
 
 /// 0 = off, 1 = delete the just-read chapter's device copy, 2..5 = the Nth back.
 @riverpod
@@ -154,7 +136,6 @@ class LocalDeleteWhileReading extends _$LocalDeleteWhileReading
   int? build() => initialize(DBKeys.localDeleteWhileReading);
 }
 
-/// Delete a chapter's device copy when it is manually marked read.
 @riverpod
 class LocalDeleteManuallyMarkedRead extends _$LocalDeleteManuallyMarkedRead
     with SharedPreferenceClientMixin<bool> {
@@ -162,7 +143,6 @@ class LocalDeleteManuallyMarkedRead extends _$LocalDeleteManuallyMarkedRead
   bool? build() => initialize(DBKeys.localDeleteManuallyMarkedRead);
 }
 
-/// Allow the two on-device rules to delete bookmarked chapters too.
 @riverpod
 class LocalDeleteWithBookmark extends _$LocalDeleteWithBookmark
     with SharedPreferenceClientMixin<bool> {
@@ -170,9 +150,7 @@ class LocalDeleteWithBookmark extends _$LocalDeleteWithBookmark
   bool? build() => initialize(DBKeys.localDeleteWithBookmark);
 }
 
-/// When enabled, the reconciler pulls down the slots-1 most recently read
-/// chapters if they are missing from the device, so the protection window is
-/// always populated. Off by default to preserve existing behavior.
+/// Downloads missing chapters in the slots-1 protection window behind the reader.
 @riverpod
 class LocalDownloadProtectionWindow extends _$LocalDownloadProtectionWindow
     with SharedPreferenceClientMixin<bool> {
@@ -180,7 +158,6 @@ class LocalDownloadProtectionWindow extends _$LocalDownloadProtectionWindow
   bool? build() => initialize(DBKeys.localDownloadProtectionWindow);
 }
 
-/// The on-device delete settings as one value (defaults all off).
 @riverpod
 DeleteChaptersSettings localDeleteSettings(Ref ref) => DeleteChaptersSettings(
       deleteWhileReading: ref.watch(localDeleteWhileReadingProvider) ?? 0,
@@ -189,14 +166,9 @@ DeleteChaptersSettings localDeleteSettings(Ref ref) => DeleteChaptersSettings(
       deleteWithBookmark: ref.watch(localDeleteWithBookmarkProvider) ?? false,
     );
 
-/// The id of the chapter to delete when [readChapterId] is read with
-/// "after reading automatically delete" = [slots] (1 = the just-read chapter,
-/// 2 = the one before it, …). Null when [slots] <= 0 or the target falls outside
-/// the list. [chapters] is the manga's chapter list in display order and
-/// [isAscending] is the sort direction — together they define reading order,
-/// exactly as the reader's own next/previous navigation does, so we only ever
-/// target a chapter already behind the reader (never the one ahead). Shared by
-/// the on-device and server delete paths.
+/// Returns the deletion target in reading order: 1 is [readChapterId], 2 its predecessor.
+/// [chapters] is in display order; [isAscending] determines reading direction.
+/// Returns null for nonpositive [slots] or an out-of-range target.
 int? chapterIdToDeleteWhileReading(
   List<ChapterDto> chapters,
   bool isAscending,
@@ -206,8 +178,6 @@ int? chapterIdToDeleteWhileReading(
   if (slots <= 0) return null;
   final current = chapters.indexWhere((c) => c.id == readChapterId);
   if (current < 0) return null;
-  // The reading-backward step in list-index terms — mirrors how
-  // getNextAndPreviousChapters derives the "previous" chapter from the sort.
   final step = isAscending ? -1 : 1;
   final target = current + step * (slots - 1);
   if (target < 0 || target >= chapters.length) return null;

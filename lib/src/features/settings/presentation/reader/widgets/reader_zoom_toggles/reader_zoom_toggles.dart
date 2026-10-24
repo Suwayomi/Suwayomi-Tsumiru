@@ -11,8 +11,6 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_zoom_toggles.g.dart';
 
-// Global zoom-gesture prefs — zoom toggles are never
-// per-series. Pinch-to-zoom lives in reader_pinch_to_zoom.dart.
 
 @riverpod
 class DoubleTapToZoom extends _$DoubleTapToZoom
@@ -35,9 +33,7 @@ class DisableZoomIn extends _$DisableZoomIn
   bool? build() => initialize(DBKeys.disableZoomIn);
 }
 
-// Per-viewer zoom toggles. Each seeds from the matching global pref above, so
-// upgrading keeps whatever the reader was already doing; once a viewer's own
-// switch is touched it owns its value and the two stop moving together.
+// Each viewer inherits its global preference until its own switch is set.
 
 @riverpod
 class PagedDoubleTapToZoom extends _$PagedDoubleTapToZoom

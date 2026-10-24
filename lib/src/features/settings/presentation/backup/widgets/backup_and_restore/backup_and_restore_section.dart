@@ -85,7 +85,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     );
 
     if (asyncBackupFile.hasError || asyncBackupFile.value == null) {
-      // Bail unconditionally — mounted only gates the toast, not the null-assertion below.
+      // Return even when unmounted; mounted only gates the toast.
       if (context.mounted) asyncBackupFile.showToastOnError(toast);
       return null;
     }
@@ -99,7 +99,6 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     );
 
     if (validateResult.hasError) {
-      // Bail unconditionally — don't let an unmounted validation failure proceed to restore.
       if (context.mounted) validateResult.showToastOnError(toast);
       return null;
     }
@@ -107,7 +106,6 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     String? backupId;
     bool restoreBackup = true;
     if (validateResult.value.isNotBlank) {
-      // Can't confirm missing sources without a context to show the dialog in.
       if (!context.mounted) return null;
       restoreBackup = (await showDialog<bool>(
         context: context,
@@ -118,7 +116,6 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     }
 
     if (restoreBackup) {
-      // Can't pick flags without a context to show the dialog in.
       if (!context.mounted) return null;
       final flags = await showBackupFlagsDialog(
         context,
@@ -130,7 +127,6 @@ class BackupAndRestoreSection extends HookConsumerWidget {
       );
 
       if (asyncBackupFile.hasError || asyncBackupFile.value == null) {
-        // Same unconditional bail as the first conversion.
         if (context.mounted) asyncBackupFile.showToastOnError(toast);
         return null;
       }

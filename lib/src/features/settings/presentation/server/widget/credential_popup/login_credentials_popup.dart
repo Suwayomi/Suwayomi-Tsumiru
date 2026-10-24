@@ -129,7 +129,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
 
     String resolveBaseUrl() {
       final baseUrl = ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial;
-      // The server ROOT — see the same note in inline_auth_section.
+      // Sign-in paths are appended to the server root.
       return Endpoints.baseApi(
         baseUrl: baseUrl,
         port: ref.read(serverPortProvider),
@@ -336,11 +336,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
   }
 }
 
-/// True for LAN-only hosts where plaintext HTTP is the norm: localhost,
-/// 127.x, and RFC1918 IPv4 ranges. We suppress the "Insecure connection"
-/// dialog for these because the warning was meant for the open internet,
-/// not a 192.168.x.x server. Exposed (not _-prefixed) so the test can
-/// exercise the address-matching logic without driving the dialog.
+/// Recognizes localhost, 127.x and RFC1918 IPv4 hosts that skip the insecure-HTTP warning.
 @visibleForTesting
 bool isLocalAddress(String url) {
   final host = Uri.tryParse(url)?.host.toLowerCase();

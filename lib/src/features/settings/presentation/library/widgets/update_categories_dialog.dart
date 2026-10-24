@@ -14,16 +14,13 @@ import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../../library/presentation/category/controller/edit_category_controller.dart';
 
-/// Normalises a category's include/exclude flag to the three values we cycle
-/// (graphql_codegen adds a `$unknown` member we never surface).
+/// Maps null and the generated $unknown value to the default state.
 Enum$IncludeOrExclude coerceInclude(Enum$IncludeOrExclude? v) =>
     v == Enum$IncludeOrExclude.INCLUDE || v == Enum$IncludeOrExclude.EXCLUDE
         ? v!
         : Enum$IncludeOrExclude.UNSET;
 
-/// Summary line for the "Categories" row under Settings → Library → Global
-/// update. "All categories" when nothing is included/excluded, else a short
-/// "Included … / Excluded …" string.
+/// Uses "All categories" when no include/exclude flags are set.
 String libraryUpdateCategoriesSummary(
     BuildContext context, List<CategoryDto> categories) {
   final included = categories
@@ -44,10 +41,6 @@ String libraryUpdateCategoriesSummary(
   return parts.join(' · ');
 }
 
-/// Tri-state (default / include / exclude) picker for which categories are
-/// checked during a global library update — the Suwayomi `includeInUpdate`
-/// flag per category. Tapping a row cycles default → include → exclude →
-/// default.
 class UpdateCategoriesDialog extends ConsumerWidget {
   const UpdateCategoriesDialog({super.key});
 
@@ -76,7 +69,6 @@ class _Body extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Seeded once from the loaded list (the parent only builds this with data).
     final state = useState<Map<int, Enum$IncludeOrExclude>>({
       for (final c in categories) c.id: coerceInclude(c.includeInUpdate),
     });
@@ -91,8 +83,6 @@ class _Body extends HookConsumerWidget {
       state.value = {...state.value, id: next};
     }
 
-    // Flutter tri-state checkbox: true ✓ = include, null – = exclude,
-    // false (empty) = default/unset.
     bool? checkboxValue(Enum$IncludeOrExclude v) => switch (v) {
           Enum$IncludeOrExclude.INCLUDE => true,
           Enum$IncludeOrExclude.EXCLUDE => null,

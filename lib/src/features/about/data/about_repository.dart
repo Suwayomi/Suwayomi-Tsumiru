@@ -103,8 +103,7 @@ AboutRepository aboutRepository(Ref ref) => AboutRepository(
   },
 );
 
-/// The release version the user opted to skip in the update prompt. Empty
-/// until they tick "Don't remind me about this version".
+/// Empty until the user opts to skip a release version.
 @riverpod
 class DismissedUpdateVersion extends _$DismissedUpdateVersion
     with SharedPreferenceClientMixin<String> {

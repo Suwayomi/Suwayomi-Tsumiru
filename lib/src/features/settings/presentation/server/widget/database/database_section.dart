@@ -56,8 +56,7 @@ class DatabaseSection extends ConsumerWidget {
           children: [
             SettingsHighlightTarget(
               id: 'databaseType',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -101,8 +100,7 @@ class DatabaseSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'databaseUrl',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -127,8 +125,7 @@ class DatabaseSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'databaseUsername',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -155,8 +152,7 @@ class DatabaseSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'databasePassword',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,

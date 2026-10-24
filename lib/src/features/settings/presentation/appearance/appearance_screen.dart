@@ -30,8 +30,6 @@ class AppearanceScreen extends ConsumerWidget {
     final themeMode = ref.watch(appThemeModeProvider);
     final theme = ref.watch(appThemeKeyProvider);
     final showRecommendations = ref.watch(showRecommendationsProvider);
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.appearance);
     final scaffold = Scaffold(
@@ -55,8 +53,6 @@ class AppearanceScreen extends ConsumerWidget {
                       id: 'appThemeMode',
                       child: AppThemeModeTile(),
                     ),
-                    // The card heading already names the theme section, so the
-                    // picker renders without its own title row.
                     const SettingsHighlightTarget(
                       id: 'theme',
                       child: ThemeSelector(),

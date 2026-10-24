@@ -11,10 +11,6 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_left_handed_seekbar_tile.g.dart';
 
-/// Persisted reader preference: anchor the vertical side seekbar to the left
-/// edge instead of the right, for left-handed reading.
-///
-/// Default FALSE — right-edge placement is the default.
 @riverpod
 class LeftHandedVerticalSeekbar extends _$LeftHandedVerticalSeekbar
     with SharedPreferenceClientMixin<bool> {

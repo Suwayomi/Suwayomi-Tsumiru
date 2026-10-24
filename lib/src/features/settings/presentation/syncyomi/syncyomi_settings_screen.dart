@@ -22,8 +22,6 @@ import 'domain/sync_yomi.dart';
 import 'syncyomi_sync.dart';
 import 'widgets/sync_yomi_host_dialog.dart';
 
-/// Wording for a stored interval. Values the picker doesn't offer come from
-/// another client, so they are read out as hours or minutes instead.
 String syncYomiIntervalLabel(BuildContext context, String value) {
   final description = describeSyncYomiInterval(value);
   final l10n = context.l10n;
@@ -57,7 +55,6 @@ String _syncYomiDataLabel(BuildContext context, SyncYomiDataKind kind) {
   };
 }
 
-/// The Sync data subtitle: what a sync will carry, or that it carries nothing.
 String syncYomiDataSummary(BuildContext context, List<SyncYomiDataKind> kinds) {
   if (kinds.isEmpty) return context.l10n.syncYomiSyncDataNone;
   return context.l10n.syncYomiSyncDataInclude(
@@ -71,8 +68,6 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.syncyomi);
     final scaffold = Scaffold(
@@ -204,8 +199,6 @@ class _SyncYomiFields extends ConsumerWidget {
               context: context,
               builder: (context) => RadioListPopup<String>(
                 title: l10n.syncYomiSyncInterval,
-                // Matched on duration, so P1D reads as the PT24H option
-                // rather than being offered as a second "Daily" row.
                 optionList: [
                   ...kSyncYomiIntervalOptions,
                   if (intervalOption == null) settings.interval,

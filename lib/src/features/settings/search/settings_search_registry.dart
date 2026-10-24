@@ -54,30 +54,7 @@ export 'settings_highlight_target.dart';
 export 'settings_search_entry.dart';
 export 'settings_search_row.dart';
 
-/// Hand-written index of searchable settings, slice 1: General, Appearance,
-/// Library. Later slices append their pages' lists here in page order.
-///
-/// Each entry's [SettingsSearchEntry.visible] mirrors the exact condition
-/// that renders its tile — same provider, same comparison:
-///
-/// - General: Quick Search only exists on keyboard runtimes (same
-///   [isKeyboardRuntime] gate as the screen). Persistent search bar moved
-///   here from Library (same local provider, always visible). Everything
-///   else always renders.
-/// - Advanced: Clear cache always renders; Copy debug log has no highlight
-///   target, so it has no entry (the drift guard requires both directions).
-/// - Appearance: Pure black only renders when the theme mode isn't light;
-///   Custom color only renders with the Custom theme; Recommendations in
-///   overflow unmounts while recommendations are off. The rest always render.
-/// - Library: the whole list renders inside the server-data branch (same
-///   `serverSettings.value != null` gate as the screen), so every entry
-///   needs the server reachable. Permission gates only disable the tap, the
-///   tile stays on screen, so they add no further gate. Section names:
-///   Categories, Behavior ("Behavior"), Global update.
-///
-/// The drift-guard test (`settings_registry_drift_test.dart`) pumps each page
-/// with every condition satisfied and checks both directions, so add an entry
-/// and wrap its tile together — one without the other fails the suite.
+/// Visibility gates must match tile mounting; register entries and highlight targets together.
 List<SettingsSearchEntry> get generalSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'quickSearch',
@@ -310,16 +287,6 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
   ),
 ];
 
-/// Reader page (52 rows): ungrouped basics carry the plain "Reader"
-/// breadcrumb, the rest "Reader › \<Section\>" with the real section header
-/// strings. Rows that render greyed-out stay searchable (Long strip Maximum
-/// width under Original size; the Paged zoom gestures while zoom-in is off),
-/// so their entries are always visible. Conditional rows mirror the screen's
-/// gate exactly: vertical-seekbar rows need force-horizontal off; cutout
-/// needs fullscreen on; the flash rows need flash on; mouse speed needs a
-/// keyboard runtime; invert-split/invert-rotate need split/rotate on;
-/// keep-screen-on/ignore-safe-area need Android or iOS; the Navigation
-/// section needs Android. Same providers, same helpers as the screen.
 List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'readerMode',
@@ -732,11 +699,6 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   ),
 ];
 
-/// Browse page (4 rows, plain "Browse" breadcrumb). Show NSFW always renders;
-/// the other three only mount while the server settings hold a value (same
-/// `serverSettings.value != null` gate as the screen). The permission gate
-/// only disables those rows' editors, never unmounts them, so it adds no
-/// further gate.
 List<SettingsSearchEntry> get browseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'hideLibraryEntries',
@@ -780,12 +742,6 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
   ),
 ];
 
-/// Notifications page (9 rows, plain "Notifications" breadcrumb), Android
-/// only. The four rows under "New chapter notifications" (interval, Wi-Fi,
-/// charging, check now) only render while it is on — same
-/// [notificationsNewChaptersEnabledProvider] read as the screen. Hide
-/// notification content closes the page and is always visible there.
-/// The rest always render too.
 List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'notificationsNewChapters',
@@ -880,12 +836,6 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
   ),
 ];
 
-/// Backup page (6 rows, plain "Backup" breadcrumb). The include-* checkboxes
-/// live in the Create Backup dialog, not on the page, so they have no
-/// entries. Create/restore always render; the four automatic rows only mount
-/// while the server settings hold a value (same `showUiWhenData` data branch
-/// as the screen). The permission gate only disables the automatic rows'
-/// editors, so it adds no further gate.
 List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'includeUserSettings',
@@ -952,22 +902,6 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   ),
 ];
 
-/// Downloads page: Server tab (8 rows, tab 0) and On device tab (13 rows,
-/// tab 1), with "Downloads › Server" / "Downloads › On device" breadcrumbs.
-/// The three delete rows share titles across tabs but carry per-tab ids, so
-/// search can land on the right tab's row. Image download processing left
-/// the Server tab (it lives on Server › Images now).
-///
-/// Server rows only mount while the server settings hold a value (same
-/// `showUiWhenData` data branch as the screen); permission/personal gates
-/// only disable them, so they add no further gate. Every On device row needs
-/// the offline feature enabled
-/// (otherwise the tab shows the "not available" note instead). The
-/// keep-window switch additionally needs delete-while-reading at 2+, the
-/// background switch needs Android-native, and its two sub-rows need the
-/// background run switched on — each mirroring the screen's gate exactly.
-/// Background rows carry a "› Background" breadcrumb level, safety-net rows
-/// (now under Storage) a "› Storage" one.
 List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'autoDownloadWhileReading',
@@ -1276,19 +1210,6 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   ),
 ];
 
-/// Server hub pages ("Server › \<Page\>" breadcrumbs, with the
-/// multi-section Network page adding its section header as a third level).
-/// Every page is server state: each entry needs the server reachable
-/// (`settingsProvider` holding a value — loading/error shows the fallback
-/// view instead), which subsumes each section's own
-/// `serverSettings.value != null` gate. Web-interface rows additionally need
-/// the web settings loaded and MANAGE_SETTINGS (both gate the tiles'
-/// mounting, unlike the permission-gated-but-mounted rows elsewhere); the
-/// channel/automatic rows stay mounted-but-disabled under the Custom flavor,
-/// so they stay visible. Check for update needs an authenticated session
-/// and a non-Custom flavor, exactly like its tile. SOCKS rows need the
-/// proxy on, FlareSolverr rows need it on — same DTO flags as the screen.
-/// "Installed version" is read-only info with no editor, so it has no entry.
 bool _serverReachable(WidgetRef ref) =>
     ref.watch(settingsProvider).value != null;
 
@@ -1901,16 +1822,6 @@ List<SettingsSearchEntry> get serverLogsSettingsSearchEntries => [
   ),
 ];
 
-/// Connection page ("Connection › \<Section\>" breadcrumbs). Server URL, the
-/// LAN row and Open in WEB sit under "Server"; the auth-mode picker sits
-/// under "Account" (it lives in the Account card on account servers and in
-/// the Authentication section elsewhere); the custom-headers entry lands on
-/// the section's Add row (per-header rows are dynamic, not settings); Open in
-/// WEB is desktop-only, like its tile. The Timeout rows moved here from
-/// General: Auto-refresh Retry Delay only renders while auto-refresh is on,
-/// the other two always render. Username/password fields, sign-in/test/log-out
-/// buttons, chips, and warnings are credentials or transient state, so they
-/// have no entries.
 List<SettingsSearchEntry> get connectionSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'serverUrl',
@@ -1974,10 +1885,6 @@ List<SettingsSearchEntry> get connectionSettingsSearchEntries => [
   ),
 ];
 
-/// Sync page (SyncYomi content first, then KOReader Sync, each under its
-/// section title). The support gates are unchanged from the old pages:
-/// null SyncYomi settings hide its rows; KOReader rows additionally need
-/// the KOReader status loaded without the undefined-field error.
 bool _syncYomiSupported(WidgetRef ref) =>
     ref.watch(syncYomiSettingsProvider).value != null;
 
@@ -2075,9 +1982,6 @@ List<SettingsSearchEntry> get syncSettingsSearchEntries => [
   ),
 ];
 
-/// Tracking page (2 rows, plain "Tracking" breadcrumb). Both switches render
-/// unconditionally; the per-tracker login rows are dynamic server data, not
-/// settings, so they have no entries.
 List<SettingsSearchEntry> get trackingSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'updateProgressAfterReading',
@@ -2100,17 +2004,7 @@ List<SettingsSearchEntry> get trackingSettingsSearchEntries => [
   ),
 ];
 
-/// Holds every GraphQL-backed provider settings search reads for the
-/// duration of the open search. Each entry's [SettingsSearchEntry.visible]
-/// watches only the providers its own gate needs, and matching stops after
-/// [kSettingsSearchLimit] hits — so without this, a query that matches ten
-/// local rows first drops every server subscription, the autoDispose
-/// providers tear down, and the next keystroke fires a fresh network request
-/// per provider. Every search host calls this once per build (above the
-/// match call), so typing reuses the in-flight values: at most one fetch per
-/// provider while the search is open, and none when the data is already
-/// loaded. [syncYomiSettingsProvider] is keepAlive today and is listed too,
-/// so the set stays complete if its disposal ever changes.
+/// Keeps server providers alive for the open search, even when matching stops at local results.
 void pinSettingsSearchProviders(WidgetRef ref) {
   ref.watch(settingsProvider);
   ref.watch(webInterfaceSettingsProvider);
@@ -2119,9 +2013,6 @@ void pinSettingsSearchProviders(WidgetRef ref) {
   ref.watch(koSyncStatusProvider);
 }
 
-/// Every registered entry in result order: General, Advanced, Appearance,
-/// Library, Reader, Browse, Notifications, Backup, Downloads, Server hub
-/// pages, Connection, Sync, Tracking.
 List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...generalSettingsSearchEntries,
   ...advancedSettingsSearchEntries,

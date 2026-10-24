@@ -10,30 +10,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'credential_snapshot.dart';
 import 'secure_credentials_provider.dart';
 
-/// Secure-storage key under which basic-auth credentials now live.
 const kBasicCredentialsSecureKey = kBasicCredentialsKey;
 
-/// Legacy SharedPreferences key (DBKeys.basicCredentials.name).
 const kLegacyBasicCredentialsKey = 'basicCredentials';
 
-/// Removes the legacy plaintext Basic credential, if one is left. Every
-/// explicit credential clear calls this: a migration deferred while the
-/// keychain was refused would otherwise re-import the cleared sign-in on a
-/// later launch.
+/// Clears the legacy copy so a deferred migration cannot restore a signed-out account.
 Future<void> clearLegacyBasicCredentials(SharedPreferences prefs) =>
     prefs.remove(kLegacyBasicCredentialsKey);
 
-/// One-time, idempotent migration of basic-auth credentials from the
-/// plaintext-equivalent SharedPreferences store to platform secure storage.
-///
-/// If a credential exists in the legacy location:
-///   - And nothing is in secure storage yet → move it.
-///   - And something is already in secure storage → keep the secure-store
-///     value (user may have re-entered credentials more recently); just
-///     clear the legacy copy.
-///
-/// Either way, the legacy SharedPreferences entry is deleted at the end so
-/// the plaintext copy doesn't linger.
+/// Moves legacy Basic credentials to secure storage, preferring an existing secure value.
+/// Deletes the plaintext legacy copy only after secure storage succeeds.
 Future<void> migrateBasicAuthCredentials({
   required SharedPreferences prefs,
   required FlutterSecureStorage secure,
@@ -41,8 +27,7 @@ Future<void> migrateBasicAuthCredentials({
   final legacy = prefs.getString(kLegacyBasicCredentialsKey);
   if (legacy == null) return;
 
-  // Captured before the load: a successful cleanup clears the marker, but the
-  // storage it cleared held a sign-out that the legacy copy must not undo.
+  // Capture invalidation before cleanup so the legacy copy cannot undo a sign-out.
   final invalidated = credentialsInvalidated(prefs);
   final vault = credentialSnapshot(secure, prefs);
   await vault.ensureLoaded(prefs);
@@ -53,9 +38,7 @@ Future<void> migrateBasicAuthCredentials({
     return;
   }
   if (vault[kBasicCredentialsSecureKey] == null) {
-    // Keep the legacy copy if the move failed, so the next launch retries. The
-    // failed write must not set the invalidation marker: the legacy copy is
-    // still the durable one, and the snapshot holds the value for this run.
+    // Preserve the durable legacy copy on failure without setting the invalidation marker.
     final moved = await vault.update(
       {kBasicCredentialsSecureKey: legacy},
       prefs,

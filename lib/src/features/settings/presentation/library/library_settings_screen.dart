@@ -55,8 +55,6 @@ class LibrarySettingsScreen extends ConsumerWidget {
     final categories =
         ref.watch(categoryControllerProvider).value ?? const <CategoryDto>[];
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.library);
     final content = ListTileTheme(
@@ -190,7 +188,6 @@ class LibrarySettingsScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      // HideEmptyCategoryTile(),
                       SettingsGroupHeading(label: context.l10n.globalUpdate),
                       SettingsGroupCard(
                         children: [

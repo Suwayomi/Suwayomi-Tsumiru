@@ -9,11 +9,6 @@ import 'package:flutter/material.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import 'settings_search_entry.dart';
 
-/// One Settings search row, option A: muted tune icon, title with the matched
-/// text in the primary colour and semi-bold, page breadcrumb underneath in
-/// `bodySmall` / `onSurfaceVariant`. A plain [ListTile] like the neighbouring
-/// library and Go to rows, so row height, padding and keyboard focus behave
-/// the same. Shared by the desktop dropdown and the phone search overlay.
 class SettingsSearchResultRow extends StatelessWidget {
   const SettingsSearchResultRow({
     super.key,

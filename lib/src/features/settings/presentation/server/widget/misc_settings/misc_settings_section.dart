@@ -126,8 +126,7 @@ class MiscSettingsSection extends ConsumerWidget {
       required Input$PartialSettingsTypeInput Function(String) patch,
     }) => SettingsHighlightTarget(
       id: id,
-      // Same merge guard as the OPDS rows: without it the engine folds
-      // this row into the neighbouring switch rows.
+      // Keep this row separate from neighboring switches in the semantics tree.
       child: Semantics(
         container: true,
         explicitChildNodes: true,
@@ -169,8 +168,7 @@ class MiscSettingsSection extends ConsumerWidget {
             if (logs != null) ...[
               SettingsHighlightTarget(
                 id: 'logFileCleanup',
-                // Same merge guard as the OPDS rows: without it the engine
-                // folds this row into the neighbouring switch rows.
+                // Keep this row separate from neighboring switches in the semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,

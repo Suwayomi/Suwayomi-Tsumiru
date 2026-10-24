@@ -300,8 +300,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
             children: [
               SettingsHighlightTarget(
                 id: 'webInterfaceFlavor',
-                // Same merge guard as the OPDS rows: without it the engine
-                // folds this row into a neighbouring switch row.
+                // Keep this row separate from neighboring switches in the semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,
@@ -331,8 +330,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               ),
               SettingsHighlightTarget(
                 id: 'webInterfaceInterface',
-                // Same merge guard as the OPDS rows: without it the engine
-                // folds this row into a neighbouring switch row.
+                // Keep this row separate from neighboring switches in the semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,
@@ -363,8 +361,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (data.webUIInterface == Enum$WebUIInterface.ELECTRON)
                 SettingsHighlightTarget(
                   id: 'electronPath',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,
@@ -415,8 +412,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (showInterfaceCard)
                 SettingsHighlightTarget(
                   id: 'webInterfaceChannel',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,
@@ -452,8 +448,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (showInterfaceCard)
                 SettingsHighlightTarget(
                   id: 'webInterfaceAutomaticUpdates',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,
@@ -487,8 +482,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (authenticated && !custom)
                 SettingsHighlightTarget(
                   id: 'webInterfaceCheckUpdate',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,

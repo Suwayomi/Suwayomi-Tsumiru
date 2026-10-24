@@ -130,7 +130,6 @@ class ServeConversionsRepository {
     }
   }
 
-  /// Saves the whole map in one write.
   Future<void> write(
     List<Input$SettingsDownloadConversionTypeInput> conversions,
   ) async {

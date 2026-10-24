@@ -6,17 +6,8 @@
 
 import 'dart:convert';
 
-/// Decodes the `exp` claim out of a JWT. Returns `null` for any
-/// malformed input (wrong segment count, invalid base64, invalid
-/// JSON, missing/non-numeric `exp`).
-///
-/// Does NOT verify the signature — that is the server's job. We only
-/// use this to size the proactive-refresh Timer so the access token
-/// rotates before it expires during a reading session.
-///
-/// Per RFC 7519, `exp` is a NumericDate — a JSON number representing
-/// seconds since the Unix epoch. The spec allows non-integer values,
-/// so we accept any finite `num` and floor it.
+/// Reads exp without verifying the signature; malformed claims return null.
+/// RFC 7519 allows fractional epoch seconds, which are floored.
 DateTime? decodeJwtExp(String jwt) {
   try {
     final segments = jwt.split('.');
@@ -35,8 +26,7 @@ DateTime? decodeJwtExp(String jwt) {
   }
 }
 
-/// `base64Url.decode` requires padding; the JWT spec strips it.
-/// Re-add the missing `=` characters before decoding.
+// JWT omits the padding required by base64Url.decode.
 String? _base64UrlDecodeWithPadding(String segment) {
   try {
     final pad = (4 - segment.length % 4) % 4;

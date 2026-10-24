@@ -37,8 +37,6 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final BrowserSettingsDto? browseSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
     final storeCount = ref.watch(extensionStoreListProvider).value?.totalCount;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.browse);
     final scaffold = Scaffold(
@@ -66,10 +64,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                           context.l10n.manageSettingsPermissionRequired,
                         ),
                       ),
-                    // Permission-gated rows stay searchable while disabled:
-                    // a missing MANAGE_SETTINGS only nulls onChanged, the
-                    // tile stays on screen — so every entry below is always
-                    // visible.
+                    // Disabled permission-gated rows remain mounted and searchable.
                     if (serverSettings.value != null) ...[
                       SettingsGroupHeading(
                         label: context.l10n.sources,

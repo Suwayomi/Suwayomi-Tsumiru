@@ -12,8 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/db_keys.dart';
 import 'secure_credentials_provider.dart';
 
-/// Secure-storage key for the password older versions wrote although nothing
-/// ever read it back. Still deleted so an upgrade removes it.
+/// Legacy unused password key, retained only for upgrade cleanup.
 const kLegacyPasswordSecureKey = 'auth.password';
 const kSimpleLoginCookieSecureKey = 'auth.simple.cookie';
 const kUiAccessTokenSecureKey = 'auth.ui.accessToken';
@@ -22,9 +21,7 @@ const kUiAccountBindingSecureKey = 'auth.ui.accountBinding';
 const kBasicCredentialsKey = 'auth.basic.credentials';
 const kCustomHeadersKey = 'custom.headers';
 
-/// Every account credential the app keeps in secure storage. A persist writes
-/// the ones with a value and deletes the rest, so storage either matches the
-/// snapshot exactly or the marker says it cannot be trusted.
+/// Persist the full account set; the invalidation marker flags incomplete writes.
 const kCredentialKeys = <String>[
   kLegacyPasswordSecureKey,
   kSimpleLoginCookieSecureKey,
@@ -34,14 +31,10 @@ const kCredentialKeys = <String>[
   kBasicCredentialsKey,
 ];
 
-/// Endpoint configuration stored beside the credentials but not part of the
-/// account: an account invalidation must not delete these. Each is written
-/// only when its own update changes it; a refused write or delete leaves the
-/// in-memory value for this run and the stored value for the next launch.
+/// Endpoint keys survive account invalidation and are persisted only when changed.
 const kEndpointKeys = <String>[kCustomHeadersKey];
 
-/// Whether a credential write or delete was refused, so what is on disk may
-/// not match what the app was last signed in with.
+/// True when failed persistence means disk credentials may differ from memory.
 bool credentialsInvalidated(SharedPreferences prefs) =>
     prefs.getBool(DBKeys.authCredentialsInvalidated.name) ?? false;
 
@@ -51,7 +44,6 @@ Future<void> _markCredentialsInvalidated(SharedPreferences prefs) =>
 Future<void> _clearCredentialInvalidation(SharedPreferences prefs) =>
     prefs.setBool(DBKeys.authCredentialsInvalidated.name, false);
 
-/// The snapshot and the preferences instance it was loaded under.
 class _SnapshotSlot {
   _SnapshotSlot(this.prefs, this.snapshot);
 
@@ -61,17 +53,7 @@ class _SnapshotSlot {
 
 final Expando<_SnapshotSlot> _snapshots = Expando('credential snapshot');
 
-/// The live credential snapshot for [storage].
-///
-/// Keyed by the store, which outlives every Riverpod container: the app uses
-/// the `kSecureStorage` constant, so a session-container restart reads the
-/// same snapshot. A keepAlive provider could not do this, because
-/// `AccountSessionHost` disposes the whole previous container.
-///
-/// The preferences instance identifies the launch. The app loads one per
-/// process and hands it to every session container; a test that installs new
-/// mock preferences starts a new run, so it gets an empty snapshot instead of
-/// the previous test's values.
+/// Shared across session containers by store identity; a new preferences instance starts a new run.
 CredentialSnapshot credentialSnapshot(
   FlutterSecureStorage storage,
   SharedPreferences prefs,
@@ -84,12 +66,7 @@ CredentialSnapshot credentialSnapshot(
   )).snapshot;
 }
 
-/// The source of truth for credentials during a run.
-///
-/// Loaded once from secure storage at launch, then never re-read: every
-/// credential mutation changes these values first and persists the complete
-/// set behind them. That keeps a refused keychain from signing the user out
-/// mid-run and from restoring a previous account on the next launch.
+/// In-memory credential authority, loaded once per run and persisted as a complete set.
 class CredentialSnapshot {
   CredentialSnapshot._(this._storage);
 
@@ -100,11 +77,7 @@ class CredentialSnapshot {
 
   String? operator [](String key) => _values[key];
 
-  /// Loads the credential set from secure storage once per run.
-  ///
-  /// With the invalidation marker set, storage may hold a sign-out or a
-  /// previous server's sign-in that a refused delete left behind: start empty
-  /// and retry the cleanup, clearing the marker only when every delete lands.
+  /// Loads once; an invalidation marker starts signed out and clears only after cleanup succeeds.
   Future<void> ensureLoaded(SharedPreferences prefs) =>
       _loading ??= _load(prefs);
 
@@ -118,11 +91,9 @@ class CredentialSnapshot {
         await _clearCredentialInvalidation(prefs);
       }
     } else {
-      // Older versions stored the sign-in password here although nothing ever
-      // read it back. Best effort: it never affects the marker or a read.
+      // Legacy-password cleanup is best effort and must not affect the invalidation marker.
       unawaited(deleteSecure(_storage, kLegacyPasswordSecureKey));
     }
-    // Endpoint configuration was never invalidated, so it loads either way.
     for (final key in [...kCredentialKeys, ...kEndpointKeys]) {
       if (key == kLegacyPasswordSecureKey) continue;
       if (invalidated && kCredentialKeys.contains(key)) continue;
@@ -130,18 +101,10 @@ class CredentialSnapshot {
     }
   }
 
-  /// Applies [changes] to the snapshot, then writes the whole account set to
-  /// secure storage: the keys with a value are written, every other credential
-  /// key is deleted. A failure in any operation sets the invalidation marker,
-  /// so the next launch starts signed out rather than trusting a partial write.
-  /// Endpoint keys in [changes] are written or deleted on their own and never
-  /// affect the marker.
-  ///
-  /// Returns whether the complete account state reached the platform store.
-  ///
-  /// [invalidateOnFailure] is false for the Basic credential migration: the
-  /// legacy preference is still the durable copy, so a refused write must not
-  /// make the next launch delete the credential instead of migrating it.
+  /// Updates memory, persists the complete account set, and marks partial failures as invalid.
+  /// Endpoint changes are independent and never affect the marker.
+  /// Returns whether the full account state reached storage.
+  /// Set [invalidateOnFailure] false only when a durable legacy copy remains for migration.
   Future<bool> update(
     Map<String, String?> changes,
     SharedPreferences prefs, {

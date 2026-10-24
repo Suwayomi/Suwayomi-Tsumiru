@@ -27,10 +27,7 @@ import '../client/server_url_tile/server_url_tile.dart';
 
 part 'credentials_popup.g.dart';
 
-// keepAlive, like AuthCredentialsStore: main() preloads it so images, links
-// and background work can read `.value` synchronously. Auto-disposed, the
-// preload was dropped at once, those reads saw null, and the first watch
-// rebuilt the GraphQL client under requests already on their way.
+// Keep alive so preloaded credentials remain available to synchronous request builders.
 @Riverpod(keepAlive: true)
 class Credentials extends _$Credentials {
   @override
@@ -41,8 +38,7 @@ class Credentials extends _$Credentials {
     return vault[kBasicCredentialsKey];
   }
 
-  /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
-  /// meanwhile. Omit for a clear (set null).
+  /// [forEpoch] discards or undoes writes across a server switch; omit when clearing.
   Future<void> set(String? value, {int? forEpoch}) async {
     await ref.read(authCredentialsStoreProvider.notifier).replaceCredentials((
       epoch,
@@ -54,8 +50,7 @@ class Credentials extends _$Credentials {
       final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
       await vault.update({kBasicCredentialsKey: value}, prefs);
       if (epoch != credentials.serverEpoch) {
-        // A switch started while the write was in flight: its complete state
-        // must not keep this server's Basic credential.
+        // A server switch must not retain the previous server's Basic credential.
         await vault.update({kBasicCredentialsKey: null}, prefs);
         return;
       }
@@ -80,8 +75,6 @@ class CredentialsPopup extends HookConsumerWidget {
       saving.value = true;
       error.value = null;
       try {
-        // Verified before it is stored. Saving blind reported a successful
-        // sign-in for a mistyped password and then 401'd every request.
         await performSignIn(
           ref,
           authType: AuthType.basic,

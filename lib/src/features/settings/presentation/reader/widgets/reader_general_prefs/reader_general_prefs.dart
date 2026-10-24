@@ -15,7 +15,6 @@ part 'reader_general_prefs.g.dart';
 /// flashDuration slider ticks → milliseconds.
 const kFlashMsPerTick = 100;
 
-// Global General-tab reader prefs.
 
 @riverpod
 class ReaderBackgroundColorKey extends _$ReaderBackgroundColorKey
@@ -27,8 +26,6 @@ class ReaderBackgroundColorKey extends _$ReaderBackgroundColorKey
       );
 }
 
-/// Drives the reader-chrome page-number pill (ReaderChrome), an always-mounted
-/// "n / m" leaf visible while reading.
 @riverpod
 class ShowPageNumber extends _$ShowPageNumber
     with SharedPreferenceClientMixin<bool> {
@@ -57,7 +54,6 @@ class DrawUnderCutout extends _$DrawUnderCutout
   bool? build() => initialize(DBKeys.drawUnderCutout);
 }
 
-/// When ON, a reader long-press opens the page-actions sheet; OFF is a no-op.
 @riverpod
 class ReadWithLongTap extends _$ReadWithLongTap
     with SharedPreferenceClientMixin<bool> {

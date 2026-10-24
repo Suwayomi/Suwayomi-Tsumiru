@@ -101,11 +101,7 @@ class AccountSessionStartup {
     _subscriptions.add(
       container.listen<bool>(offlineActiveProvider, (previous, next) {
         if (!_current || previous == true || !next) return;
-        // At launch this flips on as soon as the server's identity loads,
-        // while the pass that awaited that identity is still running and is
-        // about to read it. Forcing a rerun then repeated the whole launch
-        // reconcile and catch-up. Only rerun if the running pass read it
-        // before it flipped.
+        // Rerun only if the active pass already read offline state before activation.
         if (_flight != null) {
           _offlineActivationPending = true;
         } else {
@@ -220,10 +216,7 @@ class AccountSessionStartup {
     }
     if (!_current || !_offlineActiveNow()) return;
     final runtime = container.read(offlineRuntimeStorageProvider.notifier);
-    // Settle disk FIRST: launch reconcile and the catch-up must see
-    // post-recovery device state, or overnight background downloads read as
-    // missing and get re-fetched. Android reaches this through the worker's
-    // replay; desktop/other has no replay, so it recovers here directly.
+    // Recover disk state before reconcile/catch-up; Android uses worker replay, other platforms recover here.
     if (isAndroidNative) {
       await runtime.track(
         () => container
@@ -316,9 +309,7 @@ class AccountSessionStartup {
     }
   }
 
-  /// Reads whether offline is active, for the pass running now: an
-  /// activation that landed before this read is handled by this pass, so it
-  /// no longer calls for another.
+  /// Records the pass's offline-state read so earlier activations do not schedule another pass.
   bool _offlineActiveNow() {
     _offlineActivationPending = false;
     return container.read(offlineActiveProvider);

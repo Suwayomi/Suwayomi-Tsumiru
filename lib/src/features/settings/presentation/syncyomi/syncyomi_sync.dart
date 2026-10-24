@@ -14,7 +14,6 @@ import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
 
-/// Wording for the step a running sync has reached.
 String syncYomiStepName(BuildContext context, SyncYomiStep step) {
   final l10n = context.l10n;
   return switch (step) {
@@ -42,12 +41,7 @@ class SyncYomiSync {
   final Future<void> Function() start;
 }
 
-/// Starts a sync and watches it, shared by the settings screen's Sync now row
-/// and the Library and Updates top bars.
-///
-/// [onSynced] runs once when a sync this app started or watched run reaches
-/// SUCCESS, so callers can re-read what the sync changed. An old SUCCESS the
-/// server was already reporting when the widget mounted does not qualify.
+/// [onSynced] runs once when a started or observed sync reaches SUCCESS, excluding pre-mount results.
 SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final context = useContext();
   final l10n = context.l10n;
@@ -165,7 +159,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   );
 }
 
-/// Top-bar sync action. Draws nothing unless SyncYomi is on and configured.
+/// Hidden unless SyncYomi is enabled and configured.
 class SyncYomiSyncButton extends ConsumerWidget {
   const SyncYomiSyncButton({super.key, this.onSynced});
 

@@ -19,9 +19,7 @@ import '../data/auth_lifecycle_observer.dart';
 import '../data/auth_recovery_target.dart';
 import '../data/auth_state.dart';
 
-/// Layout-neutral host that surfaces a re-auth `MaterialBanner` via
-/// `ScaffoldMessenger` when the session has expired. Returns its child
-/// unchanged — safe to wrap around `CustomScrollView` or sliver layouts.
+/// Preserves the child layout, including slivers, while showing banners via ScaffoldMessenger.
 class ReauthBannerHost extends ConsumerStatefulWidget {
   const ReauthBannerHost({super.key, required this.child});
   final Widget child;
@@ -37,10 +35,7 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   @override
   void initState() {
     super.initState();
-    // Register the app-lifecycle observer here — same widget the
-    // re-auth banner lives in, so its lifetime matches the auth UI.
-    // R2-4: Dart Timers don't fire during Android Doze, so we need an
-    // explicit on-resume refresh-if-due trigger to cover the gap.
+    // Android Doze suspends timers, so resume must trigger an overdue refresh.
     _authObserver = AuthLifecycleObserver(ref);
     WidgetsBinding.instance.addObserver(_authObserver);
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -13,8 +13,7 @@ import '../reader_invert_tap_tile/reader_invert_tap_tile.dart';
 
 part 'reader_tap_invert.g.dart';
 
-/// New 4-value tap-invert key. Null while unset, so the legacy bool below
-/// stays authoritative for users who never touched the new control.
+/// Null leaves the legacy bool authoritative until this preference is set.
 @riverpod
 class ReaderTapInvertKey extends _$ReaderTapInvertKey
     with SharedPreferenceEnumClientMixin<TapInvert> {
@@ -23,15 +22,13 @@ class ReaderTapInvertKey extends _$ReaderTapInvertKey
       initialize(DBKeys.readerTapInvert, enumList: TapInvert.values);
 }
 
-/// Effective global tap-invert: the new key when set, else the legacy
-/// invertTap bool (true→both). The old key is compat-read only, never written.
+/// Reads the new key, falling back to the read-only legacy bool (true means both axes).
 @riverpod
 TapInvert readerTapInvertCompat(Ref ref) =>
     ref.watch(readerTapInvertKeyProvider) ??
     TapInvert.fromLegacyInvert(ref.watch(invertTapProvider));
 
-// Per-viewer, like Komikku's pagerNavInverted / webtoonNavInverted. Both seed
-// from whatever the single key resolved to, so upgrading changes nothing.
+// Seed both viewers from the resolved global preference.
 
 @riverpod
 class PagedTapInvertKey extends _$PagedTapInvertKey

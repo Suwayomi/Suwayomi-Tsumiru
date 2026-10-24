@@ -14,7 +14,6 @@ import '../../../widgets/settings_group_card/settings_group_card.dart';
 
 part 'timeout_settings_section.g.dart';
 
-// ---------------- Providers ----------------
 @riverpod
 class ServerRequestTimeout extends _$ServerRequestTimeout
     with SharedPreferenceClientMixin<int> {
@@ -24,7 +23,6 @@ class ServerRequestTimeout extends _$ServerRequestTimeout
     initial: DBKeys.serverRequestTimeout.initial,
   );
 
-  // Helper update that takes seconds and stores milliseconds
   void updateSeconds(int seconds) => update(seconds * 1000);
 }
 
@@ -50,7 +48,6 @@ class AutoRefreshRetryDelay extends _$AutoRefreshRetryDelay
   void updateSeconds(int seconds) => update(seconds * 1000);
 }
 
-// ---------------- UI Section ----------------
 class TimeoutSettingsSection extends ConsumerWidget {
   const TimeoutSettingsSection({super.key});
 
@@ -70,7 +67,6 @@ class TimeoutSettingsSection extends ConsumerWidget {
         SettingsGroupHeading(label: context.l10n.timeouts),
         SettingsGroupCard(
           children: [
-            // Server Request Timeout
             SettingsHighlightTarget(
               id: 'serverRequestTimeout',
               child: SettingsPropTile(
@@ -88,7 +84,6 @@ class TimeoutSettingsSection extends ConsumerWidget {
                 ),
               ),
             ),
-            // Auto-refresh on Timeout toggle
             SettingsHighlightTarget(
               id: 'autoRefreshOnTimeout',
               child: CompactSwitchListTile(
@@ -101,7 +96,6 @@ class TimeoutSettingsSection extends ConsumerWidget {
                     .update,
               ),
             ),
-            // Retry delay only when auto-refresh is enabled
             if (autoRefreshEnabled)
               SettingsHighlightTarget(
                 id: 'autoRefreshRetryDelay',
