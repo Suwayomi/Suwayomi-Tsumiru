@@ -4230,5 +4230,10 @@
   "saveSearch": "Save search",
   "saveCurrentSearch": "Save current search",
   "deleteSearch": "Delete search",
-  "openHomepage": "Open in WebView"
+  "openHomepage": "Open in WebView",
+  "extensionInfo": "Extension info",
+  "extensionLibrary": "Library",
+  "extensionStore": "Store",
+  "extensionVersion": "Version",
+  "extensionLanguage": "Language"
 }

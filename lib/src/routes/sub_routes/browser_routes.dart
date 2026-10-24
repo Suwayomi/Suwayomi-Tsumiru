@@ -85,8 +85,7 @@ class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
   );
 
   @override
-  Widget build(context, state) =>
-      DetailNavigationShellScreen(child: _screen);
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
@@ -109,9 +108,20 @@ class SourcePreferenceRoute extends GoRouteData with $SourcePreferenceRoute {
   Widget get _screen => SourcePreferenceScreen(sourceId: sourceId);
 
   @override
-  Widget build(context, state) =>
-      DetailNavigationShellScreen(child: _screen);
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
+class ExtensionInfoRoute extends GoRouteData with $ExtensionInfoRoute {
+  const ExtensionInfoRoute({required this.pkgName});
+  final String pkgName;
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+  Widget get _screen => ExtensionInfoScreen(pkgName: pkgName);
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       detailNavigationPage(context, state, _screen);

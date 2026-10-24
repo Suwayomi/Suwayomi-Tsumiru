@@ -12,6 +12,7 @@ import '../features/account/presentation/account_codes_screen.dart';
 import '../features/account/presentation/manage_users_screen.dart';
 import '../features/browse_center/domain/source/source_model.dart';
 import '../features/browse_center/presentation/browse/browse_screen.dart';
+import '../features/browse_center/presentation/extension/extension_info_screen.dart';
 import '../features/browse_center/presentation/extension/extension_screen.dart';
 import '../features/browse_center/presentation/extension_store/extension_store_screen.dart';
 import '../features/browse_center/presentation/global_search/global_search_screen.dart';
@@ -252,6 +253,9 @@ GoRouter routerConfig(Ref ref) {
                   routes: [
                     TypedGoRoute<BrowseExtensionRoute>(
                       path: Routes.extensionRoute,
+                      routes: [
+                        TypedGoRoute<ExtensionInfoRoute>(path: ':pkgName'),
+                      ],
                     ),
                   ],
                 ),

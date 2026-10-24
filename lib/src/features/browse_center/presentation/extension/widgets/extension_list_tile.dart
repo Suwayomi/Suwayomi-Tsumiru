@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
@@ -31,6 +32,7 @@ class ExtensionListTile extends HookConsumerWidget {
     final access = ref.watch(settledAccountAccessProvider);
     return ListTile(
       key: key,
+      onTap: () => ExtensionInfoRoute(pkgName: extension.pkgName).push(context),
       leading: ClipRRect(
         borderRadius: KBorderRadius.r8.radius,
         child: ServerImageWithCpi(
