@@ -5,8 +5,7 @@ import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/graphql_undefined_field.dart';
-import '../../../../../../account/data/account_providers.dart';
-import '../../../../../../account/domain/account_access.dart';
+import '../../../../../data/account_or_legacy_settings.dart';
 import '../../../../../data/user_settings.dart';
 import '../graphql/__generated__/opds.graphql.dart';
 
@@ -182,46 +181,46 @@ class OpdsSettingsRepository {
 
 final Provider<OpdsSettingsRepository> opdsSettingsRepositoryProvider =
     Provider<OpdsSettingsRepository>(
-  (ref) => OpdsSettingsRepository(
-    ref.watch(graphQlClientProvider),
-    routing: ref.watch(userSettingsRoutingProvider),
-  ),
-);
+      (ref) => OpdsSettingsRepository(
+        ref.watch(graphQlClientProvider),
+        routing: ref.watch(userSettingsRoutingProvider),
+      ),
+    );
 
 final FutureProvider<OpdsSettings?> opdsSettingsProvider =
-    FutureProvider.autoDispose<OpdsSettings?>((ref) async {
-  switch (ref.watch(settledAccountAccessProvider).capability) {
-    case AccountCapability.unknown:
-      throw StateError('Account settings unavailable');
-    case AccountCapability.supported:
-      final user = await ref.watch(userSettingsProvider.future);
-      if (user == null) throw StateError('Missing account settings');
-      return (
-        useBinaryFileSizes: user.opdsUseBinaryFileSizes,
-        itemsPerPage: user.opdsItemsPerPage,
-        enablePageReadProgress: user.opdsEnablePageReadProgress,
-        markAsReadOnDownload: user.opdsMarkAsReadOnDownload,
-        showOnlyUnreadChapters: user.opdsShowOnlyUnreadChapters,
-        showOnlyDownloadedChapters: user.opdsShowOnlyDownloadedChapters,
-        skipChapterMetadataFeed: user.opdsSkipChapterMetadataFeed,
-        chapterSortOrder: user.opdsChapterSortOrder,
-        cbzMimetype: user.opdsCbzMimetype,
-      );
-    case AccountCapability.unsupported:
-      final settings = await ref
-          .watch(opdsSettingsRepositoryProvider)
-          .legacySettings();
-      if (settings == null) return null;
-      return (
-        useBinaryFileSizes: settings.opdsUseBinaryFileSizes,
-        itemsPerPage: settings.opdsItemsPerPage,
-        enablePageReadProgress: settings.opdsEnablePageReadProgress,
-        markAsReadOnDownload: settings.opdsMarkAsReadOnDownload,
-        showOnlyUnreadChapters: settings.opdsShowOnlyUnreadChapters,
-        showOnlyDownloadedChapters: settings.opdsShowOnlyDownloadedChapters,
-        skipChapterMetadataFeed: settings.opdsSkipChapterMetadataFeed,
-        chapterSortOrder: settings.opdsChapterSortOrder,
-        cbzMimetype: settings.opdsCbzMimetype,
-      );
-  }
-});
+    FutureProvider.autoDispose<OpdsSettings?>(
+      (ref) => accountOrLegacySettings(
+        ref,
+        fromUser: (user) {
+          if (user == null) throw StateError('Missing account settings');
+          return (
+            useBinaryFileSizes: user.opdsUseBinaryFileSizes,
+            itemsPerPage: user.opdsItemsPerPage,
+            enablePageReadProgress: user.opdsEnablePageReadProgress,
+            markAsReadOnDownload: user.opdsMarkAsReadOnDownload,
+            showOnlyUnreadChapters: user.opdsShowOnlyUnreadChapters,
+            showOnlyDownloadedChapters: user.opdsShowOnlyDownloadedChapters,
+            skipChapterMetadataFeed: user.opdsSkipChapterMetadataFeed,
+            chapterSortOrder: user.opdsChapterSortOrder,
+            cbzMimetype: user.opdsCbzMimetype,
+          );
+        },
+        legacy: () async {
+          final settings = await ref
+              .watch(opdsSettingsRepositoryProvider)
+              .legacySettings();
+          if (settings == null) return null;
+          return (
+            useBinaryFileSizes: settings.opdsUseBinaryFileSizes,
+            itemsPerPage: settings.opdsItemsPerPage,
+            enablePageReadProgress: settings.opdsEnablePageReadProgress,
+            markAsReadOnDownload: settings.opdsMarkAsReadOnDownload,
+            showOnlyUnreadChapters: settings.opdsShowOnlyUnreadChapters,
+            showOnlyDownloadedChapters: settings.opdsShowOnlyDownloadedChapters,
+            skipChapterMetadataFeed: settings.opdsSkipChapterMetadataFeed,
+            chapterSortOrder: settings.opdsChapterSortOrder,
+            cbzMimetype: settings.opdsCbzMimetype,
+          );
+        },
+      ),
+    );

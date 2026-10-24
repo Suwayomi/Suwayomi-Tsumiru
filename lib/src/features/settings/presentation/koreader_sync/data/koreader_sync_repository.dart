@@ -5,8 +5,7 @@ import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/graphql_undefined_field.dart';
-import '../../../../account/data/account_providers.dart';
-import '../../../../account/domain/account_access.dart';
+import '../../../data/account_or_legacy_settings.dart';
 import '../../../data/user_settings.dart';
 import '../domain/koreader_sync_domain.dart';
 import './graphql/__generated__/koreader_sync.graphql.dart';
@@ -183,29 +182,28 @@ Future<KoSyncStatus> koSyncStatus(Ref ref) =>
     ref.watch(koreaderSyncRepositoryProvider).status();
 
 @riverpod
-Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) async {
-  switch (ref.watch(settledAccountAccessProvider).capability) {
-    case AccountCapability.unknown:
-      throw StateError('Account settings unavailable');
-    case AccountCapability.supported:
-      final user = await ref.watch(userSettingsProvider.future);
-      if (user == null) throw StateError('Missing account settings');
-      return (
-        strategyForward: user.koreaderSyncStrategyForward,
-        strategyBackward: user.koreaderSyncStrategyBackward,
-        checksumMethod: user.koreaderSyncChecksumMethod,
-        percentageTolerance: user.koreaderSyncPercentageTolerance,
-      );
-    case AccountCapability.unsupported:
-      final settings = await ref
-          .watch(koreaderSyncRepositoryProvider)
-          .legacySettings();
-      if (settings == null) return null;
-      return (
-        strategyForward: settings.koreaderSyncStrategyForward,
-        strategyBackward: settings.koreaderSyncStrategyBackward,
-        checksumMethod: settings.koreaderSyncChecksumMethod,
-        percentageTolerance: settings.koreaderSyncPercentageTolerance,
-      );
-  }
-}
+Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) =>
+    accountOrLegacySettings(
+      ref,
+      fromUser: (user) {
+        if (user == null) throw StateError('Missing account settings');
+        return (
+          strategyForward: user.koreaderSyncStrategyForward,
+          strategyBackward: user.koreaderSyncStrategyBackward,
+          checksumMethod: user.koreaderSyncChecksumMethod,
+          percentageTolerance: user.koreaderSyncPercentageTolerance,
+        );
+      },
+      legacy: () async {
+        final settings = await ref
+            .watch(koreaderSyncRepositoryProvider)
+            .legacySettings();
+        if (settings == null) return null;
+        return (
+          strategyForward: settings.koreaderSyncStrategyForward,
+          strategyBackward: settings.koreaderSyncStrategyBackward,
+          checksumMethod: settings.koreaderSyncChecksumMethod,
+          percentageTolerance: settings.koreaderSyncPercentageTolerance,
+        );
+      },
+    );

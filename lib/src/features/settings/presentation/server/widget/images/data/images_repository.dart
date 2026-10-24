@@ -6,14 +6,14 @@ import '../../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../../../account/data/account_permission.dart';
-import '../../../../../../account/data/account_providers.dart';
-import '../../../../../../account/domain/account_access.dart';
+import '../../../../../data/account_or_legacy_settings.dart';
 import '../../../../../data/user_settings.dart';
 import '../graphql/__generated__/images.graphql.dart';
 import '../image_conversions.dart';
 
-final Expando<Future<bool>> _clearCachedImagesSupport =
-    Expando<Future<bool>>('clearCachedImagesSupport');
+final Expando<Future<bool>> _clearCachedImagesSupport = Expando<Future<bool>>(
+  'clearCachedImagesSupport',
+);
 
 class ImagesRepository {
   const ImagesRepository(this.client, {required this.permissions});
@@ -153,65 +153,58 @@ class ServeConversionsRepository {
   }
 }
 
-final serveConversionsRepositoryProvider =
-    Provider<ServeConversionsRepository>(
-      (ref) => ServeConversionsRepository(
-        ref.watch(graphQlClientProvider),
-        routing: ref.watch(userSettingsRoutingProvider),
-      ),
-    );
+final serveConversionsRepositoryProvider = Provider<ServeConversionsRepository>(
+  (ref) => ServeConversionsRepository(
+    ref.watch(graphQlClientProvider),
+    routing: ref.watch(userSettingsRoutingProvider),
+  ),
+);
 
-final FutureProvider<List<ServerConversion>?> serveConversionsProvider =
-    FutureProvider.autoDispose<List<ServerConversion>?>((ref) async {
-      switch (ref.watch(settledAccountAccessProvider).capability) {
-        case AccountCapability.unknown:
-          throw StateError('Account settings unavailable');
-        case AccountCapability.supported:
-          final user = await ref.watch(userSettingsProvider.future);
-          if (user == null) throw StateError('Missing account settings');
-          return user.serveConversions
-              .map(
-                (c) => ServerConversion(
-                  mimeType: c.mimeType,
-                  target: c.target,
-                  compressionLevel: c.compressionLevel,
-                  callTimeout: c.callTimeout,
-                  connectTimeout: c.connectTimeout,
-                  headers: c.headers
-                      ?.map(
-                        (h) => ServerConversionHeader(
-                          name: h.name,
-                          value: h.value,
-                        ),
-                      )
-                      .toList(),
-                ),
-              )
-              .toList();
-        case AccountCapability.unsupported:
-          final settings = await ref
-              .watch(serveConversionsRepositoryProvider)
-              .legacySettings();
-          final conversions = settings?.serveConversions;
-          if (conversions == null) return null;
-          return conversions
-              .map(
-                (c) => ServerConversion(
-                  mimeType: c.mimeType,
-                  target: c.target,
-                  compressionLevel: c.compressionLevel,
-                  callTimeout: c.callTimeout,
-                  connectTimeout: c.connectTimeout,
-                  headers: c.headers
-                      ?.map(
-                        (h) => ServerConversionHeader(
-                          name: h.name,
-                          value: h.value,
-                        ),
-                      )
-                      .toList(),
-                ),
-              )
-              .toList();
-      }
-    });
+final FutureProvider<List<ServerConversion>?>
+serveConversionsProvider = FutureProvider.autoDispose<List<ServerConversion>?>(
+  (ref) => accountOrLegacySettings(
+    ref,
+    fromUser: (user) {
+      if (user == null) throw StateError('Missing account settings');
+      return user.serveConversions
+          .map(
+            (c) => ServerConversion(
+              mimeType: c.mimeType,
+              target: c.target,
+              compressionLevel: c.compressionLevel,
+              callTimeout: c.callTimeout,
+              connectTimeout: c.connectTimeout,
+              headers: c.headers
+                  ?.map(
+                    (h) => ServerConversionHeader(name: h.name, value: h.value),
+                  )
+                  .toList(),
+            ),
+          )
+          .toList();
+    },
+    legacy: () async {
+      final settings = await ref
+          .watch(serveConversionsRepositoryProvider)
+          .legacySettings();
+      final conversions = settings?.serveConversions;
+      if (conversions == null) return null;
+      return conversions
+          .map(
+            (c) => ServerConversion(
+              mimeType: c.mimeType,
+              target: c.target,
+              compressionLevel: c.compressionLevel,
+              callTimeout: c.callTimeout,
+              connectTimeout: c.connectTimeout,
+              headers: c.headers
+                  ?.map(
+                    (h) => ServerConversionHeader(name: h.name, value: h.value),
+                  )
+                  .toList(),
+            ),
+          )
+          .toList();
+    },
+  ),
+);
