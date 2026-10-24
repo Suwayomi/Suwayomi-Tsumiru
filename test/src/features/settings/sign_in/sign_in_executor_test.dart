@@ -36,7 +36,6 @@ void main() {
       );
     }
   });
-
   test(
     'verification failure preserves credentials and success commits them',
     () async {

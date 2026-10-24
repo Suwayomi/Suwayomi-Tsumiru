@@ -53,10 +53,10 @@ void main() {
     expect(
       plan.delete,
       unorderedEquals([
-        'webUI_notes_length',
-        'webUI_notes_0',
-        'webUI_notes_1',
-        'webUI_notes_2',
+      'webUI_notes_length',
+      'webUI_notes_0',
+      'webUI_notes_1',
+      'webUI_notes_2',
       ]),
     );
     expect(applyWrite(existing, 'short'), {'webUI_notes': 'short'});

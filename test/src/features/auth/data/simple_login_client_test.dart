@@ -66,31 +66,24 @@ void main() {
     expect(browserFollows, isTrue);
   });
 
-  test(
-    'a rejected login and an unexpected status are distinct failures',
-    () async {
-      final auth = MockClient(
-        (request) async =>
-            http.Response('<html>Invalid username or password</html>', 200),
-      );
-      await expectLater(
-        SimpleLoginClient(httpClient: auth).login(
-          serverBaseUrl: 'https://server.test',
-          username: 'aaron',
-          password: 'wrong',
-        ),
-        throwsA(isA<SimpleLoginAuthFailure>()),
-      );
+  test('a rejected login and an unexpected status are distinct failures', () async {
+    final auth = MockClient(
+      (request) async =>
+          http.Response('<html>Invalid username or password</html>', 200),
+    );
+    await expectLater(
+      SimpleLoginClient(
+        httpClient: auth,
+      ).login(serverBaseUrl: 'https://server.test', username: 'aaron', password: 'wrong'),
+      throwsA(isA<SimpleLoginAuthFailure>()),
+    );
 
-      final shape = MockClient((request) async => http.Response('', 500));
-      await expectLater(
-        SimpleLoginClient(httpClient: shape).login(
-          serverBaseUrl: 'https://server.test',
-          username: 'aaron',
-          password: 'hunter2',
-        ),
-        throwsA(isA<SimpleLoginShapeFailure>()),
-      );
-    },
-  );
+    final shape = MockClient((request) async => http.Response('', 500));
+    await expectLater(
+      SimpleLoginClient(
+        httpClient: shape,
+      ).login(serverBaseUrl: 'https://server.test', username: 'aaron', password: 'hunter2'),
+      throwsA(isA<SimpleLoginShapeFailure>()),
+    );
+  });
 }

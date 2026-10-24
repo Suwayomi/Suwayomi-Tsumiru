@@ -45,12 +45,13 @@ class DeleteChaptersSettings {
     bool? deleteManuallyMarkedRead,
     int? deleteWhileReading,
     bool? deleteWithBookmark,
-  }) => DeleteChaptersSettings(
-    deleteManuallyMarkedRead:
-        deleteManuallyMarkedRead ?? this.deleteManuallyMarkedRead,
-    deleteWhileReading: deleteWhileReading ?? this.deleteWhileReading,
-    deleteWithBookmark: deleteWithBookmark ?? this.deleteWithBookmark,
-  );
+  }) =>
+      DeleteChaptersSettings(
+        deleteManuallyMarkedRead:
+            deleteManuallyMarkedRead ?? this.deleteManuallyMarkedRead,
+        deleteWhileReading: deleteWhileReading ?? this.deleteWhileReading,
+        deleteWithBookmark: deleteWithBookmark ?? this.deleteWithBookmark,
+      );
 }
 
 class DeleteChaptersSettingsRepository {
@@ -86,11 +87,7 @@ class DeleteChaptersSettingsController
     return DeleteChaptersSettings.fromMeta(byKey);
   }
 
-  Future<void> _write(
-    String key,
-    String value,
-    DeleteChaptersSettings next,
-  ) async {
+  Future<void> _write(String key, String value, DeleteChaptersSettings next) async {
     final previous = state;
     state = AsyncData(next);
     try {
@@ -107,22 +104,22 @@ class DeleteChaptersSettingsController
       state.value ?? const DeleteChaptersSettings();
 
   Future<void> setDeleteManuallyMarkedRead(bool value) => _write(
-    kDeleteChaptersManuallyMarkedReadKey,
-    value ? 'true' : 'false',
-    _current.copyWith(deleteManuallyMarkedRead: value),
-  );
+        kDeleteChaptersManuallyMarkedReadKey,
+        value ? 'true' : 'false',
+        _current.copyWith(deleteManuallyMarkedRead: value),
+      );
 
   Future<void> setDeleteWhileReading(int value) => _write(
-    kDeleteChaptersWhileReadingKey,
-    '$value',
-    _current.copyWith(deleteWhileReading: value),
-  );
+        kDeleteChaptersWhileReadingKey,
+        '$value',
+        _current.copyWith(deleteWhileReading: value),
+      );
 
   Future<void> setDeleteWithBookmark(bool value) => _write(
-    kDeleteChaptersWithBookmarkKey,
-    value ? 'true' : 'false',
-    _current.copyWith(deleteWithBookmark: value),
-  );
+        kDeleteChaptersWithBookmarkKey,
+        value ? 'true' : 'false',
+        _current.copyWith(deleteWithBookmark: value),
+      );
 }
 
 // Device copies use local preferences independently of server deletion settings.
@@ -159,11 +156,11 @@ class LocalDownloadProtectionWindow extends _$LocalDownloadProtectionWindow
 
 @riverpod
 DeleteChaptersSettings localDeleteSettings(Ref ref) => DeleteChaptersSettings(
-  deleteWhileReading: ref.watch(localDeleteWhileReadingProvider) ?? 0,
-  deleteManuallyMarkedRead:
-      ref.watch(localDeleteManuallyMarkedReadProvider) ?? false,
-  deleteWithBookmark: ref.watch(localDeleteWithBookmarkProvider) ?? false,
-);
+      deleteWhileReading: ref.watch(localDeleteWhileReadingProvider) ?? 0,
+      deleteManuallyMarkedRead:
+          ref.watch(localDeleteManuallyMarkedReadProvider) ?? false,
+      deleteWithBookmark: ref.watch(localDeleteWithBookmarkProvider) ?? false,
+    );
 
 /// Returns the deletion target in reading order: 1 is [readChapterId], 2 its predecessor.
 /// [chapters] is in display order; [isAscending] determines reading direction.

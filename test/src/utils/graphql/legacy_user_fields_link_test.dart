@@ -722,10 +722,10 @@ void main() {
             }
           } else {
             requests++;
-            expect(
-              printNode(outgoing.operation.document),
-              isNot(contains('user {')),
-            );
+              expect(
+                printNode(outgoing.operation.document),
+                isNot(contains('user {')),
+              );
             yield const Response(data: {'chapter': null}, response: {});
           }
         }
@@ -735,6 +735,7 @@ void main() {
           throwsStateError,
         );
         expect(requests, 0);
+
         for (var i = 0; i < 2; i++) {
           await link.request(original, forward).first;
         }

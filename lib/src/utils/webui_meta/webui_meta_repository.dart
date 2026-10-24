@@ -57,23 +57,23 @@ class WebUiMetaRepository {
     }
     if (plan.delete.isNotEmpty) {
       Future<void> cleanup() async {
-        await client
-            .mutate$DeleteWebUiMangaMetas(
-              Options$Mutation$DeleteWebUiMangaMetas(
-                variables: Variables$Mutation$DeleteWebUiMangaMetas(
-                  input: Input$DeleteMangaMetasInput(
-                    items: [
-                      Input$DeleteMangaMetasItemInput(
-                        mangaIds: [mangaId],
-                        keys: plan.delete,
-                      ),
-                    ],
-                  ),
+      await client
+          .mutate$DeleteWebUiMangaMetas(
+            Options$Mutation$DeleteWebUiMangaMetas(
+              variables: Variables$Mutation$DeleteWebUiMangaMetas(
+                input: Input$DeleteMangaMetasInput(
+                  items: [
+                    Input$DeleteMangaMetasItemInput(
+                      mangaIds: [mangaId],
+                      keys: plan.delete,
+                    ),
+                  ],
                 ),
               ),
-            )
-            .getData((data) => data.deleteMangaMetas);
-      }
+            ),
+          )
+          .getData((data) => data.deleteMangaMetas);
+    }
 
       try {
         await cleanup();
@@ -130,23 +130,23 @@ class WebUiMetaRepository {
     }
     if (plan.delete.isNotEmpty) {
       Future<void> cleanup() async {
-        await client
-            .mutate$DeleteWebUiSourceMetas(
-              Options$Mutation$DeleteWebUiSourceMetas(
-                variables: Variables$Mutation$DeleteWebUiSourceMetas(
-                  input: Input$DeleteSourceMetasInput(
-                    items: [
-                      Input$DeleteSourceMetasItemInput(
-                        sourceIds: [sourceId],
-                        keys: plan.delete,
-                      ),
-                    ],
-                  ),
+      await client
+          .mutate$DeleteWebUiSourceMetas(
+            Options$Mutation$DeleteWebUiSourceMetas(
+              variables: Variables$Mutation$DeleteWebUiSourceMetas(
+                input: Input$DeleteSourceMetasInput(
+                  items: [
+                    Input$DeleteSourceMetasItemInput(
+                      sourceIds: [sourceId],
+                      keys: plan.delete,
+                    ),
+                  ],
                 ),
               ),
-            )
-            .getData((data) => data.deleteSourceMetas);
-      }
+            ),
+          )
+          .getData((data) => data.deleteSourceMetas);
+    }
 
       try {
         await cleanup();
@@ -157,11 +157,14 @@ class WebUiMetaRepository {
   }
 
   Future<Map<String, String>> readGlobalMetas() async {
-    final nodes = await client
-        .query$GetWebUiGlobalMetas(
-          Options$Query$GetWebUiGlobalMetas(fetchPolicy: FetchPolicy.noCache),
-        )
-        .getData((data) => data.metas.nodes);
+    final nodes =
+        await client
+            .query$GetWebUiGlobalMetas(
+              Options$Query$GetWebUiGlobalMetas(
+                fetchPolicy: FetchPolicy.noCache,
+              ),
+            )
+            .getData((data) => data.metas.nodes);
     if (nodes == null) throw StateError('Could not read global metadata');
     return {for (final node in nodes) node.key: node.value};
   }
@@ -192,16 +195,16 @@ class WebUiMetaRepository {
     }
     if (plan.delete.isNotEmpty) {
       Future<void> cleanup() async {
-        await client
-            .mutate$DeleteWebUiGlobalMetas(
-              Options$Mutation$DeleteWebUiGlobalMetas(
-                variables: Variables$Mutation$DeleteWebUiGlobalMetas(
-                  input: Input$DeleteGlobalMetasInput(keys: plan.delete),
-                ),
+      await client
+          .mutate$DeleteWebUiGlobalMetas(
+            Options$Mutation$DeleteWebUiGlobalMetas(
+              variables: Variables$Mutation$DeleteWebUiGlobalMetas(
+                input: Input$DeleteGlobalMetasInput(keys: plan.delete),
               ),
-            )
-            .getData((data) => data.deleteGlobalMetas);
-      }
+            ),
+          )
+          .getData((data) => data.deleteGlobalMetas);
+    }
 
       try {
         await cleanup();
