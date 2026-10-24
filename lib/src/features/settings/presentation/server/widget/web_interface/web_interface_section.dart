@@ -59,6 +59,10 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         _originalFlavor = null;
       }
     });
+    if (!_installing) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
     if (finished) {
       _socketSub?.cancel();
       _socketSub = null;
@@ -69,6 +73,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   }
 
   Future<void> _pollStatus() async {
+    _pollTimer = null;
     if (!mounted || !_installing) return;
     try {
       final status = await ref.read(webInterfaceRepositoryProvider).status();
@@ -95,12 +100,15 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
           .listen(
             (status) {
               _pollTimer?.cancel();
+              _pollTimer = null;
               _socketLive = true;
               _acceptInstallStatus(status);
             },
             onError: (_) {
               _socketLive = false;
-              if (mounted && _installing && _pollTimer == null) {
+              if (mounted &&
+                  _installing &&
+                  (_pollTimer == null || !_pollTimer!.isActive)) {
                 _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
               }
             },
