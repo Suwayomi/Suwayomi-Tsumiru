@@ -60,3 +60,12 @@ query LastSyncStatus {
     endDate
   }
 }
+
+subscription SyncStatusChanged {
+  syncStatusChanged {
+    state
+    errorMessage
+    startDate
+    endDate
+  }
+}

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import 'data/graphql/__generated__/query.graphql.dart';
 import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
@@ -67,10 +69,39 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final finished = terminal && startDate != requestedFrom.value;
   final pending = requested.value && !finished;
   final poll = pending || view.kind == SyncYomiStatusKind.syncing;
+  // True once the live subscription has delivered; while set, the socket is
+  // the status source and the query poll below stays parked. Any socket error
+  // clears it, so polling resumes as the fallback.
+  final socketLive = useState(false);
+
+  // Live status while a sync runs. The query above stays the initial value;
+  // each push just re-reads it. Errors (or an unavailable socket) leave
+  // [socketLive] cleared and the timer poll keeps the screen fresh.
+  useEffect(() {
+    if (!poll) {
+      socketLive.value = false;
+      return null;
+    }
+    StreamSubscription<void>? sub;
+    try {
+      sub = ref
+          .read(graphQlSubscriptionClientProvider)
+          .subscribe$SyncStatusChanged(Options$Subscription$SyncStatusChanged())
+          .getData((data) => data.syncStatusChanged)
+          .listen((_) {
+            socketLive.value = true;
+            ref.invalidate(lastSyncStatusProvider);
+          }, onError: (_) => socketLive.value = false);
+    } catch (_) {
+      socketLive.value = false;
+    }
+    return () => sub?.cancel();
+  }, [poll]);
 
   // Back off after ten minutes instead of giving up; a long sync is still live.
+  // Parked while the live subscription delivers; it is the polling fallback.
   useEffect(() {
-    if (!poll) return null;
+    if (!poll || socketLive.value) return null;
     final deadline = DateTime.now().add(const Duration(minutes: 10));
     Timer? timer;
     void schedule() {
@@ -90,7 +121,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
 
     schedule();
     return () => timer?.cancel();
-  }, [poll]);
+  }, [poll, socketLive.value]);
 
   useEffect(() {
     if (requested.value && finished) {

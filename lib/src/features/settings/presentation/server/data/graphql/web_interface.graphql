@@ -35,6 +35,10 @@ query WebInterfaceUpdateStatus {
   getWebUIUpdateStatus { ...WebInterfaceUpdateStatusDto }
 }
 
+subscription WebInterfaceUpdateStatusChange {
+  webUIUpdateStatusChange { ...WebInterfaceUpdateStatusDto }
+}
+
 mutation InstallWebInterfaceUpdate {
   updateWebUI(input: {}) {
     updateStatus { ...WebInterfaceUpdateStatusDto }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
@@ -32,6 +33,11 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   Enum$WebUIFlavor? _originalFlavor;
   Enum$WebUIFlavor? _checkedFlavor;
   Timer? _pollTimer;
+  StreamSubscription? _socketSub;
+  // True once the live subscription has delivered; while set, the socket is
+  // the status source and the query poll stays parked. Any socket error
+  // clears it, so polling resumes as the fallback.
+  bool _socketLive = false;
   bool _busy = false;
   bool _installStarted = false;
   bool _installing = false;
@@ -40,6 +46,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _socketSub?.cancel();
     super.dispose();
   }
 
@@ -55,6 +62,9 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       }
     });
     if (finished) {
+      _socketSub?.cancel();
+      _socketSub = null;
+      _socketLive = false;
       ref.invalidate(installedWebInterfaceProvider);
       ref.read(webBuildReloadRequiredProvider.notifier).check();
     }
@@ -68,8 +78,38 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     }
-    if (mounted && _installing) {
+    if (mounted && _installing && !_socketLive) {
       _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+    }
+  }
+
+  /// Live install status while [_installing]. Each push applies directly and
+  /// parks the query poll; errors (or an unavailable socket) fall back to it.
+  void _watchSocket() {
+    _socketSub?.cancel();
+    _socketSub = null;
+    try {
+      _socketSub = ref
+          .read(graphQlSubscriptionClientProvider)
+          .subscribe$WebInterfaceUpdateStatusChange(
+            Options$Subscription$WebInterfaceUpdateStatusChange(),
+          )
+          .getData((data) => data.webUIUpdateStatusChange)
+          .listen(
+            (status) {
+              _pollTimer?.cancel();
+              _socketLive = true;
+              _acceptInstallStatus(status);
+            },
+            onError: (_) {
+              _socketLive = false;
+              if (mounted && _installing && _pollTimer == null) {
+                _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+              }
+            },
+          );
+    } catch (_) {
+      _socketLive = false;
     }
   }
 
@@ -78,6 +118,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       _installStarted = true;
       _installing = true;
       _status = null;
+      _socketLive = false;
     });
     try {
       final status = await ref.read(webInterfaceRepositoryProvider).install();
@@ -86,6 +127,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       }
       _acceptInstallStatus(status);
       if (mounted && _installing) {
+        _watchSocket();
         _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
       }
     } catch (_) {
