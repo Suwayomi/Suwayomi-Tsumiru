@@ -45,12 +45,8 @@ import 'widgets/library_manga_organizer.dart';
 import 'widgets/library_random_entry.dart';
 import 'widgets/library_sections_view.dart';
 
-/// Wraps a library Scaffold body so the offline server-mismatch banner sits
-/// below the app bar (inside the Scaffold), not floating over the status bar.
-/// [grouped] picks what the banner's Retry re-asks for: the two library screens
-/// draw their tabs from different providers, and refreshing the other one left
-/// the content stale while the banner vanished.
-/// [header] is the desktop toolbar + tab strip, fixed above the banners.
+/// Keeps the mismatch banner inside the body; [grouped] chooses the provider Retry refreshes.
+/// [header] stays fixed above banners.
 Widget _libraryBody(
   WidgetRef ref,
   Widget body, {
@@ -69,34 +65,24 @@ Widget _libraryBody(
   ],
 );
 
-/// Categories as headers-style sections. Id 0 is Default/uncategorised.
 List<LibrarySection> _categorySections(List<CategoryDto> categories) => [
   for (final c in categories)
     (id: c.id.getValueOnNullOrNegative(), name: c.name),
 ];
 
-/// Grouped tabs as headers-style sections.
 List<LibrarySection> _groupSections(List<GroupedTab> tabs) => [
   for (final t in tabs) (id: t.id, name: t.name),
 ];
 
-/// Picks [TabBarView] vs [LibrarySectionsView]. Only continuous Section-Headers
-/// gets the sections view; every other combination is paginated.
 bool _useTabs(LibraryGroupStyle style, bool showAllCategories) =>
     style == LibraryGroupStyle.tabs || !showAllCategories;
 
-/// The floating tab strip is Tabs-mode's own affordance; Section-Headers mode
-/// carries section identity in its headers instead.
 bool _showTabBar(LibraryGroupStyle style, bool categoryTabsOn) =>
     style == LibraryGroupStyle.tabs && categoryTabsOn;
 
-/// Paginated Section-Headers has no floating strip, so each page grows its own
-/// non-sticky header.
 bool _showInlineHeaders(LibraryGroupStyle style, bool showAllCategories) =>
     style == LibraryGroupStyle.headers && !showAllCategories;
 
-/// The library body for the active group style: a page per group behind the tab
-/// strip, or one continuous scroll with a sticky header per group.
 Widget _groupedBody({
   required bool useTabs,
   required List<LibrarySection> sections,
@@ -105,10 +91,7 @@ Widget _groupedBody({
   required List<Widget> Function() tabViews,
 }) => Builder(
   builder: (context) => Padding(
-    // Desktop runs the scroll view to the content area's right edge so the
-    // always-visible themed scrollbar travels in the gutter the slivers keep
-    // (see LibraryMangaSliver); the left inset stays as before. Phone/tablet
-    // keep the symmetric inset.
+    // Desktop slivers reserve a scrollbar gutter on the right.
     padding: context.usesDesktopShell
         ? const EdgeInsets.only(left: 8)
         : KEdgeInsets.h8.size,
@@ -117,7 +100,7 @@ Widget _groupedBody({
             builder: (context) {
               final tabs = tabViews();
               if (!context.usesDesktopShell) {
-                // Tabs share the ambient controller here, so no scrollbars (else "attached to more than one ScrollPosition").
+                // Tabs share the ambient controller here; scrollbars would attach to multiple positions.
                 return ScrollConfiguration(
                   behavior: ScrollConfiguration.of(
                     context,
@@ -138,10 +121,7 @@ Widget _groupedBody({
   ),
 );
 
-/// Gives one library tab its own primary scroll controller on desktop, so the
-/// themed scrollbar never sees two tabs sharing the ambient controller (the
-/// "attached to more than one ScrollPosition" assertion). Phone and tablet
-/// keep the shared controller exactly as before.
+/// Gives each desktop tab its own controller so the scrollbar attaches to only one position.
 class _TabScrollHost extends HookWidget {
   const _TabScrollHost({required this.child});
 
@@ -163,16 +143,7 @@ class LibraryScreen extends HookConsumerWidget {
     final groupType =
         ref.watch(libraryGroupTypeProvider) ?? kDefaultLibraryGroupType;
 
-    // Standing rule: whenever ANY library update finishes (pull-triggered,
-    // menu-triggered, or server-scheduled), re-read the library so the new
-    // chapters it found appear without a manual refresh. Tracks the last
-    // known running state and fires on the running→idle edge, ignoring the
-    // transient null frames a socket reconnect emits.
-    //
-    // Seeded from the socket's current value so an update already in progress
-    // when this widget mounts (e.g. user navigates to Library mid-update)
-    // correctly triggers the invalidate when it finishes, instead of missing
-    // the true→false edge because lastRunning started at false.
+    // Seed from the current socket state; refresh on running→idle and ignore reconnect nulls.
     final lastRunning = useRef<bool>(
       ref.read(updateRunningSocketProvider).value ?? false,
     );
@@ -191,19 +162,14 @@ class LibraryScreen extends HookConsumerWidget {
   }
 }
 
-// ─────────────────── shared pieces ───────────────────────────────────────────
 
-/// Re-reads the library once a SyncYomi sync this app started or watched run
-/// finishes: the sync may have added entries or moved them between categories.
+/// Refreshes the library after a watched SyncYomi sync may have changed entries or categories.
 void _refreshLibraryAfterSync(WidgetRef ref) {
   ref.invalidate(libraryMangaListProvider);
   ref.invalidate(categoryControllerProvider);
 }
 
-/// Desktop page header: the toolbar row plus the category strip when tabs
-/// show. Built under the DefaultTabController (so the overflow menu and strip
-/// share the tab index with the TabBarView). The toolbar's Filter/Display
-/// buttons open anchored panels, so desktop needs no end drawer.
+/// Build under DefaultTabController so the toolbar and strip share the body's tab index.
 Widget _desktopLibraryHeader({
   required List<Widget> trailing,
   Widget? tabStrip,
@@ -217,8 +183,6 @@ Widget _desktopLibraryHeader({
   ),
 );
 
-/// Filter/sort/display organizer button: end-drawer on tablets, bottom sheet
-/// on phones.
 Widget _organizerButton() => Builder(
   builder: (context) => IconButton(
     onPressed: () {
@@ -232,8 +196,7 @@ Widget _organizerButton() => Builder(
             borderRadius: KBorderRadius.rT16.radius,
           ),
           clipBehavior: Clip.hardEdge,
-          // The organizer sizes itself to the active tab's content
-          // (capped at 72% height), so no fixed-height wrapper.
+          // The organizer sizes itself to the active tab, capped at 72% of screen height.
           builder: (_) => const LibraryMangaOrganizer(),
           sheetAnimationStyle: context.motionStyle,
         );
@@ -243,18 +206,8 @@ Widget _organizerButton() => Builder(
   ),
 );
 
-/// Whether the inline search bar (located via [searchBarKey]) has scrolled out
-/// of the viewport, meaning the pinned app bar should host the search field
-/// instead.
-///
-/// Evaluated defensively:
-///  - a missing or zero-height bar (the library is still loading, so
-///    [_LibrarySearchBar] collapsed) is never "hidden" — reporting hidden then
-///    leaves the app-bar field up while the inline bar reappears at offset 0,
-///    showing both bars at once (the pull-to-refresh glitch);
-///  - re-evaluated after every build, not only on scroll events, because a
-///    refresh can change the header extent (clamping the offset) without
-///    emitting any further scroll notification.
+/// Recheck after builds as refresh can change header extent without a scroll event.
+/// Missing or zero-height search bars are not hidden; this avoids two visible fields.
 bool _useIsSearchBarHidden(
   ScrollController controller,
   GlobalKey searchBarKey,
@@ -280,7 +233,6 @@ bool _useIsSearchBarHidden(
   return isHidden.value;
 }
 
-// ─────────────────── BY_DEFAULT (unchanged behaviour) ───────────────────────
 
 class _DefaultLibraryScreen extends ConsumerWidget {
   const _DefaultLibraryScreen({required this.categoryId});
@@ -293,8 +245,6 @@ class _DefaultLibraryScreen extends ConsumerWidget {
       : _DefaultLibraryToggledSearch(categoryId: categoryId);
 }
 
-/// Default layout (setting off): the search field lives behind the app-bar
-/// search button, Mihon/Komikku style.
 class _DefaultLibraryToggledSearch extends HookConsumerWidget {
   const _DefaultLibraryToggledSearch({required this.categoryId});
   final int categoryId;
@@ -314,16 +264,10 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
-    // Show the search bar when the user opens it OR when a query was set
-    // programmatically (tapping a tag → Search opens the library on that tag).
-    // Phone searches from the app-bar entry instead, which applies to the
-    // filter on submit.
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
-    // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
     final desktop = context.usesDesktopShell;
-    // Native desktop draws the toolbar in the shell bar instead of the body.
     final topBar = showsMergedTopBar(context);
     useEffect(() {
       categoryList.showToastOnError(toast, withMicrotask: true);
@@ -345,23 +289,13 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
           );
         } else {
           return DefaultTabController(
-            // Key on the category set so the controller fully rebuilds instead
-            // of swapping its length in place — the same fix as the grouped
-            // view below. A slow/reconnecting server fetch can replace a
-            // cached category list with a differently-sized live one after the
-            // tab bar is already showing; swapping the length while a drag is
-            // active on the old controller left its disposed AnimationController
-            // wired to a live gesture, crashing with a null-check in
-            // _TabBarState._handleTabControllerAnimationTick.
+            // Recreate the controller when categories change; active drags must not retain disposed animations.
             key: ValueKey('categories-${data!.map((c) => c.id).join(',')}'),
             length: data.length,
             animationDuration: context.reduceMotion
                 ? Duration.zero
                 : kTabScrollDuration,
-            // The route param is a category ID (e.g. from quick-search), not a
-            // positional tab index — the visible list filters out empty/hidden
-            // categories, so id != index. Select the tab whose category matches
-            // the id, falling back to the first tab if it isn't visible (#284).
+            // Route params are category IDs, not visible-tab indices; hidden/empty categories shift positions.
             initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
             child: Scaffold(
               appBar: desktop
@@ -369,8 +303,6 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                   : AppBar(
                       title: phone || !showSearch
                           ? _LibraryTitle(sections: _categorySections(data))
-                          // SearchField no longer pads itself; keep the pre-refactor
-                          // inset and large-tablet width cap here.
                           : SizedBox(
                               width: context.windowSizeClass >=
                                       WindowSizeClass.expanded
@@ -381,9 +313,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                 child: SearchField(
                                   initialText: ref.read(libraryQueryProvider),
                                   highlightDsl: true,
-                                  // Only grab focus when the user opened search; a
-                                  // tag-set query shows results without popping the
-                                  // keyboard.
+                                  // Programmatic tag searches must not steal focus and open the keyboard.
                                   autofocus: searchToggled.value,
                                   onChanged: (val) => ref
                                       .read(libraryQueryProvider.notifier)
@@ -432,8 +362,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                               Builder(
                                 builder: (context) {
                                   return UpdateStatusPopupMenu(
-                                    // Section-headers style has no "current" tab, so
-                                    // the menu targets the whole library there.
+                                    // Section headers have no current tab, so update the whole library.
                                     getCategory: () =>
                                         useTabs && data.isNotBlank
                                         ? data[DefaultTabController.of(
@@ -446,8 +375,6 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                               ),
                             ],
                     ),
-              // Desktop uses the toolbar's anchored panels instead of the
-              // drawer; tablet keeps the end drawer via _organizerButton.
               endDrawerEnableOpenDragGesture: false,
               endDrawer: desktop
                   ? null
@@ -458,9 +385,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                     ),
               body: Builder(
                 builder: (bodyContext) {
-                  // The slot content shows in the shell bar outside this tab
-                  // controller: capture the controller now, so the update
-                  // menu targets the current tab even from the bar.
+                  // Capture this controller: shell-bar content lives outside its DefaultTabController.
                   final tabController = DefaultTabController.of(bodyContext);
                   final trailing = <Widget>[
                     LibraryRandomEntryButton(libraryContext: bodyContext),
@@ -468,8 +393,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                       onSynced: () => _refreshLibraryAfterSync(ref),
                     ),
                     UpdateStatusPopupMenu(
-                      // Section-headers style has no "current" tab, so the
-                      // menu targets the whole library there.
+                      // Section headers have no current tab, so update the whole library.
                       getCategory: () => useTabs && data.isNotBlank
                           ? data[tabController.index]
                           : null,
@@ -524,7 +448,6 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
         }
       },
       refresh: () {
-        // A manual retry means "try the server again" — drop the offline pin.
         ref.read(viewOfflineNowProvider.notifier).set(false);
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.invalidate(categoryControllerProvider);
@@ -537,8 +460,6 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
   }
 }
 
-/// Opt-in layout (More → Settings → Library): the search bar is always visible
-/// under the app bar and sticks into it when scrolled away, Yokai/J2K style.
 class _DefaultLibraryStickySearch extends HookConsumerWidget {
   const _DefaultLibraryStickySearch({required this.categoryId});
   final int categoryId;
@@ -589,33 +510,20 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
             .watch(categoryNumberOfItemsProvider)
             .ifNull(false);
         final showTabs = data!.length > 1 && _showTabBar(style, categoryTabsOn);
-        // Desktop replaces the sliver app bar + TabBar with the toolbar row
-        // and the tab strip, both pinned.
         final desktop = context.usesDesktopShell;
-        // Native desktop draws the toolbar in the shell bar instead of the
-        // pinned header.
         final topBar = showsMergedTopBar(context);
-        // Phone searches from the box under the title, applied to the filter
-        // on submit; tablet keeps the live sticky bar.
         final phone = context.windowSizeClass == WindowSizeClass.compact;
 
         return DefaultTabController(
-          // See the matching comment on the toggled-search variant above: keys
-          // the controller to the category set so it fully rebuilds instead of
-          // swapping its length under an in-flight drag.
+          // Recreate the controller when categories change; active drags must not retain disposed animations.
           key: ValueKey('categories-${data.map((c) => c.id).join(',')}'),
           length: data.length,
           animationDuration: context.reduceMotion
               ? Duration.zero
               : kTabScrollDuration,
-          // The route param is a category ID (e.g. from quick-search), not a
-          // positional tab index — the visible list filters out empty/hidden
-          // categories, so id != index. Select the tab whose category matches
-          // the id, falling back to the first tab if it isn't visible (#284).
+          // Route params are category IDs, not visible-tab indices; hidden/empty categories shift positions.
           initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
           child: Scaffold(
-            // Desktop uses the toolbar's anchored panels instead of the
-            // drawer; tablet keeps the end drawer via _organizerButton.
             endDrawerEnableOpenDragGesture: false,
             endDrawer: desktop
                 ? null
@@ -626,9 +534,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                   ),
             body: Builder(
               builder: (bodyContext) {
-                // The slot content shows in the shell bar outside this tab
-                // controller: capture the controller now, so the update
-                // menu targets the current tab even from the bar.
+                // Capture this controller: shell-bar content lives outside its DefaultTabController.
                 final tabController = DefaultTabController.of(bodyContext);
                 final trailing = <Widget>[
                   LibraryRandomEntryButton(libraryContext: bodyContext),
@@ -652,8 +558,6 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                     controller: scrollController,
                     headerSliverBuilder: (context, innerBoxIsScrolled) {
                       if (topBar) {
-                        // Tabs stay pinned in the page body under the bar;
-                        // the toolbar row itself lives in the shell bar.
                         if (tabStrip == null) return [];
                         return [
                           SliverPersistentHeader(
@@ -699,8 +603,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                       Builder(
                         builder: (context) {
                           return UpdateStatusPopupMenu(
-                            // Section-headers style has no "current" tab, so
-                            // the menu targets the whole library there.
+                            // Section headers have no current tab, so update the whole library.
                             getCategory: () => useTabs && data.isNotBlank
                                 ? data[DefaultTabController.of(context).index]
                                 : null,
@@ -732,12 +635,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                     ),
                 ];
               },
-              // This Scaffold has no appBar (the header slivers replace it), so
-              // its body still carries the status-bar padding and the grids
-              // inside would re-apply it as list padding — a dead gap between
-              // the tab bar and the first row. The header slivers consume that
-              // inset; drop it for the body. The Builder matters: removePadding
-              // must start from the MediaQuery inside the Scaffold body slot.
+              // Remove the status-bar inset inside the body MediaQuery; header slivers already consume it.
               body: Builder(
                 builder: (context) => MediaQuery.removePadding(
                   context: context,
@@ -777,7 +675,6 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
   );
       },
       refresh: () {
-        // A manual retry means "try the server again" — drop the offline pin.
         ref.read(viewOfflineNowProvider.notifier).set(false);
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.invalidate(categoryControllerProvider);
@@ -790,7 +687,6 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
   }
 }
 
-// ─────────────────── non-default group modes ────────────────────────────────
 
 class _GroupedLibraryScreen extends ConsumerWidget {
   const _GroupedLibraryScreen({required this.groupType});
@@ -803,7 +699,6 @@ class _GroupedLibraryScreen extends ConsumerWidget {
       : _GroupedLibraryToggledSearch(groupType: groupType);
 }
 
-/// Default layout (setting off): search behind the app-bar toggle.
 class _GroupedLibraryToggledSearch extends HookConsumerWidget {
   const _GroupedLibraryToggledSearch({required this.groupType});
   final int groupType;
@@ -823,16 +718,10 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
-    // Show the search bar when the user opens it OR when a query was set
-    // programmatically (tapping a tag → Search opens the library on that tag).
-    // Phone searches from the app-bar entry instead, which applies to the
-    // filter on submit.
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
-    // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
     final desktop = context.usesDesktopShell;
-    // Native desktop draws the toolbar in the shell bar instead of the body.
     final topBar = showsMergedTopBar(context);
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
@@ -857,11 +746,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
           );
         }
         return DefaultTabController(
-          // Key on the tab set so the controller fully rebuilds (resetting the
-          // selected index to 0) when the group mode changes the tab count.
-          // Without this, switching e.g. By Source (many tabs) → By Status
-          // (fewer) leaves the controller's index out of range and it churns
-          // into an infinite rebuild flicker.
+          // Recreate the controller when tab IDs change so the selected index remains valid.
           key: ValueKey('group-$groupType-${tabs.length}'),
           length: tabs.length,
           animationDuration: context.reduceMotion
@@ -873,8 +758,6 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                 : AppBar(
                     title: phone || !showSearch
                         ? _LibraryTitle(sections: _groupSections(tabs))
-                        // SearchField no longer pads itself; keep the pre-refactor
-                        // inset and large-tablet width cap here.
                         : SizedBox(
                             width: context.windowSizeClass >=
                                     WindowSizeClass.expanded
@@ -959,8 +842,6 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                             ),
                           ],
                   ),
-            // Desktop uses the toolbar's anchored panels instead of the
-            // drawer; tablet keeps the end drawer via _organizerButton.
             endDrawerEnableOpenDragGesture: false,
             endDrawer: desktop
                 ? null
@@ -971,9 +852,6 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                   ),
             body: Builder(
               builder: (bodyContext) {
-                // Native desktop draws the toolbar in the shell bar: register
-                // it as this route's slot and keep only the tab strip in the
-                // body. This variant's trailing needs no tab controller.
                 final trailing = <Widget>[
                   LibraryRandomEntryButton(libraryContext: bodyContext),
                   IconButton(
@@ -1036,9 +914,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.invalidate(libraryGroupedTabsProvider);
       },
-      // Changing the grouping type reloads this provider; keep the current
-      // tabs — and their Scaffold's endDrawer — up instead of flashing the
-      // spinner Scaffold below.
+      // Keep current tabs and their endDrawer visible while the new grouping loads.
       skipLoadingOnReload: true,
       wrapper: (body) => Scaffold(
         appBar: AppBar(title: Text(context.l10n.library)),
@@ -1048,7 +924,6 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
   }
 }
 
-/// Opt-in layout: always-visible search bar that sticks into the app bar.
 class _GroupedLibraryStickySearch extends HookConsumerWidget {
   const _GroupedLibraryStickySearch({required this.groupType});
   final int groupType;
@@ -1073,14 +948,8 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
-    // Desktop replaces the sliver app bar + TabBar with the toolbar row
-    // and the tab strip, both pinned.
     final desktop = context.usesDesktopShell;
-    // Native desktop draws the toolbar in the shell bar instead of the
-    // pinned header.
     final topBar = showsMergedTopBar(context);
-    // Phone searches from the box under the title, applied to the filter
-    // on submit; tablet keeps the live sticky bar.
     final phone = context.windowSizeClass == WindowSizeClass.compact;
 
     useEffect(() {
@@ -1106,19 +975,13 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
           );
         }
         return DefaultTabController(
-          // Key on the tab set so the controller fully rebuilds (resetting the
-          // selected index to 0) when the group mode changes the tab count.
-          // Without this, switching e.g. By Source (many tabs) → By Status
-          // (fewer) leaves the controller's index out of range and it churns
-          // into an infinite rebuild flicker.
+          // Recreate the controller when tab IDs change so the selected index remains valid.
           key: ValueKey('group-$groupType-${tabs.length}'),
           length: tabs.length,
           animationDuration: context.reduceMotion
               ? Duration.zero
               : kTabScrollDuration,
           child: Scaffold(
-            // Desktop uses the toolbar's anchored panels instead of the
-            // drawer; tablet keeps the end drawer via _organizerButton.
             endDrawerEnableOpenDragGesture: false,
             endDrawer: desktop
                 ? null
@@ -1129,9 +992,6 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                   ),
             body: Builder(
               builder: (bodyContext) {
-                // Native desktop draws the toolbar in the shell bar: register
-                // it as this route's slot and keep only the tab strip pinned.
-                // This variant's trailing needs no tab controller.
                 final trailing = <Widget>[
                   LibraryRandomEntryButton(libraryContext: bodyContext),
                   SyncYomiSyncButton(
@@ -1148,8 +1008,6 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                     controller: scrollController,
                     headerSliverBuilder: (context, innerBoxIsScrolled) {
                       if (topBar) {
-                        // Tabs stay pinned in the page body under the bar;
-                        // the toolbar row itself lives in the shell bar.
                         if (tabStrip == null) return [];
                         return [
                           SliverPersistentHeader(
@@ -1236,8 +1094,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                     ),
                 ];
               },
-              // See _DefaultLibraryStickySearch: drop the status-bar padding
-              // the header slivers already consumed, from inside the body slot.
+              // Remove the body's status-bar inset; header slivers already consume it.
               body: Builder(
                 builder: (context) => MediaQuery.removePadding(
                   context: context,
@@ -1281,9 +1138,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.invalidate(libraryGroupedTabsProvider);
       },
-      // Changing the grouping type reloads this provider; keep the current
-      // tabs — and their Scaffold's endDrawer — up instead of flashing the
-      // spinner Scaffold below.
+      // Keep current tabs and their endDrawer visible while the new grouping loads.
       skipLoadingOnReload: true,
       wrapper: (body) => Scaffold(
         appBar: AppBar(title: Text(context.l10n.library)),
@@ -1293,14 +1148,8 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
   }
 }
 
-// ─────────────────── widgets ────────────────────────────────────────────────
 
-/// A Tab widget for a single library category.
-///
-/// When [categoryNumberOfItemsProvider] is on, it watches the per-category
-/// filtered manga list (the SAME provider that [CategoryMangaList] uses) and
-/// appends "(N)" to the label so the count reflects the currently active query
-/// and filter state — including offline mode where server totalCount is stale.
+/// Counts use the filtered list, including offline data, rather than server totalCount.
 class _CategoryTab extends ConsumerWidget {
   const _CategoryTab({required this.category});
   final CategoryDto category;
@@ -1320,8 +1169,7 @@ class _CategoryTab extends ConsumerWidget {
   }
 }
 
-/// A Tab for one non-default group (source, status, tag, language, …). Mirrors
-/// [_CategoryTab], counting from the same filtered provider the tab body reads.
+/// Counts use the same filtered provider as the group's body.
 class _GroupTab extends ConsumerWidget {
   const _GroupTab({required this.tab, required this.showCount});
   final GroupedTab tab;
@@ -1338,8 +1186,6 @@ class _GroupTab extends ConsumerWidget {
   }
 }
 
-/// One page of a paginated Section-Headers library: an inline, non-sticky
-/// header above that section's content.
 class _PagedSection extends ConsumerWidget {
   const _PagedSection({
     super.key,
@@ -1392,8 +1238,6 @@ class _PagedSection extends ConsumerWidget {
   }
 }
 
-/// A manga grid/list for a non-default group tab (BY_SOURCE, BY_STATUS,
-/// UNGROUPED), fed from [groupedMangaListWithQueryAndFilterProvider].
 class _GroupedMangaList extends ConsumerWidget {
   const _GroupedMangaList({super.key, required this.tabId});
   final int tabId;
@@ -1414,10 +1258,7 @@ class _GroupedMangaList extends ConsumerWidget {
         }
         final items = data;
         return RefreshIndicator(
-          // Grouped views (by source/status/ungrouped) have no single category
-          // to update, so pull triggers a whole-library source-check (matches
-          // Komikku's non-BY_DEFAULT rule). The banner shows its progress; the
-          // spinner only waits on the immediate server re-read.
+          // Grouped tabs have no single category; pull checks the whole library.
           onRefresh: () async {
             ref.read(updateOptimisticProvider.notifier).arm();
             unawaited(
@@ -1426,8 +1267,7 @@ class _GroupedMangaList extends ConsumerWidget {
                   .fetchUpdates()
                   .catchError((Object _) {}),
             );
-            // Categories are fetched once per launch, so one added in the
-            // WebUI could not appear without restarting the app.
+            // Refresh categories too, since another client can add them between launches.
             ref.invalidate(categoryControllerProvider);
             ref.invalidate(libraryMangaListProvider);
             await ref.read(libraryMangaListProvider.future);
@@ -1447,9 +1287,6 @@ class _GroupedMangaList extends ConsumerWidget {
   }
 }
 
-/// "Library", plus a subtitle naming the section on screen while scrolling a
-/// continuous Section-Headers library. Tab mode and single-section libraries
-/// have nothing to disambiguate, so they get no subtitle.
 class _LibraryTitle extends ConsumerWidget {
   const _LibraryTitle({required this.sections});
   final List<LibrarySection> sections;
@@ -1461,7 +1298,6 @@ class _LibraryTitle extends ConsumerWidget {
     final showAllCategories = ref
         .watch(sectionHeadersShowAllCategoriesProvider)
         .ifNull(false);
-    // Continuous scroll only — paginated pages carry their own inline header.
     final isSectionHeaders = !_useTabs(style, showAllCategories);
     final visibleId = ref.watch(libraryVisibleSectionProvider);
     final visibleName = isSectionHeaders && sections.length > 1
@@ -1490,9 +1326,6 @@ class _LibraryTitle extends ConsumerWidget {
   }
 }
 
-/// The persistent-mode search field. Rendered in two hosts: inline under the
-/// app bar ([inAppBar] false, with its own inset) and as the pinned app bar's
-/// title once the inline instance scrolls away ([inAppBar] true).
 class _LibrarySearchBar extends ConsumerWidget {
   const _LibrarySearchBar({required this.inAppBar});
   final bool inAppBar;
@@ -1529,7 +1362,6 @@ class _LibrarySearchBar extends ConsumerWidget {
   }
 }
 
-/// A pinned sliver of fixed [height] hosting the desktop toolbar + tab strip.
 class _SliverFixedHeaderDelegate extends SliverPersistentHeaderDelegate {
   _SliverFixedHeaderDelegate({required this.height, required this.child});
   final double height;
@@ -1578,9 +1410,7 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
-  // The header builder recreates the TabBar whenever the screen rebuilds, so
-  // comparing instances keeps the pinned row current — returning false froze
-  // the first TabBar forever, so renamed/added categories never showed up.
+  // Compare TabBar instances so rebuilt headers reflect renamed or added categories.
   @override
   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) =>
       tabBar != oldDelegate.tabBar;

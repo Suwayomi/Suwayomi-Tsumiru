@@ -35,8 +35,6 @@ class TrackingSettingsScreen extends ConsumerWidget {
       await AppUtils.guard(write, ref.read(toastProvider));
     }
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.tracking);
     final content = ListTileTheme(

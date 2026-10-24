@@ -19,9 +19,6 @@ import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
 import 'tracker_search.dart';
 
-/// Edits a bound track record's status, score, chapters, and dates.
-///
-/// Signature is fixed — Task 8 fills the body.
 class TrackEditor extends ConsumerWidget {
   const TrackEditor({
     super.key,
@@ -34,34 +31,25 @@ class TrackEditor extends ConsumerWidget {
   final Fragment$TrackRecordDto trackRecord;
   final int mangaId;
 
-  // ------------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------------
 
-  /// Runs [mutation], shows a toast on error and invalidates on both paths
-  /// (success: server truth; error: revert to server truth).
   Future<void> _doUpdate(
     WidgetRef ref,
     BuildContext context,
     Future<void> Function() mutation,
   ) async {
     final result = await AsyncValue.guard(mutation);
-    // Both branches touch ref; bail if the sheet was dismissed mid-flight.
+    // Both branches use ref; the sheet may have been dismissed during the mutation.
     if (!context.mounted) return;
     if (result.hasError) {
       result.showToastOnError(ref.read(toastProvider));
-      // Revert: re-read from server.
       ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
       return;
     }
     ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
   }
 
-  // ------------------------------------------------------------------
-  // Epoch-ms helpers
-  // ------------------------------------------------------------------
 
-  /// Converts a LongString epoch-ms ("0" = unset) to a [DateTime], or null.
+  /// Server epoch milliseconds; "0" means unset.
   static DateTime? _epochToDate(String epochMs) {
     if (epochMs == '0' || epochMs.isEmpty) return null;
     final ms = int.tryParse(epochMs);
@@ -69,15 +57,12 @@ class TrackEditor extends ConsumerWidget {
     return DateTime.fromMillisecondsSinceEpoch(ms);
   }
 
-  /// Converts a local-midnight [DateTime] to an epoch-ms String.
+  /// Stores local midnight as epoch milliseconds.
   static String _dateToEpoch(DateTime dt) =>
       DateTime(dt.year, dt.month, dt.day)
           .millisecondsSinceEpoch
           .toString();
 
-  // ------------------------------------------------------------------
-  // Build
-  // ------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -86,9 +71,6 @@ class TrackEditor extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ---------------------------------------------------------------
-        // Header: icon + title (tappable → remoteUrl) + private badge + ⋮
-        // ---------------------------------------------------------------
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
           child: Row(
@@ -134,7 +116,6 @@ class TrackEditor extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                   ),
                 ),
-              // ⋮ overflow menu
               PopupMenuButton<_MenuAction>(
                 icon: const Icon(Icons.more_vert_rounded),
                 onSelected: (action) =>
@@ -166,9 +147,6 @@ class TrackEditor extends ConsumerWidget {
 
         const Divider(height: 1),
 
-        // ---------------------------------------------------------------
-        // Status row
-        // ---------------------------------------------------------------
         _EditorRow(
           label: context.l10n.trackStatus,
           child: DropdownButton<int>(
@@ -196,9 +174,6 @@ class TrackEditor extends ConsumerWidget {
           ),
         ),
 
-        // ---------------------------------------------------------------
-        // Score row
-        // ---------------------------------------------------------------
         _EditorRow(
           label: context.l10n.trackScore,
           child: DropdownButton<String>(
@@ -225,11 +200,6 @@ class TrackEditor extends ConsumerWidget {
           ),
         ),
 
-        // ---------------------------------------------------------------
-        // Chapters read row — tap the value to edit it in a number dialog.
-        // Shows "read / total" when the tracker reports a total (WebUI
-        // parity), else just the read count.
-        // ---------------------------------------------------------------
         _ChaptersRow(
           label: context.l10n.trackChaptersRead,
           chaptersRead: trackRecord.lastChapterRead,
@@ -240,9 +210,6 @@ class TrackEditor extends ConsumerWidget {
               )),
         ),
 
-        // ---------------------------------------------------------------
-        // Start / Finish date rows — only if supportsReadingDates
-        // ---------------------------------------------------------------
         if (tracker.supportsReadingDates) ...[
           _DateRow(
             label: context.l10n.trackStartDate,
@@ -275,9 +242,6 @@ class TrackEditor extends ConsumerWidget {
     );
   }
 
-  // ------------------------------------------------------------------
-  // Overflow menu handler
-  // ------------------------------------------------------------------
 
   Future<void> _handleMenuAction(
     BuildContext context,
@@ -313,7 +277,6 @@ class TrackEditor extends ConsumerWidget {
         if (!context.mounted) return;
         final deleteRemote = await _showRemoveDialog(context);
         if (deleteRemote == null) return; // cancelled
-        // Re-check context.mounted after the dialog await.
         if (!context.mounted) return;
         await _doUpdate(ref, context, () => repo.unbind(
               recordId: trackRecord.id,
@@ -322,8 +285,7 @@ class TrackEditor extends ConsumerWidget {
     }
   }
 
-  /// Shows the remove-confirmation dialog.
-  /// Returns `null` if cancelled, or `bool` for deleteRemoteTrack.
+  /// null cancels; otherwise the result selects whether to delete the remote track too.
   Future<bool?> _showRemoveDialog(BuildContext context) async {
     bool deleteRemote = false;
     return showDialog<bool>(
@@ -367,13 +329,9 @@ class TrackEditor extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Internal layout widgets
-// ---------------------------------------------------------------------------
 
 enum _MenuAction { togglePrivate, changeEntry, remove }
 
-/// A two-column row: label on the left, [child] filling the right.
 class _EditorRow extends StatelessWidget {
   const _EditorRow({required this.label, required this.child});
 
@@ -402,7 +360,6 @@ class _EditorRow extends StatelessWidget {
   }
 }
 
-/// A date row with a tappable value and an optional clear button.
 class _DateRow extends StatelessWidget {
   const _DateRow({
     required this.label,
@@ -460,9 +417,6 @@ class _DateRow extends StatelessWidget {
   }
 }
 
-/// A chapters row: shows "read / total" (or just the read count when the
-/// tracker reports no total) as a tappable value that opens a number dialog to
-/// edit the read count. Mirrors Suwayomi-WebUI's tracker NumberSetting.
 class _ChaptersRow extends StatelessWidget {
   const _ChaptersRow({
     required this.label,
@@ -476,7 +430,6 @@ class _ChaptersRow extends StatelessWidget {
   final int totalChapters;
   final void Function(double) onSubmit;
 
-  // Whole numbers show as "12"; fractional chapters keep their decimal.
   String get _readText => chaptersRead == chaptersRead.truncateToDouble()
       ? chaptersRead.toInt().toString()
       : chaptersRead.toString();

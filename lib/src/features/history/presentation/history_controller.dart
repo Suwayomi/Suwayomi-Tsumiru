@@ -23,16 +23,13 @@ class ReadingHistory extends _$ReadingHistory {
     final items = await ref
         .watch(historyRepositoryProvider)
         .getReadingHistory(inLibrary: inLibrary);
-    // Guard the post-await ref use: the provider may have been disposed during
-    // the fetch, and keepAlive() on a dead ref throws UnmountedRefException.
+    // The provider may be disposed during fetch; keepAlive requires a mounted ref.
     if (ref.mounted) ref.keepAlive();
     return items;
   }
 
   Future<void> refresh() async {
-    // Don't reset to AsyncLoading — that blanks the list to a full-screen
-    // spinner on pull-to-refresh. Keep the current items visible until fresh
-    // data lands (the RefreshIndicator already shows the pull spinner).
+    // Retain current items while the pull-to-refresh indicator shows progress.
     final inLibrary = ref.read(historyFilterInLibraryProvider);
     final result = await AsyncValue.guard(
       () => ref
@@ -42,7 +39,6 @@ class ReadingHistory extends _$ReadingHistory {
     if (!ref.mounted) return;
     final items = result.asData?.value;
     if (items != null) state = AsyncData(items);
-    // On error keep the current list (the pull spinner has dismissed).
   }
 }
 
@@ -65,7 +61,6 @@ class MangaReadingHistory extends _$MangaReadingHistory {
   }
 }
 
-/// The History list filters, as one value; a record so equality is structural.
 typedef HistoryFilter = ({
   bool? unfinishedSeries,
   bool? unread,
@@ -110,8 +105,7 @@ HistoryFilter historyFilter(Ref ref) => (
 bool historyHasActiveFilters(Ref ref) =>
     ref.watch(historyFilterProvider) != kNoHistoryFilter;
 
-/// Applies [filter] to one row. Each filter is tri-state: null passes
-/// everything, true keeps matches, false keeps non-matches.
+/// null passes all rows, true keeps matches, false keeps non-matches.
 bool historyItemMatchesFilter(HistoryItemDto item, HistoryFilter filter) {
   final unfinishedSeries = filter.unfinishedSeries;
   if (unfinishedSeries != null &&
@@ -191,7 +185,6 @@ class HistorySearchQuery extends _$HistorySearchQuery {
   }
 }
 
-// History settings providers
 @riverpod
 class HistoryRetentionDays extends _$HistoryRetentionDays
     with SharedPreferenceClientMixin<int> {

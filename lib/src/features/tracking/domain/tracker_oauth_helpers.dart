@@ -6,14 +6,8 @@
 
 import 'dart:convert';
 
-/// Returns the full URL to open in the external browser to start OAuth for
-/// [trackerId] / [trackerName], given the tracker's [authUrl] base.
-///
-/// Preserves the server bridge state fields, adds an optional native nonce,
-/// and appends the URL-encoded JSON to [authUrl].
-///
-/// [redirectUrl] is the platform callback URL (e.g. `tsumiru://tracker-oauth`
-/// on native, or the web-app origin + route on web).
+/// Preserves bridge state, adds the optional native nonce, and appends URL-encoded JSON to authUrl.
+/// [redirectUrl] is the native callback URL or web-app origin plus callback route.
 String buildTrackerAuthUrl({
   required String authUrl,
   required int trackerId,
@@ -31,11 +25,7 @@ String buildTrackerAuthUrl({
   return '$authUrl&state=$encoded';
 }
 
-/// Parses the `trackerId` from the `state` query parameter of an incoming
-/// tracker-OAuth callback URI.
-///
-/// Returns `null` if the URI has no `state` param, or if `state` is not
-/// valid JSON, or if `trackerId` is absent or not an int.
+/// Returns null for missing/malformed state or a trackerId that is not an int.
 int? parseTrackerIdFromCallback(Uri callbackUri) {
   final rawState = callbackUri.queryParameters['state'];
   if (rawState == null) return null;

@@ -34,8 +34,6 @@ class EditCategoryScreen extends HookConsumerWidget {
       return;
     }, [categoryList.value]);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.editCategory);
     final scaffold = Scaffold(
@@ -63,8 +61,7 @@ class EditCategoryScreen extends HookConsumerWidget {
                 constraints: settingsPageConstraints(context),
                 child: ReorderableListView.builder(
                   padding: settingsPagePadding(context),
-                  // Custom drag handles live in CategoryTile (and the default
-                  // category has none), so suppress the built-in trailing ones.
+                  // CategoryTile owns drag handles; the default category must have none.
                   buildDefaultDragHandles: false,
                   itemCount: data!.length,
                   itemBuilder: (context, index) {
@@ -88,9 +85,7 @@ class EditCategoryScreen extends HookConsumerWidget {
                     if (newIndex < 0 || newIndex >= data.length) return;
                     if (newIndex == oldIndex) return;
                     final moved = data[oldIndex];
-                    // reorderCategory takes the server `order` value, not the raw
-                    // list index — use the order of whatever currently occupies
-                    // the drop slot.
+                    // reorderCategory expects the server order value, not the list index.
                     final targetOrder = data[newIndex].order
                         .getValueOnNullOrNegative();
                     ref

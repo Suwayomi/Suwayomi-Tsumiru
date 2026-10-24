@@ -12,13 +12,10 @@ typedef CategoryCreate = Input$CreateCategoryInput;
 
 typedef CategoryUpdate = Input$UpdateCategoryPatchInput;
 
-/// Meta key marking a category hidden from the Library tab bar. Stored as a
-/// per-category meta flag on the server so it's a property of the category
-/// and syncs across devices.
+/// Server-side category flag shared across devices.
 const String kCategoryHiddenMetaKey = 'tsumiru.hidden';
 
 extension CategoryHiddenX on CategoryDto {
-  /// Whether this category is hidden from the Library tabs.
   bool get isHidden => meta.any(
         (m) => m.key == kCategoryHiddenMetaKey && m.value == 'true',
       );

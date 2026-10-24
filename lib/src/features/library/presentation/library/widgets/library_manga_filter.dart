@@ -8,10 +8,6 @@ import 'package:flutter/material.dart';
 
 import 'library_filter_content.dart';
 
-/// The Filter tab inside the organizer (phone sheet, tablet drawer): the
-/// same short headings and segmented controls as the desktop filter panel,
-/// single column, then rating, Tracked, Categories and Tags. The sheet
-/// scrolls.
 class LibraryMangaFilter extends StatelessWidget {
   const LibraryMangaFilter({super.key});
 

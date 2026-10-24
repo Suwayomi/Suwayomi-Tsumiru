@@ -37,16 +37,11 @@ class HistoryScreen extends ConsumerWidget {
     final hasActiveFilters = ref.watch(historyHasActiveFiltersProvider);
     final desktop = context.usesDesktopShell;
     final phone = context.windowSizeClass == WindowSizeClass.compact;
-    // The persistent-search setting puts the tappable box under the title;
-    // otherwise phone pages get a search icon in the app bar.
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
-    // Dropdown-first matches, same live filter the list uses.
     final historyTop = [
       for (final group in historyGroups) ...group.items,
     ].take(3).toList();
-    // Native desktop draws the search box and actions in the shell bar
-    // instead of an app bar.
     final topBar = showsMergedTopBar(context);
     final search = DesktopSearchField(
       query: searchQuery,
@@ -54,9 +49,7 @@ class HistoryScreen extends ConsumerWidget {
           ref.read(historySearchQueryProvider.notifier).updateQuery(value),
       onNavigate: () =>
           ref.read(historySearchQueryProvider.notifier).clearQuery(),
-      // Built synchronously (not in a child widget): the list
-      // hands out row indices as [selectable] runs, so rows
-      // built here take the first indices in visual order.
+      // Build synchronously so selectable rows receive the first keyboard indices in visual order.
       leadingBuilder: (selectable) => [
         if (historyTop.isNotEmpty) SearchSectionHeader(l10n.history),
         for (final item in historyTop)
@@ -69,8 +62,6 @@ class HistoryScreen extends ConsumerWidget {
           ),
       ],
       hasLeadingResults: historyTop.isNotEmpty,
-      // Enter opens the top History result first; the field
-      // closes the dropdown and clears the query afterwards.
       onSubmitLeading: historyTop.isEmpty
           ? null
           : () {
@@ -86,8 +77,6 @@ class HistoryScreen extends ConsumerWidget {
       IconButton(
         icon: const Icon(Icons.filter_list_rounded),
         tooltip: l10n.filter,
-        // Tinted while filtered, so a short list reads as "filtered" rather
-        // than "nothing read". Komikku uses amber; ours comes from the theme.
         color: hasActiveFilters ? context.theme.colorScheme.primary : null,
         onPressed: () => showModalBottomSheet(
           context: context,
@@ -111,9 +100,6 @@ class HistoryScreen extends ConsumerWidget {
           ? null
           : AppBar(
               leading: backButton,
-              // Desktop uses the one search box: it filters the list live
-              // AND opens the unified dropdown with History first. The
-              // sidebar names the page.
               title: desktop
                   ? Align(
                       alignment: Alignment.centerLeft,
@@ -132,9 +118,6 @@ class HistoryScreen extends ConsumerWidget {
             ),
       body: Column(
         children: [
-          // Tablet keeps its own search bar; desktop searches from the header
-          // box above, so a second box would double-filter. Phone searches
-          // from the app-bar entry, which applies to the filter on submit.
           if (!desktop && !phone)
             Padding(
               padding: const EdgeInsets.all(8),
@@ -158,7 +141,6 @@ class HistoryScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          // History content
           Expanded(
             child: historyState.when(
               data: (data) {
@@ -166,8 +148,6 @@ class HistoryScreen extends ConsumerWidget {
                   return const HistoryEmptyState();
                 }
 
-                // Filters can empty the list just as a search can; without this
-                // the builder below renders a blank page with no explanation.
                 if (historyGroups.isEmpty &&
                     (searchQuery.isNotBlank || hasActiveFilters)) {
                   return const HistoryNoSearchResults();
@@ -214,11 +194,7 @@ class HistoryScreen extends ConsumerWidget {
   }
 }
 
-/// One History dropdown row: the same look as the unified Library rows
-/// (cover, series title, chapter). A pure tile — the History page wraps it in
-/// the dropdown's selectable row (see [SelectableRowBuilder]) so leading rows
-/// join the keyboard order first with the same highlight, hover, Semantics,
-/// and scroll behaviour; Enter runs the same action as a tap.
+/// The caller supplies the selectable wrapper to place history rows first in keyboard order.
 class HistoryDropdownRow extends StatelessWidget {
   const HistoryDropdownRow({
     super.key,

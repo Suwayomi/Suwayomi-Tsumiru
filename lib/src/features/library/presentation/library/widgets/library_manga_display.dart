@@ -18,8 +18,7 @@ import '../controller/library_controller.dart';
 class LibraryMangaDisplay extends ConsumerWidget {
   const LibraryMangaDisplay({super.key, this.scrollable = true});
 
-  /// False when nested inside another scrollable (the organizer Display tab
-  /// embeds this above the badges section).
+  /// Disable scrolling when embedded in another scrollable.
   final bool scrollable;
 
   @override
@@ -49,8 +48,6 @@ class LibraryMangaDisplay extends ConsumerWidget {
       physics: scrollable ? null : const NeverScrollableScrollPhysics(),
       children: [
         OrganizerHeading(context.l10n.displayMode),
-        // A chip row for display mode, not a tall radio list — keeps
-        // the sheet compact.
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
           child: Wrap(
@@ -159,9 +156,7 @@ class LibraryMangaDisplay extends ConsumerWidget {
             ),
           ),
         ],
-        // Only modes that draw the title on the theme surface, where an
-        // uncapped title can push its own row taller. The compact grid is out:
-        // its title sits on the art, so growing it would swallow the cover.
+        // Uncapped titles require surface space; compact-grid titles would grow over the cover art.
         if (selectedMode == DisplayMode.comfortableGrid ||
             selectedMode == DisplayMode.list ||
             selectedMode == DisplayMode.descriptiveList)

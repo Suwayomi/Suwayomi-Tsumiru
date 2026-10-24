@@ -20,16 +20,7 @@ import '../../../data/tracker_repository.dart';
 import '../../../domain/tracker_oauth_helpers.dart';
 import '../../login/tracker_credentials_sheet.dart';
 
-/// Opens the appropriate login UI for [tracker]:
-/// - OAuth tracker (`tracker.authUrl != null`): opens the tracker's auth URL
-///   in the external browser. The OS will return the OAuth callback via the
-///   `tsumiru://tracker-oauth` deep link, handled by the listener set up in
-///   `main.dart`.
-/// - Credential tracker (`tracker.authUrl == null`): a bottom-sheet with
-///   username + password fields.
-///
-/// On credentials success, invalidates [trackersProvider] and shows a success
-/// toast. OAuth success is handled asynchronously by the deep-link listener.
+/// OAuth completes asynchronously through the callback listener; credentials invalidate trackers on success.
 Future<void> loginToTracker(WidgetRef ref, Fragment$TrackerDto tracker) async {
   final context = ref.context;
   if (!context.mounted) return;
@@ -38,9 +29,6 @@ Future<void> loginToTracker(WidgetRef ref, Fragment$TrackerDto tracker) async {
   final repo = ref.read(trackerRepositoryProvider);
 
   if (tracker.authUrl != null) {
-    // Deep-link OAuth flow: build the full auth URL with state, then open it
-    // in the external browser. The OS hands the callback back via
-    // tsumiru://tracker-oauth, which is handled in main.dart.
     if (kIsWeb) {
       final builtUrl = buildTrackerAuthUrl(
         authUrl: tracker.authUrl!,

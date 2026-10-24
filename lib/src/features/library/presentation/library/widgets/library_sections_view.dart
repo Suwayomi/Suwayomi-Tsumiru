@@ -20,13 +20,9 @@ import '../controller/library_grouping.dart';
 import '../controller/library_manga_list.dart';
 import 'library_manga_grid_view.dart';
 
-/// One section of the headers-style library.
 typedef LibrarySection = ({int id, String name});
 
-/// The "section headers" group style: one continuous scroll where every group
-/// is introduced by a sticky header, instead of a tab per group.
-///
-/// The only writer of [libraryVisibleSectionProvider].
+/// Writes libraryVisibleSectionProvider from scroll position; never drives scrolling from it.
 class LibrarySectionsView extends HookConsumerWidget {
   const LibrarySectionsView({
     super.key,
@@ -37,19 +33,14 @@ class LibrarySectionsView extends HookConsumerWidget {
 
   final List<LibrarySection> sections;
 
-  /// True for BY_DEFAULT, whose sections are categories and read from
-  /// [categoryMangaListWithQueryAndFilterProvider]; false for every other group
-  /// mode, which reads [groupedMangaListWithQueryAndFilterProvider].
+  /// True uses category providers; false uses grouped-list providers.
   final bool byCategory;
 
-  /// Append "(N)" to each header, honouring the same preference as the tabs.
   final bool showCounts;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // One GlobalKey per section id, held in a hook so the tracker below keeps
-    // following the same element across rebuilds. Pruned so a vanished section
-    // can't leak its key.
+    // Retain keys across rebuilds so section tracking follows the same elements.
     final headerKeys = useRef(<int, GlobalKey>{});
     for (final s in sections) {
       headerKeys.value.putIfAbsent(s.id, GlobalKey.new);
@@ -58,7 +49,6 @@ class LibrarySectionsView extends HookConsumerWidget {
 
     final scrollController = useScrollController();
 
-    // Tracks which section is at the top of the viewport.
     useEffect(() {
       void trackVisibleSection() {
         if (!scrollController.hasClients) return;
@@ -69,8 +59,7 @@ class LibrarySectionsView extends HookConsumerWidget {
               entry.value.currentContext?.findRenderObject() as RenderBox?;
           if (box == null || !box.attached) continue;
           final y = box.localToGlobal(Offset.zero).dy;
-          // The active pinned header sits at or just above the viewport's top
-          // edge; of those, the largest y (closest to it) is the current one.
+          // The closest header at or above the viewport top is the active pinned section.
           if (y <= 1 && (topY == null || y > topY)) {
             topY = y;
             topId = entry.key;
@@ -82,21 +71,16 @@ class LibrarySectionsView extends HookConsumerWidget {
       }
 
       scrollController.addListener(trackVisibleSection);
-      // Seed after the first layout: no scroll event fires at the very top, so
-      // the tracked section would otherwise stay null until the user scrolled.
+      // Initial layout emits no scroll event; seed the visible section after layout.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) trackVisibleSection();
       });
       return () => scrollController.removeListener(trackVisibleSection);
-      // Re-seed on section-count changes: a group appearing or disappearing
-      // shifts what's on screen at the current offset.
+      // Group changes shift the section at the current offset.
     }, [scrollController, sections.length]);
 
     return RefreshIndicator(
-      // No single group under the finger here, so pull runs a whole-library
-      // source check — same rule the grouped tabs use.
       onRefresh: () async {
-        // A pull means "try the server again" — drop the offline pin.
         ref.read(viewOfflineNowProvider.notifier).set(false);
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.read(updateOptimisticProvider.notifier).arm();
@@ -126,8 +110,7 @@ class LibrarySectionsView extends HookConsumerWidget {
   }
 }
 
-/// A header + its manga, as a [SliverMainAxisGroup] so the header un-pins
-/// exactly when its own group scrolls away.
+// SliverMainAxisGroup unpins a header when its own group scrolls away.
 class _Section extends ConsumerWidget {
   const _Section({
     super.key,
@@ -141,8 +124,6 @@ class _Section extends ConsumerWidget {
   final bool byCategory;
   final bool showCount;
 
-  /// Attached to the rendered header so [LibrarySectionsView]'s scroll
-  /// listener can read its on-screen position.
   final GlobalKey headerKey;
 
   @override
@@ -156,7 +137,6 @@ class _Section extends ConsumerWidget {
           );
     final items = listAsync.value ?? const [];
 
-    // A lone header over no rows just looks broken.
     if (items.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -170,7 +150,7 @@ class _Section extends ConsumerWidget {
             title: showCount
                 ? '${section.name} (${items.length})'
                 : section.name,
-            // Opaque, so rows scrolling under a pinned header stay hidden.
+            // Opaque headers hide rows scrolling underneath.
             background: context.theme.colorScheme.surface,
             foreground: context.theme.colorScheme.primary,
           ),

@@ -13,13 +13,10 @@ import '../../../../../widgets/custom_checkbox_list_tile.dart';
 import '../../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
 import '../../../../../widgets/organizer_heading.dart';
 
-/// The "Badges" tab inside [LibraryMangaOrganizer]: everything that feeds
-/// `MangaBadgesRow` and the cover overlays.
 class LibraryMangaBadges extends ConsumerWidget {
   const LibraryMangaBadges({super.key, this.scrollable = true});
 
-  /// False when nested inside another scrollable (the Display tab embeds the
-  /// badges below the display options).
+  /// Disable scrolling when embedded in another scrollable.
   final bool scrollable;
 
   @override
@@ -49,13 +46,11 @@ class LibraryMangaBadges extends ConsumerWidget {
             ],
           ),
         ),
-        // Server-side download count.
         CustomCheckboxListTile(
           title: context.l10n.downloaded,
           provider: downloadedBadgeProvider,
           onChanged: ref.read(downloadedBadgeProvider.notifier).update,
         ),
-        // This device's offline downloads — a subset of the above.
         CustomCheckboxListTile(
           title: context.l10n.onDevice,
           provider: onDeviceBadgeProvider,
@@ -73,13 +68,11 @@ class LibraryMangaBadges extends ConsumerWidget {
               .read(showContinueReadingButtonProvider.notifier)
               .update,
         ),
-        // Covers Local Source too, as a folder glyph.
         CustomCheckboxListTile(
           title: context.l10n.sourceBadge,
           provider: sourceBadgeProvider,
           onChanged: ref.read(sourceBadgeProvider.notifier).update,
         ),
-        // Drawn as the language's flag emoji.
         CustomCheckboxListTile(
           title: context.l10n.languageBadge,
           provider: languageBadgeProvider,
@@ -93,9 +86,6 @@ class LibraryMangaBadges extends ConsumerWidget {
   }
 }
 
-/// Drag-to-reorder list of every cover badge, each with an inline button that
-/// flips it between the cover's top-left and top-right clusters. Also used by
-/// the desktop Display panel.
 class BadgeLayoutList extends ConsumerWidget {
   const BadgeLayoutList({super.key});
 
@@ -103,8 +93,7 @@ class BadgeLayoutList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final layout = ref.watch(libraryBadgeLayoutProvider);
 
-    // onReorderItem already accounts for the removal, unlike the deprecated
-    // onReorder, so newIndex is the final resting slot.
+    // onReorderItem already adjusts for removal; newIndex is the final slot.
     void move(int oldIndex, int newIndex) {
       final ids = layout.map((p) => p.badge.id).toList();
       ids.insert(newIndex, ids.removeAt(oldIndex));
@@ -125,7 +114,7 @@ class BadgeLayoutList extends ConsumerWidget {
     }
 
     return ReorderableListView(
-      // Nested inside the organizer's own ListView, which does the scrolling.
+      // The organizer's outer ListView owns scrolling.
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
@@ -165,8 +154,7 @@ class _BadgeLayoutRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // Explicit handle, so the side button stays tappable instead of
-          // starting a drag.
+          // Use an explicit drag handle so the side button stays tappable.
           ReorderableDragStartListener(
             index: index,
             child: const Padding(

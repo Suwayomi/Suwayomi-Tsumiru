@@ -80,7 +80,7 @@ class CategoryMangaList extends HookConsumerWidget {
     final mangaList = ref.watch(provider);
     refresh() => ref.invalidate(categoryMangaListProvider(categoryId));
     useEffect(() {
-      // Effect bodies run during build; invalidating a provider there throws.
+      // Effects run during build, when provider invalidation is forbidden.
       if (mangaList.isNotLoading) {
         Future.microtask(() {
           if (context.mounted) refresh();
@@ -89,8 +89,6 @@ class CategoryMangaList extends HookConsumerWidget {
       return;
     }, []);
 
-    // Multi-select: long-press starts selection, tap toggles
-    // while selecting else opens the manga. Selection is per this category list.
     final selection = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
     void toggle(int id) {
@@ -107,25 +105,18 @@ class CategoryMangaList extends HookConsumerWidget {
       }
     }
 
-    // Mark every chapter of the selected series read / unread, via the bulk
-    // chapter mutation (one batch per series).
     Future<void> markSelection(bool read) async {
       final ids = selection.value.toList();
       selection.value = const {};
       final repo = ref.read(mangaBookRepositoryProvider);
       final offlineDb = ref.read(offlineReadDatabaseProvider);
-      // Captured up front: the loop below awaits a network call per series, so
-      // this widget may unmount before a later iteration's fire-and-forget
-      // tracker push runs. A container obtained now stays valid regardless —
-      // unlike `ref.read`, which throws once this element is disposed.
+      // Capture container.read before awaits so tracker pushes remain valid after widget disposal.
       final containerRead = ProviderScope.containerOf(
         context,
         listen: false,
       ).read;
       var allOk = true;
       for (final id in ids) {
-        // Server first; offline, fall back to the catalog chapter rows
-        // instead of failing the whole series silently.
         List<int> cids;
         try {
           final chapters = await repo.getChapterList(id);
@@ -138,13 +129,10 @@ class CategoryMangaList extends HookConsumerWidget {
           cids = [for (final c in await offlineDb.chaptersForManga(id)) c.id];
         }
         if (cids.isNotEmpty) {
-          // Offline-aware write-through: the local rows are updated first (so
-          // the change survives offline + restart and keeps Resume truthful),
-          // then the server bulk write — same fix as the chapter-list icons.
+          // Persist local read state before the server write so offline changes survive restart.
           final ok = await recordReadState(ref, chapterIds: cids, isRead: read);
           if (!ok) allOk = false;
-          // Marking a whole series read here bypasses the reader, so push the
-          // new progress to the bound tracker(s) explicitly (manual path).
+          // Bulk mark-read bypasses the reader, so tracker progress needs an explicit push.
           if (read && ok) {
             unawaited(
               maybeTrackProgressOnReadFetch(
@@ -157,13 +145,11 @@ class CategoryMangaList extends HookConsumerWidget {
           }
         }
       }
-      // refresh() only re-buckets cached DTOs; unreadCount needs a real refetch.
+      // refresh() only re-buckets cached DTOs; unreadCount needs a refetch.
       ref.invalidate(libraryMangaListProvider);
       refresh();
       if (!context.mounted) return;
-      // A server failure with offline inactive means nothing was persisted, so
-      // surface it instead of a false success. (An offline-active failure is
-      // queued locally and up-syncs later, so the success message still holds.)
+      // Offline failures are queued locally; otherwise a failed server write must surface.
       if (!allOk && !ref.read(offlineActiveProvider)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.errorSomethingWentWrong)),
@@ -184,8 +170,7 @@ class CategoryMangaList extends HookConsumerWidget {
     }
 
     return mangaList.showUiWhenData(
-      // Own loading state per tab, so the offline escape hatch needs to
-      // live here too, not only on the library-level gates.
+      // Each tab loads independently and needs its own offline escape hatch.
       loadingWidget: const OfflineViewLoading(),
       offlineEscapeHatch: true,
       context,
@@ -210,14 +195,9 @@ class CategoryMangaList extends HookConsumerWidget {
         );
 
         final list = RefreshIndicator(
-          // Pull = "check this category for new chapters, and pull down the
-          // latest" (Mihon/Komikku parity). The source-check runs server-side
-          // and the progress banner reflects it, so the spinner only waits on
-          // the immediate re-read, not the whole update. The standing rule in
-          // LibraryScreen re-reads again when the update finishes.
+          // The spinner waits for the immediate re-read; update completion triggers another refresh.
           onRefresh: () async {
-            // A pull means "try the server again" — drop the offline pin.
-            // Only a user gesture clears it; the mount effect must not.
+            // Only a user gesture may clear the offline pin, never the mount effect.
             ref.read(viewOfflineNowProvider.notifier).set(false);
             ref.read(serverUnreachableProvider.notifier).set(false);
             ref.read(updateOptimisticProvider.notifier).arm();
@@ -233,8 +213,6 @@ class CategoryMangaList extends HookConsumerWidget {
           child: grid,
         );
 
-        // While selecting, swallow the system back to exit selection first, and
-        // show a contextual action bar over the grid.
         return PopScope(
           canPop: !selecting,
           onPopInvokedWithResult: (didPop, _) {
@@ -262,25 +240,15 @@ class CategoryMangaList extends HookConsumerWidget {
                                 .read(authCredentialsStoreProvider.notifier)
                                 .captureSession();
                             final ids = selection.value.toList();
-                            // Captured before any await — context is guaranteed mounted here.
-                            // After the dialog awaits below it may no longer be.
+                            // Capture the container while context is mounted, before opening dialogs.
                             final container = ProviderScope.containerOf(
                               context,
                               listen: false,
                             );
-                            // Let the user choose how much to keep (next-N / all-unread
-                            // / all) instead of silently downloading every chapter —
-                            // picking "all" across a read library can queue thousands.
-                            // The picker also surfaces "stop keeping" and "remove from
-                            // device" so bulk offline management is possible from the
-                            // library without opening each series individually.
                             final picked = await pickOfflineKeepRule(context);
                             if (picked == null) return;
 
                             if (picked.remove) {
-                              // "Remove from device" — confirm before deleting, always
-                              // (even for a single series, since deletion is irreversible
-                              // without a re-download).
                               if (!context.mounted) return;
                               final ok =
                                   await showDialog<bool>(
@@ -328,13 +296,7 @@ class CategoryMangaList extends HookConsumerWidget {
                             }
 
                             if (picked.rule == OfflineKeepRule.off) {
-                              // "Stop keeping offline" — off rule, no deletion. Route
-                              // through the shared changeKeepRule helper (same as the
-                              // Offline files screen) instead of a bare setKeepRule: it
-                              // reconciles under ownership and rewrites the background
-                              // work spec, so the overnight worker stops treating these
-                              // series as kept. A bare setKeepRule leaves the spec stale
-                              // and the worker keeps downloading their chapters.
+                              // changeKeepRule also rewrites background work; bare setKeepRule leaves downloads scheduled.
                               if (!current()) return;
                               selection.value = const {};
                               for (final id in ids) {
@@ -368,13 +330,7 @@ class CategoryMangaList extends HookConsumerWidget {
                             final runtime = ref.read(
                               offlineRuntimeStorageProvider.notifier,
                             );
-                            // setKeepRule is a pure UPDATE: with no offlineMangas row it
-                            // silently touches nothing, so the rule never persists and
-                            // the reconciler later early-exits on the missing row. A
-                            // library row is only mirrored lazily (unawaited, and only
-                            // when the list came from the server), so it can be absent
-                            // here. Mirror it now from the DTO we already hold, then set
-                            // the rule against a row that is guaranteed to exist.
+                            // setKeepRule only updates existing rows; mirror selected manga before setting their rules.
                             final selected = items
                                 .where((m) => ids.contains(m.id))
                                 .toList();
@@ -393,13 +349,7 @@ class CategoryMangaList extends HookConsumerWidget {
                               });
                             }
                             if (!current()) return;
-                            // Always fetch fresh chapter state before reconciling — the
-                            // stored serverIsDownloaded mirror the reconciler routes on
-                            // goes stale, which otherwise sends chapters to a device-only
-                            // download (bypassing the server) or to a server re-enqueue
-                            // that never pulls to the device. syncAndReconcileMangaSet
-                            // re-syncs, reconciles, registers the second-hop pull, and
-                            // starts the download in the background.
+                            // Refresh serverIsDownloaded before reconciliation so downloads take the correct server/device route.
                             unawaited(
                               syncAndReconcileMangaSet(
                                 container,
@@ -496,8 +446,6 @@ class CategoryMangaList extends HookConsumerWidget {
                           .toList();
                       if (selected.isEmpty) return;
                       selection.value = const {};
-                      // One series → the per-series toggle dialog; many → the
-                      // bulk tri-state dialog.
                       await showDialog<void>(
                         context: context,
                         builder: (context) => selected.length == 1
@@ -529,8 +477,6 @@ class CategoryMangaList extends HookConsumerWidget {
   }
 }
 
-/// Bottom action bar shown while library manga are multi-selected: mark
-/// read/unread, edit categories (bulk), keep offline, and download to server.
 class _SelectionBar extends StatelessWidget {
   const _SelectionBar({
     required this.count,
@@ -575,8 +521,6 @@ class _SelectionBar extends StatelessWidget {
         ),
         Text('$count', style: context.textTheme.titleMedium),
       ],
-      // Komikku LibraryBottomActionMenu shape: a few primary actions inline, the
-      // rest in a "More" (⋮) overflow — so the bar never clips on a phone.
       actions: [
         IconButton(
           tooltip: 'Edit categories',

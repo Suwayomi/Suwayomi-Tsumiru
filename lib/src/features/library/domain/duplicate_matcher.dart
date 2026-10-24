@@ -36,14 +36,10 @@ List<DupEntry> titleDuplicates({
       .toList();
 }
 
-/// Below this normalized length, titles are too generic to trust as a
-/// description substring match (e.g. "cat" would hit half the library).
+/// Shorter titles are too generic for description substring matching.
 const int kMinDescriptionMatchTitleLength = 4;
 
-/// Both sides padded with spaces so containment respects word boundaries
-/// ("fire" must not hit inside "bonfire"). [findLibraryDuplicateGroups]
-/// precomputes this per entry to keep its pairwise pass off the
-/// normalization cost.
+/// Space padding prevents matching "fire" inside "bonfire".
 String? _paddedNormalizedDescription(String? description) {
   if (description == null || description.isEmpty) return null;
   final normalized = normalizeTitle(description);
@@ -113,9 +109,7 @@ class _UnionFind {
 
 String _trackerKey(TrackerPair pair) => '${pair.trackerId}|${pair.remoteId}';
 
-/// Tracker keys held by two or more distinct members — the bindings that
-/// actually tie the cluster together, as opposed to a stray binding one
-/// member happens to carry.
+/// Only bindings shared by distinct members connect the cluster.
 Set<String> _sharedTrackerKeys(List<DupEntry> members) {
   final holders = <String, Set<int>>{};
   for (final member in members) {
@@ -129,10 +123,7 @@ Set<String> _sharedTrackerKeys(List<DupEntry> members) {
   };
 }
 
-/// Which edge kinds are actually present among a cluster's members — a
-/// fresh scan rather than provenance-tracking during union, since any two
-/// members sharing a title/tracker key are a real edge regardless of which
-/// union operation happened to connect the cluster.
+/// Recompute all real edges; union provenance omits edges that did not join clusters.
 Set<DupReason> _reasonsWithinCluster(List<DupEntry> members) {
   final reasons = <DupReason>{};
 
@@ -153,12 +144,7 @@ Set<DupReason> _reasonsWithinCluster(List<DupEntry> members) {
   return reasons;
 }
 
-/// Tracker-group header comes from a *shared* pair only — the lowest-id
-/// member holding one, then its lowest-(trackerId, remoteId) shared pair.
-/// A member that joined via title but carries an unrelated binding must not
-/// donate that binding's title as the group header. Always well-defined
-/// when the tracker reason is set: some pair is held by two members, and
-/// stage-2 attachments only ever add members.
+/// Use the lowest-id member's lowest shared tracker pair; unrelated bindings cannot name the group.
 String _headerFor(List<DupEntry> members, Set<DupReason> reasons) {
   final byId = List.of(members)..sort((a, b) => a.id.compareTo(b.id));
 
@@ -182,30 +168,14 @@ String _headerFor(List<DupEntry> members, Set<DupReason> reasons) {
   return byId.first.title;
 }
 
-/// Library-wide duplicate grouping (#117).
-///
-/// Two-stage on purpose — see the Phase 1 design note this ports:
-/// - **Stage 1** unions title + tracker edges via a parent-array
-///   union-find. Both relations are true equivalences (normalized-title
-///   equality; shared tracker binding), so chaining them transitively is
-///   safe.
-/// - **Stage 2** (description substring containment) is NOT transitive —
-///   two unrelated titles can each appear inside one hub's description
-///   without being duplicates of each other. So a description edge only
-///   ever attaches a still-free entry to an existing stage-1 cluster, or
-///   pairs two free entries into a brand-new 2-member group. Once an entry
-///   is touched by stage 2 (attached or paired), it becomes a dead end —
-///   it never sources or receives another description edge. This is what
-///   stops a hub description from gluing two unrelated clusters together.
+// Title/tracker edges are transitive; description edges may only attach or pair free entries once.
 typedef _Stage1 = ({
   Map<int, List<int>> memberIndicesByRoot,
   Map<int, Set<DupReason>> reasonsByRoot,
   Map<int, int> rootByIndex,
 });
 
-/// Stage 1: union title + tracker edges (both true equivalences, so chaining
-/// them transitively is safe). O(n) and never needs to yield, so it's shared
-/// verbatim by the sync and chunked entry points below.
+/// Title and tracker equivalence edges may chain transitively.
 _Stage1 _unionStage1(List<DupEntry> entries) {
   final n = entries.length;
   final uf = _UnionFind(n);
@@ -239,8 +209,7 @@ _Stage1 _unionStage1(List<DupEntry> entries) {
     clusterIndices.putIfAbsent(uf.find(i), () => []).add(i);
   }
 
-  // root -> mutable member-index list / reasons, real clusters (size >= 2)
-  // only; free (still-singleton) indices never enter this map.
+  // Singletons stay outside this map so description matching can still pair them.
   final memberIndicesByRoot = <int, List<int>>{};
   final reasonsByRoot = <int, Set<DupReason>>{};
   final rootByIndex = <int, int>{};
@@ -263,8 +232,6 @@ _Stage1 _unionStage1(List<DupEntry> entries) {
   );
 }
 
-/// Turns root-clusters + free description pairs into the final sorted
-/// [DupGroup] list. Shared by the sync and chunked entry points below.
 List<DupGroup> _assembleGroups(
   List<DupEntry> entries,
   Map<int, List<int>> memberIndicesByRoot,
@@ -291,7 +258,7 @@ List<DupGroup> _assembleGroups(
     ));
   }
 
-  // Header ties break on lowest member id — List.sort isn't stable.
+  // Break header ties by member id because List.sort is unstable.
   result.sort((a, b) {
     final byHeader = a.header.compareTo(b.header);
     return byHeader != 0
@@ -316,8 +283,7 @@ List<DupGroup> findLibraryDuplicateGroups(
   final pairGroups = <List<int>>[];
 
   if (checkDescriptions) {
-    // Normalize once per entry — the pairwise loop below is O(n²) and must
-    // not pay NFKC/regex cost per pair.
+    // Normalize once per entry to keep NFKC/regex work out of the O(n²) loop.
     final normTitle = List.generate(n, (i) => normalizeTitle(entries[i].title));
     final paddedDescription = List.generate(
       n,
@@ -333,8 +299,7 @@ List<DupGroup> findLibraryDuplicateGroups(
     final orderedIndices = List.generate(n, (i) => i)
       ..sort((a, b) => entries[a].id.compareTo(entries[b].id));
 
-    // Attached-or-paired free indices become dead ends; this is what
-    // enforces "attachments never chain".
+    // Consumed free entries become dead ends so description attachments never chain.
     final consumedFree = <int>{};
 
     for (var a = 0; a < orderedIndices.length; a++) {
@@ -383,15 +348,10 @@ List<DupGroup> findLibraryDuplicateGroups(
   );
 }
 
-/// WebUI's chunk-size constant for cooperative-yield loops.
+/// Entries processed between cooperative yields on web.
 const int kDuplicateScanWebChunkSize = 200;
 
-/// Web has no isolates — `compute()` runs its callback on the same thread —
-/// so the O(n²) description pass must yield cooperatively itself, or it
-/// freezes the tab for the duration of the scan. Stage 1 (title/tracker)
-/// stays the same tight synchronous loop as [findLibraryDuplicateGroups]
-/// (it's only O(n)); only the description pass chunks its outer loop at
-/// [chunkSize] entries with a zero-duration delay between slices.
+/// Yields during the O(n²) pass because compute() runs on the main thread on web.
 Future<List<DupGroup>> findLibraryDuplicateGroupsChunked(
   List<DupEntry> entries, {
   required bool checkDescriptions,
@@ -423,9 +383,7 @@ Future<List<DupGroup>> findLibraryDuplicateGroupsChunked(
     final orderedIndices = List.generate(n, (i) => i)
       ..sort((a, b) => entries[a].id.compareTo(entries[b].id));
 
-    // Attached-or-paired free indices become dead ends; this is what
-    // enforces "attachments never chain". Kept in lockstep with the sync
-    // version's stage 2 above — the only difference is the yield below.
+    // Consumed free entries become dead ends so description attachments never chain.
     final consumedFree = <int>{};
 
     for (var a = 0; a < orderedIndices.length; a++) {
@@ -477,8 +435,7 @@ Future<List<DupGroup>> findLibraryDuplicateGroupsChunked(
   );
 }
 
-/// Top-level so `compute()` can spawn it in a new isolate — a closure would
-/// capture non-transferable state and fail across the isolate boundary.
+/// Top-level isolate entry point avoids capturing non-transferable closure state.
 List<DupGroup> scanForDuplicates((List<DupEntry>, bool) args) {
   final (entries, checkDescriptions) = args;
   return findLibraryDuplicateGroups(
@@ -487,8 +444,7 @@ List<DupGroup> scanForDuplicates((List<DupEntry>, bool) args) {
   );
 }
 
-/// Web entry point: no isolates, so route through the self-yielding chunked
-/// scan instead of the plain sync one `compute()` uses natively.
+/// Uses cooperative yields because web has no worker isolates.
 Future<List<DupGroup>> scanForDuplicatesChunkedWeb(
   List<DupEntry> entries,
   bool checkDescriptions,

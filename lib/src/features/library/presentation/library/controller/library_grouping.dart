@@ -21,11 +21,7 @@ import 'library_manga_list.dart';
 
 part 'library_grouping.g.dart';
 
-// ─────────────────── lightweight proxy types ────────────────────────────────
 
-/// Duck-typed projection of [MangaDto] fields needed for grouping.
-/// The test creates these directly; the real code converts MangaDto via
-/// [mangaToProxy].
 typedef MangaProxy = ({
   int id,
   String sourceId,
@@ -34,16 +30,13 @@ typedef MangaProxy = ({
   String status,
   List<int> categoryIds,
 
-  /// Track status integers from all bound track records.
-  /// Empty for untracked manga.
+  /// All bound tracker statuses; empty when untracked.
   List<int> trackStatuses,
 
-  /// Source genres + the user's own tags, as stored (original casing).
-  /// Empty for untagged manga.
+  /// Source genres and custom tags in their original casing.
   List<String> tags,
 });
 
-/// Duck-typed projection of [CategoryDto] fields needed for grouping.
 typedef CategoryProxy = ({int id, String name});
 
 MangaProxy mangaToProxy(MangaDto m) => (
@@ -54,24 +47,17 @@ MangaProxy mangaToProxy(MangaDto m) => (
   status: m.status.name,
   categoryIds: m.categories.nodes.map((c) => c.id).toList(),
   trackStatuses: m.trackRecords.nodes.map((n) => n.status).toList(),
-  // Same definition the tags FILTER uses, so buckets and `tag:` searches
-  // never disagree.
+  // Use the same tag definition as the filter and tag: search.
   tags: [...m.genre, ...(m.metaData.userTags ?? const <String>[])],
 );
 
 CategoryProxy categoryToProxy(CategoryDto c) => (id: c.id, name: c.name);
 
-// ─────────────────── GroupedTab ─────────────────────────────────────────────
 
 /// Tab ID is the category ID, status rank, or zero for other groups.
 typedef GroupedTab = ({int id, String name, List<int> mangaIds});
 
-// ─────────────────── pure grouping function ──────────────────────────────────
 
-/// Returns the ordered list of [GroupedTab]s for [groupType].
-///
-/// This is a PURE function with no I/O — all data is passed in. The test
-/// suite calls it directly with [MangaProxy] / [CategoryProxy] fakes.
 List<GroupedTab> groupLibrary(
   List<MangaProxy> all,
   int groupType,
@@ -150,20 +136,17 @@ List<GroupedTab> _groupBySource(List<MangaProxy> all) {
     );
     entry.mangaIds.add(m.id);
   }
-  // A source installed once per locale (two MangaDex ids, say) shares its name
-  // across buckets, so those get their language code appended below.
+  // Sources installed for multiple locales share a name; append language to distinguish them.
   final nameCounts = <String, int>{};
   for (final b in buckets.values) {
     nameCounts[b.name] = (nameCounts[b.name] ?? 0) + 1;
   }
-  // Sort source tabs case-insensitively by name.
   final sorted = buckets.entries.toList()
     ..sort(
       (a, b) =>
           a.value.name.toLowerCase().compareTo(b.value.name.toLowerCase()),
     );
-  // Each tab needs a UNIQUE id (the grouped-list provider is keyed by tab id).
-  // Source ids are numeric strings; fall back to the string hash if not.
+  // The grouped-list provider requires unique tab ids; nonnumeric source ids use their hash.
   return sorted.map((e) {
     final isDuplicateName = (nameCounts[e.value.name] ?? 0) > 1;
     final label = isDuplicateName && e.value.lang != kLocalSourceLang
@@ -183,7 +166,6 @@ List<GroupedTab> _groupByStatus(List<MangaProxy> all) {
     final status = statusOrder.containsKey(m.status) ? m.status : 'UNKNOWN';
     buckets.putIfAbsent(status, () => []).add(m.id);
   }
-  // Sort by statusOrder rank.
   final sorted = buckets.entries.toList()
     ..sort(
       (a, b) => (statusOrder[a.key] ?? 7).compareTo(statusOrder[b.key] ?? 7),
@@ -209,19 +191,15 @@ String _statusLabel(String status) => switch (status) {
   _ => 'Unknown',
 };
 
-/// Tab id for a bucket keyed by name rather than a server id — a positional
-/// index would shift as soon as a new tag or language appeared. The prefix
-/// separates the namespaces.
+/// Name-derived IDs remain stable as buckets change; prefixes separate namespaces.
 int _nameId(String prefix, String name) => Object.hash(prefix, name);
 
-/// Sentinel ids for the trailing "no value" buckets. Negative, so they can
-/// never collide with a real category / status / track-status id.
+/// Negative sentinel IDs cannot collide with real category or status IDs.
 const int _kNoTagId = -101;
 const int _kNoLanguageId = -102;
 
 List<GroupedTab> _groupByTag(List<MangaProxy> all) {
-  // Fan-out: a manga with N distinct tags appears in all N buckets. Matched
-  // case-insensitively (like the `tag:` filter), displayed as first seen.
+  // Fan out by case-insensitive tag, preserving first-seen display casing.
   final Map<String, ({String display, List<int> mangaIds})> buckets = {};
   final List<int> untagged = [];
 
@@ -231,7 +209,7 @@ List<GroupedTab> _groupByTag(List<MangaProxy> all) {
       final tag = raw.trim();
       if (tag.isEmpty) continue;
       final key = tag.toLowerCase();
-      // De-dup within one manga: a genre that's also a user tag is one bucket.
+      // A genre that is also a custom tag must appear only once per manga.
       if (!seen.add(key)) continue;
       buckets
           .putIfAbsent(key, () => (display: tag, mangaIds: []))
@@ -251,15 +229,13 @@ List<GroupedTab> _groupByTag(List<MangaProxy> all) {
         name: e.value.display,
         mangaIds: e.value.mangaIds,
       ),
-    // Trailing, like BY_TRACK_STATUS's "Other".
     if (untagged.isNotEmpty)
       (id: _kNoTagId, name: 'Untagged', mangaIds: untagged),
   ];
 }
 
 List<GroupedTab> _groupByLanguage(List<MangaProxy> all) {
-  // Local-source entries have no real language, so they get their own trailing
-  // bucket rather than a bogus flag.
+  // Local-source entries have no real language and need their own trailing bucket.
   final Map<String, List<int>> buckets = {};
   final List<int> unknown = [];
 
@@ -272,7 +248,7 @@ List<GroupedTab> _groupByLanguage(List<MangaProxy> all) {
     }
   }
 
-  // Sort by DISPLAY name, not ISO code: "German" before "Japanese", not de/ja.
+  // Sort localized display names rather than ISO codes.
   final sorted = buckets.entries.toList()
     ..sort(
       (a, b) => languageDisplayName(
@@ -296,16 +272,14 @@ List<GroupedTab> _groupByLanguage(List<MangaProxy> all) {
 }
 
 List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
-  // Fan-out: a manga with N distinct track statuses appears in all N tabs.
-  // Manga with no track records go to the "Other" bucket (id 99).
+  // Fan out across track statuses; untracked manga belong to Other (99).
   final Map<int, List<int>> buckets = {};
 
   for (final m in all) {
     if (m.trackStatuses.isEmpty) {
       buckets.putIfAbsent(99, () => []).add(m.id);
     } else {
-      // De-dup: a manga tracked on two services with the same status should
-      // only appear once per status bucket.
+      // Multiple trackers with the same status must not duplicate a manga in that bucket.
       final distinctStatuses = m.trackStatuses.toSet();
       for (final st in distinctStatuses) {
         buckets.putIfAbsent(st, () => []).add(m.id);
@@ -313,7 +287,6 @@ List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
     }
   }
 
-  // Sort buckets: known statuses by kTrackStatusInfo order, then Other (99) last.
   final sorted = buckets.entries.toList()
     ..sort(
       (a, b) => trackStatusOrder(a.key).compareTo(trackStatusOrder(b.key)),
@@ -324,9 +297,7 @@ List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
       .toList();
 }
 
-// ─────────────────── providers ───────────────────────────────────────────────
 
-/// Persisted group-type preference (0 = BY_DEFAULT).
 @riverpod
 class LibraryGroupType extends _$LibraryGroupType
     with SharedPreferenceClientMixin<int> {
@@ -342,9 +313,7 @@ class LibraryGroupStyleKey extends _$LibraryGroupStyleKey
       initialize(DBKeys.libraryGroupStyle, enumList: LibraryGroupStyle.values);
 }
 
-/// The section at the top of the viewport in Section-Headers mode, so the app
-/// bar can name it. Not persisted — a live scroll readout, written only by
-/// [LibrarySectionsView] and never read back to move the scroll position.
+/// Live section readout written by LibrarySectionsView; never use it to drive scroll position.
 @riverpod
 class LibraryVisibleSection extends _$LibraryVisibleSection
     with StateProviderMixin<int?> {
@@ -352,21 +321,12 @@ class LibraryVisibleSection extends _$LibraryVisibleSection
   int? build() => null;
 }
 
-/// The full grouped tab list, combining the library manga list + group type +
-/// visible categories into a list of [GroupedTab]s ready for the tab bar.
 @riverpod
 Future<List<GroupedTab>> libraryGroupedTabs(Ref ref) async {
-  // IMPORTANT: do every `ref.watch` BEFORE the first `await`. Watching a
-  // provider *after* an await drops its subscription during the async gap on
-  // each rebuild; an autoDispose dep with no other listener (here
-  // CategoryController) then gets disposed and recreated, re-emits
-  // loading→data, and re-triggers this provider — an infinite rebuild flicker.
+  // Watch dependencies before awaiting so auto-dispose subscriptions survive rebuilds.
   final groupType =
       ref.watch(libraryGroupTypeProvider) ?? kDefaultLibraryGroupType;
-  // Categories are only needed for BY_DEFAULT (which is actually served by the
-  // separate _DefaultLibraryScreen, not this provider). For the grouped modes,
-  // don't watch the category provider at all — it just couples them into the
-  // loop above and isn't used.
+  // Grouped modes do not use categories; watching them adds an unnecessary rebuild dependency.
   final List<CategoryProxy> catProxies = groupType == LibraryGroup.byDefault
       ? (ref.watch(visibleCategoryListProvider).value ?? const [])
             .map(categoryToProxy)

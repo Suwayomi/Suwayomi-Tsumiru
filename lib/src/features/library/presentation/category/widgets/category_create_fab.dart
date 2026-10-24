@@ -35,7 +35,6 @@ class CategoryCreateFab extends HookConsumerWidget {
                           .createCategory(newCategory);
                       isLoading.value = (false);
                     } catch (e) {
-                      //
                     }
                   },
                 ),

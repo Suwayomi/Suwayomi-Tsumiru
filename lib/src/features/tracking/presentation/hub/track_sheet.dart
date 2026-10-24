@@ -20,7 +20,6 @@ import '../../data/tracker_repository.dart';
 import 'widgets/track_editor.dart';
 import 'widgets/tracker_search.dart';
 
-/// Opens the tracking hub sheet for [mangaId].
 Future<void> showTrackSheet(
   BuildContext context,
   int mangaId, {
@@ -41,11 +40,6 @@ Future<void> showTrackSheet(
   );
 }
 
-/// The body of the tracking hub sheet.
-///
-/// Watches [trackersProvider] and [mangaTrackRecordsProvider] and renders a card
-/// for every logged-in tracker. Trackers that are not logged in are skipped;
-/// an empty-state is shown when none are logged in.
 class TrackSheetContent extends ConsumerWidget {
   const TrackSheetContent({
     super.key,
@@ -62,7 +56,6 @@ class TrackSheetContent extends ConsumerWidget {
     final recordsAsync =
         ref.watch(mangaTrackRecordsProvider(mangaId: mangaId));
 
-    // Surface errors from either provider.
     if (trackersAsync.hasError || recordsAsync.hasError) {
       return _ErrorState(
         message: (trackersAsync.error ?? recordsAsync.error).toString(),
@@ -73,8 +66,7 @@ class TrackSheetContent extends ConsumerWidget {
       );
     }
 
-    // Spinner only on the initial load (no data yet). A reload/retry keeps the
-    // current content visible instead of flashing a spinner over it.
+    // Keep existing content visible during reloads; only initial loading needs a spinner.
     if (!trackersAsync.hasValue || !recordsAsync.hasValue) {
       return const SizedBox(
         height: 200,
@@ -89,10 +81,7 @@ class TrackSheetContent extends ConsumerWidget {
       (t) => records.any((r) => r.trackerId == t.id),
     ).toList();
 
-    // viewInsets.bottom = keyboard. The Android nav bar reads 0 through
-    // MediaQuery padding in this app (so showModalBottomSheet's useSafeArea
-    // can't clear it), so pull the real inset from the FlutterView and pad by
-    // it, converting physical px -> logical px via devicePixelRatio.
+    // Android nav-bar padding is absent from MediaQuery here; convert FlutterView physical insets to logical px.
     final view = View.of(context);
     final navBarInset = view.viewPadding.bottom / view.devicePixelRatio;
     return SingleChildScrollView(
@@ -104,7 +93,6 @@ class TrackSheetContent extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Drag handle.
           const SizedBox(height: 8),
           Center(
             child: Container(
@@ -118,7 +106,6 @@ class TrackSheetContent extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
 
-          // Always-present "Manage trackers" action.
           ListTile(
             leading: const Icon(Icons.manage_accounts_outlined),
             title: Text(context.l10n.manageTrackers),
@@ -129,7 +116,6 @@ class TrackSheetContent extends ConsumerWidget {
           ),
           const Divider(height: 1),
 
-          // Empty state only when nothing useful to show.
           if (loggedIn.isEmpty && loggedOutBound.isEmpty)
             _EmptyLoginState()
           else ...[
@@ -144,7 +130,6 @@ class TrackSheetContent extends ConsumerWidget {
               );
             }),
 
-            // Logged-out trackers that still have a bound record for this manga.
             ...loggedOutBound.map((tracker) {
               final record =
                   records.firstWhereOrNull((r) => r.trackerId == tracker.id);
@@ -163,9 +148,6 @@ class TrackSheetContent extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Internal widgets
-// ---------------------------------------------------------------------------
 
 class _EmptyLoginState extends StatelessWidget {
   const _EmptyLoginState();
@@ -232,7 +214,6 @@ class _TrackerCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Tracker header row.
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 4, 4),
             child: Row(
@@ -260,9 +241,7 @@ class _TrackerCard extends ConsumerWidget {
             ),
           ),
 
-          // Card body: add / edit / login-required.
           if (rec == null)
-            // No record — offer to bind.
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
               child: OutlinedButton(
@@ -285,7 +264,6 @@ class _TrackerCard extends ConsumerWidget {
               ),
             )
           else
-            // Bound record — show editor.
             Padding(
               padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
               child: TrackEditor(
@@ -316,7 +294,6 @@ class _LoggedOutBoundCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Tracker header row.
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 4, 4),
             child: Row(
@@ -338,7 +315,6 @@ class _LoggedOutBoundCard extends StatelessWidget {
             ),
           ),
 
-          // Read-only bound title + login prompt.
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
             child: Column(

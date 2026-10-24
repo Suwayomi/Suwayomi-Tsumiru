@@ -15,9 +15,7 @@ import '../../../domain/category/category_model.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_grouping.dart';
 
-/// One tab in the desktop category strip: a name plus an optional muted
-/// count. A null count hides the count, mirroring
-/// [categoryNumberOfItemsProvider] being off.
+/// A null count hides the count.
 typedef StripTab = ({String name, int? count});
 
 const double _kStripHeight = 44;
@@ -26,13 +24,7 @@ const double _kTabGap = 2;
 const double _kUnderlineHeight = 3;
 const double _kMoreFontSize = 13;
 
-/// Desktop category tab strip: 44 px tall with a bottom
-/// `outlineVariant` border. Shows as many tabs as fit (measured with real
-/// text widths, recomputed on resize); the rest overflow into a quieter
-/// "More (N)" menu after a 1 px divider. The visible set never reshuffles:
-/// tabs keep their order, and picking a hidden category leaves the row alone
-/// while More shows that category's name in the selected style. Driven by the
-/// ambient [DefaultTabController] so swiping the [TabBarView] keeps working.
+/// Overflow selection stays in More without reshuffling visible tabs; uses DefaultTabController.
 class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
   const CategoryTabStrip({super.key, required this.tabs});
 
@@ -198,8 +190,7 @@ _computeLayout({
   required TextStyle moreSelectedStyle,
   required TextStyle moreSelectedCountStyle,
 }) {
-  // Selected tabs render bolder, so measure every tab in its selected style:
-  // the row must still fit when the selection moves.
+  // Measure selected-style widths so changing selection cannot overflow the row.
   final textWidths = [
     for (final tab in tabs)
       _richWidth(tab, nameStyle, countStyle, direction, scaler),
@@ -225,10 +216,7 @@ _computeLayout({
     );
   }
 
-  // Reserve room for the widest More label we could end up with: either the
-  // "More (N)" count or the widest category name among ALL categories (capped
-  // at 200 px; longer names ellipsize in the More control). Independent of the
-  // selection, so picking a hidden category never reshuffles the row.
+  // Reserve the widest possible More label, capped at 200 px, so selection never reshuffles tabs.
   var widestName = 0.0;
   for (final tab in tabs) {
     widestName = max(
@@ -258,8 +246,7 @@ _computeLayout({
       hidden.add(i);
     }
   }
-  // Degenerate widths (a single tab plus More exceeds the row) leave the
-  // row to More alone; its label carries an ellipsis instead of clipping.
+  // If one tab plus More cannot fit, show only More with an ellipsized label.
   final moreMaxWidth = max(64.0, avail - used - dividerWidth - moreChrome);
   return (
     visible: visible,
@@ -445,8 +432,7 @@ class _MoreControl extends StatelessWidget {
   }
 }
 
-/// Category tabs for the default (by-category) library, with counts from the
-/// same filtered providers the tab bodies read — mirroring `_CategoryTab`.
+/// Counts come from the same filtered providers as the category bodies.
 class DefaultCategoryTabStrip extends ConsumerWidget {
   const DefaultCategoryTabStrip({super.key, required this.categories});
 
@@ -476,9 +462,7 @@ class DefaultCategoryTabStrip extends ConsumerWidget {
   }
 }
 
-/// Tabs for a non-default group (source, status, tag, …) with counts from the
-/// same grouped filtered provider the tab bodies read. Kept separate because
-/// group counts come from the grouped filtered provider.
+/// Counts come from the same filtered providers as the group bodies.
 class GroupedCategoryTabStrip extends ConsumerWidget {
   const GroupedCategoryTabStrip({super.key, required this.groupedTabs});
 

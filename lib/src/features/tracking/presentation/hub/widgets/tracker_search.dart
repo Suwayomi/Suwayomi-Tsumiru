@@ -18,7 +18,6 @@ import '../../../controller/tracker_search_controller.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
 
-/// Task 7 — search for a remote entry and bind it to this manga.
 class TrackerSearch extends HookConsumerWidget {
   const TrackerSearch({
     super.key,
@@ -36,19 +35,18 @@ class TrackerSearch extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rawInput = useState(mangaTitle);
-    // Debounce searchTracker calls or AniList/MAL rate-limits (429) and search looks broken.
+    // Debounce to avoid AniList/MAL rate limits (429).
     final query = useSettled(rawInput.value, const Duration(milliseconds: 400));
     final selected = useState<Fragment$TrackSearchDto?>(null);
-    // Blocks selection/binding until results catch up with the typed query.
+    // Block binding until results match the typed query.
     final searchPending = rawInput.value != query;
 
     void onInput(String? value) {
       rawInput.value = value ?? '';
-      // Drop any selection from the previous query so it can't get bound.
+      // Clear the old selection so a new query cannot bind a stale result.
       selected.value = null;
     }
 
-    // Don't fire a search for an empty query (e.g. the field was cleared).
     final resultsAsync = query.isEmpty
         ? null
         : ref.watch(searchTrackerProvider(trackerId: tracker.id, query: query));
@@ -66,7 +64,7 @@ class TrackerSearch extends HookConsumerWidget {
               private: private,
             ),
       );
-      // Both branches touch ref; bail if the sheet was dismissed mid-flight.
+      // Both branches use ref; the sheet may have been dismissed during binding.
       if (!context.mounted) return;
       if (result.hasError) {
         result.showToastOnError(ref.read(toastProvider));
@@ -82,7 +80,6 @@ class TrackerSearch extends HookConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle.
           Center(
             child: Container(
               width: 40,
@@ -95,7 +92,6 @@ class TrackerSearch extends HookConsumerWidget {
             ),
           ),
 
-          // Search field pre-filled with manga title (with tablet constraint & padding).
           SizedBox(
             width: context.windowSizeClass >= WindowSizeClass.expanded
                 ? context.widthScale(scale: .5)
@@ -112,8 +108,6 @@ class TrackerSearch extends HookConsumerWidget {
             ),
           ),
 
-          // Track / Track privately buttons (shown once a result is selected
-          // and the search has settled).
           if (!searchPending && selected.value != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -138,7 +132,6 @@ class TrackerSearch extends HookConsumerWidget {
               ),
             ),
 
-          // Results list. Spinner while pending so nothing stale can be tapped.
           Flexible(
             child: query.isEmpty
                 ? const SizedBox.shrink()
@@ -205,7 +198,6 @@ class _TrackSearchResultTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover image.
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: Image.network(
@@ -222,7 +214,6 @@ class _TrackSearchResultTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Text details.
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

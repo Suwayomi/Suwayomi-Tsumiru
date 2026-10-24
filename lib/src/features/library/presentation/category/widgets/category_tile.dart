@@ -18,15 +18,13 @@ import '../../../domain/category/category_model.dart';
 import '../controller/edit_category_controller.dart';
 import 'edit_category_dialog.dart';
 
-/// A category row in the Edit Categories screen: drag handle · name
-/// (struck-through + dimmed when hidden) · edit · hide-toggle · delete.
 
 class CategoryTile extends HookConsumerWidget {
   const CategoryTile({super.key, required this.category, required this.index});
 
   final CategoryDto category;
 
-  /// Position in the reorderable list — used by the drag handle.
+  /// Reorderable-list position for the drag handle.
   final int index;
 
   @override
@@ -96,9 +94,7 @@ class CategoryTile extends HookConsumerWidget {
                   tooltip: isHidden
                       ? context.l10n.showCategory
                       : context.l10n.hideCategory,
-                  // The flag lives on the server; offline the change lands on the
-                  // device mirror instead (a hidden category's downloads must stay
-                  // reachable), and the server's flag returns on reconnect.
+                  // Offline visibility changes affect only the device mirror until the next server sync.
                   onPressed: () async {
                     final result = await ref
                         .read(categoryControllerProvider.notifier)
@@ -152,7 +148,7 @@ class CategoryTile extends HookConsumerWidget {
                                   final result = await ref
                                       .read(categoryControllerProvider.notifier)
                                       .deleteCategory(category.id);
-                                  // Use the tile context because the dialog has already closed.
+                                  // The dialog is closed; use the still-mounted tile context.
                                   if (result is AsyncError && context.mounted) {
                                     final error = result.error;
                                     final cause =

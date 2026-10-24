@@ -11,8 +11,6 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/tri_state_filter_tile.dart';
 import '../history_controller.dart';
 
-/// Filter rows for the History list, matching Komikku's three: unfinished
-/// series, unfinished chapter, and library membership.
 class HistoryFilterSheet extends ConsumerWidget {
   const HistoryFilterSheet({super.key});
 

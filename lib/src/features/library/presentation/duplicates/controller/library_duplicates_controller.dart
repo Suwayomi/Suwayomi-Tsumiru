@@ -17,9 +17,7 @@ import '../../library/controller/library_manga_list.dart';
 
 part 'library_duplicates_controller.g.dart';
 
-/// Removes one library entry and purges its device downloads. Isolated behind a
-/// provider so the removal flow can be exercised (including the partial-failure
-/// path) without a live server or offline stack.
+/// Removes an entry and purges device downloads; failures may leave a partial removal.
 typedef DuplicateEntryRemover = Future<void> Function(
     ProviderContainer container, int mangaId);
 
@@ -27,9 +25,7 @@ typedef DuplicateEntryRemover = Future<void> Function(
 DuplicateEntryRemover duplicateEntryRemover(Ref ref) =>
     removeMangaFromLibraryAndPurge;
 
-/// Drops [removedIds] from each group's members and hides any group that falls
-/// below two members — the on-screen filter after a removal, so the O(n²) scan
-/// never has to re-run (Task 11 reads the library once).
+/// Hides removed entries and groups smaller than two without re-running the scan.
 List<DupGroup> visibleDuplicateGroups(
   List<DupGroup> groups,
   Set<int> removedIds,
@@ -52,11 +48,7 @@ List<DupGroup> visibleDuplicateGroups(
   return result;
 }
 
-/// Library-wide duplicate scan (#117).
-///
-/// Reads the library ONCE per build — never `watch`. A routine library
-/// invalidation elsewhere (e.g. after a removal) must not silently re-trigger
-/// this O(n²) scan; refresh only ever happens via the explicit [rescan].
+/// Reads the library once per build; only explicit rescan may repeat the O(n²) scan.
 @riverpod
 class LibraryDuplicates extends _$LibraryDuplicates {
   @override
@@ -66,14 +58,13 @@ class LibraryDuplicates extends _$LibraryDuplicates {
         .map(dupEntryFromManga)
         .toList();
     if (kIsWeb) {
-      // compute() is a main-thread no-op on web; the chunked scan yields
-      // itself so the description pass never freezes the tab.
+      // compute() runs on the main thread on web; the chunked scan yields cooperatively.
       return scanForDuplicatesChunkedWeb(entries, checkDescriptions);
     }
     return compute(scanForDuplicates, (entries, checkDescriptions));
   }
 
-  /// Explicit refresh means server truth: refetch the library, then re-scan.
+  /// Refetches the library before scanning.
   Future<void> rescan() async {
     ref.invalidate(libraryMangaListProvider);
     ref.invalidateSelf();
