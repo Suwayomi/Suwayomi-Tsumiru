@@ -64,8 +64,7 @@ Extension _ext({required String pkg, required String name}) => Extension(
   lang: 'en',
   name: name,
   pkgName: pkg,
-  // ignore: deprecated_member_use_from_same_package
-  versionCode: 1,
+  versionCodeLong: '1',
   versionName: '1.0',
 );
 

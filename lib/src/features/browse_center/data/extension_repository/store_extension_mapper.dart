@@ -20,7 +20,14 @@ Fragment$ExtensionDto extensionFromStoreDto(Fragment$StoreExtensionDto d) =>
       lang: d.lang,
       name: d.name,
       pkgName: d.pkgName,
-      repo: null,
-      versionCode: d.versionCode,
+      versionCodeLong: d.versionCodeLong,
       versionName: d.versionName,
+      storeIndexUrl: d.storeIndexUrl,
+      extensionLib: d.extensionLib,
+      extensionStore: d.extensionStore == null
+          ? null
+          : Fragment$ExtensionDto$extensionStore(
+              name: d.extensionStore!.name,
+              indexUrl: d.extensionStore!.indexUrl,
+            ),
     );
