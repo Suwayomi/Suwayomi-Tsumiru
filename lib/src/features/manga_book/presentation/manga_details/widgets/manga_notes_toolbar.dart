@@ -30,7 +30,14 @@ class MangaNotesFormatToolbar extends StatelessWidget {
           icon: const Icon(Icons.format_italic_rounded),
           onPressed: () => apply((value) => applyInlineMarker(value, '*')),
         ),
-        const VerticalDivider(indent: 8, endIndent: 8),
+        SizedBox(
+          height: 24,
+          child: VerticalDivider(
+            width: 13,
+            thickness: 1,
+            color: context.colorScheme.outlineVariant,
+          ),
+        ),
         IconButton(
           tooltip: context.l10n.bulletedList,
           icon: const Icon(Icons.format_list_bulleted_rounded),
