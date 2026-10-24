@@ -15,6 +15,7 @@ import '../../../widgets/server_image.dart';
 import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
+import 'offline_action_confirmations.dart';
 import 'offline_settings_format.dart';
 
 class OfflineSeriesChaptersScreen extends ConsumerWidget {
@@ -230,7 +231,7 @@ class _DownloadedChapterTile extends ConsumerWidget {
       trailing: IconButton(
         tooltip: context.l10n.offlineChapterDelete,
         icon: const Icon(Icons.delete_outline_rounded),
-        onPressed: () => deleteChapterFromDevice(ref, chapter.id),
+        onPressed: () => confirmDeleteChapterFromDevice(ref, chapter.id),
       ),
       onTap: () => ReaderRoute(
         mangaId: mangaId,

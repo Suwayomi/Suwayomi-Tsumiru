@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/popup_widgets/confirm_action.dart';
 import '../../account/data/account_permission.dart';
 import '../../account/data/account_providers.dart';
 import '../../auth/data/auth_credentials_store.dart';
@@ -17,6 +18,7 @@ import '../../manga_book/presentation/manga_details/widgets/manga_action_button.
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
+import 'offline_action_confirmations.dart';
 
 class SeriesOfflineButton extends ConsumerWidget {
   const SeriesOfflineButton({super.key, required this.mangaId});
@@ -175,7 +177,24 @@ class SeriesOfflineButton extends ConsumerWidget {
                           color: sheetContext.theme.colorScheme.error,
                         ),
                       ),
-                      onTap: () => _removeAll(sheetContext, ref),
+                      onTap: () async {
+                        final current = ref
+                            .read(authCredentialsStoreProvider.notifier)
+                            .captureSession();
+                        if (!await confirmAction(
+                              sheetContext,
+                              title: sheetContext.l10n.removeFromDevice,
+                              message: sheetContext
+                                  .l10n
+                                  .confirmDeleteSeriesDeviceMessage,
+                              action: sheetContext.l10n.removeFromDevice,
+                            ) ||
+                            !sheetContext.mounted ||
+                            !current()) {
+                          return;
+                        }
+                        await _removeAll(sheetContext, ref);
+                      },
                     ),
                   ],
                 ],
@@ -204,7 +223,7 @@ class SeriesOfflineButton extends ConsumerWidget {
     ref
         .read(accountPermissionGuardProvider)
         .require(Enum$UserPermission.DOWNLOAD_CHAPTERS);
-    await changeKeepRule(ref, mangaId, rule, count);
+    if (!await confirmAndChangeKeepRule(ref, mangaId, rule, count)) return;
     if (!ref.context.mounted || !current()) return;
     ref.invalidate(mangaKeepRuleProvider(mangaId));
     ref.invalidate(mangaKeepConfigProvider(mangaId));

@@ -15,6 +15,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
@@ -103,10 +104,21 @@ class DownloadsScreen extends HookConsumerWidget {
         IconButton(
           onPressed: !canDownload
               ? null
-              : () => AppUtils.guard(
+              : () async {
+                  if (!await confirmAction(
+                        context,
+                        title: context.l10n.confirmClearQueueTitle,
+                        message: context.l10n.confirmClearQueueMessage,
+                        action: context.l10n.confirmClearQueueTitle,
+                      ) ||
+                      !context.mounted) {
+                    return;
+                  }
+                  await AppUtils.guard(
                   ref.read(downloadsMapProvider.notifier).clearAll,
                   ref.read(toastProvider),
-                ),
+                  );
+                },
           tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.delete_sweep_rounded),
         ),

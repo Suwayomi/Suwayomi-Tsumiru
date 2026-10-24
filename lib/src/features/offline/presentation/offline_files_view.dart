@@ -23,6 +23,7 @@ import '../data/offline_repository.dart';
 import '../data/offline_series_entry.dart';
 import 'download_stall_banner.dart';
 import 'keep_rule_picker.dart';
+import 'offline_action_confirmations.dart';
 import 'offline_series_chapters_screen.dart';
 import 'offline_settings_format.dart';
 
@@ -263,7 +264,7 @@ class OfflineFilesView extends HookConsumerWidget {
                       onTap: canDownload
                           ? () {
                               Navigator.pop(sheetContext);
-                              changeKeepRule(
+                              confirmAndChangeKeepRule(
                                 ref,
                                 manga.id,
                                 OfflineKeepRule.nUnread,
@@ -281,7 +282,7 @@ class OfflineFilesView extends HookConsumerWidget {
                     onTap: canDownload
                         ? () {
                             Navigator.pop(sheetContext);
-                            changeKeepRule(
+                            confirmAndChangeKeepRule(
                               ref,
                               manga.id,
                               OfflineKeepRule.allUnread,
@@ -299,7 +300,7 @@ class OfflineFilesView extends HookConsumerWidget {
                     onTap: canDownload
                         ? () {
                             Navigator.pop(sheetContext);
-                            changeKeepRule(
+                            confirmAndChangeKeepRule(
                               ref,
                               manga.id,
                               OfflineKeepRule.all,
@@ -365,6 +366,15 @@ class OfflineFilesView extends HookConsumerWidget {
         rows.map((r) => r.manga.id).toList(),
         clear,
       );
+    }
+    if (!await confirmKeepRuleChanges(
+          ref,
+          rows.map((r) => r.manga.id),
+          picked.rule,
+          picked.count,
+        ) ||
+        !context.mounted) {
+      return;
     }
     if (picked.rule == OfflineKeepRule.off) {
       clear();

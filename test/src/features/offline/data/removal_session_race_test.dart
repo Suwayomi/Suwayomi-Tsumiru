@@ -166,6 +166,11 @@ void main() {
               : null;
           if (tile != null) {
             tile.onTap!();
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.widgetWithText(TextButton, 'Remove from device'),
+            );
+            await tester.pumpAndSettle();
           } else {
             await tester.tap(find.widgetWithText(TextButton, 'Delete'));
           }

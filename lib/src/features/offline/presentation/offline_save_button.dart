@@ -15,6 +15,7 @@ import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
+import 'offline_action_confirmations.dart';
 
 class OfflineSaveButton extends ConsumerWidget {
   const OfflineSaveButton({super.key, required this.chapterId});
@@ -46,7 +47,7 @@ class OfflineSaveButton extends ConsumerWidget {
       OfflineDeviceState.downloaded => IconButton(
         tooltip: 'Remove from device',
         icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
-        onPressed: () => deleteChapterFromDevice(ref, chapterId),
+        onPressed: () => confirmDeleteChapterFromDevice(ref, chapterId),
       ),
       OfflineDeviceState.error => IconButton(
         tooltip: canDownload

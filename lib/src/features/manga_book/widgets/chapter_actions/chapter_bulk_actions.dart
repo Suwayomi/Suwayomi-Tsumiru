@@ -22,6 +22,7 @@ import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
+import '../../../offline/presentation/offline_action_confirmations.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -253,7 +254,7 @@ Future<void> keepChapterOffline(WidgetRef ref, int chapterId) =>
     saveChapterToDevice(ref, chapterId);
 
 Future<void> removeChapterFromDevice(WidgetRef ref, int chapterId) =>
-    deleteChapterFromDevice(ref, chapterId);
+    confirmDeleteChapterFromDevice(ref, chapterId);
 
 Future<void> keepChaptersOffline({
   required BuildContext context,

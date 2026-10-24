@@ -15,6 +15,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/theme/brand.dart';
 import '../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../widgets/popup_widgets/confirm_action.dart';
 import '../../account/data/account_providers.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../offline/data/offline_download_providers.dart';
@@ -170,6 +171,15 @@ class DownloadStatusIcon extends HookConsumerWidget {
           return IconButton(
             icon: brandGradientIcon(context, Icons.cloud_done_rounded),
             onPressed: () async {
+              if (!await confirmAction(
+                    context,
+                    title: context.l10n.deleteServerDownloads,
+                    message: context.l10n.confirmDeleteBothDownloadsMessage,
+                    action: context.l10n.delete,
+                  ) ||
+                  !context.mounted) {
+                return;
+              }
               // Capture the container before awaiting deletion; the chapter row and its ref may disappear.
               final containerRead = ProviderScope.containerOf(
                 context,

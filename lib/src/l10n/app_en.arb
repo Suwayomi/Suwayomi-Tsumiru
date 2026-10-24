@@ -4242,5 +4242,12 @@
   "confirmNetworkMessage": "Changing this setting can make the server unreachable.",
   "confirmImageCacheMessage": "This clears cached images on the server and this device.",
   "confirmWebViewCacheMessage": "This clears WebView cookies and cache and may sign you out of sources.",
-  "confirmUninstallMessage": "This removes the extension and its sources from the server."
+  "confirmUninstallMessage": "This removes the extension and its sources from the server.",
+  "confirmClearQueueTitle": "Clear download queue",
+  "confirmClearQueueMessage": "This removes all chapters from the server download queue.",
+  "confirmDeleteBothDownloadsMessage": "This deletes the downloaded chapter from the server and this device, including matching scanlator copies.",
+  "confirmDeleteDeviceMessage": "This removes the chapter download from this device.",
+  "confirmDeleteSeriesDeviceMessage": "This stops keeping the series offline and deletes all its device downloads.",
+  "confirmKeepRuleTitle": "Change offline rule",
+  "confirmKeepRuleMessage": "This change deletes chapters already downloaded on this device."
 }
