@@ -13,6 +13,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/server_image.dart';
 import '../../controller/manga_track_records_controller.dart';
 import '../../data/graphql/__generated__/query.graphql.dart';
 import '../../data/tracker_repository.dart';
@@ -236,11 +237,10 @@ class _TrackerCard extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(12, 10, 4, 4),
             child: Row(
               children: [
-                Image.network(
-                  tracker.icon,
-                  width: 24,
-                  height: 24,
-                  errorBuilder: (_, _, _) =>
+                ServerImage(
+                  imageUrl: tracker.icon,
+                  size: const Size.square(24),
+                  progressIndicatorBuilder: (_, _, _) =>
                       const Icon(Icons.sync_rounded, size: 24),
                 ),
                 const SizedBox(width: 8),
@@ -321,11 +321,10 @@ class _LoggedOutBoundCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 10, 4, 4),
             child: Row(
               children: [
-                Image.network(
-                  tracker.icon,
-                  width: 24,
-                  height: 24,
-                  errorBuilder: (_, _, _) =>
+                ServerImage(
+                  imageUrl: tracker.icon,
+                  size: const Size.square(24),
+                  progressIndicatorBuilder: (_, _, _) =>
                       const Icon(Icons.sync_rounded, size: 24),
                 ),
                 const SizedBox(width: 8),

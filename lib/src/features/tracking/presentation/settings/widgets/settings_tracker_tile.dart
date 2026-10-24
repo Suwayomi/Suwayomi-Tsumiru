@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/server_image.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
 import 'login_to_tracker.dart';
@@ -22,11 +23,11 @@ class SettingsTrackerTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
-      leading: Image.network(
-        tracker.icon,
-        width: 40,
-        height: 40,
-        errorBuilder: (_, _, _) => const Icon(Icons.sync_rounded),
+      leading: ServerImage(
+        imageUrl: tracker.icon,
+        size: const Size.square(40),
+        progressIndicatorBuilder: (_, _, _) =>
+            const Icon(Icons.sync_rounded, size: 40),
       ),
       title: Text(tracker.name),
       subtitle: tracker.isLoggedIn && tracker.isTokenExpired
@@ -39,9 +40,7 @@ class SettingsTrackerTile extends ConsumerWidget {
         onPressed: () async {
           if (tracker.isLoggedIn) {
             await AppUtils.guard(
-              () => ref
-                  .read(trackerRepositoryProvider)
-                  .logout(tracker.id),
+              () => ref.read(trackerRepositoryProvider).logout(tracker.id),
               ref.read(toastProvider),
             );
             if (context.mounted) ref.invalidate(trackersProvider);

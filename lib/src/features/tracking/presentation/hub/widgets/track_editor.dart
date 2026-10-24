@@ -13,6 +13,7 @@ import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/hover_tap_target.dart';
+import '../../../../../widgets/server_image.dart';
 import '../../../controller/manga_track_records_controller.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
@@ -92,11 +93,10 @@ class TrackEditor extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
           child: Row(
             children: [
-              Image.network(
-                tracker.icon,
-                width: 20,
-                height: 20,
-                errorBuilder: (_, _, _) =>
+              ServerImage(
+                imageUrl: tracker.icon,
+                size: const Size.square(20),
+                progressIndicatorBuilder: (_, _, _) =>
                     const Icon(Icons.sync_rounded, size: 20),
               ),
               const SizedBox(width: 8),
