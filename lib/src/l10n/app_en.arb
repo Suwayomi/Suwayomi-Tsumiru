@@ -4225,5 +4225,9 @@
     }
   },
   "duplicateChapters": "Duplicate chapters",
-  "openRandomEntry": "Open random entry"
+  "openRandomEntry": "Open random entry",
+  "savedSearches": "Saved searches",
+  "saveSearch": "Save search",
+  "saveCurrentSearch": "Save current search",
+  "deleteSearch": "Delete search"
 }

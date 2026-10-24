@@ -182,6 +182,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                   child: Padding(
                     padding: KEdgeInsets.h16v4.size,
                     child: SearchField(
+                      key: ValueKey(query.value),
                       initialText: query.value,
                       onClose: () => showSearch.value = (false),
                       onSubmitted: (val) {
@@ -229,15 +230,31 @@ class SourceMangaListScreen extends HookConsumerWidget {
           // Edge-drag would fight the system back gesture; the filter button is
           // the way in.
           endDrawerEnableOpenDragGesture: false,
-          endDrawer: filterList.isNotBlank
+          endDrawer: filterList != null
               ? Drawer(
                   width: kDrawerWidth,
                   shape: const RoundedRectangleBorder(),
                   child: Builder(
                     builder: (context) => SourceMangaFilter(
-                      filters: filterList?.toList() ?? [],
+                      filters: filterList.toList(),
                       sourceId: sourceId,
                       appliedChanges: appliedFilter,
+                      query: query.value,
+                      onSavedSearchSelected: (savedQuery, changes) {
+                        Navigator.pop(context);
+                        appliedFilterNotifier.apply(changes);
+                        if (sourceType == SourceType.SEARCH) {
+                          query.value = savedQuery;
+                          showSearch.value = savedQuery.isNotBlank;
+                          controller.refresh();
+                        } else {
+                          SourceTypeRoute(
+                            sourceId: sourceId,
+                            sourceType: SourceType.SEARCH,
+                            query: savedQuery,
+                          ).go(context);
+                        }
+                      },
                       onReset: () {
                         appliedFilterNotifier.reset();
                         controller.refresh();
@@ -260,7 +277,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                 )
               : listBody,
           floatingActionButton:
-              sourceType == SourceType.SEARCH && filterList.isNotBlank
+              sourceType == SourceType.SEARCH && filterList != null
               ? Builder(
                   builder: (context) => FloatingActionButton.extended(
                     icon: Icon(Icons.filter_alt_rounded),
@@ -270,9 +287,25 @@ class SourceMangaListScreen extends HookConsumerWidget {
                         : showModalBottomSheet(
                             context: context,
                             builder: (context) => SourceMangaFilter(
-                              filters: filterList?.toList() ?? [],
+                              filters: filterList.toList(),
                               sourceId: sourceId,
                               appliedChanges: appliedFilter,
+                              query: query.value,
+                              onSavedSearchSelected: (savedQuery, changes) {
+                                Navigator.pop(context);
+                                appliedFilterNotifier.apply(changes);
+                                if (sourceType == SourceType.SEARCH) {
+                                  query.value = savedQuery;
+                                  showSearch.value = savedQuery.isNotBlank;
+                                  controller.refresh();
+                                } else {
+                                  SourceTypeRoute(
+                                    sourceId: sourceId,
+                                    sourceType: SourceType.SEARCH,
+                                    query: savedQuery,
+                                  ).go(context);
+                                }
+                              },
                               onReset: () {
                                 appliedFilterNotifier.reset();
                                 controller.refresh();
