@@ -218,14 +218,27 @@ class ReaderWrapper extends HookConsumerWidget {
     final handledSync = useRef(<int>{});
     final conflict = chapterPages.syncConflict;
     final localConflict = localSync.value?.syncConflict;
+    final pulledChapter = localSync.value?.chapter;
     useEffect(() {
-      if ((conflict == null && localConflict == null) ||
+      if ((conflict == null &&
+              localConflict == null &&
+              pulledChapter == null) ||
           handledSync.value.contains(chapter.id)) {
         return null;
       }
       handledSync.value.add(chapter.id);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
+        if (conflict == null &&
+            localConflict == null &&
+            pulledChapter != null) {
+          final count = chapterPages.pages.length;
+          if (count > 0) {
+            onChanged(pulledChapter.user.lastPageRead.clamp(0, count - 1));
+          }
+          ref.invalidate(chapterProvider(chapterId: chapter.id));
+          return;
+        }
         unawaited(
           applyKoSyncConflict(
             context: context,
@@ -239,7 +252,7 @@ class ReaderWrapper extends HookConsumerWidget {
         );
       });
       return null;
-    }, [chapter.id, conflict, localConflict]);
+    }, [chapter.id, conflict, localConflict, pulledChapter]);
     final nextPrevChapterPair = ref.watch(
       getNextAndPreviousChaptersProvider(
         mangaId: manga.id,

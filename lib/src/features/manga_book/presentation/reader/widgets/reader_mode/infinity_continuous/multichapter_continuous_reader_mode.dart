@@ -48,6 +48,7 @@ import '../../../controller/reader_settings_model.dart';
 import '../../../utils/download_ahead.dart';
 import '../../../utils/flush_progress_on_lifecycle.dart';
 import '../../../utils/reader_initial_page.dart';
+import '../../../utils/reader_progress_queue.dart';
 import '../../mouse_wheel_speed.dart';
 import '../../reader_wrapper.dart';
 import '../reader_zoom_view.dart';
@@ -304,7 +305,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // losing the visible chapter's. We also go through the offline-safe
     // recordReadingProgress path so a read made offline is queued, not lost.
     final progressDebounce = useRef<Timer?>(null);
-    final latestProgress = useRef<({int chapterId, int rel})?>(null);
+    final latestProgress = useRef<({int chapterId, int rel, int generation})?>(
+      null,
+    );
     final allChaptersForFlush = useRef<List<ChapterDto>?>(null);
     allChaptersForFlush.value = ref
         .watch(mangaChapterListProvider(mangaId: manga.id))
@@ -317,7 +320,19 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return null;
     }
 
-    Future<void> writeVisibleProgress(int chapterId, int rel) async {
+    ReaderProgressQueue progressQueue(int id) => ref
+        .read(readerProgressQueuesProvider)
+        .putIfAbsent(id, ReaderProgressQueue.new);
+
+    Future<void> writeVisibleProgress(
+      int chapterId,
+      int rel,
+      int generation,
+    ) async {
+      if (progressQueue(chapterId).generation != generation ||
+          progressQueue(chapterId).syncing) {
+        return;
+      }
       // Debounce can fire after the reader's gone.
       if (!context.mounted) return;
       if (ref.read(incognitoModeProvider)) return;
@@ -347,9 +362,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         chapterId: chapterId,
         lastPageRead: rel,
         isRead: completed,
+        generation: generation,
       );
       // Disposed during the await → the ref calls below would throw.
-      if (!context.mounted) return;
+      if (!context.mounted ||
+          progressQueue(chapterId).generation != generation) {
+        return;
+      }
       // Online-only users have no dirty row to retry, so a failed push would
       // vanish — surface it instead of losing progress silently.
       if (progressResult.hasError) {
@@ -390,17 +409,24 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
 
       if (ref.read(incognitoModeProvider)) return;
-      latestProgress.value = (chapterId: chapterId, rel: rel);
+      final queue = progressQueue(chapterId);
+      if (queue.syncing) return;
+      final generation = queue.generation;
+      latestProgress.value = (
+        chapterId: chapterId,
+        rel: rel,
+        generation: generation,
+      );
       progressDebounce.value?.cancel();
       final pageCount = loadedById(chapterId)?.pages.pages.length ?? 0;
       if (rel >= (pageCount - 1) && pageCount > 0) {
         // Completion: write immediately so finishing a chapter isn't lost to a
         // pending debounce.
-        unawaited(writeVisibleProgress(chapterId, rel));
+        unawaited(writeVisibleProgress(chapterId, rel, generation));
       } else {
         progressDebounce.value = Timer(
           const Duration(seconds: 2),
-          () => unawaited(writeVisibleProgress(chapterId, rel)),
+          () => unawaited(writeVisibleProgress(chapterId, rel, generation)),
         );
       }
     }
@@ -431,12 +457,18 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final offlineDbForFlush = offlineEnabledForFlush
         ? ref.read(offlineDatabaseProvider)
         : null;
+    final progressQueuesForFlush = ref.read(readerProgressQueuesProvider);
     final incognitoForFlush = ref.read(incognitoModeProvider);
     useEffect(() {
       return () {
         progressDebounce.value?.cancel();
         final p = latestProgress.value;
         if (p == null) return;
+        final queue = progressQueuesForFlush.putIfAbsent(
+          p.chapterId,
+          ReaderProgressQueue.new,
+        );
+        if (queue.syncing || p.generation != queue.generation) return;
         // Already finished (an earlier in-session completion): nothing to flush.
         if (completedChapterIds.value.contains(p.chapterId)) return;
         if (incognitoForFlush || offlineDbForFlush == null) return;
@@ -473,7 +505,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final p = latestProgress.value;
       if (p == null) return;
       if (completedChapterIds.value.contains(p.chapterId)) return;
-      await writeVisibleProgress(p.chapterId, p.rel);
+      await writeVisibleProgress(p.chapterId, p.rel, p.generation);
     });
 
     final bool isAnimationEnabled = ref
@@ -1704,6 +1736,9 @@ void _markChapterRead(
   // Incognito: don't mark chapters read or fire history/tracker/delete on a
   // boundary crossing — leave no trace (parity with ReaderScreen's writes).
   if (ref.read(incognitoModeProvider)) return;
+  if (ref.read(readerProgressQueuesProvider)[chapter.id]?.syncing ?? false) {
+    return;
+  }
   if (chapter.user.isRead.ifNull()) return;
   if (completedChapterIds.value.contains(chapter.id)) return;
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};

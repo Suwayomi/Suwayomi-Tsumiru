@@ -35,6 +35,7 @@ import '../../controller/reader_controller.dart';
 import '../../controller/reader_settings_model.dart';
 import '../../utils/download_ahead.dart';
 import '../../utils/reader_initial_page.dart';
+import '../../utils/reader_progress_queue.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous/infinity_continuous_feedback.dart';
 import 'infinity_continuous/infinity_continuous_utils.dart';
@@ -277,13 +278,27 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     // chapter currently on screen, not the chapter the reader was opened with,
     // through the offline-safe recordReadingProgress path.
     final progressDebounce = useRef<Timer?>(null);
-    final latestProgress = useRef<({int chapterId, int rel})?>(null);
+    final latestProgress = useRef<({int chapterId, int rel, int generation})?>(
+      null,
+    );
     final allChaptersForFlush = useRef<List<ChapterDto>?>(null);
     allChaptersForFlush.value = ref
         .watch(mangaChapterListProvider(mangaId: manga.id))
         .value;
 
-    Future<void> writeVisibleProgress(int chapterId, int rel) async {
+    ReaderProgressQueue progressQueue(int id) => ref
+        .read(readerProgressQueuesProvider)
+        .putIfAbsent(id, ReaderProgressQueue.new);
+
+    Future<void> writeVisibleProgress(
+      int chapterId,
+      int rel,
+      int generation,
+    ) async {
+      if (progressQueue(chapterId).generation != generation ||
+          progressQueue(chapterId).syncing) {
+        return;
+      }
       if (ref.read(incognitoModeProvider)) return;
       if (chapterId != currentVisibleChapter.value.id) return;
       if (completedChapterIds.value.contains(chapterId)) return;
@@ -302,9 +317,13 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         chapterId: chapterId,
         lastPageRead: rel,
         isRead: completed,
+        generation: generation,
       );
       // Disposed during the await → the ref calls below would throw.
-      if (!context.mounted) return;
+      if (!context.mounted ||
+          progressQueue(chapterId).generation != generation) {
+        return;
+      }
       // Online-only users have no dirty row to retry, so a failed push would
       // vanish — surface it instead of losing progress silently.
       if (progressResult.hasError) {
@@ -345,15 +364,22 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       );
 
       if (ref.read(incognitoModeProvider)) return;
-      latestProgress.value = (chapterId: chapterId, rel: rel);
+      final queue = progressQueue(chapterId);
+      if (queue.syncing) return;
+      final generation = queue.generation;
+      latestProgress.value = (
+        chapterId: chapterId,
+        rel: rel,
+        generation: generation,
+      );
       progressDebounce.value?.cancel();
       final pageCount = loadedById(chapterId)?.pages.pages.length ?? 0;
       if (rel >= (pageCount - 1) && pageCount > 0) {
-        unawaited(writeVisibleProgress(chapterId, rel));
+        unawaited(writeVisibleProgress(chapterId, rel, generation));
       } else {
         progressDebounce.value = Timer(
           const Duration(seconds: 2),
-          () => unawaited(writeVisibleProgress(chapterId, rel)),
+          () => unawaited(writeVisibleProgress(chapterId, rel, generation)),
         );
       }
     }
@@ -382,12 +408,18 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         ? ref.read(offlineDatabaseProvider)
         : null;
     final repoForFlush = ref.read(mangaBookRepositoryProvider);
+    final progressQueuesForFlush = ref.read(readerProgressQueuesProvider);
     final incognitoForFlush = ref.read(incognitoModeProvider);
     useEffect(() {
       return () {
         progressDebounce.value?.cancel();
         final p = latestProgress.value;
         if (p == null) return;
+        final queue = progressQueuesForFlush.putIfAbsent(
+          p.chapterId,
+          ReaderProgressQueue.new,
+        );
+        if (queue.syncing || p.generation != queue.generation) return;
         if (completedChapterIds.value.contains(p.chapterId)) return;
         if (incognitoForFlush) return;
         final lc = loadedById(p.chapterId);
@@ -396,17 +428,24 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         // Fire-and-forget so leaving mid-chapter still saves the spot. A
         // completion carries the same conservative release expansion as the
         // normal reader path; a partial position remains scoped to this row.
-        recordReadingProgressWithDependencies(
-          offlineEnabled: offlineEnabledForFlush,
-          offlineDatabase: offlineDbForFlush,
-          repository: repoForFlush,
-          chapterId: p.chapterId,
-          lastPageRead: p.rel,
-          isRead: isCompletion,
-          completionChapterIds: isCompletion
-              ? expandIdsForDuplicates(allChaptersForFlush.value, [p.chapterId])
-              : null,
-        ).ignore();
+        queue.run(() {
+          if (p.generation != queue.generation) {
+            return Future.value(const AsyncValue<void>.data(null));
+          }
+          return recordReadingProgressWithDependencies(
+            offlineEnabled: offlineEnabledForFlush,
+            offlineDatabase: offlineDbForFlush,
+            repository: repoForFlush,
+            chapterId: p.chapterId,
+            lastPageRead: p.rel,
+            isRead: isCompletion,
+            completionChapterIds: isCompletion
+                ? expandIdsForDuplicates(allChaptersForFlush.value, [
+                    p.chapterId,
+                  ])
+                : null,
+          );
+        }).ignore();
       };
     }, const []);
 
@@ -916,6 +955,9 @@ void _markChapterRead(
   BuildContext context,
 ) {
   if (ref.read(incognitoModeProvider)) return;
+  if (ref.read(readerProgressQueuesProvider)[chapter.id]?.syncing ?? false) {
+    return;
+  }
   if (chapter.user.isRead.ifNull()) return;
   if (completedChapterIds.value.contains(chapter.id)) return;
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};

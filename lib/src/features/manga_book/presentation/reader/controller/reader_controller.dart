@@ -19,6 +19,7 @@ import '../../../../settings/presentation/koreader_sync/data/koreader_sync_repos
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
+import '../utils/reader_progress_queue.dart';
 
 part 'reader_controller.g.dart';
 
@@ -115,9 +116,35 @@ Future<Mutation$PullKoSyncProgress$pullKoSyncProgress?> localKoSyncProgress(
   try {
     final status = await ref.watch(koSyncStatusProvider.future);
     if (!status.isLoggedIn || !ref.mounted) return null;
-    return await ref
-        .read(koreaderSyncRepositoryProvider)
-        .pullProgress(chapterId);
+    final queue = ref
+        .read(readerProgressQueuesProvider)
+        .putIfAbsent(chapterId, ReaderProgressQueue.new);
+    final repository = ref.read(koreaderSyncRepositoryProvider);
+    return await queue.pull(
+      () async {
+        final result = await repository.pullProgress(chapterId);
+        if (!ref.mounted) return null;
+        final updated = result?.chapter;
+        if (result?.syncConflict == null && updated != null) {
+          await db.setChapterProgress(
+            chapterId,
+            lastPageRead: updated.user.lastPageRead,
+            isRead: updated.user.isRead,
+          );
+          await db.clearProgressDirtyIfUnchanged(
+            chapterId,
+            lastPageRead: updated.user.lastPageRead,
+          );
+          await db.clearReadStateDirtyIfUnchanged(
+            chapterId,
+            isRead: updated.user.isRead,
+          );
+        }
+        return result;
+      },
+      replacesProgress: (result) =>
+          result?.chapter != null || result?.syncConflict != null,
+    );
   } catch (_) {
     return null;
   }

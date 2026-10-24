@@ -40,6 +40,7 @@ import 'controller/display_cutout.dart';
 import 'controller/reader_controller.dart';
 import 'utils/download_ahead.dart';
 import 'utils/flush_progress_on_lifecycle.dart';
+import 'utils/reader_progress_queue.dart';
 import 'widgets/chrome/reader_chrome.dart';
 import 'widgets/reader_mode/infinity_continuous/multichapter_continuous_reader_mode.dart';
 import 'widgets/reader_mode/multichapter_paged_reader_mode.dart';
@@ -113,6 +114,8 @@ class ReaderScreen extends HookConsumerWidget {
     // Latest page reached, so we can flush it on exit (the debounce below would
     // otherwise drop the last few pages if you back out before it fires).
     final latestPage = useRef<int>(-1);
+    final progressQueue = ref.read(readerProgressQueuesProvider).putIfAbsent(chapterId, ReaderProgressQueue.new);
+    final progressGeneration = useRef(progressQueue.generation);
     // The first onPageChanged is the on-mount restore, not a page turn.
     // Counting it as reading would mark a chapter opened at its last page read.
     final initialEmitConsumed = useRef<bool>(false);
@@ -124,7 +127,7 @@ class ReaderScreen extends HookConsumerWidget {
       // Incognito: leave no trace. Skip every progress/history write (covers
       // both the debounced call and the PopScope flush). The PopScope's own
       // provider invalidations still run — they're outside this callback.
-      if (incognitoMode) return;
+      if (incognitoMode || progressQueue.syncing || progressGeneration.value != progressQueue.generation) return;
       final chapterValue = pinnedChapter;
       final chapterPagesValue = pinnedChapterPages;
       if (chapterValue == null || chapterPagesValue == null) return;
@@ -155,6 +158,7 @@ class ReaderScreen extends HookConsumerWidget {
         chapterId: chapterValue.id,
         lastPageRead: currentPage,
         isRead: isReadingCompleted,
+        generation: progressGeneration.value,
       );
       // An online-only user has no pending row to retry, so a failed push would
       // otherwise vanish. Surface it instead of saving progress into a void.
@@ -211,6 +215,8 @@ class ReaderScreen extends HookConsumerWidget {
         return;
       }
 
+      if (progressQueue.syncing) return;
+      progressGeneration.value = progressQueue.generation;
       latestPage.value = index;
       final finalDebounce = debounce.value;
       if ((finalDebounce?.isActive).ifNull()) {

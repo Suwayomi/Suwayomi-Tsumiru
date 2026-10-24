@@ -35,6 +35,7 @@ import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_propagation.dart';
+import '../../manga_book/presentation/reader/utils/reader_progress_queue.dart';
 import '../../notifications/controller/notifications_controller.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -375,7 +376,15 @@ Future<AsyncValue<void>> recordReadingProgress(
   required int chapterId,
   required int lastPageRead,
   required bool isRead,
+  int? generation,
 }) {
+  final queue = ref
+      .read(readerProgressQueuesProvider)
+      .putIfAbsent(chapterId, ReaderProgressQueue.new);
+  final expectedGeneration = generation ?? queue.generation;
+  if (queue.syncing || expectedGeneration != queue.generation) {
+    return Future.value(const AsyncValue.data(null));
+  }
   final current = ref
       .read(authCredentialsStoreProvider.notifier)
       .captureSession();
@@ -393,16 +402,21 @@ Future<AsyncValue<void>> recordReadingProgress(
   return ref
       .read(offlineRuntimeStorageProvider.notifier)
       .track(
-        () => recordReadingProgressWithDependencies(
-          offlineEnabled: offline,
-          offlineDatabase: db,
-          repository: repository,
-          chapterId: chapterId,
-          lastPageRead: lastPageRead,
-          isRead: isRead,
-          completionChapterIds: completionChapterIds,
-          isCurrentSession: current,
-        ),
+        () => queue.run(() {
+          if (expectedGeneration != queue.generation) {
+            return Future.value(const AsyncValue<void>.data(null));
+          }
+          return recordReadingProgressWithDependencies(
+            offlineEnabled: offline,
+            offlineDatabase: db,
+            repository: repository,
+            chapterId: chapterId,
+            lastPageRead: lastPageRead,
+            isRead: isRead,
+            completionChapterIds: completionChapterIds,
+            isCurrentSession: current,
+          );
+        }),
       );
 }
 
