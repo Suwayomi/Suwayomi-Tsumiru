@@ -66,13 +66,30 @@ class _SignInSectionState extends ConsumerState<SignInSection> {
 
   @override
   Widget build(BuildContext context) {
-    final data = ref.watch(signInSettingsProvider).value;
-    final capability = ref.watch(signInAccountsCapabilityProvider).value;
-    if (data == null ||
+    final settings = ref.watch(signInSettingsProvider);
+    final accountCapability = ref.watch(signInAccountsCapabilityProvider);
+    void retry() {
+      ref.invalidate(signInSettingsProvider);
+      ref.invalidate(signInAccountsCapabilityProvider);
+    }
+
+    if (settings.isLoading || accountCapability.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final capability = accountCapability.value;
+    if (settings.hasError ||
+        accountCapability.hasError ||
         capability == null ||
         capability == AccountCapability.unknown) {
-      return const SizedBox.shrink();
+      return Column(
+        children: [
+          Text(context.l10n.serverSignInUnknown),
+          TextButton(onPressed: retry, child: Text(context.l10n.retry)),
+        ],
+      );
     }
+    final data = settings.value;
+    if (data == null) return const SizedBox.shrink();
     final before = signInValues(data);
     final accounts = capability == AccountCapability.supported;
     final admin = signInAdmin(

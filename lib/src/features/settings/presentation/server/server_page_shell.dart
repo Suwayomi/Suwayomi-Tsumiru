@@ -23,6 +23,7 @@ import 'widget/images/data/images_repository.dart';
 import 'widget/misc_settings/data/misc_logs_repository.dart';
 import 'widget/opds/data/opds_repository.dart';
 import 'widget/sign_in/data/sign_in_repository.dart';
+import 'widget/sign_in/sign_in_section.dart';
 import 'widget/webview/data/webview_repository.dart';
 
 List<Widget> _noSections(SettingsDto _) => const [];
@@ -54,6 +55,7 @@ class ServerSettingsPageShell extends ConsumerWidget {
       ref.invalidate(opdsSettingsProvider);
       ref.invalidate(databaseSettingsProvider);
       ref.invalidate(signInSettingsProvider);
+      ref.invalidate(signInAccountsCapabilityProvider);
       ref.invalidate(miscLogsSettingsProvider);
       ref.invalidate(webViewSettingsProvider);
       ref.invalidate(clearCookiesAndCacheSupportProvider);
