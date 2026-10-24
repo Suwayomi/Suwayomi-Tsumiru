@@ -7,8 +7,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../graphql/__generated__/schema.graphql.dart';
-import '../../../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../../../utils/network/graphql_errors.dart';
 import '../../../../../../account/data/account_permission.dart';
 import '../../../../../../account/data/account_providers.dart';
 import '../../../../../../auth/data/auth_coordinator.dart';
@@ -225,45 +223,16 @@ class SignInActions {
       await background.changeIdentity(() async {
         await SignInExecutor(
           write: () async {
-            try {
-              final result = await repository.write(patch);
-              if (result == null) {
-                throw const SignInPreflightException('unknown');
-              }
-              effectiveUsername = result.authUsername;
-              return signInValues(result);
-            } on OperationMessageException catch (error) {
-              final link = error.exception.linkException;
-              if (link?.originalException is TimeoutException ||
-                  link is NetworkException &&
-                      (link.message?.toLowerCase().contains('timeout') ??
-                          false)) {
-                throw TimeoutException('Sign-in settings reply timed out');
-              }
-              rethrow;
-            }
+            final result = await repository.write(patch);
+            if (result == null) throw const SignInPreflightException('unknown');
+            effectiveUsername = result.authUsername;
+            return signInValues(result);
           },
           read: () async {
-            try {
-              final data = await repository.settings();
-              if (data != null) {
-                effectiveUsername = data.authUsername;
-                return signInValues(data);
-              }
-            } on OperationMessageException catch (error) {
-              final cause = error.exception;
-              if (isAuthenticationRequired(cause) ||
-                  isPermissionDenied(cause) ||
-                  cause.graphqlErrors.any(
-                    (e) =>
-                        e.message.contains('JWT') ||
-                        e.message.toLowerCase().contains('audience'),
-                  )) {
-                throw const SignInSessionEnded();
-              }
-              rethrow;
-            }
-            throw const SignInPreflightException('unknown');
+            final data = await repository.settings();
+            if (data == null) throw const SignInPreflightException('unknown');
+            effectiveUsername = data.authUsername;
+            return signInValues(data);
           },
           authenticate: (follow, effective) async {
             final candidate = await stage(

@@ -14,20 +14,19 @@ import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
-import '../../../../../../features/auth/data/auth_credentials_store.dart';
-import '../../../../../../features/auth/data/auth_recovery_target.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
+import '../../../../../../features/auth/presentation/sign_in_action.dart';
 import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../utils/platform/web_auth_mode.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../../account/data/account_actions.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/data/server_account_capability.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../../../../account/presentation/account_code_dialog.dart';
-import '../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../client/server_port_tile/server_port_tile.dart';
 import '../client/server_url_tile/server_url_tile.dart';
 
@@ -41,12 +40,21 @@ class AuthUsername extends _$AuthUsername
 }
 
 class LoginCredentialsPopup extends HookConsumerWidget {
-  const LoginCredentialsPopup({super.key, required this.authType});
+  const LoginCredentialsPopup({
+    super.key,
+    required this.authType,
+    this.allowModeSelection = false,
+  });
 
   final AuthType authType;
+  final bool allowModeSelection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final selectedMode = useState(this.authType);
+    final authType = selectedMode.value;
+    final web = ref.watch(isWebProvider);
+    final unsupported = web && isWebUnsupportedAuthMode(authType);
     final formKey = useMemoized(() => GlobalKey<FormState>());
     final username = useTextEditingController(
       text: ref.read(authUsernameProvider) ?? '',
@@ -165,6 +173,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
     }
 
     Future<void> doSave() async {
+      if (unsupported || testing.value) return;
       if (!(formKey.currentState?.validate()).ifNull()) return;
       testing.value = true;
       testResult.value = null;
@@ -175,33 +184,12 @@ class LoginCredentialsPopup extends HookConsumerWidget {
           testing.value = false;
           return;
         }
-        await ref.read(backgroundDownloadControllerProvider).changeIdentity(
-          () async {
-            final store = ref.read(authCredentialsStoreProvider.notifier);
-            final coordinator = ref.read(authCoordinatorProvider.notifier);
-            if (authType == AuthType.simpleLogin) {
-              await coordinator.loginSimple(
-                serverBaseUrl: resolvedUrl,
-                username: username.text,
-                password: password.text,
-              );
-            } else if (authType == AuthType.uiLogin) {
-              await coordinator.loginUi(
-                gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
-                username: username.text,
-                password: password.text,
-                serverBaseUrl: resolvedUrl,
-              );
-            }
-            if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
-            if (authType != AuthType.simpleLogin) {
-              await store.clearSimpleLoginCookie();
-            }
-            await store.clearBasicCredentials();
-            ref.read(authUsernameProvider.notifier).update(username.text);
-            ref.read(authTypeKeyProvider.notifier).update(authType);
-            ref.read(authRecoveryTargetProvider.notifier).set(null);
-          },
+        await performSignIn(
+          ref,
+          authType: authType,
+          serverBaseUrl: resolvedUrl,
+          username: username.text,
+          password: password.text,
         );
         if (context.mounted) Navigator.pop(context);
       } catch (e) {
@@ -221,29 +209,58 @@ class LoginCredentialsPopup extends HookConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextFormField(
-              controller: username,
-              validator: (v) => v.isBlank ? context.l10n.errorUserName : null,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                hintText: context.l10n.userName,
-                border: const OutlineInputBorder(),
+            if (allowModeSelection)
+              DropdownButtonFormField<AuthType>(
+                initialValue: authType,
+                decoration: InputDecoration(
+                  labelText: context.l10n.serverAuthMode,
+                ),
+                items: AuthType.values
+                    .map(
+                      (mode) => DropdownMenuItem(
+                        value: mode,
+                        enabled: !(web && isWebUnsupportedAuthMode(mode)),
+                        child: Text(switch (mode) {
+                          AuthType.none => context.l10n.serverAuthNone,
+                          AuthType.basic => context.l10n.serverAuthBasic,
+                          AuthType.simpleLogin => context.l10n.serverAuthSimple,
+                          AuthType.uiLogin => context.l10n.serverAuthUi,
+                        }),
+                      ),
+                    )
+                    .toList(),
+                onChanged: testing.value
+                    ? null
+                    : (mode) {
+                        if (mode != null) selectedMode.value = mode;
+                        testResult.value = null;
+                      },
               ),
-            ),
-            const Gap(4),
-            TextFormField(
-              controller: password,
-              validator: (v) => v.isBlank ? context.l10n.errorPassword : null,
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) {
-                if (!testing.value) doSave();
-              },
-              decoration: InputDecoration(
-                hintText: context.l10n.password,
-                border: const OutlineInputBorder(),
+            if (authType != AuthType.none) ...[
+              TextFormField(
+                controller: username,
+                validator: (v) => v.isBlank ? context.l10n.errorUserName : null,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  hintText: context.l10n.userName,
+                  border: const OutlineInputBorder(),
+                ),
               ),
-            ),
+              const Gap(4),
+              TextFormField(
+                controller: password,
+                validator: (v) => v.isBlank ? context.l10n.errorPassword : null,
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) {
+                  if (!testing.value) doSave();
+                },
+                decoration: InputDecoration(
+                  hintText: context.l10n.password,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
             const Gap(12),
             Text(
               context.l10n.authReverseProxyHelp,
@@ -299,7 +316,9 @@ class LoginCredentialsPopup extends HookConsumerWidget {
       actions: [
         const PopButton(),
         TextButton(
-          onPressed: testing.value ? null : doTest,
+          onPressed: testing.value || unsupported || authType == AuthType.none
+              ? null
+              : doTest,
           child: testing.value
               ? const SizedBox(
                   width: 16,
@@ -309,7 +328,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
               : Text(context.l10n.authTestConnection),
         ),
         ElevatedButton(
-          onPressed: testing.value ? null : doSave,
+          onPressed: testing.value || unsupported ? null : doSave,
           child: Text(context.l10n.save),
         ),
       ],

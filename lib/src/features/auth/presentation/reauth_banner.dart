@@ -14,7 +14,6 @@ import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_notice.dart';
-import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_lifecycle_observer.dart';
 import '../data/auth_recovery_target.dart';
@@ -89,15 +88,6 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
       leading: const Icon(Icons.warning_amber_rounded),
       actions: [
         TextButton(
-          // The button must never be a dead end. For a known credential mode
-          // pop the quick login dialog; otherwise send the user to the
-          // Connection screen, where they can set the mode and sign in.
-          //
-          // The dialog is pushed onto the ROUTER's navigator, not ours. This
-          // banner is hosted in `MaterialApp.builder`, which sits above the
-          // navigator, so `showDialog` with our own context finds nothing to
-          // push onto and throws — leaving the only way back into the app
-          // doing nothing at all when you click it.
           onPressed: _openSignIn,
           child: Text(context.l10n.authReauthenticate),
         ),
@@ -115,16 +105,11 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
         ref.read(authRecoveryTargetProvider) ??
         ref.read(authTypeKeyProvider) ??
         DBKeys.authType.initial;
-    if (mode == AuthType.none) {
-      const ConnectionRoute().push(navigatorContext);
-      return;
-    }
     _dialogOpen = true;
     showDialog<void>(
       context: navigatorContext,
-      builder: (_) => mode == AuthType.basic
-          ? const CredentialsPopup()
-          : LoginCredentialsPopup(authType: mode),
+      builder: (_) =>
+          LoginCredentialsPopup(authType: mode, allowModeSelection: true),
       animationStyle: navigatorContext.motionStyle,
     ).whenComplete(() => _dialogOpen = false);
   }

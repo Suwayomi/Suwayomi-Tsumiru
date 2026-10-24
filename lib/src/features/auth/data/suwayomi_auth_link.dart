@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:graphql/client.dart';
 
 import '../../../constants/enum.dart';
+import '../../../utils/network/graphql_errors.dart';
 import 'auth_coordinator.dart';
 
 class SuwayomiAuthLink extends Link {
@@ -71,10 +72,7 @@ class SuwayomiAuthLink extends Link {
         ? request
         : request.updateContextEntry<HttpLinkHeaders>(
             (HttpLinkHeaders? entry) => HttpLinkHeaders(
-              headers: <String, String>{
-                ...?entry?.headers,
-                ...resolvedHeaders,
-              },
+              headers: <String, String>{...?entry?.headers, ...resolvedHeaders},
             ),
           );
 
@@ -215,26 +213,15 @@ class SuwayomiAuthLink extends Link {
     }
   }
 
-  /// True only for a THROWN HTTP 401/403 (HttpLink throws on non-200). A
-  /// socket/timeout/5xx is not auth and must propagate unchanged.
   bool _isThrownAuthError(Object error) {
+    if (isSignInSessionEnded(error)) return true;
     final ex = error is OperationException ? error.linkException : error;
-    if (ex is HttpLinkServerException) {
-      final status = ex.response.statusCode;
-      return status == 401 || status == 403;
-    }
-    return false;
+    return ex is HttpLinkServerException && ex.response.statusCode == 403;
   }
 
   bool _is401(Response response) {
-    final errors = response.errors;
-    if (errors == null) return false;
-    for (final err in errors) {
-      final http = err.extensions?['http'] as Map?;
-      final status = http?['status'];
-      if (status == 401) return true;
-      if (err.message.toLowerCase().contains('unauthor')) return true;
-    }
-    return false;
+    return isSignInSessionEnded(
+      OperationException(graphqlErrors: response.errors ?? const []),
+    );
   }
 }

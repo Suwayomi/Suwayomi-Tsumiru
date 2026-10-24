@@ -24,27 +24,39 @@ bool isPermissionDenied(Object error) {
   return message.isNotEmpty && message.split(', ').every(forbidden);
 }
 
-bool isAuthenticationRequired(Object error) {
+bool isAuthenticationRequired(Object error) => isSignInSessionEnded(error);
+
+bool isSignInSessionEnded(Object error) {
   if (error is OperationException) {
-    if (error.graphqlErrors.any(
-      (entry) =>
-          entry.extensions?['http'] is Map &&
-              (entry.extensions!['http'] as Map)['status'] == 401 ||
-          entry.message.toLowerCase().contains('unauthor'),
-    )) {
-      return true;
-    }
-    final link = error.linkException;
-    return link != null && isAuthenticationRequired(link);
+    return error.graphqlErrors.any((entry) {
+          final status = (entry.extensions?['http'] as Map?)?['status'];
+          if (status != null) return status == 401;
+          final message = entry.message
+              .split('\n')
+              .first
+              .replaceFirst(
+                RegExp(r'^Exception while fetching data \([^)]*\)\s*:\s*'),
+                '',
+              )
+              .trim();
+          return message == 'Unauthorized' || message == 'Visitor';
+        }) ||
+        (error.linkException != null &&
+            isSignInSessionEnded(error.linkException!));
   }
   if (error is HttpLinkServerException) {
     return error.response.statusCode == 401;
   }
-  if (error is ResponseFormatException) {
-    final original = error.originalException;
-    return original != null && isAuthenticationRequired(original);
+  if (error is LinkException && error.originalException != null) {
+    return isSignInSessionEnded(error.originalException!);
   }
-  return error is ServerNotJsonException && error.statusCode == 401;
+  if (error is ServerNotJsonException) {
+    // Stable v2.4.2366 Jwt.kt:95–96 throws this plain-text HTTP 400.
+    return error.statusCode == 401 ||
+        (error.statusCode == 400 &&
+            error.snippet.startsWith('Token intended for different audience'));
+  }
+  return false;
 }
 
 /// A Basic-auth server answers anonymous GraphQL with a readable 404 "Not Found".

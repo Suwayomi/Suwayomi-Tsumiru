@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
@@ -13,6 +14,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
+import '../../settings/presentation/server/widget/sign_in/graphql/__generated__/sign_in.graphql.dart';
 import '../data/auth_coordinator.dart';
 import '../data/auth_credentials_store.dart';
 import '../data/auth_recovery_target.dart';
@@ -67,7 +69,17 @@ Future<void> performSignIn(
           serverBaseUrl: serverBaseUrl,
         );
       case AuthType.none:
-        break;
+        final status = await ref
+            .read(unauthenticatedGraphQlClientProvider)
+            .query$ServerSignInStatus(
+              Options$Query$ServerSignInStatus(
+                fetchPolicy: FetchPolicy.noCache,
+              ),
+            )
+            .getData((data) => data.settings);
+        if (status == null) {
+          throw StateError('Could not verify anonymous access');
+        }
     }
     if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
     if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();

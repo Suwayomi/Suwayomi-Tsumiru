@@ -1,6 +1,8 @@
-import 'dart:async';
+import 'package:graphql/client.dart';
 
 import '../../../../../../../constants/enum.dart';
+import '../../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../../utils/network/graphql_errors.dart';
 import 'sign_in_transition.dart';
 
 class SignInValues {
@@ -70,19 +72,28 @@ class SignInExecutor {
     late SignInValues effective;
     try {
       effective = await write();
-    } on TimeoutException {
+    } catch (error) {
+      final cause = error is OperationMessageException
+          ? error.exception
+          : error;
+      if (cause is OperationException &&
+          cause.linkException == null &&
+          cause.graphqlErrors.isNotEmpty) {
+        rethrow;
+      }
       try {
         effective = await read();
-      } on SignInSessionEnded {
-        if (proposed.mode == AuthType.uiLogin &&
+      } catch (error) {
+        final cause = error is OperationMessageException
+            ? error.exception
+            : error;
+        if (isSignInSessionEnded(cause) &&
+            proposed.mode == AuthType.uiLogin &&
             proposed.audience != before.audience) {
           await invalidateUi();
           requestSignIn(AuthType.uiLogin);
           return;
         }
-        requestSignIn(proposed.mode);
-        rethrow;
-      } catch (_) {
         requestSignIn(proposed.mode);
         rethrow;
       }
@@ -109,8 +120,4 @@ class SignInExecutor {
       rethrow;
     }
   }
-}
-
-class SignInSessionEnded implements Exception {
-  const SignInSessionEnded();
 }

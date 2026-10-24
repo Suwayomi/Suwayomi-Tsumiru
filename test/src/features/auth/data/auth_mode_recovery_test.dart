@@ -5,139 +5,115 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/account/data/account_providers.dart';
+import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
+import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_recovery_target.dart';
 import 'package:tsumiru/src/features/auth/data/auth_state.dart';
+import 'package:tsumiru/src/features/auth/data/suwayomi_auth_link.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/sign_in/graphql/__generated__/sign_in.graphql.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 
-class _StatusLink extends Link {
-  _StatusLink(this.mode);
-  String mode;
-  String audience = 'server';
-  bool refused = false;
-  final headers = <Map<String, String>>[];
+import 'recorded_auth_response.dart';
 
-  @override
-  Stream<Response> request(Request request, [NextLink? forward]) async* {
-    headers.add(request.context.entry<HttpLinkHeaders>()?.headers ?? {});
-    if (refused) {
-      yield Response(
-        response: {},
-        errors: const [GraphQLError(message: 'Unauthorized')],
-      );
-    } else {
-      yield Response(
-        response: {},
-        data: {
-          '__typename': 'Query',
-          'settings': {
-            '__typename': 'SettingsType',
-            'authMode': mode,
-            'jwtAudience': audience,
-          },
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  for (final manager in [false, true]) {
+    for (final refused in [false, true]) {
+      test(
+        'recovery preserves credentials: manager $manager, protected read $refused',
+        () async {
+          FlutterSecureStorage.setMockInitialValues({});
+          SharedPreferences.setMockInitialValues({
+            DBKeys.authType.name: AuthType.uiLogin.index,
+          });
+          final client = recordedAuthClient(
+            refused ? 401 : 200,
+            refused
+                ? '{"errors":[{"message":"Unauthorized"}]}'
+                : '{"data":{"__typename":"Query","settings":{"__typename":"SettingsType","authMode":"NONE","jwtAudience":"server"}}}',
+          );
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(
+                await SharedPreferences.getInstance(),
+              ),
+              unauthenticatedGraphQlClientProvider.overrideWithValue(client),
+              settledAccountAccessProvider.overrideWithValue(
+                AccountAccess(
+                  capability: AccountCapability.supported,
+                  user: Fragment$AccountDto(
+                    id: 2,
+                    username: 'reader',
+                    roles: const [],
+                    permissions: manager
+                        ? const [Enum$UserPermission.MANAGE_SETTINGS]
+                        : const [],
+                  ),
+                ),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          await container.read(authCredentialsStoreProvider.future);
+          await container.read(credentialsProvider.future);
+          final store = container.read(authCredentialsStoreProvider.notifier);
+          await store.saveUiLoginTokens(
+            accessToken: 'old',
+            refreshToken: 'refresh',
+          );
+          store.activateSession();
+          final epoch = store.sessionEpoch;
+          await container.read(authModeReconcilerProvider).reconcile();
+          expect(container.read(authRecoveryTargetProvider), isNull);
+          await container
+              .read(authModeReconcilerProvider)
+              .reconcile(authFailure: true);
+          expect(
+            container.read(authRecoveryTargetProvider),
+            manager && !refused ? AuthType.none : AuthType.uiLogin,
+          );
+          expect(container.read(needsReauthProvider), isTrue);
+          expect(container.read(authTypeKeyProvider), AuthType.uiLogin);
+          expect(store.uiLoginTokens()?.accessToken, 'old');
+          expect(store.sessionEpoch, epoch);
         },
       );
     }
   }
-}
-
-Future<ProviderContainer> _setup(AuthType mode, _StatusLink link) async {
-  FlutterSecureStorage.setMockInitialValues({});
-  SharedPreferences.setMockInitialValues({DBKeys.authType.name: mode.name});
-  final container = ProviderContainer(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(
-        await SharedPreferences.getInstance(),
-      ),
-      unauthenticatedGraphQlClientProvider.overrideWithValue(
-        GraphQLClient(link: link, cache: GraphQLCache()),
-      ),
-    ],
-  );
-  addTearDown(container.dispose);
-  await container.read(authCredentialsStoreProvider.future);
-  await container.read(credentialsProvider.future);
-  container.read(authTypeKeyProvider.notifier).update(mode);
-  container.read(authCredentialsStoreProvider.notifier).activateSession();
-  return container;
-}
-
-void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  for (final change in [
-    (old: AuthType.none, server: 'UI_LOGIN', target: AuthType.uiLogin),
-    (old: AuthType.uiLogin, server: 'BASIC_AUTH', target: AuthType.basic),
-    (old: AuthType.basic, server: 'SIMPLE_LOGIN', target: AuthType.simpleLogin),
-    (old: AuthType.simpleLogin, server: 'UI_LOGIN', target: AuthType.uiLogin),
+  for (final response in [
+    (
+      200,
+      '{"errors":[{"message":"Exception while fetching data (/settings) : Unauthorized"}]}',
+    ),
+    (200, '{"errors":[{"message":"Visitor"}]}'),
+    (401, 'Unauthorized'),
+    (400, 'Token intended for different audience [old]'),
+    (500, 'Server error'),
   ]) {
-    test(
-      'resume discovers external ${change.old} → ${change.target} without committing mode',
-      () async {
-        final link = _StatusLink(change.server);
-        final container = await _setup(change.old, link);
-        await container.read(authModeReconcilerProvider).reconcile();
-        expect(container.read(authRecoveryTargetProvider), change.target);
-        expect(container.read(needsReauthProvider), isTrue);
-        expect(container.read(authTypeKeyProvider), change.old);
-      },
-    );
+    test('HTTP decoder classifies ${response.$1} ${response.$2}', () async {
+      var recoveryRequested = false;
+      final raw = recordedAuthClient(response.$1, response.$2);
+      final client = GraphQLClient(
+        cache: GraphQLCache(),
+        link: SuwayomiAuthLink(
+          authType: () => AuthType.basic,
+          getHeaders: () async => null,
+          refreshAccessToken: () async =>
+              throw StateError('Basic cannot refresh'),
+          onNeedsReauth: () => recoveryRequested = true,
+        ).concat(raw.link),
+      );
+      final result = await client.query$ServerSignInStatus(
+        Options$Query$ServerSignInStatus(fetchPolicy: FetchPolicy.noCache),
+      );
+      expect(result.exception, isNotNull);
+      expect(isSignInSessionEnded(result.exception!), response.$1 != 500);
+      expect(recoveryRequested, response.$1 != 500);
+    });
   }
-  for (final mode in [AuthType.basic, AuthType.simpleLogin, AuthType.uiLogin]) {
-    test(
-      'external credential or audience rejection preserves $mode recovery when discovery is refused',
-      () async {
-        final link = _StatusLink('UI_LOGIN')..refused = true;
-        final container = await _setup(mode, link);
-        await container
-            .read(authModeReconcilerProvider)
-            .reconcile(authFailure: true);
-        expect(container.read(authRecoveryTargetProvider), mode);
-        expect(container.read(needsReauthProvider), isTrue);
-        expect(container.read(authTypeKeyProvider), mode);
-      },
-    );
-  }
-  test(
-    'known external audience change drops tokens and replaces clients',
-    () async {
-      final link = _StatusLink('UI_LOGIN');
-      final container = await _setup(AuthType.uiLogin, link);
-      final store = container.read(authCredentialsStoreProvider.notifier);
-      await store.saveUiLoginTokens(
-        accessToken: 'old-token',
-        refreshToken: 'old-refresh',
-      );
-      store.activateSession();
-      final reconciler = container.read(authModeReconcilerProvider);
-      await reconciler.reconcile();
-      final before = store.sessionEpoch;
-      link.audience = 'new audience';
-      await reconciler.reconcile();
-      expect(store.uiLoginTokens(), isNull);
-      expect(store.sessionEpoch, greaterThan(before));
-      expect(container.read(authRecoveryTargetProvider), AuthType.uiLogin);
-      expect(container.read(needsReauthProvider), isTrue);
-    },
-  );
-  test(
-    'external UI login → None clears all old credentials and account binding',
-    () async {
-      final container = await _setup(AuthType.uiLogin, _StatusLink('NONE'));
-      final store = container.read(authCredentialsStoreProvider.notifier);
-      await store.saveUiLoginTokens(
-        accessToken: 'old',
-        refreshToken: 'old-refresh',
-      );
-      store.activateSession();
-      await container.read(authModeReconcilerProvider).reconcile();
-      expect(container.read(authTypeKeyProvider), AuthType.none);
-      expect(store.uiLoginTokens(), isNull);
-      expect(
-        container.read(authCredentialsStoreProvider).value?.accountBinding,
-        isNull,
-      );
-      expect(container.read(authRecoveryTargetProvider), isNull);
-    },
-  );
 }
