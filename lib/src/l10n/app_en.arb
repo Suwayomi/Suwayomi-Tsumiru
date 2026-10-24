@@ -4224,5 +4224,6 @@
       }
     }
   },
-  "duplicateChapters": "Duplicate chapters"
+  "duplicateChapters": "Duplicate chapters",
+  "openRandomEntry": "Open random entry"
 }
