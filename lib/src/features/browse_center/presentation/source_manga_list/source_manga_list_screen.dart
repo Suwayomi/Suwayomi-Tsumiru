@@ -27,6 +27,7 @@ import '../../data/source_repository/source_repository.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/source/source_model.dart';
 import 'controller/source_manga_controller.dart';
+import 'source_page_sequence.dart';
 import 'widgets/source_manga_display_icon_popup.dart';
 import 'widgets/source_manga_display_view.dart';
 import 'widgets/source_manga_filter.dart';
@@ -83,7 +84,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
 
     final query = useState(initialQuery);
     final showSearch = useState(initialQuery.isNotBlank);
-    final nextSourcePages = useRef(<int, int>{});
+    final sourcePages = useMemoized(() => SourcePageSequence<MangaDto>());
     final controller = useServerPagingController<MangaDto>(
       firstPageKey: 1,
       // Read per request: a LAN/remote endpoint switch replaces the client,
@@ -95,25 +96,25 @@ class SourceMangaListScreen extends HookConsumerWidget {
         );
         final currentQuery = query.value;
         final currentFilter = liveAppliedFilter.value;
-        var sourcePage = pageKey == 1
-            ? 1
-            : nextSourcePages.value[pageKey] ?? pageKey;
-        while (true) {
-          final page = await _fetchPage(
+        return sourcePages.fetch(
+          pageKey,
+          (sourcePage) => _fetchPage(
             repository,
             sourcePage,
             hideLibraryEntries: hideLibraryEntries,
             query: currentQuery,
             filter: currentFilter,
-          );
-          sourcePage++;
-          nextSourcePages.value[pageKey + 1] = sourcePage;
-          if (page.items.isNotEmpty || !page.hasNextPage) return page;
-        }
+          ),
+        );
       },
     );
-    useEffect(() {
+    void refresh() {
+      sourcePages.refresh();
       controller.refresh();
+    }
+
+    useEffect(() {
+      refresh();
       return null;
     }, [hideLibraryEntries]);
     return source.showUiWhenData(
@@ -213,7 +214,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                       onSubmitted: (val) {
                         if (sourceType == SourceType.SEARCH) {
                           query.value = (val);
-                          controller.refresh();
+                          refresh();
                         } else {
                           if (val == null) return;
                           SourceTypeRoute(
@@ -230,7 +231,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
           ],
         );
         final listBody = RefreshIndicator(
-          onRefresh: () async => controller.refresh(),
+          onRefresh: () async => refresh(),
           child: SourceMangaDisplayView(
             sourceId: sourceId,
             sourceType: sourceType,
@@ -271,7 +272,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                         if (sourceType == SourceType.SEARCH) {
                           query.value = savedQuery;
                           showSearch.value = savedQuery.isNotBlank;
-                          controller.refresh();
+                          refresh();
                         } else {
                           SourceTypeRoute(
                             sourceId: sourceId,
@@ -282,12 +283,12 @@ class SourceMangaListScreen extends HookConsumerWidget {
                       },
                       onReset: () {
                         appliedFilterNotifier.reset();
-                        controller.refresh();
+                        refresh();
                       },
                       onSubmitted: (value) {
                         Navigator.pop(context);
                         appliedFilterNotifier.apply(value ?? const []);
-                        controller.refresh();
+                        refresh();
                       },
                     ),
                   ),
@@ -322,7 +323,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                                 if (sourceType == SourceType.SEARCH) {
                                   query.value = savedQuery;
                                   showSearch.value = savedQuery.isNotBlank;
-                                  controller.refresh();
+                                  refresh();
                                 } else {
                                   SourceTypeRoute(
                                     sourceId: sourceId,
@@ -333,12 +334,12 @@ class SourceMangaListScreen extends HookConsumerWidget {
                               },
                               onReset: () {
                                 appliedFilterNotifier.reset();
-                                controller.refresh();
+                                refresh();
                               },
                               onSubmitted: (value) {
                                 Navigator.pop(context);
                                 appliedFilterNotifier.apply(value ?? const []);
-                                controller.refresh();
+                                refresh();
                               },
                             ),
                             sheetAnimationStyle: context.motionStyle,
