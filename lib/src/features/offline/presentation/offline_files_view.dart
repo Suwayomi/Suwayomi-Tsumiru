@@ -367,6 +367,13 @@ class OfflineFilesView extends HookConsumerWidget {
         clear,
       );
     }
+    if (picked.rule == OfflineKeepRule.off) {
+      clear();
+      for (final r in rows) {
+        await detachKeepRule(ref, r.manga.id);
+      }
+      return;
+    }
     if (!await confirmKeepRuleChanges(
           ref,
           rows.map((r) => r.manga.id),
@@ -374,13 +381,6 @@ class OfflineFilesView extends HookConsumerWidget {
           picked.count,
         ) ||
         !context.mounted) {
-      return;
-    }
-    if (picked.rule == OfflineKeepRule.off) {
-      clear();
-      for (final r in rows) {
-        await changeKeepRule(ref, r.manga.id, OfflineKeepRule.off, 5);
-      }
       return;
     }
     final growing = rows
