@@ -95,7 +95,7 @@ Future<void> _pumpEditor(
 Finder _compressionFields(WidgetTester tester) => find.byWidgetPredicate(
   (widget) =>
       widget is TextField &&
-      widget.decoration?.labelText == 'Compression level',
+      widget.decoration?.labelText == 'Quality',
   skipOffstage: false,
 );
 
@@ -237,7 +237,7 @@ void main() {
         .byWidgetPredicate(
           (widget) =>
               widget is TextField &&
-              widget.decoration?.labelText == 'MIME-Type target',
+              widget.decoration?.labelText == 'Convert to',
           skipOffstage: false,
         )
         .last;
