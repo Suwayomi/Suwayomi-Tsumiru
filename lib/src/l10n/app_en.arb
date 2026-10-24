@@ -1484,6 +1484,8 @@
   "bookmarked": "Bookmarked",
   "bookmark": "Bookmark",
   "removeBookmark": "Remove bookmark",
+  "bold": "Bold",
+  "bulletedList": "Bulleted list",
   "categoryNumberOfItems": "Show number of items",
   "@categoryNumberOfItems": {
     "description": "Library Display > Tabs: checkbox to show a manga count next to each category tab label"
@@ -1985,6 +1987,7 @@
   },
   "edit": "Edit",
   "editCategory": "Edit category",
+  "editNotes": "Edit notes",
   "hideCategory": "Hide category",
   "showCategory": "Show category",
   "showUpdateProgressBanner": "Show update progress banner",
@@ -2055,6 +2058,7 @@
   "invalidProp": "Invalid {property}",
   "ip": "IP address",
   "ipHintText": "Enter server binding IP address",
+  "italic": "Italic",
   "appThemeTitle": "Theme",
   "@appThemeTitle": {
     "description": "Header for the color theme picker"
@@ -2239,6 +2243,8 @@
   "noDownloads": "No downloads",
   "noMangaFound": "No manga found",
   "noOfChapters": "{count} chapters",
+  "notes": "Notes",
+  "numberedList": "Numbered list",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
   "readerChapterGapWarning": "{count, plural, =1{Skipping 1 chapter. It may be missing from the source or filtered out.} other{Skipping {count} chapters. They may be missing from the source or filtered out.}}",
   "@readerChapterGapWarning": {

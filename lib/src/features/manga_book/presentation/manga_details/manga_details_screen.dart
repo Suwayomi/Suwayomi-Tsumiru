@@ -35,11 +35,13 @@ import '../../domain/chapter/chapter_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'controller/manga_details_controller.dart';
+import 'manga_notes_screen.dart';
 import 'server_web_url.dart';
 import 'widgets/big_screen_manga_details.dart';
 import 'widgets/edit_manga_category_dialog.dart';
 import 'widgets/manga_chapter_organizer.dart';
 import 'widgets/manga_description.dart';
+import 'widgets/manga_notes_dialog.dart';
 import 'widgets/series_header.dart';
 import 'widgets/series_info_column.dart';
 import 'widgets/small_screen_manga_details.dart';
@@ -208,6 +210,35 @@ class MangaDetailsScreen extends HookConsumerWidget {
       if (url != null) openInBrowser(url);
     }
 
+    // Series notes (WebUI-shared Markdown). Library entries only for the
+    // entry itself; notes already on a non-library series still display.
+    void openMangaNotes(BuildContext context, MangaDto manga) {
+      final dialog = MangaNotesDialog(
+        mangaId: mangaId,
+        seriesTitle: manga.title,
+        initialNotes: manga.webUiNotes ?? '',
+        existingMetas: {for (final m in manga.meta) m.key: m.value},
+      );
+      if (twoColumn) {
+        showDialog(
+          context: context,
+          builder: (_) => dialog,
+          animationStyle: context.motionStyle,
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MangaNotesScreen(
+              mangaId: mangaId,
+              seriesTitle: manga.title,
+              initialNotes: manga.webUiNotes ?? '',
+              existingMetas: {for (final m in manga.meta) m.key: m.value},
+            ),
+          ),
+        );
+      }
+    }
+
     // Leaving this route at the root of the detail shell pops the shell page,
     // which disposes this screen without popping its own route, so PopScope
     // alone would miss it. Mirror the latest data and run the same library
@@ -330,6 +361,11 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       onTap: () => shareSeries(context, data!),
                       child: Text(context.l10n.share),
                     ),
+                  if (inLibrary && data != null)
+                    PopupMenuItem(
+                      onTap: () => openMangaNotes(context, data),
+                      child: Text(context.l10n.notes),
+                    ),
                   PopupMenuItem(
                     onTap: () => refresh(true),
                     child: Text(context.l10n.refresh),
@@ -345,6 +381,12 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   ),
                 ],
                 popUpAnimationStyle: context.motionStyle,
+              ),
+            if (twoColumn && inLibrary && data != null)
+              IconButton(
+                tooltip: context.l10n.notes,
+                icon: const Icon(Icons.edit_note_rounded),
+                onPressed: () => openMangaNotes(context, data),
               ),
             if (twoColumn && inLibrary)
               IconButton(
