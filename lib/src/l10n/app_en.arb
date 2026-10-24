@@ -4206,5 +4206,6 @@
   "cleanupDatabaseConfirm": "Remove non-library entries from categories?",
   "downloadAhead": "Download ahead",
   "autoDownloadWhileReading": "Auto download while reading",
-  "downloadAheadLimit": "Number of unread chapters to download"
+  "downloadAheadLimit": "Number of unread chapters to download",
+  "hideLibraryEntries": "Hide entries already in library"
 }

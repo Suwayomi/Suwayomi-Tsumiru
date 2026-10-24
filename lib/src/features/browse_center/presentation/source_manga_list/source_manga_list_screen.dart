@@ -13,6 +13,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -42,6 +43,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
     int pageKey, {
     String? query,
     List<FilterChange>? filter,
+    bool hideLibraryEntries = false,
   }) async {
     final page = await repository.fetchSourceManga(
       sourceId: sourceId,
@@ -51,33 +53,64 @@ class SourceMangaListScreen extends HookConsumerWidget {
       filters: filter,
     );
     if (page == null) return (items: <MangaDto>[], hasNextPage: false);
-    return (items: [...page.mangas], hasNextPage: page.hasNextPage.ifNull());
+    final items = visibleSourceMangas(
+      page.mangas,
+      hideLibraryEntries: hideLibraryEntries,
+    );
+    return (items: items, hasNextPage: page.hasNextPage.ifNull());
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hideLibraryEntries = ref.watch(
+      webUiBoolProvider('hideLibraryEntries'),
+    );
     final appliedFilter = ref.watch(appliedSourceFilterProvider(sourceId));
-    final appliedFilterNotifier =
-        ref.watch(appliedSourceFilterProvider(sourceId).notifier);
+    final appliedFilterNotifier = ref.watch(
+      appliedSourceFilterProvider(sourceId).notifier,
+    );
     final liveAppliedFilter = useRef(appliedFilter);
     liveAppliedFilter.value = appliedFilter;
-    final filterList =
-        ref.watch(baseSourceMangaFilterListProvider(sourceId)).value;
+    final filterList = ref
+        .watch(baseSourceMangaFilterListProvider(sourceId))
+        .value;
     final source = ref.watch(sourceProvider(sourceId));
 
     final query = useState(initialQuery);
     final showSearch = useState(initialQuery.isNotBlank);
+    final nextSourcePages = useRef(<int, int>{});
     final controller = useServerPagingController<MangaDto>(
       firstPageKey: 1,
       // Read per request: a LAN/remote endpoint switch replaces the client,
       // and the one captured on the first build is disposed with it.
-      fetchPage: (pageKey) => _fetchPage(
-        ref.read(sourceRepositoryProvider),
-        pageKey,
-        query: query.value,
-        filter: liveAppliedFilter.value,
-      ),
+      fetchPage: (pageKey) async {
+        final repository = ref.read(sourceRepositoryProvider);
+        final hideLibraryEntries = ref.read(
+          webUiBoolProvider('hideLibraryEntries'),
+        );
+        final currentQuery = query.value;
+        final currentFilter = liveAppliedFilter.value;
+        var sourcePage = pageKey == 1
+            ? 1
+            : nextSourcePages.value[pageKey] ?? pageKey;
+        while (true) {
+          final page = await _fetchPage(
+            repository,
+            sourcePage,
+            hideLibraryEntries: hideLibraryEntries,
+            query: currentQuery,
+            filter: currentFilter,
+          );
+          sourcePage++;
+          nextSourcePages.value[pageKey + 1] = sourcePage;
+          if (page.items.isNotEmpty || !page.hasNextPage) return page;
+        }
+      },
     );
+    useEffect(() {
+      controller.refresh();
+      return null;
+    }, [hideLibraryEntries]);
     return source.showUiWhenData(
       context,
       (data) {
@@ -94,9 +127,8 @@ class SourceMangaListScreen extends HookConsumerWidget {
           const SourceMangaDisplayIconPopup(),
           if ((data?.isConfigurable).ifNull())
             IconButton(
-              onPressed: () => SourcePreferenceRoute(
-                sourceId: sourceId,
-              ).go(context),
+              onPressed: () =>
+                  SourcePreferenceRoute(sourceId: sourceId).go(context),
               icon: const Icon(Icons.settings_rounded),
             ),
         ];
@@ -194,71 +226,70 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     child: toolbarBottom,
                   ),
                 ),
-        // Edge-drag would fight the system back gesture; the filter button is
-        // the way in.
-        endDrawerEnableOpenDragGesture: false,
-        endDrawer: filterList.isNotBlank
-            ? Drawer(
-                width: kDrawerWidth,
-                shape: const RoundedRectangleBorder(),
-                child: Builder(
-                  builder: (context) => SourceMangaFilter(
-                    filters: filterList?.toList() ?? [],
-                    sourceId: sourceId,
-                    appliedChanges: appliedFilter,
-                    onReset: () {
-                      appliedFilterNotifier.reset();
-                      controller.refresh();
-                    },
-                    onSubmitted: (value) {
-                      Navigator.pop(context);
-                      appliedFilterNotifier.apply(value ?? const []);
-                      controller.refresh();
-                    },
-                  ),
-                ),
-              )
-            : null,
-        body: topBar
-            ? Column(
-                children: [
-                  toolbarBottom,
-                  Expanded(child: listBody),
-                ],
-              )
-            : listBody,
-        floatingActionButton:
-            sourceType == SourceType.SEARCH && filterList.isNotBlank
-                ? Builder(
-                    builder: (context) => FloatingActionButton.extended(
-                      icon: Icon(Icons.filter_alt_rounded),
-                      onPressed: () => context.windowSizeClass >=
-                              WindowSizeClass.medium
-                          ? Scaffold.of(context).openEndDrawer()
-                          : showModalBottomSheet(
-                              context: context,
-                              builder: (context) => SourceMangaFilter(
-                                filters: filterList?.toList() ?? [],
-                                sourceId: sourceId,
-                                appliedChanges: appliedFilter,
-                                onReset: () {
-                                  appliedFilterNotifier.reset();
-                                  controller.refresh();
-                                },
-                                onSubmitted: (value) {
-                                  Navigator.pop(context);
-                                  appliedFilterNotifier
-                                      .apply(value ?? const []);
-                                  controller.refresh();
-                                },
-                              ),
-                              sheetAnimationStyle: context.motionStyle,
-                            ),
-                      label: Text(context.l10n.filter),
+          // Edge-drag would fight the system back gesture; the filter button is
+          // the way in.
+          endDrawerEnableOpenDragGesture: false,
+          endDrawer: filterList.isNotBlank
+              ? Drawer(
+                  width: kDrawerWidth,
+                  shape: const RoundedRectangleBorder(),
+                  child: Builder(
+                    builder: (context) => SourceMangaFilter(
+                      filters: filterList?.toList() ?? [],
+                      sourceId: sourceId,
+                      appliedChanges: appliedFilter,
+                      onReset: () {
+                        appliedFilterNotifier.reset();
+                        controller.refresh();
+                      },
+                      onSubmitted: (value) {
+                        Navigator.pop(context);
+                        appliedFilterNotifier.apply(value ?? const []);
+                        controller.refresh();
+                      },
                     ),
-                  )
-                : null,
-      );
+                  ),
+                )
+              : null,
+          body: topBar
+              ? Column(
+                  children: [
+                    toolbarBottom,
+                    Expanded(child: listBody),
+                  ],
+                )
+              : listBody,
+          floatingActionButton:
+              sourceType == SourceType.SEARCH && filterList.isNotBlank
+              ? Builder(
+                  builder: (context) => FloatingActionButton.extended(
+                    icon: Icon(Icons.filter_alt_rounded),
+                    onPressed: () =>
+                        context.windowSizeClass >= WindowSizeClass.medium
+                        ? Scaffold.of(context).openEndDrawer()
+                        : showModalBottomSheet(
+                            context: context,
+                            builder: (context) => SourceMangaFilter(
+                              filters: filterList?.toList() ?? [],
+                              sourceId: sourceId,
+                              appliedChanges: appliedFilter,
+                              onReset: () {
+                                appliedFilterNotifier.reset();
+                                controller.refresh();
+                              },
+                              onSubmitted: (value) {
+                                Navigator.pop(context);
+                                appliedFilterNotifier.apply(value ?? const []);
+                                controller.refresh();
+                              },
+                            ),
+                            sheetAnimationStyle: context.motionStyle,
+                          ),
+                    label: Text(context.l10n.filter),
+                  ),
+                )
+              : null,
+        );
         return titleTopBarSlot(
           topBar: topBar,
           leading: detailNavigationBackButton(context),

@@ -13,11 +13,13 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../domain/source/source_model.dart';
+import '../controller/source_manga_controller.dart';
 
 class SourceMangaListView extends ConsumerWidget {
   const SourceMangaListView({
@@ -39,7 +41,18 @@ class SourceMangaListView extends ConsumerWidget {
     return PagingListener(
       controller: controller,
       builder: (context, state, fetchNextPage) => PagedListView(
-        state: state,
+        state: state.copyWith(
+          pages: state.pages
+              ?.map(
+                (page) => visibleSourceMangas(
+                  page,
+                  hideLibraryEntries: ref.watch(
+                    webUiBoolProvider('hideLibraryEntries'),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
         fetchNextPage: fetchNextPage,
         builderDelegate: PagedChildBuilderDelegate<MangaDto>(
           firstPageProgressIndicatorBuilder: (context) =>

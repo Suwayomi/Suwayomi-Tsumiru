@@ -739,6 +739,15 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
 /// further gate.
 List<SettingsSearchEntry> get browseSettingsSearchEntries => [
   SettingsSearchEntry(
+    id: 'hideLibraryEntries',
+    title: (l) => l.hideLibraryEntries,
+    breadcrumb: (l) => '${l.browse} › ${l.sources}',
+    open: (c) =>
+        const BrowseSettingsRoute(highlight: 'hideLibraryEntries').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+
+  SettingsSearchEntry(
     id: 'showNsfw',
     title: (l) => l.nsfw,
     breadcrumb: (l) => l.browse,

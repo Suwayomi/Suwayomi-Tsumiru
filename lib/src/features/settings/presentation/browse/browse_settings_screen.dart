@@ -20,6 +20,7 @@ import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
+import '../../widgets/webui_switch_tile.dart';
 import 'data/browse_settings_repository.dart';
 import 'widgets/show_nsfw_switch/show_nsfw_switch.dart';
 
@@ -76,6 +77,10 @@ class BrowseSettingsScreen extends ConsumerWidget {
                       ),
                       SettingsGroupCard(
                         children: [
+                          WebUiSwitchTile(
+                            setting: 'hideLibraryEntries',
+                            title: context.l10n.hideLibraryEntries,
+                          ),
                           SettingsHighlightTarget(
                             id: 'parallelSourceRequests',
                             child: SettingsPropTile(
