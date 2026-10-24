@@ -25,6 +25,7 @@ import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../../../../connection/prompt_sign_in.dart';
 import '../../credential_popup/credentials_popup.dart';
+import '../server_port_tile/server_port_tile.dart';
 import 'hosted_base_uri.dart';
 import 'server_search_button.dart';
 import 'web_default_server_url.dart';
@@ -87,6 +88,38 @@ class ServerExternalUrl extends _$ServerExternalUrl
           prefs.getString(DBKeys.serverUrl.name) ??
           (kIsWeb ? webInitialServerUrl() : DBKeys.serverUrl.initial),
     );
+  }
+
+  Future<void> migrateLegacyPort() async {
+    if (ref.read(serverPortToggleProvider) != true) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          if (ref.read(serverPortToggleProvider) != true) return;
+          final String url = state ?? DBKeys.serverUrl.initial;
+          final port = ref.read(serverPortProvider);
+          if (port != null && url.isNotBlank) {
+            final merged = Endpoints.baseApi(
+              baseUrl: url,
+              port: port,
+              addPort: true,
+              appendApiToUrl: false,
+            );
+            super.update(merged);
+            ref.read(serverPortToggleProvider.notifier)
+                .updateWithPreviousState((_) => false);
+            await ref.read(serverUrlProvider.notifier).setActive(merged);
+          } else {
+            ref.read(serverPortToggleProvider.notifier)
+                .updateWithPreviousState((_) => false);
+          }
+        },
+        preserveSession: true,
+      );
+    } finally {
+      lease.close();
+    }
   }
 
   @override

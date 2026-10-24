@@ -61,20 +61,7 @@ class ConnectionScreen extends HookConsumerWidget {
     useEffect(() {
       // Defer to after the frame: provider writes must not happen during build.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!ref.read(serverPortToggleProvider).ifNull()) return;
-        final String url =
-            ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
-        final port = ref.read(serverPortProvider);
-        if (port != null && url.isNotBlank) {
-          final merged = Endpoints.baseApi(
-            baseUrl: url,
-            port: port,
-            addPort: true,
-            appendApiToUrl: false,
-          );
-          await ref.read(serverExternalUrlProvider.notifier).update(merged);
-        }
-        await ref.read(serverPortToggleProvider.notifier).update(false);
+        await ref.read(serverExternalUrlProvider.notifier).migrateLegacyPort();
       });
       return null;
     }, const []);
