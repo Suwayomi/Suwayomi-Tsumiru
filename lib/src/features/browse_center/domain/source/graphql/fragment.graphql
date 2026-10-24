@@ -1,5 +1,6 @@
 fragment SourceDto on SourceType {
   displayName
+  homeUrl
   iconUrl
   id
   isConfigurable

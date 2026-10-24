@@ -4229,5 +4229,6 @@
   "savedSearches": "Saved searches",
   "saveSearch": "Save search",
   "saveCurrentSearch": "Save current search",
-  "deleteSearch": "Delete search"
+  "deleteSearch": "Delete search",
+  "openHomepage": "Open in WebView"
 }

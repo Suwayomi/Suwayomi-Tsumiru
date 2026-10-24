@@ -9,15 +9,20 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
+import '../../../../constants/endpoints.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
+import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
+import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/source/source_model.dart';
@@ -125,6 +130,26 @@ class SourceMangaListScreen extends HookConsumerWidget {
             icon: const Icon(Icons.search_rounded),
           ),
           const SourceMangaDisplayIconPopup(),
+          if (data?.homeUrl.isNotBlank ?? false)
+            PopupMenuButton<void>(
+              itemBuilder: (_) => [
+                PopupMenuItem<void>(
+                  onTap: () {
+                    final api = Endpoints.baseApi(
+                      baseUrl: ref.read(serverUrlProvider),
+                      port: ref.read(serverPortProvider),
+                      addPort: ref.read(serverPortToggleProvider).ifNull(),
+                    );
+                    launchUrlInWeb(
+                      context,
+                      '${api.endsWith('/') ? api : '$api/'}webview#${data!.homeUrl}',
+                      ref.read(toastProvider),
+                    );
+                  },
+                  child: Text(context.l10n.openHomepage),
+                ),
+              ],
+            ),
           if ((data?.isConfigurable).ifNull())
             IconButton(
               onPressed: () =>
