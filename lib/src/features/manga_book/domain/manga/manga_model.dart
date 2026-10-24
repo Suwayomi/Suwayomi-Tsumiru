@@ -42,7 +42,7 @@ extension MangaExtensions on MangaDto {
   bool query([String? query]) =>
       LibrarySearchQuery.parse(query).matches(filterFields());
 
-  /// [trackerNames] resolves tracked:<service>; an empty map supports only the boolean tracked: form.
+  /// [trackerNames] resolves `tracked:<service>`; an empty map supports only the boolean tracked: form.
   LibraryFilterFields filterFields([Map<int, String> trackerNames = const {}]) {
     final m = metaData;
     return LibraryFilterFields(

@@ -602,7 +602,7 @@ Map<int, double> libraryTrackerScales(Ref ref) {
   };
 }
 
-/// Uses all known trackers so tracked:<service> still resolves bound records after logout.
+/// Uses all known trackers so `tracked:<service>` still resolves bound records after logout.
 @riverpod
 Map<int, String> libraryTrackerNames(Ref ref) {
   final all = ref.watch(trackersProvider).value ?? const [];

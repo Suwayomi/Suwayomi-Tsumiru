@@ -10,7 +10,6 @@ import '../../../../../../constants/enum.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
 import 'paged_spread_mapping.dart';
-import 'rotate_wide_page.dart';
 
 /// Logical-pixel dead space between paired pages or around a wide page.
 const double kCenterMargin = 16.0;
@@ -95,13 +94,9 @@ class DoublePageView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: _slot(ordered[0], alignment: Alignment.centerRight),
-        ),
+        Expanded(child: _slot(ordered[0], alignment: Alignment.centerRight)),
         if (_marginOnDouble) const SizedBox(width: kCenterMargin),
-        Expanded(
-          child: _slot(ordered[1], alignment: Alignment.centerLeft),
-        ),
+        Expanded(child: _slot(ordered[1], alignment: Alignment.centerLeft)),
       ],
     );
   }
@@ -183,8 +178,9 @@ class _SpreadImageState extends State<_SpreadImage> {
 
   // The provider is already decoded by imageBuilder, so resolving it here is a cache hit.
   void _resolve() {
-    final stream =
-        widget.imageProvider.resolve(createLocalImageConfiguration(context));
+    final stream = widget.imageProvider.resolve(
+      createLocalImageConfiguration(context),
+    );
     if (stream.key == _stream?.key) return;
     _stream?.removeListener(_listener);
     _stream = stream..addListener(_listener);
@@ -195,8 +191,7 @@ class _SpreadImageState extends State<_SpreadImage> {
     final w = info.image.width.toDouble();
     final h = info.image.height.toDouble();
     // Rotating a wide page swaps its axes, so report the size as drawn.
-    final natural =
-        widget.rotateWide && wide ? Size(h, w) : Size(w, h);
+    final natural = widget.rotateWide && wide ? Size(h, w) : Size(w, h);
     info.dispose();
     // Only full-page slots drive wide-detection; a half is already known wide.
     if (widget.half == PageHalf.full) {
