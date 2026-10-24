@@ -22,6 +22,7 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../../../../connection/prompt_sign_in.dart';
 import '../../credential_popup/credentials_popup.dart';
@@ -322,6 +323,15 @@ class ServerUrlTile extends ConsumerWidget {
         hintText: context.l10n.serverUrlHintText,
         value: serverUrl,
         onChanged: (value) async {
+          if (_isDifferentHost(serverUrl, _normaliseUrl(value))) {
+            final confirmed = await confirmAction(
+              context,
+              title: context.l10n.confirmServerOriginTitle,
+              message: context.l10n.confirmServerOriginMessage,
+              action: context.l10n.save,
+            );
+            if (!confirmed || !context.mounted) return;
+          }
           stayOnConnectionAfterIdentityChange();
           await ref.read(serverExternalUrlProvider.notifier).update(value);
           return;

@@ -4256,6 +4256,8 @@
   "confirmDeleteBothDownloadsMessage": "This deletes the downloaded chapter from the server and this device, including matching scanlator copies.",
   "confirmDeleteDeviceMessage": "This removes the chapter download from this device.",
   "confirmDeleteSeriesDeviceMessage": "This stops keeping the series offline and deletes all its device downloads.",
+  "confirmServerOriginTitle": "Change server address",
+  "confirmServerOriginMessage": "Changing the scheme, hostname or port clears saved sign-in credentials on this device. You will need to sign in again.",
   "confirmKeepRuleTitle": "Change offline rule",
   "confirmKeepRuleMessage": "This change deletes chapters already downloaded on this device.",
   "confirmDuplicateMigrationMessage": "Migrate from {source} to {target}? This copies series data to the target and removes the original from your library.",
