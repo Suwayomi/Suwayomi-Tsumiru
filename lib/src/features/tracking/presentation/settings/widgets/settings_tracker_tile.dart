@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
@@ -39,6 +40,14 @@ class SettingsTrackerTile extends ConsumerWidget {
       trailing: TextButton(
         onPressed: () async {
           if (tracker.isLoggedIn) {
+            if (!await confirmAction(
+              context,
+              title: context.l10n.logOut,
+              message: context.l10n.confirmTrackerLogoutMessage,
+              action: context.l10n.logOut,
+            )) {
+              return;
+            }
             await AppUtils.guard(
               () => ref
                   .read(trackerRepositoryProvider)

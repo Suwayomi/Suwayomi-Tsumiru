@@ -10,6 +10,7 @@ import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../about/data/about_repository.dart';
 import '../../../../../account/data/account_providers.dart';
@@ -170,6 +171,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     required String Function(T) name,
     String Function(T)? description,
     required Future<void> Function(T) write,
+    bool confirmReplacement = false,
   }) async {
     final selected = await showDialog<T>(
       context: context,
@@ -183,7 +185,17 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       ),
       animationStyle: context.motionStyle,
     );
-    if (selected != null && selected != value && mounted) await write(selected);
+    if (selected == null || selected == value || !mounted) return;
+    if (confirmReplacement &&
+        !await confirmAction(
+          context,
+          title: context.l10n.confirmWebInterfaceChangeTitle,
+          message: context.l10n.confirmWebInterfaceChangeMessage,
+          action: context.l10n.save,
+        )) {
+      return;
+    }
+    if (mounted) await write(selected);
   }
 
   String _flavorName(Enum$WebUIFlavor flavor) => switch (flavor) {
@@ -311,6 +323,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                         enabled && flavors.hasValue && flavors.value!.isNotEmpty
                         ? () => _pick(
                             title: context.l10n.webInterfaceInterface,
+                            confirmReplacement: true,
                             value: data.webUIFlavor,
                             options: flavors.value!,
                             name: _flavorName,
@@ -427,6 +440,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                       onTap: enabled && !custom
                           ? () => _pick(
                               title: context.l10n.webInterfaceChannel,
+                              confirmReplacement: true,
                               value: data.webUIChannel,
                               options: [
                                 if (bundledAllowed) Enum$WebUIChannel.BUNDLED,
