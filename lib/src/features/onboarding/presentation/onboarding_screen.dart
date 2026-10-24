@@ -479,7 +479,7 @@ final lanServerScanProvider =
 
 String _serverLabel(DiscoveredServer server) {
   final name = server.name?.trim();
-  final version = server.version?.trim();
+  final version = server.version?.trim().replaceFirst(RegExp(r'^[vV]'), '');
   if (name == null || name.isEmpty) return server.address;
   final titled = (version == null || version.isEmpty)
       ? name
