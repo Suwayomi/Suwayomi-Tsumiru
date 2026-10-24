@@ -2,16 +2,17 @@ String webUiKey(String key) => 'webUI_$key';
 
 String? readWebUiValue(Map<String, String> metas, String key) {
   final fullKey = webUiKey(key);
-  if (metas.containsKey(fullKey)) return metas[fullKey];
   final count = _webUiNumber(metas['${fullKey}_length']) ?? 0;
-  if (count <= 0) return null;
-  if (!count.isFinite || count != count.truncateToDouble()) {
-    throw RangeError('Invalid WebUI chunk count: $count');
+  if (count <= 0 ||
+      !count.isFinite ||
+      count != count.truncateToDouble() ||
+      count > metas.length) {
+    return metas[fullKey];
   }
   final value = StringBuffer();
   for (var index = 0; index < count; index++) {
     final chunk = metas['${fullKey}_$index'];
-    if (chunk == null) return null;
+    if (chunk == null) return metas[fullKey];
     value.write(chunk);
   }
   return value.toString();
