@@ -22,8 +22,6 @@ import '../../../controller/reader_settings_model.dart';
 import '../../../utils/reader_mode_kind.dart';
 import 'int_slider_tile.dart';
 
-/// Reading-mode tab: chip rows for the common settings,
-/// then a paged / long-strip section swapped on the resolved mode.
 class ReadingModeTab extends ConsumerWidget {
   const ReadingModeTab({
     super.key,
@@ -36,14 +34,10 @@ class ReadingModeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The settings under the "For this series" heading are
-    // ALWAYS per-manga overrides; the viewer/global settings below are global
-    // defaults. There is no scope toggle.
+    // Settings under "For this series" always write per-manga overrides.
     const perSeries = true;
     final settings = ref.watch(readerSettingsModelProvider(mangaId));
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
-    // Same resolution as reader_screen: auto-detect, then the series' mode,
-    // then the app-wide default.
     final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId)).value;
     final autoMode = manga == null
         ? null
@@ -66,11 +60,7 @@ class ReadingModeTab extends ConsumerWidget {
       ReaderMode.continuousHorizontalRTL => true,
       _ => false,
     };
-    // The stored mode's chip; null for the legacy continuous-horizontal
-    // orphans, which get their own honest extra chip (§2.5).
     final storedChip = ReaderModeAdapter.toChip(settings.readerMode);
-    // Through the shared resolver, so the sheet can't disagree with the reader
-    // about whether zones are on for this mode.
     final resolvedNav = effectiveNavigationLayout(
       ref,
       mode: resolvedMode,
@@ -81,7 +71,6 @@ class ReadingModeTab extends ConsumerWidget {
     return ListView(
       primary: false,
       children: [
-        // ── For this series (per-manga overrides) ──
         _GroupHeading(context.l10n.readerForThisSeries),
         _SectionLabel(context.l10n.readerSectionReadingMode),
         _ChipRow(
@@ -91,8 +80,6 @@ class ReadingModeTab extends ConsumerWidget {
                 selected: storedChip == chip,
                 showCheckmark: false,
                 label: Text(chip.toLocale(context)),
-                // The ONLY write path for mode — orphans stay stored until a
-                // parity chip is tapped (§2.5).
                 onSelected: (_) => model.setReaderMode(
                   ReaderModeAdapter.fromChip(chip),
                   perSeries: perSeries,
@@ -135,8 +122,6 @@ class ReadingModeTab extends ConsumerWidget {
               ),
           ],
         ),
-        // Inverting tap zones is meaningless while they're disabled, so the
-        // row is hidden.
         if (resolvedNav != ReaderNavigationLayout.disabled) ...[
           _SectionLabel(context.l10n.readerSectionTapInvert),
           _ChipRow(
@@ -152,14 +137,11 @@ class ReadingModeTab extends ConsumerWidget {
             ],
           ),
         ],
-        // Padding is a per-manga override too, so it lives under
-        // "For this series", not the global viewer block.
         AsyncReaderPaddingSlider(
           readerPadding: readerPadding,
           onChanged: (value) =>
               model.setSidePadding(value, perSeries: perSeries),
         ),
-        // ── Viewer defaults (global, apply to every series) ──
         _GroupHeading(
           isLongStrip
               ? context.l10n.readerGroupWebtoonViewer
@@ -183,8 +165,6 @@ class ReadingModeTab extends ConsumerWidget {
   }
 }
 
-/// Paged-only settings. All fields are global
-/// prefs.
 class _PagedSection extends ConsumerWidget {
   const _PagedSection({super.key, required this.mangaId});
 
@@ -209,8 +189,6 @@ class _PagedSection extends ConsumerWidget {
               ),
           ],
         ),
-        // Zoom start is tied to landscape auto-zoom, which paged mode does not
-        // apply automatically.
         _SectionLabel(context.l10n.pageLayout),
         _ChipRow(
           children: [
@@ -257,8 +235,6 @@ class _PagedSection extends ConsumerWidget {
           value: settings.cropBorders,
           onChanged: model.setCropBorders,
         ),
-        // Landscape auto-zoom stays out of paged mode; wide manga spreads
-        // should open fitted and let the reader choose when to zoom.
         CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.splitWidePages),
@@ -336,8 +312,6 @@ class _PagedSection extends ConsumerWidget {
   }
 }
 
-/// Long-strip settings, incl. the legacy
-/// continuous-horizontal orphans; gaps sub-settings only for that mode.
 class _LongStripSection extends ConsumerWidget {
   const _LongStripSection({
     super.key,
@@ -442,8 +416,6 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.longStripDisableZoomOut,
           onChanged: model.setLongStripDisableZoomOut,
         ),
-        // Webtoon split-wide hidden: splitting one strip page into two entries
-        // needs a page-list remap in the frozen webtoon engine; see reader.md.
         if (showGapsSettings) ...[
           _SectionLabel(context.l10n.readerModeChipLongStripGaps),
           CompactSwitchListTile(
@@ -458,7 +430,6 @@ class _LongStripSection extends ConsumerWidget {
   }
 }
 
-/// Indented dependent toggle, shown only while its parent switch is ON.
 class _SubSwitchTile extends StatelessWidget {
   const _SubSwitchTile({
     required this.title,
@@ -482,9 +453,6 @@ class _SubSwitchTile extends StatelessWidget {
   }
 }
 
-/// A top-level group header — separates the "For this
-/// series" per-manga block from the global "Viewer defaults" block so scope is
-/// unambiguous.
 class _GroupHeading extends StatelessWidget {
   const _GroupHeading(this.text);
 
@@ -534,7 +502,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Single-select chip row.
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
 

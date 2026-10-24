@@ -45,12 +45,10 @@ class MangaCoverListTile extends StatefulWidget {
   final bool showBadges;
   final bool selected;
 
-  /// Library list-size multiplier. Scales the cover box; the caller scales the
-  /// text through a [MediaQuery] textScaler so the row grows as one unit.
+  /// Scale covers here; callers must scale row text through MediaQuery.
   final double scale;
 
-  /// Cap the title at three ellipsized lines. Off lets it wrap in full, which
-  /// only shows if the caller also lets the row grow.
+  /// False wraps fully only if the caller lets the row grow.
   final bool limitTitleLines;
 
   @override
@@ -138,7 +136,6 @@ class _MangaCoverListTileState extends State<MangaCoverListTile> {
                     borderRadius: KBorderRadius.r8.radius,
                     child: ServerImage(
                       imageUrl: widget.manga.thumbnailUrl ?? "",
-                      // Decode at display size — see the grid tile.
                       memCacheWidth: (kCompactCoverWidth *
                               widget.scale *
                               MediaQuery.devicePixelRatioOf(context))
@@ -156,8 +153,7 @@ class _MangaCoverListTileState extends State<MangaCoverListTile> {
               Expanded(
                 child: Padding(
                   padding: KEdgeInsets.h8.size,
-                  // Skia collapses an uncapped ellipsis to one line, so uncapped
-                  // text has to clip instead.
+                  // Skia uncapped ellipsis collapses to one line; use clip for wrapping.
                   child: Text(
                     widget.manga.title,
                     softWrap: true,

@@ -6,10 +6,7 @@
 
 import 'package:flutter/foundation.dart';
 
-// Ephemeral preview channels (design §2.4): slider onChanged writes ONLY these
-// so the filter overlays repaint without a riverpod write — no tab or viewer
-// rebuild mid-drag. null = no draft; overlays fall back to the committed pref.
-// onChangeEnd (or sheet dismiss) commits to the provider and clears the draft.
+// Slider drafts repaint overlays only; commit on drag end or dismissal, then clear the draft.
 
 /// Custom-brightness draft, -75..100.
 final ValueNotifier<int?> readerBrightnessPreview = ValueNotifier(null);

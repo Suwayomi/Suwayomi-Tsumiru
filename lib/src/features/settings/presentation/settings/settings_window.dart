@@ -15,9 +15,9 @@ import '../../../account/data/account_providers.dart';
 import '../../../account/presentation/manage_users_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../general/general_screen.dart';
-import '../server/server_network_screen.dart';
 import '../server/server_opds_screen.dart';
 import '../server/server_screen.dart';
+import '../server/server_sign_in_screen.dart';
 import 'settings_pane_scope.dart';
 import 'settings_screen.dart';
 
@@ -35,15 +35,10 @@ class SettingsWindow extends StatelessWidget {
     if (context.windowSizeClass < WindowSizeClass.expanded) return child;
     final router = GoRouter.of(context);
     void close() {
-      // One pop of the window page dismisses every page pushed inside it.
-      // Navigator.of (not router.pop, which would only step back one inner
-      // page) targets the branch navigator above the window's own.
+      // Pop the outer navigator to dismiss the window and all its inner pages.
       if (router.canPop()) {
         Navigator.of(context).pop();
-        // A close that unwinds to the retired More screen (opened by URL
-        // with no earlier screen: deep link, typed address, reload) lands
-        // on Library on the desktop shell instead. Closes from a screen
-        // already returned there through the pop above.
+        // A desktop deep link with no previous page falls back to Library.
         if (context.usesDesktopShell &&
             router.state.uri.path == const MoreRoute().location) {
           const LibraryRoute(categoryId: 0).go(context);
@@ -174,7 +169,7 @@ class SettingsWindowPageBody extends ConsumerWidget {
       final access = ref.watch(settledAccountAccessProvider);
       if (access.canManageUsers) return const ManageUsersScreen();
       if (access.allows(Enum$UserPermission.MANAGE_SETTINGS)) {
-        return const ServerNetworkScreen();
+        return const ServerSignInScreen();
       }
       return const ServerOpdsScreen();
     }
@@ -452,6 +447,8 @@ class _ServerTabs extends ConsumerWidget {
     final tabs = <({String title, String location})>[
       if (access.canManageUsers)
         (title: l.serverUsers, location: const ManageUsersRoute().location),
+      if (manage)
+        (title: l.serverSignIn, location: const ServerSignInRoute().location),
       if (manage)
         (title: l.network, location: const ServerNetworkRoute().location),
       if (manage)

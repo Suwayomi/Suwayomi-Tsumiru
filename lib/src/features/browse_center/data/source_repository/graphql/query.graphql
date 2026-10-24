@@ -22,7 +22,7 @@ query SourceById($id: LongString!) {
 
 # Source results never show "continue reading", so callers pass
 # $withFirstUnread: false to skip the first unread chapter (see MangaDto).
-mutation FetchSourceManga($input: FetchSourceMangaInput!, $withFirstUnread: Boolean!) {
+mutation FetchSourceManga($input: FetchSourceMangaInput!, $withFirstUnread: Boolean!, $withLibraryFields: Boolean!) {
   fetchSourceManga(input: $input) {
     ...SourceMangaPage
   }

@@ -9,18 +9,25 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
+import '../../../../constants/endpoints.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
+import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
+import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/source/source_model.dart';
 import 'controller/source_manga_controller.dart';
+import 'source_page_sequence.dart';
 import 'widgets/source_manga_display_icon_popup.dart';
 import 'widgets/source_manga_display_view.dart';
 import 'widgets/source_manga_filter.dart';
@@ -42,6 +49,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
     int pageKey, {
     String? query,
     List<FilterChange>? filter,
+    bool hideLibraryEntries = false,
   }) async {
     final page = await repository.fetchSourceManga(
       sourceId: sourceId,
@@ -51,11 +59,18 @@ class SourceMangaListScreen extends HookConsumerWidget {
       filters: filter,
     );
     if (page == null) return (items: <MangaDto>[], hasNextPage: false);
-    return (items: [...page.mangas], hasNextPage: page.hasNextPage.ifNull());
+    final items = visibleSourceMangas(
+      page.mangas,
+      hideLibraryEntries: hideLibraryEntries,
+    );
+    return (items: items, hasNextPage: page.hasNextPage.ifNull());
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hideLibraryEntries = ref.watch(
+      webUiBoolProvider('hideLibraryEntries'),
+    );
     final appliedFilter = ref.watch(appliedSourceFilterProvider(sourceId));
     final appliedFilterNotifier =
         ref.watch(appliedSourceFilterProvider(sourceId).notifier);
@@ -66,24 +81,47 @@ class SourceMangaListScreen extends HookConsumerWidget {
     final source = ref.watch(sourceProvider(sourceId));
 
     final query = useState(initialQuery);
+    final searchDraft = useRef(initialQuery);
+    useEffect(() {
+      searchDraft.value = query.value;
+      return null;
+    }, [query.value]);
     final showSearch = useState(initialQuery.isNotBlank);
+    final sourcePages = useMemoized(() => SourcePageSequence<MangaDto>());
     final controller = useServerPagingController<MangaDto>(
       firstPageKey: 1,
-      // Read per request: a LAN/remote endpoint switch replaces the client,
-      // and the one captured on the first build is disposed with it.
-      fetchPage: (pageKey) => _fetchPage(
-        ref.read(sourceRepositoryProvider),
+      // Read per request because endpoint switches dispose the previous client.
+      fetchPage: (pageKey) async {
+        final repository = ref.read(sourceRepositoryProvider);
+        final hideLibraryEntries = ref.read(
+          webUiBoolProvider('hideLibraryEntries'),
+        );
+        final currentQuery = query.value;
+        final currentFilter = liveAppliedFilter.value;
+        return sourcePages.fetch(
         pageKey,
-        query: query.value,
-        filter: liveAppliedFilter.value,
+          (sourcePage) => _fetchPage(
+            repository,
+            sourcePage,
+            hideLibraryEntries: hideLibraryEntries,
+            query: currentQuery,
+            filter: currentFilter,
       ),
     );
+      },
+    );
+    void refresh() {
+      sourcePages.refresh();
+      controller.refresh();
+    }
+
+    useEffect(() {
+      refresh();
+      return null;
+    }, [hideLibraryEntries]);
     return source.showUiWhenData(
       context,
       (data) {
-        // Native desktop draws the title and actions in the shell bar
-        // instead of an app bar; the type chips and search box stay in the
-        // page body.
         final topBar = showsMergedTopBar(context);
         final title = Text(data?.displayName ?? context.l10n.source);
         final actions = <Widget>[
@@ -92,6 +130,26 @@ class SourceMangaListScreen extends HookConsumerWidget {
             icon: const Icon(Icons.search_rounded),
           ),
           const SourceMangaDisplayIconPopup(),
+          if (data?.homeUrl.isNotBlank ?? false)
+            PopupMenuButton<void>(
+              itemBuilder: (_) => [
+                PopupMenuItem<void>(
+                  onTap: () {
+                    final api = Endpoints.baseApi(
+                      baseUrl: ref.read(serverUrlProvider),
+                      port: ref.read(serverPortProvider),
+                      addPort: ref.read(serverPortToggleProvider).ifNull(),
+                    );
+                    launchUrlInWeb(
+                      context,
+                      '${api.endsWith('/') ? api : '$api/'}webview#${data!.homeUrl}',
+                      ref.read(toastProvider),
+                    );
+                  },
+                  child: Text(context.l10n.openHomepage),
+                ),
+              ],
+            ),
           if ((data?.isConfigurable).ifNull())
             IconButton(
               onPressed: () => SourcePreferenceRoute(
@@ -150,12 +208,14 @@ class SourceMangaListScreen extends HookConsumerWidget {
                   child: Padding(
                     padding: KEdgeInsets.h16v4.size,
                     child: SearchField(
+                      key: ValueKey(query.value),
                       initialText: query.value,
+                      onChanged: (value) => searchDraft.value = value,
                       onClose: () => showSearch.value = (false),
                       onSubmitted: (val) {
                         if (sourceType == SourceType.SEARCH) {
                           query.value = (val);
-                          controller.refresh();
+                          refresh();
                         } else {
                           if (val == null) return;
                           SourceTypeRoute(
@@ -172,7 +232,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
           ],
         );
         final listBody = RefreshIndicator(
-          onRefresh: () async => controller.refresh(),
+          onRefresh: () async => refresh(),
           child: SourceMangaDisplayView(
             sourceId: sourceId,
             sourceType: sourceType,
@@ -194,26 +254,41 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     child: toolbarBottom,
                   ),
                 ),
-        // Edge-drag would fight the system back gesture; the filter button is
-        // the way in.
+        // Edge-drag conflicts with the system back gesture.
         endDrawerEnableOpenDragGesture: false,
-        endDrawer: filterList.isNotBlank
+          endDrawer: filterList != null
             ? Drawer(
                 width: kDrawerWidth,
                 shape: const RoundedRectangleBorder(),
                 child: Builder(
                   builder: (context) => SourceMangaFilter(
-                    filters: filterList?.toList() ?? [],
+                      filters: filterList.toList(),
                     sourceId: sourceId,
                     appliedChanges: appliedFilter,
+                      currentQuery: () => searchDraft.value,
+                      onSavedSearchSelected: (savedQuery, changes) {
+                        Navigator.pop(context);
+                        appliedFilterNotifier.apply(changes);
+                        if (sourceType == SourceType.SEARCH) {
+                          query.value = savedQuery;
+                          showSearch.value = savedQuery.isNotBlank;
+                          refresh();
+                        } else {
+                          SourceTypeRoute(
+                            sourceId: sourceId,
+                            sourceType: SourceType.SEARCH,
+                            query: savedQuery,
+                          ).go(context);
+                        }
+                      },
                     onReset: () {
                       appliedFilterNotifier.reset();
-                      controller.refresh();
+                        refresh();
                     },
                     onSubmitted: (value) {
                       Navigator.pop(context);
                       appliedFilterNotifier.apply(value ?? const []);
-                      controller.refresh();
+                        refresh();
                     },
                   ),
                 ),
@@ -228,7 +303,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
               )
             : listBody,
         floatingActionButton:
-            sourceType == SourceType.SEARCH && filterList.isNotBlank
+              sourceType == SourceType.SEARCH && filterList != null
                 ? Builder(
                     builder: (context) => FloatingActionButton.extended(
                       icon: Icon(Icons.filter_alt_rounded),
@@ -238,18 +313,34 @@ class SourceMangaListScreen extends HookConsumerWidget {
                           : showModalBottomSheet(
                               context: context,
                               builder: (context) => SourceMangaFilter(
-                                filters: filterList?.toList() ?? [],
+                              filters: filterList.toList(),
                                 sourceId: sourceId,
                                 appliedChanges: appliedFilter,
+                              currentQuery: () => searchDraft.value,
+                              onSavedSearchSelected: (savedQuery, changes) {
+                                Navigator.pop(context);
+                                appliedFilterNotifier.apply(changes);
+                                if (sourceType == SourceType.SEARCH) {
+                                  query.value = savedQuery;
+                                  showSearch.value = savedQuery.isNotBlank;
+                                  refresh();
+                                } else {
+                                  SourceTypeRoute(
+                                    sourceId: sourceId,
+                                    sourceType: SourceType.SEARCH,
+                                    query: savedQuery,
+                                  ).go(context);
+                                }
+                              },
                                 onReset: () {
                                   appliedFilterNotifier.reset();
-                                  controller.refresh();
+                                refresh();
                                 },
                                 onSubmitted: (value) {
                                   Navigator.pop(context);
                                   appliedFilterNotifier
                                       .apply(value ?? const []);
-                                  controller.refresh();
+                                refresh();
                                 },
                               ),
                               sheetAnimationStyle: context.motionStyle,

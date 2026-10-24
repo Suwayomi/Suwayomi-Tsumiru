@@ -44,6 +44,8 @@ import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/ap
 import 'package:tsumiru/src/features/settings/presentation/backup/backup_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/data/backup_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/data/graphql/__generated__/query.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/widgets/backup_flags/backup_flags.dart';
+import 'package:tsumiru/src/features/settings/presentation/backup/widgets/backup_flags/backup_flags_dialog.dart';
 import 'package:tsumiru/src/features/settings/presentation/browse/browse_settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/connection/connection_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
@@ -91,6 +93,12 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
+import 'package:tsumiru/src/utils/webui_meta/webui_settings.dart';
+
+class _FixedWebUiSettings extends WebUiSettings {
+  @override
+  Future<Map<String, String>> build() async => {};
+}
 
 class _FixedSettings extends Settings {
   @override
@@ -223,7 +231,12 @@ Future<ProviderContainer> _container({List<dynamic> extra = const []}) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
-    overrides: [sharedPreferencesProvider.overrideWithValue(sp), ...extra],
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sp),
+      webUiSettingsProvider.overrideWith(_FixedWebUiSettings.new),
+      backupUserSettingsProvider.overrideWith((ref) async => true),
+      ...extra,
+    ],
   );
   return container;
 }
@@ -401,7 +414,17 @@ void main() {
           ],
         ),
         const BackupScreen(),
-        backupSettingsSearchEntries,
+        backupSettingsSearchEntries
+            .where((entry) => entry.id != 'includeUserSettings')
+            .toList(),
+      );
+
+      await pumpAndCheck(
+        await _container(),
+        const BackupFlagsDialog(title: 'Backup data', initial: BackupFlags()),
+        backupSettingsSearchEntries
+            .where((entry) => entry.id == 'includeUserSettings')
+            .toList(),
       );
 
       // The background-catchup rows only render on native Android
@@ -505,6 +528,12 @@ void main() {
           // every other conditional row in this fixture.
           flareSolverrFallbackProvider.overrideWith((ref) async => true),
           opdsSettingsProvider.overrideWith((ref) async => _opdsSettings()),
+          previewDatabaseSettingsProvider.overrideWith(
+            (ref) async => Query$PreviewDatabaseSettings$settings(
+              databaseSchema: 'suwayomi',
+              hikariMaxPoolSize: 6,
+            ),
+          ),
           databaseSettingsProvider.overrideWith(
             (ref) async => Fragment$DatabaseSettingsDto(
               databaseType: Enum$DatabaseType.POSTGRESQL,

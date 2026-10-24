@@ -45,8 +45,7 @@ String accountImageCacheKey(
   return 'tsumiru-image:session:$session:${store.sessionEpoch}/$url';
 }
 
-/// Native covers retain a durable cache. Web images share a memory cache
-/// replaced on endpoint changes so credentials follow the current origin.
+/// Native covers are durable; web memory caches rotate with endpoint credentials.
 @Riverpod(keepAlive: true)
 CacheManager coverCacheManager(Ref ref) {
   if (!kIsWeb) return createCoverCacheManager();
@@ -73,6 +72,5 @@ final serverPageCacheManagerProvider = Provider<CacheManager>(
       kIsWeb ? ref.watch(coverCacheManagerProvider) : DefaultCacheManager(),
 );
 
-/// Native covers and icons use durable storage separate from chapter pages.
 bool isCoverImagePath(String path) =>
     path.contains('/thumbnail') || path.contains('/extension/icon/');

@@ -17,9 +17,7 @@ import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
 import 'unified_search_results.dart';
 
-/// Focus node of the desktop search field currently in the tree, if any.
-/// Ctrl+F / Ctrl+P focuses it instead of opening the quick-open overlay; routes
-/// without a field (reader, series page) leave this null and keep the overlay.
+/// Mounted desktop field for Ctrl+F/Ctrl+P; null falls back to the quick-open overlay.
 final desktopSearchFocusNodeProvider = StateProvider<FocusNode?>(
   (Ref ref) => null,
 );
@@ -28,7 +26,6 @@ class _CloseSearchDropdownIntent extends Intent {
   const _CloseSearchDropdownIntent();
 }
 
-/// Up/Down move the dropdown highlight; focus stays in the field.
 class _MoveSearchHighlightIntent extends Intent {
   const _MoveSearchHighlightIntent(this.delta);
 
@@ -55,9 +52,7 @@ class _MoveSearchHighlightAction extends Action<_MoveSearchHighlightIntent> {
   }
 }
 
-/// Esc handler that is only enabled while there is something to do (an open
-/// dropdown or text to clear). Disabled, the key event is ignored by this
-/// layer and keeps propagating to the global Esc=Back handler.
+// Disable when idle so Esc propagates to the global Back handler.
 class _CloseSearchDropdownAction extends Action<_CloseSearchDropdownIntent> {
   _CloseSearchDropdownAction({required this.isActive, required this.onInvoke});
 
@@ -74,11 +69,7 @@ class _CloseSearchDropdownAction extends Action<_CloseSearchDropdownIntent> {
   }
 }
 
-/// Visible search box for desktop pages, in the same top-left place on every
-/// page. 40 px tall, radius 10, same box style as the Library toolbar's
-/// DesktopToolbarBox. Typing opens a dropdown anchored directly under the
-/// field showing the unified results; Esc or clicking outside closes it, Esc
-/// again clears the text.
+/// Desktop search dropdown; Esc closes results, then clears text on the next press.
 class DesktopSearchField extends HookConsumerWidget {
   const DesktopSearchField({
     super.key,
@@ -94,40 +85,28 @@ class DesktopSearchField extends HookConsumerWidget {
     this.onSubmitLeading,
   });
 
-  /// Current field text, owned by the host (a query provider).
   final String query;
 
-  /// Called on every edit so the host can update its query (and live-filter).
   final ValueChanged<String> onChanged;
 
-  /// Called after leaving through a dropdown result, so the host clears the
-  /// query (opening a series from the Library grid keeps it — that path never
-  /// touches this).
+  /// Invoked after dropdown navigation so the host can clear its query.
   final VoidCallback? onNavigate;
 
-  /// Extra result sections before the unified ones (History on its page),
-  /// built with [SelectableRowBuilder] so their rows join the keyboard order
-  /// first with the same highlight, hover, Semantics, and scroll behaviour.
+  /// Leading sections must use SelectableRowBuilder to join keyboard order before unified rows.
   final List<Widget> Function(SelectableRowBuilder selectable)? leadingBuilder;
 
-  /// Whether [leading] currently holds matches (drives dropdown visibility).
   final bool hasLeadingResults;
 
-  /// False hides the Library section (the Library grid is already filtered).
   final bool showLibrarySection;
 
-  /// Placeholder; null uses the unified hint.
+  /// Null uses the unified hint.
   final String? hintText;
 
-  /// Extra icon buttons before the clear button (Library: tips + global).
   final List<Widget> suffixActions;
 
   final bool autofocus;
 
-  /// Enter handler for extra leading sections: navigate to the top leading
-  /// result and return true. The field then closes the dropdown and clears
-  /// the host query, like any other dropdown result. Null (or false) falls
-  /// back to the unified top result.
+  /// True means a leading result navigated; null or false falls back to the unified top result.
   final bool Function()? onSubmitLeading;
 
   @override
@@ -135,9 +114,7 @@ class DesktopSearchField extends HookConsumerWidget {
     final l = context.l10n;
     final controller = useMemoized(() => DslSearchController(text: query));
     useEffect(() => controller.dispose, [controller]);
-    // A programmatic change (clearing after navigation, a tag-set query)
-    // refreshes the field; while typing both sides already agree. Post-frame:
-    // writing the controller mid-build could notify during layout.
+    // Update the controller after the frame; notifying during build can reach layout.
     useEffect(() {
       if (controller.text != query) controller.text = query;
       return null;
@@ -169,8 +146,7 @@ class DesktopSearchField extends HookConsumerWidget {
     bool canShow(String text, [int? caret]) {
       if (text.trim().isEmpty || fieldWidth.value == null) return false;
       if (hasLeadingResults) return true;
-      // Operator autocomplete (the Filters section) can be the only thing a
-      // query offers, e.g. `unread:` has no plain text or matches.
+      // Operator autocomplete alone can make a dropdown useful, e.g. unread:.
       final caretOffset = (caret ?? text.length).clamp(0, text.length);
       if (suggestFor(
         activeTokenAt(text, caretOffset),
@@ -178,8 +154,6 @@ class DesktopSearchField extends HookConsumerWidget {
       ).isNotEmpty) {
         return true;
       }
-      // Search all sources is always offered for plain text, so any of it
-      // opens the dropdown.
       if (plainQueryText(text).isNotEmpty) return true;
       if (showLibrarySection &&
           ref.read(unifiedLibraryResultsForProvider(text)).isNotEmpty) {
@@ -210,8 +184,6 @@ class DesktopSearchField extends HookConsumerWidget {
 
     void handleChanged(String value) {
       onChanged(value);
-      // Every text change clears the highlight; the user moves again from
-      // the top.
       selection.reset();
       if (focusNode.hasFocus && canShow(value, caretOf(value))) {
         if (!portal.isShowing) portal.show();
@@ -220,10 +192,7 @@ class DesktopSearchField extends HookConsumerWidget {
       }
     }
 
-    // A host-side clear (a History section row navigates without going through
-    // close) hides the dropdown. Deferred past the frame: this effect can run
-    // inside the build/layout phase the clear itself triggered, where the
-    // portal refuses show/hide.
+    // Defer portal changes past build/layout, including host-side clears.
     useEffect(() {
       if (query.trim().isEmpty && portal.isShowing) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -233,15 +202,9 @@ class DesktopSearchField extends HookConsumerWidget {
       return null;
     }, [query]);
 
-    // Ctrl+F registration. Provider writes are banned during the build phase
-    // (effect setup runs inside it), so every write goes through a post-frame
-    // callback guarded by mount state. The field stays registered while
-    // mounted — a blur (clicking elsewhere) must not unregister it, or Ctrl+F
-    // falls back to the overlay. Only disposal clears it; the global host
-    // ignores nodes on inactive branches/routes.
+    // Register post-frame until disposal; unregistering on blur would send Ctrl+F to the overlay.
     useEffect(() {
-      // Captured, not read lazily: ref is unusable once the widget is
-      // unmounted, but the controller itself is a plain state object.
+      // Capture the notifier now; ref is unusable after unmount.
       final registration = ref.read(desktopSearchFocusNodeProvider.notifier);
       void register() {
         if (context.mounted && registration.mounted) {
@@ -257,7 +220,6 @@ class DesktopSearchField extends HookConsumerWidget {
           register();
           if (canShow(controller.text, caretOf(controller.text)) &&
               !portal.isShowing) {
-            // A fresh open never carries a highlight.
             selection.reset();
             portal.show();
           }
@@ -267,8 +229,7 @@ class DesktopSearchField extends HookConsumerWidget {
       focusNode.addListener(onFocus);
       return () {
         focusNode.removeListener(onFocus);
-        // Deferred past the frame: unmount can run inside the build phase
-        // (a pop rebuilds the tree), where provider writes are banned.
+        // Unmount may run during build, so defer provider writes.
         if (registration.mounted && registration.state == focusNode) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (registration.mounted && registration.state == focusNode) {
@@ -375,8 +336,7 @@ class DesktopSearchField extends HookConsumerWidget {
             child: Actions(
               actions: {
                 _CloseSearchDropdownIntent: _CloseSearchDropdownAction(
-                  // Closed and empty: disabled, so Esc keeps propagating to
-                  // the global Esc=Back handler instead of being swallowed.
+                  // Let Esc reach global Back when there is no dropdown or query.
                   isActive: () =>
                       portal.isShowing || controller.text.isNotEmpty,
                   onInvoke: () {
@@ -389,8 +349,7 @@ class DesktopSearchField extends HookConsumerWidget {
                   },
                 ),
                 _MoveSearchHighlightIntent: _MoveSearchHighlightAction(
-                  // Closed: disabled, so Up/Down keep their default field
-                  // behaviour instead of being swallowed.
+                  // Preserve field Up/Down behavior while the dropdown is closed.
                   isActive: () => portal.isShowing,
                   onInvoke: (delta) {
                     if (delta > 0) {
@@ -440,9 +399,6 @@ class DesktopSearchField extends HookConsumerWidget {
                     suffixIconConstraints: const BoxConstraints(minHeight: 36),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
-                  // Enter opens the highlighted row exactly as a tap would;
-                  // with no highlight, a leading section first (History),
-                  // then the unified top result like the overlay.
                   onSubmitted: (_) {
                     if (selection.activateSelected()) return;
                     if (onSubmitLeading?.call() == true) {

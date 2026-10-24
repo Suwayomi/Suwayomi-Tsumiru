@@ -11,17 +11,22 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../domain/filter/filter_model.dart';
 import 'filter_to_widget.dart';
+import 'saved_source_searches.dart';
 
 class SourceMangaFilter extends HookWidget {
   const SourceMangaFilter({
     super.key,
     required this.filters,
+    this.currentQuery,
+    this.onSavedSearchSelected,
     required this.sourceId,
     required this.appliedChanges,
     required this.onSubmitted,
     required this.onReset,
   });
   final List<Filter> filters;
+  final String? Function()? currentQuery;
+  final void Function(String?, List<FilterChange>)? onSavedSearchSelected;
   final String sourceId;
   final List<FilterChange> appliedChanges;
   final ValueChanged<List<FilterChange>?> onSubmitted;
@@ -78,25 +83,36 @@ class SourceMangaFilter extends HookWidget {
         behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
         child: ListView.builder(
           itemBuilder: (context, index) {
-            final Filter filter = filters[index];
+            if (index == 0) {
+              if (onSavedSearchSelected == null) return const SizedBox.shrink();
+              return SavedSourceSearches(
+                sourceId: sourceId,
+                currentQuery: currentQuery ?? () => null,
+                currentChanges: () =>
+                    filterChangeMap.value.values.expand((v) => v).toList(),
+                onSelected: onSavedSearchSelected!,
+              );
+            }
+            final filterIndex = index - 1;
+            final Filter filter = filters[filterIndex];
             return FilterToWidget(
-              key: ValueKey("BaseFilter-$index"),
+              key: ValueKey("BaseFilter-$filterIndex"),
               filter: filter,
-              currentChanges: filterChangeMap.value[index] ?? const [],
+              currentChanges: filterChangeMap.value[filterIndex] ?? const [],
               onChanged: (filters) {
                 final filterChanges = <FilterChange>[];
                 for (var filter in filters) {
-                  filterChanges.add(filter.copyWith(position: index));
+                  filterChanges.add(filter.copyWith(position: filterIndex));
                 }
                 final newFilterChangeMap = <int, List<FilterChange>>{
                   ...filterChangeMap.value,
-                  index: filterChanges,
+                  filterIndex: filterChanges,
                 };
                 filterChangeMap.value = newFilterChangeMap;
               },
             );
           },
-          itemCount: filters.length,
+          itemCount: filters.length + 1,
         ),
       ),
     );

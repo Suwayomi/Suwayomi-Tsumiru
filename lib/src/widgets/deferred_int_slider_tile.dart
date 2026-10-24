@@ -6,8 +6,7 @@
 
 import 'package:flutter/material.dart';
 
-/// Int slider that previews while dragging and commits once on release — for
-/// prefs whose write triggers expensive work (e.g. a long-strip relayout).
+/// Preview during dragging; commit once on release to avoid expensive repeated preference writes.
 class DeferredIntSliderTile extends StatefulWidget {
   const DeferredIntSliderTile({
     super.key,
@@ -44,9 +43,7 @@ class DeferredIntSliderTile extends StatefulWidget {
 class _DeferredIntSliderTileState extends State<DeferredIntSliderTile> {
   int? _dragValue;
 
-  // A drag can outlive the range/enabled state it started under (hold the
-  // thumb, tap a unit chip with the other hand) — stale bounds would trip
-  // the Slider's assert or freeze the readout.
+  // A drag can outlive its range/enabled state; clamp against current bounds.
   @override
   void didUpdateWidget(DeferredIntSliderTile old) {
     super.didUpdateWidget(old);

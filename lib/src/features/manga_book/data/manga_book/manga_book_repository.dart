@@ -10,6 +10,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/webui_meta/webui_meta_codec.dart';
+import '../../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
@@ -27,6 +29,7 @@ class MangaBookRepository {
       .mutate$UpdateManga(
         Options$Mutation$UpdateManga(
           variables: Variables$Mutation$UpdateManga(
+            withLibraryFields: false,
             input: Input$UpdateMangaInput(
               id: mangaId,
               patch: Input$UpdateMangaPatchInput(inLibrary: true),
@@ -36,9 +39,7 @@ class MangaBookRepository {
       )
       .getData((data) => data.updateManga?.manga);
 
-  /// Add many series to the library in one request (bulk favorite from browse).
-  /// Returns the ids the server confirmed — may be fewer than [mangaIds]
-  /// on a partial apply.
+  /// Returns only server-confirmed IDs; a partial apply may return fewer than [mangaIds].
   Future<List<int>> addMangasToLibrary(List<int> mangaIds) => client
       .mutate$UpdateMangas(
         Options$Mutation$UpdateMangas(
@@ -53,10 +54,14 @@ class MangaBookRepository {
       .getData((data) => data.updateMangas?.mangas.map((m) => m.id).toList())
       .then((ids) => ids ?? const []);
 
-  Future<void> removeMangaFromLibrary(int mangaId) => client
+  Future<void> removeMangaFromLibrary(int mangaId) async {
+    final metas = await WebUiMetaRepository(client).readGlobalMetas();
+    final forget = readWebUiValue(metas, 'removeMangaFromCategories');
+    final removed = await client
       .mutate$UpdateManga(
         Options$Mutation$UpdateManga(
           variables: Variables$Mutation$UpdateManga(
+              withLibraryFields: false,
             input: Input$UpdateMangaInput(
               id: mangaId,
               patch: Input$UpdateMangaPatchInput(inLibrary: false),
@@ -65,6 +70,13 @@ class MangaBookRepository {
         ),
       )
       .getData((data) => data.updateManga?.manga);
+    if (removed == null || removed.user.inLibrary) {
+      throw StateError('Library removal was not confirmed');
+    }
+    if (forget != null && decodeWebUiBool(forget)) {
+      await updateMangasCategories([mangaId], clearCategories: true);
+    }
+  }
 
   Future<void> modifyBulkChapters(ChapterBatch batch) => client
       .mutate$UpdateChapters(
@@ -82,17 +94,18 @@ class MangaBookRepository {
           ),
         ),
       )
-      // Surface failure as a throw so callers don't cascade a device delete
-      // when the server delete didn't actually happen.
+      // Throw on server failure so callers do not delete the device copy.
       .getData((data) {});
 
-  // Mangas
   Future<MangaDto?> getManga({
     required int mangaId,
   }) =>
       client
           .query$GetManga(Options$Query$GetManga(
-            variables: Variables$Query$GetManga(id: mangaId),
+          variables: Variables$Query$GetManga(
+            withLibraryFields: false,
+            id: mangaId,
+          ),
           ))
           .getData((data) => data.manga);
 
@@ -137,12 +150,12 @@ class MangaBookRepository {
       )
       .getData((data) {});
 
-  /// Bulk category edit across many series in one request: add [addTo] and
-  /// remove [removeFrom] on every id in [mangaIds]. Empty lists are no-ops.
+  /// Empty [addTo] and [removeFrom] lists are no-ops.
   Future<void> updateMangasCategories(
     List<int> mangaIds, {
     List<int> addTo = const [],
     List<int> removeFrom = const [],
+    bool clearCategories = false,
   }) =>
       client
           .mutate$UpdateMangasCategories(
@@ -151,6 +164,7 @@ class MangaBookRepository {
                 input: Input$UpdateMangasCategoriesInput(
                   ids: mangaIds,
                   patch: Input$UpdateMangaCategoriesPatchInput(
+                clearCategories: clearCategories,
                     addToCategories: addTo,
                     removeFromCategories: removeFrom,
                   ),
@@ -160,7 +174,6 @@ class MangaBookRepository {
           )
           .getData((data) {});
 
-  // Chapters
 
   Future<ChapterDto?> getChapter({
     required int chapterId,
@@ -202,17 +215,23 @@ class MangaBookRepository {
               ),
             ),
           )
-          // Surface a failed mutation as a throw (like every other call here),
-          // so offline callers detect the failure and keep the change pending
-          // instead of clearing the dirty flag on a push that never landed.
+          // Throw on failure so offline callers keep the change pending.
           .getData((data) {});
 
   Future<void> patchMangaMeta({
     required int mangaId,
     required String key,
     required dynamic value,
-  }) async =>
-      client
+  }) async {
+    if (key == 'webUI_sortBy' || key == 'webUI_reverse') {
+      await WebUiMetaRepository(client).writeMangaValue(
+        mangaId,
+        key.substring('webUI_'.length),
+        value as String,
+      );
+      return;
+    }
+    await client
           .mutate$SetMangaMeta(
             Options$Mutation$SetMangaMeta(
               variables: Variables$Mutation$SetMangaMeta(
@@ -227,6 +246,7 @@ class MangaBookRepository {
             ),
           )
           .getData((data) {});
+  }
 
   /// Removes a per-series meta override so the app-wide default applies again.
   Future<void> deleteMangaMeta({
@@ -246,9 +266,7 @@ class MangaBookRepository {
           )
           .getData<Object>((data) => null);
 
-  /// Fetches the chapter list FROM THE SOURCE (the server re-scrapes the source
-  /// site). Returns nothing if the source is down/gone — callers that need to
-  /// survive a dead source should fall back to [getStoredChapterList].
+  /// Re-scrapes the source; fall back to [getStoredChapterList] if the source is unavailable.
   Future<List<ChapterDto>?> getChapterList(int mangaId) async => client
       .mutate$GetChaptersByMangaId(
         Options$Mutation$GetChaptersByMangaId(
@@ -261,9 +279,7 @@ class MangaBookRepository {
       )
       .getData((data) => data.fetchChapters?.chapters);
 
-  /// Scrapes the source for metadata + chapters together; on Tachiyomix 1.6+
-  /// servers the chapters-only fetch stopped populating metadata as a side
-  /// effect.
+  /// Fetches metadata and chapters; Tachiyomix 1.6+ chapters-only fetches do not populate metadata.
   Future<List<ChapterDto>?> getMangaAndChapterList(int mangaId) async => client
       .mutate$GetMangaAndChaptersByMangaId(
         Options$Mutation$GetMangaAndChaptersByMangaId(
@@ -278,9 +294,7 @@ class MangaBookRepository {
       )
       .getData((data) => data.fetchMangaAndChapters?.chapters);
 
-  /// Reads the chapters the server already has STORED for this entry, without
-  /// touching the source. Works whenever the server is reachable, even if the
-  /// source is down — this is what the WebUI shows.
+  /// Reads stored server chapters without contacting the source.
   Future<List<ChapterDto>?> getStoredChapterList(int mangaId) async => client
       .query$GetChapterPage(
         Options$Query$GetChapterPage(
@@ -298,8 +312,7 @@ class MangaBookRepository {
       .getData((data) => data.chapters.nodes);
 }
 
-// keepAlive so a captured repository ref can't be disposed out from under an
-// in-flight progress write (pairs with the keepAlive graphQlClient).
+// Keep the repository alive across in-flight progress writes.
 @Riverpod(keepAlive: true)
 MangaBookRepository mangaBookRepository(Ref ref) =>
     MangaBookRepository(ref.watch(graphQlClientProvider));

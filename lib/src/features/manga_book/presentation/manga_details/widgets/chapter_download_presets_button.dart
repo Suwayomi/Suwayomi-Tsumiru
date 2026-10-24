@@ -32,8 +32,6 @@ class ChapterDownloadPresetsButton extends HookConsumerWidget {
   final AsyncValue<List<ChapterDto>?> chapterList;
   final bool actionRow;
 
-  /// Callback to re-fetch chapters after a successful enqueue.
-  /// Mirrors the signature used elsewhere in manga_details_screen.
   final Future<void> Function(bool) refresh;
 
   Future<void> _handlePreset(

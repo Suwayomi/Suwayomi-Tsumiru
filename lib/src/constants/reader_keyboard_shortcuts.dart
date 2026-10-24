@@ -35,9 +35,7 @@ ShortcutManager readerShortcutManager(Axis scrollDirection,
         {bool isRtl = false, bool autoScrollSupported = false}) =>
     ShortcutManager(
       shortcuts: {
-        // Space toggles auto-scroll only in vertical modes that actually mount
-        // an auto-scroll engine; elsewhere it stays page-advance (and
-        // Shift+Space page-back), so keyboard paging never goes dead.
+        // Space toggles auto-scroll only when the reader mounts an auto-scroll engine.
         const SingleActivator(LogicalKeyboardKey.space):
             scrollDirection == Axis.vertical && autoScrollSupported
                 ? AutoScrollToggleIntent()

@@ -8,18 +8,11 @@
 import 'package:animated_vector/animated_vector.dart';
 import 'package:flutter/animation.dart';
 
-// Nav icon animations transcribed from Komikku's animated vector drawables
-// (res/drawable/anim_{library,updates,history,browse,more}_enter.xml). Path
-// strings are verbatim from the XMLs — do not reformat or "simplify" them:
-// morphs require begin/end paths with identical command structure.
-// The More paths drop a dangling `c` left by the Lottie export (draws nothing,
-// but the SVG path parser rejects it), and its no-op 833 ms filler animator is
-// omitted, so its real motion ends at 517 ms.
+// Komikku res/drawable/anim_*_enter.xml paths: morph endpoints require identical command structure.
 class AnimatedNavVectors {
   AnimatedNavVectors._();
 
-  // Bodymovin/Shape Shifter exports use custom cubics instead of the framework
-  // fastOutSlowIn on the More timeline.
+  // More uses Bodymovin's custom cubic curves.
   static const _hopCurve = Cubic(0.5, 0, 0.5, 1);
 
   static const library = AnimatedVectorData(
@@ -402,9 +395,7 @@ class AnimatedNavVectors {
     ),
   );
 
-  // Original (no Komikku reference — they have no Downloads tab): the arrow
-  // lifts out of the tray and drops back with a small overshoot. Glyph is the
-  // Material file_download outlined 24px SVG, split into arrow and tray.
+  // Material file_download outlined 24 px SVG, split into arrow and tray.
   static const downloads = AnimatedVectorData(
     viewportSize: Size(24, 24),
     duration: Duration(milliseconds: 300),

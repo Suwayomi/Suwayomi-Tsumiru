@@ -19,8 +19,6 @@ import 'recommendation_card.dart';
 import 'recommendation_error_message.dart';
 import 'recommendation_loading.dart';
 
-/// Komikku's RecommendsScreen: "Similar to {title}", one section per provider,
-/// each loading, erroring, and emptying on its own.
 class RecommendsScreen extends ConsumerWidget {
   const RecommendsScreen({super.key, required this.mangaId, this.mangaTitle});
 
@@ -30,8 +28,6 @@ class RecommendsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final setup = ref.watch(recommendationSetupProvider(mangaId));
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(
       mangaTitle != null
@@ -53,11 +49,7 @@ class RecommendsScreen extends ConsumerWidget {
           if (providers.isEmpty) {
             return Emoticons(title: context.l10n.noRecommendationsForTitle);
           }
-          // Komikku shows every applicable provider — each renders its own
-          // results, "No results found", or error; sections never drop out.
-          // Sink sources that resolved empty or errored below ones with results
-          // (still-loading stay in the middle); keep original order within a
-          // rank, and key each section so a reorder doesn't reload it.
+          // Keep empty/error sections, rank results first, and preserve keys so reordering cannot reload providers.
           int rankOf(RecommendationProvider p) {
             final recs = ref.watch(
               providerRecommendationsProvider(mangaId, p.key),
@@ -156,8 +148,6 @@ class _ProviderSection extends ConsumerWidget {
   }
 }
 
-/// Komikku's per-section empty/error state: a centered info icon over a short
-/// message, in place of the cover row.
 class _SectionMessage extends StatelessWidget {
   const _SectionMessage(this.text);
 

@@ -22,20 +22,11 @@ import '../../domain/migration_models.dart';
 
 enum _SortMode { alphabetical, total }
 
-/// Screen 1 — Migrate off a source (Komikku `MigrateSourceScreen`). Lists the
-/// library's sources with entry counts; an obsolete filter and sort mode/
-/// direction; tapping a source drills into its manga.
-///
-/// [MigrationSourcePickerBody] is the chrome-less body so the same screen hosts
-/// both the standalone route (this Scaffold wrapper) and the Browse → Migrate
-/// tab, which supplies its own app bar.
 class MigrationSourcePickerScreen extends StatelessWidget {
   const MigrationSourcePickerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.migrationPickSourceTitle);
     final scaffold = Scaffold(
@@ -62,9 +53,7 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
     this.hideInnerSearchOnDesktop = false,
   });
 
-  /// True when hosted in the Browse Migrate tab: the desktop Browse search box
-  /// already drives the filter there, so the inner box hides on desktop. The
-  /// standalone route keeps its own box everywhere.
+  /// Browse supplies the desktop search box; standalone routes retain their own.
   final bool hideInnerSearchOnDesktop;
 
   @override
@@ -104,8 +93,6 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
         }
         return Column(
           children: [
-            // Filter/sort controls sit inline: the Browse tab host owns the
-            // app bar, so they can't live in AppBar actions here.
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -216,8 +203,6 @@ class _CountBadge extends StatelessWidget {
   }
 }
 
-/// Screen 2 — per-source manga (Komikku `MigrateMangaScreen`). Tap a manga to
-/// migrate it alone; long-press to multi-select, then Migrate the selection.
 class MigrationSourceMangaScreen extends HookConsumerWidget {
   const MigrationSourceMangaScreen({super.key, required this.data});
 
@@ -240,8 +225,6 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
       selection.value = next;
     }
 
-    // Native desktop draws the toolbars in the shell bar instead of an app
-    // bar; selection mode swaps the slot content like it swaps the app bar.
     final topBar = showsMergedTopBar(context);
     final closeSelection = IconButton(
       icon: const Icon(Icons.close),

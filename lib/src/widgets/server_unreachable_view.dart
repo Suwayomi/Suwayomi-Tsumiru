@@ -25,12 +25,6 @@ final webAuthBlockedProvider = Provider<bool>(
       ),
 );
 
-/// Shown when a request failed because the server couldn't be reached (wrong
-/// URL, server down, no network) — as opposed to an auth or server-side error.
-///
-/// It points straight at Connection settings, the one screen where a wrong
-/// server URL is fixed, so a disconnected user is never stranded on a blank
-/// screen with no way forward.
 class ServerUnreachableView extends ConsumerWidget {
   const ServerUnreachableView({
     super.key,
@@ -39,21 +33,16 @@ class ServerUnreachableView extends ConsumerWidget {
     this.webNotFoundVerdict = false,
   });
 
-  /// Optional retry (re-runs the failed query). Omitted where there's nothing
-  /// to re-fetch.
   final VoidCallback? onRetry;
 
-  /// Offer the "View offline" pin. Only screens that honor the pin (the
-  /// library) pass true; elsewhere the button would silently flip a switch
-  /// the current screen ignores.
+  /// Enable only on screens that honor the offline pin.
   final bool offlineEscape;
 
   final bool webNotFoundVerdict;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Gated here, not inside the button: a shrunk child still costs the
-    // Column's spacing, doubling the gap between its neighbours.
+    // Gate outside the button so a hidden child cannot reserve Column spacing.
     final hasCatalog =
         ref.watch(offlineCatalogAvailableProvider).value ?? false;
     final webAuthBlocked = ref.watch(webAuthBlockedProvider);
@@ -84,10 +73,7 @@ class ServerUnreachableView extends ConsumerWidget {
   }
 }
 
-/// The "View offline" pin. The error it accompanies stays visible — this is
-/// the user's bypass, never an automatic mask. Self-gates on the catalog for
-/// callers without a ref; ref-having parents should gate externally so a
-/// shrunk child doesn't eat Column spacing.
+/// User-triggered offline bypass; parents should gate visibility to avoid Column spacing.
 class ViewOfflineButton extends ConsumerWidget {
   const ViewOfflineButton({super.key});
 

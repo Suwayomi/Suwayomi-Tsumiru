@@ -15,8 +15,7 @@ import '../../../../../../widgets/compact_switch.dart';
 
 part 'tap_zones_overlay.g.dart';
 
-/// Flash the tap zones every time a chapter opens. Off by default, like
-/// Komikku.
+/// Flashes the tap zones each time a chapter opens.
 @riverpod
 class ShowTapZonesOverlay extends _$ShowTapZonesOverlay
     with SharedPreferenceClientMixin<bool> {
@@ -24,8 +23,7 @@ class ShowTapZonesOverlay extends _$ShowTapZonesOverlay
   bool? build() => initialize(DBKeys.showTapZonesOverlay);
 }
 
-/// True until the zones have been shown once. Gives someone who has never seen
-/// them a single look, then never again unless they ask for it.
+/// Shows zones once for first-time users, independently of the recurring overlay setting.
 @riverpod
 class TapZonesOverlayUnseen extends _$TapZonesOverlayUnseen
     with SharedPreferenceClientMixin<bool> {

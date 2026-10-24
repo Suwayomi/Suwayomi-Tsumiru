@@ -9,8 +9,7 @@ import 'package:image/image.dart' as img;
 
 import 'border_crop.dart';
 
-/// Raw RGBA8888 of the cropped region, tightly packed (no row padding) — ready
-/// for `ui.decodeImageFromPixels(rgba, width, height, PixelFormat.rgba8888)`.
+/// Tightly packed RGBA8888 with no row padding, ready for ui.decodeImageFromPixels.
 class CroppedImageData {
   const CroppedImageData({
     required this.rgba,
@@ -23,7 +22,6 @@ class CroppedImageData {
   final int height;
 }
 
-// Sendable argument bundle for [compute].
 class _CropRequest {
   const _CropRequest(
     this.encodedBytes,
@@ -37,15 +35,7 @@ class _CropRequest {
   final int? targetHeight;
 }
 
-/// Decodes [encodedBytes], detects borders, and returns the cropped RGBA in a
-/// background isolate. Returns null when the image can't be decoded or no
-/// border was found (caller falls back to the uncropped image).
-///
-/// [targetWidth]/[targetHeight] (display px, one may be null to preserve
-/// aspect) downscale the cropped region in this same isolate call — the decode
-/// cap [ServerImage] applies to the un-cropped path can't reach this one
-/// (these are already-decoded raw pixels, not an encoded buffer the engine's
-/// decode-time resize can act on), so it has to happen here instead.
+/// Returns null if decoding/cropping fails; downscales raw cropped pixels because decode-time caps cannot.
 Future<CroppedImageData?> cropImageBytes(
   Uint8List encodedBytes, {
   int threshold = 20,
@@ -69,7 +59,6 @@ CroppedImageData? _cropEntry(_CropRequest req) {
   final rect = findContentRect(rgba, width, height, threshold: req.threshold);
   if (rect == null) return null;
 
-  // Slice the source RGBA buffer directly into a tightly-packed output.
   final out = Uint8List(rect.width * rect.height * 4);
   var dst = 0;
   for (var y = rect.top; y < rect.bottom; y++) {
@@ -79,8 +68,7 @@ CroppedImageData? _cropEntry(_CropRequest req) {
     dst += rowEnd - rowStart;
   }
 
-  // Only ever downscale — an upscale would blur a crop that's already
-  // smaller than the cap for no benefit.
+  // Only downscale; upscaling adds blur without recovering detail.
   final needsResize =
       (req.targetWidth != null && req.targetWidth! < rect.width) ||
       (req.targetHeight != null && req.targetHeight! < rect.height);

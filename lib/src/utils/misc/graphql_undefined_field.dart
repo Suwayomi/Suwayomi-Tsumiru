@@ -15,10 +15,7 @@ bool isUndefinedFieldError(
   required String type,
   String? field,
 }) {
-  // Suwayomi sends these with EMPTY extensions, so their absence says nothing;
-  // only a classification that contradicts a validation error rules it out.
-  // Requiring them classified every pre-accounts server as `unknown`, which
-  // fails UI Login sign-in outright and denies every permission-gated control.
+  // Suwayomi validation errors may have empty extensions; only contradictory classifications rule them out.
   final extensions = error.extensions;
   final classification = extensions?['classification'];
   final code = extensions?['code'];

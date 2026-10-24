@@ -15,15 +15,7 @@ import '../../constants/db_keys.dart';
 import '../../global_providers/global_providers.dart';
 import '../extensions/custom_extensions.dart';
 
-/// [SharedPreferenceClientMixin] is a mixin to add [_get] and [update] functions to
-/// the provider.
-///
-/// * Remember to use [ initialize ] function to assign [_key], [_client]
-///   in [build] function of provider.
-///
-/// * optionally provide [_initial] for giving initial value to the [_key].
-///
-/// * [T] should not be a Nullable Type.
+/// Call initialize in build; T must be non-nullable and initial may override the key default.
 mixin SharedPreferenceClientMixin<T extends Object> {
   late final String _key;
   late final SharedPreferences _client;
@@ -34,8 +26,6 @@ mixin SharedPreferenceClientMixin<T extends Object> {
   late final T? Function(dynamic)? _fromJson;
   Ref get ref;
 
-  /// Satisfied by the Notifier this mixes into — Riverpod 3 moved listenSelf
-  /// off Ref onto the notifier itself.
   void Function() listenSelf(
     void Function(T? previous, T? next) listener, {
     void Function(Object error, StackTrace stackTrace)? onError,
@@ -67,10 +57,7 @@ mixin SharedPreferenceClientMixin<T extends Object> {
       return _fromJson(jsonDecode(value.toString()));
     }
     if (value != null && value is List) {
-      // if value is List<Object> then the only possible type is List<String>
-      // as SharedPreferences only saves List<String> type.
-      // casting it to List<String> and then to T? to
-      // avoid comparing List<Object> with T?.
+      // SharedPreferences supports only string lists; narrow List<Object> before casting to T.
       return value.map((e) => e.toString()).toList() as T?;
     }
     return value is T? ? value : _initial;
@@ -98,11 +85,7 @@ mixin SharedPreferenceClientMixin<T extends Object> {
   }
 }
 
-/// [SharedPreferenceEnumClientMixin] is a mixin to add [get] and [update] functions to
-/// the provider.
-///
-/// * Remember to initialize [_key], [_client], [_enumList] in [build] function of provider
-/// * optionally provide [_initial] for giving initial value to the [_key].
+/// Initialize key, client and enumList in build; initial may override the key default.
 mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   late String _key;
   late SharedPreferences _client;
@@ -111,16 +94,12 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   set state(T? newState);
   Ref get ref;
 
-  /// Satisfied by the Notifier this mixes into — Riverpod 3 moved listenSelf
-  /// off Ref onto the notifier itself.
   void Function() listenSelf(
     void Function(T? previous, T? next) listener, {
     void Function(Object error, StackTrace stackTrace)? onError,
   });
 
-  /// [initial] overrides the key's own default — used when a new key inherits
-  /// whatever the pref it was split out of already held, so an upgrade keeps
-  /// the reader behaving the way it did.
+  /// Overrides the key's default, including inherited values during preference migration.
   T? initialize(DBKeys key, {required List<T> enumList, T? initial}) {
     _client = ref.watch(sharedPreferencesProvider);
     _key = key.name;

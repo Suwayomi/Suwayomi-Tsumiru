@@ -8,40 +8,27 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-/// Test-only override for [isDesktopPlatform]. Null (the default) uses the
-/// real platform; widget tests set it to exercise the desktop strips and
-/// bars on a non-desktop VM (or to force them off on desktop).
+/// Test override; null uses the real platform.
 @visibleForTesting
 bool? debugDesktopPlatformOverride;
 
-/// Native desktop OS (not web, not mobile). `!kIsWeb` must be first — dart:io
-/// `Platform` throws on web.
+/// Check !kIsWeb first: dart:io Platform throws on web.
 bool get isDesktopPlatform =>
     debugDesktopPlatformOverride ??
     (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS));
 
-/// Runtimes where a physical keyboard is expected: native desktop or web.
 bool get isKeyboardRuntime => kIsWeb || isDesktopPlatform;
 
-/// Test-only override for the Android gates in reader settings. Null
-/// (the default) uses the real platform; widget tests set it to true to
-/// exercise the Android-only rows on a desktop VM.
+/// Test override for Android-only controls; null uses the real platform.
 @visibleForTesting
 bool? debugAndroidOverride;
 
-/// Test-only override for the macOS top-bar/sidebar branch (traffic-lights
-/// inset instead of the logo block, 80 px collapsed sidebar). Null (the
-/// default) uses the real platform; widget tests set it to exercise the macOS
-/// layout on a Linux VM.
+/// Test override for macOS layout; null uses the real platform.
 @visibleForTesting
 bool? debugMacOSOverride;
 
-/// True on macOS. Tests opt into the macOS layout via [debugMacOSOverride];
-/// production reads the real platform.
 bool get isMacOSRuntime =>
     debugMacOSOverride ?? (!kIsWeb && Platform.isMacOS);
 
-/// True on Android. Tests opt into the Android-only rows via
-/// [debugAndroidOverride]; production reads the real platform.
 bool get isAndroidRuntime =>
     debugAndroidOverride ?? (!kIsWeb && Platform.isAndroid);

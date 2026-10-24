@@ -4026,7 +4026,6 @@
     "imageProcessingCouldNotClearCache": "No s'ha pogut esborrar la memòria cau",
     "imageDownloadProcessing": "Processament de la baixada d'imatges",
     "imageServeProcessing": "Processament del servei d'imatges",
-    "imageProcessingIntro": "Si no hi ha cap tipus MIME definit, s'utilitzarà el «predeterminat» per al processament.\nPoseu el mode de destinació a desactivat per evitar el processament d'un tipus MIME",
     "imageProcessingMimeType": "Tipus MIME",
     "imageProcessingTargetMode": "Mode de destinació",
     "imageProcessingMimeTypeTarget": "Destinació del tipus MIME",

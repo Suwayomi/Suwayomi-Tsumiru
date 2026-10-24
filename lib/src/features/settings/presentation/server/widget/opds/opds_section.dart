@@ -98,9 +98,7 @@ class OpdsSection extends ConsumerWidget {
           children: [
             SettingsHighlightTarget(
               id: 'opdsItemsPerPage',
-              // Explicit boundary: without it the engine folds this row into a
-              // neighbouring switch row, the same merge webview_section.dart
-              // guards against.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -122,7 +120,7 @@ class OpdsSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'opdsChapterSortOrder',
-              // Explicit boundary, same merge guard as above.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -257,7 +255,7 @@ class OpdsSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'opdsCbzMimetype',
-              // Explicit boundary, same merge guard as above.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,

@@ -15,8 +15,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
-// Input types are defined in the schema file and NOT re-exported by
-// auth.graphql.dart, so we import the schema directly.
 import '../../../graphql/__generated__/schema.graphql.dart'
     show Input$LoginInput, Input$RefreshTokenInput;
 import '../../../utils/crash/diagnostics.dart';
@@ -40,7 +38,6 @@ import 'ui_login_token_rejected.dart';
 
 part 'auth_coordinator.g.dart';
 
-/// Result of a Test Connection attempt.
 sealed class TestConnectionResult {
   const TestConnectionResult();
 }
@@ -66,14 +63,7 @@ enum TestConnectionFailureKind {
   webUnsupportedAuthMode,
 }
 
-/// Maps a thrown error to a typed [TestConnectionFailure]. Used by both
-/// `testConnection` and the credentials popup's Save path so both surface
-/// the same friendly message instead of a raw exception toString().
-///
-/// TLS errors (`HandshakeException: Wrong version number`) are checked
-/// BEFORE network errors because their toString() also contains tokens
-/// like "connection" that would otherwise collapse them into a generic
-/// network failure.
+/// Checks TLS errors before generic network errors, whose text overlaps.
 TestConnectionFailure classifyAuthError(Object e) {
   if (e is UiLoginTokenRejected) {
     return const TestConnectionFailure(
@@ -104,9 +94,7 @@ TestConnectionFailure classifyAuthError(Object e) {
   final msg = e.toString().toLowerCase();
   if (msg.contains('unauthor') ||
       msg.contains('forbidden') ||
-      // Suwayomi's UI-login rejection ("Incorrect username or password.")
-      // and Simple Login's variants — none contain "unauthorized", so match
-      // them explicitly rather than fall through to the scary "wrong URL?".
+      // Suwayomi credential rejections need not contain "unauthorized".
       msg.contains('incorrect username or password') ||
       msg.contains('invalid username or password') ||
       msg.contains('invalid credentials')) {
@@ -133,11 +121,6 @@ TestConnectionFailure classifyAuthError(Object e) {
   );
 }
 
-/// Outcome of a refresh attempt. Top-level sealed type — DECLARED HERE
-/// (above [AuthCoordinator]) so the class body that references it can
-/// stay contiguous. This placement matters: in round 2 the sealed
-/// classes were inserted MID-CLASS by accident, which forced
-/// `testConnection` to fall outside the class and broke compilation.
 sealed class RefreshOutcome {
   const RefreshOutcome();
   const factory RefreshOutcome.success(String newAccessToken) = RefreshSuccess;
@@ -160,12 +143,7 @@ class RefreshTransientFailure extends RefreshOutcome {
   final Object error;
 }
 
-/// Thrown instead of sending a request whose access token has already expired
-/// when no refresh could replace it: the server can only reject that token.
-///
-/// A [ServerException] carrying the refresh's own cause, so a refresh that
-/// couldn't reach the server reads as the connection error it is (offline
-/// fallbacks, reachability) rather than as an auth rejection.
+/// An expired token cannot be sent; preserves the refresh cause for reachability handling.
 class AccessTokenUnavailable extends ServerException {
   AccessTokenUnavailable(this.outcome)
     : super(
@@ -190,9 +168,7 @@ class AccessTokenUnavailable extends ServerException {
       'AccessTokenUnavailable(${describeRefreshOutcome(outcome)})';
 }
 
-/// One-line, token-free summary of [outcome] for the diagnostic log: the new
-/// token's remaining lifetime on success, the error's type and first line on
-/// a transient failure. `null` means no refresh was due.
+/// Token-free refresh diagnostic; null means no refresh was due.
 String describeRefreshOutcome(RefreshOutcome? outcome, {DateTime? now}) =>
     switch (outcome) {
       null => 'outcome=not-due',
@@ -203,8 +179,7 @@ String describeRefreshOutcome(RefreshOutcome? outcome, {DateTime? now}) =>
         'outcome=transient cause=${describeDiagnosticError(error)}',
     };
 
-/// `expIn=<seconds>` (negative once expired) for a JWT, `exp=unknown` when it
-/// can't be decoded, `token=none` for a missing one. Never the token itself.
+/// Reports token expiry without logging the token itself.
 String describeTokenExpiry(String? token, {DateTime? now}) {
   if (token == null || token.isEmpty) return 'token=none';
   final exp = decodeJwtExp(token);
@@ -212,8 +187,7 @@ String describeTokenExpiry(String? token, {DateTime? now}) {
   return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
 }
 
-/// `<Type>: <first line>` of [error], capped so a server stack trace packed
-/// into a message can't flood the log.
+/// Caps diagnostics at the error's first line to avoid logging entire server stack traces.
 String describeDiagnosticError(Object error) {
   final first = error.toString().split('\n').first.trim();
   final text = first.length > 160 ? '${first.substring(0, 160)}…' : first;
@@ -227,47 +201,23 @@ void debugResetAuthCoordinatorSingleFlight() {
   _refreshInFlight = Expando();
 }
 
-/// Extracts an HTTP status code from a graphql_flutter [LinkException],
-/// or `null` if the exception isn't an HTTP-layer one. Used by
-/// [AuthCoordinator._refreshUiAccessTokenImpl] to tell auth failures
-/// (401/403) from transient failures (sockets, 5xx, timeout). Defined
-/// at file scope so tests can drive it without standing up an
-/// AuthCoordinator. — Codex round-3 finding.
+// Only HTTP-layer link exceptions expose status codes for auth-failure classification.
 int? _httpStatusOfLinkException(LinkException ex) {
   if (ex is HttpLinkServerException) {
     return ex.response.statusCode;
   }
-  // ResponseFormatException / ServerException / NetworkException etc.
-  // don't carry a status code — treat as transient.
   return null;
 }
 
-/// Orchestrates login, re-auth, and test-connection flows for the two new
-/// auth modes. Pure logic — the UI calls into this and observes the
-/// resulting state via [AuthCredentialsStore] and [NeedsReauth].
-///
-/// **Proactive refresh** (this file's reason for existing post-v0.2.0):
-/// ui_login access tokens expire after ~5 min by default. Image fetches
-/// bypass the GraphQL auth link, so when no GraphQL traffic surfaces a
-/// 401, the token quietly expires and every subsequent image breaks.
-/// We schedule a Timer at `exp - proactiveRefreshLead` to rotate the
-/// token before any image request can see it expired. On transient
-/// refresh failures we reschedule via [_backoffSchedule]. On auth
-/// failure we cancel and surface the existing re-auth banner.
+/// Refreshes proactively because image requests bypass the GraphQL auth link.
 @Riverpod(keepAlive: true)
 class AuthCoordinator extends _$AuthCoordinator {
-  /// How long before the access token's `exp` to fire a refresh. Sized
-  /// to comfortably cover round-trip + reader prefetch latency.
+  /// Refresh lead covers network round-trip and reader prefetch latency.
   static const Duration proactiveRefreshLead = Duration(seconds: 60);
 
-  /// Maximum delay we'll wait before firing a proactive refresh. Caps
-  /// JWTs with weirdly-far-future `exp` claims so the Timer isn't
-  /// scheduled for a duration that survives device reboot.
+  // Cap timers for tokens with far-future expiry claims.
   static const Duration _maxProactiveDelay = Duration(hours: 24);
 
-  /// Backoff schedule for transient-failure retries (R2-3). One-shot
-  /// Dart `Timer` doesn't re-fire on its own, so we explicitly hop
-  /// through this list and cap at the last entry.
   static const List<Duration> _backoffSchedule = [
     Duration(seconds: 30),
     Duration(seconds: 60),
@@ -280,9 +230,6 @@ class AuthCoordinator extends _$AuthCoordinator {
 
   @override
   void build() {
-    // Listen to credentials changes and (re)schedule the proactive
-    // refresh whenever a ui_login access token is present. Cancel when
-    // tokens are cleared (logout, mode switch).
     ref.listen<AsyncValue<AuthCredentialsState>>(authCredentialsStoreProvider, (
       prev,
       next,
@@ -297,9 +244,6 @@ class AuthCoordinator extends _$AuthCoordinator {
         _cancelProactiveRefresh();
         return;
       }
-      // Re-schedule only when the expiry actually changed (e.g.
-      // post-refresh, post-login, post-bootstrap). Cheap idempotent
-      // reschedule is also fine — we cancel any existing Timer first.
       final prevExpiry = prev?.value?.uiAccessTokenExpiresAt;
       if (prevExpiry == state.uiAccessTokenExpiresAt &&
           _proactiveRefreshTimer != null) {
@@ -331,8 +275,6 @@ class AuthCoordinator extends _$AuthCoordinator {
     });
   }
 
-  /// Schedules a transient-failure backoff Timer. Cancels any existing
-  /// Timer first so we never have two pending.
   void _scheduleBackoffRefresh() {
     _proactiveRefreshTimer?.cancel();
     final stepIndex = _proactiveBackoffStep.clamp(
@@ -360,18 +302,12 @@ class AuthCoordinator extends _$AuthCoordinator {
       } else if (outcome is RefreshTransientFailure) {
         _scheduleBackoffRefresh();
       }
-      // RefreshAuthFailure: tokens are cleared and the credentials
-      // listener will fire with uiAccessToken=null, triggering
-      // _cancelProactiveRefresh. No work here.
     } catch (e, st) {
       debugPrint('proactive refresh callback raised: $e\n$st');
-      // Treat unexpected throws as transient — keep trying.
       _scheduleBackoffRefresh();
     }
   }
 
-  /// Cancels any pending Timer and resets the backoff step. Safe to
-  /// call repeatedly.
   void _cancelProactiveRefresh() {
     _proactiveRefreshTimer?.cancel();
     _proactiveRefreshTimer = null;
@@ -381,27 +317,8 @@ class AuthCoordinator extends _$AuthCoordinator {
   @visibleForTesting
   bool get debugHasProactiveTimer => _proactiveRefreshTimer != null;
 
-  // ---------- Verify-only paths (no persistence) ----------
-  //
-  // These run the same network round-trips as the real login flows but
-  // do NOT touch secure storage. Used by the credentials popup's Test
-  // Connection button so a user can verify without committing anything
-  // — clicking Cancel must leave the existing config untouched.
-  //
-  // **Caveat for simple_login (R2-11):** `verifySimpleCredentials` calls
-  // `POST /login.html`, which creates a server-side session and returns a
-  // cookie. Discarding the cookie does NOT delete the session — Suwayomi
-  // will accumulate orphan sessions if the user hammers Test. The
-  // existing simple_login docs don't expose a logout-without-cookie
-  // endpoint, so we accept this as a documented limitation. UX guidance:
-  // the popup should treat Test as "soft commit" — successive Tests
-  // overwrite each other server-side, and Save reuses the most recent
-  // verified cookie (see Task 17) so a typical Test → Save sequence
-  // produces exactly one session.
 
-  /// Verifies Simple Login credentials by POSTing to /login.html. Returns
-  /// the session cookie on success; throws on failure. Caller decides
-  /// whether to persist (via [loginSimple]) or discard.
+  /// Returns a verified cookie without persisting it; the server still creates a session.
   Future<String> verifySimpleCredentials({
     required String serverBaseUrl,
     required String username,
@@ -426,9 +343,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     }
   }
 
-  /// Verifies UI Login credentials by firing the `login` mutation.
-  /// Returns the token pair on success; throws on failure. Caller
-  /// decides whether to persist (via [loginUi]) or discard.
+  /// Returns verified tokens without persisting them; throws on failure.
   Future<UiLoginTokens> verifyUiCredentials({
     required GraphQLClient gqlClient,
     required String username,
@@ -454,13 +369,8 @@ class AuthCoordinator extends _$AuthCoordinator {
     );
   }
 
-  // ---------- Persisting login paths ----------
 
-  /// Verifies Basic credentials against the server AND persists them.
-  ///
-  /// basic_auth has no login round-trip, so this probes with the header the
-  /// app would go on to send. Without it a typo was stored happily and the
-  /// user was shown as signed in while every request came back 401.
+  /// Probes Basic credentials before persisting; Basic auth has no login round-trip.
   Future<void> loginBasic({
     required String serverBaseUrl,
     required String username,
@@ -492,16 +402,13 @@ class AuthCoordinator extends _$AuthCoordinator {
     }, expectedEpoch: store.serverEpoch);
   }
 
-  /// Performs Simple Login AND persists the resulting cookie.
-  /// Equivalent to `verifySimpleCredentials` + a store write. Used by
-  /// the credentials popup's Save button.
   Future<void> loginSimple({
     required String serverBaseUrl,
     required String username,
     required String password,
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
-    // Capture before verify so a switch mid-login can't persist creds for the new host.
+    // Capture the epoch before verification so a switch cannot persist credentials for another host.
     await store.withIdentityChange(() async {
       final epoch = store.serverEpoch;
       final cookie = await verifySimpleCredentials(
@@ -514,8 +421,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     }, expectedEpoch: store.serverEpoch);
   }
 
-  /// Performs UI Login AND persists both tokens. The password itself is not
-  /// kept: the refresh token renews the session until it expires.
+  /// Persists verified tokens; the password is never stored.
   Future<void> loginUi({
     required GraphQLClient gqlClient,
     required String username,
@@ -531,7 +437,7 @@ class AuthCoordinator extends _$AuthCoordinator {
         username: username,
         password: password,
       );
-      // A Simple-login server answers the login mutation yet rejects the token.
+      // A Simple-login server answers the login mutation yet rejects its token.
       if (serverBaseUrl != null && ref.read(isWebProvider)) {
         final probe = http.Client();
         try {
@@ -588,9 +494,7 @@ class AuthCoordinator extends _$AuthCoordinator {
           address != ref.read(currentServerAddressProvider)) {
         throw StateError('Authentication session changed');
       }
-      // userId + catalogId pin the account to a server instance. The address
-      // is only how we reached it, and the endpoint resolver rewrites it on a
-      // Wi-Fi/mobile switch, so comparing it rejects the same account.
+      // Bind to userId and catalogId; LAN/remote handovers can change the address.
       if (expectedBinding != null &&
           (binding.userId != expectedBinding.userId ||
               binding.catalogId != expectedBinding.catalogId)) {
@@ -607,15 +511,12 @@ class AuthCoordinator extends _$AuthCoordinator {
     }, expectedEpoch: forEpoch);
   }
 
-  /// [trigger] names the caller in the `auth-refresh` diagnostic, so a field
-  /// log shows which path refreshed (or failed to) and when.
   Future<RefreshOutcome> refreshUiAccessToken({
     required GraphQLClient gqlClient,
     String trigger = 'other',
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
-    // Inside an identity change the refresh is refused anyway; joining one in
-    // flight could leave this caller waiting on its own change to settle.
+    // Joining a refresh inside an identity change could wait on that same change.
     if (store.insideIdentityChange) {
       recordDiagnostic(
         '[${DateTime.now().toIso8601String()}] auth-refresh: '
@@ -643,10 +544,7 @@ class AuthCoordinator extends _$AuthCoordinator {
       completer.complete(outcome);
       return outcome;
     } catch (e, st) {
-      // _refreshUiAccessTokenImpl handles its own errors; this catch is
-      // strictly defensive. A throw here is a programmer error, not an
-      // auth/network failure — surface it transient so we don't wipe
-      // tokens for the wrong reason.
+      // Unexpected throws are transient; only confirmed auth failures may clear tokens.
       debugPrint('refreshUiAccessToken: unexpected throw: $e\n$st');
       final outcome = RefreshOutcome.transientFailure(e);
       recordDiagnostic(
@@ -662,20 +560,9 @@ class AuthCoordinator extends _$AuthCoordinator {
     }
   }
 
-  /// How long a refresh interrupted by an endpoint handover waits for it to
-  /// finish before retrying. The handover only swaps the address (and restarts
-  /// the download worker), so this is a ceiling, not an expected delay.
   static const Duration _handoverSettleTimeout = Duration(seconds: 10);
 
-  /// Runs the refresh, and retries it once if a LAN/remote endpoint handover
-  /// discarded it. The handover keeps the account but bumps the epoch, so at
-  /// launch, whenever the LAN probe switched endpoints mid-refresh, it failed
-  /// "Credentials changed" and every caller sharing it fell back to the
-  /// expired token: the subscription socket bound as a visitor for the whole
-  /// session, and each HTTP request paid a 401 first. The retry goes through
-  /// the post-handover client, since the one passed in may point at the
-  /// address just abandoned. A sign-in change (session epoch moved) is never
-  /// retried.
+  // Retry once through the new client after an endpoint handover; never retry a sign-in change.
   Future<RefreshOutcome> _refreshAcrossHandover(
     AuthCredentialsStore store,
     GraphQLClient gqlClient,
@@ -703,22 +590,16 @@ class AuthCoordinator extends _$AuthCoordinator {
     GraphQLClient gqlClient,
   ) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
-    // A switch bumping the epoch mid-refresh discards the write below.
     final startEpoch = store.serverEpoch;
     if (store.identityChanging || !store.sessionAdmitted) {
       return RefreshOutcome.transientFailure(
         StateError('Credentials are changing'),
       );
     }
-    // "No tokens" is only meaningful once the store has actually loaded.
-    // Before hydration (or after a failed secure-storage read) the snapshot is
-    // empty even when tokens exist on disk — declaring the session dead there
-    // shows a false "Session expired" and can cascade into wiping good
-    // tokens. Treat it as transient; the next trigger re-reads a settled store.
+    // Wait for hydration before treating missing in-memory tokens as a dead session.
     final storeState = ref.read(authCredentialsStoreProvider);
     if (storeState.value == null) {
-      // A failed hydration would otherwise stay AsyncError forever (nothing
-      // rebuilds the store) and pin the backoff loop — re-run it.
+      // Retry failed hydration so refresh backoff can make progress.
       if (storeState.hasError) ref.invalidate(authCredentialsStoreProvider);
       return RefreshOutcome.transientFailure(
         StateError('credentials store not hydrated'),
@@ -739,8 +620,7 @@ class AuthCoordinator extends _$AuthCoordinator {
         ),
       );
     } catch (e, st) {
-      // Network/socket/timeout — DON'T clear tokens. The refresh token
-      // may still be perfectly good; we just couldn't reach the server.
+      // Network failures do not invalidate the stored refresh token.
       debugPrint('refreshToken network error: $e\n$st');
       return RefreshOutcome.transientFailure(e);
     }
@@ -753,20 +633,11 @@ class AuthCoordinator extends _$AuthCoordinator {
 
     final exception = result.exception;
     if (exception != null) {
-      // Distinguish network-style GraphQL errors (linkException) from
-      // server-rejected auth errors (graphqlErrors with 401-ish status).
-      //
-      // Codex round-3 finding: not every linkException is transient.
-      // Suwayomi's refresh-token rejection can arrive as
-      // `HttpLinkServerException` with HTTP 401/403 — that's an AUTH
-      // failure, not a network blip. We need to inspect the inner
-      // exception's status code before classifying.
+      // Refresh rejection can arrive as HTTP 401/403, not only as GraphQL errors.
       final link = exception.linkException;
       if (link != null) {
         final status = _httpStatusOfLinkException(link);
         if (status == 401 || status == 403) {
-          // Server actively rejected the refresh token at the HTTP
-          // layer. Treat as auth failure.
           await store.clearUiLoginTokens(forEpoch: startEpoch);
           if (store.identityChanging || store.serverEpoch != startEpoch) {
             return RefreshOutcome.transientFailure(
@@ -776,13 +647,8 @@ class AuthCoordinator extends _$AuthCoordinator {
           ref.read(needsReauthProvider.notifier).set(true);
           return const RefreshOutcome.authFailure();
         }
-        // Other link exceptions (socket, timeout, server 5xx) are
-        // transient — keep tokens, let the user retry.
         return RefreshOutcome.transientFailure(exception);
       }
-      // GraphQL errors (non-link) here mean the server actively
-      // rejected the refresh token at the GraphQL layer — clear and
-      // prompt re-auth.
       await store.clearUiLoginTokens(forEpoch: startEpoch);
       if (store.identityChanging || store.serverEpoch != startEpoch) {
         return RefreshOutcome.transientFailure(
@@ -795,7 +661,6 @@ class AuthCoordinator extends _$AuthCoordinator {
 
     final newAccess = result.parsedData?.refreshToken.accessToken;
     if (newAccess == null) {
-      // No exception, but no token either — treat as auth failure.
       await store.clearUiLoginTokens(forEpoch: startEpoch);
       if (store.identityChanging || store.serverEpoch != startEpoch) {
         return RefreshOutcome.transientFailure(
@@ -806,13 +671,7 @@ class AuthCoordinator extends _$AuthCoordinator {
       return const RefreshOutcome.authFailure();
     }
 
-    // R2-1, R2-2: Re-read auth mode IMMEDIATELY before applying the
-    // refreshed token. The user may have switched to basic_auth or
-    // simple_login between the moment we issued the refresh and the
-    // moment its response arrived. Persisting a ui_login token here
-    // would resurrect dead credentials and break the now-active mode.
-    // Single-flight protects us from duplicate refreshes but does NOT
-    // protect us from stale-mode writes — that's this check's job.
+    // Recheck the mode after awaiting refresh so a mode change cannot resurrect UI Login tokens.
     final currentMode =
         ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
     if (currentMode != AuthType.uiLogin) {
@@ -833,14 +692,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     return RefreshOutcome.success(newAccess);
   }
 
-  /// Speculatively refresh the ui_login access token if it's within
-  /// [leadTime] of expiry. Returns `null` when no refresh was needed
-  /// or when the current auth mode isn't ui_login. Called by the
-  /// per-image Reload button and the app-resume lifecycle hook.
-  ///
-  /// R2-7: Explicit auth-mode gate. A stale `uiAccessTokenExpiresAt`
-  /// (defensive — `clearUiLoginTokens` should null it) must not trip a
-  /// ui-login refresh while the user is actually on basic/simple.
+  /// Refreshes within [leadTime] of expiry; null means no refresh was due or UI Login is inactive.
   Future<RefreshOutcome?> refreshUiAccessTokenIfDue({
     required GraphQLClient gqlClient,
     Duration leadTime = proactiveRefreshLead,
@@ -860,22 +712,9 @@ class AuthCoordinator extends _$AuthCoordinator {
     return refreshUiAccessToken(gqlClient: gqlClient, trigger: trigger);
   }
 
-  /// The ui_login access token a request should carry: the stored one, or a
-  /// refreshed one when it expires within [proactiveRefreshLead]. `null` when
-  /// there is none (or the mode isn't ui_login): nothing to attach.
-  ///
-  /// Requests are authorised up front rather than by refreshing after the
-  /// server rejects them. A token that expires soon but is still valid is
-  /// sent if the refresh fails; one that has already expired never is — it
-  /// gets one more refresh attempt, then [AccessTokenUnavailable] is thrown.
-  /// Launch logs showed the alternative: every early request waited on a
-  /// refresh that timed out on a waking network, went out anyway, came back
-  /// Unauthorized, and was replayed after the refresh that succeeded a second
-  /// later.
-  ///
-  /// A request spawned by an endpoint handover runs in the handover's zone;
-  /// the handover awaits no request, so this one waits it out and refreshes
-  /// against the new endpoint instead of being refused as part of it.
+  /// Returns a usable UI Login token or null when absent or inactive.
+  /// A failed refresh may use a still-valid token; expired tokens get one retry, then throw [AccessTokenUnavailable].
+  /// Handover-spawned requests wait for the new endpoint; other identity changes refuse refresh.
   Future<String?> usableUiAccessToken({
     required GraphQLClient Function() gqlClient,
     required String trigger,
@@ -892,8 +731,7 @@ class AuthCoordinator extends _$AuthCoordinator {
       return token;
     }
 
-    // Any other identity change (sign-in, account switch) refuses the refresh:
-    // it may be awaiting this very request.
+    // Other identity changes may be awaiting this request, so they cannot wait for refresh.
     final handover = store.insideHandover;
     final refusing = store.insideIdentityChange && !handover;
     Future<RefreshOutcome> refresh() {
@@ -902,8 +740,6 @@ class AuthCoordinator extends _$AuthCoordinator {
       return handover ? store.outsideIdentityChange(run) : run();
     }
 
-    // Returns the stored token while it hasn't expired: another path may have
-    // refreshed it, or it was only due and remains valid for now.
     String? stillValid() {
       final current = ref.read(authCredentialsStoreProvider).value;
       final access = current?.uiAccessToken;
@@ -917,8 +753,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     if (outcome is RefreshSuccess) return outcome.newAccessToken;
     var valid = stillValid();
     if (valid != null) return valid;
-    // One more attempt: on a waking network the first refresh often times out
-    // while the very next connection goes through.
+    // A waking network may succeed immediately after its first connection times out.
     if (outcome is RefreshTransientFailure && !refusing) {
       outcome = await refresh();
       if (outcome is RefreshSuccess) return outcome.newAccessToken;
@@ -933,15 +768,11 @@ class AuthCoordinator extends _$AuthCoordinator {
     throw AccessTokenUnavailable(outcome);
   }
 
-  /// Whether a token expiring at [expiresAt] has less than [lead] left. An
-  /// unknown expiry counts as live: there's nothing to refresh ahead of.
+  // Unknown expiry counts as live because no proactive refresh can be scheduled.
   static bool _expiresWithin(DateTime? expiresAt, Duration lead) =>
       expiresAt != null && expiresAt.difference(DateTime.now().toUtc()) <= lead;
 
-  /// Runs the appropriate verify-only round-trip and returns a typed
-  /// [TestConnectionResult]. **Does not persist credentials** — caller
-  /// must call [loginSimple] / [loginUi] explicitly to commit. This way
-  /// hitting Test → Cancel leaves prior config untouched.
+  /// Tests credentials without persisting them.
   Future<TestConnectionResult> testConnection({
     required AuthType authType,
     required String serverBaseUrl,
@@ -963,11 +794,7 @@ class AuthCoordinator extends _$AuthCoordinator {
           password: password,
         );
       } else if (authType == AuthType.basic) {
-        // basic_auth has no login round-trip — verify by probing WITH the
-        // Basic header (mirrors onboarding). First confirm it's really a
-        // Suwayomi server, then confirm the credentials actually authorise the
-        // @RequireAuth surface (which also fails when the server isn't on
-        // basic_auth, i.e. wrong mode).
+        // Basic auth has no login round-trip; probe both server identity and protected access.
         final client = http.Client();
         try {
           final extra = ref.read(customHttpHeadersProvider).value;

@@ -20,7 +20,8 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/web_auth_mode.dart';
-import '../../../../widgets/section_title.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
+import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../account/data/account_actions.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../account/data/server_account_capability.dart';
@@ -30,26 +31,14 @@ import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/presentation/auth_failure_text.dart';
 import '../../../offline/data/background/background_download_controller_shim.dart';
 import '../../search/settings_search_registry.dart';
+import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
 import 'prompt_sign_in.dart';
 
-/// Connection-screen authentication, state-aware:
-///   * No auth configured  -> just the auth-mode picker.
-///   * Already signed in    -> "Signed in as the user" + Log out (no login form,
-///                             so we never re-run a login the server rejects).
-///   * Needs sign-in        -> inline username/password with Test + Sign in,
-///                             the same shape as the first-run (FTUE) flow.
-/// The authentication-mode picker shared by the Connection page's
-/// Authentication section and its Account card.
-class ConnectionAuthTypePicker extends ConsumerWidget {
-  const ConnectionAuthTypePicker({super.key, this.inCard = false});
-
-  /// When true, the picker sits inside a SettingsGroupCard: the dropdown
-  /// gets 16 px padding on all sides (so its floating label clears the row
-  /// above) and the web-only hint sits below it at the same 16 px inset.
-  final bool inCard;
+class ConnectionAuthTypeTile extends ConsumerWidget {
+  const ConnectionAuthTypeTile({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,8 +46,23 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
     final isWeb = ref.watch(isWebProvider);
     final authChoices = connectionAuthChoices(isWeb: isWeb);
 
-    Future<void> onAuthModeChanged(AuthType? next) async {
-      if (next == null || next == authType) return;
+    Future<void> onAuthModeChanged(AuthType next) async {
+      if (next == authType) return;
+      if (next != AuthType.none) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => LoginCredentialsPopup(authType: next),
+          animationStyle: context.motionStyle,
+        );
+        return;
+      }
+      final confirmed = await confirmAction(
+        context,
+        title: context.l10n.confirmNoSignInTitle,
+        message: context.l10n.confirmNoSignInMessage,
+        action: context.l10n.clearSignInCredentials,
+      );
+      if (!confirmed || !context.mounted) return;
       stayOnConnectionAfterIdentityChange();
       await ref.read(backgroundDownloadControllerProvider).changeIdentity(
         () async {
@@ -68,47 +72,49 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
             await store.clearSimpleLoginCookie();
             await store.clearBasicCredentials();
           }
-          // No "Session expired" banner here. Nothing expired: the user just
-          // picked a different mode and is standing on the sign-in fields, so
-          // the banner only flashed across the top and then went away. A real
-          // expiry still raises it from the request paths that meet the 401.
+          // A deliberate mode change does not indicate session expiry.
           ref.read(needsReauthProvider.notifier).set(false);
           ref.read(authTypeKeyProvider.notifier).update(next);
         },
       );
     }
 
-    final dropdown = SettingsHighlightTarget(
+    return SettingsHighlightTarget(
       id: 'authentication',
-      child: DropdownMenu<AuthType>(
-        key: ValueKey(authType),
-        initialSelection: authType,
-        expandedInsets: EdgeInsets.zero,
-        requestFocusOnTap: false,
-        label: Text(context.l10n.authType),
-        leadingIcon: const Icon(Icons.security_rounded),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+      child: ListTile(
+        title: Text(context.l10n.authType),
+        subtitle: Text(authType.toLocale(context)),
+        onTap: () => showDialog(
+          context: context,
+          builder: (dialogContext) => RadioListPopup<AuthType>(
+            title: context.l10n.authType,
+            optionList: authChoices,
+            value: authType,
+            getOptionTitle: (option) => option.toLocale(dialogContext),
+            onChange: (option) {
+              Navigator.pop(dialogContext);
+              onAuthModeChanged(option);
+            },
         ),
-        dropdownMenuEntries: authChoices
-            .map((t) => DropdownMenuEntry(value: t, label: t.toLocale(context)))
-            .toList(),
-        onSelected: onAuthModeChanged,
+          animationStyle: context.motionStyle,
+        ),
       ),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // M3 DropdownMenu (not the legacy DropdownButtonFormField, whose menu
-        // anchors the selected item over the field and can open upward, wider
-        // than the field). Opens below, sized to the field. Keyed by authType
-        // so it re-seeds when the auth mode is changed elsewhere (e.g. logout).
-        if (inCard)
-          Padding(padding: const EdgeInsets.all(16), child: dropdown)
-        else
-          dropdown,
-        if (isWeb && !ref.watch(webSameOriginProvider))
-          Padding(
+  }
+}
+
+class ConnectionAuthWebHint extends ConsumerWidget {
+  const ConnectionAuthWebHint({super.key, this.inCard = false});
+
+  final bool inCard;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isWeb = ref.watch(isWebProvider);
+    if (!isWeb || ref.watch(webSameOriginProvider)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
             padding: inCard
                 ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
                 : const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -116,8 +122,6 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
               context.l10n.webUiLoginOnlyHint,
               style: Theme.of(context).textTheme.bodySmall,
             ),
-          ),
-      ],
     );
   }
 }
@@ -125,9 +129,7 @@ class ConnectionAuthTypePicker extends ConsumerWidget {
 class InlineAuthSection extends HookConsumerWidget {
   const InlineAuthSection({super.key, this.accountMode = false});
 
-  /// When true, the Account card above already shows the auth-mode picker,
-  /// the signed-in state and the sign-out action, so this section only
-  /// renders the needs-sign-in fields (or nothing while signed in).
+  /// Hides controls already shown by the Account card; shows only sign-in fields.
   final bool accountMode;
 
   @override
@@ -165,9 +167,7 @@ class InlineAuthSection extends HookConsumerWidget {
     final message = useState<String?>(null);
     final isError = useState(false);
 
-    // The server ROOT, not the API base: sign-in and the auth probe append
-    // their own paths (`/login.html`, `api/graphql`), so an `/api/v1` here
-    // posts Simple Login to `/api/v1/login.html` and 404s.
+    // Use the server root: sign-in and probes append /login.html and api/graphql.
     String resolvedBaseUrl() => Endpoints.baseApi(
       baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
       port: ref.read(serverPortProvider),
@@ -175,7 +175,6 @@ class InlineAuthSection extends HookConsumerWidget {
       appendApiToUrl: false,
     );
 
-    // Validate the entered credentials WITHOUT committing them.
     Future<void> testConnection() async {
       if (username.text.trim().isEmpty || password.text.isEmpty) {
         isError.value = true;
@@ -212,7 +211,6 @@ class InlineAuthSection extends HookConsumerWidget {
       }
     }
 
-    // Commit the credentials. On success the section flips to "Signed in".
     Future<void> signIn() async {
       if (username.text.trim().isEmpty || password.text.isEmpty) {
         isError.value = true;
@@ -286,16 +284,12 @@ class InlineAuthSection extends HookConsumerWidget {
       message.value = null;
     }
 
-    // A mode change elsewhere (the Account card picker, logout) resets the
-    // sign-in fields, like the inline picker used to do inline.
     useEffect(() {
       message.value = null;
       password.clear();
       return null;
     }, [authType]);
 
-    // In account mode the Account card above already shows the picker, the
-    // signed-in state and the sign-out action.
     if (accountMode && signedIn) return const SizedBox.shrink();
 
     Padding pad(Widget child) =>
@@ -304,8 +298,11 @@ class InlineAuthSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!accountMode) SectionTitle(title: context.l10n.authentication),
-        if (!accountMode) pad(const ConnectionAuthTypePicker()),
+        if (!accountMode) ...[
+          SettingsGroupHeading(label: context.l10n.authentication),
+          const SettingsGroupCard(children: [ConnectionAuthTypeTile()]),
+          const ConnectionAuthWebHint(),
+        ],
         if (authType != AuthType.none) ...[
           if (signedIn) ...[
             ListTile(

@@ -139,8 +139,6 @@ class SourceScreen extends HookConsumerWidget {
       );
     }, refresh: refresh);
 
-    // Phone searches from the Browse app-bar entry (or the box below when
-    // the persistent setting is on) and desktop from the Browse app-bar box.
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();

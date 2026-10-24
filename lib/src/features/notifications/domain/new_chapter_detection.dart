@@ -4,16 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Pure new-chapter detection for background notifications — no GraphQL, no
-/// isolate, fully unit-testable. The background worker feeds it the server's
-/// unread in-library chapters (already filtered `fetchedAt >= watermark`), and
-/// it returns which series to notify plus the advanced watermark.
 library;
 
-/// The minimal shape the detector reasons about. `fetchedAt` is the server's
-/// fetch timestamp as epoch SECONDS (Suwayomi stores `now.epochSecond`) — the
-/// authoritative "new" signal (never the device clock, so client/server skew
-/// can't drop or duplicate a chapter).
+/// fetchedAt is server epoch seconds (now.epochSecond), never device time.
 typedef NotifiableChapter = ({
   int id,
   int mangaId,
@@ -21,12 +14,7 @@ typedef NotifiableChapter = ({
   int fetchedAt,
 });
 
-/// Persisted detection cursor. `fetchedAt` is the high-water fetch time seen;
-/// `recent` maps recently-notified chapter id → its `fetchedAt`, kept only for
-/// the overlap window. The window (not a bare `>` cutoff) is what recovers a
-/// chapter that commits out of order *below* the high-water mark: the worker
-/// re-queries `fetchedAt >= high − overlap`, and `recent` dedupes what it
-/// already sent, so a late-but-below chapter still surfaces exactly once.
+/// High-water fetch time plus recent chapter timestamps; overlap catches late commits below the high-water mark.
 class NewChapterWatermark {
   const NewChapterWatermark({this.fetchedAt = 0, this.recent = const {}});
   final int fetchedAt;
@@ -47,8 +35,7 @@ class NewChapterWatermark {
       );
 }
 
-/// One series' worth of new chapters, chapter-number ordered so "open first new
-/// chapter" lands on the earliest, not the last-fetched.
+/// Chapters ordered by number so the first new chapter opens before later ones.
 class MangaNewChapters {
   const MangaNewChapters({required this.mangaId, required this.chapters});
   final int mangaId;
@@ -61,17 +48,10 @@ class NewChapterDetectionResult {
   final NewChapterWatermark watermark;
 }
 
-/// Default overlap window (seconds, the unit of `fetchedAt`) the worker
-/// re-scans below the high-water mark to catch out-of-order `fetchedAt`
-/// commits. Generous vs. realistic commit skew.
+/// Five-minute overlap catches out-of-order server commits; fetchedAt uses seconds.
 const kDefaultOverlapSeconds = 5 * 60;
 
-/// The first-enable cursor: high-water at [maxFetched], with every chapter the
-/// next pass's overlap re-scan (`fetchedAt >= maxFetched − overlap`) would
-/// return already marked seen. Without that, the pass right after a seed treats
-/// the whole window as fresh and notifies the existing backlog. [window] is the
-/// server's candidates for that range; anything fetched after [maxFetched]
-/// (committed between the two queries) stays fresh.
+/// Seeds overlap entries through [maxFetched] as seen, retaining newer concurrent arrivals as fresh.
 NewChapterWatermark seedNewChapterWatermark({
   required int maxFetched,
   required List<NotifiableChapter> window,
@@ -84,17 +64,8 @@ NewChapterWatermark seedNewChapterWatermark({
       },
     );
 
-/// Given the server's candidate chapters (unread, in-library, `fetchedAt >=`
-/// high-water − overlap, paginated to exhaustion by the caller), returns the
-/// per-series groups to notify and the next watermark. [allowedMangaIds] null =
-/// all series; otherwise the category scope.
-///
-/// Fresh = any candidate not already in [watermark].recent (so an out-of-order
-/// commit within the overlap window still fires exactly once). The high-water
-/// advances over ALL candidates seen — read/excluded ones the server still
-/// returns included — so they don't re-surface; category scope is forward-only
-/// past the window (re-including a category doesn't retroactively notify old
-/// chapters).
+/// Caller exhausts overlap pages; null scope allows all manga and excluded candidates still advance the watermark.
+/// Re-including categories does not backfill chapters older than the overlap window.
 NewChapterDetectionResult detectNewChapters({
   required List<NotifiableChapter> candidates,
   required NewChapterWatermark watermark,
@@ -127,8 +98,7 @@ NewChapterDetectionResult detectNewChapters({
   for (final c in candidates) {
     if (c.fetchedAt > maxFetched) maxFetched = c.fetchedAt;
   }
-  // Carry the old recent set + the ids we just notified, pruned to the window
-  // the next query will re-scan (`>= maxFetched − overlap`).
+  // Retain dedup IDs for the next overlap scan.
   final cutoff = maxFetched - overlapSeconds;
   final recent = <int, int>{
     for (final e in watermark.recent.entries)
@@ -143,41 +113,33 @@ NewChapterDetectionResult detectNewChapters({
   );
 }
 
-/// The per-series chapter-count phrase, ported 1:1 from Komikku/Mihon
-/// `getNewChaptersDescription` (`LibraryUpdateNotifier.kt:302-361`). Kept as a
-/// structured label so the presenter localizes it — the logic stays testable.
+/// Structured chapter-count label localized by the presenter.
 sealed class NewChaptersLabel {
   const NewChaptersLabel();
 }
 
-/// No parseable chapter numbers → "N new chapters".
 class GenericNewChapters extends NewChaptersLabel {
   const GenericNewChapters(this.count);
   final int count;
 }
 
-/// One parseable number → "Chapter X" (+ "and N more" when other chapters
-/// lacked a number).
 class SingleNewChapter extends NewChaptersLabel {
   const SingleNewChapter(this.number, this.more);
   final String number;
   final int more;
 }
 
-/// Several parseable numbers → "Chapters 1, 2.5, 3" (+ "and N more" past the cap).
 class MultipleNewChapters extends NewChaptersLabel {
   const MultipleNewChapters(this.numbers, this.more);
   final List<String> numbers;
   final int more;
 }
 
-/// Komikku's `NOTIF_MAX_CHAPTERS`.
+// Maximum chapter numbers listed before an "and N more" suffix.
 const _maxShownChapters = 5;
 
 NewChaptersLabel newChaptersLabel(
     List<double> chapterNumbers, int totalCount) {
-  // Recognized numbers only (>= 0), sorted, formatted, de-duplicated — mirrors
-  // Komikku's `filter { isRecognizedNumber }.sortedBy { chapterNumber }.toSet()`.
   final formatted = <String>{};
   for (final n in chapterNumbers.where((n) => n >= 0).toList()..sort()) {
     formatted.add(_formatChapterNumber(n));

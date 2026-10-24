@@ -9,29 +9,23 @@ import 'package:flutter/material.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../data/graphql/__generated__/query.graphql.dart';
 
-// A chapter with just the series fields a history row shows (see the
-// HistoryChapterDto fragment); ChapterDto's fields plus lastReadAt as usual.
 typedef HistoryItemDto = Fragment$HistoryChapterDto;
 
 extension HistoryItemExtension on HistoryItemDto {
-  /// Get the read timestamp as DateTime
   DateTime? get readAt => user.lastReadAt.parseTimestamp;
 
-  /// Check if this item was read today
   bool get isReadToday {
     final readDate = readAt;
     if (readDate == null) return false;
     return readDate.isToday;
   }
 
-  /// Check if this item was read yesterday
   bool get isReadYesterday {
     final readDate = readAt;
     if (readDate == null) return false;
     return readDate.isYesterday;
   }
 
-  /// Get a formatted date string for grouping (by day)
   String readDateGroup(BuildContext context) {
     final readDate = readAt;
     if (readDate == null) {
@@ -41,7 +35,6 @@ extension HistoryItemExtension on HistoryItemDto {
     return readDate.dateGroupString(context);
   }
 
-  /// Get a simple key for grouping without needing context
   String get readDateGroupKey {
     final readDate = readAt;
     if (readDate == null) {
@@ -51,7 +44,6 @@ extension HistoryItemExtension on HistoryItemDto {
     return readDate.dateGroupKey;
   }
 
-  /// Search functionality for history items
   bool historyQuery([String? query]) {
     if (query.isBlank) return true;
     final searchQuery = query!.toLowerCase();

@@ -15,13 +15,6 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
 
-/// Connection-screen editor for generic custom HTTP headers.
-///
-/// Every entry is sent with each request to the Suwayomi server (GraphQL,
-/// images, login, background workers). The motivating setup is a server
-/// behind a Cloudflare Tunnel guarded by Zero Trust Access, which requires
-/// `CF-Access-Client-Id` + `CF-Access-Client-Secret` on every request —
-/// but any reverse-proxy header pair works.
 class CustomHeadersSection extends HookConsumerWidget {
   const CustomHeadersSection({super.key, this.compact = false});
 
@@ -29,8 +22,6 @@ class CustomHeadersSection extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Preloaded in main() before the first frame; falls back to empty while
-    // the secure-storage read is in flight.
     final headers = ref.watch(customHttpHeadersProvider).value ?? const {};
     final entries = headers.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));

@@ -23,11 +23,7 @@ Future<DownloadStatusDto?> downloadStatus(Ref ref) =>
 class DownloadsMap extends _$DownloadsMap {
   void updateDownloadStatus(Fragment$DownloadUpdatesDto? downloadStatusDto) {
     final currState = {...?stateOrNull};
-    // Progress ticks arrive about once a second while anything is downloading.
-    // A tick that only moves a percentage must not outrank an in-flight
-    // re-read, or a round-trip slower than the tick rate could never land and
-    // the queue would stay stale for good. A tick that adds a chapter or moves
-    // one, though, is a real change and does outrank it.
+    // Only structural queue changes supersede a re-read; percentage ticks must not starve it.
     var structural = downloadStatusDto?.initial?.isNotEmpty ?? false;
     for (final element in [...?downloadStatusDto?.initial]) {
       currState[element.chapter.id] = element;
@@ -68,14 +64,10 @@ class DownloadsMap extends _$DownloadsMap {
   bool _reconciling = false;
   bool _restartRequested = false;
 
-  /// Set once the server tells us it dropped updates, cleared only when a full
-  /// re-read has actually landed. Ordinary messages don't carry what was lost,
-  /// so until then the queue is known-incomplete and every message retries.
+  /// Keep reconciliation pending until a full re-read lands; ordinary deltas cannot recover lost updates.
   bool _reconcileNeeded = false;
 
-  /// Bumped by every write that changes which chapters are queued or where.
-  /// A re-read that started before the current generation is older than what
-  /// we already have, whatever its source.
+  /// Structural writes invalidate snapshots captured by an earlier generation.
   int _generation = 0;
 
   void _publish(Map<int, DownloadDto> queue, {bool structural = true}) {
@@ -86,20 +78,12 @@ class DownloadsMap extends _$DownloadsMap {
   static const _maxReconcileAttempts = 3;
   static const _maxReconcileFailures = 3;
 
-  /// A queue that keeps losing the race is worth retrying on every message; a
-  /// server that keeps refusing the read is not, so failures back off instead.
+  /// Back off failed reads; retrying a superseded snapshot is safe.
   int _consecutiveFailures = 0;
 
-  /// Re-read the whole queue after the server drops deltas past `maxUpdates`.
-  /// Single-flight, and re-reads rather than applying a snapshot that anything
-  /// else has since moved past — a clear or a reorder landing mid-flight would
-  /// otherwise be undone by the older answer (#313, and the #73 symptom).
-  /// [moreDropped] means the server dropped another batch while this read was
-  /// out, so the answer in flight is already incomplete and has to be redone.
-  /// An ordinary message is not a reason to restart it.
+  /// Single-flight re-read after dropped deltas; reject stale snapshots and repeat if [moreDropped].
   Future<void> _reconcileQueue({bool moreDropped = false}) async {
-    // A newly dropped batch means the read is needed again, not that the
-    // server has recovered, so it does not clear the failure backoff.
+    // Dropped deltas do not imply server recovery, so preserve failure backoff.
     if (_consecutiveFailures >= _maxReconcileFailures) return;
     if (_reconciling) {
       if (moreDropped) _restartRequested = true;
@@ -116,8 +100,7 @@ class DownloadsMap extends _$DownloadsMap {
               .read(downloadsRepositoryProvider)
               .getDownloadStatus();
         } catch (_) {
-          // _reconcileNeeded stays set, so the next message retries — until
-          // the failures say the server, not the race, is the problem.
+          // Leave reconciliation pending for retries until the failure limit is reached.
           _consecutiveFailures++;
           return;
         }
@@ -129,8 +112,7 @@ class DownloadsMap extends _$DownloadsMap {
           return;
         }
       }
-      // Kept losing the race. Stop for now rather than hammering a busy
-      // server; _reconcileNeeded is still set, so the next message tries again.
+      // Leave reconciliation pending for the next message instead of retrying indefinitely.
     } finally {
       _reconciling = false;
     }
@@ -138,15 +120,11 @@ class DownloadsMap extends _$DownloadsMap {
 
   @override
   Map<int, DownloadDto> build() {
-    // The subscription can emit while any widget is mid-build; assigning state
-    // synchronously then trips the Riverpod-3 modify-during-build assert
-    // app-wide. Defer the write off the current frame.
+    // Defer subscription writes because emissions can arrive during widget build.
     ref.listen(downloadUpdatesProvider, (_, next) {
       Future.microtask(() {
         if (!ref.mounted) return;
-        // Past `maxUpdates` the server drops the deltas and expects a re-fetch,
-        // which any mass en/dequeue trips (#313). Refetch in place rather than
-        // invalidating, so the queue doesn't blank out while it reloads.
+        // Past maxUpdates the server drops deltas; refetch in place to keep the queue visible.
         final dropped = next.value?.omittedUpdates ?? false;
         if (dropped) {
           _reconcileNeeded = true;
@@ -157,9 +135,7 @@ class DownloadsMap extends _$DownloadsMap {
       });
     });
     final downloadStatusDto = ref.watch(downloadStatusProvider).value;
-    // A rebuild replaces the queue too, so an in-flight re-read must not
-    // outrank it. It's also the user's way back in after a run of failures
-    // (pull-to-refresh, re-entering the screen), so clear the backoff.
+    // A rebuild supersedes in-flight reads and resets failure backoff for an explicit retry.
     _generation++;
     _consecutiveFailures = 0;
     return getStateFromUpdates(downloadStatusDto);
@@ -191,12 +167,7 @@ class DownloadsMap extends _$DownloadsMap {
     }
   }
 
-  /// Clear the whole server download queue and empty the local map immediately.
-  /// The clear mutation doesn't reliably emit a per-chapter DEQUEUED stream for
-  /// a bulk clear, so without this the list stayed frozen until a manual
-  /// refresh (#73). Empty optimistically for instant feedback, then refetch the
-  /// authoritative status so a later rebuild can't resurrect the stale queue
-  /// from the cached snapshot.
+  /// Bulk clear may omit DEQUEUED events; clear locally and refetch the authoritative queue.
   Future<void> clearAll() async {
     await ref.read(downloadsRepositoryProvider).clearDownloads();
     if (!ref.mounted) return;
@@ -216,14 +187,10 @@ List<int> downloadsChapterIds(Ref ref) {
   return downloads.map((d) => d.chapter.id).toList();
 }
 
-/// Anything queued must be pausable or resumable. Reading the feed's delta list
-/// instead hid the control on a fresh subscribe and on any queue that had
-/// stopped changing, failed ones included (#313).
 @riverpod
 bool showDownloadsFAB(Ref ref) => ref.watch(downloadsMapProvider).isNotEmpty;
 
-/// Best-known run state. The feed only speaks when something changes, so a
-/// paused queue leaves it with no answer — fall back to the query (#313).
+/// A paused queue may emit no run state; fall back to the query.
 @riverpod
 DownloaderState? downloaderRunState(Ref ref) {
   final live = ref.watch(downloadUpdatesProvider).value?.state;

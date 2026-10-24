@@ -9,16 +9,6 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../../../domain/chapter/chapter_model.dart';
 import '../../../../../domain/chapter_page/chapter_page_model.dart';
 
-/// Utility functions for the continuous reader modes.
-///
-/// Helpers fall into two groups:
-///   * SPL-only: ``calculateVisibleArea`` is used by the single-chapter
-///     SPL implementation in ``infinity_continuous_reader_mode.dart``
-///     for "most-visible page" tracking against ``ItemPosition``.
-///   * Shared: the multi-chapter helpers
-///     (``getTotalPages``, ``isChapterBoundary``,
-///     ``convertChapterIndexToGlobalIndex``, ``createChapterPagesDto``)
-///     are used by the ListView-based multi-chapter reader.
 class InfinityContinuousUtils {
   const InfinityContinuousUtils._();
 
@@ -33,22 +23,7 @@ class InfinityContinuousUtils {
     return (visibleEnd - visibleStart).clamp(0.0, 1.0);
   }
 
-  /// The global page index the reader is "on" for progress, given the visible
-  /// [positions] (already filtered to those on screen) and [total] loaded pages.
-  ///
-  /// Normally the page showing the greatest visible area. But when the reader is
-  /// scrolled to the very end — the last page's bottom has reached the viewport
-  /// bottom ([ItemPosition.itemTrailingEdge] <= 1.0) — that last page is current
-  /// even if a taller earlier page still shows more area. Without this, short
-  /// trailing pages (e.g. a small credits page that lets three pages share the
-  /// screen) leave progress stuck one short and the last chapter never marks
-  /// read (#100).
-  ///
-  /// The override is gated on the content actually being scrolled: if page 0 is
-  /// still resting at or below the viewport top (a short chapter that simply
-  /// fits on screen at rest), it does NOT fire — otherwise opening such a
-  /// chapter would mark it read immediately, firing delete-on-read and a false
-  /// tracker bump before anything is read. Returns null when nothing is visible.
+  /// Selects the most visible page, except the last wins at the scrolled end; resting short chapters do not complete.
   static int? selectCurrentIndex(
     List<ItemPosition> positions,
     int total, {
@@ -56,20 +31,13 @@ class InfinityContinuousUtils {
   }) {
     if (positions.isEmpty) return null;
 
-    // Content is "scrolled" once page 0's top has left the viewport top (or page
-    // 0 is gone entirely). If it's still parked at rest, the reader is at the
-    // start, not the end, no matter how much of the chapter happens to fit.
-    // Tolerate float-noise around 0 (a settled page 0 can report a tiny
-    // negative) so it isn't misread as "scrolled" — which would re-open the
-    // mark-read-on-open bug.
+    // Tolerate subpixel noise at rest so a short chapter does not mark read on open.
     const restEps = 0.0015;
     final firstPage = positions.where((p) => p.index == 0);
     final restingAtTop =
         firstPage.isNotEmpty && firstPage.first.itemLeadingEdge >= -restEps;
 
-    // total - 1 is the last loaded page; itemTrailingEdge <= 1.0 means its
-    // bottom sits at or above the viewport bottom, i.e. the end is reached.
-    // The end card sits inside the last item, so allow float noise at max scroll.
+    // The end card shares the last item; tolerate float noise when testing its bottom edge.
     final lastPage = positions.where((p) => p.index == total - 1);
     if (total > 1 &&
         !restingAtTop &&
@@ -93,7 +61,6 @@ class InfinityContinuousUtils {
     return mostVisible.index;
   }
 
-  /// Sum of pages across all loaded chapters.
   static int getTotalPages(
     List<({ChapterPagesDto pages, ChapterDto chapter, int chapterId})>
         loadedChapters,
@@ -104,9 +71,7 @@ class InfinityContinuousUtils {
     );
   }
 
-  /// True if [index] is the first page of a chapter that has a chapter
-  /// before it, or the last page of a chapter that has a chapter after
-  /// it — used to decide where to render a chapter separator.
+  /// Chapter edges with a loaded neighbour, used for separators.
   static bool isChapterBoundary(
     int index,
     List<({ChapterPagesDto pages, ChapterDto chapter, int chapterId})>
@@ -127,9 +92,7 @@ class InfinityContinuousUtils {
     return false;
   }
 
-  /// Convert a chapter-relative page index for a given chapter into the
-  /// global page index across all loaded chapters. Returns -1 if the
-  /// chapter is not loaded.
+  /// Returns the global page index, or -1 if the chapter is not loaded.
   static int convertChapterIndexToGlobalIndex(
     int chapterIndex,
     List<({ChapterPagesDto pages, ChapterDto chapter, int chapterId})>
@@ -146,8 +109,6 @@ class InfinityContinuousUtils {
     return -1;
   }
 
-  /// Return the ``ChapterPagesDto`` for [currentChapter] within the
-  /// loaded set, falling back to [fallbackChapterPages] if not loaded.
   static ChapterPagesDto createChapterPagesDto(
     List<({ChapterPagesDto pages, ChapterDto chapter, int chapterId})>
         loadedChapters,

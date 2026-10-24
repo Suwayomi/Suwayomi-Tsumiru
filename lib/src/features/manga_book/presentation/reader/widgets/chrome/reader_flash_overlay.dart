@@ -15,12 +15,7 @@ import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 
-/// "Flash on page change": every Nth page change
-/// paints a full-screen color for flashDuration×100 ms. whiteBlack shows white
-/// for the first half, black for the second — all within one flash.
-///
-/// Pure chrome leaf: listens to [currentIndex] rebuilds only, never touches
-/// the (frozen) viewer engines.
+/// Every Nth page change flashes for flashDuration × 100ms; whiteBlack splits the duration evenly.
 class ReaderFlashOverlay extends HookConsumerWidget {
   const ReaderFlashOverlay({super.key, required this.currentIndex});
 
@@ -38,7 +33,6 @@ class ReaderFlashOverlay extends HookConsumerWidget {
 
     final color = useState<Color?>(null);
     final prevIndex = useRef<int?>(null);
-    // Counts from 0, so the first qualifying change always flashes.
     final timesCalled = useRef(0);
     final halfTimer = useRef<Timer?>(null);
     final endTimer = useRef<Timer?>(null);

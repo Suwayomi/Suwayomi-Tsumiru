@@ -11,8 +11,7 @@ class MoreRoute extends GoRouteData with $MoreRoute {
       const NoTransitionPage(child: MoreScreen());
 }
 
-// A shared navigator keeps nested settings pages inside the desktop window.
-// It stays under the quick-open shell so global shortcuts remain available.
+// Keep settings in the desktop window beneath the global-shortcut shell.
 
 class AboutRoute extends GoRouteData with $AboutRoute {
   const AboutRoute();
@@ -43,8 +42,7 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
 class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
   const LibrarySettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const LibrarySettingsScreen();
@@ -73,8 +71,7 @@ class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
 class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
   const ReaderSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ReaderSettingsScreen();
@@ -91,8 +88,7 @@ class AppearanceSettingsRoute extends GoRouteData
     with $AppearanceSettingsRoute {
   const AppearanceSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const AppearanceScreen();
@@ -108,8 +104,7 @@ class AppearanceSettingsRoute extends GoRouteData
 class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
   const GeneralSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const GeneralScreen();
@@ -125,8 +120,7 @@ class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
 class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
   const BrowseSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const BrowseSettingsScreen();
@@ -155,8 +149,7 @@ class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
 class BackupRoute extends GoRouteData with $BackupRoute {
   const BackupRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const BackupScreen();
@@ -185,8 +178,7 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
 class ServerNetworkRoute extends GoRouteData with $ServerNetworkRoute {
   const ServerNetworkRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ServerNetworkScreen();
@@ -203,8 +195,7 @@ class ServerWebInterfaceRoute extends GoRouteData
     with $ServerWebInterfaceRoute {
   const ServerWebInterfaceRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ServerWebInterfaceScreen();
@@ -220,8 +211,7 @@ class ServerWebInterfaceRoute extends GoRouteData
 class ServerOpdsRoute extends GoRouteData with $ServerOpdsRoute {
   const ServerOpdsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ServerOpdsScreen();
@@ -237,8 +227,7 @@ class ServerOpdsRoute extends GoRouteData with $ServerOpdsRoute {
 class ServerImagesRoute extends GoRouteData with $ServerImagesRoute {
   const ServerImagesRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ServerImagesScreen();
@@ -251,11 +240,25 @@ class ServerImagesRoute extends GoRouteData with $ServerImagesRoute {
       detailNavigationPage(context, state, _screen);
 }
 
+class ServerSignInRoute extends GoRouteData with $ServerSignInRoute {
+  const ServerSignInRoute({this.highlight});
+
+  final String? highlight;
+
+  Widget get _screen => const ServerSignInScreen();
+
+  @override
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      detailNavigationPage(context, state, _screen);
+}
+
 class ServerDatabaseRoute extends GoRouteData with $ServerDatabaseRoute {
   const ServerDatabaseRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ServerDatabaseScreen();
@@ -271,8 +274,7 @@ class ServerDatabaseRoute extends GoRouteData with $ServerDatabaseRoute {
 class ServerLogsRoute extends GoRouteData with $ServerLogsRoute {
   const ServerLogsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ServerLogsScreen();
@@ -288,8 +290,7 @@ class ServerLogsRoute extends GoRouteData with $ServerLogsRoute {
 class SyncRoute extends GoRouteData with $SyncRoute {
   const SyncRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const SyncScreen();
@@ -305,8 +306,7 @@ class SyncRoute extends GoRouteData with $SyncRoute {
 class AdvancedRoute extends GoRouteData with $AdvancedRoute {
   const AdvancedRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const AdvancedScreen();
@@ -342,13 +342,10 @@ class ImageProcessingRoute extends GoRouteData with $ImageProcessingRoute {
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
   const DownloadsSettingsRoute({this.highlight, this.tab});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
-  /// Tab to open alongside [highlight]: 0 Server, 1 On device. Null (or an
-  /// out-of-range value) opens the Server tab. Any tabbed settings page can
-  /// reuse this `highlight` + `tab` pair; the entry's `tabIndex` carries it.
+  /// 0=Server, 1=On device; null or out-of-range values open Server.
   final int? tab;
 
   Widget get _screen => DownloadsSettingsScreen(initialTab: tab ?? 0);
@@ -378,8 +375,7 @@ class NotificationsSettingsRoute extends GoRouteData
     with $NotificationsSettingsRoute {
   const NotificationsSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const NotificationsSettingsScreen();
@@ -395,8 +391,7 @@ class NotificationsSettingsRoute extends GoRouteData
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
   const ConnectionRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const ConnectionScreen();
@@ -412,8 +407,7 @@ class ConnectionRoute extends GoRouteData with $ConnectionRoute {
 class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
   const TrackingSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
   Widget get _screen => const TrackingSettingsScreen();
@@ -429,11 +423,9 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
 class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
   const SyncYomiSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
-  // The SyncYomi page merged into the Sync page, so the old link lands here.
   Widget get _screen => const SyncScreen();
 
   @override
@@ -448,11 +440,9 @@ class KoreaderSyncSettingsRoute extends GoRouteData
     with $KoreaderSyncSettingsRoute {
   const KoreaderSyncSettingsRoute({this.highlight});
 
-  /// Id of the setting to scroll to and pulse after navigation, matching a
-  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  /// Scroll to and pulse the matching SettingsHighlightTarget; null skips highlighting.
   final String? highlight;
 
-  // The KOReader Sync page merged into the Sync page, so the old link lands here.
   Widget get _screen => const SyncScreen();
 
   @override
@@ -480,7 +470,6 @@ class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
 class AccountRoute extends GoRouteData with $AccountRoute {
   const AccountRoute();
 
-  // The Account page folded into Connection; the old link lands there.
   Widget get _screen => const ConnectionScreen();
 
   @override

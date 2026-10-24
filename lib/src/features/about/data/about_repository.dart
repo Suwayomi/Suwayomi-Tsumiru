@@ -20,6 +20,7 @@ import '../../../constants/endpoints.dart';
 import '../../../constants/urls.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/misc/graphql_undefined_field.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../settings/presentation/server/data/web_interface_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -27,6 +28,7 @@ import '../../settings/presentation/server/widget/client/server_url_tile/server_
 import '../domain/about/about_dto.dart';
 import '../domain/server_update/server_update.dart';
 import '../presentation/about/controllers/about_controller.dart';
+import 'graphql/__generated__/about_webui.graphql.dart';
 import 'graphql/__generated__/query.graphql.dart';
 import 'hosted_web_update.dart';
 import 'web_update_browser.dart';
@@ -45,6 +47,19 @@ class AboutRepository {
 
   Future<AboutDto?> getAbout() =>
       client.query$GetAbout().getData((a) => a.aboutServer);
+
+  Future<Query$GetAboutWebUI$aboutWebUI?> getAboutWebUI() async {
+    try {
+      return await client
+          .query$GetAboutWebUI(
+            Options$Query$GetAboutWebUI(fetchPolicy: FetchPolicy.noCache),
+          )
+          .getData((a) => a.aboutWebUI);
+    } on OperationMessageException catch (error) {
+      if (onlyUndefinedFieldErrors(error, type: 'Query')) return null;
+      rethrow;
+    }
+  }
 
   Future<List<ServerUpdate>?> checkServerUpdate() => client
       .query$GetServerUpdate()
@@ -88,13 +103,19 @@ AboutRepository aboutRepository(Ref ref) => AboutRepository(
   },
 );
 
-/// The release version the user opted to skip in the update prompt. Empty
-/// until they tick "Don't remind me about this version".
+/// Empty until the user opts to skip a release version.
 @riverpod
 class DismissedUpdateVersion extends _$DismissedUpdateVersion
     with SharedPreferenceClientMixin<String> {
   @override
   String? build() => initialize(DBKeys.dismissedUpdateVersion);
+}
+
+@riverpod
+class LastSeenServerVersion extends _$LastSeenServerVersion
+    with SharedPreferenceClientMixin<String> {
+  @override
+  String? build() => initialize(DBKeys.lastSeenServerVersion);
 }
 
 final startupWebRevisionProvider = FutureProvider<String?>(

@@ -33,12 +33,9 @@ import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
 import 'unified_search_results.dart';
 
-/// Which page opened the phone search. Library, History and the Sources tab
-/// have their own filter, so they get the page row first; every other page
-/// searches the app without one.
+/// Library, History, and Sources offer a page filter row; plain origins search the app.
 enum PhoneSearchOrigin { library, history, sources, plain }
 
-/// The page's live filter text, if it has one and it is non-blank.
 String? _activeFilter(WidgetRef ref, PhoneSearchOrigin origin) {
   final text = switch (origin) {
     PhoneSearchOrigin.library => ref.watch(libraryQueryProvider),
@@ -75,11 +72,7 @@ void _applyFilter(WidgetRef ref, PhoneSearchOrigin origin, String query) {
   }
 }
 
-/// The tappable search entry for phone pages: a search icon for the app bar
-/// ([box] false) or a full-width box for under the title ([box] true, used
-/// when the "Persistent search bar" setting is on). Either opens the
-/// full-screen search overlay; typing there never touches the page until the
-/// page row is applied.
+/// Opens search without changing the page filter until its result row is applied.
 class PhoneSearchEntry extends HookConsumerWidget {
   const PhoneSearchEntry({super.key, required this.origin, this.box = false});
 
@@ -97,8 +90,7 @@ class PhoneSearchEntry extends HookConsumerWidget {
       if (portal.isShowing) portal.hide();
     }
 
-    // Watched in both styles so an applied filter survives while the entry
-    // is mounted (the filter providers are auto-disposed when unwatched).
+    // Watch in both styles so auto-disposed page filters survive while this entry is mounted.
     final activeFilter = _activeFilter(ref, origin);
 
     return OverlayPortal(
@@ -109,8 +101,6 @@ class PhoneSearchEntry extends HookConsumerWidget {
           ? _PhoneSearchBox(origin: origin, onOpen: open)
           : IconButton(
               tooltip: context.l10n.search,
-              // Tinted while filtered, so a short list reads as "filtered"
-              // rather than empty — same idiom as the filter icons.
               color: activeFilter != null ? context.colorScheme.primary : null,
               icon: const Icon(Icons.search_rounded),
               onPressed: open,
@@ -119,9 +109,6 @@ class PhoneSearchEntry extends HookConsumerWidget {
   }
 }
 
-/// The tappable box shown under the title when the "Persistent search bar"
-/// setting is on. Shows the page's active filter when there is one (with a
-/// clear button); tapping anywhere else opens the search overlay.
 class _PhoneSearchBox extends ConsumerWidget {
   const _PhoneSearchBox({required this.origin, required this.onOpen});
 
@@ -187,9 +174,7 @@ class _PhoneSearchBox extends ConsumerWidget {
   }
 }
 
-/// Bottom slot for the tappable search box, optionally above an existing tab
-/// bar. Only used on phone pages when the "Persistent search bar" setting is
-/// on; pages keep their own `bottom` otherwise.
+/// Phone search box below the title, optionally above an existing tab bar.
 class PhoneSearchBoxBottom extends StatelessWidget
     implements PreferredSizeWidget {
   const PhoneSearchBoxBottom({super.key, required this.origin, this.below});
@@ -213,9 +198,6 @@ class PhoneSearchBoxBottom extends StatelessWidget
   );
 }
 
-/// Clears the page's filter on phone pages using the search icon (the box
-/// carries its own clear button). Renders nothing when the persistent box is
-/// on or no filter is active, so icon-mode pages keep a way to unfilter.
 class PhoneSearchClearFilter extends ConsumerWidget {
   const PhoneSearchClearFilter({super.key, required this.origin});
 
@@ -235,12 +217,7 @@ class PhoneSearchClearFilter extends ConsumerWidget {
   }
 }
 
-/// The full-screen phone search: back arrow, autofocus field, clear button on
-/// top; results below on a solid surface background once text is typed. While
-/// the query is empty only the bar is drawn, so the page underneath stays
-/// visible. The query lives in this
-/// widget's own controller, so typing never changes the page underneath —
-/// only the page row writes the page's filter provider.
+/// Uses a local query; only applying the page row changes the underlying page filter.
 class PhoneSearchOverlay extends HookConsumerWidget {
   const PhoneSearchOverlay({
     super.key,
@@ -268,8 +245,6 @@ class PhoneSearchOverlay extends HookConsumerWidget {
       onClose();
     }
 
-    // Leaving through a result clears the search text; the page providers
-    // were never touched, so the page underneath is unchanged.
     void leave(VoidCallback navigate) {
       controller.clear();
       navigate();
@@ -316,8 +291,7 @@ class PhoneSearchOverlay extends HookConsumerWidget {
     final caretRaw = controller.selection.baseOffset;
     final caret = caretRaw < 0 ? query.length : caretRaw;
 
-    // Read at build time: tapping the tips button moves focus to it before
-    // onPressed runs, so checking focus there would always see it as lost.
+    // Read focus during build; tapping tips moves focus before onPressed runs.
     final fieldFocused = focusNode.hasFocus;
 
     final searchBar = Row(
@@ -364,16 +338,12 @@ class PhoneSearchOverlay extends HookConsumerWidget {
       ],
     );
 
-    // System back closes the overlay first, like a dialog.
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) onClose();
       },
-      // While the query is empty only the search bar is drawn, so the page
-      // underneath stays visible. The full-screen results body appears once
-      // text is typed; only the top bar hit-tests while empty, so taps
-      // elsewhere still reach the page.
+      // Empty search hit-tests only the bar so taps still reach the underlying page.
       child: Stack(
         children: [
           if (query.trim().isEmpty)
@@ -425,13 +395,7 @@ class PhoneSearchOverlay extends HookConsumerWidget {
 List<HistoryItemDto> _historyMatches(List<HistoryGroup> groups, String query) =>
     [for (final g in groups) ...g.filterByQuery(query).items];
 
-/// Whether applying [q] to the Library page would show at least one series,
-/// using the same matcher the library filter uses ([MangaDto.query]) so plain
-/// words match author/genre/tags too. Pure-operator queries (e.g.
-/// `unread:true`), service-scoped `tracked:` (needs the trackers map the
-/// overlay doesn't load), and queries parsing to nothing (half-typed `tag:`)
-/// can't be judged cheaply here — applying them is always valid, so the row
-/// stays enabled.
+// Unresolved operators and tracker-service filters stay applicable without expensive overlay data.
 bool _libraryPageHasMatches(List<MangaDto> library, String q) {
   final query = q.trim();
   if (query.isEmpty) return false;
@@ -441,8 +405,6 @@ bool _libraryPageHasMatches(List<MangaDto> library, String q) {
   return library.any((m) => m.query(query));
 }
 
-/// Whether [q] holds a `tracked:<service>` term, which only resolves with the
-/// trackers map (a bare `tracked:true`/`false` is self-contained).
 bool _namesTrackerService(String q) {
   for (final m in RegExp(
     r'(?:^|[\s,{])-?tracked:([^|\s,}]+)',
@@ -458,9 +420,6 @@ bool _namesTrackerService(String q) {
   return false;
 }
 
-/// The Sources tab shows pinned sources (name-filtered) above the grouped
-/// rest, so the row matches that same combined list ([searchableSources] is
-/// pinned first, then the language-filtered rest).
 List<SourceDto> _sourcePageMatches(List<SourceDto> searchable, String query) =>
     searchable.where((s) => s.name.query(query)).toList();
 
@@ -489,11 +448,6 @@ String _historySubtitle(HistoryItemDto item) {
   return time.isEmpty ? item.name : '${item.name} · $time';
 }
 
-/// Results for the phone overlay, top to bottom: the page row (always first
-/// while text is non-empty on pages with their own filter), up to 3 matches
-/// from the current page, Library (a swipeable cover row on the Library page,
-/// list rows everywhere else), Go to, Search all sources. Renders nothing
-/// while the query is empty — the overlay shows the page underneath instead.
 class _PhoneSearchResults extends ConsumerWidget {
   const _PhoneSearchResults({
     required this.query,
@@ -514,8 +468,7 @@ class _PhoneSearchResults extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
-    // Keep the server-backed search dependencies alive for the whole open
-    // search, so typing never refetches them (see pinSettingsSearchProviders).
+    // Pin server-backed dependencies while open so typing does not refetch them.
     pinSettingsSearchProviders(ref);
     final cs = context.colorScheme;
     final hasQuery = query.trim().isNotEmpty;
@@ -576,14 +529,7 @@ class _PhoneSearchResults extends ConsumerWidget {
     };
 
     return ListView(
-      // Bottom padding clears the soft keyboard, so the last row scrolls
-      // fully above it. The overlay is a Material, not a Scaffold, so nothing
-      // resizes for the inset automatically. Read the inset from the view
-      // itself: the overlay inherits its entry's MediaQuery, whose bottom
-      // inset the page Scaffold strips for body-placed entries (it resizes
-      // its body instead, which the full-screen overlay does not follow) —
-      // MediaQuery.viewInsetsOf here reads 0 exactly where the padding is
-      // needed.
+      // Read the view inset directly; the page Scaffold strips it from the overlay's MediaQuery.
       padding: EdgeInsets.only(
         bottom:
             16 + MediaQueryData.fromView(View.of(context)).viewInsets.bottom,
@@ -770,8 +716,6 @@ class _PhoneSearchResults extends ConsumerWidget {
   }
 }
 
-/// One Library cover for the phone cover row: ~110 px cover, title below, no
-/// source/unread line.
 class _PhoneLibraryCoverCard extends StatelessWidget {
   const _PhoneLibraryCoverCard({
     required this.title,

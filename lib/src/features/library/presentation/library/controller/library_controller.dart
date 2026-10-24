@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:diacritic/diacritic.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -16,6 +17,7 @@ import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
+import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../browse_center/domain/content_rating.dart';
 import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
@@ -29,26 +31,11 @@ import 'library_manga_list.dart';
 
 part 'library_controller.g.dart';
 
-/// Knuth multiplicative hash used by the Random sort.
-///
-/// Returns a stable, non-negative integer for a given manga [id] and [seed].
-/// Incrementing [seed] re-rolls the ordering across the whole library.
-///
-/// XORing id with seed BEFORE the multiply ensures the seed changes relative
-/// ordering between entries (a constant XOR after the multiply would only shift
-/// all keys by the same value, leaving ordering unchanged).
+/// Stable Knuth hash for Random sort; incrementing [seed] re-rolls the library order.
+/// XOR the seed before multiplication so it changes relative ordering.
 int randomKey(int id, int seed) => ((id ^ seed) * 2654435761) & 0x7fffffff;
 
-/// Applies the library filter + sort pipeline to [input].
-///
-/// All filter/sort values are passed in as resolved scalars so that the
-/// calling provider retains full control over its `ref.watch` calls and
-/// Riverpod dependency tracking is unaffected.
-///
-/// [mangaIds] is an optional allowlist — when non-null only manga whose id
-/// is in the set pass through (used by [GroupedMangaListWithQueryAndFilter]).
-/// Komikku uses a PRIMARY-strength collator (case/accent-insensitive); Dart
-/// has none, so we fold instead — misses locale quirks like Swedish "å" > "z".
+/// Case/accent-insensitive fold; locale-specific collation such as Swedish å is not supported.
 int compareTitlesFolded(String a, String b) => removeDiacritics(
   a.toLowerCase(),
 ).compareTo(removeDiacritics(b.toLowerCase()));
@@ -74,14 +61,17 @@ List<MangaDto> applyLibraryFilterSort(
   required Set<String> filterTagsExclude,
   required MangaSort sortedBy,
   required bool sortedDirection,
+  bool? duplicateChapters,
+  Map<String, bool?> statusFilters = const {},
+  Map<String, bool?> sourceFilters = const {},
   int seed = 0,
+  bool ignoreFilters = false,
+  bool fuzzySearch = false,
   Map<int, double> trackerScales = const {},
   Map<int, bool?> trackerFilters = const {},
   Map<int, String> trackerNames = const {},
 }) {
   final searchQuery = LibrarySearchQuery.parse(query);
-  // Tags match case-insensitively (aligning with the `tag:` search operator),
-  // so lower-case the selections once up front.
   final filterTagsIncludeLower = filterTagsInclude
       .map((e) => e.toLowerCase())
       .toSet();
@@ -91,6 +81,26 @@ List<MangaDto> applyLibraryFilterSort(
 
   bool filter(MangaDto manga) {
     if (mangaIds != null && !mangaIds.contains(manga.id)) return false;
+    if (ignoreFilters && !searchQuery.isEmpty) {
+      return searchQuery.matches(
+        manga.filterFields(trackerNames),
+        fuzzy: fuzzySearch,
+      );
+    }
+    bool matches(Map<String, bool?> filters, String value) {
+      final included = filters.entries.where((e) => e.value == true);
+      return filters[value] != false &&
+          (included.isEmpty || included.any((e) => e.key == value));
+    }
+
+    if (duplicateChapters != null &&
+        (manga.hasDuplicateChapters ?? false) != duplicateChapters) {
+      return false;
+    }
+    if (!matches(statusFilters, manga.status.name) ||
+        !matches(sourceFilters, manga.sourceId)) {
+      return false;
+    }
     if (mangaFilterUnread != null &&
         (mangaFilterUnread ^ manga.user.unreadCount.isGreaterThan(0))) {
       return false;
@@ -103,9 +113,7 @@ List<MangaDto> applyLibraryFilterSort(
         (mangaFilterCompleted ^ (manga.status.name == "COMPLETED"))) {
       return false;
     }
-    // Started means at least one chapter finished, matching the server's WebUI
-    // and Mihon's `hasStarted = readCount > 0`. Page progress inside a chapter
-    // that is still unread does not count.
+    // Started requires a completed chapter; partial page progress does not count.
     if (mangaFilterStarted != null &&
         (mangaFilterStarted ^ manga.readChapterCount.isGreaterThan(0))) {
       return false;
@@ -123,8 +131,6 @@ List<MangaDto> applyLibraryFilterSort(
             isAdultManga(manga.source?.contentWarning, manga.genre))) {
       return false;
     }
-    // Meta-derived fields (rating, tags) plus the DSL-searchable fields, built
-    // once and reused by the rating filter, tags filter, and search below.
     final fields = manga.filterFields(trackerNames);
     if (mangaFilterMinRating > 0 &&
         (fields.rating ?? 0) < mangaFilterMinRating) {
@@ -142,12 +148,11 @@ List<MangaDto> applyLibraryFilterSort(
       }
     }
     if (filterTags) {
-      // A manga's tags = source genres + the user's custom tags (lower-cased).
       final tags = {
         for (final t in fields.genres) t.toLowerCase(),
         for (final t in fields.userTags) t.toLowerCase(),
       };
-      // Include is OR (has any selected tag); exclude wins over include.
+      // Include accepts any selected tag; exclude always wins.
       if (filterTagsIncludeLower.isNotEmpty &&
           tags.intersection(filterTagsIncludeLower).isEmpty) {
         return false;
@@ -157,9 +162,6 @@ List<MangaDto> applyLibraryFilterSort(
         return false;
       }
     }
-    // Per-tracker filters: for each tracker id with a non-null preference,
-    // true = manga must have a record for that tracker,
-    // false = manga must NOT have a record for that tracker.
     for (final entry in trackerFilters.entries) {
       final pref = entry.value;
       if (pref == null) continue;
@@ -168,19 +170,17 @@ List<MangaDto> applyLibraryFilterSort(
       );
       if (pref ^ hasTracker) return false;
     }
-    if (!searchQuery.matches(fields)) return false;
+    if (!searchQuery.matches(fields, fuzzy: fuzzySearch)) return false;
     return true;
   }
 
   int sortPrimary(MangaDto m1, MangaDto m2) {
     final sortDirToggle = (sortedDirection ? 1 : -1);
-    // Random sort: direction is pinned (always ascending by key) so that the
-    // direction toggle button doesn't fight the re-roll affordance.
+    // Random ignores direction so its toggle cannot compete with re-roll.
     if (sortedBy == MangaSort.random) {
       return randomKey(m1.id, seed).compareTo(randomKey(m2.id, seed));
     }
-    // Tracker-score sort: untracked manga (sentinel -1) always sort last,
-    // regardless of direction — must be handled before the direction toggle.
+    // Untracked scores (-1) sort last before applying either direction.
     if (sortedBy == MangaSort.trackerScore) {
       final s1 = meanNormalizedScore(
         m1.trackRecords.nodes,
@@ -195,8 +195,7 @@ List<MangaDto> applyLibraryFilterSort(
       if (s2 < 0) return -1; // m2 untracked → always last
       return s1.compareTo(s2) * sortDirToggle;
     }
-    // Zero-unread must sort last in both directions, so it's checked before
-    // the direction toggle — else descending would lead with finished series.
+    // Finished series sort last before applying either direction.
     if (sortedBy == MangaSort.unread) {
       final u1 = m1.user.unreadCount.getValueOnNullOrNegative();
       final u2 = m2.user.unreadCount.getValueOnNullOrNegative();
@@ -207,7 +206,6 @@ List<MangaDto> applyLibraryFilterSort(
     }
     return (switch (sortedBy) {
           MangaSort.alphabetical => compareTitlesFolded(m1.title, m2.title),
-          // unread is handled above; this arm is unreachable.
           MangaSort.unread => 0,
           MangaSort.dateAdded =>
             (m1.user.inLibraryAt.getValueOnNullOrNegative()).compareTo(
@@ -227,21 +225,14 @@ List<MangaDto> applyLibraryFilterSort(
           MangaSort.totalChapters => m1.chapters.totalCount.compareTo(
             m2.chapters.totalCount,
           ),
-          // "Last update" = the manga's library-update time. Suwayomi's
-          // chaptersLastFetchedAt is when this manga's chapter list was last
-          // refreshed (distinct from ChapterFetchDate/LatestChapter above).
+          // Last update uses chapter-list refresh time, distinct from the latest chapter's fetch date.
           MangaSort.lastUpdate =>
             (int.tryParse(m1.chaptersLastFetchedAt ?? '0') ?? 0).compareTo(
               int.tryParse(m2.chaptersLastFetchedAt ?? '0') ?? 0,
             ),
-          // Personal star rating (0 = unrated, sorts lowest).
           MangaSort.rating => (m1.metaData.rating ?? 0).compareTo(
             m2.metaData.rating ?? 0,
           ),
-          // Normal order (m1 vs m2): ascending = oldest-read first,
-          // descending = newest-read first. (Previously the operands were
-          // swapped, which inverted our arrows — our "ascending" showed
-          // newest first.)
           MangaSort.lastRead =>
             (int.tryParse(m1.user.lastReadChapter?.user.lastReadAt ?? '0') ?? 0)
                 .compareTo(
@@ -250,12 +241,10 @@ List<MangaDto> applyLibraryFilterSort(
                       ) ??
                       0,
                 ),
-          // random is handled above; this arm is unreachable.
           MangaSort.random => randomKey(
             m1.id,
             seed,
           ).compareTo(randomKey(m2.id, seed)),
-          // trackerScore is handled above; this arm is unreachable.
           MangaSort.trackerScore => 0,
         }) *
         sortDirToggle;
@@ -264,8 +253,7 @@ List<MangaDto> applyLibraryFilterSort(
   int sort(MangaDto m1, MangaDto m2) {
     final p = sortPrimary(m1, m2);
     if (p != 0) return p;
-    // Title tie-break runs after the direction toggle so it's never inverted;
-    // id is the last resort since List.sort is unstable.
+    // Apply title/id ties after direction so they stay stable; List.sort itself is unstable.
     final byTitle = compareTitlesFolded(m1.title, m2.title);
     return byTitle != 0 ? byTitle : m1.id.compareTo(m2.id);
   }
@@ -273,15 +261,14 @@ List<MangaDto> applyLibraryFilterSort(
   return input.where(filter).toList()..sort(sort);
 }
 
-/// Whether the library's copy of a series differs from [fresh], a fetch of it
-/// made since (both use MangaDto). Reloading the library costs ~1.5 MB and
-/// ~2 s for 360 series, so leaving a series' page only reloads it when
-/// something on the series actually changed. `age` and `chaptersAge` are
-/// ignored: the server derives them from the current time. Unknown either
-/// side counts as changed.
+/// Compares entries ignoring server-derived age/chaptersAge; null on either side counts as changed.
 bool libraryEntryOutdated(MangaDto? listed, MangaDto? fresh) {
   if (listed == null || fresh == null) return true;
-  return fresh.copyWith(age: listed.age, chaptersAge: listed.chaptersAge) !=
+  return fresh.copyWith(
+        age: listed.age,
+        chaptersAge: listed.chaptersAge,
+        hasDuplicateChapters: listed.hasDuplicateChapters,
+      ) !=
       listed;
 }
 
@@ -357,6 +344,11 @@ class CategoryMangaListWithQueryAndFilter
             : applyLibraryFilterSort(
                 e.value!,
                 query: query,
+                ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
+                fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
+                duplicateChapters: ref.watch(libraryDuplicateChaptersProvider),
+                statusFilters: ref.watch(libraryEntryFiltersProvider('status')),
+                sourceFilters: ref.watch(libraryEntryFiltersProvider('source')),
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,
@@ -398,11 +390,7 @@ class LibraryQuery extends _$LibraryQuery with StateProviderMixin<String?> {
   String? build() => null;
 }
 
-/// [libraryQueryProvider], but only propagating a change once the query has
-/// held still for 300ms. The search field itself reads/writes the raw
-/// provider directly (so typing feels instant and the clear button reacts
-/// immediately) — this one exists purely so the two expensive
-/// filter/sort/group passes below don't re-run on every keystroke.
+/// Debounces expensive filter/sort/group passes by 300 ms; the field uses the raw query.
 @riverpod
 class LibraryQueryDebounced extends _$LibraryQueryDebounced {
   Timer? _timer;
@@ -518,16 +506,12 @@ class LibraryFilterTagsExclude extends _$LibraryFilterTagsExclude
   List<String>? build() => initialize(DBKeys.filterTagsExclude);
 }
 
-/// Distinct tags across the whole library, sorted case-insensitively. A manga's
-/// tags are its source genres plus the user's own custom tags — both are just
-/// labels on the manga, so both are filterable. Populates the tags filter dialog.
+/// Source genres and custom tags, deduplicated and sorted case-insensitively.
 @riverpod
 Future<List<String>> libraryTagList(Ref ref) async {
   final all = await ref.watch(libraryMangaListProvider.future);
   if (all == null) return const [];
-  // Dedupe case-insensitively (keeping the first-seen casing for display) so a
-  // library with both "Action" and "action" shows one row, matching the
-  // case-insensitive tag filter.
+  // Preserve first-seen casing while matching the filter's case-insensitive deduplication.
   final byLower = <String, String>{};
   for (final m in all) {
     for (final g in m.genre) {
@@ -563,8 +547,7 @@ class LibrarySortRandomSeed extends _$LibrarySortRandomSeed
   int? build() => initialize(DBKeys.librarySortRandomSeed);
 }
 
-/// Category new manga are added to when favorited. -1 = always ask,
-/// 0 = Default/uncategorized, >0 = a specific category id.
+/// Default category: -1 always asks, 0 is uncategorized, positive values are category IDs.
 @riverpod
 class LibraryDefaultCategory extends _$LibraryDefaultCategory
     with SharedPreferenceClientMixin<int> {
@@ -572,10 +555,7 @@ class LibraryDefaultCategory extends _$LibraryDefaultCategory
   int? build() => initialize(DBKeys.libraryDefaultCategory);
 }
 
-/// Tri-state filter preference for a single tracker.
-///
-/// Key pattern: `mangaFilterTracker_<trackerId>`.
-/// null = not filtered, true = must be tracked, false = must not be tracked.
+/// null disables filtering; true requires tracking, false excludes it.
 @riverpod
 class LibraryMangaFilterTracker extends _$LibraryMangaFilterTracker {
   @override
@@ -595,8 +575,7 @@ class LibraryMangaFilterTracker extends _$LibraryMangaFilterTracker {
   void update(bool? value) => state = value;
 }
 
-/// Resolved map of per-tracker filters: tracker id → bool? preference.
-/// Only includes entries with a non-null filter value (i.e., active filters).
+/// Only active, non-null per-tracker filters are included.
 @riverpod
 Map<int, bool?> libraryTrackerFilters(Ref ref) {
   final loggedIn = ref.watch(loggedInTrackersProvider).value ?? const [];
@@ -610,15 +589,7 @@ Map<int, bool?> libraryTrackerFilters(Ref ref) {
   return result;
 }
 
-/// Map of tracker id → scale max (derived from the numeric value of the last
-/// score label).
-///
-/// Parses the last entry in [tracker.scores] as a double to get the true max
-/// score value (e.g. "9.9" → 9.9 for MangaUpdates, "100" → 100.0 for
-/// AniList). Falls back to `scores.length - 1` when the last label is not
-/// numeric (e.g. letter/emoji scales), or to 10.0 when the list is empty.
-///
-/// Used by [applyLibraryFilterSort] to normalize scores to 0–10.
+/// Tracker scale maxima use the numeric last score label, falling back to length - 1 or 10 if empty.
 @riverpod
 Map<int, double> libraryTrackerScales(Ref ref) {
   final loggedIn = ref.watch(loggedInTrackersProvider).value ?? const [];
@@ -631,9 +602,7 @@ Map<int, double> libraryTrackerScales(Ref ref) {
   };
 }
 
-/// Map of tracker id → display name, resolving the `tracked:<service>` search
-/// metatag (e.g. `tracked:anilist`). Uses all known trackers, not just
-/// logged-in ones, so a bound record still resolves after a logout.
+/// Uses all known trackers so `tracked:<service>` still resolves bound records after logout.
 @riverpod
 Map<int, String> libraryTrackerNames(Ref ref) {
   final all = ref.watch(trackersProvider).value ?? const [];
@@ -662,8 +631,6 @@ class LibraryLandscapeColumns extends _$LibraryLandscapeColumns
   int? build() => initialize(DBKeys.libraryLandscapeColumns);
 }
 
-/// Uniform scale for the List / Descriptive List modes: the list-mode
-/// counterpart of the grid column slider.
 @riverpod
 class LibraryListScale extends _$LibraryListScale
     with SharedPreferenceClientMixin<double> {
@@ -699,18 +666,12 @@ class CategoryNumberOfItems extends _$CategoryNumberOfItems
   bool? build() => initialize(DBKeys.categoryNumberOfItems);
 }
 
-/// Like [CategoryMangaListWithQueryAndFilter] but for a pre-computed set of
-/// manga IDs (used by non-default group tabs: BY_SOURCE, BY_STATUS, UNGROUPED).
-/// Applies the same query/filter/sort pipeline.
 @riverpod
 class GroupedMangaListWithQueryAndFilter
     extends _$GroupedMangaListWithQueryAndFilter {
   @override
   AsyncValue<List<MangaDto>?> build({required int tabId}) {
-    // Keyed by the STABLE tab id (int), not the mangaId Set — a Set has no
-    // value equality, so passing a freshly-built Set as the family key minted a
-    // new provider on every rebuild and thrashed into an infinite loading
-    // flicker. Resolve the id-set here from the grouped-tabs provider instead.
+    // Key by stable tab id: freshly built Sets lack value equality and would recreate providers.
     final tabs = ref.watch(libraryGroupedTabsProvider).value;
     Set<int> mangaIds = const <int>{};
     if (tabs != null) {
@@ -769,6 +730,11 @@ class GroupedMangaListWithQueryAndFilter
                 e.value!,
                 mangaIds: mangaIds,
                 query: query,
+                ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
+                fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
+                duplicateChapters: ref.watch(libraryDuplicateChaptersProvider),
+                statusFilters: ref.watch(libraryEntryFiltersProvider('status')),
+                sourceFilters: ref.watch(libraryEntryFiltersProvider('source')),
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,
@@ -797,4 +763,38 @@ class GroupedMangaListWithQueryAndFilter
       loading: (e) => e,
     );
   }
+}
+
+@riverpod
+class LibraryDuplicateChapters extends _$LibraryDuplicateChapters {
+  @override
+  bool? build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    const key = 'mangaFilterDuplicateChapters';
+    listenSelf((_, next) {
+      if (next == null) {
+        prefs.remove(key);
+      } else {
+        prefs.setBool(key, next);
+      }
+    });
+    return prefs.getBool(key);
+  }
+
+  void update(bool? value) => state = value;
+}
+
+@riverpod
+class LibraryEntryFilters extends _$LibraryEntryFilters {
+  @override
+  Map<String, bool?> build(String kind) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final key = 'mangaFilter_$kind';
+    listenSelf((_, next) => prefs.setString(key, jsonEncode(next)));
+    final value = prefs.getString(key);
+    if (value == null) return {};
+    return (jsonDecode(value) as Map<String, dynamic>).cast<String, bool?>();
+  }
+
+  void update(Map<String, bool?> value) => state = value;
 }

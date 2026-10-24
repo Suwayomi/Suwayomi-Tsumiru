@@ -46,9 +46,7 @@ bool _canConfidentlyMatch(ChapterDto previous, ChapterDto chapter) {
       scanlatorGroupOf(previous) != scanlatorGroupOf(chapter);
 }
 
-/// Groups only releases that satisfy the conservative reader match. Sorting
-/// by source order first keeps otherwise-identical rows independent when an
-/// intervening chapter shows that they belong to different runs.
+/// Preserve intervening source-order rows so separate numbering runs cannot merge.
 List<List<ChapterDto>> _confidentReleaseGroups(List<ChapterDto> chapters) {
   final sourceOrdered = [...chapters]
     ..sort((a, b) {

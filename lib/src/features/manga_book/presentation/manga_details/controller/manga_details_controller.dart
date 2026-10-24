@@ -35,8 +35,7 @@ part 'manga_details_controller.g.dart';
 
 @riverpod
 class MangaWithId extends _$MangaWithId {
-  // Bumped on every build so an answer from a superseded read can't overwrite
-  // a newer server row (e.g. one fetched by an explicit refresh).
+  // Reject replies from builds superseded by a newer read.
   int _buildId = 0;
 
   @override
@@ -45,8 +44,7 @@ class MangaWithId extends _$MangaWithId {
     final sessionCurrent = watchAuthSession(ref);
     bool current() => ref.mounted && sessionCurrent();
     if (!current()) return null;
-    // Read before the await: touching ref after the async gap throws if this
-    // provider was disposed mid-build.
+    // Capture before await; the provider may be disposed while fetching.
     final sync = ref.read(offlineSyncProvider);
     // Ordered against push acks: captured before the fetch goes out.
     final fetchGen = sync?.syncGeneration ?? 0;
@@ -54,8 +52,7 @@ class MangaWithId extends _$MangaWithId {
     // unread correction and must not round-trip back as server counts.
     var fromServer = false;
     final offlineDb = ref.watch(offlineReadDatabaseProvider);
-    // Watched before the first await so a new endpoint or custom header
-    // rebuilds this provider and the refetch goes through the new repository.
+    // Watch before await so endpoint/header changes rebuild with the new repository.
     final repository = ref.watch(mangaBookRepositoryProvider);
     final manga = await mangaWithOfflineFallback(
       fetch: () async {
@@ -69,9 +66,7 @@ class MangaWithId extends _$MangaWithId {
           ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       mangaId: mangaId,
-      // A series with a complete chapter on this device (the reader's opened
-      // chapter) renders from the catalog at once; the server row refreshes it
-      // in the background. Browsed series keep the network-first read.
+      // Complete device copies render from the catalog immediately while the server refreshes in background.
       deviceCopyOnDisk: offlineDb == null
           ? null
           : () async {
@@ -90,8 +85,7 @@ class MangaWithId extends _$MangaWithId {
         }
       },
     );
-    // Keep this cached like its sibling MangaChapterList so revisiting details
-    // doesn't refetch. Guarded: keepAlive on a disposed ref throws.
+    // Check disposal before keeping this cached across detail-page visits.
     if (!current()) return null;
     ref.keepAlive();
     // Don't mirror browsed (non-library) manga into the offline catalog.
@@ -119,23 +113,19 @@ class MangaChapterList extends _$MangaChapterList {
     final refreshFromSource = ref
         .watch(refreshChaptersFromSourceProvider)
         .ifNull();
-    // getMangaAndChapterList also refreshes metadata server-side; track it so
-    // we know to refresh MangaWithId too (#363).
+    // Source fetches refresh metadata too, so refresh MangaWithId afterwards.
     var didSourceFetch = false;
-    // Read before the await: touching ref after the async gap throws if this
-    // provider was disposed mid-build.
+    // Capture before await; the provider may be disposed while fetching.
     final sync = ref.read(offlineSyncProvider);
     // Mirror only genuine server responses — fallback chapter DTOs carry
     // stub fields (lastReadAt '0') that would clobber real mirrored data.
     var fromServer = false;
     final result = await chaptersWithOfflineFallback(
       fetch: () async {
-        // Read the chapters the server already has stored (like the WebUI).
         final stored = await repo.getStoredChapterList(mangaId);
         if (!current()) return null;
         fromServer = true;
-        // Show them as-is unless the source has never been fetched (no chapters
-        // yet) or the user opted into refreshing from the source on open.
+        // Re-scrape only when stored chapters are absent or source refresh is enabled.
         if (!refreshFromSource && stored != null && stored.isNotEmpty) {
           return stored;
         }
@@ -146,8 +136,7 @@ class MangaChapterList extends _$MangaChapterList {
             return fetched;
           }
         } catch (_) {
-          // Source down / gone — fall back to the server's stored chapters
-          // instead of showing an empty list (issue #28).
+          // Keep stored chapters when the source is unavailable.
         }
         return stored;
       },
@@ -170,9 +159,7 @@ class MangaChapterList extends _$MangaChapterList {
       );
     }
     if (didSourceFetch) {
-      // MangaWithId loaded before the scrape refreshed metadata; refresh it so
-      // the synopsis shows on first open (#363). Deferred to avoid invalidating
-      // mid-build.
+      // Refresh metadata after scraping; defer invalidation outside the build phase.
       Future.microtask(() {
         if (current()) ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
       });
@@ -188,25 +175,16 @@ class MangaChapterList extends _$MangaChapterList {
     if (!current()) return;
     final sync = ref.read(offlineSyncProvider);
     final repo = ref.read(mangaBookRepositoryProvider);
-    // Only scrape the source when the user explicitly asked (pull-to-refresh /
-    // update button -> onlineFetch) or has the "refresh from source" setting on.
-    // Otherwise read the server's STORED chapters — mirrors build()'s gate
-    // (#28), so merely opening a series (the on-mount refresh) no longer fires a
-    // full, slow source re-scrape on every visit; an explicit refresh still
-    // tries the source and falls back to stored if it's unavailable.
+    // Scrape only on explicit request or when source refresh is enabled.
     final refreshFromSource =
         onlineFetch || ref.read(refreshChaptersFromSourceProvider).ifNull();
     // offlineDatabaseProvider throws on web; only touch it when offline is on.
     final offlineDb = ref.read(offlineReadDatabaseProvider);
-    // An explicit refresh is a deliberate retry — but while the user has the
-    // offline view pinned, honor it here too.
+    // Explicit retry still respects the pinned offline view.
     final viewOffline =
         ref.read(viewOfflineNowProvider) || ref.read(serverUnreachableProvider);
     var didSourceFetch = false;
-    // Wrap in chaptersWithOfflineFallback like build() does, so an explicit
-    // refresh while the device is offline serves the on-device catalog instead
-    // of erroring/clearing the list.
-    // Mirror only genuine server responses (see build()).
+    // Offline refreshes use the catalog; mirror only genuine server responses.
     var fromServer = false;
     final result = await AsyncValue.guard(
       () => chaptersWithOfflineFallback(
@@ -224,39 +202,29 @@ class MangaChapterList extends _$MangaChapterList {
               return fetched;
             }
           } catch (_) {
-            // Source down / gone — fall back to stored instead of clearing.
           }
           return stored;
         },
         db: offlineDb,
         offlineEnabled: offlineDb != null,
         offlineFirst: viewOffline,
-        // An explicit refresh can run a full source scrape, which routinely
-        // outlives the offline cap; the user asked and is watching, so give
-        // it a real window instead of silently serving stale catalog rows.
+        // An explicit source scrape can outlast the offline timeout; allow 60 seconds.
         fetchTimeout: const Duration(seconds: 60),
         mangaId: mangaId,
       ),
     );
     if (!current()) return;
     ref.keepAlive();
-    // The scrape refreshes metadata too; pick it up so pull-to-refresh
-    // updates the synopsis, not just the chapter list.
+    // Source scraping also changes metadata, so refresh it alongside chapters.
     if (didSourceFetch && ref.mounted) {
       ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     }
-    // On a refresh failure keep the current chapters visible instead of
-    // overwriting the list with an errored state (drops the internal
-    // copyWithPrevious API the analyzer flagged).
+    // Keep current chapters visible when a refresh fails.
     if (result.hasError) return;
     state = result;
     final chapters = result.value;
     if (chapters != null && fromServer) {
-      // Mirror build(): down-sync the fresh list (which orphans chapters the
-      // server no longer lists) then reconcile to evict them — so a
-      // server-side delete discovered via pull-to-refresh is cleaned up too,
-      // not only on a cold provider rebuild. Catalog-served lists are echoes
-      // and never mirrored.
+      // Mirror genuine server lists and reconcile chapters removed on the server; never mirror catalog echoes.
       unawaited(
         (sync?.syncChapters(chapters) ?? Future.value(<int>{})).then((nr) {
           if (current()) {
@@ -268,9 +236,6 @@ class MangaChapterList extends _$MangaChapterList {
   }
 
   void updateChapter(int index, ChapterDto chapter) {
-    // Explicit bounds check instead of a bare try/catch that silently dropped
-    // the edit (and dropped the internal copyWithPrevious API the analyzer
-    // flagged). A no-op when the list isn't loaded / index is stale.
     final current = state.value;
     if (current == null || index < 0 || index >= current.length) return;
     final newList = [...current];
@@ -292,9 +257,7 @@ Set<String> mangaScanlatorList(Ref ref, {required int mangaId}) {
   return scanlatorList;
 }
 
-/// Effective per-series preferred scanlation groups (issue #141).
-/// Read path: new JSON-list key, else the legacy single-scanlator key as a
-/// one-item list (never written back from here — no writes on read paths).
+/// Read the JSON-list preference, falling back to the legacy single group without writing on read.
 @riverpod
 class MangaPreferredScanlators extends _$MangaPreferredScanlators {
   @override
@@ -306,8 +269,7 @@ class MangaPreferredScanlators extends _$MangaPreferredScanlators {
     return meta?.effectivePreferredScanlators ?? const [];
   }
 
-  /// Returns whether the server writes succeeded, so the dialog can surface
-  /// a failure instead of closing over silently-unsaved state.
+  /// Returns false on write failure so the dialog can remain open.
   Future<bool> setPreference(List<String> groups) async {
     final repo = ref.read(mangaBookRepositoryProvider);
     final result = await AsyncValue.guard(() async {
@@ -324,7 +286,6 @@ class MangaPreferredScanlators extends _$MangaPreferredScanlators {
       );
     });
     if (result.hasError) return false;
-    // Write succeeded; treat the refresh below as best-effort.
     try {
       if (ref.mounted) {
         state = groups;
@@ -347,8 +308,7 @@ class MangaPreferredScanlators extends _$MangaPreferredScanlators {
   }
 }
 
-/// Session-scoped "Show all versions" escape hatch. autoDispose: resets once
-/// the series screen and any reader on it stop watching.
+/// Resets after the series screen and its readers stop watching.
 @riverpod
 class MangaShowAllScanlatorVersions extends _$MangaShowAllScanlatorVersions {
   @override
@@ -356,10 +316,7 @@ class MangaShowAllScanlatorVersions extends _$MangaShowAllScanlatorVersions {
   void update(bool value) => state = value;
 }
 
-/// Per-series chapter sort, synced with WebUI's own per-manga `webUI_sortBy`
-/// meta (see webui_chapter_sort_meta.dart) — a real cross-client setting, not
-/// a Tsumiru-only convention. Falls back to the app-wide [MangaChapterSort]
-/// default when the manga carries no such meta.
+/// Uses per-manga webUI_sortBy meta, falling back to the app-wide sort.
 @riverpod
 class MangaChapterSortPreference extends _$MangaChapterSortPreference {
   @override
@@ -372,9 +329,7 @@ class MangaChapterSortPreference extends _$MangaChapterSortPreference {
     return ref.watch(mangaChapterSortProvider);
   }
 
-  /// Persists [sort] as this manga's meta. On failure (e.g. server
-  /// unreachable) the displayed sort is left unchanged and the error is
-  /// returned for the caller to surface.
+  /// On write failure, retain the displayed sort and return the error.
   Future<AsyncValue<void>> update(ChapterSort sort) async {
     final repo = ref.read(mangaBookRepositoryProvider);
     final axis = chapterSortAxisFromChapterSort(sort);
@@ -410,11 +365,7 @@ class MangaChapterSortPreference extends _$MangaChapterSortPreference {
   }
 }
 
-/// Per-series chapter sort direction (true = ascending), synced with WebUI's
-/// own per-manga `webUI_reverse` meta, whose `'true'` means descending. Falls
-/// back to the app-wide [MangaChapterSortDirection] default when the manga
-/// carries no such meta. Display only: the offline keep-window always
-/// advances forward.
+/// webUI_reverse true means descending; this display preference does not reverse offline retention.
 @riverpod
 class MangaChapterSortDirectionPreference
     extends _$MangaChapterSortDirectionPreference {
@@ -428,7 +379,6 @@ class MangaChapterSortDirectionPreference
         ref.watch(mangaChapterSortDirectionProvider);
   }
 
-  /// Same failure contract as [MangaChapterSortPreference.update].
   Future<AsyncValue<void>> update(bool ascending) async {
     final result = await AsyncValue.guard(
       () => ref
@@ -446,8 +396,7 @@ class MangaChapterSortDirectionPreference
   }
 }
 
-/// Personal 0-5 star rating for a manga, stored in the per-manga meta store
-/// (no server rating field exists). 0 means unrated.
+/// Personal rating in manga meta: 0 means unrated, 1..5 are stars.
 @riverpod
 class MangaRating extends _$MangaRating {
   @override
@@ -464,22 +413,18 @@ class MangaRating extends _$MangaRating {
           .patchMangaMeta(
             mangaId: mangaId,
             key: MangaMetaKeys.rating.key,
-            // Meta values are String-typed server-side (MangaMetaTypeInput.value
-            // is String!); an int silently fails the mutation.
+            // MangaMetaTypeInput.value is String!; numeric values fail the mutation.
             value: '$next',
           ),
     );
     if (!ref.mounted) return;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-    // Refresh the library list so rating sort/filter reflect the change without
-    // waiting for the next full library fetch.
     ref.invalidate(libraryMangaListProvider);
     state = next;
   }
 }
 
-/// User-defined tags for a manga, stored as a JSON string array in the per-manga
-/// meta store (synced across devices/clients, distinct from source genres).
+/// User tags are a JSON string array in manga meta, distinct from source genres.
 @riverpod
 class MangaUserTags extends _$MangaUserTags {
   @override
@@ -500,8 +445,6 @@ class MangaUserTags extends _$MangaUserTags {
     );
     if (!ref.mounted) return;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-    // Refresh the library list so the tag filter list picks up new/removed tags
-    // without waiting for the next full library fetch.
     ref.invalidate(libraryMangaListProvider);
     state = tags;
   }
@@ -616,15 +559,12 @@ int _compareChapters(
       second.name.toLowerCase(),
     ),
   };
-  // List.sort is unstable; break ties by source order, and reverse the tie too
-  // when descending. Reading order then never depends on display direction.
+  // List.sort is unstable; break ties by source order and reverse ties when descending.
   return (key != 0 ? key : first.index.compareTo(second.index)) *
       (ascending ? 1 : -1);
 }
 
-/// Chapter rows plus missing-chapter notices for the details screen only.
-/// Reader navigation and bulk actions continue to consume plain ChapterDto
-/// lists and can never mistake a notice for a chapter.
+/// Details-only entries; reader navigation and bulk actions consume plain chapters.
 @riverpod
 AsyncValue<List<MangaChapterListEntry>?> mangaChapterListEntries(
   Ref ref, {

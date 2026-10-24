@@ -9,45 +9,25 @@ import 'dart:async';
 import '../../account/data/account_permission.dart';
 import 'offline_page_store.dart';
 
-/// Thrown by a [PageFetcher] when the server rejects the request with 401.
-/// Signals the engine to refresh auth once and retry, rather than counting it
-/// as a normal transient failure.
+/// A 401 that permits one auth refresh and retry.
 class PageAuthException implements Exception {
   const PageAuthException();
 }
 
-/// Thrown by a [PageFetcher] when the device is offline, or Wi-Fi-only is on and
-/// the active connection is metered. Signals the engine to stop this chapter and
-/// report it as paused-offline (leave it resumable), NOT as an error.
-///
-/// [reason] is a short technical description (e.g. the caught exception, or
-/// the HTTP status that looked like a gateway/proxy failure) — carried through
-/// to [ChapterDownloadOutcome.offlineReason] so a chapter that keeps parking
-/// can be diagnosed from the crash log instead of just seeing "offline" with
-/// no further detail.
+/// Connection loss or Wi-Fi-only blocking; leaves the chapter resumable rather than failed.
 class PageOfflineException implements Exception {
   const PageOfflineException(this.reason);
   final String reason;
 }
 
-/// One page to download: its server URL and its index within the chapter.
 typedef PageRef = ({int index, String url});
 
-/// Fetches one page's bytes over HTTP given the server page path/URL. The
-/// closure MUST resolve the server base AND the current auth headers itself,
-/// at call time — that's what makes auth run-time-fresh instead of baked at
-/// enqueue. It MUST throw
-/// [PageAuthException] on a 401 so the engine can refresh and retry; any other
-/// failure should throw a plain exception (treated as transient).
+/// Resolve server base and auth at call time; throw [PageAuthException] on 401.
 typedef PageFetcher = Future<PageBytes> Function(String pageUrl);
 
-/// Refreshes auth after a 401. Returns true if a new credential is now
-/// available (retry worth attempting), false if auth is genuinely dead (give
-/// up). Single-flight is the caller's responsibility (AuthCoordinator handles
-/// it), so concurrent pages hitting 401 at once collapse to one refresh.
+/// True if retry can use refreshed credentials; caller must deduplicate concurrent refreshes.
 typedef AuthRefresher = Future<bool> Function();
 
-/// Outcome of downloading one chapter's outstanding pages.
 class ChapterDownloadOutcome {
   const ChapterDownloadOutcome({
     required this.storedPages,
@@ -58,36 +38,24 @@ class ChapterDownloadOutcome {
     this.error,
   });
 
-  /// Pages written to disk this run: pageIndex -> (relPath, bytes).
+  /// Pages stored during this run only.
   final Map<int, ({String relPath, int bytes})> storedPages;
 
-  /// True if the run stopped because [isCancelled] went true.
   final bool cancelled;
 
-  /// True if a page 401'd and the refresh reported auth is dead — the chapter
-  /// can't proceed until the user re-authenticates.
+  /// Requires re-authentication after a failed refresh.
   final bool authFailed;
 
-  /// True if the run stopped because the device went offline / Wi-Fi-only
-  /// blocked it. The chapter is left resumable (NOT an error).
+  /// Leaves the chapter resumable.
   final bool offline;
 
-  /// Short technical detail behind [offline] (the caught exception or gateway
-  /// status), for diagnosing a chapter that keeps parking without ever
-  /// actually being a real device-offline condition.
   final String? offlineReason;
 
-  /// The first non-auth error that ended the run, if any.
   final Object? error;
 
   bool get succeeded => error == null && !cancelled && !authFailed && !offline;
 }
 
-/// Downloads a single chapter's pages with up to [parallelPageLimit] in flight
-/// (default 5), retrying blips and refreshing auth once on a 401. Deliberately
-/// does ONE chapter at a time (page-level parallelism is the real win, since
-/// everything comes from our own server); pure Dart + dependency-injected, so
-/// it's testable without HTTP, dart:io, or the real auth stack.
 class ChapterDownloadEngine {
   ChapterDownloadEngine({
     required this.fetchPage,
@@ -108,10 +76,7 @@ class ChapterDownloadEngine {
   static Duration _defaultBackoff(int attempt) =>
       Duration(milliseconds: 300 * (1 << (attempt - 1))); // 300ms, 600, 1200
 
-  /// Download [pages] for chapter [chapterId]. Returns when all are stored, the
-  /// run is cancelled, auth dies, or a page exhausts its retries. Calls
-  /// [onPageStored] as each page lands so the caller can persist its catalog row
-  /// and update progress incrementally.
+  /// Stops on cancellation, auth failure, or exhausted retries; reports each stored page.
   Future<ChapterDownloadOutcome> download({
     required int mangaId,
     required int chapterId,
@@ -197,9 +162,7 @@ class ChapterDownloadEngine {
       if (isCancelled()) return const _PageCancelled();
       try {
         final bytes = await fetchPage(page.url);
-        // The fetch can outlast a cancel (delete/pause landing mid-request);
-        // don't write a file for a chapter being deleted — the purge likely
-        // already ran, so the write would orphan on disk.
+        // A cancel can arrive during fetch; writing afterward could recreate files already purged.
         if (isCancelled()) return const _PageCancelled();
         final written = await writePage.writePage(
           mangaId,
@@ -214,20 +177,16 @@ class ChapterDownloadEngine {
         return _PageError(e);
       } on PageOfflineException catch (e) {
         if (isCancelled()) return const _PageCancelled();
-        // Device went offline / Wi-Fi-only blocked it — stop this chapter and
-        // leave it resumable. No retry (retrying offline just burns backoff).
+        // Offline work remains resumable; retrying cannot help until connectivity changes.
         return _PageOffline(e.reason);
       } on PageAuthException {
         if (isCancelled()) return const _PageCancelled();
-        // Refresh once; concurrent 401s collapse via the refresher's
-        // single-flight. If auth is dead, stop trying.
         if (!refreshedForAuth) {
           refreshedForAuth = true;
           final ok = await refreshAuth();
           if (!ok) return const _PageAuthDead();
           continue; // retry immediately with the fresh token (doesn't count)
         }
-        // Already refreshed once and still 401 → auth is dead for this run.
         return const _PageAuthDead();
       } catch (e) {
         if (isCancelled()) return const _PageCancelled();

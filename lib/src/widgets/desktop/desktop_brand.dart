@@ -11,9 +11,6 @@ import '../../utils/extensions/custom_extensions.dart';
 import '../tsumiru_logo.dart';
 import 'desktop_title_bar.dart';
 
-/// The expanded brand block: the logo (tap opens About), the app name and the
-/// collapse chevron. Shared by the merged top bar and the macOS sidebar so the
-/// two draw the same row.
 class DesktopBrandRow extends StatelessWidget {
   const DesktopBrandRow({
     super.key,
@@ -53,8 +50,6 @@ class DesktopBrandRow extends StatelessWidget {
   );
 }
 
-/// The collapsed brand: the logo alone as the expand button, shared by the
-/// merged top bar and the macOS sidebar.
 class DesktopBrandExpandButton extends StatelessWidget {
   const DesktopBrandExpandButton({super.key, required this.onExpand});
 

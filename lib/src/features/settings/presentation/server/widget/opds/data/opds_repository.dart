@@ -5,8 +5,7 @@ import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/graphql_undefined_field.dart';
-import '../../../../../../account/data/account_providers.dart';
-import '../../../../../../account/domain/account_access.dart';
+import '../../../../../data/account_or_legacy_settings.dart';
 import '../../../../../data/user_settings.dart';
 import '../graphql/__generated__/opds.graphql.dart';
 
@@ -189,12 +188,10 @@ final Provider<OpdsSettingsRepository> opdsSettingsRepositoryProvider =
 );
 
 final FutureProvider<OpdsSettings?> opdsSettingsProvider =
-    FutureProvider.autoDispose<OpdsSettings?>((ref) async {
-  switch (ref.watch(settledAccountAccessProvider).capability) {
-    case AccountCapability.unknown:
-      throw StateError('Account settings unavailable');
-    case AccountCapability.supported:
-      final user = await ref.watch(userSettingsProvider.future);
+    FutureProvider.autoDispose<OpdsSettings?>(
+      (ref) => accountOrLegacySettings(
+        ref,
+        fromUser: (user) {
       if (user == null) throw StateError('Missing account settings');
       return (
         useBinaryFileSizes: user.opdsUseBinaryFileSizes,
@@ -207,7 +204,8 @@ final FutureProvider<OpdsSettings?> opdsSettingsProvider =
         chapterSortOrder: user.opdsChapterSortOrder,
         cbzMimetype: user.opdsCbzMimetype,
       );
-    case AccountCapability.unsupported:
+        },
+        legacy: () async {
       final settings = await ref
           .watch(opdsSettingsRepositoryProvider)
           .legacySettings();
@@ -223,5 +221,6 @@ final FutureProvider<OpdsSettings?> opdsSettingsProvider =
         chapterSortOrder: settings.opdsChapterSortOrder,
         cbzMimetype: settings.opdsCbzMimetype,
       );
-  }
-});
+        },
+      ),
+    );

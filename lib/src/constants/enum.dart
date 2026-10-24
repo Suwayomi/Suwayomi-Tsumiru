@@ -51,8 +51,7 @@ enum ReaderMode {
 }
 
 enum ReaderNavigationLayout {
-  // Declaration order is the stored value — these persist by index, so this
-  // list is append-only. Use [displayOrder] for anything user-facing.
+  // Persisted by index: append only; use displayOrder for presentation.
   defaultNavigation,
   lShaped,
   rightAndLeft,
@@ -60,8 +59,7 @@ enum ReaderNavigationLayout {
   kindlish,
   disabled;
 
-  /// Komikku's order (`ReaderPreferences.TapZones`), which differs from the
-  /// declaration order above.
+  /// Display order differs from the persisted declaration order.
   static const List<ReaderNavigationLayout> displayOrder = [
     ReaderNavigationLayout.defaultNavigation,
     ReaderNavigationLayout.lShaped,
@@ -86,8 +84,7 @@ enum ReaderNavigationLayout {
   };
 }
 
-/// Reader rotation lock. defaultRotation
-/// means "leave the platform alone" so existing users see zero change.
+/// defaultRotation leaves platform rotation unchanged.
 enum ReaderOrientation {
   defaultRotation,
   free,
@@ -111,8 +108,7 @@ enum ReaderOrientation {
   };
 }
 
-/// 4-value tap-zone inversion. Successor of the
-/// legacy invertTap bool: true→both, false→none; the old key is never rewritten.
+/// Legacy invertTap maps true to both and false to none; its key is never rewritten.
 enum TapInvert {
   none,
   horizontal,
@@ -127,8 +123,7 @@ enum TapInvert {
   bool get invertsVertical =>
       this == TapInvert.vertical || this == TapInvert.both;
 
-  /// Swaps the left/right zones. Right-and-Left is a spatial layout, so a
-  /// right-to-left series has to mirror it: tapping the right edge goes back.
+  /// Mirrors spatial left/right tap zones for right-to-left series.
   TapInvert get horizontallyFlipped => switch (this) {
     TapInvert.none => TapInvert.horizontal,
     TapInvert.horizontal => TapInvert.none,
@@ -144,7 +139,6 @@ enum TapInvert {
   };
 }
 
-/// Paged image scale (default fit-screen).
 enum ImageScaleType {
   fitScreen,
   stretch,
@@ -162,8 +156,7 @@ enum ImageScaleType {
     ImageScaleType.smartFit => context.l10n.imageScaleTypeSmartFit,
   };
 
-  /// Paged page render: the BoxFit + decode-size hint for a page image on a
-  /// [width]×[height] screen. smartFit ≈ fit-width (most manga pages are tall).
+  /// smartFit uses fit-width; returns fit and decode size for the viewport.
   (BoxFit, Size?) pagedFit(double width, double height) => switch (this) {
     ImageScaleType.fitScreen => (BoxFit.contain, Size.fromHeight(height)),
     ImageScaleType.stretch => (BoxFit.fill, Size(width, height)),
@@ -173,12 +166,10 @@ enum ImageScaleType {
     ImageScaleType.smartFit => (BoxFit.fitWidth, Size.fromWidth(width)),
   };
 
-  /// pagedFit above still returns BoxFit.contain; the zoom controller applies
-  /// the real 1:1 scale (Mihon: a minimum zoom level, not a fit mode).
+  /// The zoom controller applies native 1:1 scale; pagedFit still returns BoxFit.contain.
   bool get pagesAtNaturalSize => this == ImageScaleType.originalSize;
 }
 
-/// Paged zoom start position (default automatic).
 enum ZoomStart {
   automatic,
   left,
@@ -193,7 +184,6 @@ enum ZoomStart {
   };
 }
 
-/// Paged single/double-page layout (default automatic).
 enum PageLayout {
   singlePage,
   doublePages,
@@ -206,7 +196,6 @@ enum PageLayout {
   };
 }
 
-/// Foldable dead-space spacer (default none).
 enum CenterMarginType {
   none,
   doublePage,
@@ -221,8 +210,7 @@ enum CenterMarginType {
   };
 }
 
-/// Reader page background. Declaration order matches
-/// the stored ints 0-3; the chip row shows Black/Gray/White/Auto.
+/// Declaration order matches stored values 0–3.
 enum ReaderBackgroundColor {
   white,
   black,
@@ -236,8 +224,6 @@ enum ReaderBackgroundColor {
     ReaderBackgroundColor.automatic => context.l10n.backgroundColorAuto,
   };
 
-  /// Gray is the literal 0x202125; automatic maps
-  /// (dark theme → gray, light → white).
   Color color(BuildContext context) => switch (this) {
     ReaderBackgroundColor.white => Colors.white,
     ReaderBackgroundColor.black => Colors.black,
@@ -249,8 +235,7 @@ enum ReaderBackgroundColor {
   };
 }
 
-/// Flash-on-page-change color. whiteBlack = white for the
-/// first half of the flash, black for the second.
+/// whiteBlack flashes white first, then black.
 enum FlashColor {
   black,
   white,
@@ -282,9 +267,7 @@ enum ReaderScrollAmount {
   };
 }
 
-/// Custom color-filter blend (order 0-5). Native Android
-/// gates the last three behind API level P+; Flutter's BlendMode supports all
-/// six everywhere, so no gate. "Multiply" is Compose Modulate (src×dst).
+/// Multiply uses Compose Modulate (src×dst); all blends are available on every platform.
 enum ColorFilterBlendMode {
   defaultBlend(BlendMode.srcOver),
   multiply(BlendMode.modulate),
@@ -307,8 +290,7 @@ enum ColorFilterBlendMode {
   };
 }
 
-/// Long-strip scale: fit, ratio-capped column, or native-size pages.
-// Persisted by index — append only.
+/// Persisted by index: append only.
 enum WebtoonScaleType {
   fitScreen,
   ratio4to3,
@@ -326,8 +308,7 @@ enum WebtoonScaleType {
     WebtoonScaleType.originalSize => context.l10n.webtoonScaleTypeOriginalSize,
   };
 
-  /// Target column width/height ratio. 0 → no strip-level cap (fitScreen, and
-  /// originalSize, whose per-page cap lives in the renderer).
+  /// Zero disables the strip-level cap; originalSize is capped per page.
   double get _ratio => switch (this) {
     WebtoonScaleType.fitScreen => 0,
     WebtoonScaleType.ratio4to3 => 3 / 4,
@@ -337,10 +318,7 @@ enum WebtoonScaleType {
     WebtoonScaleType.originalSize => 0,
   };
 
-  /// Max long-strip content width for a [screenWidth]×[screenHeight] viewport.
-  /// Caps the strip to the target aspect only when the screen is wider than
-  /// that column (shrinks iff screenRatio > desiredRatio); otherwise
-  /// full width. Pure/render-only — no scroll math.
+  /// Caps width to the target aspect ratio only when the viewport is wider.
   double maxContentWidth(double screenWidth, double screenHeight) {
     final ratio = _ratio;
     if (ratio <= 0) return screenWidth;
@@ -359,9 +337,7 @@ enum MangaSort {
   lastRead,
   random,
   trackerScore,
-  // Appended (NOT reordered) — MangaSort prefs are stored by enum index, so
-  // reordering would corrupt saved sorts. Sort-tab display order is controlled
-  // separately (see library_manga_organizer.dart).
+  // Persisted by enum index: append only; display order is defined separately.
   lastUpdate,
   rating;
 
@@ -384,7 +360,7 @@ enum ChapterSort {
   source,
   uploadDate,
   fetchedDate,
-  // Appended last: saved prefs store the index into [values].
+  // Persisted by index: append only.
   chapterNumber,
   alphabetical;
 
@@ -397,7 +373,7 @@ enum ChapterSort {
   };
 }
 
-/// Phone chapter-row swipe action. Persisted by index — append only.
+/// Persisted by index: append only.
 enum ChapterSwipeAction {
   toggleRead,
   toggleBookmark,
@@ -428,7 +404,7 @@ enum DisplayMode {
   list(Icons.view_list_rounded),
   descriptiveList(Icons.view_list_rounded),
   coverOnly(Icons.view_comfy_rounded),
-  // Appended last: saved prefs store the index into [values].
+  // Persisted by index: append only.
   comfortableGrid(Icons.view_module_rounded);
 
   static const List<DisplayMode> sourceDisplayList = [
@@ -436,8 +412,7 @@ enum DisplayMode {
     DisplayMode.list,
   ];
 
-  /// Menu order for the library display tab (differs from declaration order,
-  /// which is frozen by persisted indexes).
+  /// Display order differs from the persisted declaration order.
   static const List<DisplayMode> libraryDisplayList = [
     DisplayMode.list,
     DisplayMode.descriptiveList,
@@ -449,7 +424,6 @@ enum DisplayMode {
   final IconData icon;
   const DisplayMode(this.icon);
 
-  /// Gates the column slider and the grid-style selector in the Display tab.
   bool get isGrid =>
       this == DisplayMode.grid ||
       this == DisplayMode.comfortableGrid ||
@@ -463,14 +437,13 @@ enum DisplayMode {
     DisplayMode.comfortableGrid => context.l10n.displayModeComfortableGrid,
   };
 
-  /// The library offers three grid variants, so plain [grid] reads as
-  /// "Compact grid" there; Browse only has grid/list and keeps [toLocale].
+  /// Library calls grid "Compact grid"; Browse retains the generic label.
   String toLibraryLocale(BuildContext context) => this == DisplayMode.grid
       ? context.l10n.displayModeCompactGrid
       : toLocale(context);
 }
 
-/// Unread badge presentation. Persisted by index, so the order is frozen.
+/// Persisted by index: append only.
 enum UnreadBadgeMode {
   count,
   dot,
@@ -485,13 +458,9 @@ enum UnreadBadgeMode {
   };
 }
 
-/// Which corner of a cover a badge clusters into.
 enum BadgeSide { left, right }
 
-/// Every badge that can be drawn on a library cover, in shipped drag-order.
-///
-/// [id] is what gets persisted in `badgeOrder` / `badgeRightSide` — never the
-/// enum index — so inserting a badge here can't repoint a saved layout.
+/// Persisted by id, never enum index; inserting badges preserves saved layouts.
 enum LibraryBadge {
   unread('unread'),
   downloaded('downloaded'),
@@ -518,15 +487,10 @@ enum LibraryBadge {
   };
 }
 
-/// Which widget renders a grouped library. Persisted by index.
-///
-/// Orthogonal to `categoryTabs` / `sectionHeadersShowAllCategories`, which
-/// modify whichever style is active — see `_groupedBody` in library_screen.
+/// Persisted by index; categoryTabs and sectionHeadersShowAllCategories modify the active style.
 enum LibraryGroupStyle {
-  /// One page per group, behind a swipeable `TabBarView`.
   tabs,
 
-  /// A single continuous scroll, each group under a sticky header.
   headers;
 
   String toLocale(BuildContext context) => switch (this) {
@@ -535,23 +499,18 @@ enum LibraryGroupStyle {
   };
 }
 
-/// Cover geometry for the library's grid modes. Persisted by index.
+/// Persisted by index.
 enum LibraryGridStyle {
-  /// Every cover is cropped into the same fixed 2:3 cell.
   uniform(Icons.grid_view_rounded),
 
-  /// Fixed cell width, cover height follows the art (capped). Rows align to
-  /// their tallest cover.
+  /// Rows align to the tallest cover; individual cover heights follow the art.
   nonUniform(Icons.grid_goldenratio_rounded),
 
-  /// Masonry: each column packs independently.
   staggered(Icons.dashboard_rounded);
 
   const LibraryGridStyle(this.icon);
   final IconData icon;
 
-  /// True when tiles size themselves from the cover art instead of filling a
-  /// fixed cell.
   bool get isFreeform => this != LibraryGridStyle.uniform;
 
   String toLocale(BuildContext context) => switch (this) {
@@ -605,12 +564,9 @@ enum IncludeOrExclude implements ValueEnum {
   final String value;
 }
 
-/// Global-search source scope: search only pinned sources, or all of them.
 enum GlobalSearchSourceFilter { pinned, all }
 
-/// Controls how consecutive chapters from the same manga are grouped on the
-/// Updates page. [disabled] = flat list (legacy behaviour); [collapsed] =
-/// grouped and folded by default; [expanded] = grouped and unfolded by default.
+/// disabled is flat; collapsed and expanded group chapters with the named initial state.
 enum UpdatesGroupingMode {
   disabled,
   collapsed,

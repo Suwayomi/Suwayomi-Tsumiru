@@ -11,8 +11,6 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_auto_webtoon_mode.g.dart';
 
-// Global Auto Webtoon Mode pref (default ON). Detection lives
-// in manga_book/presentation/reader/controller/auto_webtoon.dart.
 
 @riverpod
 class AutoWebtoonMode extends _$AutoWebtoonMode

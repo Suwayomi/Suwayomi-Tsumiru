@@ -68,9 +68,7 @@ class MigrationBulkRunRoute extends GoRouteData with $MigrationBulkRunRoute {
   }
 }
 
-/// Shown when a migration route's `$extra` is gone, which happens when the app
-/// restores a location from a URL (extras are not serialized). Popping silently
-/// would drop the user on an unrelated page.
+/// URL restoration cannot serialize migration extras; show a fallback when they are missing.
 class _MigrationDataUnavailable extends StatelessWidget {
   const _MigrationDataUnavailable();
 

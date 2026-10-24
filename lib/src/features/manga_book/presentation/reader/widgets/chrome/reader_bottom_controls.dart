@@ -28,14 +28,6 @@ import '../reader_mode/infinity_continuous/measure_size.dart';
 import 'chapter_nav_buttons.dart';
 import 'chrome_extents.dart';
 
-/// The reader's bottom chrome controls, extracted from [ReaderWrapper]'s
-/// [Scaffold.bottomSheet] slot.
-///
-/// - **Paged / horizontal mode** ([useBottomSeekBar] true): shows the
-///   horizontal [BrandPageSeekBar] row (with prev/next chapter buttons) plus
-///   the action row.
-/// - **Webtoon / vertical mode** ([useBottomSeekBar] false): shows ONLY the
-///   action row.
 class ReaderBottomControls extends ConsumerWidget {
   const ReaderBottomControls({
     super.key,
@@ -63,7 +55,6 @@ class ReaderBottomControls extends ConsumerWidget {
   /// For infinity-scroll mode; null means use [chapterPages.chapter.pageCount].
   final int? totalPageCount;
 
-  /// True when horizontal seek bar should be shown (paged / landscape modes).
   final bool useBottomSeekBar;
   final Axis scrollDirection;
 
@@ -76,10 +67,8 @@ class ReaderBottomControls extends ConsumerWidget {
 
   final ValueChanged<int> onChanged;
 
-  /// Callback for the settings gear button (opens the end drawer).
   final VoidCallback onOpenSettings;
 
-  /// Callback for the reader-mode icon button.
   final VoidCallback onOpenReaderMode;
 
   @override
@@ -127,7 +116,6 @@ class ReaderBottomControls extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Horizontal seek row — paged mode only.
             if (useBottomSeekBar) ...[
               Row(
                 children: [
@@ -163,7 +151,6 @@ class ReaderBottomControls extends ConsumerWidget {
               ),
               const Gap(8),
             ],
-            // Action row — always shown.
             Card(
               color: readerNavSurface(context.theme.colorScheme),
               elevation: 0,

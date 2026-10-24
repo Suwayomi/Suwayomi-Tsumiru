@@ -18,8 +18,7 @@ import '../reader_tap_invert/reader_tap_invert.dart';
 
 part 'reader_navigation_layout_tile.g.dart';
 
-/// Migration source for the two per-viewer keys below. Nothing reads this to
-/// decide tap zones any more.
+/// Migration source for the per-viewer keys; not used to resolve active tap zones.
 @riverpod
 class ReaderNavigationLayoutKey extends _$ReaderNavigationLayoutKey
     with SharedPreferenceEnumClientMixin<ReaderNavigationLayout> {
@@ -30,9 +29,6 @@ class ReaderNavigationLayoutKey extends _$ReaderNavigationLayoutKey
   );
 }
 
-// Komikku keeps tap zones per viewer (navigationModePager /
-// navigationModeWebtoon), which is why they sit inside the Paged and Long
-// strip groups rather than above them.
 
 @riverpod
 class PagedNavigationLayoutKey extends _$PagedNavigationLayoutKey
@@ -56,8 +52,6 @@ class LongStripNavigationLayoutKey extends _$LongStripNavigationLayoutKey
   );
 }
 
-/// Tap zones for one viewer. Paged and long strip keep their own, so the tile
-/// appears once in each viewer group rather than above both.
 class ReaderNavigationLayoutTile extends ConsumerWidget {
   const ReaderNavigationLayoutTile({super.key, required this.longStrip});
 
@@ -80,8 +74,6 @@ class ReaderNavigationLayoutTile extends ConsumerWidget {
         context: context,
         builder: (context) => RadioListPopup<ReaderNavigationLayout>(
           title: context.l10n.readerNavigationLayout,
-          // Komikku's order, and it keeps Default now that Default resolves to
-          // a real layout rather than meaning "off".
           optionList: ReaderNavigationLayout.displayOrder,
           getOptionTitle: (value) => value.toLocale(context),
           value: layout,
@@ -96,9 +88,6 @@ class ReaderNavigationLayoutTile extends ConsumerWidget {
   }
 }
 
-/// Four-value tap inversion for one viewer, matching Komikku's
-/// pagerNavInverted / webtoonNavInverted. Settings previously offered only a
-/// legacy on/off switch.
 class ReaderTapInvertTile extends ConsumerWidget {
   const ReaderTapInvertTile({super.key, required this.longStrip});
 

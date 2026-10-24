@@ -8,10 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 
-/// A bottom-sheet that collects username + password for credential-based
-/// tracker login (i.e. trackers where [tracker.authUrl] is null).
-///
-/// Calls [onSubmit] with the entered (username, password) pair.
+/// Submits the entered username/password pair through onSubmit.
 class TrackerCredentialsSheet extends StatefulWidget {
   const TrackerCredentialsSheet({
     super.key,

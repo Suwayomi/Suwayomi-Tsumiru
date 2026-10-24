@@ -6,32 +6,23 @@
 
 import 'chapter_manifest.dart';
 
-/// One page of a committed chapter: where it now lives and how big it is.
 typedef CommittedPage = ({int pageIndex, String relPath, int bytes});
 
-/// What a chapter's final directory holds, as recovery sees it.
 enum ChapterDirState {
-  /// No directory at all.
   absent,
 
-  /// A directory written before chapters became atomic, so nothing on disk
-  /// says how many pages it should have. Its completeness is unknowable and a
-  /// `downloaded` row is taken at its word.
+  /// No manifest; completeness is unknown, so trust the catalog state.
   legacy,
 
-  /// Has a manifest but is missing pages it lists — a commit that was
-  /// interrupted, or files lost since.
+  /// Manifest present but listed pages missing.
   incomplete,
 
-  /// Manifest present and every page it lists is there.
   complete,
 }
 
-/// A chapter's final directory: what shape it is in, and which download
-/// generation produced it (0 when its manifest predates them).
+/// Generation is 0 for manifests that predate generation tracking.
 typedef CommittedChapter = ({ChapterDirState state, int generation});
 
-/// A chapter that has files on disk, and which of its directories exist.
 typedef StoredChapter = ({
   int mangaId,
   int chapterId,
@@ -40,37 +31,22 @@ typedef StoredChapter = ({
   bool hasSuperseded,
 });
 
-/// Stores/removes a chapter's page image files on the device.
-///
-/// Chapters are written in two stages. Pages accumulate in a staging directory
-/// that nothing else on the device looks at, and the chapter becomes visible in
-/// one atomic directory rename once every page the manifest lists is present.
-/// A chapter is therefore either absent or whole — never a partial directory
-/// that a later page count would mistake for finished.
-///
-/// Abstract so the download orchestrator stays platform-agnostic and
-/// hermetically testable; the real implementation (dart:io, under the
-/// app-support dir) is provided at startup on native platforms.
+/// Pages remain in staging until a complete chapter is published by atomic rename.
 abstract class OfflinePageStore {
-  /// Open staging for a chapter and record what a complete download of it looks
-  /// like. Call before writing any page. Safe to call on existing staging — the
-  /// manifest is replaced, which is how a re-resolved page list takes effect.
+  /// Call before writing pages; replaces any existing staging manifest.
   Future<void> beginChapter(
     int mangaId,
     int chapterId,
     ChapterManifest manifest,
   );
 
-  /// The manifest staging was opened with, or null when this chapter has no
-  /// (usable) staging.
+  /// Null when no usable staging manifest exists.
   Future<ChapterManifest?> readManifest(int mangaId, int chapterId);
 
-  /// Page indices already staged — the resume set. Half-written `.tmp` files
-  /// are deleted rather than counted.
+  /// Excludes and deletes half-written .tmp files.
   Future<Set<int>> stagedPageIndices(int mangaId, int chapterId);
 
-  /// Persist one page's [bytes] INTO STAGING; returns its staged relative path
-  /// and the number of bytes written.
+  /// Writes to staging, returning its relative path and byte count.
   Future<({String relPath, int bytes})> writePage(
     int mangaId,
     int chapterId,
@@ -79,65 +55,35 @@ abstract class OfflinePageStore {
     String ext,
   );
 
-  /// Promote staging into the chapter's final directory with a single rename,
-  /// and report the pages now living there. Null when staging is missing or
-  /// incomplete — the caller leaves it alone so the download can resume.
-  ///
-  /// Byte sizes are measured after the rename and cover only manifest-listed
-  /// pages, so stray files can't inflate the catalog's accounting.
+  /// Atomically promotes staging; null leaves missing/incomplete staging available for resume.
+  /// Byte counts include only manifest-listed pages, measured after promotion.
   Future<List<CommittedPage>?> commitStaging(int mangaId, int chapterId);
 
-  /// Every chapter with files on disk — the recovery scan's work list.
-  ///
-  /// Bounded by what has actually been downloaded, unlike the chapter table,
-  /// which is the size of the whole library.
+  /// Scans files on disk rather than the whole library catalog.
   Future<List<StoredChapter>> chaptersOnDisk();
 
-  /// Inspect a chapter's committed directory — what recovery reads to decide
-  /// between adopting it, grandfathering it, and rebuilding it. Deliberately
-  /// does NOT measure the pages: recovery asks this of every downloaded chapter
-  /// on every launch and resume, and almost all of them need no more than the
-  /// shape.
+  /// Inspects shape and generation without measuring page bytes.
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId);
 
-  /// The committed pages of a chapter, measured. Only the adopt path needs
-  /// this — one chapter, not the whole library.
   Future<List<CommittedPage>> committedPages(int mangaId, int chapterId);
 
-  /// Total bytes currently staged for a chapter. Unlike [chapterBytes] this
-  /// covers a chapter that hasn't been published yet.
   Future<int> stagedBytes(int mangaId, int chapterId);
 
-  /// Discard a chapter's committed directory, leaving any staging alone —
-  /// for content a delete was supposed to remove and didn't.
+  /// Leaves staging untouched.
   Future<void> deleteCommitted(int mangaId, int chapterId);
 
-  /// Discard the copy set aside during a replacement. A kill between promoting
-  /// the new chapter and clearing the old one leaves it behind, where nothing
-  /// reads it and it costs a whole chapter of storage.
   Future<void> deleteSuperseded(int mangaId, int chapterId);
 
-  /// Put a set-aside copy back as the chapter, when nothing else is there.
-  /// True if it was restored. A kill mid-replacement followed by a failed
-  /// download can leave that copy as the ONLY one, and the catalog still
-  /// calling the chapter downloaded — deleting it then is data loss.
+  /// Restores a superseded copy only when no committed directory exists; reports success.
   Future<bool> restoreSuperseded(int mangaId, int chapterId);
 
-  /// Discard a chapter's staging directory (delete, or a producer that lost its
-  /// claim cleaning up after itself).
   Future<void> deleteStaging(int mangaId, int chapterId);
 
-  /// Remove all stored files for a chapter — committed pages AND any staging.
+  /// Removes committed files and staging.
   Future<void> deleteChapter(int mangaId, int chapterId);
 
-  /// Copy a chapter's committed page files onto another manga/chapter's staging
-  /// area (for migration: reuse downloaded bytes on the target instead of
-  /// re-fetching), returning the manifest staging was opened with.
-  ///
-  /// Always a copy: a rename would destroy the source before the target's
-  /// catalog write lands, and a crash in that window would leave the only copy
-  /// looking like a chapter the user had deleted. The caller removes the source
-  /// after the target commits.
+  /// Copies committed pages into target staging; the caller deletes the source after target commit.
+  /// A rename would lose the source if the target catalog write failed.
   Future<ChapterManifest> stageChapterCopy(
     int fromMangaId,
     int fromChapterId,
@@ -146,19 +92,14 @@ abstract class OfflinePageStore {
     required int generation,
   }) => throw UnimplementedError();
 
-  /// Total bytes of a chapter's committed page files (for the catalog's byte
-  /// count after a background download completes). 0 if nothing is stored.
+  /// Returns 0 when nothing is stored.
   Future<int> chapterBytes(int mangaId, int chapterId);
 
   Future<void> clearAll() => throw UnimplementedError();
 }
 
-/// Image bytes + file extension fetched for a single page.
 typedef PageBytes = ({List<int> bytes, String ext});
 
-/// A chapter's files couldn't be transferred to a migration target (missing
-/// source, or nothing on disk after the transfer) — the caller falls back to a
-/// server re-fetch of the target chapter.
 class OfflineTransferException implements Exception {
   const OfflineTransferException(this.message);
   final String message;

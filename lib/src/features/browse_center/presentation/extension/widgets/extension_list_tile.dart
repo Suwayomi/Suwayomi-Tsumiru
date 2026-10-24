@@ -10,10 +10,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../domain/content_rating.dart';
@@ -31,6 +33,7 @@ class ExtensionListTile extends HookConsumerWidget {
     final access = ref.watch(settledAccountAccessProvider);
     return ListTile(
       key: key,
+      onTap: () => ExtensionInfoRoute(pkgName: extension.pkgName).push(context),
       leading: ClipRRect(
         borderRadius: KBorderRadius.r8.radius,
         child: ServerImageWithCpi(
@@ -90,18 +93,26 @@ class ExtensionListTileTailing extends StatelessWidget {
 
   final Extension extension;
 
-  /// The label of the action in flight, or null when the tile is idle.
   final ValueNotifier<String?> runningAction;
   final WidgetRef ref;
 
-  /// Runs an extension action with the button's spinner and error toast.
-  /// [ExtensionActions] refreshes both the extension and the source list, so no
-  /// caller needs to pass a refresh callback down.
   Future<void> _run(
     String label,
     Future<void> Function(ExtensionActions actions) action,
   ) async {
     try {
+      if (label == ref.context.l10n.uninstalling) {
+        final context = ref.context;
+        if (!await confirmAction(
+              context,
+              title: context.l10n.uninstall,
+              message: context.l10n.confirmUninstallMessage,
+              action: context.l10n.uninstall,
+            ) ||
+            !context.mounted) {
+          return;
+        }
+      }
       runningAction.value = label;
       await AppUtils.guard(
         () => action(ref.read(extensionActionsProvider)),
@@ -109,8 +120,7 @@ class ExtensionListTileTailing extends StatelessWidget {
       );
       runningAction.value = null;
     } catch (_) {
-      // The refresh this action triggers can rebuild the list and dispose the
-      // tile out from under the spinner.
+      // Refreshing can dispose this tile before the action completes.
     }
   }
 
@@ -213,7 +223,6 @@ class ExtensionListTileTailing extends StatelessWidget {
     );
   }
 
-  /// Repairs an extension with no loaded sources or a phantom update (#428).
   VoidCallback _reinstall(BuildContext context) =>
       () => _run(
         context.l10n.reinstalling,

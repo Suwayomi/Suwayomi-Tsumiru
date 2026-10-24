@@ -50,19 +50,21 @@ Future<bool> reloadServerImage({
   return isCurrentSession();
 }
 
+final failedReaderPageReloadsProvider = Provider<Set<Future<void> Function()>>(
+  (ref) => {},
+);
+
+Future<void> retryFailedReaderPages(WidgetRef ref) async {
+  await Future.wait([
+    for (final reload in {...ref.read(failedReaderPageReloadsProvider)})
+      reload(),
+  ]);
+}
+
 final _trailingSlashes = RegExp(r'/+$');
 final _leadingSlashes = RegExp(r'^/+');
 
-/// Absolute URL for a server-relative image or page [path].
-///
-/// Suwayomi hands these out root-relative and already carrying the `/api/v1`
-/// prefix, so [appendApiToUrl] only applies when the path has none. A doubled
-/// prefix or slash misses the route and falls through to the WebUI SPA, which
-/// answers 200 with index.html — a bad join shows up as a broken image rather
-/// than an HTTP error.
-///
-/// Returns `''` for a blank [path]; callers must skip the request instead of
-/// passing the result on.
+/// Join server-relative paths without duplicating /api/v1; blank paths return '' and must not be fetched.
 String serverFileUrl({
   required String path,
   required String? baseUrl,
@@ -71,15 +73,12 @@ String serverFileUrl({
   required bool appendApiToUrl,
 }) {
   if (path.isEmpty) return '';
-  // Already absolute: a downloaded page (`file://`) or a fully-qualified URL.
   if (path.startsWith('http://') ||
       path.startsWith('https://') ||
       path.startsWith('file://')) {
     return path;
   }
 
-  // Only let the caller's `appendApiToUrl` add the prefix when the server did
-  // not already put one on the path.
   final hasApiPrefix = path.startsWith('/api/') || path.startsWith('api/');
   final origin = Endpoints.baseApi(
     baseUrl: baseUrl,
@@ -93,15 +92,10 @@ String serverFileUrl({
   return '$root/$relative';
 }
 
-/// Whether image requests carry the ui_login token in their URL rather than
-/// in an `Authorization` header. Only on the web, where this hasn't been
-/// verified against a cross-origin server (the header makes the browser send
-/// a CORS preflight). Elsewhere a URL token ends up in reverse-proxy access
-/// logs and in the image cache's URL bookkeeping, a header doesn't.
+/// Web uses URL tokens to avoid CORS preflights; native uses headers to keep tokens out of logs/cache keys.
 const bool kImageTokenInUrl = kIsWeb;
 
-/// [headers] with the ui_login `Authorization` header added, unless the token
-/// rides the URL on this platform (see [kImageTokenInUrl]).
+/// Add Authorization unless this platform carries tokens in image URLs.
 Map<String, String>? withUiLoginImageAuth(
   Map<String, String>? headers,
   String? token,
@@ -110,15 +104,10 @@ Map<String, String>? withUiLoginImageAuth(
   return {...?headers, 'Authorization': 'Bearer $token'};
 }
 
-/// [url] with the ui_login token appended when it rides the URL on this
-/// platform (see [kImageTokenInUrl]).
 String uiLoginImageUrl(String url, String? token) =>
     kImageTokenInUrl ? appendUiLoginToken(url, token) : url;
 
-/// [fetchUrl] as an external browser can open it. A browser can't be handed a
-/// header, so a ui_login token has to ride the URL: the one place the app
-/// still puts it there off the web. It stays in the browser's history, valid
-/// for the access token's lifetime (5 minutes by default).
+/// External browsers require URL tokens; the token remains in history until expiry.
 String serverImageBrowserUrl(WidgetRef ref, String fetchUrl) {
   if (kImageTokenInUrl ||
       ref.read(authTypeKeyProvider) != AuthType.uiLogin) {
@@ -130,8 +119,7 @@ String serverImageBrowserUrl(WidgetRef ref, String fetchUrl) {
   );
 }
 
-/// [appendUiLoginToken] for web addresses only: a local `file:` page would
-/// hand the token to the OS opener.
+/// Only web addresses may receive tokens; file URLs must never pass credentials to an OS opener.
 String appendUiLoginTokenToWebUrl(String url, String? token) {
   final scheme = Uri.tryParse(url)?.scheme;
   return scheme == 'http' || scheme == 'https'
@@ -139,11 +127,7 @@ String appendUiLoginTokenToWebUrl(String url, String? token) {
       : url;
 }
 
-/// Appends the ui_login access token to [url] as a query parameter, which the
-/// server accepts as a fallback for clients that can't send a header: the web
-/// build's images, and a page opened in an external browser. The delimiter
-/// comes from the parsed URI, since page URLs can already carry a query
-/// string.
+/// Add the token query parameter accepted by Suwayomi when clients cannot send headers.
 String appendUiLoginToken(String url, String? token) {
   if (url.isEmpty || token == null || token.isEmpty) return url;
   final hasQuery = Uri.tryParse(url)?.hasQuery ?? url.contains('?');
@@ -168,9 +152,6 @@ class ServerImage extends HookConsumerWidget {
     this.memCacheHeight,
   });
 
-  /// When set, the page is rendered straight off disk (downloaded chapter,
-  /// offline reading) instead of fetched from the server. The network path is
-  /// left untouched when this is null.
   final String? localFilePath;
 
   final String imageUrl;
@@ -179,29 +160,19 @@ class ServerImage extends HookConsumerWidget {
   final bool appendApiToUrl;
   final Widget Function(BuildContext, String, DownloadProgress)?
   progressIndicatorBuilder;
-  // Wraps the decoded image. Only invoked once the image has loaded (never for
-  // the placeholder), so callers can measure the real rendered page here.
+  // Invoked only after loading, so callers can measure the rendered image.
   final Widget Function(BuildContext, ImageProvider)? imageBuilder;
   final Widget Function(Widget child)? wrapper;
   final bool showReloadButton;
 
-  /// Trim solid page borders before display. Routes the
-  /// page through [CroppedImageProvider] so crop composes with rotate/split/
-  /// double via the existing [imageBuilder]. No-op on web.
+  /// Crop before the imageBuilder transform; no-op on web.
   final bool cropBorders;
 
-  /// Decode the image at this pixel size instead of the source's native
-  /// resolution. Long-strip webtoon pages are ~800×15000 source; decoding at
-  /// the actual on-screen width shrinks the GPU texture the compositor samples
-  /// every frame (the #196 high-GPU-while-scrolling cost). Aspect is preserved
-  /// when only one dimension is given. Callers pass display-px = logical × DPR.
+  /// Display-pixel decode size (logical × DPR); one dimension preserves aspect ratio.
   final int? memCacheWidth;
   final int? memCacheHeight;
 
-  /// Wrap [base] so it decodes at [memCacheWidth]/[memCacheHeight] (display px)
-  /// instead of the source's native resolution. Returns [base] unchanged when
-  /// no cap is set. Used for the offline/crop provider paths; the network path
-  /// takes memCache* directly on [CachedNetworkImage].
+  /// Cap offline/crop decode size; no cap returns base unchanged.
   ImageProvider _capDecode(ImageProvider base, int? width, int? height) =>
       (width == null && height == null)
       ? base
@@ -210,12 +181,24 @@ class ServerImage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
-    // Debounce the decode resolution. Reader modes tie memCache* to the window
-    // size; a desktop window resize changes it every frame, which would evict
-    // and re-decode the page each frame — flashing its placeholder ("black")
-    // until the drag stops. Holding the last decode size lets the current bitmap
-    // stretch smoothly, then re-decodes once when the size settles. Static
-    // memCache* (thumbnails/covers) never changes, so this is a no-op there.
+    final failed = useRef(false);
+    final reload = useRef<Future<void> Function()?>(null);
+    final reloads =
+        showReloadButton &&
+            imageUrl.isNotEmpty &&
+            localFilePath == null &&
+            !imageUrl.startsWith('file:')
+        ? ref.watch(failedReaderPageReloadsProvider)
+        : null;
+    useEffect(() {
+      Future<void> retry() async {
+        if (failed.value) await reload.value?.call();
+      }
+
+      reloads?.add(retry);
+      return () => reloads?.remove(retry);
+    }, [reloads, showReloadButton]);
+    // Debounce window-driven decode sizes to avoid eviction/re-decoding on every resize frame.
     final int? cacheWidth = useSettled(
       memCacheWidth,
       const Duration(milliseconds: 250),
@@ -225,15 +208,7 @@ class ServerImage extends HookConsumerWidget {
       const Duration(milliseconds: 250),
     );
 
-    // Renders a crop provider through the same imageBuilder/wrapper contract as
-    // the normal paths (imageBuilder fires immediately with the provider, like
-    // the offline branch; consumers show the frame once it decodes).
-    //
-    // No `_capDecode`/`ResizeImage` wrap here, unlike the other paths below:
-    // `CroppedImageProvider` takes the decode cap directly (targetWidth/
-    // targetHeight passed in at the call sites) and applies it itself, since
-    // wrapping it in `ResizeImage` would silently do nothing for the cropped
-    // branch (see the provider's own doc comment).
+    // CroppedImageProvider applies its own decode cap; wrapping it in ResizeImage has no effect.
     Widget renderCrop(ImageProvider provider) {
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
@@ -260,12 +235,7 @@ class ServerImage extends HookConsumerWidget {
 
     final wantCrop = cropBorders && !kIsWeb;
 
-    // Offline: render the downloaded page from disk. Triggered either by an
-    // explicit localFilePath or by a `file://` imageUrl (the offline reader
-    // serves downloaded chapters as file URIs). Returned BEFORE any auth /
-    // server provider reads, so local pages never subscribe to token rotation
-    // (no rebuild storms) and need no network. Both inputs are immutable per
-    // widget instance, so this branch is consistent across rebuilds.
+    // Resolve local pages before auth/provider reads so offline images need no network or token subscriptions.
     final localPath =
         localFilePath ??
         (imageUrl.startsWith('file:')
@@ -309,9 +279,7 @@ class ServerImage extends HookConsumerWidget {
       );
     }
 
-    // Callers pass "" for entries with no image (a source restored from the
-    // offline catalog, a null thumbnailUrl). Fetching it would hit the bare
-    // origin, which answers with the WebUI's index.html.
+    // An empty image path hits the origin's WebUI HTML instead of an image.
     if (imageUrl.isEmpty) {
       return AppUtils.wrapOn(
         wrapper,
@@ -322,7 +290,6 @@ class ServerImage extends HookConsumerWidget {
       );
     }
 
-    // Providers
     final authType = ref.watch(authTypeKeyProvider);
     final basicToken = ref.watch(credentialsProvider).value;
 
@@ -378,15 +345,11 @@ class ServerImage extends HookConsumerWidget {
     httpHeaders = withUiLoginImageAuth(httpHeaders, uiToken);
     final fetchUrl = uiLoginImageUrl(baseApi, uiToken);
 
-    // Native covers use durable storage separate from the page cache.
-    // Web covers and pages share the credential-aware memory cache.
     final cacheManager = isCoverImagePath(imageUrl)
         ? ref.watch(coverCacheManagerProvider)
         : ref.watch(serverPageCacheManagerProvider);
 
-    // Covers re-decode from disk within a few frames after any cache clear
-    // (tab switch under pressure, background trim). Delaying the shimmer
-    // hides those near-instant reloads while real network loads still show one.
+    // Delay shimmer so quick cache re-decodes do not flash a placeholder.
     final defaultIndicator = isCoverImagePath(imageUrl)
         ? const DelayedShimmer()
         : const CenterSorayomiShimmerIndicator();
@@ -407,7 +370,28 @@ class ServerImage extends HookConsumerWidget {
         !reloadStore.sessionChanging &&
         reloadStore.sessionEpoch == reloadEpoch;
 
+    reload.value = () async {
+      final ready = await reloadServerImage(
+        cacheKeys: {cacheKey},
+        isCurrentSession: canReload,
+        evict: cacheManager.removeFile,
+        refresh: () async {
+          await ref
+              .read(authCoordinatorProvider.notifier)
+              .refreshUiAccessTokenIfDue(
+                gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+                trigger: 'image-reload',
+              );
+        },
+      );
+      if (ready && canReload()) {
+        failed.value = false;
+        key.value = UniqueKey();
+      }
+    };
+
     Widget errorWidget(BuildContext context, String error, stackTrace) {
+      failed.value = true;
       if (showReloadButton) {
         return AppUtils.wrapOn(
           wrapper,
@@ -424,24 +408,7 @@ class ServerImage extends HookConsumerWidget {
                   ),
                   const Gap(32),
                   TextButton(
-                    onPressed: () async {
-                      final ready = await reloadServerImage(
-                        cacheKeys: {cacheKey},
-                        isCurrentSession: canReload,
-                        evict: cacheManager.removeFile,
-                        refresh: () async {
-                          await ref
-                              .read(authCoordinatorProvider.notifier)
-                              .refreshUiAccessTokenIfDue(
-                                gqlClient: ref.read(
-                                  unauthenticatedGraphQlClientProvider,
-                                ),
-                                trigger: 'image-reload',
-                              );
-                        },
-                      );
-                      if (ready && canReload()) key.value = UniqueKey();
-                    },
+                    onPressed: () => reload.value?.call(),
                     child: Text(context.l10n.reload),
                   ),
                 ],
@@ -473,10 +440,7 @@ class ServerImage extends HookConsumerWidget {
       );
     }
 
-    // cached_network_image hands `imageBuilder` the RAW provider, so its
-    // memCache* is ignored whenever an imageBuilder is set (multichapter /
-    // infinity / paged all set one). Inject the decode cap into the caller's
-    // builder instead, and only pass memCache* to the plain-render path.
+    // cached_network_image passes imageBuilder a raw provider, so inject its decode cap here.
     final imageBuilderCapped = imageBuilder == null
         ? null
         : (BuildContext ctx, ImageProvider provider) =>
@@ -485,8 +449,7 @@ class ServerImage extends HookConsumerWidget {
     final fadeDuration = context.reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 150);
-    // Same cache key under a new manager would otherwise keep the old load,
-    // including its failure, on screen until the widget is recreated.
+    // Changing managers must invalidate the widget load even if the cache key is unchanged.
     return KeyedSubtree(
       key: ValueKey(cacheManager),
       child: CachedNetworkImage(
@@ -498,8 +461,7 @@ class ServerImage extends HookConsumerWidget {
         httpHeaders: httpHeaders,
         width: size?.width,
         fit: fit ?? BoxFit.cover,
-        // Package defaults linger the placeholder a full second after the image
-        // is ready. Zero shows the image at once (octo_image completes it inline).
+        // Zero bypasses the package's extra second of placeholder after decoding.
         fadeOutDuration: fadeDuration,
         fadeInDuration: fadeDuration,
         memCacheWidth: imageBuilder == null ? cacheWidth : null,
@@ -552,10 +514,7 @@ class ServerImageWithCpi extends StatelessWidget {
   }
 }
 
-/// The fetch URL, cache key and auth headers [ServerImage] would use for
-/// [imageUrl] — so a caller that needs the raw bytes (e.g. the crop-borders
-/// path) hits the SAME cache entry with the SAME auth instead of re-deriving.
-/// [localPath] is set for offline/`file://` pages (bytes come from disk).
+/// Share ServerImage URL/cache key/auth; localPath marks offline or file-URI bytes.
 ({
   String fetchUrl,
   String cacheKey,
@@ -622,12 +581,7 @@ serverImageRequest(
   );
 }
 
-/// The [ImageProvider] matching what [ServerImage] renders for [imageUrl] —
-/// same URL, cacheKey and auth, but WITHOUT the widget's memCache* decode cap,
-/// so a prefetch through this decodes native-res into its own cache entry.
-/// Callers use it to learn page dimensions (and warm the network cache) ahead
-/// of the viewport; mirrors the provider selection in [ServerImage.build];
-/// reads creds non-reactively (ref.read).
+/// Matching provider without a decode cap; prefetches native resolution and reads credentials non-reactively.
 ImageProvider serverPageImageProvider(
   WidgetRef ref,
   String imageUrl, {

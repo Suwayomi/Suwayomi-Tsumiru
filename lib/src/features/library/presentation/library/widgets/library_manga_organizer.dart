@@ -18,8 +18,7 @@ import 'library_manga_filter.dart';
 import 'library_manga_group.dart';
 import 'library_manga_sort_tile.dart';
 
-/// Sort-key display order. Kept separate from the
-/// `MangaSort` enum declaration because that is persisted by index.
+/// Display order is separate from MangaSort because enum indices are persisted.
 const List<MangaSort> librarySortDisplayOrder = [
   MangaSort.alphabetical,
   MangaSort.rating,
@@ -51,9 +50,7 @@ class LibraryMangaOrganizer extends ConsumerWidget {
   }
 }
 
-/// The organizer sizes itself to the ACTIVE tab's content (up to 72% of the
-/// screen, then scrolls), animating the height as you move between tabs — so
-/// the sheet is short for Group and taller for Sort instead of a fixed panel.
+/// Sizes to the active tab, capped at 72% of screen height.
 class _OrganizerBody extends StatelessWidget {
   const _OrganizerBody({required this.hasTrackers});
   final bool hasTrackers;
@@ -64,10 +61,6 @@ class _OrganizerBody extends StatelessWidget {
     final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
     final tabs = <Widget>[
       const LibraryMangaFilter(),
-      // Sort — display order: Alphabetical, Total
-      // chapters, Last read, Last update, Unread, Latest chapter, Chapter fetch
-      // date, Date added, [Tracker score], Random. (Enum declaration order
-      // differs because prefs are stored by index.)
       ListView(
         shrinkWrap: true,
         children: [
@@ -76,7 +69,6 @@ class _OrganizerBody extends StatelessWidget {
               LibraryMangaSortTile(sortType: sortType),
         ],
       ),
-      // Display absorbs the old Badges tab as a trailing section.
       _DisplayTab(),
       const LibraryMangaGroup(),
     ];
@@ -86,9 +78,7 @@ class _OrganizerBody extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           TabBar(
-            // Non-scrollable tabs: fill alignment keeps the selection underline
-            // aligned under every tab (the global theme defaults to
-            // TabAlignment.center for the scrollable category tabs).
+            // Fill alignment overrides the theme's centered alignment for scrollable tabs.
             tabAlignment: TabAlignment.fill,
             tabs: [
               Tab(text: context.l10n.filter),
@@ -97,12 +87,7 @@ class _OrganizerBody extends StatelessWidget {
               Tab(text: context.l10n.group),
             ],
           ),
-          // Rebuild + animate the height whenever the active tab changes.
-          // Flexible, not a bare child: the 72% cap is measured against the
-          // whole screen, but the space actually handed to the sheet shrinks
-          // when something above it appears — the "Updating library" strip is
-          // a sibling of the page content. Without this the column overflows
-          // by whatever that strip costs.
+          // Flexible also respects space taken by siblings such as the updating banner.
           Flexible(
             child: AnimatedBuilder(
               animation: controller,
@@ -127,9 +112,7 @@ class _OrganizerBody extends StatelessWidget {
   }
 }
 
-/// Display tab: today's display options with the old Badges tab as a
-/// trailing "Badges" section. One outer scrollable; both inner lists are
-/// nested (never scroll on their own).
+// One outer scrollable owns both nested display and badge lists.
 class _DisplayTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

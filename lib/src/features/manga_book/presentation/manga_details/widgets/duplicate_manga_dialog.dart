@@ -3,13 +3,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-//
-// Komikku-parity "possible duplicates" dialog (#118/#117 design,
-// 2026-07-24). Single mode fires on an individual add; bulk mode is the
-// paused-per-duplicate step of the multi-select add flow. The dialog never
-// navigates itself — long-press and "Show entry" report the target manga
-// via [onOpenEntry] and pop `openedEntry`; the caller navigates once the
-// dialog has closed.
+// The caller navigates after the dialog closes; [onOpenEntry] reports the target before openedEntry.
 
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -28,7 +22,6 @@ enum DuplicateDialogResult {
   cancel,
   openedEntry,
   migrated,
-  // Bulk-only.
   allowAll,
   skipIt,
   skipAll,
@@ -48,31 +41,23 @@ class DuplicateMangaDialog extends StatelessWidget {
     this.bulk = false,
   });
 
-  /// The manga being added.
   final MangaDto candidate;
 
-  /// The existing library entries flagged as possible duplicates.
   final List<MangaDto> duplicates;
 
-  /// Ids (from [duplicates]) that share a tracker binding with [candidate] —
-  /// a certain match, not just a title/description heuristic.
+  /// Tracker-bound matches are certain, rather than title/description heuristics.
   final Set<int> certainIds;
 
   /// Resolves a tracker id to its display name; null renders the generic
   /// "Same tracker entry" chip instead of naming the service.
   final String? Function(int trackerId) trackerNameOf;
 
-  /// Migrates a tapped duplicate into [candidate]. Supplied in both single
-  /// and bulk mode by the caller — null only matters as a defensive
-  /// fallback (open the entry instead of migrating).
+  /// Null falls back to opening the entry instead of migrating.
   final MigrateDuplicate? onMigrate;
 
-  /// Reports which manga a long-press (or bulk's "Show entry") targeted,
-  /// called before the dialog pops `openedEntry`. The caller navigates
-  /// after the dialog closes — this dialog never pushes a route itself.
+  /// Reports the target before popping openedEntry; the caller navigates after dismissal.
   final ValueChanged<MangaDto>? onOpenEntry;
 
-  /// Bulk-add mode: adds Allow all / Skip it / Skip all / Show entry.
   final bool bulk;
 
   Future<void> _handleCardTap(BuildContext context, MangaDto duplicate) async {
@@ -105,9 +90,7 @@ class DuplicateMangaDialog extends StatelessWidget {
       title: Text(context.l10n.possibleDuplicatesTitle),
       content: SizedBox(
         width: double.maxFinite,
-        // The card row has a fixed height regardless; wrapping the whole
-        // content in a scroll view (rather than a bare Column) means a
-        // small dialog viewport scrolls instead of overflowing.
+        // Allow the fixed-height cards to scroll when the dialog viewport is small.
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -198,10 +181,7 @@ class _DuplicateCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
-  /// The tracker binding [duplicate] shares with [candidate], if any — used
-  /// only to pick which tracker name to show in the certain-match chip.
-  /// [isCertain] (computed by the matcher) is the actual gate; this is a
-  /// best-effort lookup for the label.
+  /// [isCertain] gates the match; this best-effort lookup only supplies its tracker label.
   int? get _sharedTrackerId {
     for (final node in duplicate.trackRecords.nodes) {
       final shared = candidate.trackRecords.nodes.any(
@@ -232,8 +212,7 @@ class _DuplicateCard extends StatelessWidget {
           SizedBox(
             width: _kCardWidth,
             height: 150,
-            // Loose fit let the cover shrink to the art's aspect, leaving
-            // the corner badges floating in the leftover space.
+            // Expand the cover to keep corner badges attached to the card bounds.
             child: Stack(
               fit: StackFit.expand,
               children: [

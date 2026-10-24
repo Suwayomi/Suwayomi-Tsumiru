@@ -4,8 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// The Updates list filters, as one value. A record so equality is structural —
-/// the screen compares it between builds to decide whether to refetch.
+/// Structural equality lets the screen detect filter changes between builds.
 typedef UpdatesFilter = ({
   bool? downloaded,
   bool? unread,

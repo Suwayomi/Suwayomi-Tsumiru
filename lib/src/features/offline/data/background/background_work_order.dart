@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'background_endpoint.dart' show pickBackgroundServerBase;
 import 'background_token_record.dart';
 
 class BackgroundWorkOrder {
@@ -32,32 +31,23 @@ class BackgroundWorkOrder {
   final List<int> chapterIds;
   final Map<int, int> mangaIdByChapter;
 
-  /// Per-chapter download generation (bumped on delete). The worker echoes it on
-  /// every event so the main isolate can drop a stale generation's events.
+  /// Worker events echo this generation so main rejects pre-delete events.
   final Map<int, int> generationByChapter;
 
-  /// The address the foreground had verified; the worker's identity checks
-  /// are tied to it.
+  /// Verified address anchors identity checks even if transport changes.
   final String serverBase;
 
-  /// The server's two configured addresses, so the worker can reach it from
-  /// whichever network it is on (see [pickBackgroundServerBase]). Null in
-  /// orders written before they were kept.
+  /// Null in legacy orders; otherwise transport can follow network changes.
   final String? lanUrl, externalUrl;
   final int? port;
   final bool addPort;
   final bool wifiOnly;
   final BackgroundTokenRecord auth;
 
-  /// Absolute offline base directory (`<appSupport>/offline`), resolved by the
-  /// MAIN isolate via path_provider and handed to the worker so it stays
-  /// plugin-free (builds [OfflinePaths]/[IoOfflinePageStore] from this string
-  /// with only dart:io).
+  /// Resolved on the main isolate because path_provider requires platform channels.
   final String baseDir;
 
-  /// Vestigial — the plugin-free worker touches no platform channels so this
-  /// is unused. Kept only so the JSON shape stays backward-compatible;
-  /// defaults to 0 and is ignored.
+  /// Ignored; retained only for backward-compatible JSON.
   final int rootIsolateToken;
 
   Map<String, Object?> toJson() => {
@@ -108,5 +98,4 @@ class BackgroundWorkOrder {
       );
 }
 
-/// Manifest meta-data key naming the monochrome status-bar icon drawable.
 const kNotificationIconMetaData = 'app.tsumiru.NOTIFICATION_ICON';

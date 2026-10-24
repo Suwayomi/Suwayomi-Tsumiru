@@ -51,9 +51,8 @@ class DownloadProgressListTile extends HookConsumerWidget {
           await repo.addChaptersBatchToDownloadQueue([chapterId]);
         }
       })).showToastOnError(toast);
-    } catch (e) {
-      //
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   String _downloadingText(BuildContext context, DownloadDto downloadUpdate) {

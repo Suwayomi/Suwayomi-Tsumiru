@@ -13,22 +13,13 @@ import '../../../manga_book/domain/manga/manga_model.dart';
 
 const int kUnifiedSectionLimit = 6;
 
-/// Whether [q] should run through the full library DSL rather than title-only.
-/// Delegates to the DSL's own quote/brace-aware parser so detection matches
-/// exactly what the library filter bar treats as an operator (incl. `{a|b}`).
 bool queryUsesOperator(String q) => LibrarySearchQuery.hasOperator(q);
 
-/// The plain-text portion of [q] with metatag operators removed — what a global
-/// *source* search should receive. Operators like `unread:true` are local
-/// filters that make no sense against a source (`unread:true` → ``,
-/// `bad source:x` → `bad`). Quote/brace-aware via the DSL tokenizer.
+/// Removes local metatag operators before sending plain text to a source search.
 String plainQueryText(String q) => LibrarySearchQuery.plainText(q);
 
-/// The live query text in the unified search field.
 final unifiedSearchQueryProvider = StateProvider<String>((Ref ref) => '');
 
-/// Generic, testable filter+cap over a list, using an injected predicate.
-/// Extracted so the matching/cap rule is unit-testable without GraphQL DTOs.
 List<T> matchLibraryTitles<T>(
   List<T> items,
   String query,
@@ -45,9 +36,6 @@ List<T> matchLibraryTitles<T>(
   return out;
 }
 
-/// Generic, testable full count over a list, using an injected predicate.
-/// Same matching as [matchLibraryTitles] but without the cap, so a section
-/// header can show the real total while the row stays capped.
 int countLibraryTitles<T>(
   List<T> items,
   String query,
@@ -61,18 +49,10 @@ int countLibraryTitles<T>(
   return count;
 }
 
-/// Quick search matches the TITLE only. The library DSL (`MangaDto.query`)
-/// also matches author/genre/description/tags, which surfaces confusing hits
-/// like "bad" → a manga whose description mentions "bad".
 bool titleMatchesQuery(String title, String query) =>
     title.toLowerCase().contains(query.trim().toLowerCase());
 
-/// Top matching in-library manga for an explicit query (instant, local).
-///
-/// Hybrid: plain words match the TITLE only (keeps "bad" clean); the moment the
-/// query contains a metatag operator it runs the full library DSL, so quick
-/// search is never weaker than the library filter bar. A family so desktop
-/// dropdowns can search their own field text, not the overlay's query.
+/// Plain words match titles only; metatag queries use the full library DSL.
 final unifiedLibraryResultsForProvider = Provider.autoDispose
     .family<List<MangaDto>, String>((Ref ref, String query) {
       final library = ref.watch(libraryMangaListProvider).value ?? const [];
@@ -84,9 +64,6 @@ final unifiedLibraryResultsForProvider = Provider.autoDispose
       );
     });
 
-/// Total number of in-library matches for [query], without the section cap.
-/// Same matcher as [unifiedLibraryResultsForProvider], so the header count and
-/// the capped row can never disagree on what counts as a match.
 final unifiedLibraryResultCountForProvider = Provider.autoDispose
     .family<int, String>((Ref ref, String query) {
       final library = ref.watch(libraryMangaListProvider).value ?? const [];
@@ -98,7 +75,6 @@ final unifiedLibraryResultCountForProvider = Provider.autoDispose
       );
     });
 
-/// Top matching in-library manga for the current query (instant, local).
 final unifiedLibraryResultsProvider = Provider<List<MangaDto>>(
   (Ref ref) => ref.watch(
     unifiedLibraryResultsForProvider(ref.watch(unifiedSearchQueryProvider)),

@@ -24,13 +24,7 @@ class MissingChaptersEntry extends MangaChapterListEntry {
   final int count;
 }
 
-/// Inserts each catalogue gap once into an already sorted chapter list.
-///
-/// Gaps come from [sortedChapters], before display filters are applied. The
-/// [visibleChapterIds] set only controls chapter rows, so filtering a present
-/// chapter cannot make it look missing. Each gap is anchored to its higher
-/// chapter once, regardless of display order. [ascending] controls which side
-/// of that row the notice occupies and the edge for an initial gap.
+/// Insert catalogue gaps once, anchored to their higher chapter; display filters must not create gaps.
 List<MangaChapterListEntry> buildMangaChapterListEntries({
   required List<ChapterDto> sortedChapters,
   required Set<int> visibleChapterIds,

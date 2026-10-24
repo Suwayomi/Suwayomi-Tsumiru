@@ -43,8 +43,6 @@ class BigScreenNavigationBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The desktop shell uses the custom sidebar; below large it shows
-    // collapsed whatever the user chose. Landscape phones keep the icon rail.
     if (context.usesDesktopShell) {
       return DesktopSidebar(
         selectedIndex: selectedIndex,
@@ -56,23 +54,17 @@ class BigScreenNavigationBar extends ConsumerWidget {
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final navList = NavigationBarData.getNavList(context);
-    // The rail shows for a landscape phone too, where the height is tight, so
-    // only that case drops the app-icon header to make room for all
-    // destinations ("More" was falling off the bottom).
+    // Landscape phones omit the header to leave room for destinations.
     final isPhone = !context.usesDesktopShell;
 
     const logoIcon = TsumiruLogo(size: 48);
 
-    // Landscape phone: compact logo (no collapse — already an icon rail).
     final leadingIcon = IconButton(
       onPressed: () => const AboutRoute().push(context),
       icon: logoIcon,
     );
 
-    // The rail doesn't scroll on its own, so in landscape (short height) its
-    // destinations overflow the bottom. Let it scroll when it can't fit, while
-    // still filling the height when there's room (so spacing/indicator look
-    // right).
+    // NavigationRail cannot scroll itself; allow short windows to scroll destinations.
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         child: ConstrainedBox(

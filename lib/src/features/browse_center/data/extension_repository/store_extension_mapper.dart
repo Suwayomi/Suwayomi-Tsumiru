@@ -7,8 +7,6 @@
 import '../../domain/extension/graphql/__generated__/fragment.graphql.dart';
 import '../../domain/extension/graphql/__generated__/store_fragment.graphql.dart';
 
-/// Builds the legacy DTO every downstream consumer already understands
-/// (same hand-construction precedent as offline_dto_mappers.dart).
 Fragment$ExtensionDto extensionFromStoreDto(Fragment$StoreExtensionDto d) =>
     Fragment$ExtensionDto(
       apkName: d.apkName,
@@ -20,7 +18,14 @@ Fragment$ExtensionDto extensionFromStoreDto(Fragment$StoreExtensionDto d) =>
       lang: d.lang,
       name: d.name,
       pkgName: d.pkgName,
-      repo: null,
-      versionCode: d.versionCode,
+      versionCodeLong: d.versionCodeLong,
       versionName: d.versionName,
+      storeIndexUrl: d.storeIndexUrl,
+      extensionLib: d.extensionLib,
+      extensionStore: d.extensionStore == null
+          ? null
+          : Fragment$ExtensionDto$extensionStore(
+              name: d.extensionStore!.name,
+              indexUrl: d.extensionStore!.indexUrl,
+            ),
     );

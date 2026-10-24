@@ -30,7 +30,9 @@ import '../../domain/server_update/server_update.dart';
 import 'controllers/about_controller.dart';
 import 'widget/app_update_dialog.dart';
 import 'widget/clipboard_list_tile.dart';
+import 'widget/debug_information_tile.dart';
 import 'widget/media_launch_button.dart';
+import 'widget/server_update_alert_tiles.dart';
 
 class AboutScreen extends HookConsumerWidget {
   const AboutScreen({super.key});
@@ -45,7 +47,6 @@ class AboutScreen extends HookConsumerWidget {
     toast?.show(context.l10n.searchingForUpdates);
     AsyncValue.guard(updateCallback).then((value) {
       toast?.close();
-      // Left the About screen before the check resolved → context is dead.
       if (!context.mounted) return;
       try {
         value.whenOrNull(
@@ -124,8 +125,8 @@ class AboutScreen extends HookConsumerWidget {
     final toast = ref.watch(toastProvider);
     final aboutAsync = ref.watch(aboutProvider);
     final about = aboutAsync.value;
-    // revision is deprecated server-side: the version already carries it as the
-    // patch number, so appending it printed the build number twice.
+    final webUi = ref.watch(aboutWebUIProvider).value;
+    // Server version already includes revision as its patch number.
     final serverVer = about?.version;
     final packageInfo = ref.watch(packageInfoProvider);
     final serverHosted = ref.watch(serverHostedWebProvider);
@@ -137,12 +138,8 @@ class AboutScreen extends HookConsumerWidget {
       return;
     }, [aboutAsync.value]);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.about);
-    // Inside the settings window the About page trades the large centred
-    // logo for a compact left-aligned header under the pane title.
     final inSettingsWindow = SettingsPaneScope.maybeOf(context) != null;
     final scaffold = Scaffold(
       appBar: topBar
@@ -211,6 +208,16 @@ class AboutScreen extends HookConsumerWidget {
                           );
                         },
                       ),
+                      ListTile(
+                        title: Text(context.l10n.helpTranslate),
+                        onTap: () async {
+                          await launchUrlInWeb(
+                            context,
+                            AppUrls.weblateTranslate.url,
+                            toast,
+                          );
+                        },
+                      ),
                       if (!isGooglePlayBuild)
                         ListTile(
                           title: Text(
@@ -273,6 +280,12 @@ class AboutScreen extends HookConsumerWidget {
                               toast: toast,
                             ),
                           ),
+                        const ServerUpdateAlertTiles(),
+                        DebugInformationTile(
+                          about: about,
+                          webUiFlavor: webUi?.channel.name,
+                          webUiVersion: webUi?.tag,
+                        ),
                       ],
                     ),
                   ],
@@ -282,9 +295,16 @@ class AboutScreen extends HookConsumerWidget {
                       alignment: WrapAlignment.spaceEvenly,
                       children: [
                         MediaLaunchButton(
-                          title: "${context.l10n.gitHub} ",
+                          title: context.l10n.githubTsumiru,
                           icon: Icon(BrandIcons.github),
                           url: AppUrls.sorayomiGithubUrl.url,
+                          toast: toast,
+                        ),
+                        if ((about?.github).isNotBlank)
+                          MediaLaunchButton(
+                            title: context.l10n.githubServer,
+                            icon: Icon(BrandIcons.github),
+                            url: about!.github,
                           toast: toast,
                         ),
                         if ((about?.discord).isNotBlank)

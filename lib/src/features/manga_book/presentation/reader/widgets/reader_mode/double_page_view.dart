@@ -10,16 +10,10 @@ import '../../../../../../constants/enum.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
 import 'paged_spread_mapping.dart';
-import 'rotate_wide_page.dart';
 
-/// Gap (logical px) inserted by CenterMarginType — a foldable-style dead space
-/// between paired pages / around a wide page.
+/// Logical-pixel dead space between paired pages or around a wide page.
 const double kCenterMargin = 16.0;
 
-/// Renders one [SpreadEntry] for the horizontal paged viewer: a single page, a
-/// side-by-side pair (double), or a clipped half of a wide page (split). Each
-/// page reuses [ServerImage] for loading/reload/progress, so per-page settings
-/// (image scale, rotate-wide) behave exactly as the single-page path.
 class DoublePageView extends StatelessWidget {
   const DoublePageView({
     super.key,
@@ -39,11 +33,9 @@ class DoublePageView extends StatelessWidget {
 
   final SpreadEntry entry;
 
-  /// Raw page URLs (`chapterPages.pages`).
   final List<String> pages;
 
-  /// Per-page image fit + decode-size (from ImageScaleType.pagedFit) — matches
-  /// the single-page render for a full page.
+  /// Fit and decode caps match full-page rendering in the single-page viewer.
   final BoxFit? pageFit;
   final Size? pageSize;
 
@@ -62,11 +54,9 @@ class DoublePageView extends StatelessWidget {
   /// page at its own size (Original size) and to bound panning.
   final void Function(int raw, Size natural) onNaturalSize;
 
-  /// Original size: lay out at decoded pixel size — scaling a fitted image up
-  /// to 1:1 would just magnify and blur it.
+  /// Render at decoded size for 1:1; magnifying a fitted image would blur it.
   final bool naturalSize;
 
-  /// Auto-crop solid borders — threaded to each slot's [ServerImage].
   final bool cropBorders;
 
   bool get _marginOnDouble =>
@@ -82,12 +72,10 @@ class DoublePageView extends StatelessWidget {
       return const Center(child: CenterSorayomiShimmerIndicator());
     }
 
-    // Split half — one half of a wide page fills the item.
     if (entry.first.half != PageHalf.full) {
       return _slot(entry.first);
     }
 
-    // Single full page (single mode, or a solo/wide page in double mode).
     if (!entry.isPair) {
       final wide = _slot(entry.first);
       if (_marginOnWide) {
@@ -106,13 +94,9 @@ class DoublePageView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: _slot(ordered[0], alignment: Alignment.centerRight),
-        ),
+        Expanded(child: _slot(ordered[0], alignment: Alignment.centerRight)),
         if (_marginOnDouble) const SizedBox(width: kCenterMargin),
-        Expanded(
-          child: _slot(ordered[1], alignment: Alignment.centerLeft),
-        ),
+        Expanded(child: _slot(ordered[1], alignment: Alignment.centerLeft)),
       ],
     );
   }
@@ -146,11 +130,6 @@ class DoublePageView extends StatelessWidget {
   }
 }
 
-/// Renders a decoded page fragment: measures aspect (reports wide), then draws
-/// the full page (optionally rotated) or a clipped left/right half. Aspect is
-/// resolved from the already-decoded provider (imageBuilder only fires after
-/// load, so this is a cache hit — never a new fetch), the same technique as
-/// [RotateWidePage].
 class _SpreadImage extends StatefulWidget {
   const _SpreadImage({
     required this.imageProvider,
@@ -197,9 +176,11 @@ class _SpreadImageState extends State<_SpreadImage> {
     if (oldWidget.imageProvider != widget.imageProvider) _resolve();
   }
 
+  // The provider is already decoded by imageBuilder, so resolving it here is a cache hit.
   void _resolve() {
-    final stream =
-        widget.imageProvider.resolve(createLocalImageConfiguration(context));
+    final stream = widget.imageProvider.resolve(
+      createLocalImageConfiguration(context),
+    );
     if (stream.key == _stream?.key) return;
     _stream?.removeListener(_listener);
     _stream = stream..addListener(_listener);
@@ -210,8 +191,7 @@ class _SpreadImageState extends State<_SpreadImage> {
     final w = info.image.width.toDouble();
     final h = info.image.height.toDouble();
     // Rotating a wide page swaps its axes, so report the size as drawn.
-    final natural =
-        widget.rotateWide && wide ? Size(h, w) : Size(w, h);
+    final natural = widget.rotateWide && wide ? Size(h, w) : Size(w, h);
     info.dispose();
     // Only full-page slots drive wide-detection; a half is already known wide.
     if (widget.half == PageHalf.full) {
@@ -234,7 +214,6 @@ class _SpreadImageState extends State<_SpreadImage> {
 
   @override
   Widget build(BuildContext context) {
-    // Split half: clip to half the natural width, then scale to fit the slot.
     if (widget.half != PageHalf.full) {
       final alignment = widget.half == PageHalf.left
           ? Alignment.centerLeft

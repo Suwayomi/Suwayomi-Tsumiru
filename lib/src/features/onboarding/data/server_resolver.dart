@@ -13,48 +13,17 @@ import '../../../constants/enum.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/web_auth_mode.dart';
 
-/// "Find server" connection resolver.
-///
-/// The onboarding Step 2 lets a user type a half-remembered address — a bare
-/// host, `host:port`, a full `https://…/suwayomi` URL, an IPv6 literal — and
-/// have the app figure out the working base URL (and whether it needs auth)
-/// without making them understand schemes/ports. This file is the PURE,
-/// testable core of that:
-///
-///   * [connectionCandidates] turns one fuzzy input into an ordered ladder of
-///     concrete base URLs to try.
-///   * [classifyProbeBody] reads a probe response body into a [ProbeResult].
-///   * [probeServer] runs ONE candidate over the network (short timeout,
-///     redirects OFF, lightweight http client) using the two-request protocol.
-///   * [resolveServer] walks the ladder and returns the best [ResolvedServer].
-///
-/// The network bits take their `http.Client` and timeout by parameter so the
-/// resolver can be driven entirely in-memory from unit tests.
 
-// ---------------------------------------------------------------------------
-// Result types
-// ---------------------------------------------------------------------------
 
-/// Per-candidate auth posture, derived from the two-request probe.
 enum ProbeAuthMode {
-  /// `aboutServer` returned data AND the @RequireAuth probe returned data —
-  /// the server is reachable with no auth (or we're already authorised).
+  /// Both aboutServer and the protected probe returned data.
   open,
 
-  /// `aboutServer` returned data but the @RequireAuth probe came back
-  /// "Unauthorized" — a real Suwayomi server that needs credentials.
+  /// aboutServer confirmed Suwayomi, but the protected probe requires credentials.
   authRequired,
 }
 
-/// The classified outcome of probing one candidate URL.
-///
-/// `confirmed` is the strong signal: we saw a real Suwayomi `aboutServer`
-/// payload. `reached` means the host answered with *something* HTTP-shaped but
-/// not a Suwayomi GraphQL body (could be a reverse proxy login page, a 401
-/// HTML page, the wrong service, …). `basicGated` is the special case where
-/// the transport itself is gated by HTTP Basic auth (a 401 with a
-/// `WWW-Authenticate: Basic` challenge) — we cannot see past it to confirm
-/// Suwayomi, so per spec it must NEVER short-circuit and NEVER read as found.
+/// Basic-gated hosts remain unconfirmed; only an aboutServer payload proves Suwayomi.
 class ProbeResult {
   const ProbeResult({
     required this.url,
@@ -67,7 +36,6 @@ class ProbeResult {
     this.serverVersion,
   });
 
-  /// Nothing answered at this candidate (socket error / timeout / no body).
   const ProbeResult.notReached(this.url)
     : confirmed = false,
       reached = false,
@@ -77,7 +45,6 @@ class ProbeResult {
       serverName = null,
       serverVersion = null;
 
-  /// The host answered but it was not a confirmable Suwayomi GraphQL body.
   const ProbeResult.reachedUnconfirmed(this.url)
     : confirmed = false,
       reached = true,
@@ -87,7 +54,6 @@ class ProbeResult {
       serverName = null,
       serverVersion = null;
 
-  /// The transport is behind HTTP Basic auth — opaque, cannot confirm.
   const ProbeResult.basicGatedResult(this.url)
     : confirmed = false,
       reached = true,
@@ -99,31 +65,23 @@ class ProbeResult {
 
   final String url;
 
-  /// We saw a genuine Suwayomi `aboutServer` payload at this URL.
   final bool confirmed;
 
-  /// The host responded with *something* (not a transport failure).
   final bool reached;
 
-  /// A 401 + `WWW-Authenticate: Basic` challenge fronts this URL.
   final bool basicGated;
 
-  /// When [confirmed], whether the server's @RequireAuth surface needs creds.
   final ProbeAuthMode? authMode;
 
-  /// The sign-in method this candidate appears to use, per [detectAuthType].
-  /// Null when the responses don't pin one down.
+  /// Null when responses do not identify an auth method.
   final AuthType? detectedAuthType;
 
-  /// `aboutServer.name`, when present in the body (read independently of
-  /// the `errors[]` array — a partial/errored response can still carry it).
+  /// Read even with errors alongside partial data.
   final String? serverName;
 
-  /// `aboutServer.version`, when present in the body.
   final String? serverVersion;
 }
 
-/// The final answer the UI consumes.
 class ResolvedServer {
   const ResolvedServer({
     required this.baseUrl,
@@ -134,17 +92,14 @@ class ResolvedServer {
     this.serverVersion,
   });
 
-  /// The base URL the UI should adopt (no `/api/graphql` suffix).
+  /// Base URL without /api/graphql.
   final String baseUrl;
 
-  /// How strong the match is — see [ResolveOutcome].
   final ResolveOutcome outcome;
 
-  /// For a [ResolveOutcome.found] result, whether the server needs auth.
   final ProbeAuthMode? authMode;
 
-  /// Which sign-in method the server's responses point at, so onboarding can
-  /// pre-select it. Null means undetectable — keep the Basic default.
+  /// Null leaves the sign-in method at its Basic default.
   final AuthType? detectedAuthType;
 
   final String? serverName;
@@ -153,71 +108,39 @@ class ResolvedServer {
   bool get isFound => outcome == ResolveOutcome.found;
 }
 
-/// Strength of the resolver's best result, in descending confidence.
 enum ResolveOutcome {
-  /// Confirmed Suwayomi server (`aboutServer` payload seen).
   found,
 
-  /// Best we could reach is behind HTTP Basic auth — can't confirm Suwayomi,
-  /// but there IS a server here. The UI prompts for basic creds.
+  /// Basic auth hides service identity; credentials are needed to confirm Suwayomi.
   basicGated,
 
-  /// Something answered but we couldn't confirm it's Suwayomi.
   reachedUnconfirmed,
 
-  /// Nothing answered at any candidate.
   notReached,
 }
 
-// ---------------------------------------------------------------------------
-// Candidate ladder + normalisation
-// ---------------------------------------------------------------------------
 
-/// Default Suwayomi port, surfaced on bare hosts so the user sees/edits it.
 const int kDefaultSuwayomiPort = 4567;
 
-/// Builds the ordered list of concrete base URLs to try for [rawInput].
-///
-/// Rules (red-teamed):
-///   * Trim, and treat blank as no candidates.
-///   * IPv6 literals are detected FIRST (bracketed `[::1]` or a bare literal
-///     that [Uri.parseIPv6Address] accepts) BEFORE any `host:port` split, so a
-///     bare `::1` / `fe80::1` is never mistaken for `host` + `port`.
-///   * An explicit scheme (`http://` / `https://`) is honoured verbatim and
-///     yields exactly ONE candidate — the user told us what they want.
-///   * A scheme-less input with NO typed port fans out http-first (spec
-///     decision #2, the LAN fast-path):
-///       http://host:4567, https://host, http://host
-///   * A scheme-less input WITH a typed port keeps that port on both schemes
-///     and skips the default-port / bare-host variants (spec Part A):
-///       http://host:port, https://host:port
-///   * Any base path the user typed is preserved on every candidate.
-///   * URLs are assembled via [Uri] (never string concatenation); a part that
-///     can't form a valid URL is dropped (never throws); the list is
-///     de-duplicated, order-preserving.
+/// Returns deduplicated probe URLs in preference order, preserving typed ports and base paths.
 List<String> connectionCandidates(String rawInput) {
   final input = rawInput.trim();
   if (input.isEmpty) return const [];
 
-  // --- Explicit scheme. ---
   final lower = input.toLowerCase();
   if (lower.startsWith('http://') || lower.startsWith('https://')) {
     final uri = Uri.tryParse(input);
     if (uri == null || uri.host.isEmpty) return const [];
     if (uri.hasPort) {
-      // Scheme AND port → fully specified; honour it verbatim (custom ports).
       return _dedup([_assemble(uri.scheme, uri.host, uri.port, uri.path)]);
     }
-    // Scheme but NO port → the user named a host, not a full address. Try the
-    // default Suwayomi port FIRST (a server is rarely on :80/:443 bare), then
-    // the scheme's bare port as a fallback.
+    // An explicit scheme without a port still tries the default Suwayomi port first.
     return _dedup([
       _assemble(uri.scheme, uri.host, kDefaultSuwayomiPort, uri.path),
       _assemble(uri.scheme, uri.host, null, uri.path),
     ]);
   }
 
-  // Split off any base path the user typed (everything from the first '/').
   String authority = input;
   String path = '';
   final slash = input.indexOf('/');
@@ -231,16 +154,13 @@ List<String> connectionCandidates(String rawInput) {
   if (host.isEmpty) return const [];
 
   if (port != null) {
-    // Explicit port: only the two scheme variants on that exact port; the
-    // 4567/443/80 substitutions are skipped (spec Part A, round-3 fix).
+    // Preserve an explicit port across both schemes; do not substitute ports.
     return _dedup([
       _assemble('http', host, port, path),
       _assemble('https', host, port, path),
     ]);
   }
 
-  // No port: http on the default Suwayomi port first (LAN), then bare https
-  // (:443, reverse-proxy), then bare http (:80).
   return _dedup([
     _assemble('http', host, kDefaultSuwayomiPort, path),
     _assemble('https', host, null, path),
@@ -248,10 +168,7 @@ List<String> connectionCandidates(String rawInput) {
   ]);
 }
 
-/// Splits a scheme-less authority into `(host, port?)`, handling IPv6 FIRST so
-/// a bare IPv6 literal's colons are never read as a port separator.
 (String, int?) _splitHostPort(String authority) {
-  // Bracketed IPv6: [::1] or [fe80::1]:4568
   if (authority.startsWith('[')) {
     final close = authority.indexOf(']');
     if (close < 0) return (authority, null); // malformed; pass through
@@ -264,22 +181,16 @@ List<String> connectionCandidates(String rawInput) {
     return (host, null);
   }
 
-  // Bare IPv6 literal (e.g. `::1`, `fe80::1`) — accepted by parseIPv6Address.
-  // Detect BEFORE the host:port split: such a literal has 2+ colons and must
-  // not be split on its last colon.
+  // Detect IPv6 before splitting host:port; its colons belong to the address.
   if (_isBareIpv6(authority)) {
     return (authority, null);
   }
 
-  // IPv4 / hostname: split on the single (last) colon if present.
   final colon = authority.lastIndexOf(':');
   if (colon >= 0) {
     final host = authority.substring(0, colon);
     final p = int.tryParse(authority.substring(colon + 1));
-    // Only treat the suffix as a port when it's numeric AND in range. A
-    // non-numeric ('host:abc') or out-of-range ('host:99999') suffix is not a
-    // port — return the whole authority as host so the bad candidate is
-    // dropped by [_assemble] rather than wasting a probe on a default port.
+    // Invalid port suffixes remain in the host so _assemble rejects them instead of probing a default port.
     if (p == null || p < 1 || p > 65535) return (authority, null);
     return (host, p);
   }
@@ -287,8 +198,6 @@ List<String> connectionCandidates(String rawInput) {
 }
 
 bool _isBareIpv6(String s) {
-  // A valid bare IPv6 literal contains '::' or has multiple ':' segments.
-  // parseIPv6Address is the authority; guard it with a try.
   if (!s.contains(':')) return false;
   try {
     Uri.parseIPv6Address(s);
@@ -298,16 +207,9 @@ bool _isBareIpv6(String s) {
   }
 }
 
-/// Assembles a base URL from parts via [Uri] — never string concatenation.
-/// [host] may be an IPv6 literal WITHOUT brackets; [Uri] re-brackets it.
-///
-/// Returns `null` (rather than throwing) when the parts can't form a valid URL
-/// — e.g. a host still carrying a stray `:` or userinfo `@` from a malformed
-/// input like `host:abc` or `user@host:4567`. [connectionCandidates] filters
-/// these out, so arbitrary user text never crashes the resolver.
+// Uri brackets bare IPv6 hosts; malformed parts return null instead of throwing.
 String? _assemble(String scheme, String host, int? port, String path) {
-  // Normalise the path: drop a lone trailing slash so `host/` and `host`
-  // produce the same candidate, but keep a real base path (e.g. `/suwayomi`).
+  // Drop a lone trailing slash but preserve a real base path.
   var p = path;
   if (p == '/') p = '';
   if (p.length > 1 && p.endsWith('/')) p = p.substring(0, p.length - 1);
@@ -319,8 +221,6 @@ String? _assemble(String scheme, String host, int? port, String path) {
       port: port,
       path: p.isEmpty ? '' : p,
     );
-    // Uri.toString() omits a default port for the scheme; that's fine — it
-    // keeps explicit non-default ports and drops redundant ones, de-dups well.
     return uri.toString();
   } on FormatException {
     return null;
@@ -336,35 +236,15 @@ List<String> _dedup(List<String?> urls) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Probe queries
-// ---------------------------------------------------------------------------
 
-/// Auth-exempt confirmation query: a real Suwayomi server answers this with
-/// `data.aboutServer{name,version}` whether or not auth is configured.
+// aboutServer is auth-exempt and confirms Suwayomi even when auth is configured.
 const String kAboutProbeQuery = 'query { aboutServer { name version } }';
 
-/// @RequireAuth probe: `downloadStatus` is gated server-side. Unauthenticated,
-/// the server returns an `errors[]` entry whose message is exactly
-/// "Unauthorized"; authenticated (or auth-disabled) it returns data.
+// downloadStatus requires auth and reports Unauthorized in GraphQL errors when denied.
 const String kAuthProbeQuery = 'query { downloadStatus { __typename } }';
 
-// ---------------------------------------------------------------------------
-// Classifier
-// ---------------------------------------------------------------------------
 
-/// Reads the [aboutBody] (response body of [kAboutProbeQuery]) and the
-/// [authBody] (response body of [kAuthProbeQuery]) into a [ProbeResult].
-///
-/// KEY RULES (red-teamed):
-///   * `aboutServer.name`/`.version` are read INDEPENDENTLY of `errors[]`: a
-///     response can carry partial data alongside errors and we still treat a
-///     present `aboutServer` as confirmation.
-///   * `authRequired` is "does the auth-probe body contain (case-insensitive)
-///     the substring 'unauthor' in its errors". This catches both
-///     "Unauthorized" and "Unauthorised"/"unauthorized access".
-///   * If the about-probe doesn't yield an `aboutServer` object, the candidate
-///     is NOT confirmed (returns null here → caller treats as reached-unconfirmed).
+/// Confirms aboutServer even with partial-data errors; auth errors match "unauthor" case-insensitively.
 ProbeResult? classifyProbeBody({
   required String url,
   required String aboutBody,
@@ -402,8 +282,6 @@ Map<String, dynamic>? _tryDecode(String body) {
   }
 }
 
-/// Pulls `data.aboutServer` out of a decoded GraphQL body, independently of
-/// the presence of `errors[]`. Returns null if absent.
 Map<String, dynamic>? _readAboutServer(Map<String, dynamic> body) {
   final data = body['data'];
   if (data is! Map<String, dynamic>) return null;
@@ -411,13 +289,10 @@ Map<String, dynamic>? _readAboutServer(Map<String, dynamic> body) {
   return about is Map<String, dynamic> ? about : null;
 }
 
-/// True when the auth-probe body's `errors[]` contains a message with the
-/// case-insensitive substring 'unauthor'.
 bool _bodyIndicatesUnauthorised(String authBody) {
   final decoded = _tryDecode(authBody);
   if (decoded == null) {
-    // Couldn't parse — fall back to a raw substring scan so a non-JSON 401
-    // page ("401 Unauthorized") still trips the flag.
+    // Non-JSON 401 pages can still contain an Unauthorized message.
     return authBody.toLowerCase().contains('unauthor');
   }
   final errors = decoded['errors'];
@@ -431,26 +306,8 @@ bool _bodyIndicatesUnauthorised(String authBody) {
   return false;
 }
 
-// ---------------------------------------------------------------------------
-// Auth-type detection
-// ---------------------------------------------------------------------------
 
-/// Reads a probe's HTTP shape into the sign-in method it implies, so the
-/// onboarding dropdown can open on the right entry instead of always Basic.
-///
-/// PURE: plain data in, [AuthType] out — no I/O, no context.
-///
-/// Inputs:
-///   * [probeStatus] — status of the @RequireAuth probe response.
-///   * [wwwAuthenticate] — that response's `WWW-Authenticate` header, if any.
-///   * [probeUnauthorized] — whether that response said "Unauthorized".
-///   * [rootStatus] / [rootLocation] — a redirect-OFF GET of the base URL, when
-///     one could be taken. On web the browser follows redirects and the 303 is
-///     invisible, so both stay null.
-///
-/// Detection is deliberately conservative — [AuthType.basic] on a 401 Basic
-/// challenge, and simple-vs-ui only when the root hop actually distinguishes
-/// them. Anything it can't tell apart returns null (unknown).
+/// Detects auth from a redirect-OFF root response; null means the responses cannot identify a mode.
 AuthType? detectAuthType({
   required int probeStatus,
   String? wwwAuthenticate,
@@ -464,8 +321,7 @@ AuthType? detectAuthType({
   }
 
   if (probeStatus == 200 && probeUnauthorized == true) {
-    // A root redirect to the login page is the simple-login tell; a redirect
-    // anywhere else tells us nothing.
+    // Only a redirect to the login page identifies simple login.
     if (rootStatus == 301 ||
         rootStatus == 302 ||
         rootStatus == 303 ||
@@ -475,30 +331,21 @@ AuthType? detectAuthType({
           ? AuthType.simpleLogin
           : null;
     }
-    // Root serves the app shell → the login is the UI's. Same reading when the
-    // root hop couldn't be observed at all (web, or a failed read): simple
-    // login cannot be proven, and the UI login form works everywhere.
+    // Without an observable login redirect, UI login is the compatible fallback.
     if (rootStatus == 200 || rootStatus == null) return AuthType.uiLogin;
   }
 
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Network probe (one candidate)
-// ---------------------------------------------------------------------------
 
-/// Builds the `/api/graphql` URL for a candidate base URL, via [Uri] so a
-/// base path is preserved and the segment is appended structurally.
+/// Appends /api/graphql structurally, preserving the server base path.
 Uri graphqlUriFor(String baseUrl) {
   final base = Uri.parse(baseUrl);
   return base.replace(pathSegments: [...base.pathSegments, 'api', 'graphql']);
 }
 
-/// Inverse of [graphqlUriFor]: given a redirect destination that points at a
-/// GraphQL endpoint, recover the server's base URL by stripping a trailing
-/// `api/graphql`. A destination that ISN'T a graphql endpoint (e.g. an SSO
-/// `/login`) is returned as-is — re-probing it will simply not confirm.
+/// Strips a trailing api/graphql from redirects; other destinations remain unchanged.
 String _baseFromGraphqlUri(Uri g) {
   var segs = g.pathSegments.toList();
   if (segs.length >= 2 &&
@@ -506,8 +353,6 @@ String _baseFromGraphqlUri(Uri g) {
       segs[segs.length - 2] == 'api') {
     segs = segs.sublist(0, segs.length - 2);
   }
-  // Rebuild from parts so query/fragment are dropped without leaving a stray
-  // "?#" in the string form.
   return Uri(
     scheme: g.scheme,
     host: g.host,
@@ -516,15 +361,7 @@ String _baseFromGraphqlUri(Uri g) {
   ).toString();
 }
 
-/// Probes ONE candidate base URL using the two-request protocol with a short
-/// [timeout] and redirects OFF (so an https→http downgrade or a proxy login
-/// redirect can't masquerade as a reachable Suwayomi server). [client] is
-/// injected for testability.
-///
-/// Request A confirms Suwayomi (`aboutServer`); request B detects auth
-/// (`downloadStatus`). A 401 with a `WWW-Authenticate: Basic` challenge on
-/// request A short-circuits to a [ProbeResult.basicGatedResult] — we cannot
-/// see past Basic auth to confirm Suwayomi.
+/// Confirms Suwayomi and probes protected auth; a Basic challenge remains unconfirmed.
 Future<ProbeResult> probeServer(
   String baseUrl, {
   required http.Client client,
@@ -550,7 +387,6 @@ Future<ProbeResult> probeServer(
     return ProbeResult.notReached(baseUrl);
   }
 
-  // HTTP Basic auth fronting the transport: opaque, can't confirm Suwayomi.
   if (aboutResp.statusCode == 401 &&
       (aboutResp.headers['www-authenticate']?.toLowerCase().contains('basic') ??
           false)) {
@@ -564,10 +400,7 @@ Future<ProbeResult> probeServer(
     );
   }
 
-  // A redirect: follow ONE hop to the destination (a proxy bouncing the API to
-  // its real origin is legitimate), but NEVER chase an https→http downgrade and
-  // NEVER chase a second hop (an SSO portal that keeps bouncing). On the single
-  // hop we persist the DESTINATION base on confirm, not the redirecting URL.
+  // Follow one redirect only, reject HTTPS downgrades, and adopt the confirmed destination base.
   if (aboutResp.statusCode >= 300 && aboutResp.statusCode < 400) {
     final loc = aboutResp.headers['location'];
     if (loc != null && loc.isNotEmpty && redirectBudget > 0) {
@@ -590,10 +423,7 @@ Future<ProbeResult> probeServer(
     return ProbeResult.reachedUnconfirmed(baseUrl);
   }
 
-  // Auth probe (request B). Failure here doesn't sink the candidate — we can
-  // still confirm Suwayomi from request A and assume auth-required if B is
-  // unreadable. Its status + WWW-Authenticate are kept for auth detection: a
-  // Basic challenge can surface here even when request A came back 200.
+  // An unreadable protected probe still allows confirmation but cannot prove auth is disabled.
   int? authStatus;
   String? authWwwAuthenticate;
   String? authBody;
@@ -619,9 +449,7 @@ Future<ProbeResult> probeServer(
   );
   if (classified != null) {
     if (authBody == null && classified.confirmed) {
-      // B unreadable: we can't prove the server is open, and reading it as
-      // open would onboard an auth server with no login step. No response means
-      // no detection signal either.
+      // Fail closed when the protected probe is unreadable.
       return ProbeResult(
         url: classified.url,
         confirmed: true,
@@ -633,11 +461,7 @@ Future<ProbeResult> probeServer(
       );
     }
 
-    // Detection reads request B's own status/headers, so a Basic challenge
-    // that surfaced here rather than on request A is still caught. Only the
-    // simple-vs-ui split needs the extra root GET, and only an OBSERVED root
-    // hop may decide it — a failed read leaves detection unknown (and so
-    // leaves today's Basic default) rather than claiming a mode it never saw.
+    // Read Basic challenges from request B; only an observed root hop can distinguish login modes.
     AuthType? detected;
     final status = authStatus;
     if (status != null) {
@@ -672,8 +496,7 @@ Future<ProbeResult> probeServer(
       confirmed: classified.confirmed,
       reached: classified.reached,
       basicGated: classified.basicGated,
-      // A Basic challenge on the protected probe needs a login even when its
-      // body was empty and read as open.
+      // A Basic challenge requires login even if its body is empty.
       authMode: detected == AuthType.basic
           ? ProbeAuthMode.authRequired
           : classified.authMode,
@@ -686,8 +509,6 @@ Future<ProbeResult> probeServer(
   return ProbeResult.reachedUnconfirmed(baseUrl);
 }
 
-/// Sends one POST with redirects disabled and a hard timeout, returning the
-/// streamed response plus its decoded body string.
 Future<(http.StreamedResponse, String)> _sendNoRedirect(
   http.Client client,
   Uri uri,
@@ -711,10 +532,7 @@ Future<(http.StreamedResponse, String)> _sendNoRedirect(
   return (streamed, body);
 }
 
-/// GETs the candidate's base URL with redirects OFF and returns
-/// `(status, Location)` — the root hop that separates the two login modes: a
-/// simple-login server 303s to `/login.html`, a UI-login one serves its app
-/// shell. Null when the read fails (detection then reads as unknown).
+// Without redirects, simple login returns 303 to /login.html; UI login serves the shell.
 Future<(int, String?)?> readRootStatus(
   String baseUrl, {
   required http.Client client,
@@ -722,8 +540,7 @@ Future<(int, String?)?> readRootStatus(
   Map<String, String>? extraHeaders,
 }) async {
   try {
-    // A trailing slash skips a proxy's path-canonicalising redirect, which
-    // would otherwise hide the hop detection reads.
+    // A trailing slash avoids proxy canonicalization masking the auth redirect.
     final root = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
     final request = http.Request('GET', Uri.parse(root))
       ..followRedirects = false;
@@ -742,23 +559,8 @@ Future<(int, String?)?> readRootStatus(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Resolve (walk the ladder)
-// ---------------------------------------------------------------------------
 
-/// Walks [connectionCandidates] for [rawInput] in order and returns the best
-/// [ResolvedServer].
-///
-/// Short-circuit + fallback rules (red-teamed):
-///   * A CONFIRMED candidate short-circuits immediately — first confirmed wins.
-///     Ladder order is http-first (spec decision #2, the LAN fast-path); the
-///     resolved URL is surfaced for the user to confirm, so the http-first
-///     pick is visible rather than a silent downgrade.
-///   * A basic-gated candidate NEVER short-circuits and is NEVER reported as
-///     `found`: we keep walking in case a LATER candidate is a confirmable
-///     Suwayomi server (e.g. http:4567 is basic-gated but https is the real one).
-///   * If no candidate is confirmed, fall back by priority:
-///       basicGated > reachedUnconfirmed > notReached.
+/// First confirmed candidate wins; otherwise returns Basic-gated, unconfirmed, then unreachable.
 Future<ResolvedServer> resolveServer(
   String rawInput, {
   required http.Client client,
@@ -768,9 +570,7 @@ Future<ResolvedServer> resolveServer(
 }) async {
   final candidates = connectionCandidates(rawInput);
   if (candidates.isEmpty) {
-    // Unparseable input (e.g. a typo'd port): nothing to probe. Hand back a
-    // best-effort scheme-bearing URL so the "use this address anyway" escape
-    // never persists raw schemeless text (spec Part D).
+    // The manual-address fallback must include a scheme even for malformed input.
     return ResolvedServer(
       baseUrl: normalisedFallbackUrl(rawInput),
       outcome: ResolveOutcome.notReached,
@@ -793,7 +593,6 @@ Future<ResolvedServer> resolveServer(
     final result = await doProbe(candidate);
 
     if (result.confirmed) {
-      // First confirmed candidate wins outright.
       return ResolvedServer(
         baseUrl: result.url,
         outcome: ResolveOutcome.found,
@@ -831,10 +630,7 @@ Future<ResolvedServer> resolveServer(
   );
 }
 
-/// Renders a base URL with its port ALWAYS explicit, so result messages can be
-/// unambiguous about exactly where (and on which port) a server was reached —
-/// e.g. `http://192.168.0.10` becomes `http://192.168.0.10:80`. Dart's `Uri`
-/// hides scheme-default ports; this surfaces them. IPv6 hosts are bracketed.
+/// Shows scheme-default ports explicitly and brackets IPv6 hosts.
 String displayAddress(String baseUrl) {
   final u = Uri.tryParse(baseUrl);
   if (u == null || u.host.isEmpty) return baseUrl;
@@ -842,15 +638,12 @@ String displayAddress(String baseUrl) {
   return '${u.scheme}://$host:${u.port}${u.path}';
 }
 
-/// Whether a failed resolve should suggest "try its https address" — true only
-/// when NO https candidate was tried (the user pinned an explicit `http://`).
-/// A bare host already includes an https candidate, so we don't nag.
+/// Suggests HTTPS only when no HTTPS candidate was tried.
 bool shouldSuggestHttps(String rawInput) => !connectionCandidates(
   rawInput,
 ).any((c) => c.toLowerCase().startsWith('https://'));
 
-/// First requestable http/https base URL for [rawInput], or null when it
-/// cannot parse into one; check before any network work.
+/// Returns the first requestable HTTP(S) candidate, or null for invalid input.
 String? validServerBaseUrl(String rawInput) {
   final input = rawInput.trim();
   if (input.isEmpty) return null;
@@ -869,27 +662,18 @@ String? validServerBaseUrl(String rawInput) {
   return candidates.isEmpty ? null : candidates.first;
 }
 
-/// Best-effort scheme-bearing form of [rawInput] for the "use this address
-/// anyway" escape — guarantees a scheme so we never persist raw schemeless
-/// text. Prefers the first real candidate; otherwise prefixes `http://`.
+/// Manual-address fallback always includes a scheme, even for malformed input.
 String normalisedFallbackUrl(String rawInput) {
   final input = rawInput.trim();
   if (input.isEmpty) return input;
   final lower = input.toLowerCase();
-  // Explicit scheme → "use this address anyway" means EXACTLY what they typed.
   if (lower.startsWith('http://') || lower.startsWith('https://')) return input;
-  // No scheme → first candidate (scheme + default port), else http:// prefix.
   final first = connectionCandidates(input);
   if (first.isNotEmpty) return first.first;
   return 'http://$input';
 }
 
-/// Web "Test connection" auth detection. The full [probeServer] protocol can't
-/// run in a browser (redirects can't be switched off), but the auth probe
-/// itself can: POST [kAuthProbeQuery] with redirects left on and read the
-/// body. Unreadable / 401 / 403 reads as auth-required — the caller has
-/// already confirmed `aboutServer`, and a dead read here must never onboard an
-/// auth server without its login step.
+/// Browser probes follow redirects; unreadable responses, 401, and 403 require auth.
 Future<bool> webAuthRequired(
   String baseUrl, {
   required http.Client client,
@@ -905,12 +689,7 @@ Future<bool> webAuthRequired(
   return probe.required;
 }
 
-/// The same web probe as [webAuthRequired], plus the detected sign-in method.
-///
-/// The browser has already followed any redirect by the time we see the
-/// response and never exposes the root hop, so [detectAuthType] runs with
-/// `rootStatus` null: a 200 + Unauthorized server reads as UI login, since
-/// simple login can't be told apart from here.
+/// Web cannot observe the root redirect; 200 + Unauthorized therefore selects UI login.
 Future<({bool required, AuthType? detected})> webAuthProbe(
   String baseUrl, {
   required http.Client client,
@@ -964,29 +743,12 @@ bool webServerAuthUnsupported({
   return isWebUnsupportedAuthMode(detectedAuthType);
 }
 
-// ---------------------------------------------------------------------------
-// VERIFIED try-both (submit-time auth resolution)
-// ---------------------------------------------------------------------------
 
-/// The auth mode whose credential ACTUALLY authorised an `@RequireAuth` API
-/// call — the only trustworthy signal for simple-vs-ui (round-4 fix).
+/// Auth mode whose credential authorized a protected API call.
 enum VerifiedAuthMode { simpleLogin, uiLogin }
 
-/// Sends the `@RequireAuth` probe ([kAuthProbeQuery]) carrying a credential and
-/// reports whether the server ACTUALLY authorised it.
-///
-/// This is the heart of the round-4 fix: Suwayomi's `POST /login.html` returns
-/// 303 + a session cookie in EVERY auth mode — including `ui_login`, where that
-/// cookie is then ignored. So a successful simple-login is NOT proof the server
-/// is in simple_login mode. We must push the obtained credential through a real
-/// protected query and let the server's own `getUserFromContext` be the judge:
-/// authorised (expected data without errors) → the credential is the right kind.
-///
-/// Pass EXACTLY one of [cookie] / [bearer] / [basic]. [basic] is the raw
-/// `username:password` pair (base64-encoded here into a `Basic` header) — used
-/// to prove a basic_auth credential ACTUALLY authorises the @RequireAuth
-/// surface, not just the public `aboutServer`. Redirects are disabled and any
-/// transport failure reads as "not authorised" (false), never a throw.
+/// Pass exactly one credential; verify a protected query because /login.html sets inert cookies in UI mode.
+/// [basic] is raw username:password; redirects are disabled and failures return false.
 Future<bool> authProbeAuthorized(
   String baseUrl, {
   required http.Client client,
@@ -1031,7 +793,7 @@ Future<bool> authProbeAuthorized(
   }
 }
 
-/// True only on a positive token rejection: HTTP 200 with Unauthorized errors.
+/// Only HTTP 200 with Unauthorized errors proves token rejection.
 Future<bool> authProbeExplicitlyRejects(
   String baseUrl, {
   required http.Client client,
@@ -1074,13 +836,7 @@ Future<bool> authProbeExplicitlyRejects(
   }
 }
 
-/// Re-probes `aboutServer` carrying an HTTP Basic `Authorization` header and
-/// reports whether it confirms a Suwayomi server. This is the basic_auth
-/// equivalent of the simple/ui verified sign-in: a basic-gated host is opaque
-/// until we send credentials, so submit re-probes WITH the Basic header —
-/// 200 + a real `aboutServer` shape means the creds are valid AND it's really
-/// Suwayomi (closes the "random 401 host" trap on the basic path). Any other
-/// outcome (still 401, non-Suwayomi body, transport failure) → false.
+/// Confirms a Basic-gated host with credentials; non-Suwayomi or failed responses return false.
 Future<bool> basicAuthConfirms(
   String baseUrl, {
   required http.Client client,
@@ -1114,16 +870,7 @@ Future<bool> basicAuthConfirms(
   }
 }
 
-/// Runs the VERIFIED try-both for a server that we already confirmed is
-/// Suwayomi-with-auth-required. [obtainSimpleCookie] performs the `/login.html`
-/// POST and returns the session cookie (throws/returns null on rejection);
-/// [obtainUiBearer] runs the `login` mutation and returns the access token.
-/// Each obtained credential is VERIFIED via [authProbeAuthorized] before we
-/// trust it, so a `ui_login` server (whose cookie is inert) never gets
-/// mis-tagged simple_login.
-///
-/// Returns the verified mode, or null when neither credential authorises
-/// (wrong password, or not really a Suwayomi auth server).
+/// Verifies simple and UI credentials against a protected query; null means neither authorized.
 Future<VerifiedAuthMode?> verifyAuthMode({
   required String baseUrl,
   required http.Client client,
@@ -1131,7 +878,6 @@ Future<VerifiedAuthMode?> verifyAuthMode({
   required Future<String?> Function() obtainUiBearer,
   Duration timeout = const Duration(seconds: 4),
 }) async {
-  // 1. simple-login → cookie → re-probe carrying ONLY that cookie.
   String? cookie;
   try {
     cookie = await obtainSimpleCookie();
@@ -1149,8 +895,7 @@ Future<VerifiedAuthMode?> verifyAuthMode({
     return VerifiedAuthMode.simpleLogin;
   }
 
-  // 2. ui-login → bearer → re-probe carrying ONLY that bearer (a fresh request,
-  //    no stale cookie from step 1 — see [authProbeAuthorized]).
+  // Verify the bearer on a fresh request without the simple-login cookie.
   String? bearer;
   try {
     bearer = await obtainUiBearer();

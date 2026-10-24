@@ -6,8 +6,6 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/async_buttons/async_text_button.dart';
 import '../domain/sync_yomi.dart';
 
-/// TextFieldDialog with a validator: a bad host must not be saved, and the
-/// user should see why without losing what they typed.
 class SyncYomiHostDialog extends HookConsumerWidget {
   const SyncYomiHostDialog({super.key, this.value, required this.onSave});
 

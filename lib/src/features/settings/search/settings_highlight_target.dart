@@ -11,21 +11,8 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/web_selection_area.dart';
 
-/// Ancestor helper that lets a highlight reach tiles far down a long list.
-///
-/// A [SettingsHighlightTarget] only scrolls itself into view once it is
-/// mounted, and lazily built rows (e.g. [ListView.builder]) past the viewport
-/// plus cache extent never mount on their own. Screens wrap their scroll view
-/// in this scope; every target registers its id here, and when the page opens
-/// with a highlight id that isn't mounted yet, the first mounted non-target
-/// steps its [Scrollable] toward the end — about one viewport per frame —
-/// until the target mounts (its own highlight then takes over via
-/// [Scrollable.ensureVisible]) or the end of the scrollable is reached.
-///
-/// [highlightId] overrides the route query lookup; when null the scope reads
-/// the `highlight` query parameter like the targets do. Screens pass neither:
-/// they only wrap their scroll view. Tests pass [highlightId] to drive the
-/// highlight without a router.
+/// Seeks unmounted lazy-list targets; mounted targets handle their own scrolling.
+/// [highlightId] overrides the route's highlight query parameter.
 class SettingsHighlightScope extends StatefulWidget {
   const SettingsHighlightScope({
     super.key,
@@ -47,11 +34,7 @@ class SettingsHighlightScope extends StatefulWidget {
 class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
   final Set<String> _mountedIds = {};
 
-  /// Highlight ids already delivered during this page visit: the target was
-  /// reached and its pulse started. Delivery is sticky for the visit — a row
-  /// that unmounts (scrolled out of the lazy list) and remounts must not
-  /// treat the unchanged id as pending again, or newly mounted rows start
-  /// seeking and yank the list back to the end.
+  // Retain delivery across lazy-list remounts to prevent repeated seeking.
   final Set<String> _deliveredIds = {};
   Object? _seeker;
   String? _queryId;
@@ -84,12 +67,9 @@ class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
 
   bool isMounted(String id) => _mountedIds.contains(id);
 
-  /// True once the highlight for [id] has been delivered this page visit.
   bool isDelivered(String id) => _deliveredIds.contains(id);
 
-  /// Records that the highlight for [id] reached its target and started
-  /// pulsing. Afterwards no row may seek or highlight again for [id] until
-  /// the highlight id changes.
+  /// Prevents further seeking or pulsing for [id] until the highlight changes.
   void markDelivered(String id) {
     _deliveredIds.add(id);
   }
@@ -98,10 +78,7 @@ class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
 
   void unregister(String id) => _mountedIds.remove(id);
 
-  /// First mounted non-target to call this drives the seek. The winner holds
-  /// it until the seek ends or it unmounts ([releaseSeek]), so scrolling one
-  /// claimer off the list hands the job to a newly mounted row instead of
-  /// stalling with the claim consumed.
+  /// Grants one mounted row the seek; release it when finished or unmounted.
   bool claimSeek(Object seeker) {
     if (_seeker != null) return false;
     _seeker = seeker;
@@ -129,27 +106,9 @@ class _HighlightScopeBinding extends InheritedWidget {
       state != oldWidget.state;
 }
 
-/// Wraps a settings tile so opening its page with `?highlight=<id>` scrolls
-/// the tile into view and pulses it. Pages opened normally (no id, or a
-/// different id) render the child untouched.
-///
-/// The highlighted row gets [ColorScheme.primary] at 18% alpha plus a 3 px
-/// [ColorScheme.primary] bar on its left edge. The bar is painted inside the
-/// row's bounds (a [BoxDecoration] left border), so the content never moves.
-/// Timing follows Komikku's `BasePreferenceWidget`: after the first frame the
-/// target centres itself, waits 600 ms, then pulses 5 times at 200 ms each
-/// way. The bar stays at full opacity while the tint pulses; the final
-/// pulse-out fades both together over 200 ms — about 3 s total. With reduced
-/// motion (OS flag or the app's own setting, both visible through
-/// [ReduceMotionContext.reduceMotion]) there is no pulse: a steady tint + bar
-/// shows for ~2 s, then fades jointly.
-///
-/// Far-down targets in lazily built lists need a [SettingsHighlightScope]
-/// above the scroll view (see its docs); without one, only mounted targets
-/// highlight, as before.
-///
-/// [activeId] overrides the scope and route query lookups; screens never pass
-/// it, tests use it to drive the highlight without a router.
+/// Scrolls to and pulses the row matching the highlight query parameter.
+/// Lazy-list targets need a [SettingsHighlightScope] above the scroll view.
+/// [activeId] overrides scope and route lookups; reduced motion uses a steady highlight.
 class SettingsHighlightTarget extends StatefulWidget {
   const SettingsHighlightTarget({
     super.key,
@@ -228,10 +187,7 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
     }
   }
 
-  /// Steps the enclosing scrollable toward the end until the pending target
-  /// mounts, so lazily built rows far down the list still get highlighted.
-  /// Only one mounted target seeks per page ([SettingsHighlightScopeState.claimSeek]);
-  /// the target's own [_run] takes over once it mounts.
+  // Only one mounted row seeks until the pending target mounts and takes over.
   Future<void> _maybeSeek(SettingsHighlightScopeState scope) async {
     final pending = scope.highlightId;
     if (pending == null || _cancelled || !mounted) return;

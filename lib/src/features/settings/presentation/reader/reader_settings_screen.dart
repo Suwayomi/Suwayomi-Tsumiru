@@ -44,9 +44,6 @@ import 'widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import 'widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import 'widgets/tap_zones_overlay/tap_zones_overlay.dart';
 
-/// Global reader defaults. A few of these settings
-/// can be overridden per-manga from the in-reader sheet's "For this series"
-/// block; the rest apply to every series.
 class ReaderSettingsScreen extends ConsumerWidget {
   const ReaderSettingsScreen({super.key});
 
@@ -68,8 +65,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
     void Function(T?) setEnum<T>(Refreshable<dynamic> notifier) =>
         (v) => (ref.read(notifier) as dynamic).update(v);
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.reader);
     final scaffold = Scaffold(
@@ -83,9 +78,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: settingsPagePadding(context),
               children: [
-                // Group order follows Komikku's reader settings: ungrouped
-                // basics first, then Display, E-Ink, Reading, Paged,
-                // Long strip, Navigation, Actions.
                 const SizedBox(height: 16),
                 const SettingsGroupCard(
                   children: [
@@ -93,9 +85,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                       id: 'readerMode',
                       child: ReaderModeTile(),
                     ),
-                    // Tap zones and their inversion are per viewer, so they
-                    // live in the Paged and Long strip groups below — same as
-                    // Komikku. Only the overlay and the zone size are shared.
                     SettingsHighlightTarget(
                       id: 'showTapZonesOverlay',
                       child: ShowTapZonesOverlayTile(),
@@ -150,7 +139,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
-                // ── Display ──
                 SettingsGroupHeading(label: context.l10n.readerGroupDisplay),
                 SettingsGroupCard(
                   children: [
@@ -202,8 +190,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
                         id: 'ignoreSafeArea',
                         child: ReaderIgnoreSafeAreaTile(),
                       ),
-                    // Not long-strip only: reader_wrapper pads whichever axis
-                    // you are not scrolling, so paged reading uses it too.
+                    // Padding applies to the non-scrolling axis in both paged and long-strip modes.
                     const SettingsHighlightTarget(
                       id: 'readerPadding',
                       child: ReaderPaddingSlider(),
@@ -235,7 +222,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
-                // ── E-Ink ──
                 SettingsGroupHeading(label: context.l10n.readerGroupEInk),
                 SettingsGroupCard(
                   children: [
@@ -297,7 +283,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
-                // ── Reading ──
                 SettingsGroupHeading(label: context.l10n.readerGroupReading),
                 SettingsGroupCard(
                   children: [
@@ -332,7 +317,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
-                // ── Paged ──
                 SettingsGroupHeading(
                   label: context.l10n.readerGroupPagerViewer,
                 ),
@@ -448,9 +432,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
                             .update,
                       ),
                     ),
-                    // Both stay editable while zoom-in is off. The viewport
-                    // already ignores them in that state, and greying them out
-                    // would strand whatever value they were left on.
+                    // Keep these editable while zoom-in is off so users can reset ignored values.
                     SettingsHighlightTarget(
                       id: 'pagedDisableZoomOut',
                       child: _BoolTile(
@@ -543,7 +525,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
-                // ── Long strip ──
                 SettingsGroupHeading(
                   label: context.l10n.readerGroupWebtoonViewer,
                 ),
@@ -576,8 +557,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    // Greyed under Original size: native-size pages never
-                    // widen, so a width cap has nothing to do.
+                    // Original-size pages never widen, so a width cap has no effect.
                     SettingsHighlightTarget(
                       id: 'longStripWidthLimit',
                       child: LongStripWidthLimitSlider(
@@ -597,8 +577,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                         onUnitChanged: ref
                             .read(longStripWidthLimitUsePixelsProvider.notifier)
                             .update,
-                        // Clamped like the model setters, so every write path
-                        // guards.
                         onPercentCommitted: (v) => ref
                             .read(longStripWidthLimitPercentProvider.notifier)
                             .update(v.clamp(10, 100)),
@@ -663,7 +641,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
-                // ── Navigation ──
                 if (showNavigation) ...[
                   SettingsGroupHeading(
                     label: context.l10n.readerGroupNavigation,
@@ -681,7 +658,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                             child: ReaderVolumeTapInvertTile(),
                           ),
                       ],
-                      // Moved here from Reading; same keyboard-runtime gate.
                       if (isKeyboardRuntime)
                         const SettingsHighlightTarget(
                           id: 'mouseScrollSpeed',
@@ -691,7 +667,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ),
                 ],
 
-                // ── Actions ──
                 SettingsGroupHeading(label: context.l10n.readerGroupActions),
                 SettingsGroupCard(
                   children: [

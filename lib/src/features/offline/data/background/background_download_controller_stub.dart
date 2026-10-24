@@ -8,12 +8,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../auth/data/auth_credentials_store.dart';
 
-/// Web stub for [BackgroundDownloadController]. The real controller depends on
-/// `dart:io` + `flutter_foreground_task` (native-only), which don't compile for
-/// web. The conditional-import shim swaps this no-op in on web, so the
-/// web-compiled call sites (`offline_download_providers.dart`, `main.dart`)
-/// still build. Offline is disabled on web, so none of these are ever reached
-/// at runtime there anyway.
 class BackgroundDownloadController {
   BackgroundDownloadController(this._ref);
 
@@ -55,11 +49,9 @@ class BackgroundDownloadController {
   Future<void> maybeStartAfterReplay() async {}
 }
 
-/// Web no-op mirror of the native provider.
 final backgroundDownloadControllerProvider =
     Provider<BackgroundDownloadController>(
       (Ref ref) => BackgroundDownloadController(ref),
     );
 
-/// Web no-op: there is no foreground task service to initialise.
 void initForegroundTaskService() {}

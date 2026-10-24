@@ -9,16 +9,9 @@ import 'package:flutter/material.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
 
-/// Above this many chapters, a bulk download asks for confirmation first.
 const int kBulkDownloadConfirmThreshold = 20;
 
-/// Confirms a large bulk download before it starts, so a stray tap can't
-/// silently queue hundreds of chapters (the keep-offline accident). Returns
-/// true only if the user confirms.
-///
-/// [summary] describes the target in user terms — e.g. "12 series" or
-/// "45 chapters". [toDevice] picks device-vs-server wording and icon (and is
-/// why the device case warns about storage — that's the one that bites).
+/// Returns true only on confirmation; summary names the targets and toDevice selects device wording.
 Future<bool> confirmBulkDownload(
   BuildContext context, {
   required String summary,

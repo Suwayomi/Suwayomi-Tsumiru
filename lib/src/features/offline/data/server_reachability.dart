@@ -11,22 +11,12 @@ import '../../../utils/crash/redact_tokens.dart';
 
 part 'server_reachability.g.dart';
 
-/// Whether the last server request failed to connect — a wrong URL, a server
-/// that's down, or no network — as opposed to reaching a server that answered.
-///
-/// Set by the offline-fallback read path: `true` when a fetch hits a connection
-/// error (even when cached data is then served, which would otherwise hide the
-/// outage from the UI), `false` on any successful fetch. Watched by
-/// `ServerUnreachableBanner`, which the library and series screens mount, so a
-/// user browsing stale cached data still knows they're offline.
+/// True on connection failure even when cache is served; server error responses do not imply offline.
 @Riverpod(keepAlive: true)
 class ServerUnreachable extends _$ServerUnreachable {
   @override
   bool build() => false;
 
-  /// [reason] says what flipped it, for the debug log: while it's set, the
-  /// library serves the on-device catalog without trying the server, so an
-  /// unexplained flip at launch looked like the library losing its counts.
   void set(bool value, {String? reason}) {
     if (state == value) return;
     state = value;
@@ -40,11 +30,7 @@ class ServerUnreachable extends _$ServerUnreachable {
   }
 }
 
-/// User-requested offline view: skip the network entirely and serve the
-/// on-device catalog. Set by the "View offline" button shown while a
-/// fallback-capable read is still waiting on its network window, so nobody has
-/// to sit out even the capped wait. Session-only by design — a restart or a
-/// manual refresh goes back to trying the server first.
+/// Session-only network bypass, cleared by restart or manual refresh.
 @Riverpod(keepAlive: true)
 class ViewOfflineNow extends _$ViewOfflineNow {
   @override

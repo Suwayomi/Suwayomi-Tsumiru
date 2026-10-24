@@ -24,14 +24,9 @@ import '../../../../manga_book/presentation/manga_details/controller/manga_detai
 import '../../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../controller/library_controller.dart';
 
-/// Gutter between library content and the scroll view's right edge on desktop:
-/// the themed scrollbar thumb at its widest (10px) plus 4px clearance, so the
-/// thumb never paints over covers or list rows. The scroll view itself runs to
-/// the content area's right edge; the gutter lives inside the slivers.
+/// Desktop scrollbar clearance: 10 px at maximum thumb width plus 4 px gap.
 const double _libraryScrollbarGutter = 14.0;
 
-/// The scrollable that renders one library tab's manga, shared by the
-/// per-category list and the grouped tabs.
 class LibraryMangaGridView extends StatelessWidget {
   const LibraryMangaGridView({
     super.key,
@@ -46,7 +41,6 @@ class LibraryMangaGridView extends StatelessWidget {
   final void Function(MangaDto manga) onOpen;
   final void Function(MangaDto manga)? onLongPress;
 
-  /// Ids of the currently multi-selected manga (empty when not selecting).
   final Set<int> selection;
 
   final String? Function(MangaDto manga)? linkLocationFor;
@@ -65,12 +59,7 @@ class LibraryMangaGridView extends StatelessWidget {
   );
 }
 
-/// The sliver that lays [items] out under the active [DisplayMode] and
-/// [LibraryGridStyle].
-///
-/// Sliver-shaped so the section-headers group style can stack one per group in
-/// a single [CustomScrollView] and stay lazy — a shrink-wrapped inner viewport
-/// per group would build every tile in the library on every frame.
+/// Slivers keep grouped sections lazy; shrink-wrapped inner viewports would build every tile.
 class LibraryMangaSliver extends ConsumerWidget {
   const LibraryMangaSliver({
     super.key,
@@ -85,7 +74,6 @@ class LibraryMangaSliver extends ConsumerWidget {
   final void Function(MangaDto manga) onOpen;
   final void Function(MangaDto manga)? onLongPress;
 
-  /// Ids of the currently multi-selected manga (empty when not selecting).
   final Set<int> selection;
 
   final String? Function(MangaDto manga)? linkLocationFor;
@@ -116,13 +104,12 @@ class LibraryMangaSliver extends ConsumerWidget {
         .ifNull(false);
     final selecting = selection.isNotEmpty;
     VoidCallback? continueReadingFor(MangaDto manga) {
-      // While multi-selecting, taps belong to the selection.
       if (!showContinueReading || selecting) return null;
       final chapter = manga.user.firstUnreadChapter;
       if (chapter == null) return null;
       return () {
         unawaited(() async {
-          // Warm the chapter list first so the reader opens on real data.
+          // Warm chapters before opening so the reader has real data.
           await AsyncValue.guard(
             () => ref.read(mangaChapterListProvider(mangaId: manga.id).future),
           );
@@ -132,8 +119,6 @@ class LibraryMangaSliver extends ConsumerWidget {
       };
     }
 
-    // Uniform grids need a SliverGridDelegate — one fixed main-axis extent for
-    // every tile. The user's column count, or Auto (width-based).
     SliverGridDelegate uniformDelegate({bool titleBelow = false}) =>
         fixedCols > 0
         ? MangaCoverFixedCountGridDelegate(
@@ -144,8 +129,6 @@ class LibraryMangaSliver extends ConsumerWidget {
           )
         : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
 
-    // Freeform layouts take a SliverSimpleGridDelegate instead: it only decides
-    // the cross-axis split and leaves each tile's height to the tile.
     SliverSimpleGridDelegate freeformDelegate() => fixedCols > 0
         ? SliverSimpleGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: fixedCols,
@@ -154,16 +137,11 @@ class LibraryMangaSliver extends ConsumerWidget {
             maxCrossAxisExtent: gridWidth,
           );
 
-    // Preserves element state across re-orders for slivers that recalculate
-    // layout offsets. Built once per build() (items.length lookups worth of
-    // work) instead of doing an O(items.length) indexWhere scan inside the
-    // callback itself — the callback is invoked once per child needing
-    // relocation, so a linear scan there turns a single reorder into an
-    // O(n^2) pass over the whole visible+cached range.
+    // Precompute indices to preserve child state without O(n²) reorder lookups.
     final idToIndex = {for (var i = 0; i < items.length; i++) items[i].id: i};
     int? findChildIndex(Key key) => idToIndex[(key as ValueKey<int>).value];
 
-    // Re-keys masonry on item order changes to prevent crashes from nulled child offsets.
+    // Masonry cannot relocate children with null offsets; re-key when item order changes.
     Key masonryOrderKey() => ValueKey(Object.hashAll(items.map((m) => m.id)));
 
     Widget grid({bool titleBelow = false, bool showTitle = true}) {
@@ -198,7 +176,6 @@ class LibraryMangaSliver extends ConsumerWidget {
             findChildIndexCallback: findChildIndex,
           ),
         ),
-        // Rows are as tall as their tallest cover and tiles bottom-align inside them.
         LibraryGridStyle.nonUniform => SliverAlignedGrid(
           gridDelegate: freeformDelegate(),
           itemCount: items.length,
@@ -206,7 +183,6 @@ class LibraryMangaSliver extends ConsumerWidget {
           mainAxisSpacing: 2.0,
           crossAxisSpacing: 2.0,
         ),
-        // Masonry: independent column packing. Re-keyed on item order instead of moving children.
         LibraryGridStyle.staggered => SliverMasonryGrid(
           key: masonryOrderKey(),
           gridDelegate: freeformDelegate(),
@@ -217,8 +193,6 @@ class LibraryMangaSliver extends ConsumerWidget {
       };
     }
 
-    // Rows scale as one unit: the tile scales its cover box, this scales the
-    // text inside it.
     Widget scaled(Widget child) => MediaQuery(
       data: MediaQuery.of(
         context,
@@ -226,14 +200,11 @@ class LibraryMangaSliver extends ConsumerWidget {
       child: child,
     );
 
-    // Row extents track the same composed factor as the text inside them: the
-    // shipped 96/176 were tuned at scale 1.0.
+    // Row extents 96/176 are calibrated at scale 1.0.
     final rowScale =
         listScale * (MediaQuery.textScalerOf(context).scale(14) / 14);
 
-    // A fixed extent lets the viewport map offset to index without laying
-    // anything out, but an uncapped title has to be able to push its own row
-    // taller — as does the descriptive row, whose contents vary regardless.
+    // Uncapped titles and descriptive content require variable row heights.
     Widget listSliver({
       required double extent,
       required NullableIndexedWidgetBuilder builder,
@@ -298,10 +269,7 @@ class LibraryMangaSliver extends ConsumerWidget {
       DisplayMode.comfortableGrid => grid(titleBelow: true),
       DisplayMode.coverOnly => grid(showTitle: false),
     };
-    // Desktop paints the always-visible themed scrollbar over the scroll
-    // view's right edge; keep the gutter inside the sliver so covers and rows
-    // end left of the thumb. Covers keep their size and spacing — only the
-    // trailing inset changes. Phone/tablet lay out edge-to-edge as before.
+    // Reserve scrollbar clearance inside the desktop sliver so covers stay left of the thumb.
     if (!context.usesDesktopShell) return sliver;
     return SliverPadding(
       padding: const EdgeInsets.only(right: _libraryScrollbarGutter),
@@ -310,9 +278,7 @@ class LibraryMangaSliver extends ConsumerWidget {
   }
 }
 
-/// The library list scale composed with the platform text scale. [TextScaler]
-/// has no compose operation, so the platform scaler is linearised around 14sp
-/// rather than overriding the user's font preference outright.
+/// Composes list scale with platform text scale, linearized at 14sp because TextScaler has no compose.
 TextScaler _listTextScaler(BuildContext context, double scale) {
   final platform = MediaQuery.textScalerOf(context).scale(14) / 14;
   return TextScaler.linear(platform * scale);

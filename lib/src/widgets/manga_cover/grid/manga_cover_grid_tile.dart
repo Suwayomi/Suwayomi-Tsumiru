@@ -25,27 +25,19 @@ import '../providers/manga_cover_providers.dart';
 import '../widgets/continue_reading_button.dart';
 import '../widgets/manga_badges.dart';
 
-/// The 2:3 "book" ratio a uniform cover cell uses — also what the freeform
-/// styles reserve until the real cover ratio is known.
 const double _kBookAspectRatio = 2 / 3;
 
-/// Freeform cover height clamp, as a multiple of the tile width: a ceiling so a
-/// long-strip cover can't run off the screen, and a floor so a freak wide cover
-/// can't collapse the tile.
+/// Height/width bounds prevent long-strip overflow and extremely wide cover collapse.
 const double _kFreeformMinHeightFactor = 1.0;
 const double _kFreeformMaxHeightFactor = 10 / 3;
 
-/// Comfortable-grid title metrics (Komikku's values): 12sp over an 18px line,
-/// 4dp of padding all round.
 const double _kTitleFontSize = 12;
 const double _kTitleLineFactor = 1.5;
 const double _kTitlePadding = 4;
 
-/// Share of a uniform cell the title block may never exceed, so the cell can't
-/// overflow at extreme text scales.
+/// Cap title share to prevent overflow at extreme text scales.
 const double _kMaxTitleShare = .45;
 
-/// Height of a [maxLines]-line title block at the current platform text scale.
 double _titleBlockHeight(BuildContext context, int maxLines) =>
     MediaQuery.textScalerOf(context).scale(_kTitleFontSize) *
         _kTitleLineFactor *
@@ -75,41 +67,28 @@ class MangaCoverGridTile extends StatefulWidget {
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
 
-  /// When non-null, a play button is overlaid on the cover that opens the next
-  /// unread chapter. The library list supplies this only when the toggle is on
-  /// and a target chapter exists.
+  /// Non-null adds a button opening the next unread chapter.
   final VoidCallback? onContinueReading;
   final bool showCountBadges;
   final bool showTitle;
 
-  /// Comfortable grid: the title renders under the cover on the theme surface
-  /// instead of overlaid on the art ([showTitle] is ignored for the overlay).
+  /// Draw the title below the cover; showTitle does not control this title.
   final bool titleBelow;
   final bool showBadges;
   final bool showDarkOverlay;
 
-  /// Multi-select highlight: a primary-tinted border + check on the
-  /// library selection.
   final bool selected;
 
-  /// Cover geometry. [LibraryGridStyle.uniform] (the default, and what Browse
-  /// uses) fills the cell it is given; the freeform styles size the tile from
-  /// the cover art instead — see [_cover].
+  /// Uniform fills the cell; freeform styles derive height from the cover art.
   final LibraryGridStyle gridStyle;
 
-  /// A hairline border around the cover so pale art still reads as a card.
-  /// Passed in rather than read from [outlineOnCoversProvider] so this shared
-  /// tile stays usable outside the library. The selection border wins while
-  /// [selected].
+  /// The selected border takes precedence over this cover outline.
   final bool outlineOnCovers;
 
-  /// Cap the below-cover title at two ellipsized lines. When false it takes the
-  /// whole title slot (see [_kMaxTitleShare]).
+  /// False uses the whole available title slot instead of a two-line cap.
   final bool limitTitleLines;
 
-  /// Extra highlight driven by an embedding row (the descriptive list tile):
-  /// hovering or keyboard-focusing the row outlines the cover the same way as
-  /// hovering or focusing the cover itself.
+  /// Let an embedding row drive the same highlight as cover hover/focus.
   final bool highlighted;
 
   final String? linkLocation;
@@ -220,9 +199,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
         },
         onLongPress: widget.onLongPress,
         child: freeform
-            // The tile's height comes from the cover, so nothing may stretch.
-            // Non-uniform bottom-aligns: the aligned grid stretches a row's tiles
-            // to its tallest, so `end` gives the flush baseline.
+            // Avoid vertical stretch; bottom-align variable covers within each aligned-grid row.
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment:
@@ -240,8 +217,6 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 ],
               )
             : widget.titleBelow
-            // Uniform + title below: the cover flexes and the title takes a
-            // fixed block, so every cover in a row ends up the same height.
             ? LayoutBuilder(
                 builder: (context, constraints) {
                   final twoLines = _titleBlockHeight(context, 2);
@@ -291,12 +266,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
               )
             : BorderSide.none,
       ),
-      // A flat Stack, not a GridTile: GridTile lays its child out with
-      // Positioned.fill, which leaves the Stack nothing to size itself from —
-      // and the freeform styles need it to size to the cover.
+      // GridTile uses Positioned.fill; a freeform Stack must size itself from the cover.
       child: Stack(
-        // Uniform passes the cell's tight constraints straight to the cover;
-        // freeform loosens them so the cover's clamped height sizes the stack.
         fit: freeform ? StackFit.loose : StackFit.passthrough,
         children: [
           _cover(context, freeform: freeform),
@@ -327,10 +298,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 shadows: const [Shadow(blurRadius: 4)],
               ),
             ),
-          // No title to flow beside (cover-only, title-below, or the
-          // descriptive-list cover): overlay the button on the cover corner.
-          // With an overlaid title, the button lives in the footer row
-          // instead so it can't cover the text.
+          // Overlay only without an overlaid title; otherwise share the footer to avoid covering text.
           if (widget.onContinueReading != null &&
               !widget.selected &&
               !_overlayTitle)
@@ -360,9 +328,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       widget.manga.title,
       overflow: TextOverflow.ellipsis,
       maxLines: 2,
-      // Drawn on the cover art, not the theme surface: always white over
-      // the black scrim, shadowed for light covers (Komikku's
-      // CoverTextOverlay values).
+      // Cover-art text stays white over a black scrim, independent of the theme.
       style: const TextStyle(
         color: OnImage.text,
         fontSize: 12,
@@ -370,8 +336,6 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
         shadows: [Shadow(color: OnImage.shadow, blurRadius: 4)],
       ),
     ),
-    // The button shares the footer row: the title takes the remaining
-    // width, so it can never sit under the button.
     trailing: widget.onContinueReading != null
         ? ContinueReadingButton(
             onPressed: widget.onContinueReading!,
@@ -388,8 +352,6 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
         size: context.height * .2,
       );
       return freeform
-          // No art to measure: reserve the book ratio so the tile lines up with
-          // its neighbours instead of claiming a screen-relative slab.
           ? AspectRatio(
               aspectRatio: _kBookAspectRatio,
               child: FittedBox(fit: BoxFit.scaleDown, child: fallback),
@@ -407,9 +369,6 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 ),
               ]
             : null,
-        // Theme-independent scrim (Komikku: transparent → 67% black over the
-        // bottom third) — the title always reads white-on-dark in both light
-        // and dark mode.
         gradient: _overlayTitle
             ? const LinearGradient(
                 begin: Alignment(0, 1 / 3),
@@ -418,9 +377,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
               )
             : null,
       ),
-      // Decode at tile size, not source size: full-res covers overflow
-      // Flutter's decoded-image budget after a few dozen tiles, so every tab
-      // switch re-decoded (and re-shimmered) the whole grid.
+      // Decode at tile size to keep full-resolution covers from exhausting the image-cache budget.
       child: LayoutBuilder(
         builder: (context, constraints) => ServerImage(
           imageUrl: widget.manga.thumbnailUrl ?? "",
@@ -429,8 +386,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                     .round()
                     .clamp(1, 1 << 16)
               : null,
-          // A freeform tile is only as tall as its cover, so a screen-relative
-          // shimmer would make the grid lurch once the art lands.
+          // Match shimmer to cover geometry so decoded art does not shift the grid.
           progressIndicatorBuilder: freeform
               ? (context, url, progress) => const _FreeformCoverPlaceholder()
               : null,
@@ -439,8 +395,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
     );
     if (!freeform) return image;
 
-    // The stack loosened both axes, so pin the width back to the column width;
-    // only the height is allowed to follow the art.
+    // Loosen height only; preserve the column width.
     return SizedBox(
       width: double.infinity,
       child: LayoutBuilder(
@@ -461,12 +416,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
   }
 }
 
-/// The comfortable-grid title drawn under the cover, on the theme surface.
-///
-/// With [limitLines] on it is a two-line ellipsized block. With it off it wraps
-/// in full wherever the tile can grow; in a fixed-height uniform cell the line
-/// cap comes from the granted height instead, so the text stops on a line
-/// boundary.
+/// Uncapped titles wrap in growing tiles; uniform tiles cap at a whole-line boundary.
 class _TitleBlock extends StatelessWidget {
   const _TitleBlock({required this.title, required this.limitLines});
 
@@ -478,8 +428,7 @@ class _TitleBlock extends StatelessWidget {
     height: _kTitleLineFactor,
   );
 
-  /// Skia collapses `ellipsis + maxLines: null` to one line, so uncapped text
-  /// has to ask to wrap rather than to ellipsize.
+  /// Skia ellipsis with null maxLines collapses to one line; uncapped text must wrap.
   static Widget _text(String title, int? maxLines) => Text(
     title,
     maxLines: maxLines,
@@ -497,7 +446,6 @@ class _TitleBlock extends StatelessWidget {
           : LayoutBuilder(
               builder: (context, constraints) {
                 if (!constraints.hasBoundedHeight) {
-                  // Self-sizing tile: let the whole title through.
                   return _text(title, null);
                 }
                 final lineHeight =
@@ -513,8 +461,6 @@ class _TitleBlock extends StatelessWidget {
   }
 }
 
-/// Holds the 2:3 book ratio while the real cover ratio is unknown, so a
-/// freeform tile barely moves once the art decodes.
 class _FreeformCoverPlaceholder extends StatelessWidget {
   const _FreeformCoverPlaceholder();
 
@@ -525,9 +471,7 @@ class _FreeformCoverPlaceholder extends StatelessWidget {
   );
 }
 
-/// Fraction (0..1] of a series that's been read, or null when there's nothing
-/// to show (no chapters, or none read yet). Clamps defensively so odd counts
-/// (unread > total) never produce an out-of-range or negative bar.
+/// Read fraction in (0,1], or null for no chapters/read progress; inconsistent counts are clamped.
 double? coverReadFraction({
   required int totalChapters,
   required int unreadCount,
@@ -537,9 +481,6 @@ double? coverReadFraction({
   return read <= 0 ? null : read / totalChapters;
 }
 
-/// Thin read-progress bar along the bottom edge of a library cover, gated on the
-/// per-user toggle. Percent read is derived client-side from the manga's own
-/// counts, so it needs no server call.
 class _CoverReadProgressBar extends ConsumerWidget {
   const _CoverReadProgressBar({required this.manga});
 

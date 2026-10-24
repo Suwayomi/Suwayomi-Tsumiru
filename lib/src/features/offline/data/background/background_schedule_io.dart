@@ -84,16 +84,7 @@ Future<void> reconcileBackgroundSchedule() =>
         ),
         existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       );
-      // A freshly-published upstream chapter is usually not yet downloaded on
-      // the server, so the last run asked the server to fetch it and deferred
-      // the device pull to a later wake. Nudge that wake to happen in minutes
-      // instead of the next full period (or the next app launch) so the second
-      // hop completes promptly — this is the "a chapter is regularly forgotten
-      // in catch-up" case. It's a one-off (not periodic), so it needs no
-      // explicit cancel: while the obligation persists each run re-arms it
-      // (replace), and once nothing pending has strikes left — the download
-      // lands, or the executor gave up on it — we simply stop re-arming and
-      // the last queued one fires once more, harmlessly.
+      // Pending server fetches get a one-off follow-up; re-arm only while retryable obligations remain.
       if (downloadDemand &&
           state.readLedger(spec!.serverId).hasActionableServerFetch) {
         await Workmanager().registerOneOffTask(
@@ -106,9 +97,7 @@ Future<void> reconcileBackgroundSchedule() =>
       }
     });
 
-/// How long after a run leaves a server-fetch pending before the follow-up wake
-/// retries the second hop. Long enough for the server to finish its own
-/// download of a typical chapter, short enough to beat the 1-6h periodic gap.
+// Give server fetching time to finish before the next device-pull attempt.
 const _followUpDelay = Duration(minutes: 15);
 
 bool queuedChapterTerminal(List<LogEntry> entries, QueuedChapterSpec chapter) {

@@ -13,8 +13,6 @@ import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../controller/updates_filter_controller.dart';
 import '../controller/updates_grouping_controller.dart';
 
-/// Filter rows for the Updates list. Same order Komikku uses — Downloaded,
-/// Unread, Started, Bookmarked — and the same pills the library organizer uses.
 class UpdatesFilterSheet extends ConsumerWidget {
   const UpdatesFilterSheet({super.key});
 
@@ -30,8 +28,6 @@ class UpdatesFilterSheet extends ConsumerWidget {
         children: [
           OrganizerHeading(context.l10n.updatesGroupingLabel),
           OrganizerHint(context.l10n.updatesGroupingHint),
-          // A chip row, same visual language as every other tri-state /
-          // enum picker in the organizer sheets — not a SegmentedButton.
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
             child: Wrap(

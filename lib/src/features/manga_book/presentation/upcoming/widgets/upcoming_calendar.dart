@@ -8,10 +8,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 
-/// Month calendar for the Upcoming screen — a header (month/year + prev/next)
-/// over a 7-column day grid. Each day shows its number, a small count of
-/// predicted releases (top-right), and up to three dots (16sp labels, today
-/// ring, dimmed past days, dots tinted by `(index + 1) * 0.3` alpha).
 class UpcomingCalendar extends StatelessWidget {
   const UpcomingCalendar({
     super.key,
@@ -95,14 +91,12 @@ class _Grid extends StatelessWidget {
   Widget build(BuildContext context) {
     final ml = MaterialLocalizations.of(context);
     final firstDow = ml.firstDayOfWeekIndex; // 0 = Sunday
-    // Weekday header labels, starting from the locale's first day.
     final weekdayLabels = [
       for (var i = 0; i < 7; i++) ml.narrowWeekdays[(firstDow + i) % 7],
     ];
 
     final firstOfMonth = DateTime(month.year, month.month, 1);
-    // DateTime.weekday: 1 = Monday .. 7 = Sunday. Map to a 0=Sunday index, then
-    // offset by the locale's first day of week.
+    // DateTime weekdays start at Monday=1; locale indexing uses Sunday=0.
     final firstWeekdaySunday0 = firstOfMonth.weekday % 7;
     final leadingBlanks = (firstWeekdaySunday0 - firstDow + 7) % 7;
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;

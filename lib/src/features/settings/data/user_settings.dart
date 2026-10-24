@@ -49,20 +49,14 @@ final personalSettingsProvider = FutureProvider<SettingsDto?>((ref) async {
 });
 
 enum PersonalSettingsState {
-  /// Known, and editable. Also while a reload keeps the previous value.
+  /// Editable even while a reload retains the previous value.
   ready,
 
-  /// Still being checked: the account access or the first load is in flight.
   loading,
 
-  /// The check failed: say so, and keep the controls disabled.
   unavailable,
 }
 
-/// Where this account's personal settings stand, for the screens that edit
-/// them. A check in flight used to count as a failure, so every visit (and
-/// every reload, which flags a value that is already there as loading) showed
-/// "Account settings could not be verified" for a few seconds.
 PersonalSettingsState personalSettingsState({
   required AccountAccess access,
   required AsyncValue<AccountAccess> accessCheck,
@@ -80,7 +74,6 @@ PersonalSettingsState personalSettingsState({
       : PersonalSettingsState.unavailable;
 }
 
-/// [personalSettingsState] for the current account.
 final personalSettingsStateProvider = Provider<PersonalSettingsState>(
   (ref) => personalSettingsState(
     access: ref.watch(settledAccountAccessProvider),

@@ -14,8 +14,6 @@ import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dar
 import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
 
-/// Tags round-trip as a JSON list; a malformed or absent value degrades to no
-/// tags rather than throwing on every library render.
 
 List<String> offlineGenre(String? stored) {
   if (stored == null || stored.isEmpty) return const [];
@@ -28,10 +26,6 @@ List<String> offlineGenre(String? stored) {
   }
 }
 
-/// Build a [MangaDto] from an on-device catalog row. Used only as the offline
-/// fallback when the server is unreachable. All server-sourced metadata fields
-/// (source, status, counts, timestamps, categories) are restored from the
-/// catalog so filters/sort/badges/grouping all work offline.
 MangaDto offlineMangaToDto(
   OfflineManga m, {
   int chapterCount = 0,
@@ -40,21 +34,16 @@ MangaDto offlineMangaToDto(
   List<OfflineCategory> offlineCategories = const [],
   int unsyncedReadDelta = 0,
 }) {
-  // A row mirrored before totalChapters existed stores zero, so fall back to
-  // the chapters actually on hand. Used for both the reported total and the
-  // unread bound below — clamping against the raw zero would force unread to
-  // zero and make the series look fully read.
+  // Legacy zero totals fall back to mirrored chapters so unread counts are not clamped to zero.
   final effectiveTotal = m.totalChapters > 0 ? m.totalChapters : chapterCount;
 
-  // Restore source from stored columns
   final Fragment$MangaDto$source? source = m.sourceId == null
       ? null
       : Fragment$MangaDto$source(
           id: m.sourceId!,
           name: m.sourceName ?? '',
           lang: m.sourceLang ?? '',
-          // MIXED, not SAFE, when the rating was never mirrored — MIXED
-          // defers to the series' tags, so a pre-rating row still filters.
+          // Missing ratings use MIXED so genre tags can still filter legacy rows.
           contentWarning: m.sourceContentWarning == null
               ? Enum$ContentWarning.MIXED
               : fromJson$Enum$ContentWarning(m.sourceContentWarning!),
@@ -63,12 +52,10 @@ MangaDto offlineMangaToDto(
           $extension: Fragment$MangaDto$source$extension(isObsolete: false),
         );
 
-  // Restore status (stored as the enum name string)
   final status = m.status == null
       ? Enum$MangaStatus.UNKNOWN
       : fromJson$Enum$MangaStatus(m.status!);
 
-  // Restore latestFetchedChapter (carries fetchedAt for sort; minimal stub otherwise)
   final latestFetched = m.latestFetchedAt == null
       ? null
       : Fragment$MangaDto$latestFetchedChapter(
@@ -76,7 +63,6 @@ MangaDto offlineMangaToDto(
           fetchedAt: m.latestFetchedAt!,
         );
 
-  // Restore latestUploadedChapter (carries uploadDate for sort)
   final latestUploaded = m.latestUploadedAt == null
       ? null
       : Fragment$MangaDto$latestUploadedChapter(
@@ -84,7 +70,6 @@ MangaDto offlineMangaToDto(
           uploadDate: m.latestUploadedAt!,
         );
 
-  // Restore category membership
   final categoryNodes = [
     for (final cat in offlineCategories)
       Fragment$MangaDto$categories$nodes(id: cat.id),
@@ -97,17 +82,11 @@ MangaDto offlineMangaToDto(
     user: Fragment$MangaDto$user(
       bookmarkCount: m.bookmarkCount,
       downloadCount: m.downloadCount,
-      // The next unread chapter that's downloaded on this device, if any. Drives
-      // the offline "continue reading" button — left null (button hidden) when
-      // the next unread chapter isn't on the device, so it's never a dead end.
       firstUnreadChapter: firstUnread == null
           ? null
           : Fragment$MangaDto$user$firstUnreadChapter(id: firstUnread.id),
       inLibrary: true,
       inLibraryAt: m.inLibraryAt ?? '0',
-      // Carries the manga's most-recent read timestamp so the offline library's
-      // "Last Read" sort works; only this field is read off it (see the sort in
-      // library_controller). Null when nothing in the manga has been read.
       lastReadChapter: lastReadAt == null
           ? null
           : Fragment$MangaDto$user$lastReadChapter(
@@ -118,11 +97,7 @@ MangaDto offlineMangaToDto(
                 lastReadAt: lastReadAt,
               ),
             ),
-      // The stored count is the server's, so it does not move when you read
-      // offline. Add back what this device has changed since the server last
-      // reported, measured per chapter against its synced baseline — exact in
-      // both directions, and correct for a partial mirror because each row
-      // carries its own before-and-after.
+      // Correct stored server counts by local changes against each chapter baseline, even for partial mirrors.
       unreadCount: (m.unreadCount - unsyncedReadDelta).clamp(0, effectiveTotal),
     ),
     chapters: Fragment$MangaDto$chapters(totalCount: effectiveTotal),
@@ -153,12 +128,10 @@ Map<String, String> _decodeMeta(String? metaJson) {
   }
 }
 
-/// Build a [ChapterDto] from an on-device catalog row (offline fallback).
 ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
   id: c.id,
   mangaId: c.mangaId,
   name: c.name,
-  // Real number when synced; index fallback supports pre-v9 rows.
   chapterNumber: c.chapterNumber ?? c.chapterIndex.toDouble(),
   sourceOrder: c.chapterIndex,
   user: Fragment$ChapterDto$user(
@@ -176,10 +149,7 @@ ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
   meta: const <Fragment$ChapterDto$meta>[],
 );
 
-/// A synthetic "Default" category used offline, when the server's category list
-/// is unreachable. Carries [mangaCount] so it survives the `mangas.totalCount >
-/// 0` filter (`nonZeroCategoryList`) and the library renders one flat tab of the
-/// on-device catalog.
+// A positive mangaCount keeps the synthetic category through nonZeroCategoryList filtering.
 CategoryDto offlineDefaultCategoryDto(int mangaCount, {int categoryId = 0}) =>
     Fragment$CategoryDto(
       defaultCategory: false,

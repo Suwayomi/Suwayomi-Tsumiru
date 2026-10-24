@@ -27,6 +27,21 @@ class DatabaseSettingsRepository {
     }
   }
 
+  Future<Query$PreviewDatabaseSettings$settings?> previewSettings() async {
+    try {
+      return await client
+          .query$PreviewDatabaseSettings(
+            Options$Query$PreviewDatabaseSettings(
+              fetchPolicy: FetchPolicy.noCache,
+            ),
+          )
+          .getData((data) => data.settings);
+    } on OperationMessageException catch (error) {
+      if (onlyUndefinedFieldErrors(error, type: 'SettingsType')) return null;
+      rethrow;
+    }
+  }
+
   Future<Fragment$DatabaseSettingsDto?> write(
     Input$PartialSettingsTypeInput patch,
   ) => permissions.run(
@@ -53,4 +68,9 @@ final databaseSettingsRepositoryProvider = Provider<DatabaseSettingsRepository>(
 final databaseSettingsProvider =
     FutureProvider.autoDispose<Fragment$DatabaseSettingsDto?>(
       (ref) => ref.watch(databaseSettingsRepositoryProvider).settings(),
+    );
+
+final previewDatabaseSettingsProvider =
+    FutureProvider.autoDispose<Query$PreviewDatabaseSettings$settings?>(
+      (ref) => ref.watch(databaseSettingsRepositoryProvider).previewSettings(),
     );

@@ -8,8 +8,6 @@ import 'dart:convert';
 
 import '../recommendation_provider.dart';
 
-// 1:1 with exh/recs/sources/ComickPagingSource.kt. Only applies to a
-// Comick-sourced manga; reads recommendations off that manga's own Comick page.
 const _thumbnailBase = 'https://meo.comick.pictures/';
 
 class ComickProvider extends RecommendationProvider {

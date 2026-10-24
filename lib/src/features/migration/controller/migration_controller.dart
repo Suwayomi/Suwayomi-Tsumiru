@@ -17,7 +17,6 @@ import '../../settings/presentation/general/timeout_settings/timeout_settings_se
 
 part 'migration_controller.g.dart';
 
-// Migration Quick Search Results similar to regular global search
 typedef MigrationQuickSearchResults = ({
   SourceDto source,
   AsyncValue<List<MangaDto>> mangaList,
@@ -33,7 +32,7 @@ Future<List<MangaDto>> migrationSourceQuickSearchMangaList(
   String? query,
 }) async {
   final rateLimiterQueue = ref.watch(rateLimitQueueProvider(query));
-  // Capture now — ref access after the gap may throw once disposed.
+  // Capture before awaiting; ref may be disposed afterward.
   final sourceRepository = ref.watch(sourceRepositoryProvider);
   final timeout = Duration(
     milliseconds:
@@ -58,8 +57,6 @@ AsyncValue<List<MigrationQuickSearchResults>> migrationGlobalSearchResults(
   Ref ref, {
   String? query,
 }) {
-  // Pinned-first list of every searchable source (shared with global search;
-  // pinned sources are otherwise excluded from the grouped map).
   final sourcesData = ref.watch(searchableSourcesProvider);
   final sourceList = sourcesData.value ?? const <SourceDto>[];
 

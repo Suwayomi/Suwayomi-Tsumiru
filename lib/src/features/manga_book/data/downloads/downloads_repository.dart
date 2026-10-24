@@ -31,7 +31,6 @@ class DownloadsRepository {
 
   final GraphQLClient client;
   final GraphQLClient subscriptionClient;
-  // Downloads
   Future<void> startDownloads() => permissions.run(
     Enum$UserPermission.DOWNLOAD_CHAPTERS,
     () => client

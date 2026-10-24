@@ -11,9 +11,6 @@ enum AppUrls {
   ),
   privacyPolicy(url: "https://tsumiru.app/privacy/"),
   tachideskHelp(url: "https://tsumiru.app/docs/guides/getting-started"),
-  // What's New points at the GitHub Releases page so it always shows the
-  // current release notes — the old docs-site changelog was hand-maintained and
-  // went stale (stuck at v0.6.1 while the app shipped v0.7.1).
   sorayomiWhatsNew(
     url: "https://github.com/Suwayomi/Suwayomi-Tsumiru/releases",
   ),
@@ -21,6 +18,7 @@ enum AppUrls {
     url:
         "https://api.github.com/repos/Suwayomi/Suwayomi-Tsumiru/releases/latest",
   ),
+  weblateTranslate(url: "https://hosted.weblate.org/engage/suwayomi/"),
   flareSolverr(
     url:
         "https://github.com/FlareSolverr/FlareSolverr?tab=readme-ov-file#installation",

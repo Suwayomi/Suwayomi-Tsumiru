@@ -4,11 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Breadcrumbs for non-fatal faults, written into the same log the crash
-/// handlers use so Settings' copy action picks them up.
-///
-/// A sink rather than a direct write: the log path resolves once at startup and
-/// callers deep in the widget tree can't await it. Tests swap it to capture.
+/// Shared crash-log sink; callers cannot await the log path resolved at startup.
 typedef DiagnosticSink = void Function(String line);
 
 DiagnosticSink? _sink;

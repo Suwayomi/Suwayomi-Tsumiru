@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../../account/data/account_permission.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/manga_page/manga_page.dart';
@@ -39,6 +40,7 @@ class SourceRepository {
       .mutate$FetchSourceManga(
         Options$Mutation$FetchSourceManga(
           variables: Variables$Mutation$FetchSourceManga(
+            withLibraryFields: false,
             withFirstUnread: false,
             input: Input$FetchSourceMangaInput(
               query: query,
@@ -97,26 +99,13 @@ class SourceRepository {
         .getData((data) => data.updateSourcePreference?.preferences),
   );
 
-  /// Pins/unpins a source by writing the `webUI_isPinned` server meta key
-  /// (the exact key WebUI uses, so the state syncs across clients).
-  Future<void> setSourcePinned(String sourceId, bool pinned) => ferryClient
-      .mutate$SetSourceMeta(
-        Options$Mutation$SetSourceMeta(
-          variables: Variables$Mutation$SetSourceMeta(
-            input: Input$SetSourceMetaInput(
-              meta: Input$SourceMetaTypeInput(
-                sourceId: sourceId,
-                key: kSourcePinnedMetaKey,
-                value: pinned ? 'true' : 'false',
-              ),
-            ),
-          ),
-        ),
-      )
-      .getData((data) => data.setSourceMeta?.meta);
+  /// Persists pin state in server meta shared with WebUI.
+  Future<void> setSourcePinned(String sourceId, bool pinned) =>
+      WebUiMetaRepository(
+        ferryClient,
+      ).writeSourceValue(sourceId, 'isPinned', pinned ? 'true' : 'false');
 
-  /// Hides/unhides a source from the browse list by writing the
-  /// `tsumiru_isHidden` server meta key (syncs across Tsumiru devices).
+  /// Persists hidden state in server meta shared across Tsumiru devices.
   Future<void> setSourceHidden(String sourceId, bool hidden) => ferryClient
       .mutate$SetSourceMeta(
         Options$Mutation$SetSourceMeta(

@@ -6,5 +6,4 @@
 
 import 'dart:io';
 
-/// Native implementation: true only on a real Android device/emulator.
 bool get isAndroidNative => Platform.isAndroid;

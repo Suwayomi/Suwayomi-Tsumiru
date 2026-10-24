@@ -28,7 +28,6 @@ class LegacyUserFieldsDetection {
       }
       return _hasUser = fields.any((field) => field['name'] == 'user');
     } catch (_) {
-      // A failed probe must not prevent the original operation from running.
       return null;
     }
   }
@@ -65,7 +64,12 @@ class LegacyUserFieldsLink extends Link {
       return;
     }
     final hasUser = await _detection.detect(request, _probe ?? next);
-    if (hasUser != false) {
+    if (hasUser == null) {
+      throw StateError(
+        'Server compatibility detection failed; retry the request',
+      );
+    }
+    if (hasUser) {
       yield* next(request);
       return;
     }

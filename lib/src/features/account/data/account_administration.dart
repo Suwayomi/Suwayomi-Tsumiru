@@ -19,6 +19,24 @@ final accountUsersProvider = FutureProvider.autoDispose
       return result;
     });
 
+final accountManagementUsersProvider =
+    FutureProvider.autoDispose<List<Fragment$AccountDto>>((ref) async {
+      final repository = ref.watch(accountRepositoryProvider);
+      final users = <Fragment$AccountDto>[];
+      int? after;
+      do {
+        final page = await repository.users(first: 25, after: after);
+        if (page == null) throw StateError('Missing users response');
+        users.addAll(page.nodes);
+        if (!page.pageInfo.hasNextPage) return users;
+        final next = page.pageInfo.endCursor;
+        if (next == null || next == after) {
+          throw StateError('Missing next users page');
+        }
+        after = next;
+      } while (true);
+    });
+
 final accountCodesProvider =
     FutureProvider.autoDispose<List<Fragment$AccountCodeDto>>((ref) async {
       if (!ref.watch(settledAccountAccessProvider).canManageUsers) {

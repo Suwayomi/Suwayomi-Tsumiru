@@ -28,9 +28,7 @@ class CenterSorayomiShimmerIndicator extends StatelessWidget {
       );
 }
 
-/// Stays invisible for [delay] so a fast resolve (a cached cover re-decoding)
-/// never flashes a loading state. Sized like the shimmer from the start so
-/// layout doesn't shift.
+/// Reserve space immediately but delay painting to avoid flashing on fast cache loads.
 class DelayedShimmer extends StatefulWidget {
   const DelayedShimmer({super.key, this.delay = const Duration(milliseconds: 200)});
 

@@ -8,25 +8,16 @@ import 'package:workmanager/workmanager.dart';
 
 import 'notification_worker.dart';
 
-/// WorkManager task name for the periodic new-chapter check.
 const kNewChapterCheckTask = 'tsumiru.newChapterCheck';
 
-/// Unique-work names. The manual "check now" uses a SEPARATE name from the
-/// periodic job — enqueuing manual work under the periodic identity can replace
-/// or suppress the schedule.
+// Manual checks need a separate unique-work name to avoid suppressing the periodic schedule.
 const kNewChapterPeriodicName = 'tsumiru.newChapterCheck.periodic';
 const kNewChapterCheckNowName = 'tsumiru.newChapterCheck.now';
 
-/// A short-fuse follow-up wake, scheduled when a run leaves chapters waiting on
-/// the server's own download (the two-hop server-fetch). Its own unique name,
-/// so it never replaces or suppresses the periodic schedule. Without it, the
-/// second hop waits for the next 1-6h period — or, if the app is force-closed,
-/// until the next launch — which is the "a chapter is regularly forgotten in
-/// catch-up" symptom.
+// Follow-up work uses its own identity while waiting for server downloads, preserving periodic scheduling.
 const kNewChapterFollowUpName = 'tsumiru.newChapterCheck.followup';
 
-/// The isolate entry point registered with `Workmanager().initialize`. Must be a
-/// top-level `vm:entry-point` function — the OS spawns a fresh isolate here.
+// WorkManager requires a top-level vm:entry-point callback in the new isolate.
 @pragma('vm:entry-point')
 void notificationCallbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {

@@ -35,9 +35,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
     final wantsDescriptionCheck = ref
         .watch(libraryDuplicatesCheckDescriptionProvider)
         .ifNull(false);
-    // Offline data has no fresh tracker/description fields to trust, so the
-    // scan itself never runs the description pass while unreachable — even
-    // if the persisted toggle is on.
+    // Offline data lacks fresh tracker and description fields for description matching.
     final checkDescriptions = wantsDescriptionCheck && !offline;
     final scanProvider = libraryDuplicatesProvider(
       checkDescriptions: checkDescriptions,
@@ -46,8 +44,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
     final libraryAsync = ref.watch(libraryMangaListProvider);
     final trackerNames = ref.watch(libraryTrackerNamesProvider);
 
-    // Long-press to select; removals filter these groups in memory (Task 13)
-    // rather than invalidating the read-once scan provider.
+    // Filter removals in memory without invalidating the read-once O(n²) scan.
     final selection = useState<Set<int>>(const {});
     final removedIds = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
@@ -83,27 +80,20 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
       );
       if (confirmed != true || !context.mounted) return;
 
-      // The container outlives this widget, so a mid-loop unmount can't leave
-      // successful removals unreflected in the rest of the app.
+      // The container outlives the widget, so removals and invalidation survive unmounts.
       final container = ProviderScope.containerOf(context, listen: false);
       final remover = container.read(duplicateEntryRemoverProvider);
       final removed = <int>[];
       for (final id in ids) {
         try {
-          // The container backs the removal, so an unmount mid-await still
-          // completes the purge instead of surfacing as a removal failure.
           await remover(container, id);
           removed.add(id);
         } catch (_) {
-          // Stop on the first failure so a broken removal is never hidden — the
-          // snackbar below reports how many of the requested ids actually left.
           break;
         }
       }
 
-      // Refresh the rest of the app's library view; the scan provider reads the
-      // library once (Task 11), so this cannot re-trigger the O(n²) scan. Runs
-      // before the mounted check so an unmount mid-loop can't leave it stale.
+      // Invalidate before checking mounted; the read-once scan does not watch this provider.
       container.invalidate(libraryMangaListProvider);
 
       if (!context.mounted) return;
@@ -150,8 +140,6 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
       ],
     );
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.duplicatedEntries);
     final actions = <Widget>[
@@ -282,9 +270,7 @@ class _GroupList extends StatelessWidget {
   }
 }
 
-/// A tracker id held by at least two of [members] — mirrors the matcher's
-/// own "shared tracker key" test, but works from live [MangaDto]s so the UI
-/// can name the tracker without threading ids back through [DupGroup].
+/// A tracker shared by at least two members, excluding unrelated singleton bindings.
 int? _sharedTrackerId(List<MangaDto> members) {
   final holderCounts = <int, int>{};
   for (final manga in members) {
@@ -351,8 +337,7 @@ class _GroupTile extends StatelessWidget {
           ),
         ),
         const Gap(8),
-        // Derived, not a literal: the cover grew when it was corrected to
-        // 2:3, and a fixed strip height clipped the title under it.
+        // Derive strip height from cover height so cover aspect changes cannot clip text.
         CoverRowSection(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           height: mangaCoverBoxHeight(_kCardWidth) + _kMemberCardTextExtent,
@@ -372,9 +357,7 @@ class _GroupTile extends StatelessWidget {
 
 const double _kCardWidth = 120;
 
-/// Room under each cover for the source line and its gap. That needs about 20
-/// at the default text scale; the rest is headroom so a larger scale grows the
-/// line instead of clipping it against the strip's fixed height.
+/// Source text needs ~20 px at default scale; reserve extra room for larger text.
 const double _kMemberCardTextExtent = 40;
 
 class _MemberCard extends StatelessWidget {
@@ -408,7 +391,6 @@ class _MemberCard extends StatelessWidget {
             child: MangaCoverGridTile(
               manga: manga,
               selected: selected,
-              // While selecting, a tap toggles the cover instead of opening it.
               onPressed: selecting
                   ? () => onToggleSelection(manga.id)
                   : () => MangaRoute(mangaId: manga.id).push(context),

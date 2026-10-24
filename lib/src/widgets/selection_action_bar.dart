@@ -9,17 +9,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_sizes.dart';
 import '../utils/extensions/custom_extensions.dart';
 
-/// Shared floating bottom action bar for multi-select modes (library manga and
-/// chapter selection use the same look). A translucent rounded [Card] holding an
-/// optional [leading] cluster (e.g. close + count + select-all) on the left and
-/// a row of action buttons on the right; when [leading] is empty the actions are
-/// spaced evenly (the chapter-selection layout, whose count/close/select-all
-/// live in the screen's app bar instead).
-///
-/// Reads the bottom inset straight from the [FlutterView]: this bar is rendered
-/// inside the shell navigation / a Scaffold bottomSheet, which zero out the
-/// bottom MediaQuery insets (both padding and viewPadding) for descendants, so a
-/// MediaQuery/SafeArea would not clear the Android navigation bar.
+/// Read insets from FlutterView: shell/bottomSheet MediaQuery insets are zeroed.
 class SelectionActionBar extends StatelessWidget {
   const SelectionActionBar({
     super.key,
@@ -31,11 +21,7 @@ class SelectionActionBar extends StatelessWidget {
   final List<Widget> leading;
   final List<Widget> actions;
 
-  /// Add the system navigation-bar inset below the card. True when the bar sits
-  /// directly over the system nav (a pushed screen's bottomSheet, e.g. chapter
-  /// selection). False when an app bottom NavigationBar already sits between
-  /// this bar and the system nav (the library tab) — otherwise the inset is
-  /// double-counted and the bar floats too high above the nav bar.
+  /// Add the system inset only when no app navigation bar already reserves it.
   final bool clearsSystemNav;
 
   @override

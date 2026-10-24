@@ -170,8 +170,6 @@ class AccountCodesScreen extends HookConsumerWidget {
     final codePermissions = admitted
         ? ref.watch(accountCodePermissionsProvider).value
         : null;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.accountCodes);
     final scaffold = Scaffold(

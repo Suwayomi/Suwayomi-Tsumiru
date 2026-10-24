@@ -4,10 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Direct port of Komikku's tachiyomi-presentation-core FlagEmoji so the
-// Sources filter screen shows the same per-language flags. Maps a source
-// language code to a country, then to the two regional-indicator symbols that
-// render as a flag emoji. Falls back to the globe (🌎) for unknown languages.
 
 /// Regional indicators run from U+1F1E6 (A) to U+1F1FF (Z).
 String _regionalIndicator(String char) {
@@ -20,8 +16,7 @@ String _countryToFlag(String countryCode) {
   return _regionalIndicator(code[0]) + _regionalIndicator(code[1]);
 }
 
-/// Language code -> country code. Keys and lookups are lower-cased so Tsumiru's
-/// lower-case source langs (`pt-br`, `zh-hans`) match Komikku's cased entries.
+// Lowercase keys match the source language codes.
 const Map<String, String> _lang2Country = {
   'all': 'un',
   'af': 'za',

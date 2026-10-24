@@ -13,7 +13,6 @@ class WindowGeometry {
   const WindowGeometry({this.size, this.maximized = false});
 }
 
-/// Raise each axis of [size] to at least [min].
 Size clampToMin(Size size, Size min) => Size(
       size.width < min.width ? min.width : size.width,
       size.height < min.height ? min.height : size.height,
@@ -22,8 +21,7 @@ Size clampToMin(Size size, Size min) => Size(
 /// Sanity cap against corrupted prefs.
 const double _kMaxDimension = 8192;
 
-/// The size to open at: the saved size (clamped to [min]), else [fallback].
-/// Corrupt saved values (NaN/infinite/non-positive/absurd) fall back.
+/// Clamp saved sizes to min; invalid values use fallback.
 Size resolveRestoreSize(
   WindowGeometry? saved, {
   required Size fallback,
@@ -41,6 +39,5 @@ Size resolveRestoreSize(
   return clampToMin(s, min);
 }
 
-/// Never persist the window size while maximized — it would save the
-/// screen-filling size as the restore size.
+/// Do not persist maximized dimensions as the restore size.
 bool shouldPersistSize({required bool isMaximized}) => !isMaximized;

@@ -10,17 +10,12 @@ import '../../../../../../utils/theme/app_color_scheme.dart';
 import '../../../../../../utils/theme/theme_tokens.dart';
 import 'app_theme_providers.dart';
 
-/// Horizontal curated theme picker. Each card previews the theme's surface +
-/// accents at the brightness currently in use, and shows a check when selected.
-///
-/// While the cards overflow, a row with a pair of scroll arrows is shown
-/// above them. Give it a [title] to label that row.
+/// [title] labels the scroll-arrow row shown when the theme cards overflow.
 class ThemeSelector extends HookConsumerWidget {
   const ThemeSelector({super.key, this.title});
 
   final Widget? title;
 
-  /// Card height; 16px shorter than the 148 the scrollbar lane used to need.
   static const _cardsHeight = 132.0;
   static const _arrowSize = 34.0;
 
@@ -28,8 +23,6 @@ class ThemeSelector extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(appThemeKeyProvider) ?? AppTheme.indigoNight;
     final controller = useScrollController();
-    // Bumped on every scroll (controller listener) and on first layout or a
-    // viewport resize (metrics notification), so the arrows track both ends.
     final rebuild = useState(0);
     useEffect(() {
       void onScroll() => rebuild.value++;
@@ -121,8 +114,7 @@ class ThemeSelector extends HookConsumerWidget {
               height: _cardsHeight,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  // Size cards so the row always ends on half a card, which
-                  // shows it scrolls at every width.
+                  // A half-visible card signals that the row scrolls.
                   const slot = 104.0;
                   final whole = (constraints.maxWidth / slot - 0.5)
                       .floor()
@@ -132,9 +124,7 @@ class ThemeSelector extends HookConsumerWidget {
                     controller: controller,
                     scrollDirection: Axis.horizontal,
                     children: [
-                      // Named themes first, Custom last (custom sits mid-enum
-                      // because values are persisted by index — display order is
-                      // independent).
+                      // Enum indices are persisted; keep display order independent.
                       for (final theme in [
                         ...AppTheme.values.where((t) => t != AppTheme.custom),
                         AppTheme.custom,
@@ -174,10 +164,8 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Preview the brightness the app is actually in, so light mode does not
-    // show a wall of dark cards.
     final brightness = Theme.of(context).brightness;
-    // Custom has no fixed tokens; preview with its swatch on a neutral bg.
+    // Custom has no fixed tokens; preview its swatch on a neutral background.
     final ColorScheme preview = theme == AppTheme.custom
         ? (brightness == Brightness.dark
               ? const ColorScheme.dark()
@@ -239,7 +227,6 @@ class _ThemeCard extends StatelessWidget {
   );
 }
 
-/// Tile to pick a custom seed color; only meaningful when AppTheme.custom.
 class CustomColorTile extends ConsumerWidget {
   const CustomColorTile({super.key});
 

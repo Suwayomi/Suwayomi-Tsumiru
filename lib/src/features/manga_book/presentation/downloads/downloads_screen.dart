@@ -15,6 +15,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
@@ -50,8 +51,6 @@ class DownloadsScreen extends HookConsumerWidget {
         ],
       ),
     );
-    // Own the tab controller so the FAB can be tab-contextual: the server queue
-    // pause on the Server tab, the on-device pause on the On-device tab.
     final tabController = useTabController(
       initialLength: 2,
       animationDuration: context.reduceMotion
@@ -62,22 +61,18 @@ class DownloadsScreen extends HookConsumerWidget {
     useListenable(tabController);
     final onDeviceTab = tabController.index == 1;
     final phone = context.windowSizeClass == WindowSizeClass.compact;
-    // Phone searches from the app-bar entry (or the box under the title when
-    // the persistent setting is on); tablet and desktop are unchanged.
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     final tabBar = TabBar(
       controller: tabController,
-      // Fill alignment so the underline aligns under each tab (the global
-      // theme's center alignment is for the scrollable category tabs).
+      // Fill aligns the underline with each tab; the global center alignment serves scrollable categories.
       tabAlignment: TabAlignment.fill,
       tabs: [
         Tab(text: context.l10n.downloadsServerTab),
         Tab(text: context.l10n.downloadsOnDeviceTab),
       ],
     );
-    // Native desktop draws the search box and actions in the shell bar
-    // instead of an app bar; the tab bar stays in the page body.
+    // The shell hosts desktop actions and search; tabs remain in the page body.
     final topBar = showsMergedTopBar(context);
     final search = DesktopSearchField(
       query: ref.watch(unifiedSearchQueryProvider),
@@ -109,10 +104,21 @@ class DownloadsScreen extends HookConsumerWidget {
         IconButton(
           onPressed: !canDownload
               ? null
-              : () => AppUtils.guard(
+              : () async {
+                  if (!await confirmAction(
+                        context,
+                        title: context.l10n.confirmClearQueueTitle,
+                        message: context.l10n.confirmClearQueueMessage,
+                        action: context.l10n.confirmClearQueueTitle,
+                      ) ||
+                      !context.mounted) {
+                    return;
+                  }
+                  await AppUtils.guard(
                   ref.read(downloadsMapProvider.notifier).clearAll,
                   ref.read(toastProvider),
-                ),
+                  );
+                },
           tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.delete_sweep_rounded),
         ),
@@ -121,8 +127,6 @@ class DownloadsScreen extends HookConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
-              // Desktop replaces the title with the unified search box (the
-              // sidebar already names the page); phone and tablet keep it.
               title: context.usesDesktopShell
                   ? Align(
                       alignment: Alignment.centerLeft,
@@ -140,9 +144,7 @@ class DownloadsScreen extends HookConsumerWidget {
                   : tabBar,
               actions: actions,
       ),
-      // Defaulting to STOPPED (i.e. offering Resume) keeps the recovery action
-      // reachable when the run state is unknown: starting an already-running
-      // downloader is a no-op, being unable to restart a stalled one is not.
+      // Unknown run state offers Resume: starting an already-running downloader is a no-op.
       floatingActionButton: onDeviceTab
           ? const OfflineDownloadsFab()
           : (showDownloadsFAB
@@ -150,9 +152,7 @@ class DownloadsScreen extends HookConsumerWidget {
                     status: downloaderRunState ?? DownloaderState.STOPPED,
                   )
                 : null),
-      // Native desktop has no app bar to host the tab bar (the search box
-      // and actions live in the shell bar), so the tabs stay in the page
-      // body, like Browse's tabs.
+      // Desktop has no page app bar to host these tabs.
       body: topBar
           ? Column(
               children: [
@@ -192,9 +192,6 @@ class DownloadsScreen extends HookConsumerWidget {
   }
 }
 
-/// Pause/Resume control for ON-DEVICE downloads, shown on the Downloads →
-/// On device tab (mirrors the server [DownloadsFab]). Hidden when there's
-/// nothing queued/downloading; flips between Pause and Resume otherwise.
 class OfflineDownloadsFab extends ConsumerWidget {
   const OfflineDownloadsFab({super.key});
 
@@ -205,8 +202,7 @@ class OfflineDownloadsFab extends ConsumerWidget {
         .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final hasPending = ref.watch(offlineHasPendingProvider).value ?? false;
     final paused = ref.watch(offlineDownloadsPausedProvider) ?? false;
-    // Hide when idle (no pending work) — paused-but-idle included; the next
-    // enqueue flips it back to Resume.
+    // Hide idle queues, including paused queues with no pending work.
     if (!hasPending) return const SizedBox.shrink();
     return FloatingActionButton.extended(
       icon: Icon(paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
@@ -221,7 +217,6 @@ class OfflineDownloadsFab extends ConsumerWidget {
   }
 }
 
-/// The existing server download-queue view (the "Server" tab).
 class _ServerDownloads extends ConsumerWidget {
   const _ServerDownloads({
     required this.downloadsChapterIds,
@@ -230,8 +225,7 @@ class _ServerDownloads extends ConsumerWidget {
 
   final List<int> downloadsChapterIds;
 
-  /// The queue query, not the live feed: the feed can go silent for minutes
-  /// under a mass enqueue, and the tab shouldn't blank out when it does.
+  /// Use the queue query because mass enqueue can silence the live feed for minutes.
   final AsyncValue<DownloadStatusDto?> queueStatus;
 
   @override

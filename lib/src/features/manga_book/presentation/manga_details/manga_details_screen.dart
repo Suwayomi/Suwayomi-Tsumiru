@@ -6,10 +6,12 @@
 
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
@@ -17,6 +19,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
@@ -32,11 +35,13 @@ import '../../domain/chapter/chapter_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'controller/manga_details_controller.dart';
+import 'manga_notes_screen.dart';
 import 'server_web_url.dart';
 import 'widgets/big_screen_manga_details.dart';
 import 'widgets/edit_manga_category_dialog.dart';
 import 'widgets/manga_chapter_organizer.dart';
 import 'widgets/manga_description.dart';
+import 'widgets/manga_notes_dialog.dart';
 import 'widgets/series_header.dart';
 import 'widgets/series_info_column.dart';
 import 'widgets/small_screen_manga_details.dart';
@@ -69,13 +74,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final selecting = selectedChapters.value.isNotEmpty;
     final offline = ref.watch(serverUnreachableProvider);
-    // The series page switches from the phone layout to the two-column one at
-    // Material's expanded class (840), all in one step.
     final twoColumn = context.windowSizeClass >= WindowSizeClass.expanded;
 
-    // Esc belongs to the selection, not the global Back hotkey, whatever holds
-    // focus on this page (list, selection header, app bar). Focusing the page
-    // scope when a selection starts keeps Esc inside it.
+    // Focus the page scope during selection so Esc clears selection before global Back.
     final pageScope = useMemoized(FocusScopeNode.new);
     useEffect(() => pageScope.dispose, [pageScope]);
     final wasSelecting = usePrevious(selecting);
@@ -84,24 +85,19 @@ class MangaDetailsScreen extends HookConsumerWidget {
       return null;
     }, [selecting]);
 
-    // Drives the immersive app bar: transparent over the hero, fading to the
-    // surface color as the user scrolls past it. Updated from a
-    // NotificationListener on the body so only the app bar rebuilds on scroll —
-    // never the chapter list.
+    // Only the app bar listens to scroll changes, avoiding chapter-list rebuilds on scroll.
     final scrollPx = useMemoized(() => ValueNotifier<double>(0.0));
     useEffect(() => scrollPx.dispose, const []);
     final surface = context.theme.scaffoldBackgroundColor;
 
-    // Container (not the widget ref) so deferred invalidations below survive
-    // this screen being disposed mid-flight.
+    // Capture the container so deferred invalidations survive screen disposal.
     final providerContainer = ProviderScope.containerOf(context, listen: false);
 
     final mangaRefresh = useCallback(([bool onlineFetch = false]) async {
       await ref.read(mangaProvider.notifier).refresh();
       // Screen may be disposed during the refresh → don't invalidate a dead ref.
       if (!context.mounted) return;
-      // Defer past the current frame — this resumes after an await and may land
-      // mid-build, which would trip the Riverpod-3 modify-during-build assert.
+      // Defer invalidation past the frame; an await may resume during build.
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => providerContainer.invalidate(categoryControllerProvider),
       );
@@ -114,9 +110,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
     );
 
     final refresh = useCallback(([onlineFetch = false]) async {
-      // This can be invoked as a bulk chapter action's `afterOptionSelected`,
-      // reached only after that action's own network round trip — the screen
-      // may already be gone by then, and every ref use below assumes it isn't.
+      // Bulk callbacks may arrive after the screen has been disposed.
       if (!context.mounted) return;
       if (onlineFetch) {
         ref
@@ -124,17 +118,11 @@ class MangaDetailsScreen extends HookConsumerWidget {
             ?.show(context.l10n.updating, withMicrotask: true);
       }
       await mangaRefresh(onlineFetch);
-      // mangaRefresh can no-op on disposal partway through without throwing
-      // (it checks context.mounted internally) — but chapterListRefresh has
-      // no such guard, so this screen going away during mangaRefresh must be
-      // caught here before falling into it.
+      // mangaRefresh can return after disposal without throwing; recheck before chapterListRefresh.
       if (!context.mounted) return;
       await chapterListRefresh(onlineFetch);
       if (onlineFetch) {
-        // mangaRefresh only invalidates; await the actual refetch and report ITS
-        // result. Reading the captured `manga` (stale) or the provider right
-        // after invalidation (still loading) would announce "Updated" even when
-        // the fetch ultimately failed.
+        // Await the refetch result; invalidation alone cannot confirm success.
         final result = await AsyncValue.guard(
           () => ref.read(mangaProvider.future),
         );
@@ -161,11 +149,18 @@ class MangaDetailsScreen extends HookConsumerWidget {
       return;
     }, []);
 
+    void openEditCategories() => Future.microtask(() {
+      if (!context.mounted) return null;
+      return showDialog(
+        context: context,
+        builder: (context) => EditMangaCategoryDialog(mangaId: mangaId),
+        animationStyle: context.motionStyle,
+      );
+    });
+
     void startMigration(BuildContext context, int mangaId, dynamic manga) {
       if (manga == null) return;
 
-      // Single-manga migration goes through the same bulk path as the library
-      // multi-select — one consistent flow (source picker → list → migrate).
       MigrationBulkConfigRoute(
         $extra: MigrationBulkConfigData(mangaIds: [mangaId]),
       ).push(context);
@@ -174,17 +169,54 @@ class MangaDetailsScreen extends HookConsumerWidget {
     void openInBrowser(String url) =>
         launchUrlInWeb(context, url, ref.read(toastProvider));
 
-    // Open the manga's page in the Suwayomi server's own WebUI (vs the source
-    // site's realUrl). No-ops if no server is configured.
+    Future<void> shareSeries(BuildContext context, MangaDto manga) async {
+      final url = manga.realUrl;
+      if (url == null) return;
+      if (kIsWeb || isDesktopPlatform) {
+        await Clipboard.setData(ClipboardData(text: url));
+        if (context.mounted) {
+          ref.read(toastProvider)?.show(context.l10n.copiedToClipboard);
+        }
+        return;
+      }
+      await SharePlus.instance.share(
+        ShareParams(uri: Uri.parse(url), title: manga.title),
+      );
+    }
+
     void openOnServer() {
       final url = serverMangaWebUrl(ref, mangaId);
       if (url != null) openInBrowser(url);
     }
 
-    // Leaving this route at the root of the detail shell pops the shell page,
-    // which disposes this screen without popping its own route, so PopScope
-    // alone would miss it. Mirror the latest data and run the same library
-    // bookkeeping on dispose; the flag keeps it to one run per exit.
+    void openMangaNotes(BuildContext context, MangaDto manga) {
+      final dialog = MangaNotesDialog(
+        mangaId: mangaId,
+        seriesTitle: manga.title,
+        initialNotes: manga.webUiNotes ?? '',
+        existingMetas: {for (final m in manga.meta) m.key: m.value},
+      );
+      if (twoColumn) {
+        showDialog(
+          context: context,
+          builder: (_) => dialog,
+          animationStyle: context.motionStyle,
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MangaNotesScreen(
+              mangaId: mangaId,
+              seriesTitle: manga.title,
+              initialNotes: manga.webUiNotes ?? '',
+              existingMetas: {for (final m in manga.meta) m.key: m.value},
+            ),
+          ),
+        );
+      }
+    }
+
+    // Popping the detail shell can dispose this screen without a route pop; run exit bookkeeping once.
     final latestManga = useRef(manga);
     latestManga.value = manga;
     final libraryChecked = useRef(false);
@@ -211,9 +243,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
 
     useEffect(() => refreshLibraryAfterExit, const []);
 
-    // Native desktop draws the back button and title in the shell bar
-    // instead of an app bar. Phone selection swaps the app bar; desktop
-    // selection lives in the chapter-column header, so the slot never swaps.
     final topBar = showsMergedTopBar(context);
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
@@ -222,9 +251,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
       child: manga.showUiWhenData(
         context,
         (data) {
-          // The phone AppBar's toolbars, shared with the merged desktop bar so
-          // both show the same controls. Medium windows keep the phone body but
-          // suppress the AppBar, so the bar must carry these instead.
+          // Medium windows suppress the page AppBar, so the shell slot must carry its controls.
+          final inLibrary = data?.user.inLibrary.ifNull() ?? false;
           final selectionActions = [
             IconButton(
               onPressed: () {
@@ -290,20 +318,22 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       child: Text(context.l10n.seeRecommendations),
                     ),
                   PopupMenuItem(
-                    onTap: () => Future.microtask(() {
-                      if (!context.mounted) return null;
-                      return showDialog(
-                        context: context,
-                        builder: (context) =>
-                            EditMangaCategoryDialog(mangaId: mangaId),
-                        animationStyle: context.motionStyle,
-                      );
-                    }),
+                    onTap: openEditCategories,
                     child: Text(context.l10n.editCategory),
                   ),
                   PopupMenuItem(
                     onTap: () => startMigration(context, mangaId, data),
                     child: Text(context.l10n.migrate),
+                  ),
+                  if (data?.realUrl != null)
+                    PopupMenuItem(
+                      onTap: () => shareSeries(context, data!),
+                      child: Text(context.l10n.share),
+                    ),
+                  if (inLibrary && data != null)
+                    PopupMenuItem(
+                      onTap: () => openMangaNotes(context, data),
+                      child: Text(context.l10n.notes),
                   ),
                   PopupMenuItem(
                     onTap: () => refresh(true),
@@ -321,6 +351,30 @@ class MangaDetailsScreen extends HookConsumerWidget {
                 ],
                 popUpAnimationStyle: context.motionStyle,
               ),
+            if (twoColumn && inLibrary && data != null)
+              IconButton(
+                tooltip: context.l10n.notes,
+                icon: const Icon(Icons.edit_note_rounded),
+                onPressed: () => openMangaNotes(context, data),
+              ),
+            if (twoColumn && inLibrary)
+              IconButton(
+                tooltip: context.l10n.migrate,
+                icon: const Icon(Icons.sync_alt_rounded),
+                onPressed: () => startMigration(context, mangaId, data),
+              ),
+            if (twoColumn && inLibrary)
+              IconButton(
+                tooltip: context.l10n.editCategory,
+                icon: const Icon(Icons.label_outline_rounded),
+                onPressed: openEditCategories,
+              ),
+            if (twoColumn && data?.realUrl != null)
+              IconButton(
+                tooltip: context.l10n.share,
+                icon: const Icon(Icons.share_rounded),
+                onPressed: () => shareSeries(context, data!),
+              ),
           ];
           final scaffold = FocusScope(
             node: pageScope,
@@ -336,8 +390,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
             child: Scaffold(
               extendBodyBehindAppBar:
                   !twoColumn && selectedChapters.value.isEmpty && !offline,
-              // Tablet/desktop selection lives in the chapter-column header;
-              // only phones get the selection app bar.
               appBar: topBar
                   ? null
                   : selectedChapters.value.isNotEmpty && !twoColumn
@@ -364,8 +416,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 : Color.lerp(Colors.transparent, surface, t),
                             elevation: 0,
                             scrolledUnderElevation: 0,
-                            // Scrim under the icons while the bar is transparent
-                            // (hero showing); fades out as the bar turns opaque.
                             flexibleSpace: twoColumn || t >= 1
                                 ? null
                                 : DecoratedBox(
@@ -420,8 +470,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       },
                     )
                   : null,
-              // Banner above the content, not over it: the hero owns the whole top
-              // of this screen and a floating banner cuts the cover in half.
+              // Keep the banner above content so it cannot cover the hero image.
               body: Column(
                 children: [
                   ServerUnreachableBanner(onRetry: refresh),
@@ -482,9 +531,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
               ),
             ),
           );
-          // Single-column with the merged bar: the phone body has no bar of
-          // its own, so the page's own toolbar moves to the shell bar. The
-          // selection toolbar swaps in the phone AppBar's selection actions.
           if (topBar && !twoColumn && selectedChapters.value.isNotEmpty) {
             return TopBarSlot(
               slotKey: 'selection',

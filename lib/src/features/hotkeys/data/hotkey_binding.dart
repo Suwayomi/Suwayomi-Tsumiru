@@ -14,10 +14,7 @@ class GoBackIntent extends Intent {
   const GoBackIntent();
 }
 
-/// Esc. Closes the quick-open overlay if it's showing, else goes back. Bound
-/// directly in the host's Shortcuts (not via the framework DismissIntent,
-/// which pushed routes like the manga details screen don't propagate up to
-/// the host) so it fires reliably on every screen.
+/// Bind directly in the host: pushed routes do not propagate DismissIntent to it.
 class EscapeIntent extends Intent {
   const EscapeIntent();
 }
@@ -34,10 +31,7 @@ class OpenSearchIntent extends Intent {
   const OpenSearchIntent();
 }
 
-/// Sentinel for rows documented on the page but NOT bound via a keyboard
-/// Shortcut: Esc (routed through DismissIntent) and the mouse back-button
-/// (handled by a Listener); excluded from the Shortcuts map via
-/// [GlobalHotkey.hasKeyboardActivator].
+/// Sentinel for non-keyboard rows, excluded from the Shortcuts map.
 class _NoActivator extends ShortcutActivator {
   const _NoActivator();
   @override
@@ -73,9 +67,7 @@ String _searchLabel(AppLocalizations l) => l.hotkeyOpenSearch;
 String _libraryLabel(AppLocalizations l) => l.hotkeyOpenLibrary;
 String _downloadsLabel(AppLocalizations l) => l.hotkeyOpenDownloads;
 
-// Entries sharing a label render as one grouped row on the Hotkeys page
-// (e.g. all three "Go back" bindings on a single line). Order here is the
-// page order.
+// Shared labels group bindings into one row; registry order determines page order.
 const List<GlobalHotkey> globalHotkeys = [
   GlobalHotkey(
     activator: SingleActivator(LogicalKeyboardKey.escape),

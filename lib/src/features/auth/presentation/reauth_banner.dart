@@ -16,11 +16,10 @@ import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_notice.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_lifecycle_observer.dart';
+import '../data/auth_recovery_target.dart';
 import '../data/auth_state.dart';
 
-/// Layout-neutral host that surfaces a re-auth `MaterialBanner` via
-/// `ScaffoldMessenger` when the session has expired. Returns its child
-/// unchanged — safe to wrap around `CustomScrollView` or sliver layouts.
+/// Preserves the child layout, including slivers, while showing banners via ScaffoldMessenger.
 class ReauthBannerHost extends ConsumerStatefulWidget {
   const ReauthBannerHost({super.key, required this.child});
   final Widget child;
@@ -36,10 +35,7 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   @override
   void initState() {
     super.initState();
-    // Register the app-lifecycle observer here — same widget the
-    // re-auth banner lives in, so its lifetime matches the auth UI.
-    // R2-4: Dart Timers don't fire during Android Doze, so we need an
-    // explicit on-resume refresh-if-due trigger to cover the gap.
+    // Android Doze suspends timers, so resume must trigger an overdue refresh.
     _authObserver = AuthLifecycleObserver(ref);
     WidgetsBinding.instance.addObserver(_authObserver);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,6 +43,9 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
       if (ref.read(needsReauthProvider) ||
           ref.read(accountNoticeProvider) != null) {
         _showBanner();
+        if (ref.read(authRecoveryTargetProvider) != null) _openSignIn();
+      } else {
+        ref.read(authModeReconcilerProvider).reconcile();
       }
     });
   }
@@ -73,9 +72,6 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   }
 
   MaterialBanner _buildBanner() {
-    // Fall back to the stored default (as the GraphQL clients do) so a
-    // not-yet-hydrated pref reads as its real value, not null.
-    final authType = ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
     return MaterialBanner(
       content: Text(switch (ref.read(accountNoticeProvider)) {
         AccountNoticeKind.passwordUnconfirmed =>
@@ -87,34 +83,31 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
       leading: const Icon(Icons.warning_amber_rounded),
       actions: [
         TextButton(
-          // The button must never be a dead end. For a known credential mode
-          // pop the quick login dialog; otherwise send the user to the
-          // Connection screen, where they can set the mode and sign in.
-          //
-          // The dialog is pushed onto the ROUTER's navigator, not ours. This
-          // banner is hosted in `MaterialApp.builder`, which sits above the
-          // navigator, so `showDialog` with our own context finds nothing to
-          // push onto and throws — leaving the only way back into the app
-          // doing nothing at all when you click it.
-          onPressed: () {
-            final navigatorContext =
-                rootNavigatorKey.currentState?.overlay?.context;
-            if (navigatorContext == null) return;
-            if (authType == AuthType.simpleLogin ||
-                authType == AuthType.uiLogin) {
-              showDialog(
-                context: navigatorContext,
-                builder: (_) => LoginCredentialsPopup(authType: authType),
-                animationStyle: navigatorContext.motionStyle,
-              );
-            } else {
-              const ConnectionRoute().push(navigatorContext);
-            }
-          },
+          onPressed: _openSignIn,
           child: Text(context.l10n.authReauthenticate),
         ),
       ],
     );
+  }
+
+  bool _dialogOpen = false;
+
+  void _openSignIn() {
+    if (_dialogOpen) return;
+            final navigatorContext =
+                rootNavigatorKey.currentState?.overlay?.context;
+            if (navigatorContext == null) return;
+    final mode =
+        ref.read(authRecoveryTargetProvider) ??
+        ref.read(authTypeKeyProvider) ??
+        DBKeys.authType.initial;
+    _dialogOpen = true;
+    showDialog<void>(
+                context: navigatorContext,
+      builder: (_) =>
+          LoginCredentialsPopup(authType: mode, allowModeSelection: true),
+                animationStyle: navigatorContext.motionStyle,
+    ).whenComplete(() => _dialogOpen = false);
   }
 
   @override
@@ -122,6 +115,9 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
     ref.listen<bool>(needsReauthProvider, (prev, next) {
       if (next || ref.read(accountNoticeProvider) != null) {
         _showBanner();
+        if (next) {
+          ref.read(authModeReconcilerProvider).reconcile(authFailure: true);
+        }
       } else {
         _clearBanner();
       }
@@ -129,6 +125,16 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
     ref.listen<AccountNoticeKind?>(accountNoticeProvider, (previous, next) {
       _clearBanner();
       if (next != null || ref.read(needsReauthProvider)) _showBanner();
+    });
+    ref.listen<AuthType?>(authRecoveryTargetProvider, (previous, next) {
+      _clearBanner();
+      if (next != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _showBanner();
+          _openSignIn();
+        });
+      }
     });
     return widget.child;
   }

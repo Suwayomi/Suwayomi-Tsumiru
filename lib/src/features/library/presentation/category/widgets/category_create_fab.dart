@@ -34,17 +34,15 @@ class CategoryCreateFab extends HookConsumerWidget {
                           .read(categoryControllerProvider.notifier)
                           .createCategory(newCategory);
                       isLoading.value = (false);
-                    } catch (e) {
-                      //
-                    }
+                      // ignore: empty_catches
+                    } catch (e) {}
                   },
                 ),
                 animationStyle: context.motionStyle,
               );
             },
       isExtended:
-          context.windowSizeClass >= WindowSizeClass.medium &&
-          !isLoading.value,
+          context.windowSizeClass >= WindowSizeClass.medium && !isLoading.value,
       label: Text(context.l10n.addCategory),
       icon: isLoading.value
           ? MiniCircularProgressIndicator(color: context.iconColor)

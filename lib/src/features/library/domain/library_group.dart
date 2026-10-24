@@ -4,10 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Library grouping modes.
-///
-/// Persisted as `DBKeys.libraryGroupType`, so these numbers are frozen — new
-/// modes are appended.
+/// Persisted as DBKeys.libraryGroupType; values are frozen and new modes must be appended.
 class LibraryGroup {
   static const byDefault = 0;
   static const bySource = 1;
@@ -15,11 +12,11 @@ class LibraryGroup {
   static const byTrackStatus = 3;
   static const ungrouped = 4;
 
-  /// Source genres + the user's own tags, fanned out.
+  /// Source genres and user tags; one manga can belong to multiple groups.
   static const byTag = 5;
   static const byLanguage = 6;
 
-  /// Modes offered in the Group tab, in display order.
+  /// Display order, independent of persisted values.
   static const all = <int>[
     byDefault,
     byTag,
@@ -30,12 +27,9 @@ class LibraryGroup {
     ungrouped,
   ];
 
-  /// False only for [ungrouped], where per-group affordances have nothing to
-  /// decorate.
   static bool isGrouped(int type) => type != ungrouped;
 }
 
-/// Maps Suwayomi status strings → display order. Lower = shown first.
 const statusOrder = <String, int>{
   'ONGOING': 1,
   'COMPLETED': 2,
@@ -46,6 +40,4 @@ const statusOrder = <String, int>{
   'UNKNOWN': 7,
 };
 
-/// Default library group type (BY_DEFAULT = 0).
-/// Replaces the `DBKeys.libraryGroupType.initial as int` casts at call sites.
 const int kDefaultLibraryGroupType = LibraryGroup.byDefault;

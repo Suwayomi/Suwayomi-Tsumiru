@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/filter/filter_model.dart';
 import '../../../domain/source/source_model.dart';
@@ -38,10 +39,16 @@ class AppliedSourceFilter extends _$AppliedSourceFilter {
 class SourceDisplayMode extends _$SourceDisplayMode
     with SharedPreferenceEnumClientMixin<DisplayMode> {
   @override
-  // Persist against DisplayMode.values, not the curated sourceDisplayList —
-  // the latter would be a second, reorderable wire format for the same index.
+  // Persist indices into DisplayMode.values; the curated picker list can be reordered.
   DisplayMode? build() => initialize(
         DBKeys.sourceDisplayMode,
         enumList: DisplayMode.values,
       );
 }
+
+List<MangaDto> visibleSourceMangas(
+  List<MangaDto> mangas, {
+  required bool hideLibraryEntries,
+}) => mangas
+    .where((manga) => !hideLibraryEntries || !manga.user.inLibrary)
+    .toList();

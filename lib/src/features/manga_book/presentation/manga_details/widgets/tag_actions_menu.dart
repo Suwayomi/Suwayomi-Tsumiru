@@ -15,11 +15,7 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../library/presentation/library/controller/library_controller.dart';
 
-/// Komikku's tag-chip actions (MangaInfoHeader.kt:399-425): a dropdown anchored
-/// at the tapped chip offering Search (a plain library search for the tag, as
-/// Komikku's onTagSearch → HomeScreen.search does), Global search (all sources),
-/// and Copy to clipboard. [context] must be the chip's own context so the menu
-/// anchors to it.
+/// [context] must belong to the tapped chip so the menu anchors to it.
 Future<void> showTagActionsMenu(
   BuildContext context,
   WidgetRef ref, {
@@ -51,7 +47,6 @@ Future<void> showTagActionsMenu(
 
   switch (action) {
     case 'search':
-      // Komikku's "Search": open the library filtered to the tag.
       ref.read(libraryQueryProvider.notifier).update(tag);
       const LibraryRoute(categoryId: 0).go(context);
     case 'global':

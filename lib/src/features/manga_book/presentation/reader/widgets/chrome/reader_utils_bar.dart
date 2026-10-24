@@ -16,15 +16,6 @@ import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../controller/auto_scroll_controller.dart';
 
-/// Komikku-style collapsible utils bar (`ExhUtils.kt` parity): an always-visible
-/// centered pull-down chevron sits under [ReaderTopBar]; tapping it expands the
-/// on-screen auto-motion controls for touch users. Seeded without Komikku's
-/// Retry-All/Boost-Page grab-bag.
-///
-/// The one toggle adapts to the reading mode: in the vertical glide modes it's
-/// "Auto scroll" (with a smooth/jump option), in the page-flip modes it's
-/// "Auto advance" and turns a page per interval. Each keeps its own stored
-/// interval so a page-flip pace can differ from a scroll pace.
 class ReaderUtilsBar extends ConsumerWidget {
   const ReaderUtilsBar({
     super.key,
@@ -44,9 +35,7 @@ class ReaderUtilsBar extends ConsumerWidget {
     final cs = context.theme.colorScheme;
     final active = ref.watch(autoScrollActiveProvider);
 
-    // Vertical glide vs page-flip: same toggle, different label and a different
-    // stored interval. Smooth-vs-jump is a set-once preference and lives in
-    // reader settings only, never here.
+    // Scroll and page advance share a toggle but retain separate intervals.
     final isScrollMode =
         readerMode == ReaderMode.webtoon ||
         readerMode == ReaderMode.continuousVertical;
@@ -82,7 +71,6 @@ class ReaderUtilsBar extends ConsumerWidget {
         builder: (context, isOpen, _) => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Controls slide in above the handle.
             AnimatedSize(
               duration: context.reduceMotion
                   ? Duration.zero
@@ -129,10 +117,6 @@ class ReaderUtilsBar extends ConsumerWidget {
                       ),
                     ),
             ),
-            // Always-visible centered pull-down handle (Komikku's chevron).
-            // Komikku lets the IconButton keep its natural size so the arrow
-            // gets even room above and below; a little bottom padding keeps it
-            // off the seekbar that sits just under this bar.
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: SizedBox(

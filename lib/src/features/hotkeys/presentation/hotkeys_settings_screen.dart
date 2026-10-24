@@ -17,8 +17,6 @@ import '../data/hotkey_binding.dart';
 class HotkeysSettingsScreen extends StatelessWidget {
   const HotkeysSettingsScreen({super.key});
 
-  // Collapse registry entries that share a label into one row, each entry's
-  // keys shown as a separate chord (e.g. Go back → Esc · Alt+← · Mouse Back).
   List<_Row> _globalRows(AppLocalizations l) {
     final rows = <_Row>[];
     for (final h in activeGlobalHotkeys()) {
@@ -52,8 +50,6 @@ class HotkeysSettingsScreen extends StatelessWidget {
         ],
       ),
     ];
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l.keyboardShortcuts);
     final scaffold = Scaffold(
@@ -115,7 +111,6 @@ class _HotkeyRow extends StatelessWidget {
   );
 }
 
-// One key combination, e.g. Alt+← rendered as two adjacent caps.
 class _Chord extends StatelessWidget {
   const _Chord(this.keys);
   final List<String> keys;

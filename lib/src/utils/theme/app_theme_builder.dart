@@ -1,4 +1,3 @@
-// lib/src/utils/theme/app_theme_builder.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -16,8 +15,7 @@ ColorScheme schemeFor(
     ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
     : schemeFromTokens(tokensFor(theme, brightness), brightness);
 
-/// Single source of truth for app ThemeData. Named themes use brand tokens;
-/// custom uses ColorScheme.fromSeed. AMOLED applies only to dark.
+/// Named themes use brand tokens; Custom is seed-derived. AMOLED affects dark mode only.
 ThemeData buildAppTheme({
   required AppTheme theme,
   required Brightness brightness,
@@ -31,8 +29,7 @@ ThemeData buildAppTheme({
     scheme = applyAmoled(scheme);
   }
 
-  // theme-kit's own light gradients and on-accent colour; the dark blocks and
-  // Custom keep the accent→accent2 gradient and its dark content colour.
+  // Named light themes use their own gradients and on-accent colors.
   final brandColors = BrandColors(
     gradient: tokens?.grad ?? schemeBrandGradient(scheme),
     onGradient: tokens?.onAccent ?? const Color(0xFF0B0D1A),
@@ -42,7 +39,6 @@ ThemeData buildAppTheme({
 
   final primary = scheme.primary;
   final outline = scheme.outlineVariant;
-  // A lighter, more vibrant blue for text/outline actions (Uninstall, links…).
   final brightPrimary = brandBrightAccent(scheme);
 
   ButtonStyle filledLike() => ButtonStyle(
@@ -67,22 +63,18 @@ ThemeData buildAppTheme({
 
   return ThemeData(
     useMaterial3: true,
-    // App typeface (theme-kit brand rule). Platform fallback stays in place
-    // for scripts Inter doesn't cover, so no fontFamilyFallback.
+    // Leave platform font fallback available for scripts Inter does not cover.
     fontFamily: 'Inter',
     colorScheme: scheme,
     extensions: [brandColors],
     scaffoldBackgroundColor: scheme.surface,
-    // Left-aligned titles app-wide; flat surface app bar (no grey elevation).
     appBarTheme: AppBarTheme(
       centerTitle: false,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      // Make the status-bar and bottom system-navigation-bar icons track the
-      // theme brightness. Without this the system nav-bar icons stayed light
-      // and went invisible on the light surface in light themes.
+      // Match system-bar icon brightness to the surface for contrast.
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: brightness == Brightness.dark
@@ -99,7 +91,6 @@ ThemeData buildAppTheme({
       ),
     ),
     tabBarTheme: const TabBarThemeData(tabAlignment: TabAlignment.center),
-    // Bottom navigation: brand-tinted selected indicator + accent selection.
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: scheme.surface,
       elevation: 0,
@@ -132,7 +123,6 @@ ThemeData buildAppTheme({
       ),
       unselectedLabelTextStyle: TextStyle(color: scheme.onSurfaceVariant),
     ),
-    // Accent the leading icons of list rows (More/Settings etc.).
     listTileTheme: ListTileThemeData(
       iconColor: primary,
       selectedColor: primary,
@@ -148,7 +138,6 @@ ThemeData buildAppTheme({
     ),
     dividerTheme: DividerThemeData(color: outline, thickness: 1, space: 1),
     chipTheme: tokens?.accentBg != null
-        // Light: unselected chips are outlined, selected ones take the accent tint.
         ? ChipThemeData(
             backgroundColor: Colors.transparent,
             selectedColor: tokens!.accentBg,

@@ -6,9 +6,7 @@
 
 import 'package:flutter/material.dart';
 
-/// Mouse-only hover wrapper: shows [cursor] and rebuilds [builder] with
-/// `hovered` on mouse enter/exit. [MouseRegion] never fires for touch, so
-/// taps on phones and tablets look and behave exactly as before.
+/// Mouse-only hover/cursor wrapper; touch does not trigger hovered.
 class HoverTapTarget extends StatefulWidget {
   const HoverTapTarget({
     super.key,

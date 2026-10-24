@@ -9,23 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'chrome_extents.g.dart';
 
-/// Immutable snapshot of the reader chrome's inset extents, used to position
-/// the side seek bar so it never overlaps the top or bottom bars.
-///
-/// [topInset]    = measured [ReaderTopBar] Material height.
-///                 The Material wraps `Padding(top: systemTopInset)`, so
-///                 `size.height` from [MeasureSize] already includes the
-///                 status-bar inset — do NOT add it again at the call site.
-///
-/// [bottomInset] = system nav-bar inset (`MediaQuery.viewPaddingOf(context).bottom`)
-///                 + measured bottom-controls height.
-///                 The bottom bar is **shorter in webtoon mode** (no horizontal
-///                 seek row), so the extent is mode-specific and must be
-///                 measured — a constant can't capture it.
-///
-/// Both fields default to sensible fallback values (80 dp top, 100 dp bottom)
-/// that match the old hardcoded [Positioned] offsets, so callers are safe even
-/// before the first measurement fires.
+/// Measured chrome extents include system insets; do not add them again at call sites.
 @immutable
 class ChromeExtents {
   const ChromeExtents({
@@ -33,9 +17,7 @@ class ChromeExtents {
     required this.bottomInset,
   });
 
-  /// Fallback that reproduces the hardcoded literals from the old
-  /// [ReaderSideSeekBar]. Used as the initial provider state so the seekbar
-  /// never jumps on the first frame before measurement fires.
+  /// Fallback offsets before the first chrome measurement.
   static const ChromeExtents initial = ChromeExtents(
     topInset: 80,
     bottomInset: 100,
@@ -63,29 +45,13 @@ class ChromeExtents {
       'ChromeExtents(topInset: $topInset, bottomInset: $bottomInset)';
 }
 
-/// Holds the current, measured [ChromeExtents] for the reader chrome.
-///
-/// Notifier design (manual, no riverpod_annotation codegen) so the update
-/// method can be called directly by the chrome widgets without a generated
-/// file or a codegen run for this purely UI-layer piece of state.
-///
-/// Guards:
-/// - Writes are issued from **post-frame callbacks** inside [MeasureSize] so
-///   they never fire during a build.
-/// - The notifier only writes when the new value differs from the current one
-///   (equality-guarded) — no relayout feedback loop.
-/// - Measurement is at resting (fully-shown) bar height; the animation drives
-///   fade only on the side seekbar so the extent never chases a slide.
+/// Measure fully shown bars and update after layout to avoid build writes and animation feedback.
 @Riverpod(keepAlive: false)
 class ChromeExtentsNotifier extends _$ChromeExtentsNotifier {
   @override
   ChromeExtents build() => ChromeExtents.initial;
 
-  /// Update [ChromeExtents] with newly measured bar heights and system insets.
-  ///
-  /// The caller is responsible for composing `systemInset + measuredBarHeight`
-  /// and calling this only from a post-frame callback (deferred write).
-  /// The notifier provides the equality guard so duplicate writes are no-ops.
+  /// Call after the frame with system insets already included; equal measurements are no-ops.
   void update(ChromeExtents extents) {
     if (state == extents) return; // equality guard — no feedback loop
     state = extents;

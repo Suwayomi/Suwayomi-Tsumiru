@@ -25,10 +25,7 @@ class MultiChaptersActionIcon extends ConsumerWidget {
     super.key,
   });
 
-  /// The selected chapters. Carrying the full [ChapterDto] (not just ids) lets
-  /// a mark-read sync each affected manga to its tracker and honour the
-  /// delete-on-manual-read setting per chapter — correctly even when the
-  /// selection spans multiple manga (e.g. the updates screen).
+  /// Full chapter data is needed for per-manga tracker sync and delete-on-manual-read across series.
   final List<ChapterDto> chapters;
   final ChapterChange change;
   final AsyncValueSetter<bool> refresh;

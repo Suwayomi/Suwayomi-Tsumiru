@@ -12,23 +12,9 @@ import '../../../global_providers/global_providers.dart';
 import 'credential_snapshot.dart';
 import 'secure_credentials_provider.dart';
 
-/// Generic custom HTTP headers sent with every request to the Suwayomi
-/// server (GraphQL, images, login, probes, background workers).
-///
-/// Motivating use-case: a Suwayomi-Server behind a Cloudflare Tunnel guarded
-/// by Zero Trust Access, which requires e.g.
-/// `CF-Access-Client-Id` + `CF-Access-Client-Secret` on every request.
-///
-/// Header values are bearer-equivalent secrets, so the map lives in
-/// `flutter_secure_storage` (matching where the app keeps its own tokens),
-/// not SharedPreferences.
-///
-/// Manual [AsyncNotifierProvider] (no codegen) so no `build_runner` step is
-/// needed for this file. `main()` preloads the provider before the first
-/// frame, so request-building call sites can read the synchronously-cached
-/// [AsyncValue.value] (falling back to empty before the load completes).
+/// Custom headers are bearer-equivalent secrets and must remain in secure storage.
+/// Preloaded before the first frame for synchronous request builders.
 class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
-  /// Secure-storage key holding the JSON-encoded header map.
   static const secureKey = kCustomHeadersKey;
 
   @override
@@ -48,11 +34,10 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
     ).update({secureKey: headers.isEmpty ? null : encode(headers)}, prefs);
   }
 
-  /// Replace the whole map (used by import/reset flows).
   Future<void> setAll(Map<String, String> headers) async =>
       _persist(Map<String, String>.from(headers));
 
-  /// Insert or update one header. [name] is trimmed; empty names are ignored.
+  /// Trims [name] and ignores empty names.
   Future<void> put(String name, String value) async {
     final key = name.trim();
     if (key.isEmpty) return;
@@ -60,18 +45,15 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
     await _persist({...base, key: value});
   }
 
-  /// Remove one header by name (exact match).
   Future<void> remove(String name) async {
     final base = await future;
     if (!base.containsKey(name)) return;
     await _persist({...base}..remove(name));
   }
 
-  /// Remove all custom headers.
   Future<void> clear() => _persist(const {});
 
-  /// Decode the persisted JSON string into a header map. Never throws:
-  /// malformed input reads as empty.
+  /// Malformed persisted data decodes to an empty map without throwing.
   static Map<String, String> decode(String? raw) {
     if (raw == null || raw.trim().isEmpty) return const {};
     try {
@@ -89,7 +71,6 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
     }
   }
 
-  /// Encode a header map for persistence.
   static String encode(Map<String, String> headers) => jsonEncode(headers);
 }
 
@@ -98,9 +79,7 @@ final customHttpHeadersProvider =
       CustomHttpHeadersStore.new,
     );
 
-/// Validate a header name for the editor. Returns an error string or null
-/// when valid. Header names are RFC 7230 tokens: no spaces, colons, or
-/// control characters.
+/// Accepts RFC 7230 header-name tokens; returns null when valid or an editor error.
 String? validateCustomHeaderName(String name, {Map<String, String>? existing}) {
   final trimmed = name.trim();
   if (trimmed.isEmpty) return 'empty';
@@ -115,9 +94,7 @@ String? validateCustomHeaderName(String name, {Map<String, String>? existing}) {
   return null;
 }
 
-/// Merge [custom] into [headers]. Custom headers never overwrite the app's
-/// own auth headers (`authorization`, `cookie`) — a mis-typed custom header
-/// must not silently break login. Returns [headers] for chaining.
+/// Merges custom headers without overwriting Authorization or Cookie; returns [headers].
 Map<String, String> applyCustomHeaders(
   Map<String, String> headers, [
   Map<String, String>? custom,

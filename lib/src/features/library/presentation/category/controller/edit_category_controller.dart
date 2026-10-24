@@ -24,10 +24,7 @@ part 'edit_category_controller.g.dart';
 class CategoryController extends _$CategoryController {
   @override
   Future<List<CategoryDto>?> build() async {
-    // Capture every ref-backed dependency BEFORE the await. This provider
-    // auto-disposes and can be torn down mid-build (e.g. add-to-library reading
-    // .future), after which any ref access throws "used after it has been
-    // disposed" — the crash this guards against.
+    // Capture dependencies before awaiting: this provider may auto-dispose mid-build.
     final offlineDb = ref.watch(offlineReadDatabaseProvider);
     final viewOffline =
         ref.watch(viewOfflineNowProvider) ||
@@ -45,7 +42,7 @@ class CategoryController extends _$CategoryController {
       defaultCategoryId: defaultId,
       onCatalogServe: () => servedFromCatalog = true,
     );
-    // A catalog-served list is an echo — never mirror it back.
+    // Catalog responses are echoes and must not be mirrored back.
     if (sync != null &&
         result != null &&
         defaultId != null &&
@@ -120,16 +117,12 @@ class CategoryController extends _$CategoryController {
     return response;
   }
 
-  /// Hide/show a category from the Library tabs. Stored as a server-side
-  /// category meta flag so it persists and syncs across devices. Offline,
-  /// the change lands on the device's mirror instead — downloads in a hidden
-  /// category must stay reachable — and the server's flag reasserts on the
-  /// next online sync.
+  /// Sets server visibility online; offline changes affect only the device mirror until reconnect.
   Future<AsyncValue<CategoryVisibilityOutcome>> setHidden(
     int categoryId,
     bool hidden,
   ) async {
-    // Captured before the awaits: this provider auto-disposes (see build).
+    // Capture dependencies before awaits because this provider auto-disposes.
     final repo = ref.read(categoryRepositoryProvider);
     final offlineDb = ref.read(offlineReadDatabaseProvider);
     final response = await AsyncValue.guard<CategoryVisibilityOutcome>(
@@ -147,15 +140,13 @@ class CategoryController extends _$CategoryController {
         return CategoryVisibilityOutcome.synced;
       },
     );
-    // The repository throws OperationMessageException wrapping the link
-    // error — unwrap before classifying, same as _shouldFallBack.
+    // Unwrap OperationMessageException before classifying connection errors.
     if (response case AsyncError(:final error)
         when isConnectionError(
               error is OperationMessageException ? error.exception : error,
             ) &&
             offlineDb != null) {
-      // A mirror without this row (never synced online) can't honor the
-      // change — fall through to the error rather than claim success.
+      // An unsynced category has no mirror row; report failure if the change cannot persist.
       if (await offlineDb.setCategoryHidden(categoryId, hidden)) {
         ref.invalidateSelf();
         return const AsyncData(CategoryVisibilityOutcome.deviceOnly);
@@ -166,8 +157,7 @@ class CategoryController extends _$CategoryController {
   }
 }
 
-/// How a category visibility change landed: on the server (permanent,
-/// cross-device) or only on this device's offline mirror (until reconnect).
+/// Device-only changes last until the next server sync.
 enum CategoryVisibilityOutcome { synced, deviceOnly }
 
 @riverpod
@@ -181,10 +171,7 @@ List<CategoryDto>? categoryListQuery(Ref ref, {required String query}) {
 @riverpod
 AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
   final categoryList = ref.watch(categoryControllerProvider);
-  // Offline the count is "how much of this category is downloaded", so zero
-  // means not-downloaded-yet, not empty. Dropping those took the whole tab bar
-  // with them whenever a user's downloads sat in one category — their other
-  // categories looked deleted, with no way to reach them.
+  // Offline counts measure downloads, so zero does not mean an empty category.
   final offline =
       ref.watch(viewOfflineNowProvider) || ref.watch(serverUnreachableProvider);
   if (offline) return categoryList;
@@ -198,10 +185,8 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
   );
 }
 
-/// Categories shown as tabs on the Library screen: non-empty, and hidden only
-/// when [showHiddenCategoriesProvider] is false (the default).
-/// The edit screen keeps using the full [categoryControllerProvider] so hidden
-/// categories stay listed there (struck-through) and can be unhidden.
+/// Non-empty library tabs, including hidden categories only when showHiddenCategories is enabled.
+/// The edit screen uses the full category list so hidden categories can still be restored.
 @riverpod
 AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
   final categoryList = ref.watch(nonZeroCategoryListProvider);

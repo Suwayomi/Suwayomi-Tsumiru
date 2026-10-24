@@ -43,12 +43,8 @@ class MoreScreen extends ConsumerWidget {
     final hasStoredCredentials = ref.watch(hasStoredCredentialsProvider);
     final incognito = ref.watch(incognitoModeProvider);
     final phone = context.windowSizeClass == WindowSizeClass.compact;
-    // Phone searches from the app-bar entry (or the box under the title when
-    // the persistent setting is on); tablet and desktop are unchanged.
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
-    // Native desktop draws the search box in the shell bar instead of an
-    // app bar.
     final topBar = showsMergedTopBar(context);
     final search = DesktopSearchField(
       query: ref.watch(unifiedSearchQueryProvider),
@@ -117,8 +113,6 @@ class MoreScreen extends ConsumerWidget {
     }
 
     final scaffold = Scaffold(
-      // Desktop replaces the title with the unified search box (the sidebar
-      // already names the page); phone and tablet keep it.
       appBar: topBar
           ? null
           : AppBar(

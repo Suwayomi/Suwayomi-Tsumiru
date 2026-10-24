@@ -26,16 +26,13 @@ import 'offline_sync.dart';
 
 part 'offline_repository.g.dart';
 
-/// Single entry point the rest of the app uses for offline state. Keeps the
-/// drift database and path resolution behind one interface so callers never
-/// depend on drift directly.
 class OfflineRepository {
   const OfflineRepository({required this.db, required this.paths});
 
   final OfflineDatabase db;
   final OfflinePaths paths;
 
-  /// Absolute on-disk path for a stored page, or null if not downloaded.
+  /// Null if no downloaded page exists.
   Future<String?> localPagePath(int chapterId, int pageIndex) async {
     final rows =
         await (db.select(db.offlinePages)..where(
@@ -47,9 +44,7 @@ class OfflineRepository {
     return paths.absolute(rows.single.relativePath);
   }
 
-  /// Ordered absolute page paths for a chapter that is downloaded on-device, or
-  /// null when the chapter isn't fully downloaded — so the reader can serve it
-  /// from disk (offline) instead of the server.
+  /// Ordered absolute paths, or null unless the chapter is fully downloaded.
   Future<List<String>?> localChapterPages(int chapterId) async {
     final ch = await (db.select(
       db.offlineChapters,
@@ -66,18 +61,13 @@ class OfflineRepository {
     return [for (final r in rows) paths.absolute(r.relativePath)];
   }
 
-  /// The catalog row for a manga — used when the server is unreachable so the
-  /// library screen can fall back to on-device data.
   Future<OfflineManga?> mangaById(int mangaId) => db.mangaById(mangaId);
 
-  /// The catalog row for a chapter (needed to enqueue a device download), or
-  /// null if it hasn't been synced from an online read yet.
+  /// Null if the chapter has not been synced.
   Future<OfflineChapter?> chapterById(int chapterId) => (db.select(
     db.offlineChapters,
   )..where((t) => t.id.equals(chapterId))).getSingleOrNull();
 
-  /// How many of [chapterIds] currently have a device copy — for the bulk
-  /// delete confirm.
   Future<int> deviceDownloadedCount(List<int> chapterIds) async {
     if (chapterIds.isEmpty) return 0;
     final rows =
@@ -90,20 +80,14 @@ class OfflineRepository {
     return rows.length;
   }
 
-  /// Live device-download state for a chapter, so the UI reflects progress.
   Stream<OfflineDeviceState> watchChapterState(
     int chapterId,
   ) => (db.select(db.offlineChapters)..where((t) => t.id.equals(chapterId)))
       .watchSingleOrNull()
       .map((c) => c?.deviceState ?? OfflineDeviceState.none)
-      // drift re-fires every per-chapter stream on ANY chapters-table write;
-      // distinct() stops a row from rebuilding unless ITS state changed
-      // (avoids a 98-row rebuild storm while a series downloads).
+      // Drift emits on any chapter-table write; distinct avoids unrelated row rebuilds.
       .distinct();
 
-  /// Live count of pages already on disk for a chapter — drives the per-chapter
-  /// download progress arc. distinct() so a row only
-  /// rebuilds when its page count actually advances.
   Stream<int> watchChapterDownloadedPages(int chapterId) {
     final cnt = db.offlinePages.pageIndex.count();
     return (db.selectOnly(db.offlinePages)
@@ -114,8 +98,7 @@ class OfflineRepository {
         .distinct();
   }
 
-  /// The per-series keep-offline rule (defaults to off if the manga isn't
-  /// synced yet).
+  /// Defaults to off when the manga is not synced.
   Future<OfflineKeepRule> keepRuleFor(int mangaId) async {
     final m = await (db.select(
       db.offlineMangas,
@@ -123,8 +106,6 @@ class OfflineRepository {
     return m?.keepRule ?? OfflineKeepRule.off;
   }
 
-  /// The per-series keep-offline rule AND its unread-buffer size — so the UI can
-  /// tick the exact "Keep next N unread" preset that's active.
   Future<({OfflineKeepRule rule, int count})> keepConfigFor(int mangaId) async {
     final m = await (db.select(
       db.offlineMangas,
@@ -135,21 +116,14 @@ class OfflineRepository {
     );
   }
 
-  /// Manga ids with at least one chapter downloaded to this device — for the
-  /// "On device" library filter.
   Future<Set<int>> deviceDownloadedMangaIds() =>
       db.mangaIdsWithDeviceDownloads();
 
-  /// Live version of [deviceDownloadedMangaIds] — see
-  /// [OfflineDatabase.watchMangaIdsWithDeviceDownloads].
   Stream<Set<int>> watchDeviceDownloadedMangaIds() =>
       db.watchMangaIdsWithDeviceDownloads();
 
-  /// Total bytes used by all downloaded chapters — for the storage settings UI.
   Future<int> totalDownloadedBytes() => db.totalDownloadedBytes();
 
-  /// Bytes used by one manga's downloaded chapters — for the series page
-  /// chapter header subline.
   Future<int> downloadedBytesForManga(int mangaId) =>
       db.downloadedBytesForManga(mangaId);
 }
@@ -175,18 +149,13 @@ OfflineRepository offlineRepository(Ref ref) => OfflineRepository(
   paths: ref.watch(offlinePathsProvider),
 );
 
-/// Repairs a chapter that claims to be downloaded but has no page rows,
-/// returning its page paths when it healed. The files are usually still on
-/// disk, so rebuilding the rows costs nothing; when the manifest can't vouch
-/// for them, re-queue rather than leave a chapter lying about being local.
+/// Rebuilds missing page rows from verified files, or re-queues when completeness cannot be proven.
 Future<List<String>?> repairDownloadedChapterPages({
   required OfflineDatabase db,
   required OfflinePageStore store,
   required OfflinePaths paths,
   required int chapterId,
-  // Kept out of this function so it stays Ref-less and testable: re-queueing
-  // without starting anything leaves the chapter waiting on an unrelated
-  // download trigger, which is not a self-heal.
+  // Re-queueing must also trigger downloading rather than wait for unrelated work.
   void Function()? onRequeued,
 }) => ChapterFileLock.run(chapterId, () async {
   final ch = await db.chapterById(chapterId);
@@ -195,10 +164,7 @@ Future<List<String>?> repairDownloadedChapterPages({
   }
 
   final committed = await store.committedPages(ch.mangaId, chapterId);
-  // Short counts as badly as none: rebuilding rows from a directory that lost
-  // half its files certifies a truncated chapter as complete, and the reader
-  // then shows it that way forever. pageCount is 0 for rows that never learned
-  // their length, which is not evidence of a short read.
+  // A positive pageCount makes a short directory incomplete; zero means unknown length.
   final short = ch.pageCount > 0 && committed.length < ch.pageCount;
   if (committed.isEmpty || short) {
     logger.w(
@@ -287,8 +253,7 @@ class OfflineServerMismatch {
 Future<OfflineServerMismatch?> offlineServerMismatch(Ref ref) async {
   if (!ref.watch(offlineEnabledProvider)) return null;
   final preferences = ref.watch(sharedPreferencesProvider);
-  // Read before the await: touching ref after the async gap throws if this
-  // provider was disposed mid-build.
+  // Capture before awaiting: the provider can be disposed during the async gap.
   final catalogDb = ref.watch(offlineDatabaseProvider);
   final stampKey = offlineCatalogServerIdKey(preferences);
   final stamp = preferences.getString(stampKey);
@@ -324,8 +289,6 @@ Future<void> dismissOfflineServerMismatch(
 ) async {
   final preferences = ref.read(sharedPreferencesProvider);
   final key = serverMismatchKey(mismatch.catalogServer, mismatch.currentServer);
-  // Remember each dismissed (catalog, current) pair so switching among several
-  // servers doesn't un-dismiss a banner already dismissed.
   final current =
       preferences.getStringList(
         DBKeys.offlineServerMismatchDismissedList.name,
@@ -352,9 +315,6 @@ OfflineDatabase? offlineReadDatabase(Ref ref) {
   return ref.watch(offlineDatabaseProvider);
 }
 
-/// Whether the offline library has anything to SHOW — series with files on
-/// this device. Gates the "View offline" escape hatch: offering it with
-/// nothing downloaded would land on an empty screen.
 @riverpod
 Future<bool> offlineCatalogAvailable(Ref ref) async {
   final db = ref.watch(offlineReadDatabaseProvider);
@@ -362,9 +322,7 @@ Future<bool> offlineCatalogAvailable(Ref ref) async {
   return (await db.mangaIdsWithDeviceDownloads()).isNotEmpty;
 }
 
-/// The metadata down-sync, or null when offline storage is unavailable — so
-/// online controllers can call `ref.read(offlineSyncProvider)?.syncManga(m)`
-/// without caring about platform.
+/// Null when offline storage is unavailable.
 @riverpod
 OfflineSync? offlineSync(Ref ref) {
   if (!ref.watch(offlineServerAccessProvider)) return null;
@@ -378,9 +336,6 @@ OfflineSync? offlineSync(Ref ref) {
     ref.watch(offlineDatabaseProvider),
     taskTracker: ref.read(offlineRuntimeStorageProvider.notifier).track,
     isCurrentSession: current,
-    // Single-manga count refetch for settling corrections whose acks raced an
-    // aggregate fetch (see OfflineSync.refetchManga). Same DI precedent as the
-    // push loop reading the repository directly.
     refetchManga: (mangaId) async {
       if (!current()) return null;
       return mangaRepository.getManga(mangaId: mangaId);
@@ -389,12 +344,7 @@ OfflineSync? offlineSync(Ref ref) {
       if (!current()) return;
       if (preferences.getString(stampKey) == null) {
         await preferences.setString(stampKey, identity);
-        // This closure is captured by OfflineSync and invoked later, from
-        // syncManga — this provider can have been disposed/rebuilt by then
-        // (e.g. a bulk operation triggering many syncs back to back), and
-        // ref.invalidate on a disposed Ref throws. The preference write above
-        // already landed, so the guard above won't re-run this block anyway;
-        // there's nothing left to do if the ref is gone.
+        // Sync callbacks may outlive the provider that captured them.
         if (ref.mounted) ref.invalidate(offlineActiveProvider);
       }
     },

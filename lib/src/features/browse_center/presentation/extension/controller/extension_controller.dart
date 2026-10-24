@@ -55,9 +55,6 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
       );
     }
   }
-  // Sort every bucket alphabetically by name. The server returns no meaningful
-  // order (install order is unhelpful); this matches Suwayomi-WebUI, which
-  // sorts each group by name.
   for (final list in extensionMap.values) {
     list.sort(
         (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));

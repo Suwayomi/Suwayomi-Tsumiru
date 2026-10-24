@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../about/data/about_repository.dart';
 import '../../../../../account/data/account_providers.dart';
@@ -32,6 +34,8 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   Enum$WebUIFlavor? _originalFlavor;
   Enum$WebUIFlavor? _checkedFlavor;
   Timer? _pollTimer;
+  StreamSubscription? _socketSub;
+  bool _socketLive = false;
   bool _busy = false;
   bool _installStarted = false;
   bool _installing = false;
@@ -40,6 +44,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _socketSub?.cancel();
     super.dispose();
   }
 
@@ -54,13 +59,21 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         _originalFlavor = null;
       }
     });
+    if (!_installing) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
     if (finished) {
+      _socketSub?.cancel();
+      _socketSub = null;
+      _socketLive = false;
       ref.invalidate(installedWebInterfaceProvider);
       ref.read(webBuildReloadRequiredProvider.notifier).check();
     }
   }
 
   Future<void> _pollStatus() async {
+    _pollTimer = null;
     if (!mounted || !_installing) return;
     try {
       final status = await ref.read(webInterfaceRepositoryProvider).status();
@@ -68,8 +81,39 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     }
-    if (mounted && _installing) {
+    if (mounted && _installing && !_socketLive) {
       _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+    }
+  }
+
+  void _watchSocket() {
+    _socketSub?.cancel();
+    _socketSub = null;
+    try {
+      _socketSub = ref
+          .read(graphQlSubscriptionClientProvider)
+          .subscribe$WebInterfaceUpdateStatusChange(
+            Options$Subscription$WebInterfaceUpdateStatusChange(),
+          )
+          .getData((data) => data.webUIUpdateStatusChange)
+          .listen(
+            (status) {
+              _pollTimer?.cancel();
+              _pollTimer = null;
+              _socketLive = true;
+              _acceptInstallStatus(status);
+            },
+            onError: (_) {
+              _socketLive = false;
+              if (mounted &&
+                  _installing &&
+                  (_pollTimer == null || !_pollTimer!.isActive)) {
+                _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+              }
+            },
+          );
+    } catch (_) {
+      _socketLive = false;
     }
   }
 
@@ -78,6 +122,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       _installStarted = true;
       _installing = true;
       _status = null;
+      _socketLive = false;
     });
     try {
       final status = await ref.read(webInterfaceRepositoryProvider).install();
@@ -86,6 +131,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       }
       _acceptInstallStatus(status);
       if (mounted && _installing) {
+        _watchSocket();
         _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
       }
     } catch (_) {
@@ -125,6 +171,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     required String Function(T) name,
     String Function(T)? description,
     required Future<void> Function(T) write,
+    bool confirmReplacement = false,
   }) async {
     final selected = await showDialog<T>(
       context: context,
@@ -138,7 +185,17 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       ),
       animationStyle: context.motionStyle,
     );
-    if (selected != null && selected != value && mounted) await write(selected);
+    if (selected == null || selected == value || !mounted) return;
+    if (confirmReplacement &&
+        !await confirmAction(
+          context,
+          title: context.l10n.confirmWebInterfaceChangeTitle,
+          message: context.l10n.confirmWebInterfaceChangeMessage,
+          action: context.l10n.save,
+        )) {
+      return;
+    }
+    if (mounted) await write(selected);
   }
 
   String _flavorName(Enum$WebUIFlavor flavor) => switch (flavor) {
@@ -255,8 +312,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
             children: [
               SettingsHighlightTarget(
                 id: 'webInterfaceFlavor',
-                // Same merge guard as the OPDS rows: without it the engine
-                // folds this row into a neighbouring switch row.
+                // Keep this row separate from neighboring switches in the semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,
@@ -267,6 +323,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                         enabled && flavors.hasValue && flavors.value!.isNotEmpty
                         ? () => _pick(
                             title: context.l10n.webInterfaceInterface,
+                            confirmReplacement: true,
                             value: data.webUIFlavor,
                             options: flavors.value!,
                             name: _flavorName,
@@ -286,8 +343,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               ),
               SettingsHighlightTarget(
                 id: 'webInterfaceInterface',
-                // Same merge guard as the OPDS rows: without it the engine
-                // folds this row into a neighbouring switch row.
+                // Keep this row separate from neighboring switches in the semantics tree.
                 child: Semantics(
                   container: true,
                   explicitChildNodes: true,
@@ -318,8 +374,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (data.webUIInterface == Enum$WebUIInterface.ELECTRON)
                 SettingsHighlightTarget(
                   id: 'electronPath',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,
@@ -370,8 +425,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (showInterfaceCard)
                 SettingsHighlightTarget(
                   id: 'webInterfaceChannel',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,
@@ -386,6 +440,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                       onTap: enabled && !custom
                           ? () => _pick(
                               title: context.l10n.webInterfaceChannel,
+                              confirmReplacement: true,
                               value: data.webUIChannel,
                               options: [
                                 if (bundledAllowed) Enum$WebUIChannel.BUNDLED,
@@ -407,8 +462,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (showInterfaceCard)
                 SettingsHighlightTarget(
                   id: 'webInterfaceAutomaticUpdates',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,
@@ -442,8 +496,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
               if (authenticated && !custom)
                 SettingsHighlightTarget(
                   id: 'webInterfaceCheckUpdate',
-                  // Same merge guard as the OPDS rows: without it the engine
-                  // folds this row into a neighbouring switch row.
+                  // Keep this row separate from neighboring switches in the semantics tree.
                   child: Semantics(
                     container: true,
                     explicitChildNodes: true,

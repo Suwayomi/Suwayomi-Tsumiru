@@ -8,12 +8,6 @@ import 'package:flutter/material.dart';
 
 import '../../constants/navigation_bar_data.dart';
 
-/// Wraps a nav icon in whatever badge its tab has earned.
-///
-/// Downloads carries a dot when downloading is paused with work still waiting.
-/// Browse carries a count of extensions with updates, which are otherwise only
-/// discoverable by opening the tab and noticing a section (Mihon and Komikku
-/// badge the same tab, `HomeScreen.kt`).
 Widget badgedNavIcon(
   Widget icon,
   NavigationBarData data,

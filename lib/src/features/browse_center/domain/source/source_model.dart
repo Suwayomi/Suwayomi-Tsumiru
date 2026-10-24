@@ -19,16 +19,10 @@ typedef SourceDto = Fragment$SourceDto;
 
 typedef SourceType = Enum$FetchSourceMangaType;
 
-/// Server meta key WebUI uses to mark a source pinned. Matching it exactly is
-/// what makes pins sync across clients (WebUI <-> Tsumiru). It is a *global*
-/// WebUI meta key, so there is no device-name segment. Value is the plain
-/// string "true"/"false".
+/// Global WebUI-compatible key, with string "true"/"false" values and no device segment.
 const kSourcePinnedMetaKey = 'webUI_isPinned';
 
-/// Server meta key marking a source hidden from the browse list. Tsumiru-owned
-/// (WebUI has no hide concept), so it syncs across Tsumiru devices via the
-/// server but is ignored by WebUI. Sibling to [kSourcePinnedMetaKey]; value is
-/// the plain string "true"/"false".
+/// Tsumiru hidden-source key, shared across devices with string "true"/"false" values.
 const kSourceHiddenMetaKey = 'tsumiru_isHidden';
 
 extension SourceExtensions on SourceDto {

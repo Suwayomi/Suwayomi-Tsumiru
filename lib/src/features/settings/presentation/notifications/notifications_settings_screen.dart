@@ -38,8 +38,6 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
 
     Future<void> reconcile() => controller.sync();
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.notifications);
     final scaffold = Scaffold(

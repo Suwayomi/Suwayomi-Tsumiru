@@ -43,9 +43,7 @@ class AdvancedScreen extends ConsumerWidget {
                       child: ListTile(
                         title: Text(context.l10n.clearCache),
                         onTap: () async {
-                          // The GraphQL cache is in-memory (and bypassed by noCache),
-                          // so "clear cache" now means the image caches: pages and
-                          // covers.
+                          // GraphQL uses an in-memory cache; only images need clearing on disk.
                           await DefaultCacheManager().emptyCache();
                           await ref
                               .read(coverCacheManagerProvider)

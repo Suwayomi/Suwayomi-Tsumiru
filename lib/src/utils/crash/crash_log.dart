@@ -4,7 +4,5 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Web-safe entry point for the crash-log file writer. The real implementation
-// needs `dart:io` (native only); on web this swaps in a no-op stub so main.dart
-// — which compiles for web too — still builds.
+// Conditional import keeps dart:io out of web builds.
 export 'crash_log_stub.dart' if (dart.library.io) 'crash_log_io.dart';

@@ -8,17 +8,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_state.g.dart';
 
-/// Tracks whether the current session has expired and the user needs to
-/// re-enter their password.
-///
-/// Set to `true` by:
-///   - `SuwayomiAuthLink` when a 401 cannot be resolved by refresh (UI Login)
-///   - `SuwayomiAuthLink` when a 401 arrives (Simple Login — no refresh path)
-///
-/// Cleared to `false` by `AuthCoordinator` after a successful re-login.
-///
-/// Watched by `ReauthBannerHost` to decide whether to surface the banner
-/// via `ScaffoldMessenger`.
 @Riverpod(keepAlive: true)
 class NeedsReauth extends _$NeedsReauth {
   @override

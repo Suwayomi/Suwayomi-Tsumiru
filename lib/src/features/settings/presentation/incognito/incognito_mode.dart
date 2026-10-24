@@ -8,12 +8,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'incognito_mode.g.dart';
 
-/// Session-only "incognito" flag. While true, the reader
-/// records no reading progress, so nothing enters history and no chapter is
-/// marked read.
-///
-/// Deliberately NOT persisted: it resets to off on app restart. `keepAlive` so it
-/// survives having no widget listener — the reader only reads it imperatively.
+/// Suppresses progress, history and read markers until app restart.
+/// Keep alive because the reader reads it without a widget listener.
 @Riverpod(keepAlive: true)
 class IncognitoMode extends _$IncognitoMode {
   @override

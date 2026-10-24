@@ -15,18 +15,9 @@ import '../../../widgets/server_image.dart';
 import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
+import 'offline_action_confirmations.dart';
 import 'offline_settings_format.dart';
 
-/// Drill-down screen from Downloads → On device.
-///
-/// Shows all chapters with any on-device footprint for a given series, grouped
-/// into three buckets:
-///   1. Active (queued / downloading) — with live progress arcs.
-///   2. Downloaded — tap to read offline.
-///   3. Failed — with a retry button.
-///
-/// This screen reads exclusively from the local SQLite catalog and never makes
-/// a network request, so it works fully offline.
 class OfflineSeriesChaptersScreen extends ConsumerWidget {
   const OfflineSeriesChaptersScreen({
     super.key,
@@ -44,7 +35,6 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
     final chaptersAsync = ref.watch(offlineChaptersForMangaProvider(mangaId));
     final chapters = chaptersAsync.value ?? const [];
 
-    // Partition chapters into three buckets.
     final active =
         chapters
             .where(
@@ -112,20 +102,17 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
           : ListView(
               padding: const EdgeInsets.only(bottom: 16),
               children: [
-                // ── Active (queued / downloading) ─────────────────────────
                 if (active.isNotEmpty) ...[
                   _SectionHeader(context.l10n.offlineChaptersActiveSection),
                   for (final ch in active) _ActiveChapterTile(chapter: ch),
                 ],
 
-                // ── Downloaded ────────────────────────────────────────────
                 if (downloaded.isNotEmpty) ...[
                   _SectionHeader(context.l10n.offlineChaptersDownloadedSection),
                   for (final ch in downloaded)
                     _DownloadedChapterTile(chapter: ch, mangaId: mangaId),
                 ],
 
-                // ── Failed ────────────────────────────────────────────────
                 if (failed.isNotEmpty) ...[
                   _SectionHeader(context.l10n.offlineChaptersErrorSection),
                   for (final ch in failed) _FailedChapterTile(chapter: ch),
@@ -136,9 +123,6 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Section header
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.title);
@@ -161,12 +145,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Active tile (queued or downloading)
-// ─────────────────────────────────────────────────────────────────────────────
 
-/// Shows a determinate progress arc for downloading chapters and a static clock
-/// icon for queued ones — consistent with [OfflineSaveButton] semantics.
 class _ActiveChapterTile extends ConsumerWidget {
   const _ActiveChapterTile({required this.chapter});
 
@@ -175,7 +154,6 @@ class _ActiveChapterTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDownloading = chapter.deviceState == OfflineDeviceState.downloading;
-    // Live progress fraction — null while waiting for first page.
     final progress = ref.watch(offlineChapterProgressProvider(chapter.id));
 
     Widget leading;
@@ -189,14 +167,12 @@ class _ActiveChapterTile extends ConsumerWidget {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
-              // Spin until the first page lands.
               value: (progress == null || progress <= 0) ? null : progress,
             ),
           ),
         ),
       );
     } else {
-      // Queued — static clock.
       leading = Icon(
         Icons.schedule_rounded,
         color: context.theme.colorScheme.onSurfaceVariant,
@@ -218,9 +194,6 @@ class _ActiveChapterTile extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Downloaded tile — tap to read offline
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _DownloadedChapterTile extends ConsumerWidget {
   const _DownloadedChapterTile({required this.chapter, required this.mangaId});
@@ -258,7 +231,7 @@ class _DownloadedChapterTile extends ConsumerWidget {
       trailing: IconButton(
         tooltip: context.l10n.offlineChapterDelete,
         icon: const Icon(Icons.delete_outline_rounded),
-        onPressed: () => deleteChapterFromDevice(ref, chapter.id),
+        onPressed: () => confirmDeleteChapterFromDevice(ref, chapter.id),
       ),
       onTap: () => ReaderRoute(
         mangaId: mangaId,
@@ -269,9 +242,6 @@ class _DownloadedChapterTile extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Failed tile — retry button
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _FailedChapterTile extends ConsumerWidget {
   const _FailedChapterTile({required this.chapter});

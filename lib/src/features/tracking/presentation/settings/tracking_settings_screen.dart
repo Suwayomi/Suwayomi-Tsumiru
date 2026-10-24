@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/app_utils.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -29,9 +31,10 @@ class TrackingSettingsScreen extends ConsumerWidget {
         .watch(updateProgressManualMarkReadProvider)
         .ifNull(true);
     final trackersAsync = ref.watch(trackersProvider);
+    Future<void> update(Future<void> Function() write) async {
+      await AppUtils.guard(write, ref.read(toastProvider));
+    }
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.tracking);
     final content = ListTileTheme(
@@ -62,9 +65,11 @@ class TrackingSettingsScreen extends ConsumerWidget {
                         child: CompactSwitchListTile(
                           title: Text(context.l10n.updateProgressAfterReading),
                           value: updateAfterReading,
-                          onChanged: (value) => ref
+                          onChanged: (value) => update(
+                            () => ref
                               .read(updateProgressAfterReadingProvider.notifier)
                               .update(value),
+                          ),
                         ),
                       ),
                       SettingsHighlightTarget(
@@ -77,11 +82,13 @@ class TrackingSettingsScreen extends ConsumerWidget {
                             context.l10n.updateProgressManualMarkReadDesc,
                           ),
                           value: updateManualMarkRead,
-                          onChanged: (value) => ref
+                          onChanged: (value) => update(
+                            () => ref
                               .read(
                                 updateProgressManualMarkReadProvider.notifier,
                               )
                               .update(value),
+                          ),
                         ),
                       ),
                     ],

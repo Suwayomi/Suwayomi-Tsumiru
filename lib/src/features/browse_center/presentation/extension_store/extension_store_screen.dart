@@ -26,7 +26,6 @@ import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension_store/extension_store_model.dart';
 import 'widgets/add_store_dialog.dart';
 
-/// Guide page ships in a later task; linked from the empty-state Help button.
 const kStoreHelpUrl = 'https://tsumiru.app/docs/guides/adding-sources';
 
 class ExtensionStoreScreen extends ConsumerWidget {
@@ -49,8 +48,6 @@ class ExtensionStoreScreen extends ConsumerWidget {
       ref.refresh(extensionStoreListProvider.future);
     }, ref.read(toastProvider));
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.extensionStores);
     final actions = <Widget>[

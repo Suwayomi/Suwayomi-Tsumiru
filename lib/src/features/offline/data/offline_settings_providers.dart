@@ -39,9 +39,7 @@ class OfflineStorageCapMb extends _$OfflineStorageCapMb
   int? build() => initialize(DBKeys.offlineStorageCapMb);
 }
 
-/// Pages downloaded at once across all chapters. Kept low by default so a
-/// self-hosted server isn't saturated (it starts returning 500/503 under
-/// heavy parallelism). User-adjustable; applied live to the download queue.
+// Keep page concurrency low by default to avoid saturating self-hosted servers.
 @riverpod
 class OfflineDownloadConcurrency extends _$OfflineDownloadConcurrency
     with SharedPreferenceClientMixin<int> {
@@ -56,9 +54,7 @@ class OfflineWifiOnly extends _$OfflineWifiOnly
   bool? build() => initialize(DBKeys.downloadOnlyOverWifi);
 }
 
-/// User-initiated pause of all on-device downloads (persisted). The UI watches
-/// this for the Pause/Resume control + the global paused badge; the download
-/// starters gate on the persisted value directly (see [DBKeys.offlineDownloadsPaused]).
+// Download starters read persisted pause directly so provider hydration cannot bypass it.
 @riverpod
 class OfflineDownloadsPaused extends _$OfflineDownloadsPaused
     with SharedPreferenceClientMixin<bool> {

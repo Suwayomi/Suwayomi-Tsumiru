@@ -11,21 +11,17 @@ import '../../onboarding/data/server_resolver.dart' show authProbeAuthorized;
 import 'simple_login_session_client_io.dart'
     if (dart.library.js_interop) 'simple_login_session_client_web.dart';
 
-/// Stored in place of a cookie value when the browser owns the session, so
-/// "are we signed in" stays a simple non-empty check while nothing tries to
-/// set a `Cookie` header that browsers forbid anyway.
+/// Nonempty session sentinel for browsers, which own cookies and forbid setting Cookie headers.
 const kBrowserManagedSimpleSession = 'browser-managed-session';
 
-/// Thrown when `POST /login.html` returns HTTP 200 (Suwayomi's way of
-/// signalling invalid credentials — it re-renders the login HTML).
+/// Suwayomi signals rejected credentials with HTTP 200 and the login HTML.
 class SimpleLoginAuthFailure implements Exception {
   const SimpleLoginAuthFailure();
   @override
   String toString() => 'SimpleLoginAuthFailure: invalid username/password';
 }
 
-/// Thrown when the response shape is neither the 303-redirect-with-cookie
-/// success path nor the 200-with-html failure path.
+/// Response is neither a 303 with cookie nor a 200 login-form rejection.
 class SimpleLoginShapeFailure implements Exception {
   const SimpleLoginShapeFailure(this.message);
   final String message;
@@ -38,7 +34,6 @@ class SimpleLoginSessionFailure extends SimpleLoginShapeFailure {
     : super('The server did not confirm the browser session');
 }
 
-/// Talks to Suwayomi-Server's `simple_login` auth mode.
 class SimpleLoginClient {
   SimpleLoginClient({
     http.Client? httpClient,
@@ -52,17 +47,10 @@ class SimpleLoginClient {
 
   void close() => _http.close();
 
-  /// True where the browser owns the cookie jar. Injectable so both paths are
-  /// testable off the browser.
   final bool _browserSession;
 
-  /// POSTs username + password to `<serverBaseUrl>/login.html` and returns
-  /// the value of the `Set-Cookie` header (typically
-  /// `"JSESSIONID=<sessionId>"`) for the client to send on subsequent
-  /// requests.
-  ///
-  /// Throws [SimpleLoginAuthFailure] on credential rejection, or
-  /// [SimpleLoginShapeFailure] on any other server response.
+  /// Returns the session cookie, or the browser-managed sentinel on web.
+  /// Throws [SimpleLoginAuthFailure] for rejection, [SimpleLoginShapeFailure] for unexpected responses.
   Future<String> login({
     required String serverBaseUrl,
     required String username,
@@ -73,10 +61,7 @@ class SimpleLoginClient {
       ..bodyFields = {'user': username, 'pass': password}
       ..headers['Content-Type'] =
           'application/x-www-form-urlencoded; charset=utf-8'
-      // Native keeps the redirect unfollowed so `Set-Cookie` is readable
-      // (#425). In a browser that same flag becomes fetch `redirect: 'error'`,
-      // which fails the request the moment the 303 arrives — and there is
-      // nothing to read there anyway, so let the browser follow it.
+      // Native must stop at the redirect to read Set-Cookie; browser fetch must follow it.
       ..followRedirects = _browserSession;
     if (extraHeaders != null && extraHeaders.isNotEmpty) {
       for (final entry in extraHeaders.entries) {
@@ -111,7 +96,6 @@ class SimpleLoginClient {
     }
 
     if (response.statusCode == 200) {
-      // Server re-rendered the login page → bad credentials.
       throw const SimpleLoginAuthFailure();
     }
     if (response.statusCode != 303) {
@@ -123,9 +107,17 @@ class SimpleLoginClient {
         '303 response had no Set-Cookie header',
       );
     }
-    // `Set-Cookie: JSESSIONID=abc; Path=/; HttpOnly` → keep just
-    // "JSESSIONID=abc" for the outgoing Cookie header on later requests.
-    return setCookie.split(';').first.trim();
+    final cookie = setCookie.split(';').first.trim();
+    if (!await authProbeAuthorized(
+      serverBaseUrl,
+      client: _http,
+      timeout: timeout,
+      cookie: cookie,
+      extraHeaders: extraHeaders,
+    )) {
+      throw const SimpleLoginSessionFailure();
+    }
+    return cookie;
   }
 
   static bool _looksLikeLoginForm(String body) =>

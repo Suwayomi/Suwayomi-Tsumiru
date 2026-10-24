@@ -9,6 +9,12 @@ fragment StoreExtensionDto on ExtensionType {
   lang
   name
   pkgName
-  versionCode
+  versionCodeLong
   versionName
+  storeIndexUrl
+  extensionLib
+  extensionStore {
+    name
+    indexUrl
+  }
 }

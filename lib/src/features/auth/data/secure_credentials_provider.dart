@@ -13,65 +13,41 @@ import '../../../utils/logger/logger.dart';
 
 part 'secure_credentials_provider.g.dart';
 
-/// A platform-backed secure key/value store for credentials.
-///
-/// On Android this is Keystore-backed AES-GCM (v10 migrates old
-/// EncryptedSharedPreferences data on first access; the backup keeps a failed
-/// migration from destroying stored logins); on iOS the Keychain; on
-/// desktop/web best-available platform stores. Always preferred over
-/// SharedPreferences for anything bearer-equivalent (passwords, JWTs,
-/// session cookies).
-///
-/// v10's resetOnError default is accepted deliberately: an unrecoverable
-/// keystore/decrypt error wipes the store (clean re-login) instead of
-/// crashing every read.
+/// Uses secure platform storage for bearer-equivalent secrets.
+/// Android migration keeps a backup; unrecoverable decryption errors reset the store for re-login.
 @Riverpod(keepAlive: true)
 FlutterSecureStorage secureStorage(Ref ref) => kSecureStorage;
 
-/// The store [secureStorage] provides, for the background isolates, which have
-/// no Riverpod. They must open it with the very same options to see the same
-/// data.
+/// Background isolates must use the same storage options to access the same credentials.
 const kSecureStorage = FlutterSecureStorage(
   aOptions: AndroidOptions(migrateWithBackup: true),
-  // The data-protection keychain needs a restricted entitlement, and macOS
-  // refuses to launch an ad-hoc-signed build that carries one. The login
-  // keychain works unsigned.
+  // The login keychain works unsigned; the data-protection keychain requires a restricted entitlement.
   mOptions: MacOsOptions(usesDataProtectionKeychain: false),
 );
 
 bool _keychainRefused = false;
 bool _writeFailed = false;
 
-/// Whether the keychain refused a read in this process. Once it has, launch
-/// reads skip the keychain, so one launch asks the user at most once.
+/// A refused read suppresses further keychain prompts for this launch.
 bool get keychainRefusedThisRun => _keychainRefused;
 
-/// Whether a credential state failed to reach secure storage in this process.
-/// The sign-in path shows one notice when it did: the sign-in works for this
-/// run, but it could not be saved for the next launch.
+/// Failed persistence leaves sign-in active in memory but unsaved for the next launch.
 bool get credentialWriteFailedThisRun => _writeFailed;
 
-/// Forgets this run's refusal and write failure, as a fresh launch would.
 @visibleForTesting
 void debugResetKeychainRefusal() {
   _keychainRefused = false;
   _writeFailed = false;
 }
 
-/// Matches the next sign-in's notice to that sign-in's writes.
 void resetCredentialWriteFailure() => _writeFailed = false;
 
-/// Records that the in-memory credentials could not be fully written to the
-/// platform store.
 void markCredentialPersistenceFailed() => _writeFailed = true;
 
 String _describe(Object error) =>
     error is PlatformException ? error.code : error.runtimeType.toString();
 
-/// Reads [key] on the launch path. A refused keychain read (macOS denied
-/// prompt) reads as absent so launch proceeds, and later reads skip the
-/// keychain. Callers read one at a time, so a refusal stops the rest before
-/// they prompt. A throwing build would be retried by Riverpod and re-prompt.
+/// Refused reads return null and suppress later reads for this launch to avoid repeated prompts.
 Future<String?> readSecureOrAbsent(
   FlutterSecureStorage storage,
   String key,
@@ -89,10 +65,7 @@ Future<String?> readSecureOrAbsent(
   }
 }
 
-/// Writes [value] to [storage]. A write the keychain refuses is not thrown:
-/// the caller keeps the value in memory for this run and only needs to tell
-/// the user it was not saved. Returns whether the value reached the platform
-/// store.
+/// Returns whether persistence succeeded; refusal leaves the caller's in-memory value active.
 Future<bool> writeSecure(
   FlutterSecureStorage storage,
   String key,
@@ -102,7 +75,6 @@ Future<bool> writeSecure(
     await storage.write(key: key, value: value);
     return true;
   } catch (error) {
-    // No point prompting again on every later read of another key.
     _keychainRefused = true;
     logger.w(
       'Keychain refused a write for $key; keeping it in memory for this run: '
@@ -112,9 +84,7 @@ Future<bool> writeSecure(
   }
 }
 
-/// Deletes [key]. A refused delete is not thrown, for the same reason as
-/// [writeSecure]: the caller's in-memory state is the source of truth, and the
-/// next mutation retries the complete state anyway.
+/// Returns false on refusal; in-memory state remains authoritative until persistence is retried.
 Future<bool> deleteSecure(FlutterSecureStorage storage, String key) async {
   try {
     await storage.delete(key: key);

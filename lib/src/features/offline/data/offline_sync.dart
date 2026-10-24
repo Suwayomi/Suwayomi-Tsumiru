@@ -15,12 +15,7 @@ import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
 import 'webui_chapter_sort_meta.dart';
 
-/// Mirrors server metadata into the offline catalog during normal online use.
-///
-/// Maps GraphQL DTOs onto the catalog's metadata upserts, which deliberately
-/// preserve device-managed columns (deviceState, bytes, thumbnailRelPath) — so
-/// a re-sync never clobbers what the user has downloaded. Called online only;
-/// a no-op offline (the caller guards via [offlineSyncProvider] being null).
+/// Metadata refreshes preserve device-managed columns; callers must guard offline availability.
 
 class OfflineSync {
   const OfflineSync(
@@ -41,15 +36,10 @@ class OfflineSync {
   final OfflineDatabase _db;
   final Future<void> Function()? onSynced;
 
-  /// Fetches one manga's fresh counts. Used when an alignment had to skip
-  /// late-acked corrections: a refetch whose generation postdates those acks
-  /// provably covers them, so the count settles within one round-trip instead
-  /// of waiting for whenever the next refresh happens to run.
+  /// Refetches aggregates after late acknowledgements so their corrections can settle.
   final Future<MangaDto?> Function(int mangaId)? refetchManga;
 
-  /// Capture before issuing the fetch whose result will be passed to
-  /// [syncManga] or [syncChapters] — it is how the sync layer orders that
-  /// fetch against concurrent push acknowledgements.
+  /// Capture before fetching metadata to order it against concurrent push acknowledgements.
   int get syncGeneration => _db.syncGeneration;
 
   Future<void> syncManga(
@@ -70,10 +60,7 @@ class OfflineSync {
     required bool isSettleRetry,
   }) async {
     if (!_current) return;
-    // One transaction: the count and the baselines it retires are two halves
-    // of the same invariant, and a kill between them would persist the new
-    // count with the old corrections still live — double-counted on the next
-    // offline launch.
+    // Counts and baselines must commit together to avoid double-counting after a crash.
     var skippedLateAcks = 0;
     await _db.transaction(() async {
       await _db.upsertMangaMetadata(
@@ -90,14 +77,7 @@ class OfflineSync {
         unreadCount: manga.user.unreadCount,
         downloadCount: manga.user.downloadCount,
         bookmarkCount: manga.user.bookmarkCount,
-        // manga.inLibraryAt is a raw server field, populated whenever the
-        // server has ever tracked the manga — it does NOT imply current
-        // membership. A caller can sync a target that isn't in the library
-        // (e.g. OfflineMigrationService.migrate() syncing a metadata-merge
-        // target); trusting the raw value there would let it read back as
-        // "present" from libraryManga(). Force the sentinel whenever the
-        // server says it isn't in the library, regardless of what
-        // inLibraryAt itself contains.
+        // inLibraryAt can outlive membership; only user.inLibrary determines current membership.
         inLibraryAt: manga.user.inLibrary
             ? manga.user.inLibraryAt
             : kLibraryRemovedSentinel,
@@ -106,26 +86,16 @@ class OfflineSync {
         lastReadAt: manga.user.lastReadChapter?.user.lastReadAt,
         metaJson: jsonEncode({for (final e in manga.meta) e.key: e.value}),
         totalChapters: manga.chapters.totalCount,
-        // Pre-extracted from the same meta list above, with the same
-        // resolution as the chapter list display (alphabetical flag first,
-        // then webUI_sortBy) so downloads follow what the reader shows.
         chapterSortMode: chapterSortAxisFromMeta(
           (key) => manga.meta.firstWhereOrNull((m) => m.key == key)?.value,
         ),
       );
-      // The counts just written include every read the server knew about
-      // when the fetch went out; acks landing after it keep their
-      // corrections.
       skippedLateAcks = await _db.alignSyncedReadBaseline(
         manga.id,
         upToGen: fetchedAtGen,
       );
     });
-    // A skipped correction means this aggregate raced a push: the server may
-    // already count the change, so settle it now with a fetch that provably
-    // postdates the ack rather than leaving a possible double-count until an
-    // unrelated refresh. One retry only — its own skips can only come from
-    // yet another concurrent push, which will trigger its own settling.
+    // One later fetch settles acknowledgements that raced this aggregate.
     if (!_current) return;
     if (skippedLateAcks > 0 && !isSettleRetry && refetchManga != null) {
       final retryGen = _db.syncGeneration;
@@ -146,36 +116,25 @@ class OfflineSync {
   static bool _keepReadBaseline(OfflineChapter? row, ChapterDto server) {
     if (row == null) return false; // first mirror initializes
     if (row.readStateDirty) return true; // push still pending
-    // Acked-awaiting-aggregate: the row carries a correction and the server
-    // reports the value we pushed. A differing server value is newer remote
-    // information and settles the row instead.
+    // Preserve an acknowledged correction until its aggregate arrives; differing remote state supersedes it.
     return row.isRead != row.syncedIsRead && row.isRead == server.user.isRead;
   }
 
-  /// Returns the set of chapter IDs that transitioned from unread to read
-  /// during this sync (chapters the user read outside Tsumiru, e.g. in WebUI).
-  /// The caller passes these to the immediately-following reconcile so that the
-  /// local delete-while-reading setting fires for those chapters too.
+  /// Returns new remote unread-to-read transitions for the following delete-on-read reconcile.
   Future<Set<int>> syncChapters(List<ChapterDto> chapters) =>
       _track(() => _syncChapters(chapters));
 
   Future<Set<int>> _syncChapters(List<ChapterDto> chapters) async {
     if (!_current) return {};
     final now = DateTime.now();
-    // Preserve read progress that was updated locally but not yet pushed to the
-    // server — otherwise a down-sync would overwrite it with the stale server
-    // value (the up-sync pushes it; this just stops it being lost in the gap).
+    // Preserve pending local changes until up-sync succeeds.
     final dirty = {for (final c in await _db.dirtyChapters()) c.id: c};
     if (!_current) return {};
-    // Persisted state decides baseline handling below — it, unlike any
-    // in-memory record, survives a restart between an ack and its aggregate.
+    // Persisted baselines survive a restart between acknowledgement and aggregate refresh.
     final existingRows = await _db.chaptersByIds([
       for (final c in chapters) c.id,
     ]);
     if (!_current) return {};
-    // Collect IDs whose read state flips from false to true in this sync pass.
-    // Excludes locally-dirty chapters (their isRead is a pending local write,
-    // not a server-originated change) and brand-new rows (no prior local state).
     final newlyRead = <int>{
       for (final c in chapters)
         if (!(dirty[c.id]?.readStateDirty ?? false) &&
@@ -184,16 +143,11 @@ class OfflineSync {
             c.user.isRead)
           c.id,
     };
-    // One transaction per list: an interrupted sync must not leave a manga
-    // with a mix of real and index-fallback chapter numbers — a legacy row at
-    // index N would falsely dedup-merge with a real chapter N.
+    // Mixed real and fallback chapter numbers could falsely merge distinct chapters after interruption.
     await _db.transaction(() async {
       for (final c in chapters) {
         final local = dirty[c.id];
-        // Keep a locally-changed value only while its OWN flag is still dirty;
-        // otherwise take the server's. Separate flags per field let one sync
-        // in from the server while another stays pending up-sync (the ch-99
-        // loop, #13).
+        // Preserve each field only under its own dirty flag.
         final keepPosition = local?.progressDirty ?? false;
         final keepReadState = local?.readStateDirty ?? false;
         final keepBookmark = local?.bookmarkDirty ?? false;
@@ -207,7 +161,6 @@ class OfflineSync {
           uploadDate: c.uploadDate,
           fetchedAt: c.fetchedAt,
           isRead: keepReadState ? local!.isRead : c.user.isRead,
-          // Baseline handling — see OfflineChapters.syncedIsRead.
           syncedIsRead: _keepReadBaseline(existingRows[c.id], c)
               ? null
               : c.user.isRead,
@@ -220,31 +173,14 @@ class OfflineSync {
           serverIsDownloaded: c.user.isDownloaded,
           pageCount: c.pageCount,
           updatedAt: now,
-          // Server-managed: always the server's value (drives the offline
-          // "Last Read" sort). Never preserve the local one, unlike read progress.
+          // Last-read time follows the server even while local progress remains dirty.
           lastReadAt: c.user.lastReadAt,
         );
       }
     });
 
-    // Device ⊆ server: a chapter the server no longer lists (deleted there) must
-    // lose its on-device copy too. Mark any FULLY-DOWNLOADED local chapter
-    // that's absent from this (full, per-manga) sync as orphaned — the reconcile
-    // pass that runs right after a sync evicts orphaned chapters. Only the
-    // `downloaded` state is orphaned: an in-flight queued/downloading chapter is
-    // owned by the background worker (evicting it mid-flight would race the
-    // worker, which would just re-create the row), and it will resolve on its
-    // own (a deleted chapter's pages fail to fetch). Scoped to the manga(s) in
-    // this sync, and a no-op for an empty list (a failed/empty fetch must never
-    // orphan everything). A chapter the server lists but hasn't downloaded
-    // server-side yet is still present here, so a device-on-demand download is
-    // NOT orphaned (#32).
-    //
-    // A gone chapter with nothing on the device (`none`/`error`) loses its row
-    // outright. The server recreates a chapter under a new id when the source
-    // changes it, and the old row is otherwise still picked by the keep-rule
-    // and asked of the server, which rejects the whole enqueue batch for that
-    // one id, so the valid chapters in it never download either.
+    // Orphan missing downloaded chapters only; active downloads belong to the worker.
+    // An empty fetch must never orphan everything; gone rows without device content can be deleted.
     if (!_current) return {};
     final serverIdsByManga = <int, Set<int>>{};
     for (final c in chapters) {
@@ -282,27 +218,13 @@ class OfflineSync {
     return _current ? newlyRead : {};
   }
 
-  /// Removes manga that have left the server library from the offline catalog.
-  /// Rows with device downloads survive (hidden from the offline library by
-  /// the libraryManga membership filter, still listed in On device). An empty
-  /// [serverLibrary] is ignored — a failed or empty fetch must never prune the
-  /// whole catalog.
-  ///
-  /// [serverLibrary] MUST be the COMPLETE library, not a page of it: this
-  /// stamps [kLibraryRemovedSentinel] on (and [purgeRemovedLibraryManga] then
-  /// deletes) every off-rule series absent from it, so a truncated list
-  /// silently strands and deletes real library manga. Its only caller feeds
-  /// it `getAllLibraryMangas`, which now paginates to exhaustion and returns
-  /// null (never a short list) on any partial/failed fetch — so a null there
-  /// means this never runs at all.
+  /// Requires a complete successful library fetch; ignores empty input.
+  /// Removed series with device copies stay in On device, hidden from the offline library.
   Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) =>
       _track(() => _pruneRemovedLibraryManga(serverLibrary));
 
   Future<void> _pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
     if (!_current || serverLibrary.isEmpty) return;
-    // Classify what THIS complete server fetch reports before touching
-    // anything — total/real/zero/empty over the server's own inLibraryAt
-    // values, independent of whatever the local catalog currently holds.
     var serverReal = 0;
     var serverZero = 0;
     var serverEmpty = 0;
@@ -322,13 +244,7 @@ class OfflineSync {
       'zero=$serverZero empty=$serverEmpty\n',
     );
     await _db.logLibraryStampCounters('before');
-    // Repair stale removed-sentinel stamps on manga that are still in the
-    // library: a previous truncated fetch may have marked them as removed.
-    // The real server timestamp is available from the complete fetch, so we
-    // restore it exactly (not just clear to null) before stamping the
-    // genuinely absent. Also fixes manga whose real server value happens to
-    // be literal "0" — kLibraryRemovedSentinel is '-1', not '0', so it no
-    // longer collides with that.
+    // Restore present members before stamping absent ones removed.
     await _db.restoreLibraryTimestamps({
       for (final m in serverLibrary) m.id: m.user.inLibraryAt,
     });
@@ -341,9 +257,7 @@ class OfflineSync {
     if (_current) await onSynced?.call();
   }
 
-  /// Full mirror, not an accumulate: categories deleted on the server must
-  /// stop haunting the offline tabs. Empty is ignored for the same reason as
-  /// [pruneRemovedLibraryManga] — a failed fetch must never wipe the mirror.
+  /// Replaces the category mirror; ignores empty input to avoid wiping it after a failed fetch.
   Future<void> syncCategories(
     List<CategoryDto> categories, {
     int? defaultCategoryId = 0,
@@ -356,8 +270,7 @@ class OfflineSync {
     required int? defaultCategoryId,
   }) async {
     if (!_current || categories.isEmpty) return;
-    // One transaction: overlapping syncs (fired unawaited on every category
-    // rebuild) must not interleave an old upsert after a newer prune.
+    // Overlapping syncs must not interleave an older upsert after a newer prune.
     await _db.transaction(() async {
       for (final cat in categories) {
         await _db.upsertCategory(

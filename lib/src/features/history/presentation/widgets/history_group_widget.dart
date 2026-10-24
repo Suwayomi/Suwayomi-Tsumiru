@@ -26,7 +26,6 @@ class HistoryGroupWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Group header
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: 8,
@@ -62,7 +61,6 @@ class HistoryGroupWidget extends StatelessWidget {
             ],
           ),
         ),
-        // Group items
         ...group.items.map((HistoryItemDto item) => HistoryItemTile(
               item: item,
             )),

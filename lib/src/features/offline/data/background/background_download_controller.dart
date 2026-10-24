@@ -53,12 +53,7 @@ import 'download_task_handler.dart';
 import 'foreground_service_gateway.dart';
 import 'work_order_admission.dart';
 
-/// Owns the Android foreground-service download worker from the MAIN isolate —
-/// starts/stops it, mirrors drift into it, and applies its events + completion
-/// log back into drift. Single-owner invariant: exactly one isolate downloads
-/// while the queue is non-empty on Android, so the main-isolate pump must never
-/// run there; on other platforms this controller is a no-op and the
-/// main-isolate pump is used instead.
+/// Android worker owner on the main isolate; the main-isolate pump must not also download.
 class BackgroundDownloadController with WidgetsBindingObserver {
   BackgroundDownloadController(
     this._ref, {
@@ -103,19 +98,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   String? _activeAttemptId;
   Future<void>? _startupFuture;
 
-  // Test-only: completes once the async work register() kicked off settles.
   @visibleForTesting
   Future<void> get startupSettled => _startupFuture ?? Future.value();
   Future<void> _identityTail = Future.value();
   Future<void> _mutationTail = Future.value();
   DateTime? _lastRecovery;
   AppLifecycleState? _lastLifecycle;
-  // Latched when the app actually goes to the background (paused/hidden/
-  // detached). Flutter synthesises hidden → inactive → resumed on a genuine
-  // return, so by the time `resumed` arrives the previous state is always
-  // `inactive` and can't be used to tell a real background return from a
-  // notification-shade peek (inactive → resumed, never reaching hidden/paused).
-  // This latch can: the shade never trips it.
+  // A shade peek is inactive/resumed too; only hidden/paused/detached marks a background trip.
   bool _wentBackground = false;
   bool? _retryBlocked;
   bool _disposed = false;
@@ -236,36 +225,25 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   final Ref _ref;
 
-  /// The chapter's persistent download generation (bumped on each delete),
-  /// stamped into every worker message so a terminal event from an older
-  /// generation is dropped. Persisted so it survives a restart — an in-memory
-  /// counter would let a re-queued download reuse a generation.
   int _genOf(OfflineChapter c) => c.downloadGeneration;
 
-  /// Registered as the FFT task-data callback; held so we can deregister.
   DataCallback? _workerEventCallback;
 
-  /// Connectivity listener used to enforce Wi-Fi-only while the app is alive.
   StreamSubscription<List<ConnectivityResult>>? _connSub;
   ProviderSubscription<AsyncValue<String>>? _identitySubscription;
 
-  /// Guards [ensureServiceRunning] against overlapping invocations (it does
-  /// several awaited steps; concurrent enqueue + resume could double-start).
+  // Awaited startup steps must not overlap between enqueue and resume.
   bool _ensuring = false;
   bool _suppressRestarts = false;
   int _controlCount = 0;
   final Object _controlZone = Object();
 
-  /// Backoff after the worker parks on an unreachable server. The stop
-  /// handshake sees the queue still pending and restarts immediately, which
-  /// measured 10 service starts — each booting a background isolate — in 60s
-  /// against a dead server.
+  // Pending drift rows survive a park; backoff prevents the stop handshake restarting immediately.
   DateTime? _parkedUntil;
   Duration _parkBackoff = _minParkBackoff;
   Timer? _parkTimer;
 
-  /// Bumped on every park so a slow chapter commit can tell whether the server
-  /// it proved reachable is the one currently parked, or one from before.
+  // Epoch prevents a slow earlier commit from clearing a later park.
   int _parkEpoch = 0;
   static const _minParkBackoff = Duration(seconds: 15);
   static const _maxParkBackoff = Duration(minutes: 5);
@@ -277,13 +255,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   BackgroundCompletionLog get _log =>
       BackgroundCompletionLog(File('${_paths.baseDir}/.bg_completion.log'));
 
-  // ---------------------------------------------------------------------------
-  // Lifecycle registration
-  // ---------------------------------------------------------------------------
 
-  /// Wire up the worker-event callback + Wi-Fi-only listener. Call once at
-  /// startup (after FFT.initCommunicationPort, before/at launch replay);
-  /// idempotent.
   Future<void> _recoverIdentityTransition() async {
     final state = CatchupStateStore(_ref.read(sharedPreferencesProvider));
     if (!_suppressRestarts && state.identityChanging) {
@@ -307,8 +279,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     _workerEventCallback ??= _onWorkerEvent;
     _gateway.addCallback(_workerEventCallback!);
     _bindStorage();
-    // Container-level: a provider-level listen makes this controller depend on
-    // the server address, which reads this controller while switching.
+    // Provider-level listening would cycle through the server-address dependency during switching.
     _identitySubscription ??= _ref.container.listen(serverInstanceIdProvider, (
       _,
       next,
@@ -375,8 +346,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     _handoffTimer?.cancel();
     unawaited(_pendingSub?.cancel());
     _parkTimer?.cancel();
-    // Mirrors register(): off Android nothing was ever wired up, and touching
-    // WidgetsBinding here would fault a container-only test with no binding.
+    // Non-Android registration never touched WidgetsBinding; disposal must not require it either.
     if (!_isAndroid()) return;
     WidgetsBinding.instance.removeObserver(this);
     final cb = _workerEventCallback;
@@ -384,16 +354,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     unawaited(_connSub?.cancel());
   }
 
-  // ---------------------------------------------------------------------------
-  // Service start (heart of single-owner)
-  // ---------------------------------------------------------------------------
 
-  /// Ensure the foreground service owns the current queue — idempotent: merges
-  /// pending ids into an already-running worker, else starts one with a fresh
-  /// work order. Wi-Fi-only is enforced here: won't start on a metered
-  /// connection when the setting is on.
-  /// [force] is for signals that supersede the park backoff: an explicit user
-  /// action, or proof the server answered.
+  /// Merges pending work or starts the worker; honors Wi-Fi-only.
+  /// [force] bypasses park backoff for user actions or proof the server answered.
   Future<void> ensureServiceRunning({bool force = false}) async {
     if (force && _controlCount > 0) _handoffForce = true;
     if (!_isAndroid() ||
@@ -531,9 +494,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
-  /// The worker receives its endpoint in a launch-time work order. Restart it
-  /// on a LAN/remote handover so queued page GETs never remain pinned to the
-  /// address that just became unreachable.
+  /// Restarts with a fresh endpoint snapshot after a network handover.
   Future<void> restartForEndpointChange() => ensureServiceRunning(force: true);
 
   Future<T> changeIdentity<T>(
@@ -612,7 +573,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
-  /// drift is queue authority: queued + (resumable) downloading chapters.
   Future<List<OfflineChapter>> _pendingChapters() async {
     final queued = await _db.chaptersInState(OfflineDeviceState.queued);
     final downloading = await _db.chaptersInState(
@@ -621,18 +581,12 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     return [...queued, ...downloading];
   }
 
-  // ---------------------------------------------------------------------------
-  // Enqueue / remove / wifi-only changes
-  // ---------------------------------------------------------------------------
 
-  /// Called after the caller has written drift `queued` for [chapterIds]. Just
-  /// ensures the service owns the queue (it reads drift, not the argument).
+  /// Call after writing queued state to drift; the queue is read from drift, not [chapterIds].
   Future<void> onEnqueued(List<int> chapterIds) =>
       requestStart(userInitiated: true);
 
-  /// Something outside the controller wants downloads moving. A user action
-  /// outranks the park backoff outright; an automated pass only brings the next
-  /// attempt forward, so a trigger that repeats can't defeat it.
+  /// User actions bypass backoff; automatic triggers may only shorten it to the minimum delay.
   Future<void> requestStart({bool userInitiated = false}) {
     if (userInitiated) {
       _allowRecovery();
@@ -642,9 +596,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     return ensureServiceRunning(force: userInitiated);
   }
 
-  /// True when the user has paused all on-device downloads (persisted flag).
-  /// Read synchronously so the start gate can't be bypassed by an unhydrated
-  /// provider read.
+  // Read persisted pause synchronously so unhydrated providers cannot bypass the start gate.
   bool _isPaused() {
     final prefs = _ref.read(sharedPreferencesProvider);
     final state = CatchupStateStore(prefs);
@@ -653,9 +605,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         (catalogId != null && state.downloadPermissionPaused(catalogId));
   }
 
-  /// Pause all on-device downloads: tell the worker to park the in-flight
-  /// chapter and self-stop. Caller persists the flag first; the start gate in
-  /// [ensureServiceRunning] then blocks restart until [resume].
+  /// Caller must persist pause first; the worker cancels resumably and self-stops.
   Future<void> pause() async {
     if (!_isAndroid()) return;
     _activeAttemptId = null;
@@ -669,8 +619,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       await _gateway.remove(kWorkOrderKey);
     });
     if (await _gateway.isRunningService) {
-      // Graceful: the worker cancels + self-stops. Never main-side stopService
-      // here — it would race the worker and could corrupt a half-written page.
+      // Let the worker self-stop; main-side stopService could interrupt a page write.
       _pauseWorker();
     }
     await withOwnership(() async {});
@@ -780,7 +729,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     });
   }
 
-  /// Resume on-device downloads (caller has cleared the persisted flag first).
+  /// Caller must clear persisted pause first.
   Future<void> resume() => requestStart(userInitiated: true);
 
   Future<void> stopAndClearWorkOrder() async {
@@ -806,8 +755,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     _suppressRestarts = false;
   }
 
-  /// Tell the worker to drop a chapter (delete/cancel). The caller still does
-  /// the actual drift/file delete; this only stops the in-flight download.
+  /// Cancels worker activity only; the caller deletes drift rows and files.
   Future<void> onRemoved(int chapterId) async {
     if (!_isAndroid()) return;
     await withWorkOrderAdmission(_paths.baseDir, () async {
@@ -824,16 +772,12 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
-  /// Record a delete tombstone at [newGeneration] (already bumped in drift) so
-  /// a stale entry from the previous generation can't complete the chapter
-  /// after it's re-queued.
+  /// Call after bumping drift generation to reject stale completions.
   Future<void> recordChapterDeleted(int chapterId, int newGeneration) async {
     if (!_isAndroid()) return;
     await _log.appendDeleted(chapterId, newGeneration);
   }
 
-  /// Push a Wi-Fi-only setting change to the worker, and enforce it from the
-  /// main side: if it's now on + we're metered, stop the running service.
   Future<void> onWifiOnlyChanged(bool value) async {
     if (!_isAndroid()) return;
     try {
@@ -856,9 +800,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // App lifecycle
-  // ---------------------------------------------------------------------------
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -868,48 +809,32 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
-      // A genuine background trip. The FGS already owns the queue, so do NOTHING
-      // else here — just latch that we left so the matching resume replays.
       _wentBackground = true;
       return;
     }
     if (state == AppLifecycleState.resumed) {
-      // Replay only after a real background trip (latched above) or the very
-      // first resume at launch. Can't key off `previous`: Flutter synthesises
-      // hidden → inactive → resumed on a genuine return, so `previous` is
-      // always `inactive` here and would also match the notification-shade peek
-      // (inactive → resumed, which never reaches hidden/paused). Replaying on
-      // the shade would re-send an add op for every pending chapter to the FGS,
-      // interrupting in-progress downloads. The latch separates the two cleanly.
+      // Only actual background returns replay work; shade peeks must not interrupt active downloads.
       final wasBackground = _wentBackground || previous == null;
       _wentBackground = false;
       if (!wasBackground) return;
       unawaited(replayOnResume());
     }
-    // inactive: nothing.
   }
 
-  /// Replay the completion log into drift (live-UI catch-up on resume).
   Future<void> replayOnResume() async {
     _allowRecovery();
     _retrySooner();
     await _replay();
-    // The FGS may have been killed while backgrounded (OOM, the dataSync time
-    // cap, a swipe-away); restart if pending work remains — ensureServiceRunning
-    // is idempotent/no-op if the worker's still alive.
     await ensureServiceRunning();
   }
 
-  /// At launch: replay any log left by a previous run, then — if drift still has
-  /// a non-empty queue — (re)start the service to finish it.
   Future<void> replayAtLaunchAndMaybeStart() async {
     if (!_isAndroid()) return;
     await _replay();
     await maybeStartAfterReplay();
   }
 
-  /// Replay only — split out so launch can order it BEFORE the reconcile pass
-  /// (which must see post-replay device state), keeping the service start after.
+  /// Replay before launch reconciliation, then start the service afterward.
   Future<void> replayAtLaunch() async {
     if (!_isAndroid()) return;
     await _restoreActiveAttempt();
@@ -929,8 +854,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       db: _db,
       store: _store,
       log: _log,
-      // Gates catch-up adoptions: a record from another server's catalog is
-      // refused (and its files cleaned up), never adopted across identities.
       onTimeout: () => _recordTimeout(blockRetry: false),
       catalogServerId: _ref
           .read(sharedPreferencesProvider)
@@ -940,9 +863,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     );
   });
 
-  // ---------------------------------------------------------------------------
-  // Worker events + drain handshake (CRITICAL-1)
-  // ---------------------------------------------------------------------------
 
   bool _eventCurrent(Map data) {
     final controls = CatchupStateStore(_ref.read(sharedPreferencesProvider));
@@ -961,14 +881,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   void _onWorkerEvent(Object data) {
     if (data is! Map) return;
-    // During a catalog clear the worker is being torn down; a page/chapter
-    // event still queued in the SendPort would otherwise re-insert a row into
-    // the just-wiped catalog — drop everything until the clear releases the flag.
+    // Drop queued port events while clearing the catalog so they cannot recreate rows.
     if (_controlCount > 0 || !_eventCurrent(data)) return;
     switch (data['kind']) {
-      // Live foreground UI only — mark downloading + accumulate page rows so
-      // the progress arc animates; the durable record is the completion log,
-      // replayed on resume.
       case 'timedOut':
         final occurred = DateTime.tryParse(data['at'] as String? ?? '');
         unawaited(
@@ -1043,38 +958,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     await _refreshRestriction();
   }
 
-  /// Consecutive parks attributed to one specific chapter — diagnostics only,
-  /// never a give-up signal. A park always means the SERVER could not be
-  /// reached for this chapter (see `_downloadChapter`'s null-vs-empty
-  /// distinction in download_task_handler.dart, which already routes a
-  /// genuine "server answered, no pages" straight to `error` without ever
-  /// parking); attributing several in a row to the same chapter just reflects
-  /// that it's the head of the queue every backoff cycle, not that its own
-  /// source is broken. A previous version marked the chapter `error` after
-  /// three, which during a proxy/tunnel outage (backoff runs 15s to 5min)
-  /// condemned the queue's head within minutes of a blip that had nothing to
-  /// do with that chapter. A chapter whose source really is gone already has
-  /// its own persisted give-up path (serverFetchAttempts, see
-  /// offline_reconciler.dart), so this counter no longer drives one.
+  // Diagnostic only: repeated network parks do not prove a chapter is unservable.
   final Map<int, int> _chapterParkAttempts = {};
 
-  /// How many consecutive commit failures a chapter gets before it is given up
-  /// on and marked `error`. Prevents the phantom-download loop where a chapter
-  /// whose staging always fails to commit stays `downloading` in drift and is
-  /// re-enqueued by `_pendingChapters()` on every `afterDrained` restart.
+  // Cap failed commits so incomplete staging cannot restart indefinitely as a pending download.
   static const _maxCommitFailures = 3;
   final Map<int, int> _commitFailures = {};
 
-  /// The worker gave up on an unreachable server and stopped with the queue
-  /// intact — OR, just as often in practice, gave up resolving/downloading
-  /// one specific chapter whose source is gone (a reverse proxy in front of
-  /// the Suwayomi server answers a dead per-chapter source fetch with a
-  /// gateway-style status, which reads identically to "the whole server is
-  /// down" from here). [chapterId]/[mangaId] are null only for the rare path
-  /// that can't attribute the park to one chapter. [reason] is the short
-  /// technical detail behind THIS specific attempt (an exception or HTTP
-  /// status) — logged every time so a chapter that keeps parking can be
-  /// diagnosed, not just seen to be "offline" with no further explanation.
   void _onParked({int? chapterId, int? mangaId, String? reason}) {
     final ts = _now().toIso8601String();
     if (chapterId != null) {
@@ -1092,18 +982,14 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     final delay = _nextBackoff();
     _armPark(delay);
     logger.i('Offline: server unreachable — downloads parked for $delay');
-    // Lets the reconnect listener resume us as soon as anything else in the app
-    // reaches the server, instead of waiting out the backoff.
     _ref
         .read(serverUnreachableProvider.notifier)
         .set(true, reason: 'background-downloads-parked');
     _ref.read(offlineDownloadRestrictionProvider.notifier).set('connection');
-    // Only on the first park of a run: the service took its own notification
-    // with it when it stopped, so without this the queue just goes quiet.
+    // Stopping the service removes its notification; surface the first parked state separately.
     if (delay == _minParkBackoff) unawaited(_notifyPaused(_PauseReason.server));
   }
 
-  /// The delay to wait now, doubling what the next one will be.
   Duration _nextBackoff() {
     final delay = _parkBackoff;
     _parkBackoff = delay * 2 > _maxParkBackoff ? _maxParkBackoff : delay * 2;
@@ -1111,9 +997,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   }
 
   void _armPark(Duration delay) {
-    // Every arming invalidates in-flight completions: a commit that started
-    // before the park would otherwise finish, see its captured epoch as
-    // current, and clear a park armed while it was running.
+    // Invalidate older commits before they can clear this newly armed park.
     _parkEpoch++;
     _parkedUntil = _now().add(delay);
     _parkTimer?.cancel();
@@ -1123,9 +1007,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _onParkExpired() async {
     _parkedUntil = null;
     await ensureServiceRunning();
-    // The start can decline — Android refusing the service, Wi-Fi-only holding
-    // it back — and the deadline is gone by then, so without re-arming here the
-    // queue would sit with nothing left to wake it.
+    // A declined service start consumes the timer; re-arm so pending work still has a wakeup.
     if (_parkedUntil != null || _blocked || _isPaused() || _suppressRestarts) {
       return;
     }
@@ -1141,9 +1023,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     _parkBackoff = _minParkBackoff;
   }
 
-  /// Bring the next attempt forward for a signal that suggests the server may
-  /// be back but doesn't prove it. Never nearer than the minimum, so a link
-  /// flapping every few seconds can't restart the service every few seconds.
+  // Keep at least the minimum delay so link flapping cannot repeatedly restart the service.
   void _retrySooner() {
     final until = _parkedUntil;
     if (until == null) return;
@@ -1152,10 +1032,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
-  /// Apply a `chapterStart` inside a transaction that checks the chapter isn't
-  /// deleted first — a remove message can cross the isolate boundary after
-  /// already-queued worker events, so this guard (serialized with
-  /// deleteChapter) drops it instead of resurrecting a `none` chapter.
+  // Check deletion transactionally: remove messages can arrive after already-queued worker events.
   Future<void> _applyChapterStart(
     int id,
     int? total,
@@ -1172,24 +1049,18 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         return;
       }
       await _db.setChapterDeviceState(id, OfflineDeviceState.downloading);
-      // Only set a known total over an unset/0 one, to avoid clobbering a good
-      // catalog value.
       if (total != null && total > 0) {
         await _db.setChapterPageCount(id, total);
       }
     });
   }
 
-  /// A page landed in the worker's staging area. Nothing is written to the
-  /// catalog — the chapter isn't published until it commits — so this only
-  /// moves the progress arc.
+  // Staging is unpublished; page events update progress only.
   Future<void> _applyPageEvent(Map data) async {
     final total = data['total'] as int? ?? 0;
     if (total <= 0) return;
     final id = data['chapterId'] as int;
-    // Same staleness guard as chapterStart and the terminal apply: an event
-    // already in the port when a delete lands must not re-enter the map for a
-    // chapter that no longer exists.
+    // Events queued before deletion must not re-enter the progress map.
     final c = await _db.chapterById(id);
     if (!_eventCurrent(data)) return;
     if (c == null || c.deviceState == OfflineDeviceState.none) return;
@@ -1199,10 +1070,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         .start(id, total: total, done: data['done'] as int? ?? 0);
   }
 
-  /// The worker drained and is self-stopping. Anything queued during that
-  /// shutdown window is stranded (the "tap download, nothing happens until
-  /// reopen" bug), so wait for the stop to actually complete, then recheck and
-  /// restart if work remains.
+  // Wait for self-stop before rechecking work queued during the shutdown window.
   Future<void> _onDrained(Map data) async {
     for (var i = 0; i < 20; i++) {
       if (!await _gateway.isRunningService) break;
@@ -1217,14 +1085,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     await _notifyDownloadsComplete(() => _eventCurrent(data));
   }
 
-  /// Chapters that finished / failed this download session — drive the
-  /// completion + error notifications once the queue truly drains.
   int _sessionDownloaded = 0;
   int _sessionFailed = 0;
 
-  /// Fire the completion + error notifications on drain (opt-in). Only covers a
-  /// download session THIS device ran — a server/WebUI download with the app
-  /// closed has no observer here.
   Future<void> _notifyDownloadsComplete(bool Function() isCurrent) async {
     final done = _sessionDownloaded;
     final failed = _sessionFailed;
@@ -1253,12 +1116,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         );
       }
     } catch (_) {
-      // Best-effort — a missed toast is not data loss.
     }
   }
 
-  /// Says why the queue stopped: the service owns the download notification,
-  /// so stopping it takes the only on-screen explanation with it.
   Future<void> _notifyPaused(_PauseReason reason) =>
       _publishStall(reason == _PauseReason.wifi ? 'wifi' : 'connection');
 
@@ -1282,9 +1142,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       if (!_eventCurrent(data)) return;
       await _applyChapterDone(data);
     });
-    // Drain handshake: if the worker just self-stopped, do post-stop
-    // reconciliation + a drift requery in case work was enqueued during the
-    // async stop window (CRITICAL-1).
+    // Recheck drift after self-stop to catch work enqueued during shutdown.
     if (!await _gateway.isRunningService && _eventCurrent(data)) {
       await _onServiceStopped(isCurrent: () => _eventCurrent(data));
     }
@@ -1293,9 +1151,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _applyChapterDone(Map data) async {
     final chapterId = data['chapterId'] as int?;
     final status = data['status'] as String?;
-    // Ahead of the awaits below: this event races the worker's `parked` message,
-    // and the stop handshake at the end of this method would otherwise restart
-    // the service before the latch is set.
+    // Latch offline before awaiting, or the terminal handshake can restart before parked arrives.
     if (status == 'offline') {
       _onParked(
         chapterId: chapterId,
@@ -1306,16 +1162,12 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       _armPark(_nextBackoff());
     }
     final epoch = _parkEpoch;
-    // Outside the status guard: a cancel (pause, delete, Wi-Fi drop) reports a
-    // null status, and leaving those entries behind grows the map for the life
-    // of the process and shows a re-queued chapter the last attempt's percent.
+    // Cancel events have null status too; clear their progress to avoid stale percentages on retry.
     if (chapterId != null) {
       _ref.read(offlineDownloadProgressProvider.notifier).clear(chapterId);
     }
     if (chapterId != null && status != null) {
-      // SINGLE COMMITTER: the worker only fills staging. Publishing the chapter
-      // happens here, on the main isolate, so exactly one party ever renames a
-      // staging directory into place and writes the rows for it.
+      // Only the main isolate publishes staged chapters and writes their catalog rows.
       if (status == 'downloaded') {
         final ch = await _db.chapterById(chapterId);
         if (!_eventCurrent(data)) return;
@@ -1335,10 +1187,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           mangaId: ch.mangaId,
           chapterId: chapterId,
         );
-        // The worker saying "done" isn't the same as the chapter landing: a
-        // stale event, a delete, or short staging all end here without
-        // publishing anything, and counting those would have the completion
-        // notification claim chapters the user doesn't have.
+        // Count only published chapters, not stale, deleted, or incomplete completions.
         if (!_eventCurrent(data)) return;
         if (result == ChapterCommitResult.committed) {
           _sessionDownloaded++;
@@ -1346,28 +1195,12 @@ class BackgroundDownloadController with WidgetsBindingObserver {
             '[${_now().toIso8601String()}] offline-fgs: downloaded-chapter '
             'mangaId=${ch.mangaId} chapterId=$chapterId\n',
           );
-          // A chapter landed, so the server is demonstrably fine — unless a
-          // later chapter parked while this one was committing.
+          // Do not clear a park raised by a later chapter while this commit was running.
           if (_parkEpoch == epoch) _clearPark();
-          // This chapter succeeded, so any earlier parks blamed on it were a
-          // transient blip, not its source being gone — don't let them count
-          // toward giving up on it if it ever parks again later.
           _chapterParkAttempts.remove(chapterId);
           _commitFailures.remove(chapterId);
         } else {
-          // The worker reports the chapter downloaded, but the commit didn't
-          // publish it.
-          //
-          // `refused`: chapter was deleted or re-queued under a new generation
-          // while the download was in flight. Drift already reflects the new
-          // state (none / queued for the new gen) — do not touch it.
-          //
-          // `incomplete`/`noStaging`: staging was missing or empty after the
-          // download. The row is still `downloading` in drift, which means
-          // `_pendingChapters()` will return it on every `afterDrained` restart
-          // → infinite phantom-download loop. Fix: reset to `queued` so it
-          // re-downloads from scratch, or mark `error` after _maxCommitFailures
-          // consecutive failures so it leaves the queue entirely.
+          // Refused commits preserve newer drift state; missing/incomplete staging must retry under a cap.
           if (ch.deviceState != OfflineDeviceState.none &&
               result != ChapterCommitResult.refused) {
             final attempts = (_commitFailures[chapterId] ?? 0) + 1;
@@ -1431,13 +1264,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         .captureSession();
     await _wipeWorkOrderAuth(isCurrent: isCurrent);
     if (!sessionCurrent() || !_identityAllowed || _suppressRestarts) return;
-    // Anything queued during the async stop? Restart to pick it up.
     await ensureServiceRunning();
   }
 
-  // ---------------------------------------------------------------------------
-  // Work order + auth snapshot / write-back
-  // ---------------------------------------------------------------------------
 
   Future<String?> _writeWorkOrder() async {
     final ownership = BackgroundDownloadLock(
@@ -1533,8 +1362,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         await _gateway.remove(kTokenRecordKey);
       });
 
-  /// Snapshot the current auth into the cross-isolate record. The worker uses
-  /// only the fields relevant to the active auth type.
   BackgroundTokenRecord _snapshotAuth() {
     final authType = _ref.read(authTypeKeyProvider) ?? AuthType.none;
     final basicToken = _ref.read(credentialsProvider).value;
@@ -1560,16 +1387,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     );
   }
 
-  /// Endpoint identity (URL + custom port if enabled) the client talks to.
   String _effectiveEndpoint() {
     final usePort = _ref.read(serverPortToggleProvider).ifNull();
     final port = usePort ? _ref.read(serverPortProvider) : null;
     return '${_ref.read(serverUrlProvider)}|${port ?? '-'}';
   }
 
-  /// After the worker stops, copy any rotated ui_login tokens back into
-  /// [AuthCredentialsStore], then clear the FFT auth keys so a stale snapshot
-  /// doesn't linger in plugin storage.
+  // Copy rotated tokens back before clearing the worker auth snapshot.
   Future<void> _wipeWorkOrderAuth({bool Function()? isCurrent}) =>
       withWorkOrderAdmission(_paths.baseDir, () async {
         if (await _gateway.isRunningService) return;
@@ -1614,13 +1438,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         await _gateway.remove(kWorkOrderKey);
       });
 
-  // ---------------------------------------------------------------------------
-  // Wi-Fi-only main-side enforcement
-  // ---------------------------------------------------------------------------
 
-  /// True when the active connection is metered (no Wi-Fi/ethernet).
-  /// `connectivity_plus` returns a list; empty/none is treated as metered-ish
-  /// so a wifi-only batch doesn't start.
+  // Treat empty/none connectivity as metered so Wi-Fi-only never starts offline.
   Future<bool> _isMetered() async {
     final result = await _connectivity();
     final hasUnmetered =
@@ -1629,11 +1448,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     return !hasUnmetered;
   }
 
-  /// React to connectivity changes while the app is alive: stop the service on
-  /// a drop to metered under Wi-Fi-only (chapters stay `downloading`, resume on
-  /// Wi-Fi), or start it on a (re)gained connection with pending work.
-  /// LIMITATION: a switch entirely while backgrounded isn't caught here — only
-  /// reconciled on the next foreground/launch.
+  // Background-only connectivity changes are reconciled on foreground/launch.
   void _onConnectivityChanged(List<ConnectivityResult> result) {
     if (!_isAndroid() || _disposed || !_ref.read(offlineEnabledProvider)) {
       return;
@@ -1655,8 +1470,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       }
       await _refreshRestriction();
       if (hasConnection && wifiOnly && !hasUnmetered) {
-        // Wi-Fi-only and dropped to metered: stop the running service (chapters
-        // stay `downloading` and resume on Wi-Fi).
         if (await _gateway.isRunningService) {
           logger.i(
             'Offline: dropped to metered with Wi-Fi-only — stopping FGS',
@@ -1666,23 +1479,16 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         }
         return;
       }
-      // Only the Wi-Fi-only case used to stop the service, so with that off
-      // the worker kept running against a network that was gone.
       if (!hasConnection) {
         if (await _gateway.isRunningService) {
           logger.i('Offline: no connection — stopping FGS');
-          // Before the stop: the cancelled chapter's terminal event runs the
-          // restart handshake, which would put a fresh worker straight back on
-          // a network that isn't there.
+          // Park before stopping so the cancelled terminal event cannot restart on the dead link.
           _armPark(_nextBackoff());
           await _gateway.stop();
           await _notifyPaused(_PauseReason.server);
         }
         return;
       }
-      // A usable link returned — resume pending work; covers a queue parked by
-      // a resolve-time network drop that would otherwise strand until app
-      // resume.
       final pending = await _pendingChapters();
       if (pending.isEmpty) return;
       _retrySooner();
@@ -1690,20 +1496,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }());
   }
 
-  // ---------------------------------------------------------------------------
-  // Permissions
-  // ---------------------------------------------------------------------------
 
-  /// Request POST_NOTIFICATIONS (Android 13+) before starting the service —
-  /// `startService` fails without it. Best-effort: a denial is only logged,
-  /// and the start still proceeds.
-  // ---------------------------------------------------------------------------
-  // TokenBroker adapter (main side)
-  // ---------------------------------------------------------------------------
 
-  /// A [TokenBroker] backed by FFT storage, sharing the worker's gen-versioned
-  /// record — for callers/tests coordinating a refresh from the main isolate.
-  /// Only ui_login refreshes; network refresh is delegated to [refreshFn].
   TokenBroker mainSideBroker({
     required Future<RefreshAttempt> Function(String refreshToken) refreshFn,
   }) {
@@ -1740,22 +1534,15 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   }
 }
 
-/// App-lifetime singleton driving the foreground-service downloads on
-/// Android; read at launch (register + replay) and from enqueue/delete sites.
-/// No-op on iOS/desktop; on web this file isn't compiled at all —
-/// `background_download_controller_shim.dart` swaps in a stub.
 final backgroundDownloadControllerProvider =
     Provider<BackgroundDownloadController>((Ref ref) {
       final controller = BackgroundDownloadController(ref);
-      // App-lifetime in practice, but a container teardown (tests, a full
-      // reset) must not leave its retry timer and listeners running against a
-      // disposed Ref.
+      // Container teardown must cancel retry timers and listeners before Ref disposal.
       ref.onDispose(controller.dispose);
       return controller;
     });
 
-/// Initialise `flutter_foreground_task` (communication port + notification
-/// channel/options). Call once early in `main()`. Android-only; no-op elsewhere.
+/// Call once early in main; no-op outside Android.
 void initForegroundTaskService() {
   if (!Platform.isAndroid) return;
   FlutterForegroundTask.initCommunicationPort();
@@ -1774,6 +1561,4 @@ void initForegroundTaskService() {
   );
 }
 
-/// Why on-device downloads stopped, for the notification that stands in for the
-/// foreground service's own once it has been torn down.
 enum _PauseReason { wifi, server }

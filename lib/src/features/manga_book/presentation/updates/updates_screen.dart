@@ -37,9 +37,6 @@ import 'widgets/chapter_manga_grouped_tile.dart';
 import 'widgets/chapter_manga_list_tile.dart';
 import 'widgets/updates_filter.dart';
 
-// ---------------------------------------------------------------------------
-// Paged list widget
-// ---------------------------------------------------------------------------
 
 class _UpdatesPagedList extends StatefulWidget {
   const _UpdatesPagedList({
@@ -65,18 +62,7 @@ class _UpdatesPagedList extends StatefulWidget {
 }
 
 class _UpdatesPagedListState extends State<_UpdatesPagedList> {
-  // Memoizes the grouping pass per loaded-pages instance instead of
-  // recomputing it once per visible row: PagedSliverList's itemBuilder calls
-  // _buildItem separately for every rendered row, and grouping/index-mapping
-  // re-walk the WHOLE loaded (all-pages-so-far) list each time they're asked.
-  // This State persists across those calls (only scrolling triggers them, not
-  // a rebuild of this widget), so caching on the pages list's identity is
-  // enough to turn an O(rows x loaded-items) pass back into one
-  // O(loaded-items) pass reused by every row. The key is `pages`, not
-  // `items`: `items` flattens into a fresh list on every read. Requires State
-  // (not StatelessWidget) since Widget subclasses are @immutable — plain
-  // mutable fields on the widget itself would fail analysis (must_be_immutable
-  // / const_constructor_with_non_final_field).
+  // Cache by pages identity, not items (a fresh flattened list), to group once per page set rather than per row.
   List<List<ChapterWithMangaDto>>? _memoPages;
   List<ChapterWithMangaDto>? _memoItems;
   List<UpdatesGroupedEntry>? _memoGroups;
@@ -170,14 +156,11 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     int flatIndex,
   ) {
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
-    // Memoized per pages instance — see _groupingFor's doc comment. Needed on
-    // both paths below since date headers are independent of manga grouping.
     final grouping = _groupingFor(state.pages);
     final items = grouping.items;
 
     if (isGrouped) {
-      // A flat index missing from headIndex is a tail member (or the head of
-      // a DIFFERENT group already rendered): suppress it either way.
+      // A missing head index is already rendered in its group, so suppress the row.
       final displayIndex = grouping.headIndex[flatIndex];
       if (displayIndex == null) return const SizedBox.shrink();
 
@@ -192,7 +175,6 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       );
     }
 
-    // Ungrouped path — identical to the original flat behaviour.
     final item = items[flatIndex];
     final tile = ChapterMangaListTile(
       chapterWithMangaDto: item,
@@ -274,10 +256,8 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   }
 }
 
-// ---------------------------------------------------------------------------
 
-/// Refetches one chapter, holding its autoDispose provider open so a bare
-/// refresh with nothing listening can't tear it down mid-fetch and throw.
+/// Hold the autoDispose provider during refresh so an unobserved request cannot tear down mid-fetch.
 Future<ChapterDto?> refetchChapter(WidgetRef ref, int chapterId) async {
   final provider = chapterProvider(chapterId: chapterId);
   final keepAlive = ref.listenManual(provider, (_, _) {});
@@ -288,13 +268,7 @@ Future<ChapterDto?> refetchChapter(WidgetRef ref, int chapterId) async {
   }
 }
 
-/// Extracts new items from a single fetched page when live-patching the
-/// Updates list after a background library check.
-///
-/// Returns all items from [nodes] that are not in [existingIds], stopping
-/// before the first known ID. [boundaryFound] is true when a known ID was
-/// encountered, meaning the caller has collected all new items up to the
-/// existing list and can stop fetching further pages.
+/// Stops before the first known ID; boundaryFound lets callers stop fetching older pages.
 ({List<ChapterWithMangaDto> items, bool boundaryFound})
 extractNewUpdatesFromPage(
   List<ChapterWithMangaDto> nodes,
@@ -310,9 +284,7 @@ extractNewUpdatesFromPage(
 class UpdatesScreen extends HookConsumerWidget {
   const UpdatesScreen({super.key});
 
-  // A refresh or filter change while a request is in flight leaves it
-  // describing a list that no longer exists; the controller drops its reply
-  // rather than interleave two result sets.
+  // Drop replies after a refresh/filter reset so results from different lists cannot interleave.
   Future<ServerPage<ChapterWithMangaDto>> _fetchPage(
     UpdatesRepository repository,
     int pageKey,
@@ -330,8 +302,7 @@ class UpdatesScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The item builder's context belongs to a row that recycles on scroll, so
-    // post-await guards ask this one whether the screen itself is still alive.
+    // Use the screen context after awaits; row contexts can be recycled during scroll.
     final screenContext = context;
     final updatesRepository = ref.watch(updatesRepositoryProvider);
     final lastUpdated = ref.watch(libraryLastUpdatedProvider).value;
@@ -341,39 +312,28 @@ class UpdatesScreen extends HookConsumerWidget {
     final groupingMode =
         ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.disabled;
     final phone = context.windowSizeClass == WindowSizeClass.compact;
-    // Phone searches from the app-bar entry (or the box under the title when
-    // the persistent setting is on); tablet and desktop are unchanged.
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
-    // The page fetcher is captured once, so it can't close over `filter` — it
-    // reads the latest value through this holder instead.
+    // The fetcher is captured once; read current filters through a holder to avoid stale closures.
     final latestFilter = useRef(filter);
     latestFilter.value = filter;
     final controller = useServerPagingController<ChapterWithMangaDto>(
       firstPageKey: 0,
-      // Read per request: a LAN/remote endpoint switch replaces the client,
-      // and the one captured on the first build is disposed with it.
+      // Read the repository per request because endpoint switches dispose the captured client.
       fetchPage: (pageKey) => _fetchPage(
         ref.read(updatesRepositoryProvider),
         pageKey,
         latestFilter.value,
       ),
     );
-    // Bumped by every reset of the list, so replies from the previous one can be
-    // recognised as stale and dropped.
+    // List resets invalidate replies from earlier generations.
     final generation = useRef(0);
     final resetList = useCallback(() {
       generation.value++;
       selectedChapters.value = ({});
       controller.refresh();
     }, []);
-    // Use the lightweight running-only socket (not updatesSocketProvider, the
-    // heavy feed that goes silent mid-run on large updates and can miss the
-    // true→false edge). Pattern mirrors LibraryScreen's own update listener.
-    //
-    // On the true→false edge, fetch page 0 and prepend only the items that
-    // aren't already in the list, so the user keeps their scroll position.
-    // Falls back to doing nothing on error (pull-to-refresh still works).
+    // Use the running-only socket to detect completion; prepend new rows without losing scroll position.
     final lastRunningUpdates = useRef<bool>(false);
     Future<void> liveUpdate() async {
       final gen = generation.value;
@@ -381,9 +341,7 @@ class UpdatesScreen extends HookConsumerWidget {
         for (final item in controller.items ?? <ChapterWithMangaDto>[]) item.id,
       };
       final newItems = <ChapterWithMangaDto>[];
-      // Walk pages until we hit a known ID (the boundary) or run out of pages.
-      // Cap at 3 pages: beyond that the list is so stale that a full reset is
-      // cleaner than prepending dozens of out-of-context entries.
+      // Cap at three pages; larger backlogs reset instead of prepending many stale entries.
       const maxPages = 3;
       for (var pageNo = 0; pageNo < maxPages; pageNo++) {
         final snapshot = await AsyncValue.guard(
@@ -405,8 +363,7 @@ class UpdatesScreen extends HookConsumerWidget {
         }
       }
       if (newItems.isEmpty || !screenContext.mounted) return;
-      // Prepended onto the first page so the keys, and the next page to
-      // fetch, stay as they were.
+      // Prepend within the first page to preserve page keys and the next fetch key.
       final pages = controller.pages;
       if (pages == null || pages.isEmpty) return;
       controller.value = controller.value.copyWith(
@@ -425,8 +382,7 @@ class UpdatesScreen extends HookConsumerWidget {
       }
       lastRunningUpdates.value = running;
     });
-    // Filtering happens server-side, so a changed filter invalidates every page
-    // already loaded. Skip the mount run or page 0 would be fetched twice.
+    // Skip the mount run to avoid fetching page zero twice; later server-side filter changes reset all pages.
     final isFilterMount = useRef(true);
     useEffect(() {
       if (isFilterMount.value) {
@@ -437,8 +393,6 @@ class UpdatesScreen extends HookConsumerWidget {
       return null;
     }, [filter]);
     final selecting = selectedChapters.value.isNotEmpty;
-    // Native desktop draws the toolbars in the shell bar instead of an app
-    // bar; selection mode swaps the slot content like it swaps the app bar.
     final topBar = showsMergedTopBar(context);
     final closeSelection = IconButton(
       onPressed: () => selectedChapters.value = ({}),
@@ -461,9 +415,6 @@ class UpdatesScreen extends HookConsumerWidget {
       IconButton(
         icon: const Icon(Icons.filter_list_rounded),
         tooltip: context.l10n.filter,
-        // Tinted while filtered, so a short list reads as "filtered"
-        // rather than "nothing new". Komikku uses amber here; ours
-        // comes from the theme.
         color: hasActiveFilters ? context.theme.colorScheme.primary : null,
         onPressed: () => showModalBottomSheet(
           context: context,
@@ -492,13 +443,6 @@ class UpdatesScreen extends HookConsumerWidget {
           : topBar
           ? null
           : AppBar(
-              // Single-line, like every other tab. Stacking the last-updated
-              // line in here made this the only header whose title sat at a
-              // different height; it lives at the top of the list instead,
-              // which is where Mihon keeps it.
-              //
-              // Desktop replaces the title with the unified search box (the
-              // sidebar already names the page); phone and tablet keep it.
               title: context.usesDesktopShell
                   ? Align(
                       alignment: Alignment.centerLeft,

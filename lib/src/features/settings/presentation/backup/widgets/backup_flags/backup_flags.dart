@@ -10,6 +10,7 @@ class BackupFlags {
     this.includeHistory = true,
     this.includeClientData = true,
     this.includeServerSettings = true,
+    this.includeUserSettings,
   });
 
   factory BackupFlags.fromAuto(AutoBackupFlagsDto dto) => BackupFlags(
@@ -29,6 +30,7 @@ class BackupFlags {
   final bool includeHistory;
   final bool includeClientData;
   final bool includeServerSettings;
+  final bool? includeUserSettings;
 
   BackupFlags copyWith({
     bool? includeManga,
@@ -38,6 +40,7 @@ class BackupFlags {
     bool? includeHistory,
     bool? includeClientData,
     bool? includeServerSettings,
+    bool? includeUserSettings,
   }) => BackupFlags(
     includeManga: includeManga ?? this.includeManga,
     includeCategories: includeCategories ?? this.includeCategories,
@@ -46,10 +49,15 @@ class BackupFlags {
     includeHistory: includeHistory ?? this.includeHistory,
     includeClientData: includeClientData ?? this.includeClientData,
     includeServerSettings: includeServerSettings ?? this.includeServerSettings,
+    includeUserSettings: includeUserSettings ?? this.includeUserSettings,
   );
 
-  Input$PartialBackupFlagsInput toPartialInput() =>
-      Input$PartialBackupFlagsInput(
+  Input$PartialBackupFlagsInput toPartialInput({
+    bool supportsUserSettings = false,
+  }) => Input$PartialBackupFlagsInput(
+    includeUserSettings: supportsUserSettings
+        ? includeUserSettings ?? true
+        : null,
         includeManga: includeManga,
         includeCategories: includeCategories,
         includeChapters: includeChapters,
@@ -59,8 +67,12 @@ class BackupFlags {
         includeServerSettings: includeServerSettings,
       );
 
-  Input$PartialSettingsTypeInput toAutoInput() =>
-      Input$PartialSettingsTypeInput(
+  Input$PartialSettingsTypeInput toAutoInput({
+    bool supportsUserSettings = false,
+  }) => Input$PartialSettingsTypeInput(
+    autoBackupIncludeUserSettings: supportsUserSettings
+        ? includeUserSettings ?? true
+        : null,
         autoBackupIncludeManga: includeManga,
         autoBackupIncludeCategories: includeCategories,
         autoBackupIncludeChapters: includeChapters,
@@ -80,7 +92,8 @@ class BackupFlags {
           includeTracking == other.includeTracking &&
           includeHistory == other.includeHistory &&
           includeClientData == other.includeClientData &&
-          includeServerSettings == other.includeServerSettings);
+          includeServerSettings == other.includeServerSettings &&
+          includeUserSettings == other.includeUserSettings);
 
   @override
   int get hashCode => Object.hash(
@@ -91,6 +104,7 @@ class BackupFlags {
     includeHistory,
     includeClientData,
     includeServerSettings,
+    includeUserSettings,
   );
 }
 

@@ -29,21 +29,17 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   if (!current()) return null;
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
-  // The first unread chapter only feeds the "continue reading" button, off by
-  // default; turning it on refetches the list with it.
+  // Only the optional continue-reading button needs the costly first-unread query.
   final withFirstUnread = ref
       .watch(showContinueReadingButtonProvider)
       .ifNull(false);
-  // Captured before the await; touching ref after the async gap throws if this
-  // provider was disposed mid-build. The keepAlive notifiers outlive it.
+  // Capture dependencies before awaiting; this provider may be disposed during the fetch.
   final reachability = ref.read(serverUnreachableProvider.notifier);
   final sync = ref.read(offlineSyncProvider);
   final coverWarmer = ref.read(offlineCoverWarmerProvider.notifier);
-  // Ordered against push acks: captured before the fetch goes out.
+  // Capture generation before fetching to order this response against progress push acknowledgements.
   final fetchGen = sync?.syncGeneration ?? 0;
-  // Mirror only genuine server responses. Fallback DTOs are catalog echoes:
-  // they already carry the unread correction (double-applied if written
-  // back), and the DTO round-trip loses lastReadAt and real chapter numbers.
+  // Never mirror catalog echoes: that reapplies unread corrections and loses timestamp/chapter details.
   var fromServer = false;
   final offlineFirst =
       ref.watch(viewOfflineNowProvider) || ref.watch(serverUnreachableProvider);
@@ -57,13 +53,10 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
         fromServer = true;
         return r;
       },
-      // Only read the native-only DB when offline is available (never on web).
       db: offlineDb,
       offlineEnabled: offlineDb != null,
       offlineFirst: offlineFirst,
-      // Riverpod forbids modifying another provider while this one is building,
-      // so defer the flip to a later tick (past the build) and ignore it if the
-      // container is already gone.
+      // Defer reachability changes until after build; Riverpod forbids provider writes during build.
       onReachability: (reachable) {
         Future(() {
           try {
@@ -75,8 +68,7 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
       },
     );
   } catch (e) {
-    // Connection errors never reach the provider-failure log, and this is the
-    // list every library tab filters.
+    // Connection errors bypass the provider-failure log.
     recordDiagnostic(
       redactTokens(
         '[${DateTime.now().toIso8601String()}] library-list: failed '
@@ -86,8 +78,6 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
     rethrow;
   }
   if (!current()) return null;
-  // Which list the library shows, each time it's rebuilt: the server's or the
-  // on-device catalog (downloaded series only).
   recordDiagnostic(
     '[${DateTime.now().toIso8601String()}] library-list: '
     'source=${fromServer ? 'server' : 'catalog'} manga=${list?.length} '
@@ -100,8 +90,7 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
       }
       unawaited(sync.pruneRemovedLibraryManga(list));
     }
-    // Top up missing library covers in the durable cover cache, so a series
-    // never opened still has its cover when the server is unreachable.
+    // Warm covers even for unopened series so they remain available offline.
     unawaited(coverWarmer.warmLibraryCovers(list));
   }
   return list;

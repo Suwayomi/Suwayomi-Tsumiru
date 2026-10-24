@@ -14,15 +14,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import 'crop_isolate.dart';
 
-/// Decoder-level auto-crop: fetches the page's encoded bytes through the SAME
-/// cache entry [ServerImage] uses ([cacheKey] + [headers]), trims solid borders
-/// off-thread ([cropImageBytes]), and yields the cropped frame. When no border
-/// is found the original image is decoded unchanged. Because it's an
-/// [ImageProvider], every consumer (single/double/split/rotate/webtoon) gets
-/// crop for free — decoder-level border cropping.
-///
-/// Identity ([==]/[hashCode]) keys Flutter's [ImageCache], so a re-scrolled page
-/// reuses the already-cropped decode instead of re-running the isolate.
+/// Shares ServerImage byte-cache identity and crops off-thread; uncropped images decode unchanged.
 @immutable
 class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   const CroppedImageProvider({
@@ -37,12 +29,10 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     this.targetHeight,
   });
 
-  /// URL fetched when the bytes aren't already cached (token-appended for
-  /// ui_login); ignored for [localPath] pages.
+  /// Token-appended fetch URL; ignored for [localPath] pages.
   final String fetchUrl;
 
-  /// Stable cache key shared with [ServerImage] (the token-less base URL), so
-  /// the byte fetch hits the same [DefaultCacheManager] entry.
+  /// Token-free cache key shared with ServerImage and DefaultCacheManager.
   final String cacheKey;
   final Map<String, String>? headers;
   final CacheManager? cacheManager;
@@ -52,12 +42,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   final int threshold;
   final double scale;
 
-  /// Decode-size cap (display px; see [ServerImage.memCacheWidth] /
-  /// [memCacheHeight]), applied internally by this provider on both branches
-  /// of [_load] — wrapping this provider in `ResizeImage` (as the un-cropped
-  /// paths do) would silently do nothing here, because the cropped branch
-  /// never calls the `decode` callback `ResizeImage` relies on (it starts
-  /// from already-decoded raw pixels, not an encoded buffer).
+  /// ResizeImage cannot resize the raw-pixel crop branch; apply display-pixel caps internally.
   final int? targetWidth;
   final int? targetHeight;
 
@@ -114,11 +99,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     return completer.future;
   }
 
-  /// No border was found (or none was needed) — decode via the callback the
-  /// engine handed [loadImage], so [targetWidth]/[targetHeight] still apply
-  /// through the engine's own decode-time downscale (what `ResizeImage`
-  /// itself builds on), instead of decoding at native resolution and never
-  /// shrinking it.
+  /// Use the engine decode callback so size caps also apply when no border is cropped.
   Future<ui.Image> _decodeEncoded(
     Uint8List bytes,
     ImageDecoderCallback decode,

@@ -14,6 +14,10 @@ fragment ChapterPagesDto on FetchChapterPagesPayload {
       pageCount
       __typename
     }
+    syncConflict {
+      deviceName
+      remotePage
+    }
     pages
     __typename
 }

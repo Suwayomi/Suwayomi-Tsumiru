@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/misc/app_utils.dart';
+import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../search/settings_search_registry.dart';
+import '../../data/backup_settings_repository.dart';
 import 'backup_flags.dart';
 
 Future<BackupFlags?> showBackupFlagsDialog(
   BuildContext context, {
   required String title,
   BackupFlags? initial,
+  String? highlight,
 }) => showDialog<BackupFlags>(
   context: context,
   animationStyle: context.motionStyle,
-  builder: (context) =>
-      BackupFlagsDialog(title: title, initial: initial ?? const BackupFlags()),
+  builder: (context) => SettingsHighlightScope(
+    highlightId: highlight,
+    child: BackupFlagsDialog(
+      title: title,
+      initial: initial ?? const BackupFlags(),
+    ),
+  ),
 );
 
-class BackupFlagsDialog extends HookWidget {
+class BackupFlagsDialog extends HookConsumerWidget {
   const BackupFlagsDialog({
     super.key,
     required this.title,
@@ -28,7 +39,8 @@ class BackupFlagsDialog extends HookWidget {
   final BackupFlags initial;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userSettings = ref.watch(backupUserSettingsProvider).value;
     final flags = useState(initial);
     CheckboxListTile tile(String label, bool value, ValueChanged<bool> set) =>
         CheckboxListTile(
@@ -91,6 +103,17 @@ class BackupFlagsDialog extends HookWidget {
                 includeServerSettings: value,
               ),
             ),
+            if (userSettings != null)
+              SettingsHighlightTarget(
+                id: 'includeUserSettings',
+                child: tile(
+                  context.l10n.includeUserSettings,
+                  flags.value.includeUserSettings ?? true,
+                  (value) => flags.value = flags.value.copyWith(
+                    includeUserSettings: value,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -103,4 +126,29 @@ class BackupFlagsDialog extends HookWidget {
       ],
     );
   }
+}
+
+Future<void> openBackupUserSettings(BuildContext context) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  await AppUtils.guard(() async {
+    final auto = await container.read(autoBackupFlagsProvider.future);
+    final userSettings = await container.read(
+      backupUserSettingsProvider.future,
+    );
+    if (!context.mounted || auto == null || userSettings == null) return;
+    final flags = await showBackupFlagsDialog(
+      context,
+      title: context.l10n.backupData,
+      initial: BackupFlags.fromAuto(
+        auto,
+      ).copyWith(includeUserSettings: userSettings),
+      highlight: 'includeUserSettings',
+    );
+    if (flags == null || !context.mounted) return;
+    await container
+        .read(backupSettingsRepositoryProvider)
+        .updateAutoBackupFlags(flags);
+    container.invalidate(autoBackupFlagsProvider);
+    container.invalidate(backupUserSettingsProvider);
+  }, container.read(toastProvider));
 }

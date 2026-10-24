@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Device-wide opt-in safety nets. Timestamp basis is downloadedAt (kept-N-days).
+/// Time eviction uses downloadedAt, not reading timestamps.
 class SafetyNetConfig {
   const SafetyNetConfig({
     required this.timeEvictEnabled,
@@ -26,8 +26,7 @@ class SafetyNetConfig {
   );
 }
 
-/// The outcome of a reconcile pass: chapters to fetch, chapters to evict, and
-/// whether the storage cap can't be met without removing pinned chapters.
+/// overCapWarning means meeting the cap would require evicting pinned chapters.
 class ReconcilePlan {
   const ReconcilePlan({
     required this.toDownload,

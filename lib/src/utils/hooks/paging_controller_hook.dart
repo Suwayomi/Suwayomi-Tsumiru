@@ -7,16 +7,9 @@
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
-/// One page as the server reports it: its items, and whether another follows.
 typedef ServerPage<ItemType> = ({List<ItemType> items, bool hasNextPage});
 
-/// A [PagingController] for integer-keyed APIs that say whether another page
-/// follows alongside each page, instead of ending with an empty page.
-///
-/// [PagingController] only learns a list is over when `getNextPageKey`
-/// returns null, so the last page's flag is kept here for it. A reply that
-/// lands after a [refresh] belongs to the previous list: the controller drops
-/// its items, and the epoch check keeps its flag from ending the new list.
+/// Uses server hasNextPage flags; epoch checks discard flags from requests predating a refresh.
 class ServerPagingController<ItemType> extends PagingController<int, ItemType> {
   factory ServerPagingController({
     required int firstPageKey,
@@ -62,10 +55,7 @@ class _PageFlag {
   bool hasNextPage = true;
 }
 
-/// Creates a [ServerPagingController] that will be disposed automatically.
-///
-/// [fetchPage] is captured once, on the first build: read anything that
-/// changes between builds through a ref.
+/// Disposed automatically; fetchPage is captured once, so read changing values through a ref.
 ServerPagingController<ItemType> useServerPagingController<ItemType>({
   required int firstPageKey,
   required Future<ServerPage<ItemType>> Function(int pageKey) fetchPage,

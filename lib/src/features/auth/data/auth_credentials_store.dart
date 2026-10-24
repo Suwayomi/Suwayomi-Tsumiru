@@ -22,20 +22,13 @@ import 'simple_login_client.dart';
 
 part 'auth_credentials_store.g.dart';
 
-/// Holds an access + refresh token pair for UI Login mode.
 class UiLoginTokens {
   const UiLoginTokens({required this.accessToken, required this.refreshToken});
   final String accessToken;
   final String refreshToken;
 }
 
-/// In-memory snapshot of every credential the app holds. This is the
-/// `state` of [AuthCredentialsStore] — synchronously readable via
-/// `ref.watch(authCredentialsStoreProvider).value` so widgets like
-/// `server_image` can authenticate on the first frame without an
-/// `AsyncLoading` flash that would otherwise cache a 401.
-///
-/// All fields are nullable: any value the user hasn't set is simply `null`.
+/// Synchronously readable after preload so first-frame image requests can authenticate.
 class AuthCredentialsState {
   const AuthCredentialsState({
     this.sessionEpoch = 0,
@@ -63,24 +56,15 @@ class AuthCredentialsState {
   final String? uiAccessToken;
   final String? uiRefreshToken;
 
-  /// Decoded `exp` claim from the current `uiAccessToken`, or `null` if
-  /// no token is present or the token was malformed. Derived from the
-  /// JWT — NOT persisted separately to secure storage — and recomputed
-  /// every time `uiAccessToken` is set.
+  /// Derived from the access token on each update; null for missing or malformed tokens.
   final DateTime? uiAccessTokenExpiresAt;
 
-  /// Convenience: `{'Authorization': 'Bearer <jwt>'}` or `null` when no
-  /// access token is present. Used by `SuwayomiAuthLink.getHeaders`.
   Map<String, String>? get uiAuthorizationHeader =>
       (uiAccessToken == null || uiAccessToken!.isEmpty)
       ? null
       : {'Authorization': 'Bearer $uiAccessToken'};
 
-  /// Convenience: `{'Cookie': '<cookie>'}` or `null`. Used by
-  /// `SuwayomiAuthLink.getHeaders` and `server_image`.
-  ///
-  /// Null when the browser owns the session: it attaches the cookie itself,
-  /// and a `Cookie` header set from page code is dropped either way.
+  /// Null for browser-managed sessions, whose cookies cannot be set from page code.
   Map<String, String>? get simpleLoginCookieHeader =>
       (simpleLoginCookie == null ||
           simpleLoginCookie!.isEmpty ||
@@ -124,25 +108,8 @@ class AuthCredentialsState {
   }
 }
 
-/// Typed wrapper over `flutter_secure_storage` for auth credentials.
-///
-/// Storage key conventions (all in secure storage):
-///   `auth.password`            — no longer written (nothing ever read it);
-///                                deleted at launch from older installs
-///   `auth.simple.cookie`       — full Cookie header value (e.g.
-///                                "JSESSIONID=abc123") for simpleLogin
-///   `auth.ui.accessToken`      — current uiLogin access token (JWT)
-///   `auth.ui.refreshToken`     — uiLogin refresh token (JWT)
-///   `auth.basic.credentials`   — migrated `Basic <base64(user:pass)>` from
-///                                legacy SharedPreferences (see Task 7a)
-///
-/// Username lives in SharedPreferences (via DBKeys.authUsername) since it's
-/// not sensitive on its own.
-///
-/// **Reactivity:** This is an `AsyncNotifier`. `build()` loads every key from
-/// secure storage exactly once at startup; mutators write through to
-/// secure storage AND update `state`, so widgets watching the provider
-/// rebuild immediately on token rotation / login / logout.
+/// Loads credentials once at startup; mutations update memory and persist to secure storage.
+/// Username alone remains in SharedPreferences.
 @Riverpod(keepAlive: true)
 class AuthCredentialsStore extends _$AuthCredentialsStore {
   @override
@@ -173,18 +140,13 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     ref.read(sharedPreferencesProvider),
   );
 
-  /// Changes the in-memory credentials first, then persists the complete set.
   Future<bool> _persist(Map<String, String?> changes) =>
       _vault.update(changes, ref.read(sharedPreferencesProvider));
 
-  /// Current snapshot, or `AuthCredentialsState.empty()` if `build()`
-  /// hasn't completed yet. Used internally by mutators that need to
-  /// apply `copyWith` even before the initial load finishes.
   AuthCredentialsState get _current =>
       state.value ?? const AuthCredentialsState.empty();
 
-  // Bumped by [clearAllForServerSwitch]; a delayed write racing a switch
-  // captures a stale epoch and discards itself instead of writing.
+  // Epoch guards discard delayed writes that race a server switch.
   int _serverEpoch = 0;
   int get serverEpoch => _serverEpoch;
   void invalidatePendingWrites() => _serverEpoch++;
@@ -236,34 +198,22 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   final _identityZone = Object();
   final _handoverZone = Object();
 
-  // Bumped when a session-preserving change (a LAN/remote endpoint handover)
-  // starts. It still bumps [serverEpoch], so a refresh racing it is discarded
-  // although the account never changed; this lets the coordinator tell that
-  // case from a real sign-in change and retry instead of giving up.
+  // Handovers preserve the account but bump serverEpoch; refresh can retry after them.
   int _handovers = 0;
   int get handovers => _handovers;
 
-  /// True inside a [withIdentityChange] action: waiting for identity changes
-  /// to settle there would wait on itself.
+  /// Waiting for identity changes inside their own action would deadlock.
   bool get insideIdentityChange => Zone.current[_identityZone] == this;
 
-  /// True inside an endpoint handover (a session-preserving identity change).
-  /// A handover only swaps the address and resets local download state; it
-  /// awaits no server request, so any request running in its zone is one its
-  /// rebuild spawned, safe to run as if outside it.
+  /// Handovers await no requests, so requests they spawn may wait for the handover.
   bool get insideHandover =>
       insideIdentityChange && Zone.current[_handoverZone] == this;
 
-  /// Runs [body] as if outside any identity change. For work a change only
-  /// spawns and never awaits, such as a socket connect started by the rebuild
-  /// the change triggers: it inherits the change's zone through the microtasks
-  /// that start it, and would otherwise be refused as if the change itself
-  /// were asking, instead of waiting for it to finish.
+  /// Detaches spawned work from an identity-change zone when the change never awaits that work.
   R outsideIdentityChange<R>(R Function() body) =>
       runZoned(body, zoneValues: {_identityZone: null, _handoverZone: null});
 
-  /// Waits (up to [timeout]) for every queued identity change to finish.
-  /// Returns whether none is still running.
+  /// Waits up to [timeout]; returns false if an identity change is still running.
   Future<bool> identitySettled({required Duration timeout}) async {
     if (insideIdentityChange) return false;
     final deadline = DateTime.now().add(timeout);
@@ -389,7 +339,6 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     await withIdentityChange(() => action(_serverEpoch));
   }
 
-  // ---------- Simple Login ----------
 
   Future<void> saveSimpleLoginCookie(String cookieValue, {int? forEpoch}) =>
       replaceCredentials(
@@ -415,10 +364,8 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     }),
   );
 
-  // ---------- UI Login ----------
 
-  /// [forEpoch]: discards (or undoes) the write if a switch bumps [serverEpoch]
-  /// before or during the storage write.
+  /// [forEpoch] discards or undoes writes if the server switches before persistence completes.
   Future<void> saveUiLoginTokens({
     required String accessToken,
     required String refreshToken,
@@ -482,9 +429,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
         uiAccessToken: accessToken,
         uiRefreshToken: refreshToken,
         uiAccessTokenExpiresAt: expiresAt,
-        // If decoder returned null (malformed token), wipe any stale
-        // expiry from a previous good token so the Timer doesn't fire
-        // off the old schedule.
+        // Clear stale expiry when the replacement token cannot be decoded.
         clearUiAccessTokenExpiresAt: expiresAt == null,
       ),
     );
@@ -539,8 +484,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     );
   });
 
-  /// Returns the cached refresh+access pair from state, or `null` if
-  /// either is missing. Avoids hitting secure storage on every refresh.
+  /// Returns null unless both tokens are cached; never reads secure storage.
   UiLoginTokens? uiLoginTokens() {
     final s = _current;
     if (s.uiAccessToken == null || s.uiRefreshToken == null) return null;
@@ -550,13 +494,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     );
   }
 
-  // ---------- Basic credentials (migrated from SharedPreferences) ----------
 
-  /// Removes the migrated basic-auth credential from secure storage.
-  /// We don't track it in `state` (it's not in `AuthCredentialsState`)
-  /// because basic auth has its own existing provider (`credentialsProvider`)
-  /// for read access — this method exists solely to give the Logout flow
-  /// a way to clear that entry post-migration.
   Future<void> clearBasicCredentials() async {
     await clearLegacyBasicCredentials(ref.read(sharedPreferencesProvider));
     await ref.read(credentialsProvider.notifier).set(null);

@@ -17,7 +17,6 @@ import '../../../domain/next_update/next_update_predictor.dart';
 
 part 'upcoming_controller.g.dart';
 
-/// One day's worth of predicted releases.
 class UpcomingGroup {
   const UpcomingGroup({required this.date, required this.mangas});
 
@@ -26,8 +25,7 @@ class UpcomingGroup {
   final List<MangaDto> mangas;
 }
 
-/// The Upcoming screen's data: the grouped list (one [UpcomingGroup] per future
-/// day, ascending) and the per-day counts the calendar paints as dots/badges.
+/// Future-day groups in ascending order, with per-day calendar counts.
 class UpcomingData {
   const UpcomingData({required this.groups, required this.events});
 
@@ -39,8 +37,7 @@ class UpcomingData {
   static const empty = UpcomingData(groups: [], events: {});
 }
 
-/// Pure grouping: bucket `(manga, predictedDate)` pairs into per-day groups
-/// (today onward, ascending) plus the per-day count map. Testable in isolation.
+/// Groups today-or-later predictions by day in ascending order.
 UpcomingData buildUpcomingData(
   List<({MangaDto manga, DateTime date})> entries, {
   required DateTime today,
@@ -59,28 +56,26 @@ UpcomingData buildUpcomingData(
   );
 }
 
-/// Every manga in the library (across all categories), in one query.
 @riverpod
 Future<List<MangaDto>> upcomingLibraryMangas(Ref ref) async {
   final nodes = await ref
       .watch(graphQlClientProvider)
       .query$GetLibraryMangas(
         Options$Query$GetLibraryMangas(
-          variables: Variables$Query$GetLibraryMangas(withFirstUnread: false),
+          variables: Variables$Query$GetLibraryMangas(
+            withLibraryFields: false,
+            withFirstUnread: false,
+          ),
         ),
       )
       .getData((data) => data.mangas.nodes);
   return [for (final n in nodes ?? const []) n as MangaDto];
 }
 
-/// Predicts the next release for every (non-completed) library series from its
-/// own chapter history and groups them by date. Chapter lists are loaded in
-/// bounded-concurrency batches so a large library doesn't open N sockets at
-/// once. Reuses the same [predictNextUpdate] the manga-details estimate uses.
+/// Predicts non-completed library series in bounded batches to limit concurrent chapter requests.
 @riverpod
 Future<UpcomingData> upcoming(Ref ref) async {
-  // Read before the await: this provider auto-disposes and touching ref after
-  // the async gap throws UnmountedRefException.
+  // Capture before await; this autoDispose provider may be gone when the fetch completes.
   final client = ref.watch(graphQlClientProvider);
   final mangas = await ref.watch(upcomingLibraryMangasProvider.future);
   final now = DateTime.now();

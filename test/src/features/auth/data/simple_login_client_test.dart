@@ -10,6 +10,14 @@ void main() {
       'follows redirects', () async {
     bool? followRedirects;
     final mock = MockClient((request) async {
+      if (request.url.path == '/api/graphql') {
+        expect(request.headers['Cookie'], 'JSESSIONID=abc.123');
+        expect(request.headers['Authorization'], isNull);
+        return http.Response(
+          '{"data":{"downloadStatus":{"__typename":"DownloadStatus"}}}',
+          200,
+        );
+      }
       expect(request.url.toString(), 'https://server.test/login.html');
       expect(
         request.headers['Content-Type'],

@@ -1,0 +1,62 @@
+mutation SetWebUiMangaMetas($input: SetMangaMetasInput!) {
+  setMangaMetas(input: $input) {
+    __typename
+  }
+}
+
+mutation DeleteWebUiMangaMetas($input: DeleteMangaMetasInput!) {
+  deleteMangaMetas(input: $input) {
+    __typename
+  }
+}
+
+mutation SetWebUiSourceMetas($input: SetSourceMetasInput!) {
+  setSourceMetas(input: $input) {
+    __typename
+  }
+}
+
+mutation DeleteWebUiSourceMetas($input: DeleteSourceMetasInput!) {
+  deleteSourceMetas(input: $input) {
+    __typename
+  }
+}
+
+mutation SetWebUiGlobalMetas($input: SetGlobalMetasInput!) {
+  setGlobalMetas(input: $input) {
+    __typename
+  }
+}
+
+mutation DeleteWebUiGlobalMetas($input: DeleteGlobalMetasInput!) {
+  deleteGlobalMetas(input: $input) {
+    __typename
+  }
+}
+
+query GetWebUiGlobalMetas {
+  metas {
+    nodes {
+      key
+      value
+    }
+  }
+}
+
+query GetWebUiMangaMetas($id: Int!) {
+  manga(id: $id) {
+    meta {
+      key
+      value
+    }
+  }
+}
+
+query GetWebUiSourceMetas($id: LongString!) {
+  source(id: $id) {
+    meta {
+      key
+      value
+    }
+  }
+}

@@ -11,8 +11,6 @@ import '../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'sidebar_expanded.g.dart';
 
-/// Whether the desktop navigation rail shows labels beside its icons (expanded)
-/// or collapses to an icon-only rail. Persisted; toggled from the rail header.
 @riverpod
 class SidebarExpanded extends _$SidebarExpanded
     with SharedPreferenceClientMixin<bool> {

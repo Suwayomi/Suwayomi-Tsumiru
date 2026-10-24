@@ -14,30 +14,17 @@ import 'package:pointycastle/export.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../auth/data/secure_credentials_provider.dart';
 
-/// Encrypts the secret fields of [BackgroundTokenRecord]s.
-///
-/// The background workers keep their copy of the credentials in plain
-/// SharedPreferences (the notification worker's record) and in the
-/// foreground-task plugin's storage, which is SharedPreferences too. Both are
-/// readable from a device backup, unlike secure storage. The records keep
-/// living there, so the workers' locking and cross-isolate reads stay as they
-/// are, but their secrets are sealed with AES-256-GCM under a key held in
-/// secure storage, which a backup can't decrypt.
-///
-/// Every isolate that reads or writes records loads the key first: the app at
-/// launch ([load] with `create: true`), and each worker at its entry point.
+/// Seals backup-readable worker credentials with AES-256-GCM under a secure-storage key.
+/// Each isolate must load the key before reading or writing records.
 abstract final class RecordSeal {
   static const storageKey = 'auth.background.sealKey';
   static const _prefix = 'v1';
 
   static Uint8List? _key;
 
-  /// Whether this isolate has a key to seal and open records with.
   static bool get ready => _key != null;
 
-  /// Loads the key from [storage]. Only the app creates one ([create]): a
-  /// worker that found none would seal records nobody else could open.
-  /// Returns whether a key is loaded.
+  /// Only the app may create the shared key; workers load it. Returns whether it is available.
   static Future<bool> load(
     FlutterSecureStorage storage, {
     bool create = false,
@@ -58,8 +45,7 @@ abstract final class RecordSeal {
         return false;
       }
       final fresh = _randomBytes(32);
-      // A key that never reached storage would seal records nothing can
-      // open later, so an unsaved key is no key (as before).
+      // Do not seal with a key that failed to persist; later runs could never decrypt it.
       if (!await writeSecure(storage, storageKey, base64Encode(fresh))) {
         return false;
       }
@@ -83,8 +69,7 @@ abstract final class RecordSeal {
   @visibleForTesting
   static set debugKey(Uint8List? key) => _key = key;
 
-  /// [secrets] as an opaque string. Throws when no key is loaded: writing
-  /// them in clear is exactly what this exists to prevent.
+  /// Throws without a loaded key; never falls back to plaintext.
   static String seal(Map<String, Object?> secrets) {
     final key = _key;
     if (key == null) {
@@ -99,9 +84,7 @@ abstract final class RecordSeal {
     return '$_prefix.${base64Encode(nonce)}.${base64Encode(sealed)}';
   }
 
-  /// The secrets [sealed] holds, or null when they can't be read: no key in
-  /// this isolate, a key replaced since (secure storage wiped), or tampering.
-  /// A record whose secrets can't be read authenticates as nobody.
+  /// Null for unavailable keys or tampering; unreadable records authenticate as nobody.
   static Map<String, Object?>? open(String sealed) {
     final key = _key;
     if (key == null) {

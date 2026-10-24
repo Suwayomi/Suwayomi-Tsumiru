@@ -43,8 +43,7 @@ class Sorayomi extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final routes = ref.watch(routerConfigProvider);
 
-    // Also drains a cold-start tap that launched the app. Android-only — the
-    // plugin is initialized with Android settings.
+    // Initialization also drains a cold-start notification tap; Android settings are required.
     useEffect(() {
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
         return null;
@@ -71,7 +70,6 @@ class Sorayomi extends HookConsumerWidget {
 
       void onResponse(NotificationResponse r) {
         final action = r.actionId;
-        // Also handled headlessly when the app is dead — no navigation needed.
         if (action == kNotifActionMarkRead || action == kNotifActionDownload) {
           final payload = NotificationPayload.decode(r.payload);
           if (allowed(payload)) handleNotificationAction(action, r.payload);
@@ -106,7 +104,6 @@ class Sorayomi extends HookConsumerWidget {
     final appTheme = ref.watch(appThemeKeyProvider) ?? AppTheme.indigoNight;
     final customSeed = ref.watch(customThemeColorProvider);
     final isTrueBlack = ref.watch(isTrueBlackProvider).ifNull();
-    // Idempotent, so re-applying on every rebuild is harmless.
     applyForcePortrait(ref.watch(forcePortraitProvider).ifNull());
     return MaterialApp.router(
       builder: (context, child) {
@@ -204,12 +201,7 @@ class _WebTitleBridge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Follow the delegate (the logical route), not the engine's route
-    // information: imperative pops (dismissing the settings window) update
-    // the match list without reporting a new route, which left the tab
-    // title stuck on the closed page. Pushes need the provider too: a push
-    // lands as an [ImperativeRouteMatch] whose location the match list's
-    // own uri ignores, while the provider carries the pushed uri.
+    // Imperative pops update the delegate only; pushes also need the route-information provider.
     return ListenableBuilder(
       listenable: Listenable.merge([
         routes.routerDelegate,
@@ -221,11 +213,7 @@ class _WebTitleBridge extends StatelessWidget {
   }
 }
 
-/// The uri the tab title follows. The delegate's configuration uri ignores
-/// imperative matches, so a pushed page's location comes from the innermost
-/// imperative match — the same source the browser URL uses. Before the first
-/// route the configuration is empty and [GoRouter.state] throws, so the
-/// provider's value is the only safe read there.
+// Read imperative matches for pushed URIs; before the first route, only the provider URI is safe.
 Uri _titleUri(GoRouter routes) {
   final configuration = routes.routerDelegate.currentConfiguration;
   if (configuration.isEmpty) {
@@ -239,8 +227,7 @@ Uri _titleUri(GoRouter routes) {
   return configuration.uri;
 }
 
-/// Must live below [MaterialApp] — `context.l10n` is null above it, which
-/// crashed the root at launch.
+// Must be below MaterialApp because context.l10n is null above it.
 class _IncognitoNotificationBridge extends ConsumerWidget {
   const _IncognitoNotificationBridge({required this.child});
 
@@ -265,8 +252,7 @@ class _IncognitoNotificationBridge extends ConsumerWidget {
   }
 }
 
-/// Lets mouse/trackpad drag-scroll — Flutter's desktop default only responds
-/// to wheel/touch.
+/// Adds mouse and trackpad drag scrolling to the default wheel/touch behavior.
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
 

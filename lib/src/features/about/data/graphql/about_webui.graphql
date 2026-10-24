@@ -1,0 +1,6 @@
+query GetAboutWebUI {
+  aboutWebUI {
+    channel
+    tag
+  }
+}

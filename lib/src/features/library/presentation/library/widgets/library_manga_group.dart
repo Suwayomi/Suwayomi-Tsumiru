@@ -16,9 +16,6 @@ import '../../../domain/library_group.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_grouping.dart';
 
-/// The "Group" tab inside [LibraryMangaOrganizer]: what the library is bucketed
-/// by, how those buckets are presented, and the per-group affordances (tab
-/// strip, item counts, hidden categories).
 class LibraryMangaGroup extends ConsumerWidget {
   const LibraryMangaGroup({super.key});
 
@@ -54,13 +51,11 @@ class LibraryMangaGroup extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final type in LibraryGroup.all)
-                // Track status needs a logged-in tracker to bucket by.
                 if (type != LibraryGroup.byTrackStatus || hasTrackers)
                   RadioListTile<int>(value: type, title: Text(label(type))),
             ],
           ),
         ),
-        // Ungrouped is a single flat list, so there are no groups to lay out.
         if (isGrouped) ...[
           OrganizerHeading(context.l10n.groupStyle),
           Padding(
@@ -81,8 +76,6 @@ class LibraryMangaGroup extends ConsumerWidget {
               ],
             ),
           ),
-          // One modifier key per style — see `_groupedBody` in
-          // library_screen.dart for how the four states combine.
           if (style == LibraryGroupStyle.tabs)
             CustomCheckboxListTile(
               title: context.l10n.categoryTabs,
@@ -97,14 +90,12 @@ class LibraryMangaGroup extends ConsumerWidget {
                   .read(sectionHeadersShowAllCategoriesProvider.notifier)
                   .update,
             ),
-          // Hidden categories only exist under the category grouping.
           if (current == LibraryGroup.byDefault)
             CustomCheckboxListTile(
               title: context.l10n.showHiddenCategories,
               provider: showHiddenCategoriesProvider,
               onChanged: ref.read(showHiddenCategoriesProvider.notifier).update,
             ),
-          // Decorates whichever group label is on screen, tab or section.
           CustomCheckboxListTile(
             title: context.l10n.categoryNumberOfItems,
             provider: categoryNumberOfItemsProvider,

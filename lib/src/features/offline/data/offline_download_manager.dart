@@ -10,16 +10,10 @@ import 'chapter_manifest.dart';
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 
-/// Resolves a chapter's page URLs (wraps the GraphQL fetchChapterPages call).
 typedef PageUrlsFetcher = Future<List<String>> Function(int chapterId);
 
-/// Fetches one page URL's bytes + extension (wraps the auth'd HTTP GET).
 typedef PageBytesFetcher = Future<PageBytes> Function(String url);
 
-/// Orchestrates saving a chapter's pages to the device. Platform-agnostic —
-/// the page-URL resolver, byte fetcher, and file store are injected so the
-/// flow is hermetically testable; real wiring (GraphQL, auth'd HTTP, dart:io,
-/// free-space guard) is provided on native platforms.
 class OfflineDownloadManager {
   OfflineDownloadManager({
     required this.db,
@@ -33,14 +27,7 @@ class OfflineDownloadManager {
   final PageUrlsFetcher fetchPageUrls;
   final PageBytesFetcher fetchBytes;
 
-  /// Download every page of [chapter] to the device. Requires it to be
-  /// server-downloaded (product policy); on any failure, partial files/rows
-  /// are removed, the chapter is marked `error`, and the error rethrows so
-  /// the queue/UI can surface it.
-  ///
-  /// Serial and unbatched — the queue-driven downloaders are what the app
-  /// actually runs. This publishes through the same staging-then-commit path
-  /// they do, so a chapter it downloads is either whole or absent.
+  /// Requires a server-downloaded chapter; failures purge partial staging, mark error, and rethrow.
   Future<void> downloadChapter(
     OfflineChapter chapter, {
     bool force = false,
@@ -62,10 +49,7 @@ class OfflineDownloadManager {
       );
       final generation =
           (await db.chapterById(chapter.id))?.downloadGeneration ?? 0;
-      // Start clean. `beginChapter` only replaces the manifest, so a previous
-      // attempt's pages would survive underneath it — and the commit renames
-      // the whole directory, carrying files the new manifest never listed into
-      // the finished chapter.
+      // beginChapter replaces only the manifest; clear old pages before starting a fresh download.
       await store.deleteStaging(chapter.mangaId, chapter.id);
       await store.beginChapter(
         chapter.mangaId,
@@ -92,12 +76,7 @@ class OfflineDownloadManager {
         mangaId: chapter.mangaId,
         chapterId: chapter.id,
       );
-      // The source answered with zero pages (chapter removed/renamed upstream,
-      // for instance). commitStagedChapter refuses to publish that as
-      // `downloaded`, but left unchecked the row stays `downloading` forever —
-      // not `error`, so the reconciler's error-skip guard never engages and
-      // this chapter is re-selected for download on every pass, looking like
-      // it is stuck trying to fetch a chapter that does not exist.
+      // Empty staging must fail rather than leave a downloading row selected on every reconcile.
       if (result == ChapterCommitResult.incomplete) {
         throw StateError(
           'Chapter ${chapter.id} produced no pages to commit '
@@ -117,12 +96,8 @@ class OfflineDownloadManager {
     }
   }
 
-  /// Remove a chapter's device copy entirely and reset its state.
   Future<void> deleteChapter(OfflineChapter chapter) async {
-    // Flip state and drop page rows in one transaction so it serializes with
-    // the coordinator's onPageStored insert: that insert either commits first
-    // and is deleted here, or reads state=none and skips. Files come after —
-    // reconcile sweeps an orphan file, not an orphan row.
+    // Clear state and page rows atomically before removing files; recovery can sweep leftover files.
     await db.transaction(() async {
       await db.setChapterDeviceState(
         chapter.id,
@@ -136,8 +111,6 @@ class OfflineDownloadManager {
     await store.deleteChapter(chapter.mangaId, chapter.id);
   }
 
-  /// On launch, reset chapters left mid-download (app killed) so they can be
-  /// retried cleanly instead of being stuck `downloading` forever.
   Future<void> sweepInterrupted() async {
     final stuck =
         await (db.select(db.offlineChapters)..where(
@@ -149,10 +122,7 @@ class OfflineDownloadManager {
     }
   }
 
-  /// Drop what this attempt was building. Staging only: a download that failed
-  /// says nothing about the copy already on the device, and wiping the chapter
-  /// here turned "the re-download didn't work" into "your chapter is gone".
-  /// Removing a chapter for real is [deleteChapter]'s job.
+  // Failed replacements may purge staging only; preserve the committed copy.
   Future<void> _purge(OfflineChapter chapter) =>
       store.deleteStaging(chapter.mangaId, chapter.id);
 }

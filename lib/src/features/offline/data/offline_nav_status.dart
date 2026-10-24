@@ -12,9 +12,6 @@ import 'offline_settings_providers.dart';
 
 part 'offline_nav_status.g.dart';
 
-/// True when on-device downloads are paused AND there's still work waiting —
-/// the condition under which the Downloads nav entry shows a paused badge, so a
-/// persisted pause can't silently freeze downloads with no visible signal.
 @riverpod
 bool downloadsPausedBadge(Ref ref) {
   final paused = ref.watch(offlineDownloadsPausedProvider) ?? false;

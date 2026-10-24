@@ -20,10 +20,6 @@ import 'desktop_library_panels.dart';
 import 'library_filter_content.dart';
 import 'library_manga_organizer.dart';
 
-/// Desktop Library toolbar chrome, copied from Tsumige's `ToolbarBox`
-/// (`vn-launcher/.../library/widgets/library_toolbar.dart`, lines ~234-262):
-/// a 40 px box, 10 px radius, `surfaceContainer` fill and an `outlineVariant`
-/// border that brightens on hover. Not imported from that repo.
 class DesktopToolbarBox extends StatefulWidget {
   const DesktopToolbarBox({
     super.key,
@@ -34,8 +30,7 @@ class DesktopToolbarBox extends StatefulWidget {
 
   final double? width;
 
-  /// Overrides the border color (the Filter box uses `primary` while any
-  /// filter is active).
+  /// Overrides the border color, e.g. while a filter is active.
   final Color? borderColor;
   final Widget child;
 
@@ -73,8 +68,6 @@ class _DesktopToolbarBoxState extends State<DesktopToolbarBox> {
   }
 }
 
-/// Shows the library search cheat-sheet (opened from the search bar's help
-/// icon), so the query syntax is discoverable rather than hidden.
 Future<void> showSearchTips(BuildContext context) {
   return showDialog<void>(
     context: context,
@@ -148,17 +141,7 @@ Future<void> showSearchTips(BuildContext context) {
   );
 }
 
-/// The desktop Library toolbar: one 64 px row (12 px horizontal padding,
-/// 40 px controls, 10 px gaps) with an always-visible search field, a
-/// combined sort + direction control, Filter and Display buttons that
-/// open anchored dropdown panels, and whatever [trailing] controls the
-/// variant keeps reachable (sync, update menu, migration picker). No title.
-/// Phone and tablet never see this.
-///
-/// When the row is too narrow to leave the search field a usable width, the
-/// toolbar switches to compact mode: Sort and Filter drop their text labels
-/// and become icon buttons (see [_toolbarIsCompact]). Full mode renders
-/// exactly the labelled layout.
+/// Keeps search mounted as Sort/Filter switch to icons when the labelled layout cannot fit.
 class DesktopLibraryToolbar extends HookConsumerWidget {
   const DesktopLibraryToolbar({super.key, this.trailing = const []});
 
@@ -200,13 +183,10 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
             query: ref.watch(libraryQueryProvider) ?? '',
             onChanged: (val) =>
                 ref.read(libraryQueryProvider.notifier).update(val),
-            // Leaving through a dropdown result (Go to, Search all
-            // sources) clears the query; opening a series from the
-            // filtered grid keeps it — that path never touches this.
+            // Dropdown navigation clears the query; opening a series from the grid keeps it.
             onNavigate: () =>
                 ref.read(libraryQueryProvider.notifier).update(''),
-            // The grid below is already the filtered library: only Go to
-            // matches and Search all sources belong in the dropdown.
+            // Grid results already appear below; the dropdown only needs Go to and Search all sources.
             showLibrarySection: false,
             hintText: context.l10n.searchLibraryHint,
             suffixActions: [
@@ -267,15 +247,7 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
               ),
             ),
           );
-          // Compact Filter drops the text but keeps its tooltip, so the
-          // button stays discoverable.
-          //
-          // Both modes share one Row with the search field always in the
-          // same Expanded slot, so crossing the compact threshold only
-          // rebuilds the Sort/Filter children and never remounts the field
-          // (which would drop its focus, selection and results dropdown).
-          // The search field absorbs every shortage: it shrinks below any
-          // floor rather than letting a control clip or overflow.
+          // Keep search in the same Expanded slot across modes to preserve focus, selection and dropdown.
           final row = Row(
             spacing: 10,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -296,10 +268,7 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
               child: row,
             );
           }
-          // Degenerate widths (fixed controls alone exceed the content):
-          // keep the identical row — the search field keeps its slot and
-          // state, sized to 0 — inside a horizontal scroller sized to the
-          // controls, so no RenderFlex overflow is ever reported.
+          // Retain the same row and zero-width search state inside a scroller when fixed controls cannot fit.
           final minWidth = _compactFixedWidth(trailing.length);
           if (constraints.maxWidth >= minWidth) {
             return Padding(
@@ -320,38 +289,22 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
   }
 }
 
-/// True when the toolbar is too narrow to keep the labelled layout: the
-/// space the full layout leaves for the search box would drop below a usable
-/// width. The Filter box is measured with a [TextPainter] under the current
-/// text style and [MediaQuery.textScalerOf], so larger text flips the switch
-/// sooner; the usable search width itself scales the same way, since it is a
-/// text width too.
-// Fixed chrome of the toolbar boxes, shared by the compact-mode switch and
-// the compact layout so the two agree on what fits.
+// Shared toolbar widths keep the compact breakpoint and layout calculations consistent.
 const _sortFullWidth = 230.0;
-// Filter box around its label: left/right padding, the 18 px icon and 22 px
-// caret with an 8 px gap on each side of the text.
+// Horizontal padding, 18 px icon, 22 px caret, and two 8 px gaps.
 const _filterFullChrome = 12.0 + 6.0 + 18.0 + 8.0 + 8.0 + 22.0;
-// Compact Filter: same padding, icon and caret, one gap, no label.
+// Same chrome as Filter with one gap and no label.
 const _filterCompactWidth = 12.0 + 6.0 + 18.0 + 8.0 + 22.0;
-// Display box: padding, the 20 px icon and 22 px caret, 2 px apart.
+// Horizontal padding, 20 px icon, 22 px caret, and 2 px gap.
 const _displayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 22.0;
-// Compact Sort: 48 px trigger, 1 px divider, 40 px direction button.
+// 48 px trigger, 1 px divider, 40 px direction button.
 const _sortCompactWidth = 48.0 + 1.0 + 40.0;
-// Every DesktopToolbarBox paints a 1 px border on each side. The full Sort
-// width (230) is the Container's outer width so it already includes its
-// border; the chrome sums are content widths, so Filter and Display each
-// reserve 2 px more, as does the compact Sort below.
+// Content-width boxes need 2 px for borders; the full Sort width already includes them.
 const _boxBorderWidth = 2.0;
-// Trailing callers pass IconButton/PopupMenuButton-sized controls, 48 px by
-// default and never narrower in practice; assuming the wider size flips to
-// compact before a real button clips instead of after.
+// Trailing actions reserve the default 48 px IconButton/PopupMenuButton width.
 const _trailingButtonWidth = 48.0;
 
-/// Minimum outer width of the compact row: 12 px padding on each side, a
-/// 10 px gap between every child, the three boxes with their borders, and
-/// one [_trailingButtonWidth] slot per trailing action. Below this the
-/// search field is already at 0, so the row scrolls instead of overflowing.
+/// Fixed controls' minimum width; below it the zero-width search stays mounted while the row scrolls.
 double _compactFixedWidth(int trailingCount) =>
     24.0 +
     (3 + trailingCount) * 10.0 +
@@ -360,9 +313,7 @@ double _compactFixedWidth(int trailingCount) =>
     (_displayBoxWidth + _boxBorderWidth) +
     trailingCount * _trailingButtonWidth;
 
-/// Minimum width of the Library toolbar for the one-bar/two-row breakpoint:
-/// the compact row at its narrowest plus a usable search field. Compact-mode
-/// constants live above; the search floor matches the top bar's.
+/// Minimum compact toolbar width including a usable search field.
 double libraryTopBarSlotMinWidth(int trailingCount) =>
     _compactFixedWidth(trailingCount) + kTopBarSearchMinWidth;
 
@@ -397,18 +348,7 @@ bool _toolbarIsCompact(
   return constraints.maxWidth - neededBesidesSearch < scaler.scale(280.0);
 }
 
-/// Sort field menu + direction toggle in one 230 px box: the menu trigger
-/// fills the remaining width and a 40 px direction button sits past a 1 px
-/// divider. Lists the same sorts in the same order as the organizer
-/// ([librarySortDisplayOrder]), hiding Tracker score unless a tracker is
-/// logged in. Picking the already-active Random re-rolls the order via
-/// [librarySortRandomSeedProvider], mirroring [LibraryMangaSortTile]. The
-/// direction button is disabled for Random, whose comparator ignores
-/// direction by design.
-///
-/// In compact mode the trigger shrinks to a 48 px icon button (the caret is
-/// dropped) carrying the current sort's label as its tooltip; the menu, the
-/// divider and the direction button are unchanged.
+// Random re-rolls on selection and ignores direction; compact mode must preserve those controls.
 class _DesktopSortControl extends ConsumerWidget {
   const _DesktopSortControl({this.compact = false});
 

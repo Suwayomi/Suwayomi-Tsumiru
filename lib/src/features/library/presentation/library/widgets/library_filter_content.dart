@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
@@ -20,8 +21,7 @@ import '../controller/library_controller.dart';
 import '../controller/library_manga_list.dart';
 import 'library_filter_segments.dart';
 
-/// Full segmented filter content, shared by the desktop filter panel
-/// (two columns) and the organizer Filter tab (single column).
+/// Two columns require a bounded height; one column sizes to content.
 class LibraryFilterContent extends ConsumerWidget {
   const LibraryFilterContent({super.key, this.twoColumns = false});
 
@@ -44,20 +44,10 @@ class LibraryFilterContent extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const LibraryFilterHeader(),
-        // Two columns need a bounded height (the desktop panel): the left
-        // column scrolls internally, so a radio fallback for long labels
-        // never overflows the panel. The right column's tag list grows to
-        // fill the remaining height and scrolls inside itself, so both
-        // column bottoms align. With many trackers the tag list shrinks
-        // first (down to ~3 rows); only if the right column still doesn't
-        // fit does the right column scroll as one. The left column is
-        // unaffected either way.
+        // The tag list shrinks to its minimum before the right column scrolls as a whole.
         if (twoColumns)
           const Expanded(
             child: Row(
-              // Stretch both columns to the full row height: the left
-              // column scrolls inside that height and the right column's
-              // tag list expands into it, aligning both bottoms.
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
@@ -77,16 +67,10 @@ class LibraryFilterContent extends ConsumerWidget {
   }
 }
 
-/// Slots of the two-column filter panel's right column.
 enum _FilterRightSlot { fixed, tags }
 
-/// Lays out the right column without intrinsic measurements (a [ListView]
-/// cannot answer those): the fixed filters get their natural height and the
-/// tag list takes the leftover viewport height, shrinking to
-/// [_minTagListHeight] first. Anything beyond the viewport paints past the
-/// layout size, where the surrounding scroll view picks it up — so the right
-/// column scrolls as one only when the fixed filters plus that minimum
-/// exceed the row height.
+/// Avoids ListView intrinsic measurements: fixed filters take natural height, tags take the remainder.
+/// Overflow paints beyond layout size for the surrounding scroll view to handle.
 class _FilterRightDelegate extends MultiChildLayoutDelegate {
   _FilterRightDelegate({required this.viewportHeight});
 
@@ -116,9 +100,6 @@ class _FilterRightDelegate extends MultiChildLayoutDelegate {
       oldDelegate.viewportHeight != viewportHeight;
 }
 
-/// Right column of the two-column filter panel: rating, per-tracker rows,
-/// categories, tag search, then the tag list expanding into the leftover
-/// height and scrolling inside itself. The left column is unaffected.
 class _FilterRightColumn extends HookConsumerWidget {
   const _FilterRightColumn();
 
@@ -177,9 +158,6 @@ class _FilterRightColumn extends HookConsumerWidget {
   }
 }
 
-/// "Filter" title plus a Reset text button. Reset clears every library filter
-/// (tri-states, rating, categories, tags, per-tracker filters) and is
-/// disabled while nothing is active.
 class LibraryFilterHeader extends ConsumerWidget {
   const LibraryFilterHeader({super.key});
 
@@ -203,12 +181,6 @@ class LibraryFilterHeader extends ConsumerWidget {
   }
 }
 
-/// The seven tri-state filters with short headings: Downloaded (Any/Yes/No),
-/// Storage (Any/On Device/Remote), Read Status (Any/Unread/Read), Started,
-/// Bookmarked, Completed and Lewd (Any/Yes/No).
-///
-/// Any=null, first option=true, second option=false on the existing
-/// providers, exactly as `TriStateFilterTile` maps them.
 class LibraryFilterSegments extends ConsumerWidget {
   const LibraryFilterSegments({super.key});
 
@@ -267,16 +239,23 @@ class LibraryFilterSegments extends ConsumerWidget {
           provider: libraryMangaFilterLewdProvider,
           onChanged: ref.read(libraryMangaFilterLewdProvider.notifier).update,
         ),
+        LibraryTriStateSegment(
+          heading: context.l10n.duplicateChapters,
+          provider: libraryDuplicateChaptersProvider,
+          onChanged: ref.read(libraryDuplicateChaptersProvider.notifier).update,
+        ),
+        const LibraryEntryFilter(kind: 'status'),
+        const LibraryEntryFilter(kind: 'source'),
       ],
     );
   }
 }
 
-/// Number of active library filters: one per non-null tri-state, the rating
-/// threshold, enabled category/tag filters and per-tracker filters.
+/// Counts each active tri-state, rating threshold, category/tag filter and per-tracker filter.
 int watchLibraryFilterActiveCount(WidgetRef ref) {
   var count = 0;
   for (final provider in [
+    libraryDuplicateChaptersProvider,
     libraryMangaFilterDownloadedProvider,
     libraryMangaFilterOfflineProvider,
     libraryMangaFilterUnreadProvider,
@@ -293,11 +272,21 @@ int watchLibraryFilterActiveCount(WidgetRef ref) {
   for (final value in ref.watch(libraryTrackerFiltersProvider).values) {
     if (value != null) count++;
   }
+  for (final kind in ['status', 'source']) {
+    count += ref
+        .watch(libraryEntryFiltersProvider(kind))
+        .values
+        .where((v) => v != null)
+        .length;
+  }
   return count;
 }
 
-/// Clears every library filter back to its inactive value.
 void resetLibraryFilters(WidgetRef ref) {
+  ref.read(libraryDuplicateChaptersProvider.notifier).update(null);
+  for (final kind in ['status', 'source']) {
+    ref.read(libraryEntryFiltersProvider(kind).notifier).update({});
+  }
   ref.read(libraryMangaFilterDownloadedProvider.notifier).update(null);
   ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
   ref.read(libraryMangaFilterUnreadProvider.notifier).update(null);
@@ -320,8 +309,6 @@ void resetLibraryFilters(WidgetRef ref) {
   }
 }
 
-/// Minimum personal star rating. Tapping star N sets the threshold to N;
-/// tapping the current threshold clears it (show all).
 class LibraryRatingFilter extends ConsumerWidget {
   const LibraryRatingFilter({super.key});
 
@@ -362,8 +349,6 @@ class LibraryRatingFilter extends ConsumerWidget {
   }
 }
 
-/// One Any / Yes / No row per logged-in tracker. Hidden when no tracker is
-/// logged in.
 class LibraryTrackerSegments extends ConsumerWidget {
   const LibraryTrackerSegments({super.key});
 
@@ -425,9 +410,6 @@ class _TrackerSegments extends ConsumerWidget {
   }
 }
 
-/// Category include/exclude summary ("Any category" when nothing is picked)
-/// with an Edit button opening the include/exclude dialog. Tapping the row
-/// toggles category filtering.
 class LibraryCategoryFilter extends ConsumerWidget {
   const LibraryCategoryFilter({super.key});
 
@@ -507,21 +489,15 @@ class LibraryCategoryFilter extends ConsumerWidget {
   }
 }
 
-/// Minimum height of the expanded tag list: ~3 tag rows (each ~36 px: 8 px
-/// padding above and below a ~20 px line). The list shrinks to this before
-/// the right column starts scrolling as a whole.
+/// Three ~36 px rows before the right column starts scrolling as a whole.
 const _minTagListHeight = 112.0;
 
-/// Next tag state when tapping: include → exclude → ignored.
 bool? _nextTagValue(bool? current) {
   if (current == null) return true;
   if (current == true) return false;
   return null;
 }
 
-/// Tag rows shared by the single-column filter and the two-column panel's
-/// right column: the filtered tags with series counts plus their
-/// include/exclude state and the callbacks that change it.
 class _TagFilterData {
   const _TagFilterData({
     required this.isLoading,
@@ -544,7 +520,6 @@ class _TagFilterData {
   final VoidCallback clear;
 }
 
-/// Reads the tag filter rows for [rawQuery] (untrimmed search field text).
 _TagFilterData _readTagFilterData(WidgetRef ref, String rawQuery) {
   final tagsAsync = ref.watch(libraryTagListProvider);
   final includeSet =
@@ -613,8 +588,6 @@ _TagFilterData _readTagFilterData(WidgetRef ref, String rawQuery) {
   );
 }
 
-/// One tag row: the label plus its series count, checkmarked or blocked when
-/// included or excluded. "All tags" clears the selection.
 Widget _tagRow(
   BuildContext context, {
   required String label,
@@ -662,7 +635,6 @@ Widget _tagRow(
   );
 }
 
-/// Tag search heading plus search field, shared by both filter layouts.
 class _TagSearchHeader extends StatelessWidget {
   const _TagSearchHeader({required this.onQueryChanged});
 
@@ -691,8 +663,6 @@ class _TagSearchHeader extends StatelessWidget {
   }
 }
 
-/// The tag rows as a list, scrolling inside whatever height its parent gives
-/// it (or shrink-wrapped inside a scrollable parent).
 class _TagListView extends StatelessWidget {
   const _TagListView({required this.data, this.shrinkWrap = false});
 
@@ -731,13 +701,6 @@ class _TagListView extends StatelessWidget {
   }
 }
 
-/// Tag filter: a search field plus the library's tags with series counts.
-/// "All tags" first clears the selection; tapping a tag cycles it through
-/// include → exclude → ignored, reusing the tag filter providers.
-///
-/// Single-column layout (organizer Filter tab): the list takes its intrinsic
-/// height up to 150 px. The desktop two-column panel composes
-/// [_TagSearchHeader] and [_TagListView] itself (see [_FilterRightColumn]).
 class LibraryTagFilter extends HookConsumerWidget {
   const LibraryTagFilter({super.key});
 
@@ -759,8 +722,7 @@ class LibraryTagFilter extends HookConsumerWidget {
   }
 }
 
-/// Dialog that tri-states each category: null = not filtered, true = include,
-/// false = exclude. Picking any category enables category filtering.
+/// null ignores a category, true includes, false excludes; any selection enables the filter.
 class CategoryFilterDialog extends ConsumerWidget {
   const CategoryFilterDialog({super.key});
 
@@ -847,6 +809,56 @@ class CategoryFilterDialog extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(context.l10n.close),
         ),
+      ],
+    );
+  }
+}
+
+class LibraryEntryFilter extends ConsumerWidget {
+  const LibraryEntryFilter({super.key, required this.kind});
+  final String kind;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(libraryEntryFiltersProvider(kind));
+    final all = ref.watch(libraryMangaListProvider).value ?? const [];
+    final labels = kind == 'status'
+        ? {
+            for (final status in MangaStatus.values)
+              status.title: status.toLocale(context),
+          }
+        : {
+            for (final manga in all)
+              manga.sourceId:
+                  manga.source?.displayName ??
+                  manga.source?.name ??
+                  manga.sourceId,
+          };
+    final entries = labels.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    return ExpansionTile(
+      title: Text(
+        kind == 'status' ? context.l10n.trackStatus : context.l10n.source,
+      ),
+      children: [
+        for (final entry in entries)
+          ListTile(
+            leading: Icon(switch (selected[entry.key]) {
+              true => Icons.check_box_rounded,
+              false => Icons.disabled_by_default_rounded,
+              null => Icons.check_box_outline_blank_rounded,
+            }),
+            title: Text(entry.value),
+            onTap: () =>
+                ref.read(libraryEntryFiltersProvider(kind).notifier).update({
+                  ...selected,
+                  entry.key: switch (selected[entry.key]) {
+                    null => true,
+                    true => false,
+                    false => null,
+                  },
+                }),
+          ),
       ],
     );
   }

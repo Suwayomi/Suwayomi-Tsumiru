@@ -7,8 +7,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Inter's license, shown on the licences page next to the bundled font.
-/// The OFL text is read from the copy shipped with the font files.
+/// Reads Inter's OFL license from the bundled font files.
 void registerInterLicense() => LicenseRegistry.addLicense(() async* {
   yield LicenseEntryWithLineBreaks(const [
     'Inter',

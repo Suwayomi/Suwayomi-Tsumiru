@@ -22,9 +22,11 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../../../../connection/prompt_sign_in.dart';
 import '../../credential_popup/credentials_popup.dart';
+import '../server_port_tile/server_port_tile.dart';
 import 'hosted_base_uri.dart';
 import 'server_search_button.dart';
 import 'web_default_server_url.dart';
@@ -74,8 +76,7 @@ class ServerUrl extends _$ServerUrl with SharedPreferenceClientMixin<String> {
   }
 }
 
-/// User-configured remote URL. Existing installations migrate their old single
-/// URL into this preference on first read.
+/// Migrates the legacy single URL on first read.
 @riverpod
 class ServerExternalUrl extends _$ServerExternalUrl
     with SharedPreferenceClientMixin<String> {
@@ -88,6 +89,38 @@ class ServerExternalUrl extends _$ServerExternalUrl
           prefs.getString(DBKeys.serverUrl.name) ??
           (kIsWeb ? webInitialServerUrl() : DBKeys.serverUrl.initial),
     );
+  }
+
+  Future<void> migrateLegacyPort() async {
+    if (ref.read(serverPortToggleProvider) != true) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          if (ref.read(serverPortToggleProvider) != true) return;
+          final String url = state ?? DBKeys.serverUrl.initial;
+          final port = ref.read(serverPortProvider);
+          if (port != null && url.isNotBlank) {
+            final merged = Endpoints.baseApi(
+              baseUrl: url,
+              port: port,
+              addPort: true,
+              appendApiToUrl: false,
+            );
+            super.update(merged);
+            ref.read(serverPortToggleProvider.notifier)
+                .updateWithPreviousState((_) => false);
+            await ref.read(serverUrlProvider.notifier).setActive(merged);
+          } else {
+            ref.read(serverPortToggleProvider.notifier)
+                .updateWithPreviousState((_) => false);
+          }
+        },
+        preserveSession: true,
+      );
+    } finally {
+      lease.close();
+    }
   }
 
   @override
@@ -111,8 +144,7 @@ class ServerExternalUrl extends _$ServerExternalUrl
   }
 }
 
-/// Optional LAN URL for the same Suwayomi instance. Changing it never clears
-/// credentials: its entire purpose is to share the remote endpoint's login.
+/// LAN address for the same server; changing it preserves the shared credentials.
 @riverpod
 class ServerLanUrl extends _$ServerLanUrl
     with SharedPreferenceClientMixin<String> {
@@ -122,11 +154,9 @@ class ServerLanUrl extends _$ServerLanUrl
   @override
   void update(String? value) {
     super.update(_normaliseUrl(value));
-    // The active resolver observes this preference and re-checks immediately.
   }
 }
 
-/// Default to the page origin and app base path.
 String webInitialServerUrl() {
   final candidate = webDefaultServerUrl(readHostedBaseUri());
   final parsed = Uri.tryParse(candidate);
@@ -144,8 +174,6 @@ String? _normaliseUrl(String? value) {
       : trimmed;
 }
 
-/// Chooses an endpoint. Kept pure apart from the injected probe so it can be
-/// tested without a device network or a real Suwayomi server.
 Future<String> selectServerUrl({
   required String externalUrl,
   required String? lanUrl,
@@ -159,8 +187,7 @@ Future<String> selectServerUrl({
 Future<bool> serverUrlIsReachable(String url, {http.Client? client}) async {
   final httpClient = client ?? http.Client();
   try {
-    // An auth-required response proves that this host is reachable too. Do not
-    // follow this with a GraphQL request: the shared session may be expired.
+    // An auth-required response proves reachability even when the shared session expired.
     await httpClient
         .head(Uri.parse(Endpoints.baseApi(baseUrl: url, appendApiToUrl: false)))
         .timeout(const Duration(seconds: 2));
@@ -174,20 +201,13 @@ Future<bool> serverUrlIsReachable(String url, {http.Client? client}) async {
   }
 }
 
-/// Subscribes to connectivity changes without letting a platform failure
-/// escape. On a sandboxed Linux build there is no system D-Bus to reach
-/// NetworkManager through, and that failure arrives after listen() returns,
-/// so a try/catch around the call cannot see it. An uncaught async error
-/// before the first frame is treated as a fatal startup failure.
+/// Handles asynchronous connectivity failures, including missing D-Bus in sandboxed Linux.
 @visibleForTesting
 StreamSubscription<List<ConnectivityResult>> listenToConnectivity(
   Stream<List<ConnectivityResult>> changes,
   void Function() onChange,
 ) => changes.listen((_) => onChange(), onError: (_) {}, cancelOnError: false);
 
-/// Keeps [serverUrlProvider] pointed at the preferred endpoint. It runs at
-/// startup and each interface change, so moving between Wi-Fi and mobile data
-/// automatically re-evaluates the LAN address.
 @Riverpod(keepAlive: true)
 class ServerEndpointResolver extends _$ServerEndpointResolver {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -206,13 +226,7 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
         ),
       ),
     );
-    // Desktop and widget-test platforms may not register connectivity_plus,
-    // and a sandboxed Linux build (Flatpak) has no system D-Bus to reach
-    // NetworkManager through. That failure arrives asynchronously, after
-    // listen() returns, so it needs onError rather than a try/catch: an
-    // uncaught async error before the first frame is treated as a fatal
-    // startup failure. Startup selection still works without the stream;
-    // only later interface-change callbacks are lost.
+    // Connectivity plugins or D-Bus may be unavailable; startup selection must still work.
     try {
       _connectivitySubscription ??= listenToConnectivity(
         Connectivity().onConnectivityChanged,
@@ -224,7 +238,6 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
     return external;
   }
 
-  /// [trigger] only labels the debug-log line: what made us re-probe.
   Future<void> refresh({String trigger = 'connection-failure'}) async {
     if (_refreshing) return;
     final credentials = ref.read(authCredentialsStoreProvider.notifier);
@@ -256,11 +269,6 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
       );
       if (!current()) return;
       final previous = ref.read(serverUrlProvider);
-      // A switch rebuilds every server client and re-fetches the library; a
-      // LAN probe failing while Wi-Fi reconnects sends requests to the remote
-      // address, which may not resolve from inside the LAN. Without a LAN
-      // address there's nothing to probe, and every failed read re-runs this:
-      // only a switch is worth a line then.
       if (lanReachable != null || selected != previous) {
         recordDiagnostic(
           '[${DateTime.now().toIso8601String()}] endpoint: trigger=$trigger '
@@ -294,8 +302,7 @@ bool _isDifferentHost(String? a, String? b) {
   return ua.scheme != ub.scheme || ua.host != ub.host || ua.port != ub.port;
 }
 
-/// Wipe credentials and bump the epoch on an endpoint change (URL, port, or
-/// port toggle) so the old server's creds can't reach the new one.
+/// Clears credentials and bumps the epoch so an endpoint change cannot leak them to another server.
 Future<void> clearCredentialsForServerChange(Ref ref) async {
   await ref.read(credentialsProvider.notifier).set(null);
   await ref
@@ -316,6 +323,15 @@ class ServerUrlTile extends ConsumerWidget {
         hintText: context.l10n.serverUrlHintText,
         value: serverUrl,
         onChanged: (value) async {
+          if (_isDifferentHost(serverUrl, _normaliseUrl(value))) {
+            final confirmed = await confirmAction(
+              context,
+              title: context.l10n.confirmServerOriginTitle,
+              message: context.l10n.confirmServerOriginMessage,
+              action: context.l10n.save,
+            );
+            if (!confirmed || !context.mounted) return;
+          }
           stayOnConnectionAfterIdentityChange();
           await ref.read(serverExternalUrlProvider.notifier).update(value);
           return;

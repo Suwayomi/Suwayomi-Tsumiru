@@ -6,8 +6,7 @@ import '../../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../../../account/data/account_permission.dart';
-import '../../../../../../account/data/account_providers.dart';
-import '../../../../../../account/domain/account_access.dart';
+import '../../../../../data/account_or_legacy_settings.dart';
 import '../../../../../data/user_settings.dart';
 import '../graphql/__generated__/images.graphql.dart';
 import '../image_conversions.dart';
@@ -131,7 +130,6 @@ class ServeConversionsRepository {
     }
   }
 
-  /// Saves the whole map in one write.
   Future<void> write(
     List<Input$SettingsDownloadConversionTypeInput> conversions,
   ) async {
@@ -161,13 +159,11 @@ final serveConversionsRepositoryProvider =
       ),
     );
 
-final FutureProvider<List<ServerConversion>?> serveConversionsProvider =
-    FutureProvider.autoDispose<List<ServerConversion>?>((ref) async {
-      switch (ref.watch(settledAccountAccessProvider).capability) {
-        case AccountCapability.unknown:
-          throw StateError('Account settings unavailable');
-        case AccountCapability.supported:
-          final user = await ref.watch(userSettingsProvider.future);
+final FutureProvider<List<ServerConversion>?>
+serveConversionsProvider = FutureProvider.autoDispose<List<ServerConversion>?>(
+  (ref) => accountOrLegacySettings(
+    ref,
+    fromUser: (user) {
           if (user == null) throw StateError('Missing account settings');
           return user.serveConversions
               .map(
@@ -188,7 +184,8 @@ final FutureProvider<List<ServerConversion>?> serveConversionsProvider =
                 ),
               )
               .toList();
-        case AccountCapability.unsupported:
+    },
+    legacy: () async {
           final settings = await ref
               .watch(serveConversionsRepositoryProvider)
               .legacySettings();
@@ -213,5 +210,6 @@ final FutureProvider<List<ServerConversion>?> serveConversionsProvider =
                 ),
               )
               .toList();
-      }
-    });
+    },
+  ),
+);

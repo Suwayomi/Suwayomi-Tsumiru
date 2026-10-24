@@ -57,8 +57,7 @@ class NumberPickerDialog extends HookWidget {
         AsyncTextButton(
           onPressed: () async {
             context.hideKeyboard;
-            // waiting for the number picker to unfocus
-            // so that the numberPickerState update itself
+            // Wait for unfocus to commit the number-picker state.
             await Future.delayed(Duration(milliseconds: 50));
             await onChanged?.call(numberPickerState.value);
             if (context.mounted) Navigator.pop(context);

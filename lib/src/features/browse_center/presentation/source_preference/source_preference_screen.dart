@@ -33,8 +33,6 @@ class SourcePreferenceScreen extends HookConsumerWidget {
     final preferenceProvider = baseSourcePreferenceListProvider(sourceId);
     final networkPreferences = ref.watch(preferenceProvider);
     final preferences = networkPreferences.value;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(
       source.value?.displayName ?? "",

@@ -10,10 +10,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../features/settings/presentation/incognito/incognito_mode.dart';
 import '../../utils/extensions/custom_extensions.dart';
 
-/// App-wide strip shown whenever incognito mode is on, so the state is never
-/// invisible. Tapping it turns incognito off. Renders nothing
-/// when incognito is off — and since the flag resets on restart, its absence
-/// reliably means "not incognito".
 class IncognitoBanner extends ConsumerWidget {
   const IncognitoBanner({super.key});
 

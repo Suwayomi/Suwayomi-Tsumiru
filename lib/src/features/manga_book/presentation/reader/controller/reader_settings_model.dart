@@ -29,10 +29,8 @@ import 'reader_setting.dart';
 part 'reader_settings_model.freezed.dart';
 part 'reader_settings_model.g.dart';
 
-/// Descriptor table mirroring exactly how each option persists today.
 abstract final class ReaderSettings {
-  /// Meta ?? sentinel: the app-wide default mode is dereferenced later by the
-  /// engine — folding it in here would make "Default" unrepresentable.
+  /// Keep the Default sentinel here; the engine resolves the app-wide mode later.
   static const mode = ReaderSetting<ReaderMode>(
     scope: ReaderSettingScope.perSeries,
     perSeriesKey: MangaMetaKeys.readerMode,
@@ -66,8 +64,7 @@ abstract final class ReaderSettings {
     fallback: ReaderOrientation.defaultRotation,
   );
 
-  /// 4-value successor of invertTap. Global side is the compat provider:
-  /// new key ?? legacy bool (true→both). Writes only ever hit the new key.
+  /// Reads the new key, then the legacy boolean (true means both); writes only the new key.
   static final tapInvert = ReaderSetting<TapInvert>(
     scope: ReaderSettingScope.perSeries,
     perSeriesKey: MangaMetaKeys.readerTapInvert,
@@ -75,9 +72,7 @@ abstract final class ReaderSettings {
     fallback: TapInvert.none,
   );
 
-  // Migration source only. No reader reads these three any more — each viewer
-  // has its own below. They survive so an upgrade can seed the new keys; wire
-  // a new switch to the paged*/longStrip* pair, never to these.
+  // Migration-only keys; new zoom controls must use the paged/long-strip keys.
   static final pinchToZoom = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: pinchToZoomProvider,
@@ -102,7 +97,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.disableZoomIn.initial as bool,
   );
 
-  // Per-viewer zoom toggles: paged and long strip each own their value.
   static final pagedPinchToZoom = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: pagedPinchToZoomProvider,
@@ -139,7 +133,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.longStripDisableZoomOut.initial as bool,
   );
 
-  // Paged parity prefs — all global.
   static final imageScaleType = ReaderSetting<ImageScaleType>(
     scope: ReaderSettingScope.global,
     global: imageScaleTypeKeyProvider,
@@ -200,8 +193,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.animatePageTransitions.initial as bool,
   );
 
-  // Wide-page handling (paged). Rotate is live; split + spread persist-only
-  // until the engine can remap the page list.
   static final dualPageSplitPaged = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: dualPageSplitPagedProvider,
@@ -232,7 +223,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.trueDualPageSpread.initial as bool,
   );
 
-  // Long-strip parity prefs (all global).
   static final webtoonScaleType = ReaderSetting<WebtoonScaleType>(
     scope: ReaderSettingScope.global,
     global: webtoonScaleTypeKeyProvider,
@@ -305,7 +295,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.dualPageInvertWebtoon.initial as bool,
   );
 
-  // General-tab prefs — all global.
   static final backgroundColor = ReaderSetting<ReaderBackgroundColor>(
     scope: ReaderSettingScope.global,
     global: readerBackgroundColorKeyProvider,
@@ -372,7 +361,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.flashColor.initial as FlashColor,
   );
 
-  // Custom-filter tab prefs — all global.
   static final customBrightness = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: customBrightnessProvider,
@@ -483,12 +471,10 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
   }) = _ReaderSettingsState;
 }
 
-/// Effective reader settings for one manga, seeded `perSeries ?? global` from
-/// the existing providers/meta — the state home for the settings sheet.
+/// Resolves per-series overrides over global settings for the settings sheet.
 @riverpod
 class ReaderSettingsModel extends _$ReaderSettingsModel {
-  // Captured at build: setters write via these, since the model's own ref is
-  // outdated (assert-crash) between a global write and the rebuild it triggers.
+  // Capture notifiers before global writes rebuild this model and invalidate its ref.
   late PinchToZoom _pinchToZoom;
   late DoubleTapToZoom _doubleTapToZoom;
   late DisableZoomOut _disableZoomOut;
@@ -719,7 +705,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     );
   }
 
-  // Zoom toggles are global: write the app-wide provider, never manga meta.
   void setPinchToZoom(bool value) => _pinchToZoom.update(value);
 
   void setDoubleTapToZoom(bool value) => _doubleTapToZoom.update(value);
@@ -745,7 +730,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setLongStripDisableZoomOut(bool value) =>
       _longStripDisableZoomOut.update(value);
 
-  // Parity prefs are global too.
   void setImageScaleType(ImageScaleType value) => _imageScaleType.update(value);
 
   void setZoomStart(ZoomStart value) => _zoomStart.update(value);
@@ -811,7 +795,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setDualPageInvertWebtoon(bool value) =>
       _dualPageInvertWebtoon.update(value);
 
-  // General-tab prefs are global too.
   void setBackgroundColor(ReaderBackgroundColor value) =>
       _backgroundColor.update(value);
 
@@ -837,7 +820,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setFlashColor(FlashColor value) => _flashColor.update(value);
 
-  // Custom-filter tab prefs are global too.
   void setCustomBrightness(bool value) => _customBrightness.update(value);
 
   void setCustomBrightnessValue(int value) =>
@@ -854,13 +836,11 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setInvertedColors(bool value) => _invertedColors.update(value);
 
-  // Per-series-capable setters. perSeries=false is the "For this series" OFF
-  // path (§2.6): set the app-wide default and drop this series' override.
+  // With perSeries=false, remove the override and update the app-wide default.
 
   Future<void> setReaderMode(ReaderMode mode, {bool perSeries = true}) {
     if (perSeries) return _patchMeta(MangaMetaKeys.readerMode, mode.name);
-    // "Default" is only meaningful per-series; globally it just means "no
-    // override", so the global key is left alone.
+    // Default only has meaning per-series; leave the global key unchanged.
     return _clearMetaThenWriteGlobal(
       MangaMetaKeys.readerMode,
       mode == ReaderMode.defaultReader
@@ -869,10 +849,7 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     );
   }
 
-  /// The sheet only ever writes per-series. The global branch still targets the
-  /// pre-split key, which no reader consults — wire any future "apply to all"
-  /// control to the paged/long-strip keys instead, or it will silently do
-  /// nothing.
+  /// The global branch targets an unused legacy key; global controls must use paged/long-strip keys.
   Future<void> setNavigationLayout(
     ReaderNavigationLayout layout, {
     bool perSeries = true,
@@ -903,8 +880,7 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
               () => _readerOrientationKey.update(orientation),
             );
 
-  /// Writes the NEW 4-value key only; the legacy invertTap bool is never
-  /// destructively rewritten (compat read stays valid for a downgrade).
+  /// Write only the new tap-invert key so legacy reads remain valid after downgrade.
   Future<void> setTapInvert(TapInvert value, {bool perSeries = true}) =>
       perSeries
           ? _patchMeta(MangaMetaKeys.readerTapInvert, value.name)
@@ -913,11 +889,8 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
               () => _readerTapInvertKey.update(value),
             );
 
-  /// Per-series write, mirroring the old drawer: patchMangaMeta then
-  /// invalidate mangaWithIdProvider so every watcher re-reads fresh meta.
   Future<void> _patchMeta(MangaMetaKeys key, dynamic value) async {
-    // Hold this autoDispose family open across the round-trip so a sheet
-    // dismissed mid-write can't tear down ref before the invalidate.
+    // Hold the provider across writes so dismissing the sheet cannot dispose ref before invalidation.
     final link = ref.keepAlive();
     try {
       await AsyncValue.guard(
@@ -933,8 +906,7 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     }
   }
 
-  /// Meta delete runs first while ref is still valid; the global write comes
-  /// last since it rebuilds this model (captured notifier, no ref use after).
+  /// Delete meta before the global write rebuilds this model; do not use ref afterwards.
   Future<void> _clearMetaThenWriteGlobal(
     MangaMetaKeys key,
     void Function()? writeGlobal,
@@ -955,5 +927,4 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   }
 }
 
-/// Plan-named alias for the resolved-settings family.
 final readerEffectiveSettingsProvider = readerSettingsModelProvider;

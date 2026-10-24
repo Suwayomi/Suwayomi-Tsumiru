@@ -1484,6 +1484,8 @@
   "bookmarked": "Bookmarked",
   "bookmark": "Bookmark",
   "removeBookmark": "Remove bookmark",
+  "bold": "Bold",
+  "bulletedList": "Bulleted list",
   "categoryNumberOfItems": "Show number of items",
   "@categoryNumberOfItems": {
     "description": "Library Display > Tabs: checkbox to show a manga count next to each category tab label"
@@ -1670,6 +1672,7 @@
     }
   },
   "libraryLastUpdated": "Library last updated: {time}",
+  "debugInformation": "Debug information",
   "debugLogs": "Debug logs",
   "defaultCategory": "Default category when adding new manga to library",
   "defaultCategoryOnAdd": "Default category",
@@ -1985,6 +1988,7 @@
   },
   "edit": "Edit",
   "editCategory": "Edit category",
+  "editNotes": "Edit notes",
   "hideCategory": "Hide category",
   "showCategory": "Show category",
   "showUpdateProgressBanner": "Show update progress banner",
@@ -2033,9 +2037,14 @@
   "responseFallbackDescription": "Use the FlareSolverr response in case the server runs into a Cloudflare challenge while FlareSolverr does not and is therefore unable to solve the challenge (does not work for images)",
   "general": "General",
   "gitHub": "GitHub",
+  "githubServer": "GitHub Server",
+  "githubTsumiru": "GitHub Tsumiru",
   "globalSearch": "Global search",
   "globalUpdate": "Global update",
   "help": "Help",
+  "helpTranslate": "Help translate",
+  "informAboutAvailableUpdate": "Inform about available update",
+  "informAboutVersionUpdate": "Inform about version update",
   "inLibrary": "In library",
   "includeCategories": "Categories",
   "includeChapters": "Chapters",
@@ -2055,6 +2064,7 @@
   "invalidProp": "Invalid {property}",
   "ip": "IP address",
   "ipHintText": "Enter server binding IP address",
+  "italic": "Italic",
   "appThemeTitle": "Theme",
   "@appThemeTitle": {
     "description": "Header for the color theme picker"
@@ -2162,6 +2172,7 @@
   "lockToPortrait": "Lock to portrait",
   "manga": "Manga",
   "mangaGridSize": "Manga grid size",
+  "mangaThumbnailBackdrop": "Manga thumbnail as background",
   "mangaSortAlphabetical": "Alphabetical",
   "mangaSortDateAdded": "Date added",
   "mangaSortLastChapterDate": "Latest chapter",
@@ -2239,6 +2250,8 @@
   "noDownloads": "No downloads",
   "noMangaFound": "No manga found",
   "noOfChapters": "{count} chapters",
+  "notes": "Notes",
+  "numberedList": "Numbered list",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
   "readerChapterGapWarning": "{count, plural, =1{Skipping 1 chapter. It may be missing from the source or filtered out.} other{Skipping {count} chapters. They may be missing from the source or filtered out.}}",
   "@readerChapterGapWarning": {
@@ -2284,6 +2297,7 @@
   "@seriesTagsMore": {"placeholders": {"count": {"type": "int"}}},
   "seriesNextChapterExpected": "Next chapter expected {days, plural, =0{soon} =1{in 1 day} other{in {days} days}}",
   "@seriesNextChapterExpected": {"placeholders": {"days": {"type": "int"}}},
+  "seriesPage": "Series page",
   "suggestions": "Suggestions",
   "@suggestions": {
     "description": "Header for the inline suggestions row on the manga details page"
@@ -2784,6 +2798,15 @@
   "serverUnreachableAction": "Connection settings",
   "@serverUnreachableAction": {
     "description": "Button that opens the connection settings screen"
+  },
+  "serverUpdateAvailable": "Server update available",
+  "serverUpdatedTo": "Server updated to {version}",
+  "@serverUpdatedTo": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   },
   "offlineViewBannerTitle": "You're viewing offline",
   "@offlineViewBannerTitle": {
@@ -3396,6 +3419,10 @@
   "@shareImage": {
     "description": "Reader page-actions sheet: share the current page image file via the system share sheet"
   },
+  "share": "Share",
+  "@share": {
+    "description": "Series page: share the series source link via the system share sheet"
+  },
   "saveToGallery": "Save to gallery",
   "@saveToGallery": {
     "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
@@ -3986,13 +4013,12 @@
   "imageProcessingClearCache": "Clear cache",
   "imageProcessingClearedCache": "Cleared the cache",
   "imageProcessingCouldNotClearCache": "Could not clear the cache",
-  "imageDownloadProcessing": "Image download processing",
-  "imageServeProcessing": "Image serve processing",
-  "imageProcessingIntro": "In case no MIME-Type is defined, the \"default\" one will be used for the processing.\nSet the target mode to disabled to prevent processing for a MIME-Type",
-  "imageProcessingMimeType": "MIME-Type",
-  "imageProcessingTargetMode": "Target mode",
-  "imageProcessingMimeTypeTarget": "MIME-Type target",
-  "imageProcessingCompressionLevel": "Compression level",
+  "imageDownloadProcessing": "Convert downloaded images",
+  "imageServeProcessing": "Convert served images",
+  "imageProcessingMimeType": "Image type",
+  "imageProcessingTargetMode": "Action",
+  "imageProcessingMimeTypeTarget": "Convert to",
+  "imageProcessingCompressionLevel": "Quality",
   "imageProcessingCallTimeout": "Call timeout",
   "imageProcessingConnectTimeout": "Connect timeout",
   "imageProcessingSearchParameters": "Search parameters",
@@ -4141,5 +4167,116 @@
   "suggestionsLoadFailed": "Couldn’t load suggestions. Try again later.",
   "trackerOAuthLinkInvalid": "This sign-in link is no longer valid. Start tracker sign-in again.",
   "trackerOAuthSaveFailed": "Couldn’t save the sign-in request. Try again.",
-  "trackerOAuthBrowserFallback": "Couldn’t open the browser. The sign-in link was copied to the clipboard."
+  "trackerOAuthBrowserFallback": "Couldn’t open the browser. The sign-in link was copied to the clipboard.",
+  "serverSignIn": "Sign-in",
+  "serverAuthMode": "Authentication mode",
+  "serverAuthNone": "None",
+  "serverAuthBasic": "Basic authentication",
+  "serverAuthSimple": "Simple login",
+  "serverAuthUi": "UI login",
+  "serverAuthUsername": "Username",
+  "serverAuthPassword": "Password",
+  "serverAdminUsername": "Admin username",
+  "serverAdminPassword": "Admin password",
+  "serverJwtAudience": "JWT audience claim",
+  "serverAccessExpiry": "Access token expiry",
+  "serverRefreshExpiry": "Stay signed in for",
+  "serverSignInConfirmTitle": "Change sign-in settings?",
+  "serverSignInConfirmBody": "This changes how everyone signs in to this server.",
+  "serverSignInChange": "Change",
+  "serverSignInCredentialsRequired": "Enter a username and password first.",
+  "serverSignInAdminOnly": "Only the admin can change these credentials.",
+  "serverSignInWebMode": "This sign-in mode cannot be selected in a browser.",
+  "serverSignInWebCredentials": "These credentials cannot be changed from a browser.",
+  "serverSignInSeparateSaves": "Save the credentials before switching to UI login.",
+  "serverSignInUsernameTaken": "Another account uses this username.",
+  "serverSignInManageUsers": "Manage users permission is required to change the admin username.",
+  "serverSignInUnknown": "Could not verify the server’s sign-in settings.",
+  "serverSignInMinutes": "{count, plural, =1{1 minute} other{{count} minutes}}",
+  "@serverSignInMinutes": {"placeholders": {"count": {"type": "int"}}},
+  "serverSignInDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@serverSignInDays": {"placeholders": {"count": {"type": "int"}}},
+  "databaseSchema": "Schema",
+  "hikariMaxPoolSize": "Maximum connections",
+  "includeUserSettings": "User settings",
+  "removeMangaFromCategories": "Forget manga categories",
+  "ignoreFilters": "Ignore filters when searching",
+  "fuzzySearch": "Fuzzy search",
+  "cleanupDatabase": "Cleanup database",
+  "cleanupDatabaseConfirm": "Remove non-library entries from categories?",
+  "downloadAhead": "Download ahead",
+  "autoDownloadWhileReading": "Auto download while reading",
+  "downloadAheadLimit": "Number of unread chapters to download",
+  "hideLibraryEntries": "Hide entries already in library",
+  "retryErroredPages": "Retry errored pages",
+  "openChapterInWebView": "Open in WebView",
+  "shareChapterLink": "Share chapter link",
+  "pushKoReaderProgress": "Push progress to KOReader",
+  "pullKoReaderProgress": "Pull progress from KOReader",
+  "koSyncLocationPrompt": "Sync to page {page} from device '{device}'?",
+  "@koSyncLocationPrompt": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "duplicateChapters": "Duplicate chapters",
+  "openRandomEntry": "Open random entry",
+  "savedSearches": "Saved searches",
+  "saveSearch": "Save search",
+  "saveCurrentSearch": "Save current search",
+  "deleteSearch": "Delete search",
+  "openHomepage": "Open in WebView",
+  "extensionInfo": "Extension info",
+  "extensionLibrary": "Library",
+  "extensionStore": "Store",
+  "extensionVersion": "Version",
+  "extensionLanguage": "Language",
+  "confirmDatabaseTitle": "Change database settings",
+  "confirmDatabaseMessage": "Changing these settings can disconnect the server or switch its database.",
+  "confirmNetworkTitle": "Change server network",
+  "confirmNetworkMessage": "Changing this setting can make the server unreachable.",
+  "confirmImageCacheMessage": "This clears cached images on the server and this device.",
+  "confirmWebViewCacheMessage": "This clears WebView cookies and cache and may sign you out of sources.",
+  "confirmUninstallMessage": "This removes the extension and its sources from the server.",
+  "confirmKoPushMessage": "This replaces the chapter’s KOReader progress with your current progress.",
+  "confirmKoPullMessage": "This replaces the chapter’s local and server progress with KOReader progress.",
+  "confirmSeriesReadMessage": "This replaces reading progress for every chapter in the selected series.",
+  "confirmClearQueueTitle": "Clear download queue",
+  "confirmClearQueueMessage": "This removes all chapters from the server download queue.",
+  "confirmDeleteNoteTitle": "Delete note",
+  "confirmDeleteNoteMessage": "Saving an empty note deletes the existing note.",
+  "confirmOverwriteSearchTitle": "Overwrite saved search",
+  "confirmOverwriteSearchMessage": "This replaces the query and filters saved under this name.",
+  "confirmOverwriteAction": "Overwrite",
+  "confirmDeleteBothDownloadsMessage": "This deletes the downloaded chapter from the server and this device, including matching scanlator copies.",
+  "confirmDeleteDeviceMessage": "This removes the chapter download from this device.",
+  "confirmDeleteSeriesDeviceMessage": "This stops keeping the series offline and deletes all its device downloads.",
+  "confirmServerOriginTitle": "Change server address",
+  "confirmServerOriginMessage": "Changing the scheme, hostname or port clears saved sign-in credentials on this device. You will need to sign in again.",
+  "confirmNoSignInTitle": "Use no sign-in",
+  "confirmNoSignInMessage": "This clears saved sign-in credentials on this device. You will need to enter them again if the server requires sign-in.",
+  "clearSignInCredentials": "Clear credentials",
+  "confirmKeepRuleTitle": "Change offline rule",
+  "confirmKeepRuleMessage": "This change deletes chapters already downloaded on this device.",
+  "confirmDuplicateMigrationMessage": "Migrate from {source} to {target}? This copies series data to the target and removes the original from your library.",
+  "@confirmDuplicateMigrationMessage": {
+    "placeholders": {
+      "source": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "confirmSyncYomiMessage": "SyncYomi will merge local and remote library data, upload the merged backup, and restore it on this server. Continue?",
+  "accountAdminCheckFailed": "Could not verify other admins. Try again before removing access.",
+  "accountAdminCheckLoading": "Checking other admins before removing access…",
+  "accountLastManagerRequired": "At least one account must keep access to manage users.",
+  "confirmRemoveOwnAdminTitle": "Remove your own admin access?",
+  "confirmRemoveOwnAdminMessage": "You will lose access to the settings controlled by the role or permission you remove.",
+  "confirmTrackerLogoutMessage": "This signs everyone on the server out of this tracker.",
+  "confirmWebInterfaceChangeTitle": "Change web interface?",
+  "confirmWebInterfaceChangeMessage": "This changes the web interface the server serves for everyone."
 }

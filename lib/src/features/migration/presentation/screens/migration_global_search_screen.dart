@@ -33,7 +33,6 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
     final migrationSearchResult =
         ref.watch(migrationGlobalSearchResultsProvider(query: query.value));
 
-    // Auto-search with source manga title on screen load
     useEffect(() {
       final initialQuery = sourceManga.title;
       if (initialQuery.isNotEmpty) {
@@ -42,8 +41,6 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
       return null;
     }, []);
 
-    // Native desktop draws the title and search box in the shell bar
-    // instead of an app bar; the results stay in the page body.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.searchAllSources);
     final searchBox = Align(

@@ -19,10 +19,7 @@ class HistoryRepository {
   const HistoryRepository(this.client);
   final GraphQLClient client;
 
-  /// Most-recently-read chapter per manga, newest first.
-  ///
-  /// Fetches one bounded window (not paginated) — per-manga dedup over a
-  /// chapter-ordered, live-mutable server result doesn't paginate cleanly.
+  /// Newest read chapter per manga from one bounded window; live per-manga dedup cannot paginate safely.
   Future<List<HistoryItemDto>> getReadingHistory({
     int maxChapters = 2000,
     String? searchQuery,
@@ -30,9 +27,7 @@ class HistoryRepository {
     DateTime? toDate,
     bool? inLibrary,
   }) async {
-    // Library membership is pushed to the server rather than filtered on the
-    // result: this fetch is one bounded window, so spending it on rows that are
-    // about to be discarded would cut how far back the history reaches.
+    // Filter membership server-side so discarded rows do not consume the bounded history window.
     final filter = Input$ChapterFilterInput(
       inLibrary: inLibrary == null
           ? null
@@ -42,7 +37,6 @@ class HistoryRepository {
         greaterThan:
             "0", // Ensure lastReadAt is actually set to a real timestamp
       ),
-      // Chapters with actual reading progress: fully read, or past the first page.
       or: [
         Input$ChapterFilterInput(
           isRead: Input$BooleanFilterInput(equalTo: true),
@@ -70,8 +64,7 @@ class HistoryRepository {
               Input$ChapterFilterInput(
                 name: Input$StringFilterInput(includesInsensitive: searchQuery),
               ),
-              // Note: We can't search manga title directly in chapter filter
-              // This will be handled in the UI layer
+              // Chapter filters cannot search manga titles; title matching happens in the UI.
             ],
           ),
       ],
@@ -104,15 +97,13 @@ class HistoryRepository {
     final seen = <int>{};
     final items = <HistoryItemDto>[];
     for (final chapter in chapters?.nodes ?? const <HistoryItemDto>[]) {
-      // A timestamp with no read progress isn't history worth showing.
       if (!chapter.user.isRead && chapter.user.lastPageRead <= 0) continue;
-      // First-seen per manga wins (server order is already newest-first).
+      // The first chapter per manga wins because server order is newest-first.
       if (seen.add(chapter.mangaId)) items.add(chapter);
     }
     return items;
   }
 
-  /// Get reading history for a specific manga
   Future<List<HistoryItemDto>?> getMangaReadingHistory({
     required int mangaId,
     int limit = 20,
@@ -142,8 +133,6 @@ class HistoryRepository {
         .getData((data) => data.chapters.nodes);
   }
 
-  /// Clear all reading history (mark all chapters as unread)
-  /// This is a destructive operation and should be used with caution
   Future<void> clearAllHistory() async {
     throw UnimplementedError(
       'Clearing all history requires server-side support. '

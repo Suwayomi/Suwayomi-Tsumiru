@@ -17,11 +17,7 @@ import '../../../data/default_category.dart';
 import '../../category/controller/edit_category_controller.dart';
 import '../controller/library_manga_list.dart';
 
-/// Bulk "edit categories" for a multi-selection. Each category is tri-state
-/// against the selection: checked = all selected series are in it, unchecked =
-/// none are, dash = some are (mixed). Tapping resolves toward "add all"; only
-/// categories the user actually changes are written, so a mixed category left
-/// untouched keeps each series' membership. Applied in one bulk request.
+/// Mixed categories stay unchanged unless tapped; a tap adds all unless already all-in.
 
 class EditMangasCategoryDialog extends HookConsumerWidget {
   const EditMangasCategoryDialog({super.key, required this.mangas});
@@ -34,7 +30,6 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
         .where((c) => defaultId != null && c.id != defaultId)
         .toList();
 
-    // Initial tri-state per category, from the selection's current membership.
     final memberIds = [
       for (final m in mangas) {for (final n in m.categories.nodes) n.id},
     ];
@@ -44,8 +39,7 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
       },
       [categories.map((c) => c.id).join(','), mangas.length],
     );
-    // Seed from `initial` so the first frame is correct (no all-dash flash);
-    // the effect keeps it in sync if the category set loads/changes later.
+    // Seed synchronously for the first frame; the effect handles later category changes.
     final current = useState<Map<int, bool?>>({...initial});
     useEffect(() {
       current.value = {...initial};
@@ -112,8 +106,6 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
                         value: current.value[c.id],
                         title: Text(c.name),
                         onChanged: (_) {
-                          // Tap always resolves to a definite decision: add
-                          // all, unless already all-in → then remove all.
                           current.value = {
                             ...current.value,
                             c.id: current.value[c.id] == true ? false : true,
@@ -138,8 +130,7 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
   }
 }
 
-/// A category's tri-state against a multi-selection, from each series' set of
-/// category ids: all series in it → true, none → false, some → null (mixed).
+/// true means all selected series, false none, and null mixed membership.
 bool? categoryMembership(List<Set<int>> perMangaCategoryIds, int categoryId) {
   if (perMangaCategoryIds.isEmpty) return false;
   final inCount = perMangaCategoryIds

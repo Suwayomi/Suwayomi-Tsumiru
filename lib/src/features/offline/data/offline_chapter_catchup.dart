@@ -34,13 +34,8 @@ import 'offline_runtime_storage.dart';
 import 'offline_storage_identity.dart';
 import 'offline_types.dart';
 
-/// Closes the #310 gap: a library update told the SERVER to find new chapters,
-/// but nothing on the client synced or downloaded them for keep-rule manga —
-/// the full fetch→mirror→reconcile chain only ran on a manga-details visit.
 
-/// Feed pages scanned per pass. Running out of budget before reaching the
-/// watermark falls back to a full keep-rule pass, so the cap trades feed
-/// queries for chapter-list fetches rather than dropping anything.
+// Feed-page budget; unreached watermarks fall back to a full keep-rule pass.
 const _maxCatchUpPages = 3;
 
 bool _running = false;
@@ -59,17 +54,9 @@ void resetChapterCatchUp() {
   awaitingServerDownloads.clear();
 }
 
-/// Set by the [downloadsMapProvider] drain listener when a drain event fires
-/// while a catch-up pass holds [_running]. Rather than dropping the event, we
-/// record it here and replay [_pullAwaiting] at the tail of the current pass so
-/// chapters that became serverIsDownloaded during the pass are not stranded
-/// until the next update cycle.
+// Replay drains received mid-pass so newly server-downloaded chapters are pulled promptly.
 bool _drainMissedDuringPass = false;
 
-/// Resets all module-private state, PLUS the cross-module
-/// [awaitingServerDownloads] set. These globals persist across `test()` cases
-/// in the same file (one isolate per file), so every test exercising this
-/// module must call this in `setUp`.
 @visibleForTesting
 void resetChapterCatchUpStateForTest() {
   _running = false;
@@ -84,9 +71,6 @@ void seedAwaitingServerDownloadsForTest(Iterable<int> mangaIds) {
     ..addAll(mangaIds);
 }
 
-/// Test-only mirror of the [downloadsMapProvider] drain listener installed by
-/// [initChapterCatchUp]. Lets a test simulate a queue-drain event landing at
-/// an arbitrary point in time without wiring up the full listener chain.
 @visibleForTesting
 void simulateQueueDrainForTest(ProviderContainer container) {
   if (_running) {
@@ -96,12 +80,10 @@ void simulateQueueDrainForTest(ProviderContainer container) {
   }
 }
 
-/// Called once from app bootstrap, after the offline engine is up.
 void initChapterCatchUp(ProviderContainer container) {
   detachChapterCatchUp();
   resetChapterCatchUp();
-  // Restore the second-hop obligations — the watermark has already moved past
-  // these manga, so losing the set to a restart would strand their pulls.
+  // Persist second-hop obligations because the watermark has already passed these manga.
   awaitingServerDownloads.addAll(
     container
             .read(sharedPreferencesProvider)
@@ -115,12 +97,7 @@ void initChapterCatchUp(ProviderContainer container) {
             .whereType<int>() ??
         const [],
   );
-  // Adopt the background worker's second-hop obligations: chapters it queued
-  // server-side get pulled by the foreground machinery now instead of waiting
-  // for the next background wake. Exhausted retries hand off the same way —
-  // foreground reconcile owns surfacing stuck downloads.
   unawaited(adoptWorkerObligations(container.read));
-  // A finished server update run is the moment new chapters exist to pull.
   final updateSubscription = container.listen(updateRunningSocketProvider, (
     previous,
     next,
@@ -132,16 +109,12 @@ void initChapterCatchUp(ProviderContainer container) {
     }
   });
   _subscriptions.add(updateSubscription);
-  // The server's download queue draining is the moment chapters queued by a
-  // catch-up reconcile become pullable to the device.
   final downloadSubscription = container.listen(downloadsMapProvider, (
     previous,
     next,
   ) {
     if ((previous?.isNotEmpty ?? false) && next.isEmpty) {
       if (_running) {
-        // A catch-up pass is in flight — defer rather than drop. The pass's
-        // own tail will call _pullAwaiting again with fresh server state.
         _drainMissedDuringPass = true;
       } else {
         unawaited(pullAfterServerDownloads(container));
@@ -149,13 +122,10 @@ void initChapterCatchUp(ProviderContainer container) {
     }
   });
   _subscriptions.add(downloadSubscription);
-  // Catch anything the server found while the app was closed.
   unawaited(runKeepRuleCatchUp(container));
 }
 
-/// Read-modify-write on the worker's ledger, so it runs under the download
-/// lock (a live worker run means skip — next launch retries) and against a
-/// freshly reloaded prefs cache, never this isolate's stale snapshot.
+/// Reads the worker ledger under its lock with freshly reloaded preferences.
 Future<bool> adoptWorkerObligations(OfflineRead read) => read(
   offlineRuntimeStorageProvider.notifier,
 ).track(() => _runWorkerObligations(read));
@@ -185,10 +155,7 @@ Future<bool> _runWorkerObligations(OfflineRead read) async {
     final lock = alreadyOwned
         ? null
         : BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
-    // The worker holds this while it downloads, and a single no-wait attempt
-    // made a foreground save fail whenever it landed mid-chapter — reported,
-    // wrongly, as an account permission problem. Ask the worker to yield and
-    // give it a few seconds, the way the controller's own ownership path does.
+    // Ask the active worker to yield ownership before retrying the lock.
     if (lock != null) {
       var acquired = await lock.acquire('handoff');
       if (!acquired) await lock.requestYield();
@@ -201,8 +168,7 @@ Future<bool> _runWorkerObligations(OfflineRead read) async {
       if (!acquired) return false;
     }
     try {
-      // Re-open INSIDE the lock: open() reloads the prefs cache, so the read
-      // below cannot predate a worker write that slipped in before acquire.
+      // Reload preferences inside the lock to include the last worker write.
       final lockedStore = await CatchupStateStore.open();
       if (!current()) return false;
       final fresh = lockedStore.readLedger(catalogServerId);
@@ -335,10 +301,7 @@ Future<bool> _runWorkerObligations(OfflineRead read) async {
   }
 }
 
-/// Single-flight: an update trigger landing mid-pass is dropped, since its
-/// chapters are newer than the watermark and will be picked up by the next
-/// pass. A server-download drain event landing mid-pass is instead deferred
-/// via [_drainMissedDuringPass] and replayed at the tail of the current pass.
+/// Single-flight; update triggers wait for the next pass, while drain events replay at this pass end.
 Future<void> runKeepRuleCatchUp(ProviderContainer container) => container
     .read(offlineRuntimeStorageProvider.notifier)
     .track(() => _runRunKeepRuleCatchUp(container));
@@ -389,23 +352,16 @@ Future<void> _runRunKeepRuleCatchUp(ProviderContainer container) async {
       keepRuleManga: keepRuleManga,
       watermark: watermark,
     );
-    // Didn't reach the watermark (or this is the first pass, with none yet)?
-    // Fall back to every keep-rule manga instead of skipping the tail.
     if (!current()) return;
     final feedTouched = scan.sawWatermark ? scan.touched : keepRuleManga;
-    // Also include manga still awaiting a server-side download. Their
-    // serverIsDownloaded flag can flip without generating a new feed entry
-    // (e.g. a manual re-download via the WebUI), so the watermark scan would
-    // miss them — always give them a fresh sync attempt.
+    // Server download state can change without a feed entry; always revisit outstanding pulls.
     final touched = {
       ...feedTouched,
       ...awaitingServerDownloads.where(keepRuleManga.contains),
     };
     final allSynced = await _syncAndReconcile(container, touched, current);
 
-    // Only a fully-processed pass may advance the watermark — a skipped manga
-    // must stay newer than it so the next pass retries. syncChapters is
-    // idempotent, so re-processing the rest is just cheap.
+    // Advance the watermark only after every manga succeeds so skipped work remains retryable.
     if (!current()) return;
     if (allSynced && scan.newestFetchedAt > watermark) {
       await prefs.setInt(
@@ -418,15 +374,11 @@ Future<void> _runRunKeepRuleCatchUp(ProviderContainer container) async {
       await container.read(downloadStarterProvider)();
     }
     await _pullAwaiting(container, current, skip: touched);
-    // If a drain event arrived while this pass was in flight, the listener
-    // deferred it instead of dropping it. Re-run the pull now so chapters that
-    // became serverIsDownloaded during the pass are not stranded until the next
-    // update cycle.
+    // Replay a drain deferred during this pass so newly available server copies are not stranded.
     if (current() && _drainMissedDuringPass) {
       _drainMissedDuringPass = false;
       await _pullAwaiting(container, current);
     }
-    // Freshest device-state snapshot for the background worker.
     if (!current()) return;
     await writeCatchupWorkSpec(container.read);
   } catch (e) {
@@ -436,11 +388,7 @@ Future<void> _runRunKeepRuleCatchUp(ProviderContainer container) async {
   }
 }
 
-/// Second hop: chapters the server had to download from the source first.
-/// Once its queue drains, re-run the chain for the manga that were waiting so
-/// the device copies get pulled. Single-flight with the catch-up pass; a drain
-/// event landing mid-pass sets [_drainMissedDuringPass] instead of being
-/// dropped, and is replayed at the pass's tail.
+/// Pulls server-fetch obligations after queue drain; mid-pass drain events replay at pass end.
 Future<void> pullAfterServerDownloads(ProviderContainer container) => container
     .read(offlineRuntimeStorageProvider.notifier)
     .track(() => _runPullAfterServerDownloads(container));
@@ -472,15 +420,13 @@ Future<void> _pullAwaiting(
   if (awaitingServerDownloads.isEmpty) return;
   if (!container.read(offlineServerAccessProvider)) return;
   var pulled = false;
-  // One obligation at a time, persisted after each: a crash mid-loop keeps
-  // the unprocessed rest, and a batch clear would lose them.
+  // Persist each consumed obligation separately so a crash preserves the unprocessed remainder.
   for (final mangaId in {...awaitingServerDownloads}) {
     if (!current() || !downloadPermissionAllowed(container.read)) return;
     if (skip.contains(mangaId)) continue;
     pulled = true;
     awaitingServerDownloads.remove(mangaId);
-    // The reconcile may re-add this manga (a NEW server enqueue) — that is a
-    // fresh obligation, not the one being consumed, so it must survive.
+    // Reconciliation may create a fresh obligation for the same manga; preserve it.
     final ok = await _syncAndReconcile(container, {mangaId}, current);
     if (!current()) return;
     if (!ok) awaitingServerDownloads.add(mangaId);
@@ -490,10 +436,7 @@ Future<void> _pullAwaiting(
   if (pulled) await container.read(downloadStarterProvider)();
 }
 
-/// Scans the feed for keep-rule manga touched since [watermark]. Boundary
-/// entries (same second as watermark) are re-included since a resync is
-/// idempotent but a missed chapter isn't; [sawWatermark] false means the
-/// scan hit its page budget first, so the tail is unknown, not empty.
+/// Re-includes watermark-second ties; sawWatermark false means the unscanned tail is unknown.
 @visibleForTesting
 Future<({Set<int> touched, int newestFetchedAt, bool sawWatermark})>
 touchedSinceWatermark({
@@ -504,15 +447,12 @@ touchedSinceWatermark({
 }) async {
   final touched = <int>{};
   var newest = watermark;
-  // First run has no watermark to reach: one page seeds it (the caller falls
-  // back to a full keep-rule pass), instead of paging a library's whole
-  // backlog as if it were new.
+  // First run seeds one page, then falls back to the full keep-rule pass.
   final pageBudget = watermark == 0 ? 1 : _maxCatchUpPages;
   for (var page = 0; page < pageBudget; page++) {
     final nodes = await fetchPage(page);
     if (nodes == null) break;
     if (nodes.isEmpty) {
-      // The feed genuinely ended — nothing older remains unseen.
       return (touched: touched, newestFetchedAt: newest, sawWatermark: true);
     }
     for (final node in nodes) {
@@ -529,20 +469,8 @@ touchedSinceWatermark({
   return (touched: touched, newestFetchedAt: newest, sawWatermark: false);
 }
 
-/// Fetch each manga's chapter list from the server, mirror it into drift, then
-/// reconcile. Called from the bulk keep-rule change path.
-///
-/// The server fetch is not optional even for a manga whose chapters are already
-/// mirrored: the reconciler routes purely on the stored `serverIsDownloaded`
-/// flag, and that mirror goes stale between syncs. A stale-true value routes a
-/// chapter straight to a device download that bypasses the server; a stale-false
-/// value re-enqueues a chapter the server already holds, which drains with no
-/// edge and never pulls to the device. Re-syncing first (syncChapters writes the
-/// server's current isDownloaded) is what keeps both hops correct.
-///
-/// Mirrors [_syncAndReconcile] but also kicks the download starter so the
-/// freshly-queued chapters begin transferring without waiting for the next
-/// library update.
+/// Fetches fresh server state before reconciling; stale isDownloaded flags can misroute either hop.
+/// Starts queued downloads immediately after reconciliation.
 Future<void> syncAndReconcileMangaSet(
   ProviderContainer container,
   Set<int> mangaIds, {
@@ -565,9 +493,7 @@ Future<void> syncAndReconcileMangaSet(
   await container.read(downloadStarterProvider)(userInitiated: userInitiated);
 }
 
-/// The manga-details chain, minus the screen: stored chapters from the server,
-/// mirrored into drift, then reconciled. Sequential on purpose — an update can
-/// touch much of a library, and this runs behind the UI.
+// Process manga sequentially to keep a large catch-up behind the UI.
 Future<bool> _syncAndReconcile(
   ProviderContainer container,
   Set<int> mangaIds,
@@ -597,8 +523,7 @@ Future<bool> _syncAndReconcile(
         allSynced = false;
       }
     } catch (e) {
-      // Never reconcile on a failed fetch — evictions must not run against a
-      // list the server didn't actually give us.
+      // Never evict against a chapter list whose fetch failed.
       allSynced = false;
       logger.w('Offline: catch-up skipped manga $mangaId: $e');
     }
@@ -606,10 +531,7 @@ Future<bool> _syncAndReconcile(
   return allSynced;
 }
 
-/// Like [reconcileMangaContainer], but also records server-download enqueues
-/// so the queue-drain trigger knows which manga still owe a device pull.
-/// Returns false on a failed enqueue (reconcileMangaCore swallows the error)
-/// so the pass won't advance the watermark past an unqueued chapter.
+/// Tracks server-fetch obligations; false on failed enqueue prevents watermark advancement.
 Future<bool> _reconcileTracked(
   ProviderContainer container,
   int mangaId,
@@ -650,8 +572,7 @@ Future<bool> _reconcileTracked(
             await container
                 .read(downloadsRepositoryProvider)
                 .addChaptersBatchToDownloadQueue(ids);
-            // Recorded only on success: a failed enqueue produces no queue
-            // activity, so no drain edge would ever retry the waiting entry.
+            // Failed enqueues create no drain edge to retry an obligation.
             if (!current()) throw StateError('Authentication session changed');
             awaitingServerDownloads.add(mangaId);
           } catch (_) {

@@ -14,8 +14,7 @@ import 'graphql/__generated__/query.graphql.dart';
 
 part 'tracker_repository.g.dart';
 
-/// Per-client cache of the bindTrackRecord capability check, keyed by the
-/// GraphQLClient so it's computed once per session and re-checked after a server switch.
+/// Per-client capability cache; switching servers must trigger a fresh check.
 final Expando<Future<bool>> _capabilityCache =
     Expando<Future<bool>>('bindTrackRecordSupport');
 
@@ -100,8 +99,6 @@ class TrackerRepository {
           ),
         )
         .getData((d) => d);
-    // A null payload (no exception, but nothing bound) must surface as an error
-    // so callers don't treat an unbound record as success.
     final record = data?.bindTrack.trackRecord;
     if (record == null) {
       throw Exception('Tracking bind returned no data');
@@ -109,8 +106,7 @@ class TrackerRepository {
     return record;
   }
 
-  /// Copies an existing track record onto [mangaId] in the server DB, making no
-  /// external tracker call. Only valid when [supportsBindTrackRecord] is true.
+  /// Copies a record in the server DB without an external call; requires supportsBindTrackRecord.
   Future<Fragment$TrackRecordDto> bindRecord({
     required int mangaId,
     required int trackRecordId,
@@ -132,9 +128,7 @@ class TrackerRepository {
     return record;
   }
 
-  /// Whether the connected server exposes `bindTrackRecord`. Detected by schema
-  /// introspection and cached per client (via [_capabilityCache]) so a bulk run
-  /// introspects once, not once per pair. Fails closed to `false`.
+  /// Introspects once per client; fails closed to false.
   Future<bool> supportsBindTrackRecord() =>
       _capabilityCache[client] ??= _introspectBindTrackRecord();
 
@@ -158,13 +152,8 @@ class TrackerRepository {
     }
   }
 
-  /// Carries [record] onto [toMangaId], avoiding an external tracker call when
-  /// possible.
-  ///
-  /// - [useBindTrackRecord] true: pure local DB copy of the whole record.
-  /// - false (older server): `bindTrack` carries only tracker+remote id, so the
-  ///   rest is copied via a follow-up `update` and verified — throws on
-  ///   mismatch so the caller keeps the source rather than losing progress.
+  /// Copies locally when supported; older servers bind, update and verify all progress fields.
+  /// Throws on mismatch so the caller can retain the source record.
   Future<Fragment$TrackRecordDto> copyRecord({
     required int toMangaId,
     required Fragment$TrackRecordDto record,
@@ -190,8 +179,7 @@ class TrackerRepository {
       private: record.private,
     );
 
-    // Verify the copy carried the load-bearing fields; the caller keeps the
-    // source on mismatch.
+    // A mismatch must fail so the caller retains the source and its progress.
     final refreshed = (await getMangaTrackRecords(toMangaId))
         ?.where((r) => r.trackerId == record.trackerId)
         .firstOrNull;
@@ -286,10 +274,6 @@ Future<List<Fragment$TrackerDto>> trackers(Ref ref) async {
   return await repo.getTrackers() ?? [];
 }
 
-/// The subset of [trackers] where [Fragment$TrackerDto.isLoggedIn] is true.
-///
-/// UI surfaces gated on this: tracker-score sort, per-tracker filter,
-/// by-track-status group. When the list is empty those surfaces stay hidden.
 @riverpod
 Future<List<Fragment$TrackerDto>> loggedInTrackers(Ref ref) async {
   final all = await ref.watch(trackersProvider.future);

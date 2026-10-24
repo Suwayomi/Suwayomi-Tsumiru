@@ -8,7 +8,6 @@ import '../utils/extensions/custom_extensions.dart';
 import 'db_keys.dart';
 
 abstract class Endpoints {
-  // base url
   static String baseApi({
     String? baseUrl,
     int? port,
@@ -33,10 +32,8 @@ abstract class Endpoints {
     return url.toString();
   }
 
-  // receiveTimeout
   static const Duration receiveTimeout = Duration(minutes: 1);
 
-  // connectTimeout
   static const Duration connectionTimeout = Duration(minutes: 1);
 }
 

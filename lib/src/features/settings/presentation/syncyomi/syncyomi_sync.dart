@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/popup_widgets/confirm_action.dart';
+import 'data/graphql/__generated__/query.graphql.dart';
 import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
 
-/// Wording for the step a running sync has reached.
 String syncYomiStepName(BuildContext context, SyncYomiStep step) {
   final l10n = context.l10n;
   return switch (step) {
@@ -40,12 +42,7 @@ class SyncYomiSync {
   final Future<void> Function() start;
 }
 
-/// Starts a sync and watches it, shared by the settings screen's Sync now row
-/// and the Library and Updates top bars.
-///
-/// [onSynced] runs once when a sync this app started or watched run reaches
-/// SUCCESS, so callers can re-read what the sync changed. An old SUCCESS the
-/// server was already reporting when the widget mounted does not qualify.
+/// [onSynced] runs once when a started or observed sync reaches SUCCESS, excluding pre-mount results.
 SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final context = useContext();
   final l10n = context.l10n;
@@ -67,10 +64,31 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final finished = terminal && startDate != requestedFrom.value;
   final pending = requested.value && !finished;
   final poll = pending || view.kind == SyncYomiStatusKind.syncing;
+  final socketLive = useState(false);
 
-  // Back off after ten minutes instead of giving up; a long sync is still live.
   useEffect(() {
-    if (!poll) return null;
+    if (!poll) {
+      socketLive.value = false;
+      return null;
+    }
+    StreamSubscription<void>? sub;
+    try {
+      sub = ref
+          .read(graphQlSubscriptionClientProvider)
+          .subscribe$SyncStatusChanged(Options$Subscription$SyncStatusChanged())
+          .getData((data) => data.syncStatusChanged)
+          .listen((_) {
+            socketLive.value = true;
+            ref.invalidate(lastSyncStatusProvider);
+          }, onError: (_) => socketLive.value = false);
+    } catch (_) {
+      socketLive.value = false;
+    }
+    return () => sub?.cancel();
+  }, [poll]);
+
+  useEffect(() {
+    if (!poll || socketLive.value) return null;
     final deadline = DateTime.now().add(const Duration(minutes: 10));
     Timer? timer;
     void schedule() {
@@ -90,7 +108,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
 
     schedule();
     return () => timer?.cancel();
-  }, [poll]);
+  }, [poll, socketLive.value]);
 
   useEffect(() {
     if (requested.value && finished) {
@@ -111,6 +129,15 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   }, [terminal, view.kind, startDate]);
 
   Future<void> start() async {
+    if (!await confirmAction(
+          context,
+          title: l10n.syncYomiSyncNow,
+          message: l10n.confirmSyncYomiMessage,
+          action: l10n.syncYomiSyncNow,
+        ) ||
+        !context.mounted) {
+      return;
+    }
     final result = await AppUtils.guard(
       repository.startSync,
       ref.read(toastProvider),
@@ -142,7 +169,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   );
 }
 
-/// Top-bar sync action. Draws nothing unless SyncYomi is on and configured.
+/// Hidden unless SyncYomi is enabled and configured.
 class SyncYomiSyncButton extends ConsumerWidget {
   const SyncYomiSyncButton({super.key, this.onSynced});
 

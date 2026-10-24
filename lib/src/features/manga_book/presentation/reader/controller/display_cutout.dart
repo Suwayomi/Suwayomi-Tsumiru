@@ -7,10 +7,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Toggles the Android window's display-cutout layout mode — SHORT_EDGES draws
-/// reader content into the notch/punch-hole area, DEFAULT keeps it clear.
-/// Flutter's SystemChrome can't set this attribute, so it goes through a native
-/// MethodChannel (see MainActivity.kt). No-op on non-Android / older OS.
+/// Android cutout layout requires a native channel; SystemChrome cannot set it.
 const MethodChannel _channel = MethodChannel('tsumiru/display_cutout');
 
 Future<void> setDrawUnderCutout(bool enable) async {

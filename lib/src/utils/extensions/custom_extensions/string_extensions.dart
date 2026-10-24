@@ -61,14 +61,12 @@ extension StringExtensions on String? {
     return "0" * noOfZeros + newVal.toString();
   }
 
-  /// Checks if this is phone number.
   bool get isPhoneNumber {
     if (isNull) return false;
     if (this!.length != 10) return false;
     return hasMatch(r'^[0-9]{10}$');
   }
 
-  /// Checks if this is email.
   bool get isEmail {
     if (isNull) return false;
     return this!.hasMatch(
@@ -113,9 +111,7 @@ extension StringExtensions on String? {
 
   String? get toWebSocket {
     if (isBlank) return null;
-    // Anchor to the START so only the scheme is rewritten (http→ws,
-    // https→wss). An un-anchored 'http' would also rewrite a path segment
-    // that happens to contain "http" (e.g. a base path like /proxy/http).
+    // Anchor the scheme replacement so paths containing http remain intact.
     return this!.replaceFirst(RegExp('^http', caseSensitive: false), 'ws');
   }
 
@@ -135,22 +131,19 @@ extension StringExtensions on String? {
     ).toDateString;
   }
 
-  /// Parse timestamp string to DateTime, handling both milliseconds and seconds formats
-  /// Returns null if the string is blank, unparseable, or results in an invalid date
+  /// Accept epoch milliseconds or seconds; return null for blank, invalid, or unparseable input.
   DateTime? get parseTimestamp {
     if (isBlank) return null;
     final milliseconds = int.tryParse(this!);
     if (milliseconds == null || milliseconds <= 0) return null;
 
-    // Try parsing as milliseconds first, then as seconds if the result is too old
     var dateTime = DateTime.fromMillisecondsSinceEpoch(milliseconds);
 
-    // If the parsed date is before 1990, it's likely in seconds format
+    // Dates before 1990 indicate seconds rather than milliseconds.
     if (dateTime.year < 1990) {
       dateTime = DateTime.fromMillisecondsSinceEpoch(milliseconds * 1000);
     }
 
-    // If still before 1990, something is wrong with the data
     if (dateTime.year < 1990) {
       return null;
     }

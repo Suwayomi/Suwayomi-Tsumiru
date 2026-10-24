@@ -12,7 +12,6 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_filter_prefs.g.dart';
 
-// Global Custom-filter tab prefs.
 
 @riverpod
 class CustomBrightness extends _$CustomBrightness
@@ -21,8 +20,7 @@ class CustomBrightness extends _$CustomBrightness
   bool? build() => initialize(DBKeys.customBrightness);
 }
 
-/// -75..100. Negatives render the black dim overlay; positives are inert
-/// (sets the Android window brightness attr — no plugin here).
+/// -75..100; negatives dim the page, positives are inert without a brightness plugin.
 @riverpod
 class CustomBrightnessValue extends _$CustomBrightnessValue
     with SharedPreferenceClientMixin<int> {

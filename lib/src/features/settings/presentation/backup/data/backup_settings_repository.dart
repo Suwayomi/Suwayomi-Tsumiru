@@ -28,17 +28,34 @@ class BackupSettingsRepository {
 
   final GraphQLClient ferryClient;
 
-  Future<String?> restoreBackup(MultipartFile file, BackupFlags flags) =>
-      ferryClient
+  Future<String?> restoreBackup(MultipartFile file, BackupFlags flags) async {
+    final supported = await userSettingsFlag() != null;
+    return ferryClient
           .mutate$RestoreBackup(
             Options$Mutation$RestoreBackup(
               variables: Variables$Mutation$RestoreBackup(
                 backup: file,
-                flags: flags.toPartialInput(),
+              flags: flags.toPartialInput(supportsUserSettings: supported),
               ),
             ),
           )
           .getData((data) => data.restoreBackup.id);
+  }
+
+  Future<bool?> userSettingsFlag() async {
+    try {
+      return await ferryClient
+          .query$BackupUserSettingsCapability(
+            Options$Query$BackupUserSettingsCapability(
+              fetchPolicy: FetchPolicy.noCache,
+            ),
+          )
+          .getData((data) => data.settings.autoBackupIncludeUserSettings);
+    } on OperationMessageException catch (error) {
+      if (onlyUndefinedFieldErrors(error, type: 'SettingsType')) return null;
+      rethrow;
+    }
+  }
 
   Future<Fragment$AutoBackupFlagsDto?> autoBackupFlags() async {
     try {
@@ -55,18 +72,18 @@ class BackupSettingsRepository {
 
   Future<Fragment$AutoBackupFlagsDto?> updateAutoBackupFlags(
     BackupFlags flags,
-  ) => permissions.run(
-    Enum$UserPermission.MANAGE_SETTINGS,
-    () => ferryClient
+  ) => permissions.run(Enum$UserPermission.MANAGE_SETTINGS, () async {
+    final supported = await userSettingsFlag() != null;
+    return ferryClient
         .mutate$UpdateAutoBackupFlags(
           Options$Mutation$UpdateAutoBackupFlags(
             variables: Variables$Mutation$UpdateAutoBackupFlags(
-              settings: flags.toAutoInput(),
+              settings: flags.toAutoInput(supportsUserSettings: supported),
             ),
           ),
         )
-        .getData((data) => data.setSettings.settings),
-  );
+        .getData((data) => data.setSettings.settings);
+  });
 
   Future<Set<String>?> validateBackup(MultipartFile file) => ferryClient
       .query$ValidateBackup(
@@ -88,15 +105,18 @@ class BackupSettingsRepository {
       )
       .getData((data) => data.restoreStatus);
 
-  Future<String?> createBackup(BackupFlags flags) => ferryClient
+  Future<String?> createBackup(BackupFlags flags) async {
+    final supported = await userSettingsFlag() != null;
+    return ferryClient
       .mutate$CreateBackup(
         Options$Mutation$CreateBackup(
           variables: Variables$Mutation$CreateBackup(
-            flags: flags.toPartialInput(),
+              flags: flags.toPartialInput(supportsUserSettings: supported),
           ),
         ),
       )
       .getData((data) => data.createBackup.url);
+  }
 
   Future<SettingsDto?> updateBackupLocation(String? backupPath) =>
       permissions.run(
@@ -163,3 +183,7 @@ final autoBackupFlagsProvider =
     FutureProvider.autoDispose<Fragment$AutoBackupFlagsDto?>(
       (ref) => ref.watch(backupSettingsRepositoryProvider).autoBackupFlags(),
     );
+
+final backupUserSettingsProvider = FutureProvider.autoDispose<bool?>(
+  (ref) => ref.watch(backupSettingsRepositoryProvider).userSettingsFlag(),
+);

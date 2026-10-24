@@ -1,8 +1,4 @@
-// lib/src/features/manga_book/domain/chapter/chapter_download_presets.dart
 
-/// Lightweight value type the bulk-download menu's pure helper consumes.
-/// Decoupled from `ChapterDto` so the helper is testable without GraphQL
-/// codegen fixtures.
 class ChapterDownloadCandidate {
   final int id;
   final double chapterNumber;
@@ -17,8 +13,7 @@ class ChapterDownloadCandidate {
   });
 }
 
-/// The six presets exposed by the manga-details bulk-download menu.
-/// Order matches the menu display order.
+/// Order matches the bulk-download menu.
 enum DownloadPreset {
   nextChapter,
   next5,
@@ -28,13 +23,7 @@ enum DownloadPreset {
   all,
 }
 
-/// Compute the list of chapter IDs to enqueue for a given preset.
-///
-/// Always operates on chapters sorted by `chapterNumber` ascending, regardless
-/// of any UI display sort. "Next" semantics walk forward from the chapter
-/// immediately after the highest-numbered chapter where `isRead == true`,
-/// skipping any chapter that is already downloaded, until N IDs are collected
-/// or the list is exhausted. "Unread" / "All" use simple filters.
+/// "Next" walks forward from the highest read chapter, skipping downloads, regardless of display sort.
 List<int> chaptersToQueueForPreset(
   List<ChapterDownloadCandidate> chapters,
   DownloadPreset preset,

@@ -17,13 +17,9 @@ import '../offline_types.dart';
 import 'background_schedule.dart';
 import 'catchup_work_spec.dart';
 
-/// Provider-read indirection so the writer runs off the root container or a
-/// WidgetRef alike.
 typedef CatchupRead = T Function<T>(ProviderListenable<T> provider);
 
-/// Snapshot the background download step's world from drift + settings.
-/// Called after catch-up/reconcile passes, on keep-rule changes, and on app
-/// pause — the worker reads the newest snapshot it can get, never drift.
+/// Snapshots drift and settings for workers, which must never open drift.
 Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
     withBackgroundScheduleLock(
       () async {
@@ -74,7 +70,6 @@ Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
                 for (final c in chapters)
                   if (c.pinned) c.id,
               },
-              // Only the deleted-at-least-once chapters; everything else is 0.
               serverFetchAttempts: {
                 for (final c in chapters)
                   if (c.serverFetchAttempts != 0) c.id: c.serverFetchAttempts,

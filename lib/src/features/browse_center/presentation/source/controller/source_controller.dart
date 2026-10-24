@@ -21,11 +21,7 @@ part 'source_controller.g.dart';
 Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
 
-/// The source list with NSFW sources removed when "Show NSFW" is off. Every
-/// displayed source list derives from this (the grouped/filtered map, the
-/// pinned section, global search, migration), so the toggle hides NSFW sources
-/// everywhere — matching how the extensions list already behaves. Defaults to
-/// showing NSFW (no filtering) when the setting is unset.
+/// Applies the NSFW source filter; an unset setting allows NSFW.
 @riverpod
 AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
   final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
@@ -36,11 +32,7 @@ AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
       );
 }
 
-/// [visibleSourceList] with user-hidden sources removed. Every browse-facing
-/// list (grouped map, pinned section, global search, migration) derives from
-/// this, so hiding a source drops it everywhere. The Sources filter screen
-/// deliberately reads [visibleSourceList] instead, so hidden sources stay
-/// visible there to be un-hidden.
+/// Excludes hidden sources; the filter screen uses [visibleSourceList] so they can be unhidden.
 @riverpod
 AsyncValue<List<SourceDto>?> browsableSourceList(Ref ref) =>
     ref.watch(visibleSourceListProvider).copyWithData(
@@ -50,15 +42,10 @@ AsyncValue<List<SourceDto>?> browsableSourceList(Ref ref) =>
 int _byName(SourceDto a, SourceDto b) =>
     a.name.toLowerCase().compareTo(b.name.toLowerCase());
 
-/// Pure: pinned sources sorted alphabetically. Pin state lives in server meta
-/// (`webUI_isPinned`), so it syncs with WebUI. Exposed for testing.
 List<SourceDto> pinnedSourcesFrom(List<SourceDto> sources) =>
     [...sources.where((e) => e.isPinned)]..sort(_byName);
 
-/// Pure: group NON-pinned sources by language code (pinned live in their own
-/// top section, so they're excluded here to avoid showing twice), with the
-/// last-used source lifted into a "lastUsed" bucket. Every group is sorted
-/// alphabetically by name. Exposed for testing.
+/// Groups non-pinned sources by language, with a separate last-used bucket; sorts each by name.
 Map<String, List<SourceDto>> groupSourcesByLanguage(
   List<SourceDto> sources,
   String? lastUsedId,
@@ -80,8 +67,7 @@ Map<String, List<SourceDto>> groupSourcesByLanguage(
   return sourceMap;
 }
 
-/// Pinned sources, surfaced as their own top section regardless of the active
-/// language filter.
+/// Pinned sources ignore the active language filter.
 @riverpod
 List<SourceDto> pinnedSources(Ref ref) => pinnedSourcesFrom(
     ref.watch(browsableSourceListProvider).value ?? const []);
@@ -95,9 +81,7 @@ AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
   );
 }
 
-/// Pure: group EVERY source by language code (pinned and hidden included, no
-/// last-used bucket), alphabetically by name. Backs the Sources filter screen
-/// where each source is toggled hidden/shown. Exposed for testing.
+/// Includes hidden and pinned sources, grouped by language and sorted by visibility then name.
 Map<String, List<SourceDto>> groupAllSourcesByLanguage(
   List<SourceDto> sources,
 ) {
@@ -109,7 +93,6 @@ Map<String, List<SourceDto>> groupAllSourcesByLanguage(
       ifAbsent: () => [e],
     );
   }
-  // Komikku within-language order: shown sources before hidden, then by name.
   for (final list in sourceMap.values) {
     list.sort((a, b) => a.isHidden == b.isHidden
         ? _byName(a, b)
@@ -118,8 +101,7 @@ Map<String, List<SourceDto>> groupAllSourcesByLanguage(
   return sourceMap;
 }
 
-/// All sources grouped by language for the Sources filter screen. Reads the
-/// pre-hide [visibleSourceList] so hidden sources remain listed (to un-hide).
+/// Includes hidden sources so the filter screen can unhide them.
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> allSourcesByLanguage(Ref ref) {
   final sourceListData = ref.watch(visibleSourceListProvider);
@@ -166,10 +148,7 @@ AsyncValue<Map<String, List<SourceDto>>?> sourceMapFiltered(Ref ref) {
   return sourceMapData.copyWithData((e) => sourceMapFiltered);
 }
 
-/// Every source to search across, **pinned first** — for global search,
-/// migration, and any other "search all sources" consumer. Pinned sources are
-/// excluded from the grouped/filtered map (they get their own top section on the
-/// Sources screen), so without prepending them here they'd be silently skipped.
+/// Includes pinned sources first; they are absent from the grouped source map.
 @riverpod
 AsyncValue<List<SourceDto>> searchableSources(Ref ref) {
   final mapData = ref.watch(sourceMapFilteredProvider);
@@ -197,9 +176,6 @@ List<SourceDto>? sourceQuery(Ref ref, {String? query}) {
   return sourceMap.values.expand((list) => list).toList();
 }
 
-/// The Sources-tab name filter. Mirrors [ExtensionQuery]: filters the grouped
-/// source map by name while preserving the language grouping, so typing in the
-/// Sources tab narrows the list instead of launching a global search.
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>?> sourceMapFilteredAndQueried(Ref ref) {
   final sourceMapData = ref.watch(sourceMapFilteredProvider);

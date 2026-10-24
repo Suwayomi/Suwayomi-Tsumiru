@@ -26,9 +26,7 @@ class LibraryMangaSortTile extends ConsumerWidget {
     final isSelected = sortType == sortedBy;
     final primary = context.theme.colorScheme.primary;
 
-    // Random sort: when already selected, tapping re-rolls (increments seed)
-    // rather than toggling direction — the comparator ignores direction by
-    // design. Shows a shuffle glyph while selected.
+    // Selecting Random again re-rolls; its comparator ignores sort direction.
     if (sortType == MangaSort.random) {
       final seed = ref.watch(librarySortRandomSeedProvider) ??
           DBKeys.librarySortRandomSeed.initial as int;
@@ -46,9 +44,6 @@ class LibraryMangaSortTile extends ConsumerWidget {
       );
     }
 
-    // Non-random: tapping an unselected key selects it; tapping the selected
-    // key toggles ascending/descending. The leading arrow shows the direction
-    // only for the active key.
     return _CompactSortRow(
       label: sortType.toLocale(context),
       leading: isSelected
@@ -72,8 +67,6 @@ class LibraryMangaSortTile extends ConsumerWidget {
   }
 }
 
-/// Compact sort row: 24dp/10dp padding, a 24dp
-/// leading slot (direction arrow or empty), then the label.
 class _CompactSortRow extends StatelessWidget {
   const _CompactSortRow({
     required this.label,

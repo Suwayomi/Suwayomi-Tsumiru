@@ -22,26 +22,17 @@ import 'library_filter_content.dart';
 import 'library_filter_segments.dart';
 import 'library_manga_badges.dart';
 
-/// Anchors a dropdown menu to [rect], which must already be in the coordinates
-/// of the [Overlay] above [context] (see [_openPanel]: the desktop Library
-/// lives in a branch [Navigator] whose overlay covers only the content area,
-/// window minus the sidebar, so window-global coordinates would shift the
-/// panel right by the sidebar width). Same mechanism the series page uses for
-/// its chapter filter (`big_screen_manga_details.dart`): the menu's top edge
-/// sits 6 px below the button, no scrim, Esc closes only the panel.
+/// [rect] must use the nearest Overlay's coordinates; a branch Navigator excludes the sidebar.
 RelativeRect menuAnchorForRect(BuildContext context, Rect rect) {
   final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
   return RelativeRect.fromRect(rect, Offset.zero & overlay.size);
 }
 
-/// Positions [child] (a fixed-size panel) from an anchor rect the same way
-/// the series page positions its filter menu: the panel's top edge sits 6 px
-/// below the button and its right edge aligns with the button's right edge,
-/// clamped into the overlay with an 8 px margin.
+/// Aligns below the anchor's right edge, clamped to an 8 px overlay margin.
 class _LibraryPanelLayout extends SingleChildLayoutDelegate {
   _LibraryPanelLayout(this.anchor);
 
-  /// Button rect in overlay coordinates (zero size: only its edges matter).
+  /// Button rect in overlay coordinates; only its edges matter.
   final Rect anchor;
 
   @override
@@ -50,7 +41,6 @@ class _LibraryPanelLayout extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // Mirror the menu rule: grow toward the side with more room.
     final fromRight = size.width - (anchor.left + anchor.width);
     var x = anchor.left > fromRight
         ? anchor.left + anchor.width - childSize.width
@@ -72,10 +62,7 @@ class _LibraryPanelLayout extends SingleChildLayoutDelegate {
       anchor != oldDelegate.anchor;
 }
 
-/// Anchored dropdown route: the same presentation the series page gets from
-/// `showMenu` (anchored under the button, rounded 14, no scrim, focus
-/// returns to the button on close, Esc closes only the panel) without
-/// `showMenu`'s 280 px menu width cap, which cannot host a 720 px panel.
+/// Anchored menu route without showMenu's 280 px width cap.
 class _LibraryPanelRoute extends PopupRoute<void> {
   _LibraryPanelRoute({
     required this.position,
@@ -90,8 +77,7 @@ class _LibraryPanelRoute extends PopupRoute<void> {
   final RelativeRect position;
   final double panelWidth;
 
-  /// Fixed height, or null to size to the content, capped at the overlay
-  /// height minus 140 (the body scrolls only beyond that cap).
+  /// Null sizes to content, capped at overlay height minus 140; overflow scrolls.
   final double? panelHeight;
   final Widget panel;
   final CapturedThemes capturedThemes;
@@ -125,17 +111,11 @@ class _LibraryPanelRoute extends PopupRoute<void> {
       removeRight: true,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Same anchor math as the series page filter: right edge under
-          // the button's right edge, 6 px below it.
           final overlay = Offset.zero & constraints.biggest;
           final anchor = position.toRect(overlay);
           final fixedHeight = panelHeight;
           final Widget sheet = Builder(
             builder: (context) {
-              // Series-page menu look (big_screen_manga_details.dart
-              // openFilterPanel via showMenu with a radius-14 shape):
-              // surfaceContainer fill, 1 px outlineVariant border,
-              // radius 14, and the M3 menu elevation-3 shadow.
               final scheme = context.theme.colorScheme;
               return Material(
                 color: scheme.surfaceContainer,
@@ -226,10 +206,7 @@ Future<void> _openPanel({
 }) async {
   final box = buttonKey.currentContext?.findRenderObject() as RenderBox?;
   if (box == null) return;
-  // Overlay-relative, not window-global: the branch Navigator's overlay
-  // covers only the content area, so a global rect interpreted against the
-  // smaller overlay lands a sidebar-width too far right and the clamp then
-  // pins the panel to the window's right edge minus the margin.
+  // Use overlay-relative coordinates because the branch Navigator excludes the sidebar.
   final overlayBox =
       Overlay.of(context).context.findRenderObject()! as RenderBox;
   final topLeft = box.localToGlobal(Offset.zero, ancestor: overlayBox);
@@ -241,12 +218,7 @@ Future<void> _openPanel({
   final navigator = Navigator.of(context);
   await navigator.push(
     _LibraryPanelRoute(
-      // Zero-size anchor on the button's bottom-right corner: the layout
-      // delegate right-aligns the panel to anchor.left, so the panel's
-      // right edge lands under the button's right edge. (Subtracting the
-      // panel width here would apply the offset twice — once here and once
-      // in _LibraryPanelLayout — and push the panel a full width too far
-      // left.)
+      // Anchor at the button's bottom-right; the layout delegate already applies panel width.
       position: menuAnchorForRect(
         context,
         Rect.fromLTWH(rect.right, rect.bottom + 6, 0, 0),
@@ -265,8 +237,7 @@ Future<void> _openPanel({
   if (context.mounted) focusNode.requestFocus();
 }
 
-/// Opens the desktop Filter panel anchored under the toolbar's Filter
-/// button: 720 px, two columns, changes apply live.
+/// Opens a 720 px two-column panel; changes apply live.
 Future<void> showLibraryFilterPanel({
   required BuildContext context,
   required GlobalKey buttonKey,
@@ -280,10 +251,7 @@ Future<void> showLibraryFilterPanel({
   child: const DesktopLibraryFilterPanel(),
 );
 
-/// Opens the desktop Display panel anchored under the toolbar's Display
-/// button: 820 px so labels like "Continue reading button" fit on one line,
-/// three columns, changes apply live. The height sizes to the content, capped
-/// at the window height minus 140; the body scrolls only beyond that cap.
+/// Opens an 820 px three-column panel; changes apply live and height is capped to the viewport.
 Future<void> showLibraryDisplayPanel({
   required BuildContext context,
   required GlobalKey buttonKey,
@@ -296,10 +264,6 @@ Future<void> showLibraryDisplayPanel({
   child: const DesktopLibraryDisplayPanel(),
 );
 
-/// Desktop Filter panel body: header row plus the shared filter content in
-/// two columns. The tag list fills the leftover right-column height and
-/// scrolls inside itself; with many trackers it shrinks to ~3 rows first,
-/// and only then does the right column scroll as one.
 class DesktopLibraryFilterPanel extends StatelessWidget {
   const DesktopLibraryFilterPanel({super.key});
 
@@ -312,11 +276,7 @@ class DesktopLibraryFilterPanel extends StatelessWidget {
   }
 }
 
-/// Desktop Display panel body: three columns of radio lists and checkboxes,
-/// no segmented switches. Columns size to content with no per-column
-/// scrolling; the whole body scrolls as one only when the content exceeds the
-/// route's window-height-minus-140 cap. [Flexible] (loose) lets a short body
-/// size to its content while still bounding a tall one so it can scroll.
+// Flexible bounds tall content for scrolling while allowing short panels to size to content.
 class DesktopLibraryDisplayPanel extends StatelessWidget {
   const DesktopLibraryDisplayPanel({super.key});
 
@@ -361,8 +321,6 @@ class DesktopLibraryDisplayPanel extends StatelessWidget {
   }
 }
 
-/// Unified radio row used by every radio list in both desktop panels: 36 px
-/// tall, 14 px label, same zero left indent as the checkbox rows below.
 class _PanelRadioRow<T> extends StatelessWidget {
   const _PanelRadioRow({
     required this.value,
@@ -408,9 +366,6 @@ class _PanelRadioRow<T> extends StatelessWidget {
   }
 }
 
-/// Unified checkbox row used by every checkbox list in both desktop panels:
-/// 36 px tall, 20 px icon, 14 px label, same zero left indent as the radio
-/// rows above (not the old tile paddings).
 class _PanelCheckRow extends ConsumerWidget {
   const _PanelCheckRow({
     required this.title,
@@ -458,8 +413,6 @@ class _PanelCheckRow extends ConsumerWidget {
   }
 }
 
-/// Col 1: Display Mode radios, Grid style radios, then the cover
-/// checkboxes.
 class _DisplayColumn extends ConsumerWidget {
   const _DisplayColumn();
 
@@ -531,7 +484,6 @@ class _DisplayColumn extends ConsumerWidget {
   }
 }
 
-/// Col 2: Badges (unread mode radios, badge checkboxes, badge layout).
 class _BadgesColumn extends ConsumerWidget {
   const _BadgesColumn();
 
@@ -601,9 +553,6 @@ class _BadgesColumn extends ConsumerWidget {
   }
 }
 
-/// Col 3: Group radios, Group display radios, then every leftover setting
-/// from today's tabs: columns per orientation, list size, category tabs,
-/// item counts and hidden categories.
 class _GroupColumn extends ConsumerWidget {
   const _GroupColumn();
 

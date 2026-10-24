@@ -5,6 +5,8 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/webui_meta/webui_meta_codec.dart';
+import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
@@ -24,14 +26,7 @@ import 'data/delete_chapters_settings_repository.dart';
 import 'data/downloads_settings_repository.dart';
 import 'widgets/auto_download_categories_dialog.dart';
 
-/// Downloads settings, split into two tabs:
-///   * Server — what the Suwayomi server downloads from sources.
-///   * On-device — copies kept on this phone (Wi-Fi-only, storage, deletion).
-///
-/// [initialTab] selects the tab the page opens on (0 Server, 1 On device).
-/// Search entries carry it as `tabIndex` and the route as the `tab` query
-/// value, so opening a result lands on the tab its row lives on before the
-/// highlight seeks. Out-of-range values fall back to Server.
+/// [initialTab]: 0 for Server, 1 for On device; out-of-range values select Server.
 class DownloadsSettingsScreen extends StatelessWidget {
   const DownloadsSettingsScreen({super.key, this.initialTab = 0});
 
@@ -39,8 +34,6 @@ class DownloadsSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar; the tabs stay in the page body.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.downloads);
     final tabBar = TabBar(
@@ -98,13 +91,22 @@ class DownloadsSettingsScreen extends StatelessWidget {
   }
 }
 
-/// Server-side downloads: where/how the server stores chapters, auto-download,
-/// and the server copy's delete rules.
 class _ServerDownloadsTab extends ConsumerWidget {
   const _ServerDownloadsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final downloadAheadLimit = ref.watch(downloadAheadLimitProvider);
+    final canWriteMeta = ref.watch(webUiSettingsProvider).hasValue;
+    Future<void> writeAhead(int limit) async {
+      await AppUtils.guard(
+        () => ref
+            .read(webUiSettingsProvider.notifier)
+            .write('downloadAheadLimit', encodeWebUiInt(limit)),
+        ref.read(toastProvider),
+      );
+    }
+
     final repository = ref.watch(downloadsSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final personalSettings = ref.watch(personalSettingsProvider);
@@ -136,8 +138,7 @@ class _ServerDownloadsTab extends ConsumerWidget {
             title: context.l10n.noPropFound(context.l10n.settings),
           );
         }
-        // Permission/personal gates only disable these rows (onChanged null);
-        // they stay mounted, so every Server entry is always visible.
+        // Permission and personal-setting gates disable rows without unmounting them.
         return SettingsHighlightScope(
           child: Center(
             child: ConstrainedBox(
@@ -189,10 +190,6 @@ class _ServerDownloadsTab extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // Image download processing lives on Server › Images
-                  // only now; the same editor used to be linked from here too.
-                  // Server downloads (shared with the web interface).
-                  // Default off.
                   ...deleteChaptersSection(
                     context,
                     title: context.l10n.deleteServerDownloads,
@@ -200,8 +197,10 @@ class _ServerDownloadsTab extends ConsumerWidget {
                     settings: serverDelete,
                     onManual:
                         serverDeleteController.setDeleteManuallyMarkedRead,
-                    onWhileReading:
-                        serverDeleteController.setDeleteWhileReading,
+                    onWhileReading: (value) => AppUtils.guard(
+                      () => serverDeleteController.setDeleteWhileReading(value),
+                      ref.read(toastProvider),
+                    ),
                     onBookmark: serverDeleteController.setDeleteWithBookmark,
                     targetIdPrefix: 'server',
                   ),
@@ -238,7 +237,6 @@ class _ServerDownloadsTab extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      // Greyed while auto-download is off, never unmounted.
                       SettingsHighlightTarget(
                         id: 'autoDownloadCategories',
                         child: ListTile(
@@ -314,6 +312,41 @@ class _ServerDownloadsTab extends ConsumerWidget {
                         ),
                     ],
                   ),
+                  SettingsGroupHeading(label: context.l10n.downloadAhead),
+                  SettingsGroupCard(
+                    children: [
+                      SettingsHighlightTarget(
+                        id: 'autoDownloadWhileReading',
+                        child: SettingsPropTile(
+                          title: context.l10n.autoDownloadWhileReading,
+                          type: SettingsPropType.switchTile(
+                            value: downloadAheadLimit != 0,
+                            onChanged: canWriteMeta
+                                ? (value) => writeAhead(value ? 2 : 0)
+                                : null,
+                          ),
+                        ),
+                      ),
+                      SettingsHighlightTarget(
+                        id: 'downloadAheadLimit',
+                        child: SettingsPropTile(
+                          title: context.l10n.downloadAheadLimit,
+                          subtitle:
+                              '${downloadAheadLimit == 0 ? 2 : downloadAheadLimit}',
+                          type: SettingsPropType.numberPicker(
+                            min: 2,
+                            max: 10,
+                            value: downloadAheadLimit == 0
+                                ? 2
+                                : downloadAheadLimit,
+                            onChanged: canWriteMeta && downloadAheadLimit != 0
+                                ? writeAhead
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -324,8 +357,6 @@ class _ServerDownloadsTab extends ConsumerWidget {
   }
 }
 
-/// On-device downloads: this phone's copies — the on-device delete rules plus
-/// Wi-Fi-only, concurrency, and storage management.
 class _OnDeviceDownloadsTab extends ConsumerWidget {
   const _OnDeviceDownloadsTab();
 

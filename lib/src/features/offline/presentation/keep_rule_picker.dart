@@ -13,19 +13,10 @@ import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 
-/// Rolling-buffer sizes offered for the "keep next N unread" rule.
 const kOfflineBufferSizes = [5, 10, 25];
 
-/// Bottom sheet that lets the user choose an offline keep-rule (how much of a
-/// series to hold on the device). Returns the chosen rule + count + whether
-/// local files should also be deleted, or null if dismissed.
-///
-/// `remove: true` is only set for the "Remove from device" option — callers
-/// must also delete local chapters when this flag is set. All other options
-/// set `remove: false` and only adjust the keep-rule.
-///
-/// The keep options need the account's download permission; stopping a rule
-/// and freeing device space do not, so they stay available to every account.
+/// Null on dismissal; remove true requires deleting local chapters as well as changing the rule.
+/// Stopping rules and deleting files remain available without download permission.
 Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
   BuildContext context,
 ) {
@@ -33,9 +24,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
     context: context,
     sheetAnimationStyle: context.motionStyle,
     showDragHandle: true,
-    // Scroll-controlled and scrollable: a default sheet is capped at 9/16 of
-    // the space it is given, and the "Updating library" strip is a sibling of
-    // the page content, so it shrinks that space from under it.
+    // The library-update strip shrinks available height; avoid the default 9/16 sheet cap.
     isScrollControlled: true,
     builder: (sheetContext) => Consumer(
       builder: (context, sheetRef, _) {

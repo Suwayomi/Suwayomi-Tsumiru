@@ -14,6 +14,7 @@ import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/shell/update_banner_state.dart';
 import '../../library/data/default_category.dart';
 import '../../library/domain/category/category_model.dart';
+import '../../library/presentation/library/widgets/library_random_entry.dart';
 import '../data/updates/updates_repository.dart';
 
 class UpdateStatusPopupMenu extends ConsumerWidget {
@@ -34,6 +35,11 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
       itemBuilder: (context) {
         final category = getCategory?.call();
         return [
+          if (showDuplicatesButton && !context.usesDesktopShell)
+            PopupMenuItem(
+              onTap: randomLibraryEntryAction(context, ref),
+              child: Text(context.l10n.openRandomEntry),
+            ),
           if (category != null && defaultId != null && category.id != defaultId)
             PopupMenuItem(
               child: Text(context.l10n.categoryUpdate),

@@ -8,7 +8,6 @@ import 'dart:convert';
 
 import '../recommendation_provider.dart';
 
-// 1:1 with exh/recs/sources/AniListPagingSource.kt.
 const _endpoint = 'https://graphql.anilist.co/';
 
 const _recFields = r'''
@@ -97,8 +96,6 @@ query Recommendations(\$search: String!) {
         as List?) ??
         const [];
     if (searchFilter != null) {
-      // Komikku keeps only search hits whose own title/synonyms contain the
-      // query, dropping loose full-text matches.
       media = media.where((m) => _matches(m as Map, searchFilter)).toList();
     }
     final out = <Recommendation>[];
@@ -133,8 +130,6 @@ query Recommendations(\$search: String!) {
     return false;
   }
 
-  // AniListPagingSource.getTitle: english, then romaji if Japanese, then a
-  // synonym, then romaji if not Japanese, then native.
   String _title(Map rec) {
     final t = (rec['title'] as Map?) ?? const {};
     final english = t['english'] as String?;

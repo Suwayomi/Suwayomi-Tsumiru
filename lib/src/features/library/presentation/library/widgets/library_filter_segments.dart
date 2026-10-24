@@ -10,7 +10,6 @@ import 'package:hooks_riverpod/misc.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 
-/// One option in an [AdaptiveSegments] control.
 class SegmentOption<T> {
   const SegmentOption({required this.value, required this.label});
 
@@ -18,12 +17,7 @@ class SegmentOption<T> {
   final String label;
 }
 
-/// Equal-width segmented control (Tsumige `ToolbarSegment` look: 32 px
-/// segments in a 40 px box) that falls back to a vertical list of radio rows
-/// when any option label doesn't fit its segment.
-///
-/// The fallback keeps the same state and callback; it exists so long option
-/// labels (long locales, tracker names) never clip.
+/// Falls back to radio rows when any label cannot fit its equal-width segment.
 class AdaptiveSegments<T> extends StatelessWidget {
   const AdaptiveSegments({
     super.key,
@@ -74,10 +68,7 @@ class AdaptiveSegments<T> extends StatelessWidget {
           return RadioGroup<T>(
             groupValue: value,
             onChanged: (next) {
-              // RadioGroup reports the tapped radio's value, so picking the
-              // Any row legitimately yields null. Only drop null when no
-              // option carries it (keyboard tristate toggle on non-null
-              // options), never when Any is on the list.
+              // null selects Any when present; discard it only for tristate toggles without a null option.
               if (next != null ||
                   options.any((option) => option.value == null)) {
                 onChanged(next as T);
@@ -172,11 +163,7 @@ class _Segment extends StatelessWidget {
   }
 }
 
-/// A tri-state library filter (Any / Yes / No, or custom Yes/No labels) as a
-/// heading plus [AdaptiveSegments].
-///
-/// Mapping is identical to [TriStateFilterTile]: Any=null, first option=true,
-/// second option=false.
+/// Any maps to null, first option to true, second to false.
 class LibraryTriStateSegment extends ConsumerWidget {
   const LibraryTriStateSegment({
     super.key,
@@ -221,8 +208,6 @@ class LibraryTriStateSegment extends ConsumerWidget {
   }
 }
 
-/// Compact heading shared by the desktop Filter and Display panels: 13 px
-/// semibold with 12 px above, per the approved panel layout.
 class FilterSectionHeading extends StatelessWidget {
   const FilterSectionHeading(this.text, {super.key});
 

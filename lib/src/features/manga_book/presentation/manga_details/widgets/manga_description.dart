@@ -27,10 +27,12 @@ import '../../../../../widgets/server_image.dart';
 import '../../../../migration/domain/migration_models.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../../offline/presentation/series_offline_button.dart';
+import '../../../../settings/presentation/appearance/widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import '../../../../tracking/presentation/hub/track_sheet.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../controller/manga_details_controller.dart';
 import '../controller/next_update_controller.dart';
+import '../manga_notes_screen.dart';
 import '../server_web_url.dart';
 import 'chapter_download_presets_button.dart';
 import 'edit_manga_category_dialog.dart';
@@ -56,8 +58,7 @@ class MangaDescription extends HookConsumerWidget {
   final AsyncCallback removeMangaFromLibrary;
   final AsyncCallback addMangaToLibrary;
 
-  /// "Web View" → choose the source site (realUrl) or the Suwayomi server's
-  /// WebUI page for this manga. With no source page, opens the server directly.
+  /// With no source realUrl, opens the server WebUI directly; otherwise offers both.
   static void openInBrowser(
     BuildContext context,
     WidgetRef ref,
@@ -208,14 +209,30 @@ class MangaDescription extends HookConsumerWidget {
             ),
           );
 
+    final notes = manga.webUiNotes;
     Widget descriptionSection(bool expanded, bool showToggle) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (manga.description.isNotBlank)
+        if (manga.description.isNotBlank || notes.isNotBlank)
           Padding(
             padding: KEdgeInsets.a16.size,
             child: MangaDescriptionBody(
-              description: manga.description!,
+              description: manga.description ?? '',
+              notes: notes,
+              onEditNotes: !twoColumn && inLibrary
+                  ? () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => MangaNotesScreen(
+                          mangaId: manga.id,
+                          seriesTitle: manga.title,
+                          initialNotes: notes ?? '',
+                          existingMetas: {
+                            for (final meta in manga.meta) meta.key: meta.value,
+                          },
+                        ),
+                      ),
+                    )
+                  : null,
               isExpanded: expanded,
               showToggle: showToggle,
               onToggleExpanded: toggleExpanded,
@@ -260,10 +277,15 @@ class MangaDescription extends HookConsumerWidget {
       ],
     );
 
+    final showBackdrop = resolveMangaThumbnailBackdrop(
+      override: ref.watch(mangaThumbnailBackdropProvider),
+      twoColumn: twoColumn,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (twoColumn)
+        if (!showBackdrop)
           SeriesHeader(
             manga: manga,
             belowStatus: soonWidget,
@@ -272,7 +294,7 @@ class MangaDescription extends HookConsumerWidget {
         else
           Stack(
             children: [
-              if (manga.thumbnailUrl.isNotBlank)
+              if (showBackdrop && manga.thumbnailUrl.isNotBlank)
                 Positioned.fill(
                   child: ClipRect(
                     child: ImageFiltered(
@@ -313,6 +335,7 @@ class MangaDescription extends HookConsumerWidget {
                     ),
                   ),
                 ),
+              if (showBackdrop)
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -327,6 +350,7 @@ class MangaDescription extends HookConsumerWidget {
                   ),
                 ),
               ),
+              if (showBackdrop)
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -342,10 +366,15 @@ class MangaDescription extends HookConsumerWidget {
                   ),
                 ),
               ),
+              if (twoColumn)
+                SeriesHeader(
+                  manga: manga,
+                  belowStatus: soonWidget,
+                  onLibraryPressed: toggleLibrary,
+                )
+              else
               Padding(
-                // Clear only the status bar; the transparent app-bar icons float
-                // over the top of the hero so the cover rides up into the backdrop
-                // instead of leaving a dead toolbar-height band above it.
+                // Clear only the status-bar inset so the hero can extend behind the transparent app bar.
                 padding: EdgeInsets.only(
                   top: MediaQuery.paddingOf(context).top + 8,
                 ),
@@ -502,33 +531,65 @@ class MangaDescriptionBody extends StatelessWidget {
   const MangaDescriptionBody({
     super.key,
     required this.description,
+    this.notes,
     required this.isExpanded,
     required this.onToggleExpanded,
     this.onOpenLink,
+    this.onEditNotes,
     this.showToggle = true,
   });
 
   final String description;
+  final String? notes;
   final bool isExpanded;
   final bool showToggle;
   final VoidCallback onToggleExpanded;
   final ValueChanged<String>? onOpenLink;
+  final VoidCallback? onEditNotes;
 
   @override
   Widget build(BuildContext context) {
     final textStyle = DefaultTextStyle.of(context).style;
     final fontSize = textStyle.fontSize ?? 14;
     final lineHeight = fontSize * (textStyle.height ?? 1.4);
-    final markdownBody = MarkdownBody(
-      data: description,
+    final styleSheet = MarkdownStyleSheet.fromTheme(context.theme).copyWith(
+      p: textStyle,
+      a: textStyle.copyWith(color: context.theme.colorScheme.primary),
+    );
+    MarkdownBody renderMarkdown(String data) => MarkdownBody(
+      data: data,
       selectable: kIsWeb,
       onTapLink: (_, href, _) {
         if (href.isNotBlank) onOpenLink?.call(href!);
       },
-      styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
-        p: textStyle,
-        a: textStyle.copyWith(color: context.theme.colorScheme.primary),
+      styleSheet: styleSheet,
+    );
+    final hasNotes = notes.isNotBlank;
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (hasNotes) renderMarkdown(notes!),
+        if (hasNotes && isExpanded && onEditNotes != null)
+          Align(
+            alignment: Alignment.center,
+            child: TextButton.icon(
+              onPressed: onEditNotes,
+              icon: const Icon(Icons.edit_note, size: 16),
+              label: Text(context.l10n.editNotes),
       ),
+          ),
+        if (hasNotes && description.isNotBlank)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: context.theme.colorScheme.outlineVariant,
+            ),
+      ),
+        if (description.isNotBlank) renderMarkdown(description),
+      ],
     );
 
     return Column(
@@ -536,16 +597,16 @@ class MangaDescriptionBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (isExpanded)
-          markdownBody
+          content
         else
           Stack(
             children: [
               ClipRect(
                 child: SizedBox(
-                  height: lineHeight * 5,
+                  height: lineHeight * (hasNotes ? 6 : 5),
                   child: SingleChildScrollView(
                     physics: const NeverScrollableScrollPhysics(),
-                    child: markdownBody,
+                    child: content,
                   ),
                 ),
               ),

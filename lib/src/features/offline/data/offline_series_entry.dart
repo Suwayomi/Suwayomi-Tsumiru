@@ -6,10 +6,7 @@
 
 import 'offline_database.dart';
 
-/// One Downloads → On device row. A nominal class (not a record) on purpose:
-/// a record type inlines drift's generated OfflineManga into the provider
-/// signature, which riverpod_generator can't resolve in its build phase.
-/// Member types are never emitted, so the drift row is fine as a field.
+// A nominal class hides drift field types from provider signatures until drift generation finishes.
 class OfflineSeriesEntry {
   const OfflineSeriesEntry({
     required this.manga,

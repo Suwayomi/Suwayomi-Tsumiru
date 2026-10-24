@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../constants/app_theme.dart';
 
-/// Color tokens for a named theme at one brightness.
-///
-/// Every value is copied VERBATIM from `~/Projects/theme-kit/themes/<id>.css` —
-/// never invented, never derived by Material. The DARK sets come from the
-/// theme's `[data-mode='dark']` block, the LIGHT sets from its
-/// `[data-mode='light']` block.
+/// Named-theme values copied from theme-kit light/dark CSS blocks.
 class ThemeTokens {
   const ThemeTokens({
     required this.bg,
@@ -34,14 +29,12 @@ class ThemeTokens {
   final Color danger; // error  (--danger)
   final Color border; // panel border overlay  (--panel-brd → outlineVariant)
 
-  // The three below exist only on the LIGHT sets; the dark blocks name none of
-  // them, and a null here keeps the dark scheme byte-identical to before.
+  // Null for tokens only supplied by light themes.
   final Color? onAccent; // text on a filled accent  (--on-accent)
   final Color? accentBg; // tinted accent container  (--accent-bg)
   final LinearGradient? grad; // brand gradient  (--grad)
 }
 
-// --- DARK token sets: VERBATIM from theme-kit/themes/<id>.css ---
 const _indigoDark = ThemeTokens(
   bg: Color(0xFF0B0D1A),
   bg2: Color(0xFF11142A),
@@ -187,7 +180,6 @@ const _royalDark = ThemeTokens(
   border: Color(0x17FFFFFF),
 );
 
-// --- LIGHT token sets: VERBATIM from theme-kit/themes/<id>.css ---
 const _indigoLight = ThemeTokens(
   bg: Color(0xFFEEECF9),
   bg2: Color(0xFFFFFBFD),
@@ -291,7 +283,6 @@ const _synthwaveLight = ThemeTokens(
   border: Color(0xFFDBD4E3),
   onAccent: Color(0xFFFFFFFF),
   accentBg: Color(0xFFFFD9E3),
-  // The one 3-stop, 90° grad in theme-kit: left → right, magenta → violet → teal.
   grad: LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,

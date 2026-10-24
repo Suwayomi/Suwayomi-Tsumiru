@@ -20,6 +20,7 @@ import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
+import '../../widgets/webui_switch_tile.dart';
 import 'data/browse_settings_repository.dart';
 import 'widgets/show_nsfw_switch/show_nsfw_switch.dart';
 
@@ -36,8 +37,6 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final BrowserSettingsDto? browseSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
     final storeCount = ref.watch(extensionStoreListProvider).value?.totalCount;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.browse);
     final scaffold = Scaffold(
@@ -65,10 +64,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                           context.l10n.manageSettingsPermissionRequired,
                         ),
                       ),
-                    // Permission-gated rows stay searchable while disabled:
-                    // a missing MANAGE_SETTINGS only nulls onChanged, the
-                    // tile stays on screen — so every entry below is always
-                    // visible.
+                    // Disabled permission-gated rows remain mounted and searchable.
                     if (serverSettings.value != null) ...[
                       SettingsGroupHeading(
                         label: context.l10n.sources,
@@ -76,6 +72,10 @@ class BrowseSettingsScreen extends ConsumerWidget {
                       ),
                       SettingsGroupCard(
                         children: [
+                          WebUiSwitchTile(
+                            setting: 'hideLibraryEntries',
+                            title: context.l10n.hideLibraryEntries,
+                          ),
                           SettingsHighlightTarget(
                             id: 'parallelSourceRequests',
                             child: SettingsPropTile(

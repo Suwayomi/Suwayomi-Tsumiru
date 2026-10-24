@@ -31,7 +31,6 @@ class ReaderLastPageSwipeTile extends HookConsumerWidget {
     final swipeChapterToggle = ref.watch(swipeChapterToggleProvider);
     final lastPageSwipeEnabled = ref.watch(lastPageSwipeEnabledProvider);
 
-    // Only show this setting when main swipe toggle is DISABLED
     final showTile = !(swipeChapterToggle ?? DBKeys.swipeToggle.initial);
 
     if (!showTile) return const SizedBox.shrink();

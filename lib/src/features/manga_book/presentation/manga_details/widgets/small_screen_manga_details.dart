@@ -123,8 +123,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
               child: SizedBox(height: context.height * .5, child: child),
             ),
           ),
-          // Bottom spacer so the last chapter can scroll clear of the floating
-          // Resume button (which otherwise permanently covers its controls).
+          // Reserve space for the last chapter to clear the floating Resume button.
           const SliverToBoxAdapter(child: SizedBox(height: 96)),
         ],
       ),

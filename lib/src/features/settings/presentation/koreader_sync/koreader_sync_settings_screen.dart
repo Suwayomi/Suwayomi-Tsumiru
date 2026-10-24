@@ -54,8 +54,6 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.koreaderSync);
     final scaffold = Scaffold(

@@ -52,6 +52,13 @@ class ServerScreen extends ConsumerWidget {
                 children: [
                   if (canManage)
                     SettingsGroupRow(
+                      icon: Icons.login_rounded,
+                      title: context.l10n.serverSignIn,
+                      trailing: chevron,
+                      onTap: () => const ServerSignInRoute().push(context),
+                    ),
+                  if (canManage)
+                    SettingsGroupRow(
                       icon: Icons.lan_outlined,
                       title: context.l10n.network,
                       trailing: chevron,

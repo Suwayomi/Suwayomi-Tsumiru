@@ -23,9 +23,6 @@ import '../../controller/bulk_migration_providers.dart';
 import '../../domain/migration_models.dart';
 import '../widgets/migration_config_sheet.dart';
 
-/// Screen — "Select sources" (Komikku `MigrationConfigScreen`). Chooses and
-/// orders the target sources, then opens the data-to-migrate sheet before the
-/// migration list. A 1:1 translation of Komikku's flow.
 class MigrationBulkConfigScreen extends HookConsumerWidget {
   const MigrationBulkConfigScreen({super.key, required this.mangaIds});
 
@@ -37,8 +34,6 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
     final allSources = ref.watch(searchableSourcesProvider).value ?? const [];
     final saved = ref.watch(migrationTargetSourcesPrefProvider) ?? const [];
 
-    // Ordered ids of selected sources (seeded from the saved priority, keeping
-    // only still-installed ones); everything else is "Available".
     final selectedIds = useState<List<String>>([
       for (final id in saved)
         if (allSources.any((s) => s.id == id)) id,
@@ -67,8 +62,6 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
     void setSelected(Iterable<String> ids) =>
         selectedIds.value = ids.toList();
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(l10n.migrationSelectSourcesTitle);
     final actions = <Widget>[
@@ -225,15 +218,13 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
           migrateReaderSettings: config.migrateReaderSettings,
           migrateOfflineSettings: config.migrateOfflineSettings,
           migrateDownloads: config.migrateDownloads,
-          // Copy vs Migrate is chosen on the list screen; default to Migrate.
           deleteSource: true,
         ),
         hideUnmatched: config.hideUnmatched,
         hideWithoutUpdates: config.hideWithoutUpdates,
         extraSearchQuery: extraSearchQuery,
       ),
-      // Replace this config screen (Komikku `navigator.replace`) so the run
-      // screen pops straight back to the library when migration finishes.
+      // Replace config so completing the run returns directly to the library.
     ).pushReplacement(context);
   }
 }
@@ -264,7 +255,6 @@ class _SourceCard extends StatelessWidget {
   final int? dragIndex;
   final VoidCallback onTap;
 
-  /// When false, render just the row (for grouping many rows in one card).
   final bool card;
 
   @override

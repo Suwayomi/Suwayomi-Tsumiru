@@ -11,9 +11,6 @@ import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import 'offline_storage_identity.dart';
 
-/// Sendable read signature shared by `Ref.read`, `WidgetRef.read`, and
-/// `ProviderContainer.read` — lets the functions below stay agnostic of which
-/// kind of reader the caller has.
 typedef OfflineRead = T Function<T>(ProviderListenable<T> provider);
 
 String offlinePreferenceKey(OfflineRead read, DBKeys key) {
@@ -24,24 +21,10 @@ String offlinePreferenceKey(OfflineRead read, DBKeys key) {
       : key.name;
 }
 
-/// Manga whose reconcile had to ask the SERVER to download chapters first —
-/// their device pull can only happen after those finish.
-///
-/// Shared by EVERY reconcile entry point: the automatic keep-rule catch-up
-/// pass (`offline_chapter_catchup.dart`'s `runKeepRuleCatchUp`/
-/// `pullAfterServerDownloads`) and the manga-details-triggered entry points
-/// (`reconcileManga`/`reconcileMangaWidget`/`reconcileMangaContainer` in
-/// `offline_download_providers.dart`). Only the catch-up pass used to
-/// register here — a manga-details-triggered download that needed a server
-/// fetch first silently missed the progressive
-/// pull-as-soon-as-the-server-queue-drains mechanism
-/// (`offline_chapter_catchup.dart`'s `downloadsMapProvider` listener) and sat
-/// waiting for the next full-library sync instead. Registering from every
-/// entry point here closes that gap.
+// Every reconcile entry must register server-fetch obligations for the later device pull.
 final Set<int> awaitingServerDownloads = {};
 
-/// Persists the current [awaitingServerDownloads] set so a crash/restart
-/// before the next drain doesn't lose the obligation.
+// Persist before the next drain so restart cannot lose the second-hop obligation.
 Future<void> persistAwaitingServerDownloads(OfflineRead read) =>
     read(sharedPreferencesProvider).setStringList(
       offlinePreferenceKey(read, DBKeys.offlineCatchUpAwaitingPull),

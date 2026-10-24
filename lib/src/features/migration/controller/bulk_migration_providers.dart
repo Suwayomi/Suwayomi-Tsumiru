@@ -79,7 +79,6 @@ MigrationJournal _accountJournal(ProviderContainer container) {
   );
 }
 
-/// The library grouped by source, obsolete-first — the source-picker's model.
 @riverpod
 Future<List<LibrarySourceGroup>> librarySourceGroups(Ref ref) async {
   final mangas = await ref.watch(libraryMangaListProvider.future) ?? const [];
@@ -88,15 +87,11 @@ Future<List<LibrarySourceGroup>> librarySourceGroups(Ref ref) async {
       (
         sourceId: m.sourceId,
         displayName: m.source?.displayName ?? m.sourceId,
-        // null source = extension uninstalled/gone; else use its obsolete flag.
         isObsolete: m.source == null || m.source!.$extension.isObsolete,
       ),
   ]);
 }
 
-/// The Migrate tab's source-name filter. Backed by a provider (not local
-/// widget state) so the desktop Browse search box drives the same filter the
-/// tab's inner box writes to.
 @riverpod
 class MigrationSourcePickerQuery extends _$MigrationSourcePickerQuery
     with StateProviderMixin<String> {
@@ -104,8 +99,7 @@ class MigrationSourcePickerQuery extends _$MigrationSourcePickerQuery
   String build() => '';
 }
 
-/// Ordered target-source priority (ids, most preferred first); persisted so it
-/// sticks between batches.
+/// Persists target-source IDs in descending preference order.
 @riverpod
 class MigrationTargetSourcesPref extends _$MigrationTargetSourcesPref
     with SharedPreferenceClientMixin<List<String>> {
@@ -113,8 +107,7 @@ class MigrationTargetSourcesPref extends _$MigrationTargetSourcesPref
   List<String>? build() => initialize(DBKeys.migrationTargetSources);
 }
 
-/// Flushes a source's unsynced offline reads (progress only, no tracker nudge)
-/// then reports whether it's clean; migration blocks removal when this is false.
+/// Flushes offline progress without tracker updates; false blocks source removal.
 Future<bool> bulkMigrationDirtyGate(
   ProviderContainer container,
   int mangaId,
@@ -141,8 +134,7 @@ Future<bool> bulkMigrationDirtyGate(
   });
 }
 
-/// Blocks while a 401 wave has flagged reauth, waking when it clears or the
-/// batch is cancelled. Re-checks on a 1s heartbeat in case the listener misses.
+/// Waits for reauth or cancellation, rechecking every second if the listener misses a change.
 Future<void> waitAuthReady(
   ProviderContainer container,
   CancelToken token,
@@ -164,9 +156,7 @@ Future<void> waitAuthReady(
   }
 }
 
-/// Drains any crash-recovery journal from a batch killed mid-run, called once
-/// at launch so it actually self-heals instead of only running in tests.
-/// Best-effort — a failure must never block startup.
+/// Recovers an interrupted batch at launch; failures must not block startup.
 Future<void> recoverBulkMigrationsAtLaunch(ProviderContainer container) {
   final current = _captureSession(container);
   return container.read(offlineRuntimeStorageProvider.notifier).track(() async {
@@ -183,9 +173,7 @@ Future<void> recoverBulkMigrationsAtLaunch(ProviderContainer container) {
   });
 }
 
-/// Carries device-local offline state (keep-rule + downloaded files) onto the
-/// migration target, reusing the app's real offline machinery. No-op when
-/// offline is inactive. Best-effort — the runner swallows failures.
+/// Carries offline downloads and keep-rules; inactive offline storage is a no-op.
 Future<void> migrateOfflineLocalState(
   ProviderContainer container,
   int fromMangaId,
@@ -305,8 +293,7 @@ ChapterState _chapterState(ChapterDto c) => ChapterState(
   lastPageRead: c.user.lastPageRead,
 );
 
-/// Assembles a [BulkMigrationRunner] from the app's real dependencies. Holds a
-/// container (not a Ref) so it survives navigation; the screen owns its lifetime.
+/// Holds a container across navigation; the screen owns the runner lifetime.
 BulkMigrationRunner buildBulkMigrationRunner({
   required ProviderContainer container,
   required List<BulkMigrationEntry> entries,

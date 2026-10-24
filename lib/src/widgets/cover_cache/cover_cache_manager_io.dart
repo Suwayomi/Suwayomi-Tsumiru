@@ -106,17 +106,7 @@ Future<FileInfo> _transcodeAvifInfo(FileInfo info) async {
   return info;
 }
 
-/// Cover/icon image cache that survives OS cache pressure.
-///
-/// The default cache manager keeps at most 200 files in the OS *temp* dir —
-/// shared with reader pages, so reading a few chapters evicts most library
-/// covers, and Android (or a Linux reboot) wipes the dir wholesale. Offline
-/// mode renders covers purely from this cache, so losing it turns the offline
-/// library into a wall of broken images.
-///
-/// Covers are small and long-lived, so they get their own store: files under
-/// application-support (durable, app-private) with a cap sized to a large
-/// library instead of a page ring buffer.
+/// Durable app-support cover cache, separate from reader pages and immune to OS temp cleanup.
 CacheManager createCoverCacheManager({String? serverOrigin}) =>
     _CoverCacheManager(
       Config(
@@ -127,18 +117,7 @@ CacheManager createCoverCacheManager({String? serverOrigin}) =>
       ),
     );
 
-/// A cover on disk is shown, full stop — its age is never a reason to go back
-/// to the server.
-///
-/// The stock manager re-downloads an expired entry every time it is displayed,
-/// and the expiry comes from the server's own cache headers (about ten days
-/// for a Suwayomi thumbnail), so scrolling a library quietly re-fetched every
-/// cover past its date. Covers change when the user asks for new metadata, not
-/// on a clock: an explicit refresh evicts the entry, and the next load fetches
-/// it because there is no copy left — not because it went stale.
-///
-/// On Android 12 and newer, AVIF covers are transcoded to JPEG in place, since
-/// the platform AV1 decoder stutters or crashes on them.
+/// Ignore age until explicit eviction; Android 12+ transcodes AVIF to JPEG to avoid platform decoder failures.
 class _CoverCacheManager extends CacheManager {
   _CoverCacheManager(super.config);
 
@@ -190,8 +169,7 @@ class _CoverCacheManager extends CacheManager {
   }
 }
 
-/// Same layout as the package's IOFileSystem, but rooted in
-/// application-support instead of the OS temp dir.
+/// Package IOFileSystem layout rooted in durable application-support.
 class _AppSupportFileSystem implements FileSystem {
   _AppSupportFileSystem(this._cacheKey)
     : _fileDir = _createDirectory(_cacheKey);

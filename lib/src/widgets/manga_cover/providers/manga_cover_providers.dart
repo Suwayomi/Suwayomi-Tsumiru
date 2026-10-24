@@ -26,8 +26,6 @@ class OnDeviceBadge extends _$OnDeviceBadge
   bool? build() => initialize(DBKeys.onDeviceBadge);
 }
 
-/// Exact count, plain accent chip, or hidden. Supersedes the `unreadBadge`
-/// bool, whose key is abandoned rather than migrated.
 @riverpod
 class UnreadBadgeStyle extends _$UnreadBadgeStyle
     with SharedPreferenceEnumClientMixin<UnreadBadgeMode> {
@@ -57,8 +55,6 @@ class LanguageBadge extends _$LanguageBadge
   bool? build() => initialize(DBKeys.languageBadge);
 }
 
-/// Source badge, including Local Source (a folder glyph). Supersedes the
-/// separate `localBadge` switch.
 @riverpod
 class SourceBadge extends _$SourceBadge with SharedPreferenceClientMixin<bool> {
   @override
@@ -72,8 +68,6 @@ class OutlineOnCovers extends _$OutlineOnCovers
   bool? build() => initialize(DBKeys.outlineOnCovers);
 }
 
-/// Library grid cover geometry. Lives here, not in the library controller, so
-/// `lib/src/widgets` cover tiles can read it without importing a feature.
 @riverpod
 class LibraryGridStyleKey extends _$LibraryGridStyleKey
     with SharedPreferenceEnumClientMixin<LibraryGridStyle> {
@@ -89,7 +83,6 @@ class LimitTitleLines extends _$LimitTitleLines
   bool? build() => initialize(DBKeys.limitTitleLines);
 }
 
-/// The user's badge drag-order, as [LibraryBadge.id]s.
 @riverpod
 class BadgeOrder extends _$BadgeOrder
     with SharedPreferenceClientMixin<List<String>> {
@@ -97,8 +90,7 @@ class BadgeOrder extends _$BadgeOrder
   List<String>? build() => initialize(DBKeys.badgeOrder);
 }
 
-/// The [LibraryBadge.id]s pinned to a cover's top-RIGHT corner. Anything absent
-/// clusters top-left.
+/// Physical top-right badge ids; absent ids cluster top-left.
 @riverpod
 class BadgeRightSide extends _$BadgeRightSide
     with SharedPreferenceClientMixin<List<String>> {
@@ -108,11 +100,7 @@ class BadgeRightSide extends _$BadgeRightSide
 
 typedef BadgePlacement = ({LibraryBadge badge, BadgeSide side});
 
-/// Every badge in the user's drag-order, tagged with the corner it belongs to.
-///
-/// Unknown persisted ids are dropped, and badges the saved order never
-/// mentioned are appended in declaration order — so a newly shipped badge lands
-/// at the end of an existing layout instead of vanishing.
+/// Drop unknown ids and append newly introduced badges in declaration order.
 @riverpod
 List<BadgePlacement> libraryBadgeLayout(Ref ref) {
   final savedOrder = ref.watch(badgeOrderProvider) ?? const <String>[];

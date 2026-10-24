@@ -23,20 +23,15 @@ import '../data/offline_repository.dart';
 import '../data/offline_series_entry.dart';
 import 'download_stall_banner.dart';
 import 'keep_rule_picker.dart';
+import 'offline_action_confirmations.dart';
 import 'offline_series_chapters_screen.dart';
 import 'offline_settings_format.dart';
 
 typedef _SeriesRow = OfflineSeriesEntry;
 
-/// The "On device" segment of the Downloads tab — the single surface for
-/// on-device downloads: every series with files saved here OR an active
-/// keep-rule, showing what's downloaded + its rule, with a per-series rule
-/// editor and bulk actions. (Replaces the old separate "Manage downloads" page.)
 class OfflineFilesView extends HookConsumerWidget {
   const OfflineFilesView({super.key});
 
-  /// The unread-buffer sizes offered for "Keep N unread" (matches the per-series
-  /// offline sheet).
   static const _bufferSizes = [5, 10, 25];
 
   String _ruleLabel(BuildContext context, OfflineManga m) =>
@@ -231,9 +226,6 @@ class OfflineFilesView extends HookConsumerWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Single-series action sheet (the row's gear button)
-  // ---------------------------------------------------------------------------
 
   void _openSeriesSheet(
     BuildContext context,
@@ -243,9 +235,7 @@ class OfflineFilesView extends HookConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // Scroll-controlled and scrollable: a default sheet is capped at 9/16
-      // of the space it is given, and the "Updating library" strip is a
-      // sibling of the page content, so it shrinks that space from under it.
+      // The library-update strip shrinks available height; avoid the default 9/16 sheet cap.
       isScrollControlled: true,
       builder: (sheetContext) => Consumer(
         builder: (context, sheetRef, _) {
@@ -274,7 +264,7 @@ class OfflineFilesView extends HookConsumerWidget {
                       onTap: canDownload
                           ? () {
                               Navigator.pop(sheetContext);
-                              changeKeepRule(
+                              confirmAndChangeKeepRule(
                                 ref,
                                 manga.id,
                                 OfflineKeepRule.nUnread,
@@ -292,7 +282,7 @@ class OfflineFilesView extends HookConsumerWidget {
                     onTap: canDownload
                         ? () {
                             Navigator.pop(sheetContext);
-                            changeKeepRule(
+                            confirmAndChangeKeepRule(
                               ref,
                               manga.id,
                               OfflineKeepRule.allUnread,
@@ -310,7 +300,7 @@ class OfflineFilesView extends HookConsumerWidget {
                     onTap: canDownload
                         ? () {
                             Navigator.pop(sheetContext);
-                            changeKeepRule(
+                            confirmAndChangeKeepRule(
                               ref,
                               manga.id,
                               OfflineKeepRule.all,
@@ -359,9 +349,6 @@ class OfflineFilesView extends HookConsumerWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Bulk actions
-  // ---------------------------------------------------------------------------
 
   Future<void> _bulkChangeRule(
     BuildContext context,
@@ -372,8 +359,6 @@ class OfflineFilesView extends HookConsumerWidget {
     if (rows.isEmpty) return;
     final picked = await _pickRule(context);
     if (picked == null || !context.mounted) return;
-    // "Remove from device" selected — delegate to the dedicated bulk-delete
-    // flow which handles its own confirmation dialog.
     if (picked.remove) {
       return _bulkStopDelete(
         context,
@@ -382,12 +367,20 @@ class OfflineFilesView extends HookConsumerWidget {
         clear,
       );
     }
-    // "Stop keeping" — off rule, no deletion.
     if (picked.rule == OfflineKeepRule.off) {
       clear();
       for (final r in rows) {
-        await changeKeepRule(ref, r.manga.id, OfflineKeepRule.off, 5);
+        await detachKeepRule(ref, r.manga.id);
       }
+      return;
+    }
+    if (!await confirmKeepRuleChanges(
+          ref,
+          rows.map((r) => r.manga.id),
+          picked.rule,
+          picked.count,
+        ) ||
+        !context.mounted) {
       return;
     }
     final growing = rows

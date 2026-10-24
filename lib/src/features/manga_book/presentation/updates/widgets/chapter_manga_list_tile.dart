@@ -35,13 +35,10 @@ class ChapterMangaListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
     final color = (chapterWithMangaDto.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapterWithMangaDto.manga;
-    // Custom Row (rather than ListTile's height-constrained `leading`) so the
-    // cover renders at the standard portrait size used on the History list.
     final readerLocation = ReaderRoute(
       mangaId: manga.id,
       chapterId: chapterWithMangaDto.id,
@@ -63,9 +60,7 @@ class ChapterMangaListTile extends StatelessWidget {
                 chapterId: chapterWithMangaDto.id,
                 showReaderLayoutAnimation: true,
               ).push(context);
-              // Refresh the whole series on return, not just this row — the
-              // reader walks on into the next chapters, and those have rows here
-              // too. Guard mounted: the user may have left Updates while reading.
+              // Refresh the whole series after reading because navigation may change other chapter rows too.
               if (!context.mounted) return;
               await refreshManga();
             }
@@ -86,16 +81,13 @@ class ChapterMangaListTile extends StatelessWidget {
                         onTap: () => WebRouteLink.handleAsyncTap(
                           openMangaInNewTab,
                           () async {
-                            // The cover sits inside the row, so it has to honour
-                            // multi-select too or it navigates away mid-selection.
+                            // Cover taps must honour multi-selection instead of navigating away.
                             if (canTapSelect) {
                               toggleSelect(chapterWithMangaDto);
                               return;
                             }
                             await MangaRoute(mangaId: manga.id).push(context);
                             if (!context.mounted) return;
-                            // Chapters get read on the details page too, so this row
-                            // is stale the moment we come back.
                             await refreshManga();
                           },
                         ),

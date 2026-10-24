@@ -57,28 +57,11 @@ class ConnectionScreen extends HookConsumerWidget {
           ref.watch(serverExternalUrlProvider),
           lanUrl,
         ].any((url) => url != null && sendsCredentialsInClear(url));
-    // One-time migration: the separate "Server Port" toggle is retired in
-    // favour of the URL being the single source of truth. If a user still has
-    // the toggle on, fold the port into the URL and switch the toggle off so
-    // every URL-building call site (which then reads the URL as-is) keeps
-    // reaching the same server.
+    // Fold the legacy port toggle into the URL before URL-only callers read it.
     useEffect(() {
       // Defer to after the frame: provider writes must not happen during build.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!ref.read(serverPortToggleProvider).ifNull()) return;
-        final String url =
-            ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
-        final port = ref.read(serverPortProvider);
-        if (port != null && url.isNotBlank) {
-          final merged = Endpoints.baseApi(
-            baseUrl: url,
-            port: port,
-            addPort: true,
-            appendApiToUrl: false,
-          );
-          await ref.read(serverExternalUrlProvider.notifier).update(merged);
-        }
-        await ref.read(serverPortToggleProvider.notifier).update(false);
+        await ref.read(serverExternalUrlProvider.notifier).migrateLegacyPort();
       });
       return null;
     }, const []);
@@ -93,8 +76,6 @@ class ConnectionScreen extends HookConsumerWidget {
       }
     }
 
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.connection);
     final scaffold = Scaffold(
@@ -125,9 +106,7 @@ class ConnectionScreen extends HookConsumerWidget {
               child: ListView(
                 padding: settingsPagePadding(context),
                 children: [
-                  // Surfaced here (where the server is changed) and kept visible even
-                  // after dismissal, so it doubles as the "clear to re-enable offline"
-                  // recovery affordance for this server.
+                  // Keep recovery available after dismissal so offline mode can be re-enabled.
                   const OfflineServerMismatchBanner(showAfterDismissal: true),
                   SettingsGroupHeading(label: context.l10n.server, first: true),
                   SettingsGroupCard(

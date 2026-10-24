@@ -14,10 +14,12 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
+import 'widgets/app_language/app_language_tile.dart';
 import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
 import 'widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import 'widgets/is_true_black/is_true_black_tile.dart';
+import 'widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import 'widgets/show_recommendations/show_recommendations_tile.dart';
 
 class AppearanceScreen extends ConsumerWidget {
@@ -28,8 +30,6 @@ class AppearanceScreen extends ConsumerWidget {
     final themeMode = ref.watch(appThemeModeProvider);
     final theme = ref.watch(appThemeKeyProvider);
     final showRecommendations = ref.watch(showRecommendationsProvider);
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.appearance);
     final scaffold = Scaffold(
@@ -53,8 +53,6 @@ class AppearanceScreen extends ConsumerWidget {
                       id: 'appThemeMode',
                       child: AppThemeModeTile(),
                     ),
-                    // The card heading already names the theme section, so the
-                    // picker renders without its own title row.
                     const SettingsHighlightTarget(
                       id: 'theme',
                       child: ThemeSelector(),
@@ -72,11 +70,24 @@ class AppearanceScreen extends ConsumerWidget {
                   ],
                 ),
                 SettingsGroupHeading(label: context.l10n.display),
+                const SettingsGroupCard(
+                  children: [
+                    SettingsHighlightTarget(
+                      id: 'appLanguage',
+                      child: AppLanguageTile(),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'mangaGridSize',
+                      child: GridCoverWidthSlider(),
+                    ),
+                  ],
+                ),
+                SettingsGroupHeading(label: context.l10n.seriesPage),
                 SettingsGroupCard(
                   children: [
                     const SettingsHighlightTarget(
-                      id: 'mangaGridSize',
-                      child: GridCoverWidthSlider(),
+                      id: 'mangaThumbnailBackdrop',
+                      child: MangaThumbnailBackdropTile(),
                     ),
                     const SettingsHighlightTarget(
                       id: 'showRecommendations',

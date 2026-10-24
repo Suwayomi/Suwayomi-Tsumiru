@@ -43,9 +43,6 @@ import '../data/server_discovery.dart';
 import '../data/server_resolver.dart';
 import 'onboarding_sign_in.dart';
 
-/// First-time onboarding wizard: pick a theme, connect a Suwayomi server, done.
-/// Shown by the router until [OnboardingComplete] is set true. Matches the
-/// approved Indigo Night mockups.
 class OnboardingScreen extends HookConsumerWidget {
   const OnboardingScreen({super.key});
 
@@ -93,7 +90,6 @@ class OnboardingScreen extends HookConsumerWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Brand backdrop: indigo glow at the top fading into the scaffold.
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -109,15 +105,12 @@ class OnboardingScreen extends HookConsumerWidget {
             ),
           ),
           SafeArea(
-            // Wide desktop windows keep onboarding a readable column.
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 620),
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
-                    // Brand wordmark, centered, with a top-right "Skip" escape on
-                    // every step except the final one (nothing left to skip there).
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -187,14 +180,11 @@ class OnboardingScreen extends HookConsumerWidget {
   }
 }
 
-/// The swirl mark for the brightness in use: the light artwork is a darker
-/// logo drawn for pale surfaces, the default one reads on dark ones.
 AssetGenImage _brandLogo(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
     ? Assets.icons.logoOnLight
     : Assets.icons.darkIcon;
 
-/// The swirl logo + "Tsumiru" wordmark shown at the top of every step.
 class _BrandHeader extends StatelessWidget {
   const _BrandHeader();
 
@@ -304,8 +294,6 @@ class _NavBar extends StatelessWidget {
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
-      // Back + Next share one row (Next wider) so the nav takes less vertical
-      // space; on the first step there's no Back, so Next fills the row.
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -347,7 +335,6 @@ class _NavBar extends StatelessWidget {
   }
 }
 
-// --- Step 1: theme ----------------------------------------------------------
 
 class _ThemeStep extends ConsumerWidget {
   const _ThemeStep();
@@ -360,12 +347,9 @@ class _ThemeStep extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-        // The big brand mark — the swirl logo above the welcome heading.
         Center(
           child: Image.asset(
             _brandLogo(context).path,
-            // Short, wide windows (desktop, landscape) shrink the mark so the
-            // theme row still fits; portrait phones keep it full size.
             height: _compactLogo(MediaQuery.sizeOf(context)) ? 96 : 160,
           ),
         ),
@@ -433,9 +417,7 @@ class _ThemeStep extends ConsumerWidget {
   }
 }
 
-// --- Step 2: server ---------------------------------------------------------
 
-/// Outcome of "Test connection" (and the in-flight states for both actions).
 enum _TestState {
   idle,
   searching,
@@ -443,28 +425,21 @@ enum _TestState {
   signingIn,
   connected,
 
-  /// Reachable Suwayomi whose API is gated — reveal the auth sub-form.
   needsLogin,
 
-  /// Couldn't reach the address at all.
   failed,
 
-  /// Web only: the server answered in a mode a cross-origin page cannot use.
+  /// Web cannot use this server mode across origins.
   unsupportedAuth,
 
-  /// Reached something, but it isn't a Suwayomi server.
   notSuwayomi,
 }
 
-/// Factory for the throwaway HTTP client the resolver probes use. Overridable
-/// in widget tests so the connection flow can be driven against a MockClient.
 final onboardingHttpClientProvider = Provider<http.Client Function()>(
   (Ref ref) => http.Client.new,
 );
 
-/// Keeps a found host:port only if it answers as Suwayomi, or challenges for
-/// Basic auth (such a server can't prove what it is before sign-in, and Test
-/// connection handles its login). Closes [client].
+/// Accepts confirmed Suwayomi or Basic-gated hosts; closes [client].
 @visibleForTesting
 Future<DiscoveredServer?> confirmLanServer(
   String url, {
@@ -490,8 +465,6 @@ Future<DiscoveredServer?> confirmLanServer(
   }
 }
 
-/// The LAN sweep behind "Search my network". Overridable in widget tests so the
-/// step can be driven without touching the network.
 final lanServerScanProvider =
     Provider<Future<List<DiscoveredServer>> Function()>(
       (ref) =>
@@ -504,11 +477,9 @@ final lanServerScanProvider =
           ),
     );
 
-/// The picker row label: name and version when the server reported them, then
-/// the address, e.g. `Suwayomi-Server v2.3.2162 · 192.168.2.4:4568`.
 String _serverLabel(DiscoveredServer server) {
   final name = server.name?.trim();
-  final version = server.version?.trim();
+  final version = server.version?.trim().replaceFirst(RegExp(r'^[vV]'), '');
   if (name == null || name.isEmpty) return server.address;
   final titled = (version == null || version.isEmpty)
       ? name
@@ -516,8 +487,6 @@ String _serverLabel(DiscoveredServer server) {
   return '$titled · ${server.address}';
 }
 
-/// Picker shown when "Search my network" finds more than one Suwayomi server.
-/// Popping with a server is the only action; dismissing picks nothing.
 class _ServerPickerSheet extends StatelessWidget {
   const _ServerPickerSheet({required this.servers});
 
@@ -585,13 +554,11 @@ class _ServerStep extends HookConsumerWidget {
     final state = useState(_TestState.idle);
     final version = useState<String?>(null);
     final errorDetail = useState<String?>(null);
-    // The base URL we resolved to (after auto-fallback) — shown + persisted.
     final resolvedUrl = useState<String?>(null);
-    // Credentials + chosen auth type, revealed when the server needs a login.
     final userController = useTextEditingController();
     final passController = useTextEditingController();
     final authChoice = useState(onboardingAuthChoices(isWeb: isWeb).first);
-    // Once the user picks a method themselves, detection stops overriding it.
+    // A manual auth choice must take precedence over detection.
     final userChangedAuth = useState(false);
     final credsRejected = useState(false);
     final unsupportedAfterLogin = useState(false);
@@ -636,7 +603,6 @@ class _ServerStep extends HookConsumerWidget {
       serverAccountCapability.value = capability;
     }
 
-    // Persist a resolved/typed base URL as the active server URL.
     Future<void> adopt(String url) async {
       resolvedUrl.value = url;
       final ports = ref.read(serverPortToggleProvider.notifier);
@@ -674,21 +640,12 @@ class _ServerStep extends HookConsumerWidget {
       }
     }
 
-    // Validate + commit the entered credentials against [base] using
-    // [authChoice], via the SAME performSignIn the Connection settings screen
-    // uses — the wizard must not run its own login path. Returns true
-    // on success; a thrown rejection (bad creds / wrong auth mode) reads as
-    // false. [client] is retained for the connection-probe callers above.
     Future<bool> validateCredentials(String base, http.Client client) async {
       final user = userController.text.trim();
       final pass = passController.text;
       if (user.isEmpty || pass.isEmpty) return false;
       if (authChoice.value == AuthType.none) return false;
-      // Basic auth has no login round-trip that can fail, so the wizard
-      // pre-flights it before committing: confirm it's really Suwayomi over
-      // Basic AND that these creds actually authorise the @RequireAuth API —
-      // otherwise picking the wrong auth type would "succeed" against a server
-      // whose public aboutServer answers regardless of credentials.
+      // Basic auth must confirm Suwayomi and authorize a protected query; public aboutServer is insufficient.
       if (authChoice.value == AuthType.basic) {
         final extra = ref.read(customHttpHeadersProvider).value;
         if (!await basicAuthConfirms(
@@ -866,9 +823,6 @@ class _ServerStep extends HookConsumerWidget {
       }
     }
 
-    // "Test connection": validate the address. Auto-fallback (scheme/port) runs
-    // under the hood. The first press detects whether a login is needed; once
-    // credentials are entered, pressing again validates them.
     Future<void> testConnection() async {
       final input = urlController.text.trim();
       if (input.isBlank) {
@@ -981,9 +935,6 @@ class _ServerStep extends HookConsumerWidget {
       return null;
     }, const []);
 
-    // "Search my network": sweep the LAN for Suwayomi servers, fill the field
-    // with the one found (or let the user pick when several answered), then
-    // test it.
     Future<void> searchNetwork() async {
       if (isWeb) return;
       final noServerMsg = context.l10n.onboardingNoServerFound;
@@ -1005,7 +956,6 @@ class _ServerStep extends HookConsumerWidget {
       }
       var chosen = found.first;
       if (found.length > 1) {
-        // The sweep is done; nothing is "being searched" while the picker is up.
         resetToIdle();
         final picked = await showModalBottomSheet<DiscoveredServer>(
           context: context,
@@ -1018,7 +968,6 @@ class _ServerStep extends HookConsumerWidget {
           sheetAnimationStyle: context.motionStyle,
         );
         if (!context.mounted) return;
-        // Dismissed without choosing: no server picked, nothing to test.
         if (picked == null) return;
         chosen = picked;
       }
@@ -1026,9 +975,6 @@ class _ServerStep extends HookConsumerWidget {
       await testConnection();
     }
 
-    // "Sign in": validate the entered credentials against the resolved server
-    // and, on success, unlock Next. Clear, dedicated action that lives right
-    // under the credential fields.
     Future<void> signIn() async {
       final base = resolvedUrl.value ?? urlController.text.trim();
       final user = userController.text.trim();
@@ -1138,7 +1084,6 @@ class _ServerStep extends HookConsumerWidget {
             resetToIdle();
           },
         ),
-        // Discover: scan the LAN and fill the address.
         if (!isWeb)
           Align(
             alignment: Alignment.centerLeft,
@@ -1163,11 +1108,9 @@ class _ServerStep extends HookConsumerWidget {
           style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
         ),
         const SizedBox(height: 8),
-        // Zero Trust / reverse-proxy headers (e.g. Cloudflare Access) must be
-        // set BEFORE probing, or the probe can't reach the server at all.
+        // Proxy access headers must be set before probing.
         const CustomHeadersSection(compact: true),
         const SizedBox(height: 12),
-        // Validate: test the connection.
         FilledButton.tonalIcon(
           onPressed: busy ? null : testConnection,
           icon: state.value == _TestState.testing
@@ -1199,14 +1142,10 @@ class _ServerStep extends HookConsumerWidget {
               shouldSuggestHttps(urlController.text.trim()),
           unsupportedFromNotFound.value,
         ),
-        // Auth sub-form, revealed only when the server needs a login.
         if (state.value == _TestState.needsLogin ||
             state.value == _TestState.signingIn) ...[
           const SizedBox(height: 12),
-          // M3 DropdownMenu (not the legacy DropdownButtonFormField, whose menu
-          // anchors the selected item over the field and can open upward over
-          // other content, wider than the field). This opens below, sized to
-          // the field. Keyed by the selection so it re-seeds if changed.
+          // Key by selection so DropdownMenu reseeds after auth detection.
           DropdownMenu<AuthType>(
             key: ValueKey(authChoice.value),
             initialSelection: authChoice.value,
@@ -1320,7 +1259,6 @@ class _ServerStep extends HookConsumerWidget {
             ),
           ],
           const SizedBox(height: 12),
-          // The clear, dedicated action right under the credentials.
           FilledButton.icon(
             onPressed: busy ? null : signIn,
             icon: busy
@@ -1344,8 +1282,6 @@ class _ServerStep extends HookConsumerWidget {
           ),
         ],
         const SizedBox(height: 8),
-        // No server yet? Open the setup docs and let them proceed — Library then
-        // shows the friendly "set up a server" empty state.
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
@@ -1366,8 +1302,6 @@ class _ServerStep extends HookConsumerWidget {
   }
 }
 
-/// Renders the Test-connection outcome row(s) — always naming the exact
-/// address (with explicit port) we reached.
 List<Widget> _buildTestStatus(
   BuildContext context,
   ColorScheme cs,
@@ -1392,7 +1326,7 @@ List<Widget> _buildTestStatus(
           color: BrandColors.of(context).success,
           icon: Icons.check_circle_rounded,
           text: (version != null && version.isNotEmpty)
-              // The server reports "v2.3.x"; the l10n string adds its own "v".
+              // The server version includes "v"; localization supplies its own prefix.
               ? context.l10n.onboardingConnected(
                   version.startsWith('v') ? version.substring(1) : version,
                 )
@@ -1491,7 +1425,6 @@ class _StatusRow extends StatelessWidget {
   }
 }
 
-// --- Step 3: finish ---------------------------------------------------------
 
 class _FinishStep extends StatelessWidget {
   const _FinishStep();

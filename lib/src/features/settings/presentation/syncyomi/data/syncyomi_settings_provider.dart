@@ -3,10 +3,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/graphql_undefined_field.dart';
-import '../../../../account/data/account_providers.dart';
 import '../../../../account/data/graphql/__generated__/account.graphql.dart';
-import '../../../../account/domain/account_access.dart';
-import '../../../data/user_settings.dart';
+import '../../../data/account_or_legacy_settings.dart';
 import '../../../domain/settings/graphql/__generated__/fragment.graphql.dart';
 import './graphql/__generated__/query.graphql.dart';
 
@@ -61,21 +59,13 @@ class SyncYomiSettings {
 }
 
 /// Null means the server has no SyncYomi settings at all.
-final syncYomiSettingsProvider = FutureProvider<SyncYomiSettings?>((ref) async {
-  // Only the capability picks the source. Watching the whole access re-ran
-  // the legacy query on every account re-check, even when nothing changed.
-  switch (ref.watch(
-    settledAccountAccessProvider.select((access) => access.capability),
-  )) {
-    case AccountCapability.supported:
-      final user = await ref.watch(userSettingsProvider.future);
-      return user == null ? null : SyncYomiSettings.fromUser(user);
-    case AccountCapability.unsupported:
-      return _legacySettings(ref);
-    case AccountCapability.unknown:
-      throw StateError('Account settings unavailable');
-  }
-});
+final syncYomiSettingsProvider = FutureProvider<SyncYomiSettings?>(
+  (ref) => accountOrLegacySettings(
+    ref,
+    fromUser: (user) => user == null ? null : SyncYomiSettings.fromUser(user),
+    legacy: () => _legacySettings(ref),
+  ),
+);
 
 Future<SyncYomiSettings?> _legacySettings(Ref ref) async {
   final result = await ref

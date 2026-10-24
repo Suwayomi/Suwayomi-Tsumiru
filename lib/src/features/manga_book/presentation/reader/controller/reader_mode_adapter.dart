@@ -9,8 +9,6 @@ import 'package:flutter/material.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 
-/// Parity chips for the Reading-mode row. Pure presentation: the stored
-/// 8-value ReaderMode stays byte-for-byte; chips are a view over it (§2.5).
 enum ReadingModeChip {
   defaultChip,
   pagedLTR,
@@ -32,8 +30,7 @@ enum ReadingModeChip {
 }
 
 abstract final class ReaderModeAdapter {
-  /// Null for the continuous-horizontal orphans: no parity chip lies about
-  /// them — the sheet shows a dedicated "legacy" chip instead.
+  /// Legacy continuous-horizontal modes have no matching chip.
   static ReadingModeChip? toChip(ReaderMode mode) => switch (mode) {
         ReaderMode.defaultReader => ReadingModeChip.defaultChip,
         ReaderMode.singleHorizontalLTR => ReadingModeChip.pagedLTR,

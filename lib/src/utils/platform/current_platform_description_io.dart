@@ -6,7 +6,6 @@
 
 import 'dart:io';
 
-/// Native implementation: e.g. `android 15`, `linux (flatpak) 7.2.3`.
 String currentPlatformDescription() {
   final env = Platform.environment;
   final package = env.containsKey('FLATPAK_ID')

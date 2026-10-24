@@ -19,10 +19,7 @@ class AsyncCheckboxListTile extends HookWidget {
 
   final bool value;
 
-  /// Runs the change. The checkbox flips optimistically before this is awaited
-  /// and reverts if it throws — so a failed toggle doesn't leave the box showing
-  /// a state that never persisted. Callers own user-facing error reporting; the
-  /// throw is only used here to trigger the revert.
+  /// Optimistically toggle, reverting on throw; callers report errors to the user.
   final Future<void> Function(bool)? onChanged;
   final Widget title;
   @override
@@ -34,8 +31,7 @@ class AsyncCheckboxListTile extends HookWidget {
       return null;
     }, [value]);
     return CheckboxListTile(
-      // Disabled while a change is in flight so overlapping toggles can't leave
-      // the revert pointing at a stale, mid-flight value.
+      // Disable in flight so overlapping toggles cannot restore stale values.
       onChanged: onChanged != null && !inFlight.value
           ? (val) async {
               final previous = localValue.value;

@@ -4,20 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Pure multi-chapter display list for the paged viewer.
-///
-/// The paged viewport shows prev/current/next chapters in ONE continuous pager
-/// (like Komikku's PagerViewer) instead of rebuilding the reader per chapter.
-/// This composes each loaded chapter's [SpreadMapping] into a single display
-/// list, inserting a virtual transition entry between chapters, and translates
-/// display-index ↔ (chapterId, raw page). Kept pure (no Flutter deps) so the
-/// index contract is unit-tested.
+/// Maps spreads and chapter transitions to display indices and visible-chapter raw page indices.
 library;
 
 import 'paged_spread_mapping.dart';
 
-/// One loaded chapter in the window: its spread mapping plus the raw page URLs
-/// the spreads address.
 class WindowChapter {
   const WindowChapter({
     required this.chapterId,
@@ -38,14 +29,10 @@ class WindowChapter {
   final bool hasGapBefore;
 }
 
-/// One position in the paged display list: either a spread of a chapter's pages
-/// or a virtual chapter-boundary transition.
 sealed class DisplayItem {
   const DisplayItem();
 }
 
-/// A spread (single page, double-page pair, or split-wide half) belonging to
-/// [chapterId]; [entry] addresses that chapter's raw pages.
 class SpreadDisplay extends DisplayItem {
   const SpreadDisplay({required this.chapterId, required this.entry});
 
@@ -90,8 +77,6 @@ class TransitionDisplay extends DisplayItem {
   String toString() => 'TransitionDisplay($fromChapterId -> $toChapterId)';
 }
 
-/// The built multi-chapter display list plus the display ↔ (chapter, raw)
-/// translation the viewer needs.
 class PagedDisplayWindow {
   const PagedDisplayWindow(this.items, this._chapters);
 
@@ -154,7 +139,6 @@ class PagedDisplayWindow {
     return -1;
   }
 
-  /// The first display position belonging to [chapterId], or -1 if absent.
   int firstDisplayOf(int chapterId) {
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
@@ -163,7 +147,6 @@ class PagedDisplayWindow {
     return -1;
   }
 
-  /// The last display position belonging to [chapterId], or -1 if absent.
   int lastDisplayOf(int chapterId) {
     for (var i = items.length - 1; i >= 0; i--) {
       final item = items[i];
@@ -173,17 +156,7 @@ class PagedDisplayWindow {
   }
 }
 
-/// Builds the multi-chapter display list from an ordered (reading order) list of
-/// loaded chapters.
-///
-/// - A transition entry is inserted between two consecutive chapters when
-///   [forceTransition] is set (the `alwaysShowChapterTransition` setting) or the
-///   later chapter reports [WindowChapter.hasGapBefore]. Otherwise the crossing
-///   is seamless (last spread of one chapter directly precedes the first of the
-///   next), matching Komikku's PagerViewerAdapter.
-/// - [leadingTransition] / [trailingTransition] add a boundary card before the
-///   first / after the last chapter — used at the window edges where a further
-///   chapter exists to load, or to show end/start-of-manga.
+/// Inserts transitions when forced or a gap exists; optional edge cards represent unloaded neighbours.
 PagedDisplayWindow buildPagedDisplayWindow({
   required List<WindowChapter> chapters,
   required bool forceTransition,

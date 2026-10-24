@@ -12,8 +12,6 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_paged_prefs.g.dart';
 
-// Global paged-viewer prefs — never
-// per-series. Consumed by the paged viewer.
 
 @riverpod
 class ImageScaleTypeKey extends _$ImageScaleTypeKey
@@ -90,8 +88,6 @@ class AnimatePageTransitions extends _$AnimatePageTransitions
   bool? build() => initialize(DBKeys.animatePageTransitions);
 }
 
-// Wide-page handling — consumed by the paged viewer's spread mapping
-// (double-page / split / true-dual-spread) and per-image rotate.
 
 @riverpod
 class DualPageSplitPaged extends _$DualPageSplitPaged

@@ -18,20 +18,13 @@ import '../../../utils/theme/brand.dart';
 import '../../server_image.dart';
 import '../providers/manga_cover_providers.dart';
 
-/// How far each segment of a combined badge slides under its predecessor, and
-/// the width of the diagonal cut between them.
 const double _kBadgeSlant = 6;
 
-/// Corner rounding, matching the app's other badge chips.
 const double _kBadgeRadius = 8;
 
-/// The flag emoji's font size as a share of the strip height. Doubles as the
-/// line-height multiplier's inverse, so the emoji's line box is exactly one
-/// strip tall — see the language segment.
+/// Inverse line-height multiplier keeps the emoji line box exactly one strip tall.
 const double _kFlagFontRatio = .7;
 
-/// Strip height, tracking the platform text scale but capped at 1.4× so a large
-/// font can't clip a three-digit count nor swallow the cover.
 double _stripHeight(BuildContext context) {
   final ratio = (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
     1.0,
@@ -40,13 +33,10 @@ double _stripHeight(BuildContext context) {
   return 20 * ratio;
 }
 
-/// One cell of a badge strip. [fill] segments own their whole cell (no content
-/// padding, no slant inset) — for artwork that should bleed to the diagonal.
+/// Fill segments have no padding/slant inset so artwork reaches the diagonal.
 typedef _Segment = ({Decoration decoration, Widget child, bool fill});
 
-/// Badge corners are physical: the layout editor offers "top-left" and
-/// "top-right", not "start" and "end". Every row that places a cluster pins
-/// this, or an RTL locale mirrors the clusters onto the wrong corners.
+/// Badge corners are physical; pin direction so RTL locales cannot mirror clusters.
 const _kPhysical = TextDirection.ltr;
 
 class MangaBadgesRow extends ConsumerWidget {
@@ -58,8 +48,7 @@ class MangaBadgesRow extends ConsumerWidget {
   });
   final MangaDto manga;
 
-  /// Library covers (true) get the user's configurable badge set; Browse and
-  /// global-search covers (false) get only the "already in library" marker.
+  /// False shows only the library marker; true uses the configured library badge set.
   final bool showCountBadges;
   final EdgeInsetsGeometry? padding;
 
@@ -99,8 +88,6 @@ class MangaBadgesRow extends ConsumerWidget {
     final downloadedBadge = ref.watch(downloadedBadgeProvider).ifNull(true);
     final languageBadge = ref.watch(languageBadgeProvider).ifNull(false);
     final sourceBadge = ref.watch(sourceBadgeProvider).ifNull(false);
-    // At least one chapter downloaded to THIS device, a subset of the server's.
-    // Empty set when on-device storage is unavailable, so the badge self-hides.
     final onDevice =
         ref.watch(onDeviceBadgeProvider).ifNull(true) &&
         (ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{})
@@ -111,8 +98,6 @@ class MangaBadgesRow extends ConsumerWidget {
     final langCode = source?.lang;
     final langFlag = isLocal ? null : languageFlagEmoji(langCode);
 
-    // The segment for [badge], or null when it's off or this manga has nothing
-    // to show for it.
     _Segment? segmentFor(LibraryBadge badge) {
       switch (badge) {
         case LibraryBadge.unread:
@@ -138,8 +123,6 @@ class MangaBadgesRow extends ConsumerWidget {
           );
         case LibraryBadge.onDevice:
           if (!onDevice) return null;
-          // Brand gradient + downloaded pin, distinct from the flat
-          // server-download count.
           final brand = BrandColors.of(context);
           return (
             decoration: BoxDecoration(gradient: brand.gradient),
@@ -152,8 +135,6 @@ class MangaBadgesRow extends ConsumerWidget {
           );
         case LibraryBadge.language:
           if (!languageBadge || langCode == null || isLocal) return null;
-          // Emoji carry their own colour, so the flag sits on the surface tone
-          // instead of an accent fill. Unmapped codes fall back to the code.
           return langFlag != null
               ? (
                   decoration: BoxDecoration(color: scheme.surface),
@@ -162,13 +143,9 @@ class MangaBadgesRow extends ConsumerWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: height * _kFlagFontRatio,
-                      // Line box = exactly one strip, which bounds the emoji's
-                      // line spacing without squeezing it: a 1em box is shorter
-                      // than the font's ascent+descent, and shifted the glyph
-                      // ~1px above the strip's centre line.
+                      // A full-strip line box avoids emoji font ascent/descent shifting the glyph.
                       height: 1 / _kFlagFontRatio,
-                      // Trim any remaining overflow top and bottom equally,
-                      // not by the font's lopsided ascent:descent ratio.
+                      // Trim overflow symmetrically instead of using the font ascent/descent ratio.
                       leadingDistribution: TextLeadingDistribution.even,
                     ),
                   ),
@@ -181,8 +158,7 @@ class MangaBadgesRow extends ConsumerWidget {
                 );
         case LibraryBadge.source:
           if (!sourceBadge || source == null) return null;
-          // Local Source has no extension icon to fetch, so it gets a folder
-          // glyph — what the separate `localBadge` used to draw.
+          // Local Source has no extension icon to fetch.
           return isLocal
               ? _iconSegment(
                   Icons.folder_rounded,
@@ -223,9 +199,7 @@ class MangaBadgesRow extends ConsumerWidget {
 
     return Padding(
       padding: padding ?? KEdgeInsets.a8.size,
-      // Reaching the cover's right edge needs a bounded width, which the list
-      // tiles don't provide (their Row lays non-flex children out unbounded);
-      // fall back to a min-width row there.
+      // List rows provide unbounded width; fall back to a min-width badge row.
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (!constraints.hasBoundedWidth) {
@@ -240,9 +214,7 @@ class MangaBadgesRow extends ConsumerWidget {
               ],
             );
           }
-          // Flexible, not a Spacer between two intrinsic strips: with every
-          // badge on, a narrow cell's two clusters together overflow the cover.
-          // Capping each at half the width lets its own clip shave the excess.
+          // Cap each cluster at half the cover width so clipping handles narrow cells.
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             textDirection: _kPhysical,
@@ -282,19 +254,12 @@ _Segment _iconSegment(
   fill: false,
 );
 
-/// "There is something unread" without the arithmetic: a blank accent chip.
 _Segment _plainSegment(Color background, double height) => (
   decoration: BoxDecoration(color: background),
   child: SizedBox(width: height * .3),
   fill: false,
 );
 
-/// A cluster of badges pinned to one corner of a cover.
-///
-/// A lone badge is a plain rounded square. Two or more combine: each segment
-/// after the first gets a diagonal leading edge and slides [_kBadgeSlant] under
-/// its predecessor, so the seam reads as one continuous cut. The strip keeps
-/// [_kBadgeRadius] on every corner either way.
 class _BadgeStrip extends StatelessWidget {
   const _BadgeStrip({
     required this.segments,
@@ -306,8 +271,7 @@ class _BadgeStrip extends StatelessWidget {
   final BadgeSide side;
   final double height;
 
-  /// Right-hand clusters mirror the geometry so the diagonal leans toward its
-  /// own corner instead of away from it.
+  /// Mirror diagonals toward the right-hand corner.
   bool get _mirrored => side == BadgeSide.right;
 
   @override
@@ -317,8 +281,7 @@ class _BadgeStrip extends StatelessWidget {
     if (segments.length == 1) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(_kBadgeRadius),
-        // Same tight height [_OverlappingRow] gives multi-segment cells, so a
-        // lone badge doesn't resize the moment a second one joins it.
+        // Keep single badges the same height as multi-segment cells.
         child: SizedBox(
           height: height,
           child: _cell(segments.single, isFirst: true, isLast: true),
@@ -333,8 +296,6 @@ class _BadgeStrip extends StatelessWidget {
         height: height,
         children: [
           for (var i = 0; i < segments.length; i++)
-            // Only segments after the first are clipped: each paints over its
-            // predecessor's trailing edge, and the clip makes that a seam.
             i == 0
                 ? _cell(segments[i], isFirst: true, isLast: false)
                 : ClipPath(
@@ -353,9 +314,7 @@ class _BadgeStrip extends StatelessWidget {
     );
   }
 
-  /// One segment box. Structural padding keeps content clear of the diagonal:
-  /// the leading `slant` on every non-first segment (its own cut) and the
-  /// trailing `slant` on every non-last one (the next segment overlaps it).
+  /// Reserve leading slant for this cut and trailing slant for the next overlap.
   Widget _cell(
     _Segment segment, {
     required bool isFirst,
@@ -379,9 +338,7 @@ class _BadgeStrip extends StatelessWidget {
   }
 }
 
-/// Clips a segment's leading edge into a diagonal. Unmirrored cuts the TOP-left
-/// corner, so the seam leans "/"; mirrored cuts the BOTTOM-left corner ("\")
-/// for right-hand clusters.
+/// Unmirrored cuts top-left (/); mirrored cuts bottom-left (\).
 class _SlantClipper extends CustomClipper<Path> {
   const _SlantClipper({required this.slant, required this.mirrored});
   final double slant;
@@ -411,9 +368,7 @@ class _SlantClipper extends CustomClipper<Path> {
       old.slant != slant || old.mirrored != mirrored;
 }
 
-/// A row whose children overlap by [overlap] logical pixels — [Row] rejects
-/// negative spacing. Children lay out at a tight [height] and paint in order,
-/// so each clipped segment covers its predecessor's trailing edge.
+/// Row rejects negative spacing; overlap children at a tight height in paint order.
 class _OverlappingRow extends MultiChildRenderObjectWidget {
   const _OverlappingRow({
     required this.overlap,
@@ -474,8 +429,6 @@ class _RenderOverlappingRow extends RenderBox
 
   @override
   void performLayout() {
-    // Each segment sizes itself horizontally and is stretched to the strip
-    // height, so the diagonals line up across the whole cluster.
     final childConstraints = BoxConstraints.tightFor(height: stripHeight);
     var x = 0.0;
     var child = firstChild;
@@ -485,7 +438,6 @@ class _RenderOverlappingRow extends RenderBox
       x += child.size.width - overlap;
       child = childAfter(child);
     }
-    // The last child contributes its FULL width — only the seams shrink.
     final width = childCount == 0 ? 0.0 : x + overlap;
     size = constraints.constrain(Size(width, stripHeight));
   }
@@ -505,12 +457,7 @@ class _RenderOverlappingRow extends RenderBox
       defaultPaint(context, offset);
 }
 
-/// A source icon fetched from the server, sized to the badge strip.
-///
-/// [ServerImage]'s stock placeholder and failure glyph are scaled for a
-/// full-page image, so both are pinned to the cell here: [IconTheme] caps the
-/// unsized fallback icon, and the placeholder occupies exactly [size] so the
-/// strip's width doesn't jump when the real icon arrives.
+/// Bound placeholder/error glyphs to the strip size so loading cannot change badge width.
 class _SourceIcon extends StatelessWidget {
   const _SourceIcon({required this.iconUrl, required this.size});
   final String iconUrl;
@@ -528,8 +475,7 @@ class _SourceIcon extends StatelessWidget {
           child: ServerImage(
             imageUrl: iconUrl,
             size: Size.square(size),
-            // Extension icons are not all square. `cover` (ServerImage's
-            // default) crops them to the cell; `contain` fits the whole glyph.
+            // Contain non-square extension icons so the full glyph remains visible.
             fit: BoxFit.contain,
             progressIndicatorBuilder: (_, _, _) =>
                 Center(child: Icon(Icons.extension_rounded, size: size * .8)),
@@ -555,8 +501,6 @@ class MangaBadge extends StatelessWidget {
   final Color color;
   final Color textColor;
 
-  /// Which corner the badge sits in. A lone badge looks the same either way;
-  /// it's here so callers describe placement as [MangaBadgesRow] does.
   final BadgeSide side;
 
   @override

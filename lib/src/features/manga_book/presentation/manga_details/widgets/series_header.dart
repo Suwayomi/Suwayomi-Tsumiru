@@ -82,9 +82,7 @@ class SeriesHeader extends ConsumerWidget {
     final libraryLabel = inLibrary
         ? context.l10n.inLibrary
         : context.l10n.addToLibrary;
-    // The two buttons need this much room beside the cover to keep both labels
-    // on one line. Measured from the real labels, padding and icon, so the
-    // switch follows the content rather than a window width.
+    // Switch layout when measured labels, padding, and icons no longer fit beside the cover.
     final resumeWidth = next != null
         ? _pillWidth(context, resumeLabel, gradient: true)
         : 0.0;
@@ -96,8 +94,6 @@ class SeriesHeader extends ConsumerWidget {
         builder: (context, constraints) {
           final infoWidth = constraints.maxWidth - coverWidth - 18;
           final stackControls = controlsWidth > infoWidth;
-          // Equal halves while both labels fit; past that the wider label gets
-          // the larger share, so neither is clipped.
           final halfWidth = (constraints.maxWidth - 10) / 2;
           final equalButtons =
               halfWidth >= resumeWidth && halfWidth >= libraryWidth;
@@ -120,8 +116,6 @@ class SeriesHeader extends ConsumerWidget {
             label: libraryLabel,
             onPressed: onLibraryPressed,
           );
-          // Loose flex weighted by the measured widths, so neither label is
-          // capped at an equal share of the row.
           final controls = Row(
             key: const ValueKey('series-header-controls'),
             children: [

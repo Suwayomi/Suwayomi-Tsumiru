@@ -8,6 +8,7 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../search/settings_search_registry.dart';
@@ -35,14 +36,25 @@ class DatabaseSection extends ConsumerWidget {
     if (settings.hasError) return const SizedBox.shrink();
     final data = settings.value;
     if (data == null) return const SizedBox.shrink();
+    final preview = ref.watch(previewDatabaseSettingsProvider).value;
     final type = data.databaseType;
     final isH2 = type == Enum$DatabaseType.H2;
     Future<void> save(
       Future<Fragment$DatabaseSettingsDto?> Function() action,
     ) async {
+      if (!await confirmAction(
+            context,
+            title: context.l10n.confirmDatabaseTitle,
+            message: context.l10n.confirmDatabaseMessage,
+            action: context.l10n.save,
+          ) ||
+          !context.mounted) {
+        return;
+      }
       final result = await AppUtils.guard(action, ref.read(toastProvider));
       if (result != null && context.mounted) {
         ref.invalidate(databaseSettingsProvider);
+        ref.invalidate(previewDatabaseSettingsProvider);
       }
     }
 
@@ -54,8 +66,7 @@ class DatabaseSection extends ConsumerWidget {
           children: [
             SettingsHighlightTarget(
               id: 'databaseType',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -99,8 +110,7 @@ class DatabaseSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'databaseUrl',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -125,8 +135,7 @@ class DatabaseSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'databaseUsername',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -153,8 +162,7 @@ class DatabaseSection extends ConsumerWidget {
             ),
             SettingsHighlightTarget(
               id: 'databasePassword',
-              // Same merge guard as the OPDS rows: without it the engine folds
-              // this row into a neighbouring switch row.
+              // Keep this row separate from neighboring switches in the semantics tree.
               child: Semantics(
                 container: true,
                 explicitChildNodes: true,
@@ -179,6 +187,27 @@ class DatabaseSection extends ConsumerWidget {
                 ),
               ),
             ),
+            if (preview != null)
+              SettingsHighlightTarget(
+                id: 'databaseSchema',
+                child: SettingsPropTile(
+                  title: context.l10n.databaseSchema,
+                  subtitle: preview.databaseSchema,
+                  type: SettingsPropType.textField(
+                    value: preview.databaseSchema,
+                    hintText: context.l10n.databaseSchema,
+                    onChanged: canManage && !isH2
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                databaseSchema: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
             SettingsHighlightTarget(
               id: 'hikariConnectionPool',
               child: SettingsPropTile(
@@ -198,6 +227,28 @@ class DatabaseSection extends ConsumerWidget {
                 ),
               ),
             ),
+            if (preview != null)
+              SettingsHighlightTarget(
+                id: 'hikariMaxPoolSize',
+                child: SettingsPropTile(
+                  title: context.l10n.hikariMaxPoolSize,
+                  subtitle: '${preview.hikariMaxPoolSize}',
+                  type: SettingsPropType.numberPicker(
+                    min: 1,
+                    max: 10000000,
+                    value: preview.hikariMaxPoolSize,
+                    onChanged: canManage && data.useHikariConnectionPool
+                        ? (value) => save(
+                            () => repository.write(
+                              Input$PartialSettingsTypeInput(
+                                hikariMaxPoolSize: value,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
           ],
         ),
       ],

@@ -28,7 +28,9 @@ import 'src/features/account/data/account_session_storage.dart';
 import 'src/features/account/presentation/account_session_host.dart';
 import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
+import 'src/features/auth/data/auth_recovery_target.dart';
 import 'src/features/auth/data/auth_session_transition.dart';
+import 'src/features/auth/data/auth_state.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/custom_headers_store.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
@@ -65,52 +67,36 @@ import 'src/utils/soft_clear_image_cache.dart';
 import 'src/widgets/app_error_app.dart';
 import 'src/widgets/cover_cache/cover_cache.dart';
 
-/// Absolute path of the crash-log file (native only; null on web / if setup
-/// fails). The error handlers append to it synchronously.
+// Native crash-log path; null on web or initialization failure.
 String? _crashLogPath;
 
-/// True once the app has painted its first frame. Distinguishes a genuine
-/// startup failure (show the error screen) from a recoverable runtime async
-/// error (log only; keep the app running). See [_onFatalError].
 bool _appRendered = false;
 
-/// Stock binding except the image cache survives memory-pressure signals
-/// with a working set intact (see [SoftClearImageCache]) — Android sends one
-/// for plain backgrounding, and the default clear-to-zero re-faded every
-/// cover on return.
+// Android sends memory-pressure signals on backgrounding; retain a working set of covers.
 class _TsumiruWidgetsBinding extends WidgetsFlutterBinding {
   @override
   ImageCache createImageCache() => SoftClearImageCache(floorBytes: 64 << 20);
 
   static WidgetsBinding ensureInitialized() {
-    // First thing in main, so no binding exists yet; constructing a second
-    // one would assert, which is the alarm we'd want if that ever lied.
+    // Must be the first binding created; a second binding construction asserts.
     _TsumiruWidgetsBinding();
     return WidgetsBinding.instance;
   }
 }
 
 void main() {
-  // Run everything inside a guarded zone so a fatal error — sync, async, or
-  // framework — is caught, written to a log file, and shown as a readable
-  // screen instead of a blank white window (release desktop has no console).
   runZonedGuarded<Future<void>>(_startApp, _onFatalError);
 }
 
 Future<void> _startApp() async {
   _TsumiruWidgetsBinding.ensureInitialized();
-  // 100 MB default is too small even for tile-sized covers — evicted covers
-  // re-shimmer on every tab switch. A cap, not an allocation.
+  // 256 MiB is a cache cap, not an allocation, and retains covers across tab switches.
   PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
   registerBrandIconsLicense();
   registerInterLicense();
   await _setUpCrashReporting();
-  // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
-  // any download service is started. Must run after the binding is ready.
+  // Initialize after the binding and before starting any download service.
   initForegroundTaskService();
-  // Register the background notification scheduler's isolate entry point
-  // (Android only). The periodic job itself is (re)scheduled from the launch
-  // sync below once settings are available.
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     Workmanager().initialize(notificationCallbackDispatcher);
   }
@@ -120,11 +106,8 @@ Future<void> _startApp() async {
     '(${defaultTargetPlatform.name})',
   );
   final sharedPreferences = await SharedPreferences.getInstance();
-  // Desktop: hide the OS title bar + restore saved window size before first
-  // frame. No-op on web/mobile.
+  // Restore the desktop window before the first frame.
   await initDesktopWindow(sharedPreferences);
-  // The GraphQL cache is in-memory now; reclaim the legacy on-disk box, whose
-  // unbounded growth OOM-crashed startup when Hive loaded it whole.
   final legacyBoxBytes = await deleteLegacyGraphqlCacheBox();
   if (legacyBoxBytes != null) {
     _logBoot('deleted legacy graphql cache box: $legacyBoxBytes bytes');
@@ -137,24 +120,17 @@ Future<void> _startApp() async {
 
   final secure = container.read(secureStorageProvider);
 
-  // Before anything reads or writes the background workers' credential
-  // records, whose secrets are sealed with this key.
+  // Load the seal key before any background credential reads or writes.
   if (!await RecordSeal.load(secure, create: true)) {
     _logBoot('background credentials key unavailable');
   }
 
-  // 1) Migrate legacy SharedPreferences basic-auth → secure storage.
   try {
     await migrateBasicAuthCredentials(prefs: sharedPreferences, secure: secure);
   } catch (e, st) {
     debugPrint('basic_auth migration failed: $e\n$st');
-    // Non-fatal: legacy creds stay in SharedPreferences for one more launch.
   }
 
-  // 2) One-time: installs from before "Ignore Safe Area" defaulted on kept their
-  //    saved `false`, so the reader's SafeArea ate the camera-cutout / notch row
-  //    and the webtoon strip stopped below it. Flip it on once; the guard key
-  //    means a later deliberate toggle-off by the user still sticks.
   try {
     const migratedKey = 'readerIgnoreSafeAreaDefaultOnMigrated';
     if (sharedPreferences.getBool(migratedKey) != true) {
@@ -167,20 +143,13 @@ Future<void> _startApp() async {
     debugPrint('readerIgnoreSafeArea migration failed: $e\n$st');
   }
 
-  // 3) One-time: an install that already points at a real server has already
-  //    "onboarded" — seed the flag so the new first-run wizard never shows for
-  //    existing users. Only run when the flag is unset; treat the default
-  //    loopback URL (and no URL) as not-configured.
   try {
     await seedFirstRunPreferences(sharedPreferences);
   } catch (e, st) {
     debugPrint('onboarding migration failed: $e\n$st');
   }
 
-  // 3.1) Split the legacy single endpoint into the configured remote URL and
-  // the active endpoint. This must happen before the LAN resolver can replace
-  // `serverUrl`, otherwise the original remote address would be lost on the
-  // next launch.
+  // Preserve the remote URL before the LAN resolver can replace serverUrl.
   try {
     const externalKey = 'serverExternalUrl';
     if (sharedPreferences.getString(externalKey) == null) {
@@ -193,19 +162,11 @@ Future<void> _startApp() async {
     debugPrint('server URL split migration failed: $e\n$st');
   }
 
-  // 3.5) One-time: the Last-Read sort comparator was un-inverted so its
-  //    ascending/descending is now ascending = oldest-read first.
-  //    A user whose CURRENT sort is Last-Read and who had an explicit direction
-  //    saved would otherwise see their order silently flip; flip their saved
-  //    direction once to preserve their view. Only touch it when they're on
-  //    Last-Read (direction is a global setting shared by every sort key), and
-  //    only when a direction was explicitly saved (unset users get the new
-  //    default, which already yields newest-first).
   try {
     const migratedKey = 'lastReadSortDirectionMigrated';
     if (sharedPreferences.getBool(migratedKey) != true) {
       final sortIdx = sharedPreferences.getInt('mangaSort');
-      // mangaSort default is Last-Read, so an unset value means Last-Read too.
+      // An unset mangaSort defaults to Last-Read.
       final onLastRead = sortIdx == null || sortIdx == MangaSort.lastRead.index;
       final savedDir = sharedPreferences.getBool('mangaSortDirection');
       if (onLastRead && savedDir != null) {
@@ -217,11 +178,6 @@ Future<void> _startApp() async {
     debugPrint('lastRead sort direction migration failed: $e\n$st');
   }
 
-  // 3.6) One-time: the old request-timeout model was broken twice over (a
-  //    hidden 5s graphql-layer cap the setting never reached, and retries
-  //    subdivided into delay-sized attempts). Any saved value was tuned
-  //    against that broken behavior, so move EVERY install to the new model:
-  //    30s timeout, auto-retry on. Deliberate full override, per Aaron.
   try {
     const migratedKey = 'requestTimeout30sMigrated';
     if (sharedPreferences.getBool(migratedKey) != true) {
@@ -236,46 +192,28 @@ Future<void> _startApp() async {
     debugPrint('request timeout migration failed: $e\n$st');
   }
 
-  // 3.7) One-time: the badge revamp replaced three preference keys. Seed the
-  //    new ones from the old so an upgrade keeps the badges the user picked.
   try {
     await migrateBadgePreferences(sharedPreferences);
   } catch (e, st) {
     debugPrint('badge preference migration failed: $e\n$st');
   }
 
-  // 4) Preload both auth providers (plus the custom-header store) BEFORE the
-  //    first frame so synchronous reads (image widgets, GraphQL links) get
-  //    populated state instead of AsyncLoading — which would produce tokenless
-  //    requests that get cached as 401 failures by cached_network_image.
-  // Read one provider at a time: the keychain prompts once per launch, and a
-  // refused read stops the rest from prompting.
+  // Preload auth before image requests can cache tokenless 401s; sequential reads avoid repeated keychain prompts.
   try {
     await container.read(authCredentialsStoreProvider.future);
     await container.read(credentialsProvider.future);
     await container.read(customHttpHeadersProvider.future);
   } catch (e, st) {
     debugPrint('auth preload failed, falling back to empty state: $e\n$st');
-    // Both notifiers will re-attempt on first widget read. App still launches.
   }
 
-  // 5) Eagerly instantiate the AuthCoordinator so its build() runs and
-  //    sets up the proactive-refresh listener BEFORE any image request
-  //    can see an expired token. Without this, the Coordinator stays
-  //    lazy until something hits a 401 — which for an existing logged-in
-  //    session may not happen for the entire 5-minute access-token
-  //    lifetime, exactly the window we're trying to close.
-  //    `read(.notifier)` constructs the notifier and runs build().
+  // Start proactive auth refresh before any image request can use an expired token.
   try {
     container.read(authCoordinatorProvider.notifier);
   } catch (e, st) {
     debugPrint('auth coordinator preload failed: $e\n$st');
-    // Non-fatal: reactive 401-refresh path still works on first use.
   }
 
-  // 6) Debug-only: auto-connect + auto-login from a local --dart-define test
-  //    config (see scripts/run-test.sh). No-op in release builds or when
-  //    TEST_SERVER_URL isn't provided, so it never affects real users.
   try {
     await _seedTestConfig(container);
   } catch (e, st) {
@@ -323,6 +261,12 @@ Future<void> _startApp() async {
         next.read(credentialsProvider.future),
         next.read(customHttpHeadersProvider.future),
       ]);
+      next
+          .read(authRecoveryTargetProvider.notifier)
+          .set(previous.read(authRecoveryTargetProvider));
+      next
+          .read(needsReauthProvider.notifier)
+          .set(previous.read(needsReauthProvider));
       await CatchupStateStore(sharedPreferences).setIdentityAuthorized(false);
       next
           .read(accountStorageRecoveryProvider.notifier)
@@ -396,9 +340,6 @@ Future<void> _startApp() async {
           AppErrorApp(message: redactTokens('$error'), logPath: _crashLogPath),
     ),
   );
-  // Mark the app as up once it has painted a frame. After this, a stray
-  // uncaught async error is recoverable and must NOT replace the whole UI with
-  // the fatal screen (see [_onFatalError]).
   WidgetsBinding.instance.addPostFrameCallback((_) {
     _appRendered = true;
     _logBoot('first frame');
@@ -425,9 +366,6 @@ ProviderContainer _createSessionContainer(
   ],
 );
 
-/// Startup breadcrumbs in the crash log: a boot that dies pre-frame leaves the
-/// last completed stage next to the error, instead of a bare stack with no
-/// context (the startup-OOM class was undiagnosable without this).
 void _logBoot(String stage) {
   writeCrashLog(
     _crashLogPath,
@@ -435,9 +373,7 @@ void _logBoot(String stage) {
   );
 }
 
-/// Install the framework + async error handlers and resolve the crash-log file.
-/// Each handler is best-effort and never throws, so crash reporting can't itself
-/// crash startup.
+// Error handlers must never throw while reporting a startup failure.
 Future<void> _setUpCrashReporting() async {
   _crashLogPath = await initCrashLog();
   setDiagnosticSink((line) => writeCrashLog(_crashLogPath, line));
@@ -456,8 +392,7 @@ Future<void> _setUpCrashReporting() async {
 }
 
 void _logCrash(Object error, StackTrace? stack) {
-  // Include the runtime type — some exceptions (e.g. wrapped GraphQL ones) have
-  // an empty toString(), which would otherwise log a blank line.
+  // Some exceptions have empty toString(); retain their runtime type.
   final body = redactTokens('${error.runtimeType}: $error\n$stack');
   debugPrint('Tsumiru error: $body');
   writeCrashLog(
@@ -468,11 +403,7 @@ void _logCrash(Object error, StackTrace? stack) {
 
 void _onFatalError(Object error, StackTrace stack) {
   _logCrash(error, stack);
-  // Only a failure BEFORE the first frame is truly fatal (it would otherwise
-  // leave a blank white window) — show the error screen then. Once the app has
-  // painted, a stray uncaught async error (e.g. a failed network call in a
-  // button handler) is recoverable: it's logged, but it must not replace the
-  // running app with a "couldn't start" screen.
+  // After the first frame, async errors must not replace the running app with a startup error screen.
   if (_appRendered) return;
   try {
     runApp(
@@ -484,11 +415,6 @@ void _onFatalError(Object error, StackTrace stack) {
   } catch (_) {}
 }
 
-/// Sets up the AppLinks deep-link listener so that OAuth callbacks of the form
-/// `tsumiru://tracker-oauth?...&state=...` are handled automatically.
-///
-/// Checks for an initial link (cold-start) and subscribes to the uriLinkStream
-/// (warm-start). Both paths use the same pending-request guard.
 void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
   final appLinks = AppLinks();
 
@@ -513,7 +439,6 @@ void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
     }
   }
 
-  // Cold-start: the app was launched via a deep link.
   appLinks
       .getInitialLink()
       .then((uri) {
@@ -523,17 +448,12 @@ void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
         debugPrint('AppLinks initial link could not be read');
       });
 
-  // Warm-start: the app was already running and received a deep link.
   appLinks.uriLinkStream.listen(
     (uri) => unawaited(handleUri(uri)),
     onError: (_) => debugPrint('AppLinks link stream failed'),
   );
 }
 
-/// Seeds server URL + auth from `--dart-define`s so test launches come up
-/// already connected and logged in. Local dev convenience only — gated on
-/// [kDebugMode] and the presence of `TEST_SERVER_URL`. The password is NEVER
-/// stored in the repo; it comes from a gitignored launcher (scripts/run-test.sh).
 Future<void> _seedTestConfig(ProviderContainer container) async {
   if (!kDebugMode) return;
   const url = String.fromEnvironment('TEST_SERVER_URL');
@@ -543,7 +463,7 @@ Future<void> _seedTestConfig(ProviderContainer container) async {
 
   await container.read(serverExternalUrlProvider.notifier).update(url);
   if (url.startsWith('https')) {
-    // Reverse-proxied https servers need no extra port appended.
+    // Reverse-proxied HTTPS servers need no additional port.
     await container.read(serverPortToggleProvider.notifier).update(false);
   }
   container.read(authTypeKeyProvider.notifier).update(AuthType.uiLogin);

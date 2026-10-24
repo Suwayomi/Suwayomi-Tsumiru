@@ -5,8 +5,7 @@ import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/graphql_undefined_field.dart';
-import '../../../../account/data/account_providers.dart';
-import '../../../../account/domain/account_access.dart';
+import '../../../data/account_or_legacy_settings.dart';
 import '../../../data/user_settings.dart';
 import '../domain/koreader_sync_domain.dart';
 import './graphql/__generated__/koreader_sync.graphql.dart';
@@ -97,6 +96,31 @@ class KoreaderSyncRepository {
     return status?.isLoggedIn ?? false;
   }
 
+  Future<void> pushProgress(int chapterId) async {
+    final success = await ferryClient
+        .mutate$PushKoSyncProgress(
+          Options$Mutation$PushKoSyncProgress(
+            variables: Variables$Mutation$PushKoSyncProgress(
+              input: Input$PushKoSyncProgressInput(chapterId: chapterId),
+            ),
+          ),
+        )
+        .getData((data) => data.pushKoSyncProgress?.success);
+    if (success != true) throw StateError('KOReader progress push failed');
+  }
+
+  Future<Mutation$PullKoSyncProgress$pullKoSyncProgress?> pullProgress(
+    int chapterId,
+  ) => ferryClient
+      .mutate$PullKoSyncProgress(
+        Options$Mutation$PullKoSyncProgress(
+          variables: Variables$Mutation$PullKoSyncProgress(
+            input: Input$PullKoSyncProgressInput(chapterId: chapterId),
+          ),
+        ),
+      )
+      .getData((data) => data.pullKoSyncProgress);
+
   Future<bool> updateStrategyForward(Enum$KoreaderSyncConflictStrategy value) =>
       _write(
         Input$PartialUserSettingsTypeInput(koreaderSyncStrategyForward: value),
@@ -183,12 +207,10 @@ Future<KoSyncStatus> koSyncStatus(Ref ref) =>
     ref.watch(koreaderSyncRepositoryProvider).status();
 
 @riverpod
-Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) async {
-  switch (ref.watch(settledAccountAccessProvider).capability) {
-    case AccountCapability.unknown:
-      throw StateError('Account settings unavailable');
-    case AccountCapability.supported:
-      final user = await ref.watch(userSettingsProvider.future);
+Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) =>
+    accountOrLegacySettings(
+      ref,
+      fromUser: (user) {
       if (user == null) throw StateError('Missing account settings');
       return (
         strategyForward: user.koreaderSyncStrategyForward,
@@ -196,7 +218,8 @@ Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) async {
         checksumMethod: user.koreaderSyncChecksumMethod,
         percentageTolerance: user.koreaderSyncPercentageTolerance,
       );
-    case AccountCapability.unsupported:
+      },
+      legacy: () async {
       final settings = await ref
           .watch(koreaderSyncRepositoryProvider)
           .legacySettings();
@@ -207,5 +230,5 @@ Future<KoreaderSyncSettings?> koreaderSyncSettings(Ref ref) async {
         checksumMethod: settings.koreaderSyncChecksumMethod,
         percentageTolerance: settings.koreaderSyncPercentageTolerance,
       );
-  }
-}
+      },
+    );

@@ -11,7 +11,6 @@ class Settings extends _$Settings {
   Future<SettingsDto?> build() =>
       ref.watch(settingsRepositoryProvider).getServerSettings();
 
-  // Set directly: copyWithData only touches the data branch, so an update
-  // landing while loading/errored was silently dropped.
+  // Set directly because copyWithData ignores loading and error states.
   void updateState(SettingsDto value) => state = AsyncValue.data(value);
 }

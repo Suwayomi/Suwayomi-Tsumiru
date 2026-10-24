@@ -8,16 +8,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-/// The two brand marks the app shows (About, update dialog), from the Font
-/// Awesome Free Brands font bundled on its own. The font_awesome_flutter
-/// package also shipped its Solid and Regular fonts, ~500 KB nothing used.
+/// Brand marks from the separately bundled Font Awesome Free Brands font.
 abstract final class BrandIcons {
   static const github = IconData(0xf09b, fontFamily: 'FontAwesomeBrands');
   static const discord = IconData(0xf392, fontFamily: 'FontAwesomeBrands');
 }
 
-/// Font Awesome's license, which the package used to add to the licenses page
-/// by itself (icons CC BY 4.0, font SIL OFL 1.1).
+/// Font Awesome license: icons CC BY 4.0, font SIL OFL 1.1.
 void registerBrandIconsLicense() => LicenseRegistry.addLicense(() async* {
   yield LicenseEntryWithLineBreaks([
     'Font Awesome',

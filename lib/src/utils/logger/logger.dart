@@ -27,14 +27,7 @@ class MyConsoleOutput extends ConsoleOutput {
     for (int i = 0; i < event.lines.length; i++) {
       debugPrint(event.lines[i]);
     }
-    // debugPrint alone requires a live debugger attached to see it — anything
-    // that happens in a background isolate (WorkManager, the foreground
-    // download service) or on a release/profile build the user actually runs
-    // was otherwise undiagnosable after the fact. Persisting warnings and
-    // worse to the same crash-log file the Settings "copy crash log" action
-    // reads makes every existing logger.w/.e call site in the app retroactively
-    // visible there, not just the ones that happen to also call
-    // recordDiagnostic directly.
+    // Persist warnings/errors so background and release failures appear in the copied crash log.
     if (event.level == l.Level.warning ||
         event.level == l.Level.error ||
         event.level == l.Level.fatal) {

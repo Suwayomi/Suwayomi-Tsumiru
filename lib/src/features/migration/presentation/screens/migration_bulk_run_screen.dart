@@ -35,9 +35,6 @@ import '../../domain/bulk_migration_types.dart';
 import '../../domain/migration_models.dart';
 import '../widgets/migration_config_sheet.dart';
 
-/// Migration list (Komikku `MigrationListScreen`). Each row compares the source
-/// manga to its matched target as cover cards; Copy / Migrate live in the top
-/// bar; the per-row ⋮ menu offers search-manually / skip / migrate-now / copy-now.
 class MigrationBulkRunScreen extends HookConsumerWidget {
   const MigrationBulkRunScreen({super.key, required this.data});
 
@@ -76,8 +73,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final hideWithoutUpdates = useState(data.hideWithoutUpdates);
 
     final sourceById = {for (final m in library.value ?? const []) m.id: m};
-    // Resolve in the build body (listen:false) — calling containerOf inside
-    // useEffect runs during hook-init, where inherited-widget lookups throw.
+    // Resolve outside useEffect; hook initialization cannot look up inherited widgets.
     final container = ProviderScope.containerOf(context, listen: false);
 
     useEffect(() {
@@ -185,8 +181,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final r = sameSession && !unavailable.value && startupError.value == null
         ? runner.value
         : null;
-    // Native desktop draws the toolbar in the shell bar instead of an app
-    // bar.
     final topBar = showsMergedTopBar(context);
     final title = Text(
       r == null || r.entries.isEmpty
@@ -314,7 +308,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                 return Align(
                   alignment: Alignment.topCenter,
                   child: SizedBox(
-                    // Keep the 5:1:5 flex ratio plus the menu and row insets.
                     width: kShortSearchCoverWidth * 11 / 5 + 40 + 24,
                     child: list,
                   ),
@@ -331,8 +324,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     );
   }
 
-  /// A matched target with no more chapters than the source — hidden by the
-  /// "hide without updates" toggle.
   bool _noUpdates(BulkMigrationEntry e) {
     if (e.toMangaId == null) return false;
     final from = e.fromLatestChapter;
@@ -354,8 +345,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
         e.phase != BulkEntryPhase.queued && e.phase != BulkEntryPhase.searching,
   );
 
-  /// Manual target search for one row — pops back the chosen target and sets it
-  /// on the runner (Komikku parity), instead of launching a separate migration.
   Future<void> _searchManually(
     BuildContext context,
     BulkMigrationRunner r,
@@ -443,7 +432,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
 
     final messenger = ScaffoldMessenger.of(context);
     final snackBarMotionStyle = context.snackBarMotionStyle;
-    // Blocking progress while copying/removing (Komikku MigrationProgressDialog).
     unawaited(
       showDialog<void>(
         context: context,
@@ -474,8 +462,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     if (context.mounted) context.pop(); // back to the library
   }
 
-  /// Per-row Migrate/Copy: commit the one entry, drop it, and pop to the library
-  /// once the list empties (Komikku `migrateNow` → `removeManga`).
   Future<void> _commitRow(
     BuildContext context,
     BulkMigrationRunner r,
@@ -504,7 +490,6 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     if (r.entries.isEmpty && context.mounted) context.pop();
   }
 
-  /// Whether the entry reached [BulkEntryPhase.done] (or was already gone).
   bool _committed(BulkMigrationRunner r, int fromMangaId) {
     for (final e in r.entries) {
       if (e.fromMangaId == fromMangaId) return e.phase == BulkEntryPhase.done;
@@ -531,7 +516,6 @@ double? _latestOf(List<dynamic>? chapters) {
   return best;
 }
 
-/// One source → target comparison row (Komikku layout).
 class _Row extends StatelessWidget {
   const _Row({
     required this.entry,
@@ -803,8 +787,6 @@ class _ActionMenu extends StatelessWidget {
   }
 }
 
-/// Non-dismissible progress while a batch commits (Komikku `MigrationProgressDialog`).
-/// Progress = committed entries over the set that was confirmed for this run.
 class _MigrationProgressDialog extends StatelessWidget {
   const _MigrationProgressDialog({
     required this.runner,

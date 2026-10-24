@@ -8,10 +8,7 @@ import 'package:flutter/widgets.dart';
 
 import 'router_config.dart';
 
-/// Global search is a top-level route, so it covers the shell and its bottom
-/// nav. It has to be pushed: `go` replaces the stack, leaving nothing to go
-/// back to and no way off the screen but killing the app (#350). Routed
-/// through here so no caller has to know that.
+/// Push global search so replacing the stack cannot discard its return route.
 void openGlobalSearch(
   BuildContext context, {
   String? query,

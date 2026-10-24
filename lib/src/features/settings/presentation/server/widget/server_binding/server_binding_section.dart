@@ -5,6 +5,7 @@ import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../../../search/settings_search_registry.dart';
@@ -34,7 +35,21 @@ class ServerBindingSection extends ConsumerWidget {
                 type: SettingsPropType.textField(
                   hintText: context.l10n.ipHintText,
                   value: serverBindingDto.ip,
-                  onChanged: canManage ? repository.updateIpAddress : null,
+                  onChanged: canManage
+                      ? (value) async {
+                          if (value == serverBindingDto.ip) return;
+                          if (!await confirmAction(
+                                context,
+                                title: context.l10n.confirmNetworkTitle,
+                                message: context.l10n.confirmNetworkMessage,
+                                action: context.l10n.save,
+                              ) ||
+                              !context.mounted) {
+                            return;
+                          }
+                          await repository.updateIpAddress(value);
+                        }
+                      : null,
                 ),
                 subtitle: serverBindingDto.ip,
               ),
@@ -48,7 +63,21 @@ class ServerBindingSection extends ConsumerWidget {
                   min: 0,
                   max: 65535,
                   value: serverBindingDto.port,
-                  onChanged: canManage ? repository.updatePort : null,
+                  onChanged: canManage
+                      ? (value) async {
+                          if (value == serverBindingDto.port) return;
+                          if (!await confirmAction(
+                                context,
+                                title: context.l10n.confirmNetworkTitle,
+                                message: context.l10n.confirmNetworkMessage,
+                                action: context.l10n.save,
+                              ) ||
+                              !context.mounted) {
+                            return;
+                          }
+                          await repository.updatePort(value);
+                        }
+                      : null,
                 ),
               ),
             ),

@@ -7,10 +7,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/tracking/controller/manga_track_records_controller.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/features/tracking/presentation/hub/track_sheet.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 Fragment$TrackerDto _fakeTracker({bool isLoggedIn = true, int id = 1}) =>
@@ -50,9 +52,12 @@ void main() {
     required Fragment$TrackerDto tracker,
     required List<Fragment$TrackRecordDto> records,
   }) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           trackersProvider.overrideWith((ref) async => [tracker]),
           mangaTrackRecordsProvider(
             mangaId: 1,

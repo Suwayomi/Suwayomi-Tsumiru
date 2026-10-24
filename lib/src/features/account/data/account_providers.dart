@@ -118,11 +118,7 @@ final settledAccountAccessProvider = Provider<AccountAccess>((ref) {
     cache.remember(key, fresh);
     return fresh;
   }
-  // A re-check in flight, an unreachable server or a failed probe says nothing
-  // new about the grants, so keep the last settled answer for this binding.
-  // Dropping to unknown here made every reachability flip flash
-  // permission-denied UI (the Downloads queue header jumped on a stalled
-  // server). The server still enforces every permission.
+  // Keep settled grants during rechecks or reachability failures; the server still enforces them.
   return cache.recall(key) ??
       AccountAccess(capability: AccountCapability.unknown);
 });
@@ -195,13 +191,7 @@ final refreshAccountAccessProvider = Provider<Future<AccountAccess> Function()>(
   (ref) {
     final current = watchAuthSession(ref);
     Completer<AccountAccess>? pending;
-    // The launch reconcile verifies the download grant once per series, one
-    // after another. Each call re-ran the account check, and each answer
-    // rebuilt everything watching it (SyncYomi settings re-queried too): about
-    // 700 request pairs in 20 s on a 360-series library, while it loaded. A
-    // verified answer this recent is still the answer; the server enforces the
-    // grant on every download anyway. A session change rebuilds this provider,
-    // so the reuse never crosses sessions.
+    // Reuse recent checks within this session to avoid one account query per reconciled series.
     AccountAccess? recent;
     DateTime? recentAt;
     ref.onDispose(() {
@@ -212,8 +202,7 @@ final refreshAccountAccessProvider = Provider<Future<AccountAccess> Function()>(
     return () {
       if (!current()) return Future.error(const AccountPermissionUnavailable());
       if (pending != null) return pending!.future;
-      // Downloads parked by a denial resume only when a fresh check sees the
-      // grant back (accountAccessProvider clears the pause), so never reuse then.
+      // Denied downloads resume only after a fresh check observes the grant restored.
       final reusable = recent;
       if (reusable != null &&
           accountAccessClock().difference(recentAt!) < accountAccessReuse &&

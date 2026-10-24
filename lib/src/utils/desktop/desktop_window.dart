@@ -15,18 +15,11 @@ import 'window_geometry.dart';
 import 'window_geometry_listener.dart';
 import 'window_geometry_store.dart';
 
-// The smallest size the desktop two-row layout fits: the desktop layout
-// needs width >= 600 with a shortestSide >= 600, and at 600 px the title
-// bar (brand plus window buttons) and every toolbar at its minimum still
-// lay out — narrower toolbars scroll internally instead of overflowing,
-// and the collapsed sidebar's rows fit the remaining height. Mirrored in
-// linux/my_application.cc, because window_manager's minimum is lost there.
+// Minimum desktop-shell size; mirrored in linux/my_application.cc where window_manager's minimum is lost.
 const kMinWindowSize = Size(600, 600);
 const kDefaultWindowSize = Size(1280, 900);
 
-/// Initialise the desktop window: hide the OS title bar, restore the saved
-/// size/maximized state, and show only once Flutter is ready (no white flash).
-/// No-op on web/mobile.
+/// Restore and prepare the hidden desktop window; no-op on web/mobile.
 Future<void> initDesktopWindow(SharedPreferences prefs) async {
   if (!isDesktopPlatform) return;
 
@@ -57,9 +50,7 @@ Future<void> initDesktopWindow(SharedPreferences prefs) async {
     }
     await windowManager.setPreventClose(true);
     attachWindowGeometryListener(prefs);
-    // Show after Flutter's first frame, not here — the rest of startup (Hive,
-    // migrations, auth preload) still runs before runApp, and showing early
-    // flashes a blank window on slow starts.
+    // Wait for Flutter's first frame before showing the window to avoid a blank startup.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await windowManager.show();
       await windowManager.focus();

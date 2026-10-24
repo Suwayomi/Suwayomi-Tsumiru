@@ -9,26 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 
-/// Set once the seeding below has run, so a later deliberate change by the user
-/// survives the next launch.
+/// Marks completed migration so later user choices survive relaunch.
 const kBadgePrefsMigratedKey = 'badgePrefsRevampMigrated';
 
 const _kLegacyUnreadBadge = 'unreadBadge';
 const _kLegacyLocalBadge = 'localBadge';
 const _kLegacyUseLangIcon = 'useLangIcon';
 
-/// Carries pre-revamp badge settings onto the keys that replaced them, so an
-/// upgrade doesn't read as the app forgetting them.
-///
-/// * `unreadBadge` off becomes [UnreadBadgeMode.hidden]. Everyone else is
-///   already covered by the new key's own default.
-/// * `localBadge` folded into `sourceBadge`, which now draws the Local Source
-///   folder glyph itself. Turning it on is the only way to keep that badge; it
-///   also brings source icons the user didn't ask for, which beats silently
-///   dropping a badge they did.
-/// * `useLangIcon` put a source icon in the language slot. The language slot
-///   now always draws a flag, so the source icon moves to `sourceBadge` and the
-///   language badge turns off — the same single icon on the cover as before.
+/// Migrates legacy badge preferences once, preserving disabled unread badges and source icons.
 Future<void> migrateBadgePreferences(SharedPreferences prefs) async {
   if (prefs.getBool(kBadgePrefsMigratedKey) == true) return;
 
@@ -40,8 +28,7 @@ Future<void> migrateBadgePreferences(SharedPreferences prefs) async {
     );
   }
 
-  // Only meaningful while the language badge was actually on: the old settings
-  // page nested this switch under it, and the renderer gated on it too.
+  // The legacy language-icon switch only applied while the language badge was enabled.
   final langIconStandsIn = prefs.getBool(_kLegacyUseLangIcon) == true &&
       prefs.getBool(DBKeys.languageBadge.name) == true;
 

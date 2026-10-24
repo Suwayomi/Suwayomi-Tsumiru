@@ -11,13 +11,7 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_force_horizontal_seekbar_tile.g.dart';
 
-/// Persisted reader preference: force the horizontal bottom
-/// seekbar in all reader modes, including webtoon.
-///
-/// **Default FALSE** (locked decision 2026-07-01): webtoon
-/// keeps the vertical side seekbar by default. Setting this to true is an
-/// explicit opt-in; it hides the vertical side seekbar and promotes the
-/// horizontal bottom seekbar as the primary control in every mode.
+/// Replaces the vertical seekbar with the horizontal seekbar in every reader mode.
 @riverpod
 class ForceHorizontalSeekbar extends _$ForceHorizontalSeekbar
     with SharedPreferenceClientMixin<bool> {

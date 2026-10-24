@@ -30,8 +30,7 @@ final _isoDuration = RegExp(
   r'^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$',
 );
 
-/// The bare origin the server appends `/api/sync/...` to, or null when [raw]
-/// is not an http(s) URL with a host.
+/// Returns the bare http(s) origin the server appends /api/sync/... to, or null.
 String? normaliseSyncYomiHost(String raw) {
   final trimmed = raw.trim();
   if (!_httpScheme.hasMatch(trimmed)) return null;
@@ -74,8 +73,7 @@ class SyncYomiStatusView {
   final String? error;
 }
 
-/// Which line the status row should show. Every state other than SUCCESS and
-/// ERROR counts as still running, including ones this build doesn't know.
+/// Unknown states count as running; only SUCCESS and ERROR are terminal.
 SyncYomiStatusView syncYomiStatusView({
   String? state,
   String? endDate,
@@ -119,9 +117,7 @@ class SyncYomiIntervalDescription {
   final String? raw;
 }
 
-/// The offered interval whose length equals [value]'s, or null when the picker
-/// has no such option. Matched on duration, so a server sending P1D still
-/// lands on PT24H.
+/// Matches durations rather than strings, so P1D selects PT24H.
 String? syncYomiIntervalOption(String value) {
   final duration = parseIsoDuration(value);
   if (duration == null) return null;
@@ -131,8 +127,7 @@ String? syncYomiIntervalOption(String value) {
   return null;
 }
 
-/// How to word a stored interval. A value the picker doesn't offer came from
-/// another client, so it is read out in whole hours or whole minutes.
+/// Intervals absent from the picker are described in whole hours or minutes.
 SyncYomiIntervalDescription describeSyncYomiInterval(String value) {
   final option = syncYomiIntervalOption(value);
   if (option != null) {
@@ -169,8 +164,7 @@ enum SyncYomiStep {
   unknown,
 }
 
-/// Which step of a running sync the server reports. Anything this build does
-/// not know reads as [SyncYomiStep.unknown].
+/// Unrecognized server states resolve to [SyncYomiStep.unknown].
 SyncYomiStep syncYomiStep(String? state) => switch (state) {
   'STARTED' => SyncYomiStep.starting,
   'CREATING_BACKUP' => SyncYomiStep.creatingBackup,
@@ -181,10 +175,8 @@ SyncYomiStep syncYomiStep(String? state) => switch (state) {
   _ => SyncYomiStep.unknown,
 };
 
-/// One row of the Sync data setting, named after the server flag it writes.
 enum SyncYomiDataKind { manga, chapters, categories, history, tracking }
 
-/// The data kinds a sync includes, in the order the dialog lists them.
 List<SyncYomiDataKind> enabledSyncYomiData({
   required bool manga,
   required bool chapters,

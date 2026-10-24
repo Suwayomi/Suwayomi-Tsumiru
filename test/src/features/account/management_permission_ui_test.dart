@@ -51,7 +51,10 @@ void main() {
         );
         await tester.pumpAndSettle();
         final localSwitch = tester.widget<CompactSwitchListTile>(
-          find.byType(CompactSwitchListTile),
+          find.descendant(
+            of: find.byType(ShowNSFWTile),
+            matching: find.byType(CompactSwitchListTile),
+          ),
         );
         expect(localSwitch.onChanged, isNotNull);
         localSwitch.onChanged!(true);

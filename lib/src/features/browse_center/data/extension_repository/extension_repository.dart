@@ -109,11 +109,7 @@ class ExtensionRepository {
       )
       .getData((data) {});
 
-  /// How many installed extensions have an update waiting.
-  ///
-  /// A plain query, unlike [getExtensionListStream] — that one is a mutation
-  /// that sends the server out to the extension repos, which is far too much to
-  /// do for a number on a navigation bar.
+  /// Queries the update count without triggering the server repository refresh mutation.
   Future<int> getExtensionUpdateCount() => client
       .query$ExtensionUpdateCount(
         Options$Query$ExtensionUpdateCount(

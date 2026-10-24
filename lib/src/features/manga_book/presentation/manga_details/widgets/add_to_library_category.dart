@@ -24,27 +24,18 @@ import '../../../domain/manga/manga_model.dart';
 import 'duplicate_manga_dialog.dart';
 import 'migrate_duplicate.dart';
 
-/// Adds a manga to the library honoring the "Default category" preference:
-/// a specific category is assigned silently, "Default"/uncategorized just adds,
-/// and "Always ask" pops a picker. Mirrors Komikku's add-to-library behavior.
-///
-/// Assignment is client-side (the server does not auto-categorize on add, per
-/// Suwayomi-WebUI). Returns without adding if the picker is cancelled.
+/// Assigns the preferred category client-side; cancelling the picker leaves the manga unadded.
 
 Future<void> addMangaToLibraryWithCategory(
   WidgetRef ref,
   BuildContext context,
   MangaDto manga, {
-  // Test seams: migrate needs the whole migration runner and open needs a
-  // router, neither of which a widget test can stand up. Production leaves both
-  // null and uses the real runner-backed migrate + go_router navigation.
   @visibleForTesting
   Future<bool> Function(MangaDto from, MangaDto to)? migrateDuplicate,
   @visibleForTesting
   void Function(BuildContext context, MangaDto manga)? openEntry,
 }) async {
-  // The container outlives this widget, so the server writes + the final list
-  // invalidation still land if the details page is popped mid-add.
+  // Capture the container so writes and invalidation survive details-page disposal.
   final container = ProviderScope.containerOf(context, listen: false);
   final repo = container.read(mangaBookRepositoryProvider);
   final mangaId = manga.id;
@@ -76,8 +67,7 @@ Future<void> addMangaToLibraryWithCategory(
     await repo.addMangaToLibrary(mangaId);
     await repo.addMangaToCategory(mangaId, match.first.id);
   } else if (pref == 0 || categories.isEmpty) {
-    // Explicit Default/uncategorized, or nothing to pick from. A since-deleted
-    // pref is NOT this branch — it falls through to the picker (matches settings).
+    // A deleted category preference falls through to the picker, not the uncategorized branch.
     await repo.addMangaToLibrary(mangaId);
   } else {
     if (!context.mounted) return;
@@ -95,11 +85,7 @@ Future<void> addMangaToLibraryWithCategory(
   container.invalidate(libraryMangaListProvider);
 }
 
-/// Runs the possible-duplicates check (#118) before the add. Returns true when
-/// the add should proceed (no duplicates, a fail-open library-list error, or the
-/// user chose "Add anyway"); false when it should stop (migrated / opened an
-/// existing entry / cancelled). Fail-open is deliberate — a library read that
-/// errors must never block adding.
+/// Allow adds on duplicate-check read failure; false means opened, migrated, or cancelled.
 Future<bool> _passesDuplicateGate(
   WidgetRef ref,
   ProviderContainer container,
@@ -166,13 +152,10 @@ Future<bool> _passesDuplicateGate(
     if (target != null) open(context, target);
     return false;
   }
-  // Barrier-dismiss (null), cancel, and migrated all stop the add.
   return result == DuplicateDialogResult.addAnyway;
 }
 
-/// The "Always ask" prompt shown when adding a manga to the library: pick which
-/// categories it joins. Server-default categories start checked (WebUI parity).
-/// Pops the selected ids on OK, or null on Cancel/Edit.
+/// Server-default categories start checked; returns selected IDs, or null on Cancel/Edit.
 class SetCategoriesOnAddDialog extends HookWidget {
   const SetCategoriesOnAddDialog({super.key, required this.categories});
 

@@ -13,10 +13,6 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/theme/brand.dart';
 
-/// Reading-progress bar, themed with the brand gradient. Lays out **horizontal**
-/// (page-flip manga) or **vertical** (webtoon / vertical scroll); tap or drag
-/// anywhere along it to seek. The filled portion is the indigo→cyan brand
-/// gradient with a soft glow, on a subtle rounded track, in our theme.
 class BrandPageSeekBar extends StatelessWidget {
   const BrandPageSeekBar({
     super.key,
@@ -39,8 +35,7 @@ class BrandPageSeekBar extends StatelessWidget {
   /// Flip the fill/seek direction (RTL paging).
   final bool inverted;
 
-  /// Capsule background. Pass [readerNavSurface] in vertical (webtoon) mode so
-  /// the bar shares ONE theme-surface colour with its jump buttons.
+  /// Use readerNavSurface vertically so the seek bar matches its chapter buttons.
   final Color? capsuleColor;
 
   void _seek(Offset local, Size size) {
@@ -55,8 +50,7 @@ class BrandPageSeekBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // A chapter whose page list failed to load has no page to show; the
-    // current-page label would call clamp(1, 0) and throw.
+    // No pages means clamp(1, 0) would throw.
     if (maxValue < 1) return const SizedBox.shrink();
     final cs = context.theme.colorScheme;
     final brand = BrandColors.of(context);
@@ -102,8 +96,6 @@ class BrandPageSeekBar extends StatelessWidget {
         Text("${(currentValue + 1).clamp(1, maxValue)}", style: numStyle);
     final total = Text("$maxValue", style: numStyle);
     const thickness = 26.0;
-    // Gap between the page numbers and the bar — keeps them clear of
-    // the slider (the "6 / 15 touching the slider" complaint).
     const gap = SizedBox.square(dimension: 10);
 
     final content = axis == Axis.horizontal
@@ -158,7 +150,6 @@ class _SeekPainter extends CustomPainter {
   final Gradient gradient;
   final Color onGradient;
 
-  /// Page count — one tick dot per page.
   final int count;
 
   @override
@@ -174,13 +165,11 @@ class _SeekPainter extends CustomPainter {
         : Rect.fromLTRB(cross - t / 2, from, cross + t / 2, to);
     Offset along(double d) => horizontal ? Offset(d, cross) : Offset(cross, d);
 
-    // Track — accent-tinted inactive track, subtle.
     canvas.drawRRect(
       RRect.fromRectAndRadius(bar(0, length), radius),
       Paint()..color = scheme.primary.withValues(alpha: 0.22),
     );
 
-    // Gradient fill up to the current position.
     final marker = (length * position).clamp(0.0, length);
     final filled = inverted ? bar(marker, length) : bar(0, marker);
     if ((horizontal ? filled.width : filled.height) > 0.5) {
@@ -190,8 +179,6 @@ class _SeekPainter extends CustomPainter {
       );
     }
 
-    // Per-page tick dots: dark over the filled portion, light over the
-    // unfilled track so they read on both.
     if (count > 1) {
       final onFill = Paint()..color = onGradient.withValues(alpha: 0.45);
       final onTrack = Paint()..color = scheme.onSurface.withValues(alpha: 0.4);
@@ -206,8 +193,6 @@ class _SeekPainter extends CustomPainter {
       }
     }
 
-    // Marker line at the current position (perpendicular to the bar), painted
-    // with the brand gradient + a soft glow.
     final pos = marker;
     const half = 13.0;
     const mkt = 4.0;
@@ -215,7 +200,6 @@ class _SeekPainter extends CustomPainter {
         horizontal ? Offset(pos, cross - half) : Offset(cross - half, pos);
     final p2 =
         horizontal ? Offset(pos, cross + half) : Offset(cross + half, pos);
-    // Glow.
     canvas.drawLine(
       p1,
       p2,
@@ -225,7 +209,6 @@ class _SeekPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..maskFilter = const ui.MaskFilter.blur(BlurStyle.normal, 5),
     );
-    // Gradient marker.
     final markerRect = Rect.fromPoints(p1, p2).inflate(mkt);
     canvas.drawLine(
       p1,

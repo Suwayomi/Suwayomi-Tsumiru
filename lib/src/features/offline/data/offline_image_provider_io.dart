@@ -8,5 +8,4 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 
-/// Native: render a downloaded page straight off disk.
 ImageProvider offlineImageProvider(String path) => FileImage(File(path));

@@ -144,22 +144,8 @@ class CategoryRepository {
       )
       .getData((data) {});
 
-  //  Manga
-  //
-  // Paginated to exhaustion. This fetch drives BOTH the offline metadata sync
-  // (per-manga upsert) and the prune (markNotInLibrary + purgeRemovedLibrary):
-  // a single truncated page would leave every series past it unsynced — its
-  // inLibraryAt frozen — AND, for off-rule series, stamp the removed sentinel
-  // (kLibraryRemovedSentinel) and delete it. The server paginates the
-  // `mangas` list (the notification feed pages the sibling `chapters` query
-  // the same way), and the old single-shot
-  // call kept only the first page while silently discarding pageInfo/totalCount.
-  // A partial or failed page therefore yields null — treated by the caller as a
-  // failed fetch (no sync, no prune, offline fallback) — never a short list.
-  ///
-  /// [withFirstUnread] asks for each series' first unread chapter, which only
-  /// the "continue reading" button reads and which costs the server a ranking
-  /// over every chapter of the library.
+  /// Returns null on partial or failed pagination: offline pruning requires the complete library.
+  /// [withFirstUnread] adds a costly per-series chapter ranking for the continue-reading button.
   Future<List<MangaDto>?> getAllLibraryMangas({bool withFirstUnread = true}) =>
       collectAllPages<MangaDto>(
         (after) => ferryClient

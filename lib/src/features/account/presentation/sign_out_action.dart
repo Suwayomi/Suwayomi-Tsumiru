@@ -15,9 +15,6 @@ import '../../../widgets/popup_widgets/pop_button.dart';
 import '../../settings/presentation/connection/prompt_sign_in.dart';
 import '../data/account_actions.dart';
 
-/// Shared "Sign out" flow for the Connection page's Account card and the
-/// More screen: the Account screen's confirmation dialog, then the account
-/// sign-out, staying on Connection across the identity change.
 Future<void> confirmAndSignOutAccount(
   BuildContext context,
   WidgetRef ref,

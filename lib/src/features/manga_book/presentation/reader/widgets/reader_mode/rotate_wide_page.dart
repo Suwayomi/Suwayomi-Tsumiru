@@ -6,10 +6,7 @@
 
 import 'package:flutter/material.dart';
 
-/// Rotates a wide (landscape) page 90° so it fills a portrait viewport
-/// (+90° default, -90° inverted). Aspect comes
-/// from the already-decoded image (ServerImage.imageBuilder only fires once
-/// loaded, so resolving here is a cache hit, never a new fetch/decode).
+/// Rotates wide pages ±90°; aspect lookup reuses the decoded image without fetching again.
 class RotateWidePage extends StatefulWidget {
   const RotateWidePage({
     super.key,
@@ -56,7 +53,6 @@ class _RotateWidePageState extends State<RotateWidePage> {
     info.dispose();
     if (wide == _isWide) return;
     if (synchronousCall) {
-      // Delivered inside _resolve(), i.e. before this frame's build.
       _isWide = wide;
     } else if (mounted) {
       setState(() => _isWide = wide);

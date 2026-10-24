@@ -11,12 +11,10 @@ import 'package:flutter/foundation.dart'; // debugPrint
 import '../chapter/chapter_model.dart';
 import '../chapter/graphql/__generated__/fragment.graphql.dart';
 
-/// A page holds 50 rows and a newly added series can be all of them, so this
-/// keeps a return from the reader from bursting 50 requests at a home server.
+/// Limit concurrency so returning from the reader cannot send a page of 50 requests at once.
 const int kUpdatesRefreshBatchSize = 8;
 
-/// Fetches [ids] via [fetch], [batchSize] at a time. A failing fetch is dropped
-/// rather than fatal — one unreachable chapter must not sink the whole batch.
+/// Fetches at most [batchSize] chapters concurrently; individual failures are dropped.
 Future<List<ChapterDto>> fetchChaptersInBatches({
   required List<int> ids,
   required Future<ChapterDto?> Function(int id) fetch,
@@ -29,8 +27,6 @@ Future<List<ChapterDto>> fetchChaptersInBatches({
       for (final id in batch)
         fetch(id).then<ChapterDto?>(
           (c) => c,
-          // Failing soft keeps one bad chapter from costing the user the rest,
-          // but a swallowed error already hid a live bug here once, so say so.
           onError: (Object e, StackTrace _) {
             debugPrint('Updates row refresh failed for chapter $id: $e');
             return null;
@@ -42,9 +38,7 @@ Future<List<ChapterDto>> fetchChaptersInBatches({
   return fetched;
 }
 
-/// Rewrites [rows] for [mangaId] from [chapters]; rows the fetch doesn't cover
-/// keep what they had. Read state only moves forward — a lagging refetch must
-/// never flip an already-read row back to unread, which was the original bug.
+/// Unfetched rows stay unchanged; lagging refetches must not turn read rows unread.
 List<ChapterWithMangaDto> patchRowsForManga({
   required List<ChapterWithMangaDto> rows,
   required int mangaId,

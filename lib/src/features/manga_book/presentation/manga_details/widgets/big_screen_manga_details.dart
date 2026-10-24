@@ -30,9 +30,7 @@ import 'missing_chapters_tile.dart';
 import 'recommends_row.dart';
 import 'series_info_column.dart';
 
-/// Re-anchors the list on the chapter that was at the top when the row style
-/// changes. The two rows have different heights, so the pixel offset no longer
-/// points at the same chapter.
+/// Row-style changes alter heights, so restore by chapter index rather than pixel offset.
 int? _topChapterIndex(ItemPositionsListener positions) {
   final visible = positions.itemPositions.value.where(
     (position) => position.itemTrailingEdge > 0,
@@ -66,15 +64,11 @@ class BigScreenMangaDetails extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final desktop = context.windowSizeClass >= WindowSizeClass.expanded;
-    // One rule for the chapter column: the large class gets one-line rows and
-    // labelled buttons, everything below keeps the two-line phone rows.
     final wide = context.windowSizeClass >= WindowSizeClass.large;
     final selection = useValueListenable(selectedChapters);
     final selecting = selection.isNotEmpty;
     final anchor = useState<int?>(null);
-    // Last row style built, so a switch can re-anchor the list.
     final previousWide = useRef<bool?>(null);
-    // Row index to land on when the list remounts for a row-style switch.
     final restoreIndex = useRef<int?>(null);
     final itemPositionsListener = useMemoized(ItemPositionsListener.create);
     final filterButtonKey = useMemoized(GlobalKey.new);
@@ -104,8 +98,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
         .watch(firstUnreadInFilteredChapterListProvider(mangaId: mangaId))
         ?.id;
 
-    // A cleared selection drops its range anchor too, so a later shift-click
-    // never extends from a stale row (Esc is handled by the series page).
+    // Clear the range anchor with selection so a later shift-click cannot reuse a stale row.
     final wasSelecting = usePrevious(selecting);
     useEffect(() {
       if (!selecting && wasSelecting == true) anchor.value = null;
@@ -171,8 +164,6 @@ class BigScreenMangaDetails extends HookConsumerWidget {
         chapterEntries?.whereType<MangaChapterEntry>().length ?? 0;
     final lastWide = previousWide.value;
     if (lastWide != null && lastWide != wide) {
-      // The list remounts below at the new row height, so hand it the chapter
-      // that was at the top instead of a pixel offset.
       restoreIndex.value = _topChapterIndex(itemPositionsListener);
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => restoreIndex.value = null,
@@ -185,9 +176,6 @@ class BigScreenMangaDetails extends HookConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            // Large keeps the chapter column at roughly the 488 px that used
-            // to select one-line rows; the 55/45 split leaves it too narrow at
-            // 1200 with the expanded sidebar.
             flex: wide ? 50 : (desktop ? 55 : 1),
             child: SeriesInfoColumn(
               key: ValueKey(mangaId),

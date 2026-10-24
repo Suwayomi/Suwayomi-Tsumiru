@@ -7,11 +7,7 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// Reports its child's laid-out size via [onChange] after every layout in which
-/// the size changed. Used by the webtoon reader to record each page image's
-/// true rendered height, so a page re-entering the viewport (after being
-/// disposed on a long backward scroll) can reserve that height immediately
-/// instead of collapsing to a small placeholder and snapping the scroll.
+/// Reports changed layout size after the frame so webtoon pages can reserve their measured extent.
 class MeasureSize extends SingleChildRenderObjectWidget {
   const MeasureSize({super.key, required this.onChange, required Widget child})
       : super(child: child);

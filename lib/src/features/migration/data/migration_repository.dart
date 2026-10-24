@@ -23,13 +23,10 @@ import '../domain/migration_models.dart';
 
 part 'migration_repository.g.dart';
 
-/// Your rating and custom tags describe the STORY, not the source, so they carry
-/// on every migration regardless of the reader-settings toggle.
+// Rating and custom tags carry regardless of the reader-settings toggle.
 const _alwaysMetaKeys = {'flutter_rating', 'flutter_tags'};
 
-/// Per-manga reader/display settings, carried when the reader-settings toggle is
-/// on. Deliberately NOT `flutter_scanlator` (names scanlators the new source
-/// doesn't have) nor the dead legacy `flutter_readerNavigationLayoutInvert`.
+// Exclude source-specific scanlators and the obsolete navigation-invert key.
 const _readerMetaKeys = {
   'flutter_readerMode',
   'flutter_readerNavigationLayout',
@@ -49,9 +46,7 @@ abstract class MigrationRepository {
     BuildContext? context,
   ]);
 
-  /// Copies library/categories/chapters/tracking from source onto target
-  /// WITHOUT removing the source. The bulk runner journals this as its own
-  /// boundary before deciding to remove.
+  /// Copies data without removing the source; removal is a separate journal boundary.
   Future<MigrationCopyResult> copyMangaData(
     int fromMangaId,
     int toMangaId,
@@ -59,19 +54,15 @@ abstract class MigrationRepository {
     BuildContext? context,
   ]);
 
-  /// Removes the source from the library and unbinds any [copiedSourceRecordIds]
-  /// locally (never the remote tracker). Idempotent — safe to re-run after a crash.
+  /// Idempotently removes the source and unbinds copied records locally, never on the remote tracker.
   Future<({bool success, List<String> warnings})> removeSourceManga(
     int fromMangaId, {
     List<int> copiedSourceRecordIds,
   });
 
-  /// Re-adds a previously-removed source to the library ("Restore source to
-  /// library"). Does NOT reverse copied chapters/categories/tracker binds.
+  /// Restores membership without reversing copied chapters, categories, or tracker bindings.
   Future<bool> restoreSourceToLibrary(int mangaId);
 
-  /// Preflights migrating [fromMangaId] onto [toMangaId] to detect a merge into
-  /// an existing entry and any tracker records that would collide.
   Future<MigrationMergePreflight> preflightMerge(
     int fromMangaId,
     int toMangaId,
@@ -131,6 +122,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
       final result = await client.mutate$FetchSourceManga(
         Options$Mutation$FetchSourceManga(
           variables: Variables$Mutation$FetchSourceManga(
+            withLibraryFields: false,
             withFirstUnread: false,
             input: Input$FetchSourceMangaInput(
               source: sourceId,
@@ -165,7 +157,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
     try {
       final sourceMangaResult = await client.query$GetManga(
         Options$Query$GetManga(
-          variables: Variables$Query$GetManga(id: fromMangaId),
+          variables: Variables$Query$GetManga(
+            withLibraryFields: false,
+            id: fromMangaId,
+          ),
         ),
       );
 
@@ -185,7 +180,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
 
       final targetMangaResult = await client.query$GetManga(
         Options$Query$GetManga(
-          variables: Variables$Query$GetManga(id: toMangaId),
+          variables: Variables$Query$GetManga(
+            withLibraryFields: false,
+            id: toMangaId,
+          ),
         ),
       );
 
@@ -206,7 +204,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
       List<String> warnings = [];
       int migratedChapters = 0;
       int migratedCategories = 0;
-      // Blocks deleting the source so a partial migration can't lose data.
+      // Any hard failure blocks source deletion to preserve unmigrated state.
       bool hardFailure = false;
 
       if (options.migrateCategories && sourceManga.user.inLibrary) {
@@ -251,7 +249,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
               }
             }
           } else {
-            // Fetch itself failed — hard-fail rather than delete having migrated nothing.
             warnings.add(
               'Failed to read source categories: ${sourceCategoriesResult.exception ?? 'no data'}',
             );
@@ -297,7 +294,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
               source: sourceChapters.map(toState).toList(),
               target: targetChapters.map(toState).toList(),
             );
-            // Unmatched source state can't migrate — must block deleting the source.
+            // Unmatched chapter state must block source deletion.
             final int unmatchedState = matchResult.unmatchedState;
 
             final chapterUpdates = matchResult.patches
@@ -314,7 +311,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
                 .toList();
 
             if (chapterUpdates.isNotEmpty) {
-              // Update chapters one by one to avoid overwhelming the server
+              // Serialize chapter updates to avoid overwhelming the server.
               for (final updateInput in chapterUpdates) {
                 try {
                   final updateResult = await client.mutate$UpdateChapter(
@@ -325,8 +322,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
                     ),
                   );
 
-                  // A null payload (no exception but nothing applied) must not
-                  // count as migrated, or the source could be deleted with state unmoved.
+                  // A null payload does not prove state moved and must block source deletion.
                   if (!updateResult.hasException &&
                       updateResult.parsedData?.updateChapter != null) {
                     migratedChapters++;
@@ -352,7 +348,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
               hardFailure = true;
             }
           } else {
-            // Fetch itself failed — hard-fail rather than delete having migrated no progress.
             warnings.add(
               'Failed to read chapters for migration: ${targetChaptersResult.exception ?? 'no data'}',
             );
@@ -364,10 +359,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
         }
       }
 
-      // Uses bindTrackRecord (pure server-DB copy, no external tracker call) when
-      // the server supports it, else bindTrack+updateTrack (see
-      // TrackerRepository.copyRecord). Copy not move — copied source records get
-      // unbound on Migrate (see removeSourceManga).
+      // Copy tracker records without an external tracker call when supported; unbind only after migration.
       int migratedTracking = 0;
       final List<int> copiedSourceRecordIds = [];
       if (options.migrateTracking) {
@@ -377,8 +369,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
           final sourceRecords = await trackerRepo.getMangaTrackRecords(
             fromMangaId,
           );
-          // Never silently clobber the target's own tracking — keep it unless
-          // the owner opted into overwrite.
+          // Keep target tracking unless overwrite was explicitly selected.
           final targetRecords =
               await trackerRepo.getMangaTrackRecords(toMangaId) ?? const [];
           final targetTrackerIds = {for (final r in targetRecords) r.trackerId};
@@ -407,8 +398,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
               }
             }
           } else {
-            // Null result means tracking was never read — hard-fail rather than
-            // delete a source whose tracking might not have migrated.
+            // Unknown tracking state must block source deletion.
             warnings.add('Failed to read source tracking records.');
             hardFailure = true;
           }
@@ -418,9 +408,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
         }
       }
 
-      // Per-manga meta lives server-side as key/value. Rating and tags always
-      // carry; reader/display settings ride the toggle. Best-effort — a missing
-      // override is not data loss and must never block removal.
+      // Meta overrides are best-effort; a missing override must not block removal.
       try {
         final mangaRepo = MangaBookRepository(client);
         for (final entry in sourceManga.meta) {
@@ -446,6 +434,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
         final updateLibraryResult = await client.mutate$UpdateManga(
           Options$Mutation$UpdateManga(
             variables: Variables$Mutation$UpdateManga(
+              withLibraryFields: false,
               input: Input$UpdateMangaInput(
                 id: toMangaId,
                 patch: Input$UpdateMangaPatchInput(inLibrary: true),
@@ -492,6 +481,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
     final removeFromLibraryResult = await client.mutate$UpdateManga(
       Options$Mutation$UpdateManga(
         variables: Variables$Mutation$UpdateManga(
+          withLibraryFields: false,
           input: Input$UpdateMangaInput(
             id: fromMangaId,
             patch: Input$UpdateMangaPatchInput(inLibrary: false),
@@ -509,8 +499,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
     }
 
     if (copiedSourceRecordIds.isNotEmpty) {
-      // Remove the now-duplicate source records. deleteRemoteTrack stays false
-      // — never touch the remote AniList/MAL entry.
+      // Unbind only local source records; never delete the remote tracker entry.
       final trackerRepo = TrackerRepository(client);
       for (final recordId in copiedSourceRecordIds) {
         try {
@@ -519,7 +508,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
             deleteRemoteTrack: false,
           );
         } catch (e) {
-          // Stale source record is a cosmetic leftover, not data loss — warn only.
           warnings.add(
             'Migrated tracking, but could not remove the old source record ($recordId): $e',
           );
@@ -535,6 +523,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
     final result = await client.mutate$UpdateManga(
       Options$Mutation$UpdateManga(
         variables: Variables$Mutation$UpdateManga(
+          withLibraryFields: false,
           input: Input$UpdateMangaInput(
             id: mangaId,
             patch: Input$UpdateMangaPatchInput(inLibrary: true),
@@ -553,7 +542,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
     final trackerRepo = TrackerRepository(client);
     final targetResult = await client.query$GetManga(
       Options$Query$GetManga(
-        variables: Variables$Query$GetManga(id: toMangaId),
+        variables: Variables$Query$GetManga(
+          withLibraryFields: false,
+          id: toMangaId,
+        ),
       ),
     );
     final targetInLibrary =

@@ -32,9 +32,7 @@ class AccountAccess {
       allows(Enum$UserPermission.MANAGE_USERS);
 }
 
-/// What in [result] a [classifyAccountResponse] of `unknown` rests on, for the
-/// debug log: the link failure, the GraphQL error messages, or the user the
-/// server answered with.
+/// Evidence behind an unknown classification: link failure, GraphQL errors or returned user.
 String describeAccountResponse(QueryResult<Query$AccountCapability> result) {
   final exception = result.exception;
   final link = exception?.linkException;

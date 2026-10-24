@@ -17,6 +17,31 @@ class LibrarySettingsRepository {
 
   final GraphQLClient ferryClient;
 
+  Future<void> cleanupDatabase() async {
+    final ids = await ferryClient
+        .query$NonLibraryCategorizedMangas(
+          Options$Query$NonLibraryCategorizedMangas(
+            fetchPolicy: FetchPolicy.noCache,
+          ),
+        )
+        .getData((data) => data.mangas.nodes.map((m) => m.id).toList());
+    if (ids == null || ids.isEmpty) return;
+    await ferryClient
+        .mutate$CleanupLibraryCategories(
+          Options$Mutation$CleanupLibraryCategories(
+            variables: Variables$Mutation$CleanupLibraryCategories(
+              input: Input$UpdateMangasCategoriesInput(
+                ids: ids,
+                patch: Input$UpdateMangaCategoriesPatchInput(
+                  clearCategories: true,
+                ),
+              ),
+            ),
+          ),
+        )
+        .getData((data) => data.updateMangasCategories);
+  }
+
   Future<SettingsDto?> updateGlobalUpdateInterval(double value) {
     Future<SettingsDto?> legacy() => ferryClient
         .mutate$UpdateGlobalUpdateInterval(

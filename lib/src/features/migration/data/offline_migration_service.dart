@@ -13,7 +13,6 @@ import '../../offline/data/offline_sync.dart';
 import '../domain/chapter_matcher.dart';
 import '../domain/migration_models.dart';
 
-/// Outcome of carrying device-local offline state onto a migration target.
 class OfflineMigrationResult {
   const OfflineMigrationResult({
     this.movedDownloads = 0,
@@ -25,32 +24,21 @@ class OfflineMigrationResult {
   final int movedDownloads;
   final int refetchedDownloads;
 
-  /// Source downloads with no chapter-number match on the target — nothing to
-  /// move and nothing to refetch (the chapter simply doesn't exist on B).
+  /// Downloads with no target chapter-number match cannot be moved or refetched.
   final int unmatchedDownloads;
   final List<String> warnings;
 }
 
-/// What happened when one chapter's downloaded pages were carried across.
 enum _TransferOutcome {
-  /// The bytes were reused on the target.
   moved,
 
-  /// The target already had this chapter downloaded — nothing to do.
   alreadyPresent,
 
-  /// The bytes couldn't be reused. The caller pins the target so the reconcile
-  /// pass re-downloads it, rather than leaving the chapter quietly missing.
+  /// Caller pins the target for refetch when bytes cannot be reused.
   refused,
 }
 
-/// Carries device-local offline state (keep-rule + downloaded files) across a
-/// migration. Reader settings are server-side meta, copied separately in
-/// [MigrationRepository.copyMangaData].
-///
-/// Self-contained and idempotent (skips already-downloaded target chapters), so
-/// it's safely re-runnable from crash recovery. Invoke after a successful copy
-/// and before source removal — a failure here must leave the source intact.
+/// Idempotently carries offline state after server copy and before source removal.
 class OfflineMigrationService {
   OfflineMigrationService({
     required this.db,
@@ -69,8 +57,7 @@ class OfflineMigrationService {
   final Future<MangaDto?> Function(int mangaId) fetchManga;
   final Future<List<ChapterDto>?> Function(int mangaId) fetchChapters;
 
-  /// Reconcile pass on the target: no-op for the chapters we just moved, and
-  /// enqueues a server download for anything we pinned but couldn't move.
+  /// Reconciles the target, refetching pinned chapters whose bytes could not be moved.
   final Future<void> Function(int toMangaId) reconcileTarget;
 
   Future<OfflineMigrationResult> migrate({
@@ -83,10 +70,7 @@ class OfflineMigrationService {
     }
     final warnings = <String>[];
 
-    // Seed the target catalog rows to attach the keep-rule and downloads to;
-    // preserves device-managed columns, so this is safe even if B already had
-    // offline content.
-    // Ordered against push acks: captured before the fetches go out.
+    // Capture sync generation before fetching so catalog writes respect push acknowledgments.
     final fetchGen = sync.syncGeneration;
     final targetManga = await fetchManga(toMangaId);
     if (targetManga == null) {
@@ -125,11 +109,9 @@ class OfflineMigrationService {
       unmatched = result.unmatched;
     }
 
-    // Apply the keep-rule and pick up the pinned-but-not-moved refetches.
     await reconcileTarget(toMangaId);
 
-    // Migrate: drop the source's keep-rule and pins so the runner's post-removal
-    // reconcile evicts every remaining source download. Copy leaves it untouched.
+    // Migrate clears source rules and pins for eviction; Copy retains them.
     if (options.deleteSource) {
       await db.setKeepRule(
         fromMangaId,
@@ -157,8 +139,7 @@ class OfflineMigrationService {
     final sourceDownloaded = await db.downloadedChaptersForManga(fromMangaId);
     if (sourceDownloaded.isEmpty) return (moved: 0, refetched: 0, unmatched: 0);
 
-    // Chapter numbers live on the server DTO, not the offline row, so match the
-    // downloaded source chapters against the source DTO list for their numbers.
+    // Offline rows lack chapter numbers, so match downloads through server DTOs.
     final sourceChapters = await fetchChapters(fromMangaId) ?? const [];
     final downloadedIds = {for (final c in sourceDownloaded) c.id};
     final sourceStates = [
@@ -195,9 +176,7 @@ class OfflineMigrationService {
         case _TransferOutcome.alreadyPresent:
           break; // the target already has it; nothing to carry or re-fetch
         case _TransferOutcome.refused:
-          // Couldn't reuse the bytes — pin the target so the reconcile pass
-          // re-fetches it from the server. Anything short of this loses the
-          // chapter silently: it is neither carried across nor re-downloaded.
+          // Pin refused transfers so reconciliation refetches their bytes.
           await db.setChapterPinned(pair.toId, true);
           refetched++;
           warnings.add(
@@ -210,18 +189,7 @@ class OfflineMigrationService {
     return (moved: moved, refetched: refetched, unmatched: unmatched);
   }
 
-  /// Carry one chapter's downloaded pages onto the target: copy into the
-  /// target's staging area, commit it, then drop the source.
-  ///
-  /// Never a bare rename. A rename destroys the source before the target's
-  /// catalog write lands, and a crash in that window leaves a complete
-  /// directory under a `none` row — which recovery would rightly delete as a
-  /// delete the user made, taking the only copy with it. Copying costs a
-  /// duplicate of one chapter during a rare, user-initiated operation; the
-  /// rename costs the chapter.
-  ///
-  /// Both chapters are held for the whole sequence, so a download or an
-  /// eviction can't publish into either one halfway through.
+  // Copy into staging before committing; hold both chapters so crashes retain a recoverable copy.
   Future<_TransferOutcome> _transferOne({
     required int fromMangaId,
     required int fromChapterId,
@@ -252,14 +220,10 @@ class OfflineMigrationService {
   }) => ChapterFileLock.runPair(fromChapterId, toChapterId, () async {
     final target = await db.chapterById(toChapterId);
     if (target == null) return _TransferOutcome.refused;
-    // Don't clobber a copy the target already has.
     if (target.deviceState == OfflineDeviceState.downloaded) {
       return _TransferOutcome.alreadyPresent;
     }
-    // Only an empty target is safe to write over. A queued/downloading one
-    // has a producer of its own holding staging, and migration is not
-    // entitled to commit on top of it — so hand it to the re-fetch path
-    // rather than dropping it.
+    // Only an empty target is safe; queued/downloading chapters have another staging producer.
     if (target.deviceState != OfflineDeviceState.none) {
       return _TransferOutcome.refused;
     }
@@ -283,12 +247,11 @@ class OfflineMigrationService {
       toChapterId: toChapterId,
       pages: pages,
       downloadedAt: downloadedAt,
-      // Pin so the move survives regardless of the target's keep-rule.
+      // Preserve the download regardless of the target keep-rule.
       pinned: true,
       clearSourceChapterId: keepSource ? null : fromChapterId,
     );
-    // The target owns the bytes now, so the source can go. Until this line
-    // a crash leaves both copies, which recovery settles.
+    // Delete source bytes only after the target owns a committed copy.
     if (!keepSource) {
       await pageStore.deleteChapter(fromMangaId, fromChapterId);
     }

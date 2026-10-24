@@ -59,13 +59,9 @@ class BrowseScreen extends HookConsumerWidget {
     }, [tabController.index]);
     useListenable(tabController);
     final phone = context.windowSizeClass == WindowSizeClass.compact;
-    // Phone searches the Sources tab from the app-bar entry (or the box in
-    // the tab when the persistent setting is on); other tabs are unchanged.
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
 
-    // Native desktop draws the search box and actions in the shell bar
-    // instead of an app bar; the tabs stay in the page body.
     final topBar = showsMergedTopBar(context);
     final search = _BrowseDesktopSearch(tabIndex: tabController.index);
     final actions = <Widget>[
@@ -74,7 +70,6 @@ class BrowseScreen extends HookConsumerWidget {
           const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
           const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
         ],
-        // The search overlay/dropdown already offers "Search all sources".
         IconButton(
           tooltip: context.l10n.filterSources,
           onPressed: () => const SourceFilterRoute().push(context),
@@ -89,7 +84,6 @@ class BrowseScreen extends HookConsumerWidget {
         ),
         const InstallExtensionFile(),
       ],
-      // Language filter applies to Sources/Extensions only, not Migrate.
       if (tabController.index != 2)
         IconButton(
           onPressed: () => showDialog(
@@ -116,9 +110,6 @@ class BrowseScreen extends HookConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
-        // Desktop replaces the title with a search box driving the current
-        // tab's own filter (the sidebar already names the page). Phone and
-        // tablet keep the title.
         title: context.usesDesktopShell
             ? Align(
                 alignment: Alignment.centerLeft,
@@ -155,9 +146,6 @@ class BrowseScreen extends HookConsumerWidget {
   }
 }
 
-/// Desktop Browse search box: drives the current tab's existing filter, live
-/// as you type, like the desktop Library toolbar drives its query provider.
-/// Switching tabs shows that tab's filter text.
 class _BrowseDesktopSearch extends ConsumerWidget {
   const _BrowseDesktopSearch({required this.tabIndex});
 

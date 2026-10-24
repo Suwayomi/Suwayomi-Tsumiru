@@ -22,6 +22,7 @@ import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
+import '../../../offline/presentation/offline_action_confirmations.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -124,8 +125,7 @@ Future<void> markChaptersRead({
   await refresh(true);
 }
 
-/// The exact read state of every chapter this action would change, taken
-/// before the write so Undo can put it back instead of inverting the request.
+/// Capture exact pre-write state so Undo restores it rather than inverting the requested action.
 List<_ReadSnapshot> _captureReadSnapshots(
   ProviderContainer container, {
   required Map<int, List<int>> expandedByManga,
@@ -155,8 +155,7 @@ List<_ReadSnapshot> _captureReadSnapshots(
   ];
 }
 
-/// Undo for [markChaptersRead]: writes each captured chapter state back,
-/// locally first (marked dirty for the next sync) then to the server.
+/// Restore snapshots locally first, marked dirty for sync, then push to the server.
 Future<void> _restoreChapterReadStates(
   ProviderContainer container,
   List<_ReadSnapshot> snapshots,
@@ -234,8 +233,6 @@ Future<void> setChaptersBookmark({
   required AsyncValueSetter<bool> refresh,
 }) async {
   if (chapters.isEmpty) return;
-  // Same offline-aware path as a single tile's bookmark: write the local
-  // catalogue first, then push; an unreachable server leaves it queued.
   for (final chapter in chapters) {
     await recordBookmark(
       ref,
@@ -257,7 +254,7 @@ Future<void> keepChapterOffline(WidgetRef ref, int chapterId) =>
     saveChapterToDevice(ref, chapterId);
 
 Future<void> removeChapterFromDevice(WidgetRef ref, int chapterId) =>
-    deleteChapterFromDevice(ref, chapterId);
+    confirmDeleteChapterFromDevice(ref, chapterId);
 
 Future<void> keepChaptersOffline({
   required BuildContext context,
@@ -318,10 +315,7 @@ Future<void> queueServerDownload({
   await refresh(false);
 }
 
-/// Phone swipe's Download action, per live server state (Komikku parity):
-/// queue when missing, cancel while queued/downloading, delete once the
-/// server holds it. Queue and cancel are one-step; the delete asks first, the
-/// same confirmation as the selection bar and the chapter menu.
+/// Queues missing chapters, cancels queued downloads, and confirms deletion of server copies.
 Future<void> runChapterSwipeDownload({
   required BuildContext context,
   required WidgetRef ref,

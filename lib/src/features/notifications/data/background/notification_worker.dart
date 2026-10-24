@@ -33,32 +33,18 @@ import '../local_notification_service.dart';
 import '../notification_state_store.dart';
 import 'notification_background_client.dart';
 
-/// The headless new-chapter check: read config + cursor, paginate the server's
-/// unread/in-library delta, detect what's new, write a durable outbox, publish,
-/// then advance the cursor. Returns false only on a transient failure so the
-/// scheduler retries (a cursor is never advanced past unseen chapters).
-///
-/// Runs in the WorkManager isolate — no Riverpod, no BuildContext.
+/// Returns false only for transient failures; persists the outbox before publishing and advancing the cursor.
 Future<bool> runNewChapterCheck() async {
-  // The main isolate wires this up in main.dart; a WorkManager run gets a
-  // fresh isolate every time and starts with no diagnostic sink at all, so
-  // without this, every recordDiagnostic() call in the download/catch-up
-  // path this function calls into is a silent no-op — invisible even though
-  // the same crash-log file (and its Settings copy action) is what the user
-  // actually checks.
+  // Each WorkManager isolate needs its own diagnostic sink.
   final crashLogPath = await initCrashLog();
   setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
-  // The token record's secrets are sealed; without the key it reads as
-  // unauthenticated (logged as `record-seal: …`).
+  // Load the seal key before reading encrypted token records.
   await RecordSeal.load(kSecureStorage);
 
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
   if (config == null || token == null || !config.matchesToken(token)) {
-    // The only way to tell "the OS never woke this task" apart from "it woke
-    // but had nothing configured yet" from the field — both look identical
-    // (a silent gap in the log) without this line.
     recordDiagnostic(
       '[${DateTime.now().toIso8601String()}] offline-worker: '
       'check-skipped reason=no-config\n',
@@ -77,8 +63,7 @@ Future<bool> runNewChapterCheck() async {
   final l10n = lookupAppLocalizations(_deviceLocale());
   final notifier = LocalNotificationService();
   await notifier.init(onBackgroundTap: notificationActionCallback);
-  // Where to reach the server from this network. Identity checks below keep
-  // using `config`, tied to the address the foreground verified.
+  // Resolve reachability for this network; identity remains tied to the foreground-verified address.
   final endpoint = await config.endpoint.forThisNetwork(source: 'worker');
   final client = NotificationBackgroundClient(
     endpoint: endpoint,
@@ -122,10 +107,6 @@ Future<bool> runNewChapterCheck() async {
   if (notificationPolicy && config.newChaptersEnabled) {
     ok = await runNewChapters(store, config, client, notifier, l10n);
   }
-  // Background download step — own cursor, keep-rule scope, no category
-  // filter. Resolution records the obligations; the executor then downloads
-  // as many as the run's budget allows — unless the user only wants
-  // detection in the background and prefers to fetch files in the foreground.
   if (catchupStore.enabled &&
       !catchupStore.paused &&
       config.catalogServerId != null &&
@@ -162,8 +143,6 @@ Future<bool> runNewChapterCheck() async {
   return ok;
 }
 
-/// App-update check — compares the latest GitHub release to the installed
-/// version, notifying once per new version.
 Future<void> _checkAppUpdate(
   NotificationStateStore store,
   NotificationWorkerConfig config,
@@ -185,8 +164,6 @@ Future<void> _checkAppUpdate(
   });
 }
 
-/// Extension-update check — notifies when the count of installed extensions with
-/// an update rises (server-tracked).
 Future<void> _checkExtensionUpdates(
   NotificationStateStore store,
   NotificationWorkerConfig config,
@@ -234,9 +211,7 @@ Future<bool> runNewChapters(
   LocalNotificationService notifier,
   AppLocalizations l10n,
 ) async {
-  // 0. Crash recovery — an outbox present means a prior run posted (or died
-  // mid-post) without advancing the cursor. Re-publish (stable ids → replace,
-  // not re-buzz), advance, clear.
+  // Replay the durable outbox before scanning; stable IDs replace already-posted notifications.
   final stranded = store.readOutbox();
   if (stranded != null && stranded.matchesConfig(config)) {
     if (!await _publish(
@@ -253,9 +228,7 @@ Future<bool> runNewChapters(
 
   var watermark = store.readWatermark(config.sessionFingerprint!);
 
-  // 1. First enable (or a fresh session after reinstall/re-login): seed the
-  // cursor to the server's current max fetch time and notify nothing, so we
-  // don't dump the backlog.
+  // Seed on first enable so existing chapters are not announced as new.
   if (watermark.fetchedAt == 0 && watermark.recent.isEmpty) {
     final seed = await _seedWatermark(client);
     if (seed == null) return false; // transient — retry next wake
@@ -266,7 +239,6 @@ Future<bool> runNewChapters(
     return true;
   }
 
-  // 2. Paginate the overlap window to exhaustion.
   final gte = _overlapStart(watermark);
   final all = <NotifChapter>[];
   final mangaCategories = <int, Set<int>>{};
@@ -285,7 +257,6 @@ Future<bool> runNewChapters(
     after = page.endCursor;
   }
 
-  // 3. Detect.
   final allowedMangaIds = config.allowedMangaIds(mangaCategories);
   final result = detectNewChapters(
     candidates: [
@@ -301,11 +272,6 @@ Future<bool> runNewChapters(
     allowedMangaIds: allowedMangaIds,
   );
 
-  // The notify list this pass will actually surface, per manga. Paired with the
-  // download side's `offline-download-resolve` line, this is how you tell
-  // "notified but not downloaded" apart: a manga appearing here but not in the
-  // download pass's `queued` (and showing up in its `droppedOutOfScope`) was
-  // notified yet is outside the background download scope.
   final notifyList = [
     for (final g in result.groups)
       '${g.mangaId}:${g.chapters.map((c) => c.id).join('|')}',
@@ -316,13 +282,6 @@ Future<bool> runNewChapters(
     'notify=[$notifyList]\n',
   );
 
-  // Per-candidate exclusion breakdown: every server candidate that did NOT
-  // make it into a notify group, and why — mirrors the download side's
-  // `droppedOutOfScope` line. `zeroFetchedAt` is called out across ALL
-  // candidates (notified or not): the server's fetchedAt is the sole "is this
-  // new" signal, so a chapter arriving with fetchedAt=0 never advances the
-  // watermark and is a data-quality symptom worth flagging on its own even
-  // when it still got notified this pass.
   final notifiedIds = {
     for (final g in result.groups) for (final c in g.chapters) c.id,
   };
@@ -364,20 +323,16 @@ Future<bool> runNewChapters(
   return true;
 }
 
-/// Start of the re-scan window below [cursor]'s high-water mark. `fetchedAt` is
-/// epoch seconds server-side, so the overlap is in seconds too.
+// fetchedAt and the overlap window both use epoch seconds.
 int _overlapStart(NewChapterWatermark cursor) =>
     (cursor.fetchedAt - kDefaultOverlapSeconds).clamp(0, cursor.fetchedAt);
 
-/// A first-enable cursor that also marks the chapters the next overlap re-scan
-/// will return as already seen — otherwise that pass notifies (or queues) them
-/// as fresh. Null when the window fetch fails.
+// Seed overlap entries as seen to avoid notifying the existing backlog; null means fetch failure.
 Future<NewChapterWatermark?> _seedWatermark(
   NotificationBackgroundClient client,
 ) async {
   final maxFetched = await client.serverMaxFetchedAt();
-  // 0 = empty library or failed query: the cursor stays unseeded and the next
-  // wake tries again, as before.
+  // Zero can mean a failed query; leave the cursor unseeded so the next wake retries.
   if (maxFetched == 0) return const NewChapterWatermark();
   final window = <NotifChapter>[];
   String? after;
@@ -410,10 +365,7 @@ Future<NewChapterWatermark?> _seedWatermark(
   return seed;
 }
 
-/// The download side of detection. Same pagination and detector as the notify
-/// step but consuming its OWN cursor, scoped to the spec's keep-rule manga and
-/// never the notification category filter — muting a category must not
-/// silently stop its downloads.
+// Downloads have a separate cursor and keep-rule scope; muting notifications must not stop downloads.
 Future<bool> _runDownloadResolution(
   CatchupStateStore catchupStore,
   NotificationWorkerConfig config,
@@ -439,8 +391,7 @@ Future<bool> _runDownloadResolution(
         spec.storagePath('${support.path}/offline') != storagePath) {
       return true;
     }
-    // The worker must not outlive its world: after a server switch the spec is
-    // dead until the foreground rewrites it.
+    // A server switch invalidates the spec until the foreground rewrites it.
     if (spec.serverId != catchupStore.catalogServerId) return true;
 
     if (!await verifyBackgroundServerIdentity(
@@ -458,8 +409,7 @@ Future<bool> _runDownloadResolution(
 
     var ledger = catchupStore.readLedger(spec.serverId);
 
-    // First enable: seed to now. The toggle does not backfill history — the
-    // foreground launch pass owns the backlog.
+    // First enable does not backfill; foreground launch handles the backlog.
     if (ledger.cursor.fetchedAt == 0 && ledger.cursor.recent.isEmpty) {
       final seed = await _seedWatermark(client);
       if (seed == null) return false; // transient — retry next wake
@@ -500,13 +450,6 @@ Future<bool> _runDownloadResolution(
       allowedMangaIds: spec.keepRuleMangaIds,
     );
 
-    // Fresh detections whose manga carries no keep rule in the spec: they are
-    // dropped from the download plan here, even though the notify pass (scoped
-    // by the category filter, not this one) may have just surfaced them. A
-    // non-empty list for a series you expect kept means the spec — a foreground
-    // snapshot built from libraryManga() — is stale or dropped that manga while
-    // it still carries a rule (e.g. a removed-sentinel desync). This is the exact
-    // signature of "notified but never downloaded".
     final droppedOutOfScope = <int, int>{
       for (final n in all)
         if (!ledger.cursor.recent.containsKey(n.id) &&
@@ -526,8 +469,7 @@ Future<bool> _runDownloadResolution(
       'droppedOutOfScope=[$droppedList]\n',
     );
 
-    // Obligations and the advanced cursor land in ONE atomic write: the cursor
-    // may only move once every detected chapter is owed somewhere.
+    // Persist obligations and cursor atomically so every detected chapter remains owed.
     final pendingDownloads = {...ledger.pendingDownloads};
     for (final group in result.groups) {
       for (final c in group.chapters) {
@@ -617,23 +559,20 @@ Future<bool> _publish(
   });
 }
 
-/// Isolate entry point for a Mark-read / Download action fired while the app is
-/// dead. Top-level + `vm:entry-point` so the OS can spawn it.
+// Headless actions require a top-level vm:entry-point callback.
 @pragma('vm:entry-point')
 void notificationActionCallback(NotificationResponse response) {
   handleNotificationAction(response.actionId, response.payload);
 }
 
-/// Handles a Mark-read / Download notification action headlessly (the app may be
-/// dead): reads config + token, builds a client, fires the mutation. View is a
-/// UI action, routed by the foreground handler instead.
+/// Handles Mark-read and Download without UI; View is routed by the foreground.
 Future<void> handleNotificationAction(String? actionId, String? payload) async {
   if (actionId != kNotifActionMarkRead && actionId != kNotifActionDownload) {
     return;
   }
   final p = NotificationPayload.decode(payload);
   if (p.chapterIds.isEmpty) return;
-  // Headless when the app is dead: this isolate has no key loaded yet.
+  // A headless isolate must load its own seal key.
   if (!RecordSeal.ready) await RecordSeal.load(kSecureStorage);
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
@@ -688,8 +627,7 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
   }
 }
 
-/// Fetch + cache a series cover to a temp file for the notification's
-/// BigPicture. Best-effort — null on any failure falls back to text.
+// Missing covers return null and fall back to text notifications.
 Future<String?> _fetchCover(
   NotificationBackgroundClient client,
   PendingSeriesNotification p,
@@ -726,9 +664,6 @@ String _describe(AppLocalizations l10n, PendingSeriesNotification p) {
   };
 }
 
-/// A [TokenBroker] backed by the persistent store, so a ui_login refresh in the
-/// worker isolate rotates the shared record (same gen-versioned scheme the
-/// download worker uses).
 TokenBroker _brokerFor(
   NotificationEndpoint ep,
   BackgroundTokenRecord original,
@@ -759,7 +694,7 @@ TokenBroker _brokerFor(
         addPort: ep.addPort,
         isGraphQl: true,
       );
-      // Read fresh: the token record and its headers travel together.
+      // Read auth and its headers together after any rotation.
       Map<String, String> extraHeaders = const {};
       try {
         extraHeaders = original.extraHeaders;
@@ -780,11 +715,7 @@ TokenBroker _brokerFor(
               }),
             )
             .timeout(const Duration(seconds: 10));
-        // A proxy answering for a dead origin is the server being
-        // unreachable, not the refresh token being invalid — without this,
-        // the first request after reconnecting (racing the network
-        // actually settling) permanently condemns every chapter that
-        // happened to 401 in that window.
+        // A gateway error proves reachability failure, not refresh-token rejection.
         if (isGatewayStatus(res.statusCode)) {
           logBackgroundRefresh(
             'notify',
@@ -793,10 +724,6 @@ TokenBroker _brokerFor(
           return (tokens: null, transient: true);
         }
         if (res.statusCode != 200) {
-          // The server was reached and rejected the refresh (e.g. 401/403 =
-          // refresh token no longer accepted). This is the decisive line for
-          // "the background worker worked once then fails every wake": if it
-          // shows up, the fix is on the auth side, not Doze/scheduling.
           recordDiagnostic(
             '[${DateTime.now().toIso8601String()}] offline-refresh: '
             'rejected status=${res.statusCode}\n',
@@ -809,16 +736,13 @@ TokenBroker _brokerFor(
             (data?['refreshToken'] as Map<String, Object?>?)?['accessToken']
                 as String?;
         if (access == null || access.isEmpty) {
-          // HTTP 200 but no token — usually a GraphQL `errors` payload
-          // (invalid/expired refresh token reported in-band). Surface the
-          // errors so the reason is visible in the log.
           recordDiagnostic(
             '[${DateTime.now().toIso8601String()}] offline-refresh: '
             'no-token errors=${decoded['errors']}\n',
           );
           return (tokens: null, transient: false);
         }
-        // Suwayomi doesn't rotate the refresh token — reuse it.
+        // Suwayomi does not rotate refresh tokens; reuse the existing one.
         return (
           tokens: (access: access, refresh: refreshToken),
           transient: false,

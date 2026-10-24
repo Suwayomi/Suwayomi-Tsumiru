@@ -22,16 +22,12 @@ abstract class HistoryGroup with _$HistoryGroup {
 
   const HistoryGroup._();
 
-  /// Get the total number of items in this group
   int get itemCount => items.length;
 
-  /// Check if this group is empty
   bool get isEmpty => items.isEmpty;
 
-  /// Check if this group is not empty
   bool get isNotEmpty => items.isNotEmpty;
 
-  /// Get the most recent read date in this group
   DateTime? get mostRecentReadDate {
     if (items.isEmpty) return null;
 
@@ -45,7 +41,6 @@ abstract class HistoryGroup with _$HistoryGroup {
                 : DateTimeExtensions.max(previous, current));
   }
 
-  /// Get a localized description of when this group was last read
   String? getLastReadDescription(BuildContext context) {
     final lastRead = mostRecentReadDate;
     if (lastRead == null) return null;
@@ -53,9 +48,7 @@ abstract class HistoryGroup with _$HistoryGroup {
     return lastRead.convertToDaysAgo(context);
   }
 
-  /// Get the localized title for this group
   String getLocalizedTitle(BuildContext context) {
-    // Handle special keys
     if (title == DateGroupKeys.today.value) {
       return context.l10n.today;
     } else if (title == DateGroupKeys.yesterday.value) {
@@ -64,11 +57,9 @@ abstract class HistoryGroup with _$HistoryGroup {
       return context.l10n.recentlyRead;
     }
 
-    // Handle weekday keys
     if (title.startsWith('week_')) {
       final weekdayNumber = int.tryParse(title.split('_')[1]);
       if (weekdayNumber != null && weekdayNumber >= 1 && weekdayNumber <= 7) {
-        // Create a date for the specific weekday and use convertToDaysAgo
         final now = DateTime.now();
         final daysToSubtract = (now.weekday - weekdayNumber) % 7;
         final targetDate = now.subtract(Duration(days: daysToSubtract));
@@ -76,25 +67,19 @@ abstract class HistoryGroup with _$HistoryGroup {
       }
     }
 
-    // Try to parse the title as a date string and use convertToDaysAgo
     final parsedDate = _tryParseDate(title);
     if (parsedDate != null) {
       return parsedDate.convertToDaysAgo(context);
     }
 
-    // Return the title as-is for unknown formats
     return title;
   }
 
-  /// Try to parse a string as a date
-  /// Returns null if the string cannot be parsed as a date
   DateTime? _tryParseDate(String dateString) {
     try {
-      // Try parsing as a standard date format (e.g., "MMM d, yyyy")
       return DateFormat.yMMMd().parse(dateString);
     } catch (_) {
       try {
-        // Try parsing as other common date formats
         return DateFormat.yMd().parse(dateString);
       } catch (_) {
         return null;
@@ -102,7 +87,6 @@ abstract class HistoryGroup with _$HistoryGroup {
     }
   }
 
-  /// Filter items in this group by search query
   HistoryGroup filterByQuery(String? query) {
     if (query == null || query.trim().isEmpty) return this;
 

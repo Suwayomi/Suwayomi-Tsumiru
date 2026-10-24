@@ -12,13 +12,9 @@ import '../tsumiru_logo.dart';
 
 const double kDesktopTitleBarHeight = 40;
 
-/// Logo size and logo-to-name gap shared by the title bar and the merged top
-/// bar, so the brand measures the same in both.
 const double kBrandLogoSize = 28;
 const double kBrandGap = 8;
 
-/// The brand name style, shared by [DesktopBrandTitle] and the top-bar
-/// breakpoint math so both measure the same text.
 TextStyle? brandNameStyle(BuildContext context) {
   final theme = Theme.of(context);
   return theme.textTheme.labelMedium?.copyWith(
@@ -28,9 +24,7 @@ TextStyle? brandNameStyle(BuildContext context) {
   );
 }
 
-/// The brand mark: logo plus the app name. The name is a literal, not
-/// localized, so the bar never depends on Localizations being in scope at the
-/// app-builder level, where AppLocalizations.of() isn't reliably available.
+/// Literal brand name avoids requiring Localizations above the app.
 class DesktopBrandTitle extends StatelessWidget {
   const DesktopBrandTitle({super.key});
 
@@ -47,11 +41,7 @@ class DesktopBrandTitle extends StatelessWidget {
   }
 }
 
-/// Slim, seamless, theme-reactive window title bar. Windows/Linux draw our own
-/// min/max/close on the right; macOS keeps the native traffic lights (left) and
-/// this is just a draggable strip. Off native desktop (the merged bar's
-/// two-row fallback on web/tablets) there is no window to drag or control,
-/// so this is just a plain surface row.
+/// Native draggable strip: Windows/Linux get controls; macOS retains traffic lights.
 class DesktopTitleBar extends StatelessWidget {
   const DesktopTitleBar({super.key});
 
@@ -65,20 +55,16 @@ class DesktopTitleBar extends StatelessWidget {
       color: scheme.surface,
       child: Stack(
         children: [
-          // The whole strip is a drag handle.
           if (native)
             const Positioned.fill(
               child: DragToMoveArea(child: SizedBox.expand()),
             ),
-          // Brand, centred: present, not a banner. IgnorePointer so it
-          // doesn't block the drag region beneath it.
+          // IgnorePointer lets the brand remain inside the drag region.
           const Positioned.fill(
             child: IgnorePointer(
               child: Center(child: DesktopBrandTitle()),
             ),
           ),
-          // Window controls, pinned right (Windows/Linux); macOS keeps its
-          // native traffic lights on the left, so nothing is drawn there.
           if (native && !isMacOSRuntime)
             Align(
               alignment: Alignment.centerRight,
@@ -90,9 +76,6 @@ class DesktopTitleBar extends StatelessWidget {
   }
 }
 
-/// The minimise / maximise-restore / close cluster, shrink-wrapped so the
-/// caller can pin it right. Public so the merged top bar reuses the exact
-/// same buttons.
 class DesktopWindowButtons extends StatefulWidget {
   const DesktopWindowButtons({super.key, required this.brightness});
   final Brightness brightness;
@@ -128,8 +111,7 @@ class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
   Widget build(BuildContext context) {
     final b = widget.brightness;
     return Row(
-      // Shrink-wrap the buttons so the enclosing Align can pin the cluster to
-      // the right; a default (max-width) Row would left-align them.
+      // Shrink-wrap so Align can position the controls on the right.
       mainAxisSize: MainAxisSize.min,
       children: [
         WindowCaptionButton.minimize(

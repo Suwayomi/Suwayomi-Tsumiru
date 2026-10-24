@@ -86,3 +86,7 @@ query ValidateBackup($backup: Upload!) {
         }
     }
 }
+
+query BackupUserSettingsCapability {
+  settings { autoBackupIncludeUserSettings }
+}

@@ -17,9 +17,7 @@ import '../../quick_open/presentation/unified_search/unified_search_providers.da
 import '../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 import '../data/hotkey_binding.dart';
 
-/// Whether [node] belongs to the currently visible page. Shell branches stay
-/// mounted while hidden (kept alive), so the registered field can sit on an
-/// inactive page — focusing it would steal Ctrl+F into a hidden box.
+/// Hidden shell branches stay mounted; exclude their search fields to avoid stealing focus.
 bool desktopSearchNodeIsCurrent(FocusNode node) {
   final context = node.context;
   if (context == null) return false;
@@ -30,13 +28,8 @@ bool desktopSearchNodeIsCurrent(FocusNode node) {
   return true;
 }
 
-/// App-wide keyboard + mouse navigation, mounted as the OUTERMOST wrapper
-/// around the shell. Owns every global shortcut (back, search, library,
-/// downloads) so there is a single `Shortcuts` layer that reliably receives
-/// keys — the FocusScope below keeps a focused node under it at all times,
-/// which a bare `Shortcuts` needs to fire. Esc is routed via Flutter's
-/// built-in [DismissIntent] so dialogs/menus dismiss first and this is the
-/// last resort.
+/// Must wrap the shell with a focused descendant for Shortcuts to receive keys.
+/// DismissIntent lets dialogs and menus handle Escape before global navigation.
 class GlobalShortcutHost extends ConsumerWidget {
   const GlobalShortcutHost({super.key, required this.child});
 
@@ -50,11 +43,7 @@ class GlobalShortcutHost extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     void openSearch() {
       if (ref.read(quickSearchToggleProvider).ifNull()) {
-        // A visible desktop page owns its search box: focus it instead of
-        // opening the overlay. Routes without a field (reader, series page)
-        // leave the provider null — or detached after a route change — and
-        // keep today's overlay. A node on an inactive branch/route is
-        // skipped the same way, so Ctrl+F never lands in a hidden box.
+        // Skip detached or hidden-branch search fields; fall back to the overlay.
         final field = ref.read(desktopSearchFocusNodeProvider);
         if (field != null && desktopSearchNodeIsCurrent(field)) {
           field.requestFocus();
@@ -72,7 +61,6 @@ class GlobalShortcutHost extends ConsumerWidget {
       },
       child: Actions(
         actions: {
-          // Esc: close the quick-open overlay if it's showing, else go back.
           EscapeIntent: CallbackAction<EscapeIntent>(
             onInvoke: (_) {
               if (ref.read(quickOpenVisibleProvider)) {
@@ -108,17 +96,12 @@ class GlobalShortcutHost extends ConsumerWidget {
             },
           ),
         },
-        // A `Shortcuts` widget only receives key events when a focused widget
-        // lives below it. The app shell never autofocuses anything, so without
-        // this the whole global keymap is dead. FocusScope(autofocus) keeps a
-        // focused node under the host at all times (yielding to any inner
-        // widget — text field, reader — that requests focus).
+        // Shortcuts needs a focused descendant; this scope yields to inner fields and readers.
         child: FocusScope(
           autofocus: true,
           child: Builder(
             builder: (context) => Listener(
-              // buttons is a bitmask — test the bit, not equality, so a chorded
-              // press (e.g. left held + back) still triggers.
+              // Test the bitmask so back still works when another mouse button is held.
               onPointerDown: (event) {
                 if (event.buttons & kBackMouseButton != 0) {
                   Actions.maybeInvoke(context, const GoBackIntent());

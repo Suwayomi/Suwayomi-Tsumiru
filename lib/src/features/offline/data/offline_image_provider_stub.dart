@@ -6,7 +6,5 @@
 
 import 'package:flutter/widgets.dart';
 
-/// Web stub: offline storage (and thus local page files) is disabled on web,
-/// so this is never reached; it exists only to keep `ServerImage` compiling.
 ImageProvider offlineImageProvider(String path) =>
     throw UnsupportedError('Local page images are unavailable on web');

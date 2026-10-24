@@ -4,18 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Whether requests to [url] would cross the internet unencrypted: plain
-/// `http://` to a host that isn't on a private or local network. Every auth
-/// mode then sends its secret in clear (the Basic password on each request,
-/// the session cookie, the access and refresh tokens), and anyone on the path
-/// can read it.
-///
-/// Plain HTTP on a home network stays allowed and unflagged, which is why the
-/// app can't simply forbid cleartext traffic. Private and local means:
-/// loopback, RFC 1918, link-local, the 100.64/10 shared range (Tailscale and
-/// carrier-grade NAT), IPv6 unique-local and link-local, `localhost`,
-/// single-label hosts, and the `.local`, `.lan`, `.home`, `.home.arpa`,
-/// `.internal` and `.localdomain` suffixes. An unparseable URL isn't flagged.
+/// Flags public HTTP URLs that expose credentials; local/private and unparseable URLs are unflagged.
 bool sendsCredentialsInClear(String url) {
   final uri = Uri.tryParse(url.trim());
   if (uri == null || uri.scheme.toLowerCase() != 'http') return false;

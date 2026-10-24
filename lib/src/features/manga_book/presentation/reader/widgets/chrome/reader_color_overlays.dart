@@ -16,14 +16,11 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_filter_prefs/reader_filter_prefs.dart';
 import '../../controller/reader_preview_channel.dart';
 
-/// Custom brightness: negatives dim via a black overlay at
-/// abs(value)/100 (-75 → 0.75); 0 and positives draw nothing (positive raises
-/// the app window brightness instead — see [applicationBrightnessFor]).
+/// Negative values dim with black at abs(value)/100; positive values change window brightness.
 double brightnessOverlayAlpha(int value) =>
     value < 0 ? (value.abs() / 100).clamp(0.0, 1.0) : 0.0;
 
-/// Positive custom-brightness → app-window brightness target 0..1 for
-/// [ScreenBrightness]; 0 and negatives return null (the black dim covers those).
+/// Positive values map to window brightness 0..1; zero/negative reset to system brightness.
 double? applicationBrightnessFor(int value) =>
     value > 0 ? (value / 100).clamp(0.0, 1.0) : null;
 
@@ -35,8 +32,7 @@ bool get _screenBrightnessSupported =>
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows);
 
-/// >0 target sets the app window brightness; null resets it. Throws are
-/// non-fatal (missing plugin / denied permission).
+/// Null resets window brightness; missing-plugin and permission errors are non-fatal.
 Future<void> _applyScreenBrightness(double? target) async {
   if (!_screenBrightnessSupported) return;
   try {
@@ -63,7 +59,6 @@ const List<double> kGrayscaleColorMatrix = [
   0, 0, 0, 1, 0,
 ];
 
-/// The combined-paint inversion matrix.
 const List<double> kInvertColorMatrix = [
   -1, 0, 0, 0, 255, //
   0, -1, 0, 0, 255, //
@@ -99,14 +94,7 @@ List<double> grayscaleInvertMatrix({
   return inverted ? kInvertColorMatrix : kGrayscaleColorMatrix;
 }
 
-/// Custom-filter overlays (design §2.4 layer 3): leaf siblings of the viewer
-/// in the ReaderChrome Stack, below the flash overlay and the chrome bars so
-/// only the page content beneath gets tinted.
-///
-/// Grayscale/invert and the blended color filter use [BackdropFilter] — a
-/// leaf [ColorFiltered] only filters its own child, never the pixels below.
-/// Each overlay listens to `draft ?? committed`, so slider drags repaint just
-/// this subtree.
+/// BackdropFilter affects pages underneath; leaf ColorFiltered would only affect its child.
 class ReaderColorOverlays extends HookConsumerWidget {
   const ReaderColorOverlays({super.key});
 
@@ -123,9 +111,7 @@ class ReaderColorOverlays extends HookConsumerWidget {
     final blend = ref.watch(colorFilterBlendModeKeyProvider) ??
         DBKeys.colorFilterBlendMode.initial as ColorFilterBlendMode;
 
-    // Positive custom-brightness raises the app window brightness live. Listen
-    // to the preview channel so slider drags apply with no rebuild; re-sync on
-    // toggle/committed change. brightnessOn off (or <=0) → reset to system.
+    // Listen to brightness drafts without rebuilding; reset when disabled or nonpositive.
     useEffect(() {
       void sync() {
         final value =
@@ -166,7 +152,6 @@ class ReaderColorOverlays extends HookConsumerWidget {
   }
 }
 
-/// Semi-transparent black dim for negative custom-brightness values.
 class _BrightnessOverlay extends StatelessWidget {
   const _BrightnessOverlay({required this.committed});
 
@@ -187,7 +172,6 @@ class _BrightnessOverlay extends StatelessWidget {
   }
 }
 
-/// ARGB color blended over the page via a drawRect(color, blendMode).
 class _ColorFilterOverlay extends StatelessWidget {
   const _ColorFilterOverlay({required this.committed, required this.blend});
 

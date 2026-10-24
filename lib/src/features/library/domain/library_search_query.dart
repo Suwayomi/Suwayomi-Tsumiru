@@ -4,30 +4,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Library search DSL.
-///
-/// Plain words match title/author/genre/custom-tag (case-insensitive substring);
-/// `key:value` tokens filter on a specific field. Multi-word values use double quotes, a
-/// leading `-` negates, and terms are separated by spaces or commas. All terms
-/// are AND-ed. Follows the Mihon/Komikku library-search conventions (quotes,
-/// `-` exclude, AND across terms) plus explicit `tag:`/`genre:`/`rating:`
-/// metatags for our per-manga user meta.
-///
-/// Supported keys: `tag:` (exact match on a source genre OR a custom tag,
-/// case-insensitive), `genre:` (source genre, substring), `author:`, `artist:`,
-/// `title:` (substring), `unread:`/`downloaded:` (bool), `rating:` (int with
-/// optional `>=`/`<=`/`>`/`<`/`=`), `status:` (ongoing/completed/hiatus/…),
-/// `source:` (source name, substring), and `tracked:` (bool, or a service name
-/// like `tracked:anilist`). An unrecognized key is treated as plain text, so
-/// titles like `Re:Zero` still search normally.
-///
-/// `{a|b}` groups alternatives: the group matches if ANY term inside it matches,
-/// so `{genre:action|genre:romance}` finds either. A leading `-` negates a whole
-/// group.
+/// Plain words match title/author/genre/custom-tag by case-insensitive substring.
+/// `key:value` restricts a field; double quotes preserve multi-word values.
+/// Terms are AND-ed, separated by spaces or commas; leading `-` negates.
+/// `tag:` matches genres or custom tags exactly; `genre:`, `author:`, `artist:`,
+/// `title:`, and `source:` use substrings. `unread:`/`downloaded:` take bools,
+/// `rating:` takes an int with optional >=/<=/>/</=, and `status:` takes a status.
+/// `tracked:` takes a bool or service name. Unknown keys remain plain text (Re:Zero).
+/// `{a|b}` matches any alternative; `-{a|b}` negates the whole group.
 library;
 
-/// Flat, GraphQL-free view of the fields the DSL can match against. Keeps the
-/// parser/evaluator pure and trivially unit-testable.
+import 'package:diacritic/diacritic.dart';
+
 class LibraryFilterFields {
   const LibraryFilterFields({
     required this.title,
@@ -40,6 +28,8 @@ class LibraryFilterFields {
     this.userTags = const [],
     this.status,
     this.sourceName,
+    this.sourceId,
+    this.description,
     this.trackers = const {},
   });
 
@@ -52,13 +42,14 @@ class LibraryFilterFields {
   final int? rating;
   final List<String> userTags;
 
-  /// The manga's publication status, as the enum name (e.g. `COMPLETED`).
+  /// Publication status as an enum name, e.g. COMPLETED.
   final String? status;
 
-  /// The source's display name.
   final String? sourceName;
+  final String? sourceId;
+  final String? description;
 
-  /// Lowercased names of the tracker services this manga is bound to.
+  /// Lowercased names of bound tracker services.
   final Set<String> trackers;
 }
 
@@ -76,8 +67,7 @@ enum _Field {
   tracked,
 }
 
-/// Recognized metatag keys, in display order. Exported so the search field's
-/// syntax highlighter colors exactly the keys the parser understands.
+/// Shared with syntax highlighting so it recognizes exactly the parser's keys.
 const List<String> librarySearchMetatagKeys = [
   'tag',
   'genre',
@@ -114,7 +104,8 @@ class LibrarySearchQuery {
 
   bool get isEmpty => terms.isEmpty;
 
-  bool matches(LibraryFilterFields f) => terms.every((t) => t.matches(f));
+  bool matches(LibraryFilterFields f, {bool fuzzy = false}) =>
+      terms.every((t) => t.matches(f, fuzzy: fuzzy));
 
   static LibrarySearchQuery parse(String? raw) {
     if (raw == null || raw.trim().isEmpty) return const LibrarySearchQuery([]);
@@ -126,9 +117,7 @@ class LibrarySearchQuery {
     return LibrarySearchQuery(terms);
   }
 
-  /// Whether [raw] contains a structured term — a recognized `key:` metatag or a
-  /// `{…}` group. Quick search uses this to pick title-only vs full-DSL matching,
-  /// so it agrees with [parse] on what counts (a bare `Re:Zero` does not).
+  /// Recognizes supported metatags and alternative groups; bare Re:Zero remains plain text.
   static bool hasOperator(String? raw) {
     if (raw == null) return false;
     for (final token in _tokenize(raw)) {
@@ -137,10 +126,7 @@ class LibrarySearchQuery {
     return false;
   }
 
-  /// The plain-text portion of [raw] with metatag operators and `{…}` groups
-  /// removed — what a *source* search should receive (`bad source:x` → `bad`,
-  /// `tag:"slice of life"` → ``). Reuses the quote/brace-aware tokenizer so a
-  /// quoted value isn't split into leaked fragments.
+  /// Removes structured terms for source searches, preserving quoted spans as single tokens.
   static String plainText(String? raw) {
     if (raw == null) return '';
     return [
@@ -149,8 +135,6 @@ class LibrarySearchQuery {
     ].join(' ');
   }
 
-  /// A token is structured if it's an operator (`[-]key:…` with a recognized
-  /// key) or a `{…}` group, as opposed to plain search text.
   static bool _isStructured(String token) {
     var t = token;
     if (t.length > 1 && t.startsWith('-')) t = t.substring(1);
@@ -159,10 +143,7 @@ class LibrarySearchQuery {
     return colon > 0 && _fieldFor(t.substring(0, colon).toLowerCase()) != null;
   }
 
-  /// Splits on spaces/commas, keeping double-quoted spans and `{…}` groups
-  /// intact. Quote chars are consumed, so `tag:"slice of life"` becomes the
-  /// single token `tag:slice of life`; a `{a|b}` group stays one token so its
-  /// inner spaces don't split it.
+  /// Keeps quoted spans and brace groups intact; consumes quote characters.
   static List<String> _tokenize(String raw) {
     final tokens = <String>[];
     final buf = StringBuffer();
@@ -200,14 +181,13 @@ class LibrarySearchQuery {
     }
     if (t.isEmpty) return null;
 
-    // `{a|b|c}` — matches if any inner alternative matches.
     if (t.length > 1 && t.startsWith('{') && t.endsWith('}')) {
       final alts = <SearchTerm>[];
       for (final part in t.substring(1, t.length - 1).split('|')) {
         final sub = _parseToken(part.trim());
         if (sub != null) alts.add(sub);
       }
-      // An empty/half-typed group imposes no constraint rather than hiding all.
+      // Ignore incomplete groups while typing rather than hiding all results.
       if (alts.isEmpty) return null;
       return SearchTerm._group(alts, negated);
     }
@@ -217,7 +197,7 @@ class LibrarySearchQuery {
       final field = _fieldFor(t.substring(0, colon).toLowerCase());
       if (field != null) {
         final value = t.substring(colon + 1);
-        // A half-typed `tag:` shouldn't hide the whole library — skip it.
+        // An incomplete metatag imposes no constraint while typing.
         if (value.isEmpty) return null;
         return SearchTerm._field(field, value, negated);
       }
@@ -251,19 +231,30 @@ class SearchTerm {
   final String? value;
   final List<SearchTerm>? _alternatives;
 
-  bool matches(LibraryFilterFields f) {
-    final res = _rawMatch(f);
-    // A null result means the term imposes no constraint (an unparseable value,
-    // e.g. a half-typed `-unread:t`). Negation must NOT flip it to hide-all.
+  bool matches(LibraryFilterFields f, {bool fuzzy = false}) {
+    final res = _rawMatch(f, fuzzy: fuzzy);
+    // Invalid values impose no constraint; negation must not turn them into hide-all.
     if (res == null) return true;
     return negated ? !res : res;
   }
 
-  bool? _rawMatch(LibraryFilterFields f) {
+  bool? _rawMatch(LibraryFilterFields f, {bool fuzzy = false}) {
     final alts = _alternatives;
-    if (alts != null) return alts.any((a) => a.matches(f));
+    if (alts != null) return alts.any((a) => a.matches(f, fuzzy: fuzzy));
     final t = text;
     if (t != null) {
+      if (fuzzy) {
+        return [
+          f.title,
+          if (f.author != null) f.author!,
+          if (f.artist != null) f.artist!,
+          if (f.sourceName != null) f.sourceName!,
+          if (f.sourceId != null) f.sourceId!,
+          if (f.description != null) f.description!,
+          ...f.genres,
+          ...f.userTags,
+        ].any((value) => fuzzyLibraryWordMatches(t, value));
+      }
       return f.title.toLowerCase().contains(t) ||
           (f.author?.toLowerCase().contains(t) ?? false) ||
           f.genres.any((g) => g.toLowerCase().contains(t)) ||
@@ -272,7 +263,7 @@ class SearchTerm {
     final v = value!;
     switch (_field!) {
       case _Field.tag:
-        // A manga's tags = source genres + custom tags. Exact match on either.
+        // tag: matches either source genres or custom tags exactly.
         final lv = v.toLowerCase();
         return f.userTags.any((tag) => tag.toLowerCase() == lv) ||
             f.genres.any((g) => g.toLowerCase() == lv);
@@ -298,15 +289,11 @@ class SearchTerm {
         if (s == null) return null;
         final ns = s.toLowerCase();
         final lv = v.toLowerCase();
-        // Match the exact enum name, or a partial like `hiatus` → `on_hiatus`
-        // and `finished` → `publishing_finished`.
         return ns == lv || ns.replaceAll('_', ' ').contains(lv) || ns.contains(lv);
       case _Field.source:
         return f.sourceName?.toLowerCase().contains(v.toLowerCase());
       case _Field.tracked:
         final want = _parseBool(v);
-        // `tracked:true`/`false` = has any tracker; otherwise match a service
-        // name, e.g. `tracked:anilist`.
         if (want != null) return f.trackers.isNotEmpty == want;
         final lv = v.toLowerCase();
         return f.trackers.any((name) => name.contains(lv));
@@ -334,4 +321,28 @@ class SearchTerm {
       _ => actual == n,
     };
   }
+}
+
+bool fuzzyLibraryWordMatches(String query, String text) {
+  final needle = removeDiacritics(query.toLowerCase());
+  final haystack = removeDiacritics(text.toLowerCase());
+  if (haystack.contains(needle)) return true;
+  if (needle.isEmpty) return true;
+  var previous = List<int>.filled(haystack.length + 1, 0);
+  for (var i = 1; i <= needle.length; i++) {
+    final row = List<int>.filled(haystack.length + 1, i);
+    for (var j = 1; j <= haystack.length; j++) {
+      final substitution =
+          previous[j - 1] + (needle[i - 1] == haystack[j - 1] ? 0 : 1);
+      final insertion = row[j - 1] + 1;
+      final deletion = previous[j] + 1;
+      row[j] = [
+        substitution,
+        insertion,
+        deletion,
+      ].reduce((a, b) => a < b ? a : b);
+    }
+    previous = row;
+  }
+  return previous.any((distance) => distance / needle.length <= 0.35);
 }
