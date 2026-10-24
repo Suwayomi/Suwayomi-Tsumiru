@@ -3,14 +3,14 @@
 
 
 
-query GetManga($id: Int!, $withFirstUnread: Boolean = true, $withLibraryFields: Boolean = false) {
+query GetManga($id: Int!, $withFirstUnread: Boolean = true, $withLibraryFields: Boolean!) {
   manga(id: $id) {
     ...MangaDto
     __typename
   }
 }
 
-mutation UpdateManga($input: UpdateMangaInput!, $withFirstUnread: Boolean = true, $withLibraryFields: Boolean = false) {
+mutation UpdateManga($input: UpdateMangaInput!, $withFirstUnread: Boolean = true, $withLibraryFields: Boolean!) {
   updateManga(input: $input) {
     manga {
         ...MangaDto

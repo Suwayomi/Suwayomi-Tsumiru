@@ -1,4 +1,4 @@
-query GetLibraryMangas($withFirstUnread: Boolean!, $withLibraryFields: Boolean = false) {
+query GetLibraryMangas($withFirstUnread: Boolean!, $withLibraryFields: Boolean!) {
   mangas(condition: { inLibrary: true }) {
     nodes {
       ...MangaDto
