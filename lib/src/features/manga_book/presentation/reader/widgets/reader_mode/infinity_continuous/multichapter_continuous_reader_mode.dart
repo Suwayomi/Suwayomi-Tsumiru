@@ -464,6 +464,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         .ifNull(true);
     final WebtoonScaleType scaleType =
         ref.watch(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen;
+    // Original-size pages cap themselves at native width, so the strip width limit must not apply.
     final bool pagesAtNaturalSize = scaleType == WebtoonScaleType.originalSize;
     final bool widthLimitInPixels = ref
         .watch(longStripWidthLimitUsePixelsProvider)
@@ -623,6 +624,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     void jumpToIndex({required int index, double alignment = 0}) {
       if (!itemScrollController.isAttached) return;
       itemScrollController.jumpTo(index: index, alignment: alignment);
+      // Reseed decode order after a seek so newly visible strips do not resize on landing.
       prefetchPagesFrom(index);
     }
 
@@ -1197,6 +1199,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         fit: fit,
         appendApiToUrl: false,
         cropBorders: cropBorders,
+        // Decode at display size to avoid sampling full-resolution webtoon textures every frame.
         memCacheWidth: isHorizontal
             ? null
             : (crossAxisExtent * MediaQuery.devicePixelRatioOf(context))

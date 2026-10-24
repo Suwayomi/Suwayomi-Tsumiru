@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// Use ref.read for gesture-time flags; watching them would trigger reader rebuilds.
 
 import 'package:hooks_riverpod/legacy.dart';
 

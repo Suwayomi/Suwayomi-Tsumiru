@@ -467,6 +467,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   } else if (authType == AuthType.basic && credentials.isNotBlank) {
     handshakeHeaders = {'Authorization': credentials!};
   }
+  // Reverse-proxy access headers must also authorize the WebSocket upgrade.
   final customWsHeaders =
       ref.watch(customHttpHeadersProvider).value ?? const {};
   if (customWsHeaders.isNotEmpty) {

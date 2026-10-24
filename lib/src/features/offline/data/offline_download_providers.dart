@@ -436,6 +436,7 @@ Future<AsyncValue<void>> recordReadingProgressWithDependencies({
       lastPageRead: lastPageRead,
     );
     if (!current()) return const AsyncValue.data(null);
+    // Completion dirties read state too; clearing only progress would push the same completion again.
     if (markRead != null) {
       await db.clearReadStateDirtyIfUnchanged(chapterId, isRead: markRead);
     }
@@ -605,6 +606,7 @@ Future<int?> whileReadingDeleteTarget(
       mangaShowAllScanlatorVersionsProvider(mangaId: mangaId),
     );
     var chapters = read(listProvider).value;
+    // Wait for the list: skipping an in-flight load would permanently miss this finish-time delete.
     chapters ??= await read(listProvider.future);
     if (chapters == null) return null;
 

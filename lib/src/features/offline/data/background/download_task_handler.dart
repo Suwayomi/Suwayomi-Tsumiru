@@ -434,6 +434,7 @@ class DownloadTaskHandler extends TaskHandler {
       'kind': 'chapterStart',
       'chapterId': chapterId,
       'gen': _genOf[chapterId] ?? 0,
+      // Webtoon page totals are unknown until the worker resolves the page list.
       'total': urls.length,
     });
 
@@ -609,6 +610,7 @@ class DownloadTaskHandler extends TaskHandler {
     );
   }
 
+  // Null parks for retry; an empty list is a terminal no-pages result.
   Future<List<String>?> _resolvePageUrls(int chapterId) =>
       resolveChapterPageUrls(
         target: BackgroundServerTarget(

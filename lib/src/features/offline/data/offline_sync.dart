@@ -173,6 +173,7 @@ class OfflineSync {
           serverIsDownloaded: c.user.isDownloaded,
           pageCount: c.pageCount,
           updatedAt: now,
+          // Last-read time follows the server even while local progress remains dirty.
           lastReadAt: c.user.lastReadAt,
         );
       }

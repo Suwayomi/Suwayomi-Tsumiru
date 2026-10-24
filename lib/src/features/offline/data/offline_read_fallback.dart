@@ -30,6 +30,7 @@ Future<T> _boundedFetch<T>(
   Future<bool> Function() canServe,
   Duration fetchTimeout,
 ) async {
+  // Without a cached fallback, a slow working fetch needs the full client timeout.
   if (!await canServe()) return fetch();
   return fetch().timeout(fetchTimeout);
 }

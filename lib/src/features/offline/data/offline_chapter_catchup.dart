@@ -374,6 +374,7 @@ Future<void> _runRunKeepRuleCatchUp(ProviderContainer container) async {
       await container.read(downloadStarterProvider)();
     }
     await _pullAwaiting(container, current, skip: touched);
+    // Replay a drain deferred during this pass so newly available server copies are not stranded.
     if (current() && _drainMissedDuringPass) {
       _drainMissedDuringPass = false;
       await _pullAwaiting(container, current);

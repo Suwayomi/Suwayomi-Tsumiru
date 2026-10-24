@@ -260,6 +260,7 @@ class OfflineDownloadCoordinator {
             isPaused ||
             isCurrentSession?.call() == false,
         onPageStored: (pageIndex, relPath, bytes) async {
+          // Pages remain in staging until commit, so this callback must not publish catalog page rows.
           onProgress?.call(chapter.id, ++done, urls.length);
         },
       );

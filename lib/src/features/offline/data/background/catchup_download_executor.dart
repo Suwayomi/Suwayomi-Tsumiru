@@ -415,6 +415,7 @@ Future<bool> runCatchupDownloads({
         if (deviceSpent > 0) dlRetries[row.id] = deviceSpent;
       }
 
+      // Exclude exhausted chapters before selecting the next-N window so failed chapters cannot occupy its slots.
       final exhausted = <int>{};
       for (final r in chapters.rows) {
         final serverFetchSpent = retries[r.id] ?? 0;
@@ -601,6 +602,7 @@ Future<bool> runCatchupDownloads({
               'attempt=${dlSpent + 1}/$catchupMaxChapterAttempts\n',
             );
           } else {
+            // An unreachable server does not spend the chapter's failure budget.
             recordDiagnostic(
               '[${DateTime.now().toIso8601String()}] offline-catchup: '
               'download-deferred mangaId=$mangaId chapterId=$chapterId '
@@ -706,6 +708,7 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) {
     chapterGenerations: without(ledger.chapterGenerations),
     pendingDownloads: without(ledger.pendingDownloads),
     pendingServerFetch: without(ledger.pendingServerFetch),
+    // Removing a rule resets retry and backfill history so re-adding it starts with a fresh backlog.
     serverFetchRetries: without(ledger.serverFetchRetries),
     downloadRetries: without(ledger.downloadRetries),
     backfilledMangaIds: {...ledger.backfilledMangaIds}..remove(mangaId),

@@ -212,6 +212,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// and the rest guard would pre-empt the commit.
   bool _commitPending = false;
 
+  // Track each stop explicitly: touch handlers can stop animations without calling _abandonMotion.
   String _lastMotionStop = 'none';
   _StrandRecord? _strand;
   DateTime? _lastDiagnosticAt;

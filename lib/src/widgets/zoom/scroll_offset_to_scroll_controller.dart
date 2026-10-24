@@ -19,6 +19,7 @@ class ScrollOffsetToScrollController extends ScrollController {
 
   @override
   void jumpTo(double value) {
+    // ScrollOffsetController has no public jumpTo; the fork exposes its underlying ScrollPosition.
     scrollOffsetController.position.jumpTo(value);
   }
 

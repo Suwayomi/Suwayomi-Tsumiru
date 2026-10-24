@@ -173,6 +173,7 @@ class OfflineReconciler {
         }
         continue;
       }
+      // A successful server fetch resets the budget so unrelated later failures get fresh attempts.
       if (c.serverFetchAttempts > 0) {
         await db.resetServerFetchAttempts(id);
       }

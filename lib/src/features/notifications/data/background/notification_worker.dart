@@ -332,6 +332,7 @@ Future<NewChapterWatermark?> _seedWatermark(
   NotificationBackgroundClient client,
 ) async {
   final maxFetched = await client.serverMaxFetchedAt();
+  // Zero can mean a failed query; leave the cursor unseeded so the next wake retries.
   if (maxFetched == 0) return const NewChapterWatermark();
   final window = <NotifChapter>[];
   String? after;

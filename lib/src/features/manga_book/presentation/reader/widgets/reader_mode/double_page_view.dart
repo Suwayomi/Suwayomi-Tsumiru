@@ -181,6 +181,7 @@ class _SpreadImageState extends State<_SpreadImage> {
     if (oldWidget.imageProvider != widget.imageProvider) _resolve();
   }
 
+  // The provider is already decoded by imageBuilder, so resolving it here is a cache hit.
   void _resolve() {
     final stream =
         widget.imageProvider.resolve(createLocalImageConfiguration(context));

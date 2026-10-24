@@ -168,6 +168,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
     final sessionChapterIds = useRef<Set<int>>({});
     final sessionNotifier = ref.read(sessionReadChaptersProvider.notifier);
+    // Deferred callbacks can outlive the widget; mirror incognito state without retaining its ref.
     final incognitoRef = useRef(ref.watch(incognitoModeProvider));
     incognitoRef.value = ref.watch(incognitoModeProvider);
     useEffect(() {
@@ -186,6 +187,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
       // Defer build-time provider writes to a microtask, which does not need another scheduled frame.
       Future.microtask(() => doRecord(currentVisibleChapter.value.id));
+      // ValueNotifier listeners run outside build, so chapter changes may update provider state synchronously.
       void onChanged() => doRecord(currentVisibleChapter.value.id);
       currentVisibleChapter.addListener(onChanged);
       return () {

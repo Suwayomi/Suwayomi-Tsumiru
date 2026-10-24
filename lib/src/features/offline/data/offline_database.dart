@@ -435,6 +435,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     }
   }
 
+  // Partial upgrades may lack the table entirely; column checks alone cannot guard migration steps.
   Future<bool> _hasTable(TableInfo table) async {
     final rows = await customSelect(
       "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -1260,6 +1261,7 @@ class OfflineDatabase extends _$OfflineDatabase {
       '[${DateTime.now().toIso8601String()}] offline-sync: '
       'purge-removed-library-manga mangaIds=[${doomed.join(',')}]\n',
     );
+    // These rows have no device content; sweep their metadata children because there is no cascading foreign key.
     await (delete(offlineChapters)..where((t) => t.mangaId.isIn(doomed))).go();
     await (delete(
       offlineMangaCategories,
