@@ -16,9 +16,11 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/platform/platform_runtime.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../../../widgets/server_image.dart';
+import '../../../../../settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../../../manga_details/server_web_url.dart';
+import '../../utils/koreader_progress_actions.dart';
 import 'reader_bookmark_button.dart';
 
 /// The reader's top chrome bar — mirrors the content that was previously in
@@ -37,15 +39,24 @@ class ReaderTopBar extends ConsumerWidget {
     required this.manga,
     required this.chapter,
     required this.onBack,
+    required this.onJump,
+    required this.pageCount,
+    required this.currentPage,
   });
 
   final MangaDto manga;
   final ChapterDto chapter;
   final VoidCallback onBack;
+  final ValueChanged<int> onJump;
+  final int pageCount;
+  final int currentPage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Status-bar inset the reader's SafeArea hasn't already applied.
+    final connected =
+        koSyncOnline(ref) &&
+        ref.watch(koSyncStatusProvider).value?.isLoggedIn == true;
     final link = chapter.realUrl.isNotBlank ? chapter.realUrl : chapter.url;
     final serverMangaUrl = serverMangaWebUrl(ref, manga.id);
     final systemTopInset = MediaQuery.viewPaddingOf(context).top;
@@ -100,6 +111,17 @@ class ReaderTopBar extends ConsumerWidget {
                         ShareParams(uri: Uri.parse(link!), title: chapter.name),
                       );
                     }
+                  case 'push':
+                  case 'pull':
+                    await syncKoReaderChapter(
+                      context: context,
+                      ref: ref,
+                      chapter: chapter,
+                      push: action == 'push',
+                      pageCount: pageCount,
+                      currentPage: currentPage,
+                      onJump: onJump,
+                    );
                 }
               },
               itemBuilder: (context) => [
@@ -117,6 +139,18 @@ class ReaderTopBar extends ConsumerWidget {
                     value: 'share',
                     child: Text(context.l10n.shareChapterLink),
                   ),
+                if (connected) ...[
+                  PopupMenuItem(
+                    value: 'push',
+                    enabled: koSyncOnline(ref),
+                    child: Text(context.l10n.pushKoReaderProgress),
+                  ),
+                  PopupMenuItem(
+                    value: 'pull',
+                    enabled: koSyncOnline(ref),
+                    child: Text(context.l10n.pullKoReaderProgress),
+                  ),
+                ],
               ],
             ),
             // Actions (mirrors AppBar.actions).

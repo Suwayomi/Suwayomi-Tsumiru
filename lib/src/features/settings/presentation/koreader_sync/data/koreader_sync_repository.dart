@@ -96,6 +96,19 @@ class KoreaderSyncRepository {
     return status?.isLoggedIn ?? false;
   }
 
+  Future<void> pushProgress(int chapterId) async {
+    final success = await ferryClient
+        .mutate$PushKoSyncProgress(
+          Options$Mutation$PushKoSyncProgress(
+            variables: Variables$Mutation$PushKoSyncProgress(
+              input: Input$PushKoSyncProgressInput(chapterId: chapterId),
+            ),
+          ),
+        )
+        .getData((data) => data.pushKoSyncProgress?.success);
+    if (success != true) throw StateError('KOReader progress push failed');
+  }
+
   Future<Mutation$PullKoSyncProgress$pullKoSyncProgress?> pullProgress(
     int chapterId,
   ) => ferryClient

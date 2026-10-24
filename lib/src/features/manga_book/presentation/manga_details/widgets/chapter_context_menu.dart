@@ -14,9 +14,11 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../../offline/data/offline_types.dart';
+import '../../../../settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/chapter_actions/chapter_bulk_actions.dart';
+import '../../reader/utils/koreader_progress_actions.dart';
 
 RelativeRect menuAnchorForRect(BuildContext context, Rect rect) {
   final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
@@ -40,6 +42,13 @@ Future<void> showChapterContextMenu({
   required AsyncCallback refresh,
   void Function()? refocus,
 }) async {
+  final connected = koSyncOnline(ref)
+      ? await ref
+            .read(koSyncStatusProvider.future)
+            .then((status) => status.isLoggedIn)
+            .catchError((_) => false)
+      : false;
+  if (!context.mounted) return;
   final selecting =
       selectedChapters.value.isNotEmpty &&
       selectedChapters.value.containsKey(chapter.id);
@@ -87,6 +96,28 @@ Future<void> showChapterContextMenu({
           label: read ? context.l10n.markAsUnread : context.l10n.markAsRead,
         ),
       ),
+      if (connected)
+        for (final push in [true, false])
+          PopupMenuItem(
+            enabled: koSyncOnline(ref),
+            onTap: () async {
+              await syncKoReaderChapter(
+                context: context,
+                ref: ref,
+                chapter: chapter,
+                push: push,
+              );
+              await refresh();
+            },
+            child: ChapterMenuRow(
+              icon: push
+                  ? Icons.cloud_upload_outlined
+                  : Icons.cloud_download_outlined,
+              label: push
+                  ? context.l10n.pushKoReaderProgress
+                  : context.l10n.pullKoReaderProgress,
+            ),
+          ),
       const PopupMenuDivider(),
       PopupMenuItem(
         enabled: previousChapters(bulkChapters, chapter).isNotEmpty,

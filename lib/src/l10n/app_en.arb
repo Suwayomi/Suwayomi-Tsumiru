@@ -4211,6 +4211,8 @@
   "retryErroredPages": "Retry errored pages",
   "openChapterInWebView": "Open in WebView",
   "shareChapterLink": "Share chapter link",
+  "pushKoReaderProgress": "Push progress to KOReader",
+  "pullKoReaderProgress": "Pull progress from KOReader",
   "koSyncLocationPrompt": "Sync to page {page} from device '{device}'?",
   "@koSyncLocationPrompt": {
     "placeholders": {

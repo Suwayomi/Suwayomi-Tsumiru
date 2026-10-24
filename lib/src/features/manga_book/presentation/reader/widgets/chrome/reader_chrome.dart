@@ -346,6 +346,9 @@ class ReaderChrome extends HookConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ReaderTopBar(
+                            onJump: onChanged,
+                            pageCount: chapterPages.pages.length,
+                            currentPage: currentIndex,
                             manga: manga,
                             chapter: chapter,
                             onBack: () => context.pop(),

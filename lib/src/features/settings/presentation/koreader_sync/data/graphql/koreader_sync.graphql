@@ -92,6 +92,10 @@ mutation UpdateKoreaderSyncPercentageTolerance(
   }
 }
 
+mutation PushKoSyncProgress($input: PushKoSyncProgressInput!) {
+  pushKoSyncProgress(input: $input) { success }
+}
+
 mutation PullKoSyncProgress($input: PullKoSyncProgressInput!) {
   pullKoSyncProgress(input: $input) {
     chapter { ...ChapterDto }
