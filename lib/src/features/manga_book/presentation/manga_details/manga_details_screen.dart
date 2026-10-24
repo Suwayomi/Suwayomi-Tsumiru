@@ -6,10 +6,12 @@
 
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
@@ -17,6 +19,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
@@ -174,6 +177,21 @@ class MangaDetailsScreen extends HookConsumerWidget {
     void openInBrowser(String url) =>
         launchUrlInWeb(context, url, ref.read(toastProvider));
 
+    Future<void> shareSeries(BuildContext context, MangaDto manga) async {
+      final url = manga.realUrl;
+      if (url == null) return;
+      if (kIsWeb || isDesktopPlatform) {
+        await Clipboard.setData(ClipboardData(text: url));
+        if (context.mounted) {
+          ref.read(toastProvider)?.show(context.l10n.copiedToClipboard);
+        }
+        return;
+      }
+      await SharePlus.instance.share(
+        ShareParams(uri: Uri.parse(url), title: manga.title),
+      );
+    }
+
     // Open the manga's page in the Suwayomi server's own WebUI (vs the source
     // site's realUrl). No-ops if no server is configured.
     void openOnServer() {
@@ -305,6 +323,11 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     onTap: () => startMigration(context, mangaId, data),
                     child: Text(context.l10n.migrate),
                   ),
+                  if (data?.realUrl != null)
+                    PopupMenuItem(
+                      onTap: () => shareSeries(context, data!),
+                      child: Text(context.l10n.share),
+                    ),
                   PopupMenuItem(
                     onTap: () => refresh(true),
                     child: Text(context.l10n.refresh),

@@ -3396,6 +3396,10 @@
   "@shareImage": {
     "description": "Reader page-actions sheet: share the current page image file via the system share sheet"
   },
+  "share": "Share",
+  "@share": {
+    "description": "Series page: share the series source link via the system share sheet"
+  },
   "saveToGallery": "Save to gallery",
   "@saveToGallery": {
     "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
