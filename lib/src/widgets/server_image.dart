@@ -513,6 +513,36 @@ class ServerImage extends HookConsumerWidget {
       }
     }
 
+    // Some cover hosts send no CORS headers, so byte fetches fail on web.
+    if (external && kIsWeb) {
+      if (imageBuilder != null) {
+        return AppUtils.wrapOn(
+          wrapper,
+          imageBuilder!(
+            context,
+            NetworkImage(
+              fetchUrl,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+            ),
+          ),
+        );
+      }
+      return AppUtils.wrapOn(
+        wrapper,
+        Image.network(
+          fetchUrl,
+          key: key.value,
+          width: size?.width,
+          height: size?.height,
+          fit: fit ?? BoxFit.cover,
+          webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+          frameBuilder: (ctx, child, frame, wasSync) =>
+              frame != null ? child : defaultIndicator,
+          errorBuilder: (ctx, error, stack) => errorWidget(ctx, '', stack),
+        ),
+      );
+    }
+
     if (wantCrop) {
       return renderCrop(
         CroppedImageProvider(
@@ -712,6 +742,13 @@ ImageProvider serverPageImageProvider(
     port: ref.read(serverPortProvider),
     addPort: ref.read(serverPortToggleProvider).ifNull(),
   );
+  // Element-backed provider skips the CORS-blocked byte fetch on web.
+  if (external && kIsWeb) {
+    return NetworkImage(
+      request.fetchUrl,
+      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+    );
+  }
   return CachedNetworkImageProvider(
     request.fetchUrl,
     cacheKey: request.cacheKey,

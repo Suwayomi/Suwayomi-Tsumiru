@@ -572,6 +572,19 @@ class _UrlCoverTile extends StatelessWidget {
             ),
             if (current)
               Positioned(
+                top: 3,
+                left: 3,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.surface,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            if (current)
+              Positioned(
                 top: 4,
                 left: 4,
                 child: Icon(
