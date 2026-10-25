@@ -524,6 +524,7 @@ class MangaCustomCover extends _$MangaCustomCover {
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     ref.invalidate(libraryMangaListProvider);
     ref.invalidate(upcomingLibraryMangasProvider);
+    ref.invalidate(upcomingPastReleasesProvider);
     ref.invalidate(readingHistoryProvider);
     ref.invalidate(mangaReadingHistoryProvider);
     ref.read(customCoverRevisionProvider.notifier).bump();

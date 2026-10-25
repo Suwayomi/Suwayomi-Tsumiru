@@ -173,9 +173,15 @@ Future<void> _deleteCover(
         overlayContext: context,
         onAction: () async {
           if (!sessionCurrent()) return;
+          // Hold the auto-disposed notifier alive across the await.
+          final keepAlive = container.listen(
+            mangaCustomCoverProvider(mangaId: manga.id),
+            (_, _) {},
+          );
           final restored = await container
               .read(mangaCustomCoverProvider(mangaId: manga.id).notifier)
               .setCover(previous);
+          keepAlive.close();
           if (!sessionCurrent()) return;
           if (!restored) container.read(toastProvider)?.showError(failedMsg);
         },

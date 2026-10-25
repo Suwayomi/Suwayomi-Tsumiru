@@ -72,12 +72,10 @@ class Toast {
     // Anchor to the root navigator so the entry lands above every route, including dialogs.
     final rootContext = Navigator.of(target, rootNavigator: true).context;
     _fToast = FToast().init(rootContext);
+    // FToast queues behind earlier toasts; drop the queue so Undo shows now.
+    _fToast.removeQueuedCustomToasts();
     _actionTimer?.cancel();
     _actionVisible = true;
-    _actionTimer = Timer(
-      duration + _fadeDuration,
-      () => _actionVisible = false,
-    );
     _fToast.showToast(
       child: ToastWidget(
         text: msg,
@@ -98,6 +96,11 @@ class Toast {
       positionedToastBuilder: _centeredBuilder(),
       toastDuration: duration,
       fadeDuration: _fadeDuration,
+    );
+    // Start after display so the guard tracks the visible toast.
+    _actionTimer = Timer(
+      duration + _fadeDuration,
+      () => _actionVisible = false,
     );
   }
 

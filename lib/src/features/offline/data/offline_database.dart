@@ -739,7 +739,16 @@ class OfflineDatabase extends _$OfflineDatabase {
         OfflineMangasCompanion(thumbnailRelPath: Value(relPath)),
       );
 
+  // Read-modify-write runs in one transaction so a concurrent sync mirror cannot slip between.
   Future<void> updateMangaMetaValue({
+    required int mangaId,
+    required String key,
+    String? value,
+  }) => transaction(
+    () => _updateMangaMetaValue(mangaId: mangaId, key: key, value: value),
+  );
+
+  Future<void> _updateMangaMetaValue({
     required int mangaId,
     required String key,
     String? value,

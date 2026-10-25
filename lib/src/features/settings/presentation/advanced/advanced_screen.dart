@@ -149,6 +149,7 @@ class AdvancedScreen extends ConsumerWidget {
                         if (!context.mounted) return;
                         ref.invalidate(libraryMangaListProvider);
                         ref.invalidate(upcomingLibraryMangasProvider);
+                        ref.invalidate(upcomingPastReleasesProvider);
                         ref.invalidate(readingHistoryProvider);
                         ref.invalidate(mangaReadingHistoryProvider);
                         ref.read(customCoverRevisionProvider.notifier).bump();
