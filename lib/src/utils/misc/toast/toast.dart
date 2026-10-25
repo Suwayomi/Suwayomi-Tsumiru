@@ -45,12 +45,9 @@ class Toast {
     toast() {
       if (instantShow && !_actionVisible) close();
       _fToast.showToast(
-        child: ToastWidget(
-          text: msg,
-          backgroundColor: _context.colorScheme.inverseSurface,
-          textColor: _context.colorScheme.onInverseSurface,
-        ),
+        child: ToastWidget(text: msg),
         gravity: ToastGravity.BOTTOM,
+        positionedToastBuilder: _centeredBuilder(),
         fadeDuration: _fadeDuration,
       );
     }
@@ -69,8 +66,7 @@ class Toast {
     Duration duration = const Duration(seconds: 5),
     BuildContext? overlayContext,
   }) {
-    final target =
-        overlayContext != null && overlayContext.mounted
+    final target = overlayContext != null && overlayContext.mounted
         ? overlayContext
         : _context;
     // Anchor to the root navigator so the entry lands above every route, including dialogs.
@@ -85,8 +81,6 @@ class Toast {
     _fToast.showToast(
       child: ToastWidget(
         text: msg,
-        backgroundColor: _context.colorScheme.inverseSurface,
-        textColor: _context.colorScheme.onInverseSurface,
         action: TextButton(
           onPressed: () {
             _actionTimer?.cancel();
@@ -94,10 +88,14 @@ class Toast {
             close();
             onAction();
           },
+          style: TextButton.styleFrom(
+            foregroundColor: _context.colorScheme.primary,
+          ),
           child: Text(actionLabel),
         ),
       ),
       gravity: ToastGravity.BOTTOM,
+      positionedToastBuilder: _centeredBuilder(),
       toastDuration: duration,
       fadeDuration: _fadeDuration,
     );
@@ -116,12 +114,9 @@ class Toast {
     toast() {
       if (instantShow && !_actionVisible) close();
       _fToast.showToast(
-        child: ToastWidget(
-          text: text,
-          backgroundColor: _context.colorScheme.error,
-          textColor: _context.colorScheme.onError,
-        ),
+        child: ToastWidget(text: text, isError: true),
         gravity: ToastGravity.TOP,
+        positionedToastBuilder: _centeredBuilder(),
         fadeDuration: _fadeDuration,
       );
     }
@@ -134,6 +129,31 @@ class Toast {
   }
 
   void close() => _fToast.removeCustomToast();
+
+  PositionedToastBuilder? _centeredBuilder() {
+    if (_context.windowSizeClass < WindowSizeClass.medium) return null;
+    return (context, child, gravity) {
+      final toast = Align(
+        alignment: gravity == ToastGravity.TOP
+            ? Alignment.topCenter
+            : Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: child,
+        ),
+      );
+      if (gravity == ToastGravity.TOP) {
+        return Positioned(top: 100, left: 24, right: 24, child: toast);
+      }
+      final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+      return Positioned(
+        bottom: bottomInset + 24,
+        left: 24,
+        right: 24,
+        child: toast,
+      );
+    };
+  }
 }
 
 class ToastWidget extends StatelessWidget {
@@ -142,31 +162,48 @@ class ToastWidget extends StatelessWidget {
     required this.text,
     this.icon,
     this.action,
-    this.backgroundColor,
-    this.textColor,
+    this.isError = false,
   });
   final String text;
   final Widget? icon;
   final Widget? action;
-  final Color? backgroundColor;
-  final Color? textColor;
+  final bool isError;
   @override
   Widget build(BuildContext context) {
+    final scheme = context.colorScheme;
+    final leading =
+        icon ??
+        (isError ? Icon(Icons.error_outline, color: scheme.error) : null);
     Widget textWidget = Text(
       text,
-      style: TextStyle(
-        color: textColor ?? context.colorScheme.onPrimaryContainer,
-      ),
-      textAlign: TextAlign.center,
+      style: TextStyle(color: scheme.onSurface),
+      textAlign: action != null ? TextAlign.left : TextAlign.center,
     );
     return Container(
       padding: KEdgeInsets.h16v8.size,
       decoration: BoxDecoration(
         borderRadius: KBorderRadius.r16.radius,
-        color: backgroundColor ?? context.colorScheme.primaryContainer,
+        color: scheme.surfaceContainerHigh,
+        border: Border.all(
+          color: isError ? scheme.error : scheme.outlineVariant,
+        ),
+        // No panel shadow token in the theme; shadow role keeps it neutral in every theme.
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: icon != null
-          ? Row(children: [icon!, const Gap(16), textWidget])
+      child: leading != null
+          ? Row(
+              children: [
+                leading,
+                const Gap(16),
+                Flexible(child: textWidget),
+              ],
+            )
           : action != null
           ? Row(
               children: [
