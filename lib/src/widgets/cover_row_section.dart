@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
@@ -117,7 +118,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
         tooltip: left ? context.l10n.back : context.l10n.next,
         onPressed: enabled ? () => _scrollBy(left ? -1 : 1) : null,
         icon: Icon(
-          left ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+          left ? FluentIcons.chevron_left_24_regular : FluentIcons.chevron_right_24_regular,
           size: 20,
         ),
         style: IconButton.styleFrom(
@@ -196,7 +197,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
                 child: Row(
                   children: [
                     Expanded(child: heading),
-                    const Icon(Icons.arrow_forward),
+                    const Icon(FluentIcons.arrow_right_24_regular),
                   ],
                 ),
               ),

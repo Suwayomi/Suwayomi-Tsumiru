@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -102,7 +103,7 @@ class PhoneSearchEntry extends HookConsumerWidget {
           : IconButton(
               tooltip: context.l10n.search,
               color: activeFilter != null ? context.colorScheme.primary : null,
-              icon: const Icon(Icons.search_rounded),
+              icon: const Icon(FluentIcons.search_24_regular),
               onPressed: open,
             ),
     );
@@ -139,7 +140,7 @@ class _PhoneSearchBox extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.search_rounded, size: 20),
+                const Icon(FluentIcons.search_24_regular, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -162,7 +163,7 @@ class _PhoneSearchBox extends ConsumerWidget {
                       minWidth: 36,
                       minHeight: 36,
                     ),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(FluentIcons.dismiss_24_regular),
                     onPressed: () => _clearFilter(ref, origin),
                   ),
               ],
@@ -211,7 +212,7 @@ class PhoneSearchClearFilter extends ConsumerWidget {
     if (_activeFilter(ref, origin) == null) return const SizedBox.shrink();
     return IconButton(
       tooltip: context.l10n.reset,
-      icon: const Icon(Icons.close_rounded),
+      icon: const Icon(FluentIcons.dismiss_24_regular),
       onPressed: () => _clearFilter(ref, origin),
     );
   }
@@ -298,7 +299,7 @@ class PhoneSearchOverlay extends HookConsumerWidget {
       children: [
         IconButton(
           tooltip: l.back,
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(FluentIcons.arrow_left_24_regular),
           onPressed: onClose,
         ),
         Expanded(
@@ -321,7 +322,7 @@ class PhoneSearchOverlay extends HookConsumerWidget {
         if (origin == PhoneSearchOrigin.library)
           IconButton(
             tooltip: l.searchTips,
-            icon: const Icon(Icons.help_outline_rounded),
+            icon: const Icon(FluentIcons.question_circle_24_regular),
             onPressed: () async {
               await showSearchTips(context);
               if (fieldFocused && context.mounted) {
@@ -332,7 +333,7 @@ class PhoneSearchOverlay extends HookConsumerWidget {
         if (query.isNotEmpty)
           IconButton(
             tooltip: l.close,
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(FluentIcons.dismiss_24_regular),
             onPressed: controller.clear,
           ),
       ],
@@ -513,19 +514,19 @@ class _PhoneSearchResults extends ConsumerWidget {
       PhoneSearchOrigin.library => (
         l.phoneSearchLibraryFor(query),
         libraryPageMatches,
-        Icons.collections_bookmark_rounded,
+        FluentIcons.library_24_regular,
       ),
       PhoneSearchOrigin.history => (
         l.phoneSearchHistoryFor(query),
         historyMatches.isNotEmpty,
-        Icons.history_rounded,
+        FluentIcons.history_24_regular,
       ),
       PhoneSearchOrigin.sources => (
         l.phoneSearchSourcesFor(query),
         sourceMatches.isNotEmpty,
-        Icons.explore_rounded,
+        FluentIcons.compass_northwest_24_regular,
       ),
-      PhoneSearchOrigin.plain => ('', false, Icons.search_rounded),
+      PhoneSearchOrigin.plain => ('', false, FluentIcons.search_24_regular),
     };
 
     return ListView(
@@ -625,7 +626,7 @@ class _PhoneSearchResults extends ConsumerWidget {
             ListTile(
               dense: true,
               leading: Icon(
-                s.isKey ? Icons.data_object_rounded : Icons.tune_rounded,
+                s.isKey ? FluentIcons.braces_24_regular : FluentIcons.options_24_regular,
               ),
               title: Text(s.display),
               onTap: () => onApplySuggestion(s),
@@ -705,7 +706,7 @@ class _PhoneSearchResults extends ConsumerWidget {
         if (plainQuery.isNotEmpty) ...[
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.travel_explore_rounded),
+            leading: const Icon(FluentIcons.globe_search_24_regular),
             title: Text(l.unifiedSearchAllSources(plainQuery)),
             onTap: () =>
                 onLeave(() => openGlobalSearch(context, query: plainQuery)),

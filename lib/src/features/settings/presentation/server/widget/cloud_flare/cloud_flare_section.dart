@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -45,7 +46,7 @@ class CloudFlareSection extends ConsumerWidget {
                         AppUrls.flareSolverr.url,
                         ref.read(toastProvider),
                       ),
-                      icon: const Icon(Icons.open_in_new_rounded),
+                      icon: const Icon(FluentIcons.open_24_regular),
                     ),
                   ],
                 ),

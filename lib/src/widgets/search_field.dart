@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
@@ -95,7 +96,7 @@ class SearchField extends HookWidget {
     final closeIcon = onClose != null
         ? IconButton(
             onPressed: closeAction,
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(FluentIcons.dismiss_24_regular),
           )
         : null;
 
@@ -112,8 +113,8 @@ class SearchField extends HookWidget {
         hintText: decorationHint,
         prefixIcon: IconButton(
           icon: Icon(effectiveFocusNode.hasFocus
-              ? Icons.arrow_back_rounded
-              : Icons.search_rounded),
+              ? FluentIcons.arrow_left_24_regular
+              : FluentIcons.search_24_regular),
           onPressed: prefixAction,
         ),
         suffixIcon: Row(

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -392,7 +393,7 @@ class _ChapterHeader extends StatelessWidget {
     if (filterCount > 0) {
       subline.write(' · ${context.l10n.filtered}');
     }
-    Widget filterIcon = const Icon(Icons.filter_list_rounded);
+    Widget filterIcon = Icon(FluentIcons.filter_24_regular, size: desktop ? 20 : 24);
     if (filterCount > 0) {
       filterIcon = Badge.count(
         count: filterCount,
@@ -451,14 +452,14 @@ class _ChapterHeader extends StatelessWidget {
           if (desktop)
             TextButton.icon(
               onPressed: onRefresh,
-              icon: const Icon(Icons.refresh_rounded, size: 20),
+              icon: const Icon(FluentIcons.arrow_clockwise_24_regular, size: 20),
               label: Text(context.l10n.refresh),
             )
           else
             IconButton(
               tooltip: context.l10n.refresh,
               onPressed: onRefresh,
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
             ),
           const SizedBox(width: 4),
           filterButton,
@@ -528,7 +529,9 @@ class _ChapterSelectionHeader extends ConsumerWidget {
         ),
       ),
       _HeaderAction(
-        icon: Icons.bookmark_rounded,
+        icon: allBookmarked
+            ? FluentIcons.bookmark_24_filled
+            : FluentIcons.bookmark_24_regular,
         label: allBookmarked
             ? context.l10n.removeBookmark
             : context.l10n.bookmark,
@@ -540,7 +543,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
         ),
       ),
       _HeaderAction(
-        icon: Icons.save_alt_rounded,
+        icon: FluentIcons.arrow_circle_down_24_regular,
         label: context.l10n.keepOffline,
         onTap: () => keepChaptersOffline(
           context: context,
@@ -550,7 +553,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
         ),
       ),
       _HeaderAction(
-        icon: Icons.cloud_download_outlined,
+        icon: FluentIcons.cloud_arrow_down_24_regular,
         label: context.l10n.download,
         onTap: () => queueServerDownload(
           context: context,
@@ -596,7 +599,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               refresh: refresh,
             ),
             child: ChapterMenuRow(
-              icon: Icons.history_rounded,
+              icon: FluentIcons.text_bullet_list_checkmark_20_regular,
               label: context.l10n.markPreviousAsRead,
             ),
           ),
@@ -611,7 +614,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               }, anchor.id);
             },
             child: ChapterMenuRow(
-              icon: Icons.playlist_add_check_rounded,
+              icon: FluentIcons.task_list_ltr_24_regular,
               label: context.l10n.selectNext10,
             ),
           ),
@@ -625,7 +628,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               }, anchor.id);
             },
             child: ChapterMenuRow(
-              icon: Icons.vertical_align_bottom_rounded,
+              icon: FluentIcons.arrow_down_24_regular,
               label: context.l10n.selectBelow,
             ),
           ),
@@ -635,7 +638,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
                 if (!c.user.isRead.ifNull()) c.id: c,
             }, anchor.id),
             child: ChapterMenuRow(
-              icon: Icons.filter_list_rounded,
+              icon: FluentIcons.multiselect_ltr_24_regular,
               label: context.l10n.selectUnread,
             ),
           ),
@@ -650,7 +653,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               }, anchor.id);
             },
             child: ChapterMenuRow(
-              icon: Icons.swap_vert_rounded,
+              icon: FluentIcons.arrow_autofit_height_24_regular,
               label: context.l10n.selectInBetween,
             ),
           ),
@@ -660,7 +663,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               onTap: () =>
                   openChapterInBrowser(context, ref, browserChapter, seriesUrl),
               child: ChapterMenuRow(
-                icon: Icons.public_rounded,
+                icon: FluentIcons.globe_24_regular,
                 label: context.l10n.openInBrowser,
               ),
             ),
@@ -685,23 +688,25 @@ class _ChapterSelectionHeader extends ConsumerWidget {
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
-            icon: const Icon(Icons.more_horiz_rounded, size: 20),
+            icon: const Icon(FluentIcons.more_horizontal_24_regular, size: 24),
             label: Text(context.l10n.more),
           )
         : IconButton(
             key: moreButtonKey,
             tooltip: context.l10n.more,
             onPressed: () => openMore(overflowed),
-            icon: const Icon(Icons.more_horiz_rounded),
+            icon: const Icon(FluentIcons.more_horizontal_24_regular),
           );
 
     Widget actionButton(_HeaderAction action) => IconButton(
       tooltip: action.label,
       onPressed: action.onTap,
-      style: IconButton.styleFrom(
+      style: desktop
+          ? IconButton.styleFrom(
         minimumSize: const Size(40, 40),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
+      )
+          : null,
       icon: Icon(action.icon),
     );
 
@@ -713,10 +718,10 @@ class _ChapterSelectionHeader extends ConsumerWidget {
           final all = actions();
           const closeWidth = 48.0;
           const selectAllWidth = 48.0;
-          const actionWidth = 40.0;
-          const moreWidth = 104.0;
+          final actionWidth = desktop ? 40.0 : 48.0;
+          const moreWidth = 108.0;
           const moreIconWidth = 48.0;
-          const deleteFullWidth = 156.0;
+          const deleteFullWidth = 160.0;
           const deleteIconWidth = 40.0;
           final deleteLabelled =
               desktop &&
@@ -745,7 +750,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
             children: [
               IconButton(
                 tooltip: context.l10n.cancel,
-                icon: const Icon(Icons.close_rounded),
+                icon: const Icon(FluentIcons.dismiss_24_regular),
                 onPressed: onClear,
               ),
               Flexible(
@@ -758,7 +763,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: context.l10n.selectAll,
-                icon: const Icon(Icons.select_all_rounded),
+                icon: const Icon(FluentIcons.select_all_on_24_regular),
                 onPressed: onSelectAll,
               ),
               for (final action in shown) actionButton(action),
@@ -766,7 +771,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               if (deleteLabelled)
                 TextButton.icon(
                   onPressed: deleteSelected,
-                  icon: Icon(Icons.delete_rounded, color: cs.error, size: 20),
+                  icon: Icon(FluentIcons.delete_24_regular, color: cs.error, size: 24),
                   label: Text('${context.l10n.delete}…'),
                 )
               else if (desktop)
@@ -777,13 +782,13 @@ class _ChapterSelectionHeader extends ConsumerWidget {
                     minimumSize: const Size(40, 40),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  icon: Icon(Icons.delete_rounded, color: cs.error),
+                  icon: Icon(FluentIcons.delete_24_regular, color: cs.error),
                 )
               else
                 IconButton(
                   tooltip: context.l10n.delete,
                   onPressed: deleteSelected,
-                  icon: Icon(Icons.delete_rounded, color: cs.error),
+                  icon: Icon(FluentIcons.delete_24_regular, color: cs.error),
                 ),
             ],
           );

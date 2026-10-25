@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -83,16 +84,16 @@ void main() {
     (tester) async {
       final repo = await pump(tester);
 
-      await tester.tap(find.byIcon(Icons.cloud_download_outlined));
+      await tester.tap(find.byIcon(FluentIcons.cloud_arrow_down_24_regular));
       await tester.pump();
 
       expect(find.byType(MiniCircularProgressIndicator), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_download_outlined), findsNothing);
+      expect(find.byIcon(FluentIcons.cloud_arrow_down_24_regular), findsNothing);
 
       repo.enqueue.completeError(Exception('offline'));
       await tester.pump();
 
-      expect(find.byIcon(Icons.cloud_download_outlined), findsOneWidget);
+      expect(find.byIcon(FluentIcons.cloud_arrow_down_24_regular), findsOneWidget);
     },
   );
 }

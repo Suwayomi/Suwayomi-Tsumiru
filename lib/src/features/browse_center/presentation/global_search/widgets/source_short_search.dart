@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -78,7 +79,7 @@ class SourceShortSearch extends ConsumerWidget {
           child: Row(
             children: [
               Icon(
-                Icons.error_outline,
+                FluentIcons.error_circle_24_regular,
                 size: 20,
                 color: context.colorScheme.error,
               ),

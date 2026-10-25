@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -219,12 +220,12 @@ void main() {
     tester,
   ) async {
     await pump(tester, more: true, capability: AccountCapability.unsupported);
-    expect(find.widgetWithIcon(ListTile, Icons.dns_outlined), findsOneWidget);
-    expect(find.widgetWithIcon(ListTile, Icons.person_outlined), findsNothing);
+    expect(find.widgetWithIcon(ListTile, FluentIcons.server_24_regular), findsOneWidget);
+    expect(find.widgetWithIcon(ListTile, FluentIcons.person_24_regular), findsNothing);
     expect(find.text('Sign out'), findsNothing);
     await pump(tester, more: true, capability: AccountCapability.unknown);
     expect(
-      find.widgetWithIcon(ListTile, Icons.person_outlined),
+      find.widgetWithIcon(ListTile, FluentIcons.person_24_regular),
       findsOneWidget,
     );
     expect(find.text('Sign out'), findsOneWidget);

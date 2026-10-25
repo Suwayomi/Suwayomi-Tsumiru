@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -58,7 +59,7 @@ class NumberPicker extends HookWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.remove_rounded),
+            icon: const Icon(FluentIcons.subtract_24_regular),
             onPressed:
                 AppUtils.returnIf(value > min, () => onChanged(value - 1)),
           ),
@@ -85,7 +86,7 @@ class NumberPicker extends HookWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add_rounded),
+            icon: const Icon(FluentIcons.add_24_regular),
             onPressed:
                 AppUtils.returnIf(value < max, () => onChanged(value + 1)),
           ),

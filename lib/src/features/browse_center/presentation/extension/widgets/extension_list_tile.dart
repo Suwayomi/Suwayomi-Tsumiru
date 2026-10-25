@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,6 +19,7 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
+import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../controller/extension_actions.dart';
@@ -191,20 +193,29 @@ class ExtensionListTileTailing extends StatelessWidget {
         // A third control squeezes the extension name off a phone screen.
         if (hasUpdate)
           PopupMenuButton<VoidCallback>(
+            icon: const Icon(
+              FluentIcons.more_vertical_24_regular,
+            ),
             enabled: canUninstall && running == null,
             onSelected: (selected) => selected(),
             itemBuilder: (context) => [
               PopupMenuItem(
                 enabled: canInstall && canUninstall,
                 value: _reinstall(context),
-                child: Text(context.l10n.reinstall),
+                child: ChapterMenuRow(
+                  icon: FluentIcons.arrow_clockwise_24_regular,
+                  label: context.l10n.reinstall,
+                ),
               ),
               PopupMenuItem(
                 value: () => _run(
                   context.l10n.uninstalling,
                   (actions) => actions.uninstall(extension.pkgName),
                 ),
-                child: Text(context.l10n.uninstall),
+                child: ChapterMenuRow(
+                  icon: FluentIcons.delete_24_regular,
+                  label: context.l10n.uninstall,
+                ),
               ),
             ],
             popUpAnimationStyle: context.motionStyle,
@@ -214,7 +225,7 @@ class ExtensionListTileTailing extends StatelessWidget {
             tooltip: canInstall && canUninstall
                 ? context.l10n.reinstall
                 : context.l10n.accountPermissionDenied,
-            icon: const Icon(Icons.restart_alt_rounded),
+            icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
             onPressed: canInstall && canUninstall && running == null
                 ? _reinstall(context)
                 : null,

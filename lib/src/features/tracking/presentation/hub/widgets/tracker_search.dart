@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -209,7 +210,7 @@ class _TrackSearchResultTile extends StatelessWidget {
                   width: 56,
                   height: 80,
                   color: context.theme.colorScheme.surfaceContainerHighest,
-                  child: const Icon(Icons.broken_image_rounded),
+                  child: const Icon(FluentIcons.image_off_24_regular),
                 ),
               ),
             ),
@@ -245,7 +246,7 @@ class _TrackSearchResultTile extends StatelessWidget {
             ),
             if (isSelected)
               Icon(
-                Icons.check_circle_rounded,
+                FluentIcons.checkmark_circle_24_filled,
                 color: context.theme.colorScheme.primary,
               ),
           ],

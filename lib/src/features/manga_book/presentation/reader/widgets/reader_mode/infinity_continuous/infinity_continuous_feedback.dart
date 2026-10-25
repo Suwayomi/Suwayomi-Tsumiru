@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -38,7 +39,8 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             Icon(
-              Icons.auto_stories_rounded,
+              FluentIcons.book_open_24_regular,
+              size: 18,
               color: context.theme.colorScheme.onInverseSurface,
             ),
             const Gap(12),
@@ -81,7 +83,8 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             Icon(
-              Icons.first_page_rounded,
+              FluentIcons.arrow_previous_24_regular,
+              size: 18,
               color: context.theme.colorScheme.onInverseSurface,
             ),
             const Gap(12),
@@ -114,8 +117,8 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             SizedBox(
-              width: 16,
-              height: 16,
+              width: 18,
+              height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -153,8 +156,8 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             SizedBox(
-              width: 16,
-              height: 16,
+              width: 18,
+              height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -192,7 +195,7 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             Icon(
-              Icons.check_circle_outline,
+              FluentIcons.checkmark_circle_24_regular,
               color: context.theme.colorScheme.onInverseSurface,
               size: 18,
             ),
@@ -227,7 +230,7 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             Icon(
-              Icons.check_circle_outline,
+              FluentIcons.checkmark_circle_24_regular,
               color: context.theme.colorScheme.onInverseSurface,
               size: 18,
             ),
@@ -263,7 +266,7 @@ class InfinityContinuousFeedback {
         content: Row(
           children: [
             Icon(
-              Icons.error_outline,
+              FluentIcons.error_circle_24_regular,
               color: context.theme.colorScheme.onErrorContainer,
               size: 18,
             ),
@@ -345,8 +348,8 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
             children: [
               Icon(
                 isChapterStart
-                    ? Icons.play_circle_outline_rounded
-                    : Icons.bookmark_border_rounded,
+                    ? FluentIcons.play_circle_24_regular
+                    : FluentIcons.bookmark_24_regular,
                 size: 32,
                 color: isChapterStart
                     ? context.theme.colorScheme.primary
@@ -377,7 +380,7 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.celebration_rounded,
+                      FluentIcons.trophy_24_regular,
                       size: 16,
                       color: context.theme.colorScheme.secondary,
                     ),

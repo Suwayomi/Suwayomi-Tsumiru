@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -174,6 +175,9 @@ class EditAccountDialog extends HookConsumerWidget {
         if (blocked) Text(blockMessage),
         if (access.canEditRoles)
           DropdownButtonFormField<Enum$UserRole>(
+            icon: const Icon(
+              FluentIcons.caret_down_24_filled,
+            ),
             initialValue: role.value,
             decoration: InputDecoration(labelText: context.l10n.accountRole),
             items: [

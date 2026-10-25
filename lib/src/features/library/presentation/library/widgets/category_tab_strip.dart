@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -407,7 +408,7 @@ class _MoreControl extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.arrow_drop_down_rounded, size: 20),
+                    const Icon(FluentIcons.caret_down_24_filled, size: 20),
                   ],
                 ),
               ),

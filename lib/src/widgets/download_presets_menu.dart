@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../features/manga_book/domain/chapter/chapter_download_presets.dart';
@@ -35,7 +36,7 @@ class DownloadPresetsMenu extends StatelessWidget {
     final canDownload = enabled && onSelected != null;
     return PopupMenuButton<DownloadPreset>(
       enabled: canDownload,
-      icon: const Icon(Icons.cloud_download_outlined),
+      icon: const Icon(FluentIcons.cloud_arrow_down_24_regular),
       tooltip: canDownload
           ? context.l10n.downloadToServer
           : context.l10n.accountPermissionDenied,

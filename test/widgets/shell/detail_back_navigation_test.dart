@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -298,7 +299,7 @@ void main() {
     expect(find.byType(MultiChaptersActionsBottomAppBar), findsOneWidget);
     final phoneSelectAll = find.descendant(
       of: find.byType(AppBar),
-      matching: find.byIcon(Icons.select_all_rounded),
+      matching: find.byIcon(FluentIcons.select_all_on_24_regular),
     );
     final phoneNode = Focus.of(tester.element(phoneSelectAll));
     phoneNode.requestFocus();
@@ -331,7 +332,7 @@ void main() {
     expect(find.byType(Checkbox), findsWidgets);
     final headerSelectAll = find.descendant(
       of: find.byKey(const ValueKey('chapterSelectionHeader')),
-      matching: find.byIcon(Icons.select_all_rounded),
+      matching: find.byIcon(FluentIcons.select_all_on_24_regular),
     );
     final headerNode = Focus.of(tester.element(headerSelectAll));
     headerNode.requestFocus();

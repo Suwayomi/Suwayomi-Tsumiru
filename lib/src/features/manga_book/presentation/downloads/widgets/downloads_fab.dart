@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -35,7 +36,7 @@ class DownloadsFab extends ConsumerWidget {
         tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
         label: Text(context.l10n.resume),
         isExtended: context.windowSizeClass >= WindowSizeClass.medium,
-        icon: const Icon(Icons.play_arrow_rounded),
+        icon: const Icon(FluentIcons.play_24_regular),
       );
     } else {
       return FloatingActionButton.extended(
@@ -49,7 +50,7 @@ class DownloadsFab extends ConsumerWidget {
         tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
         label: Text(context.l10n.pause),
         isExtended: context.windowSizeClass >= WindowSizeClass.medium,
-        icon: const Icon(Icons.pause_rounded),
+        icon: const Icon(FluentIcons.pause_24_regular),
       );
     }
   }

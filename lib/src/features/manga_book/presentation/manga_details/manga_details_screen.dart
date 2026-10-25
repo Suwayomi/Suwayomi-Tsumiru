@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,7 @@ import 'controller/manga_details_controller.dart';
 import 'manga_notes_screen.dart';
 import 'server_web_url.dart';
 import 'widgets/big_screen_manga_details.dart';
+import 'widgets/chapter_context_menu.dart';
 import 'widgets/edit_manga_category_dialog.dart';
 import 'widgets/manga_chapter_organizer.dart';
 import 'widgets/manga_description.dart';
@@ -261,7 +263,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   for (ChapterDto i in chapterList) i.id: i,
                 });
               },
-              icon: const Icon(Icons.select_all_rounded),
+              icon: const Icon(FluentIcons.select_all_on_24_regular),
             ),
             IconButton(
               onPressed: () {
@@ -271,7 +273,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     if (!selectedChapters.value.containsKey(i.id)) i.id: i,
                 });
               },
-              icon: const Icon(Icons.flip_to_back_rounded),
+              icon: const Icon(FluentIcons.arrow_swap_24_regular),
             ),
             MultiSelectPopupButton(
               filteredChapterList: filteredChapterList,
@@ -279,12 +281,29 @@ class MangaDetailsScreen extends HookConsumerWidget {
             ),
           ];
           final pageActions = [
-            if (!twoColumn && data != null)
+            if (twoColumn && inLibrary && data != null)
               IconButton(
-                tooltip: context.l10n.webView,
-                icon: const Icon(Icons.public_rounded),
-                onPressed: () =>
-                    MangaDescription.openInBrowser(context, ref, data),
+                tooltip: context.l10n.notes,
+                icon: const Icon(FluentIcons.note_edit_24_regular),
+                onPressed: () => openMangaNotes(context, data),
+              ),
+            if (twoColumn && inLibrary)
+              IconButton(
+                tooltip: context.l10n.migrate,
+                icon: const Icon(FluentIcons.arrow_swap_24_regular),
+                onPressed: () => startMigration(context, mangaId, data),
+              ),
+            if (inLibrary)
+              IconButton(
+                tooltip: context.l10n.editCategory,
+                icon: const Icon(FluentIcons.tag_24_regular),
+                onPressed: openEditCategories,
+              ),
+            if (twoColumn && data?.realUrl != null)
+              IconButton(
+                tooltip: context.l10n.share,
+                icon: const Icon(FluentIcons.share_24_regular),
+                onPressed: () => shareSeries(context, data!),
               ),
             if (!twoColumn)
               IconButton(
@@ -299,14 +318,14 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     sheetAnimationStyle: context.motionStyle,
                   );
                 },
-                icon: const Icon(Icons.filter_list_rounded),
+                icon: const Icon(FluentIcons.filter_24_regular),
               ),
             if (!twoColumn)
               PopupMenuButton(
                 shape: RoundedRectangleBorder(
                   borderRadius: KBorderRadius.r16.radius,
                 ),
-                icon: const Icon(Icons.more_vert_rounded),
+                icon: const Icon(FluentIcons.more_vertical_24_regular),
                 itemBuilder: (context) => [
                   if (ref.watch(showRecommendationsProvider).ifNull(true) &&
                       ref.watch(recommendsInOverflowProvider).ifNull(false))
@@ -315,65 +334,68 @@ class MangaDetailsScreen extends HookConsumerWidget {
                         mangaId: mangaId,
                         mangaTitle: data?.title,
                       ).push(context),
-                      child: Text(context.l10n.seeRecommendations),
-                    ),
-                  PopupMenuItem(
-                    onTap: openEditCategories,
-                    child: Text(context.l10n.editCategory),
-                  ),
-                  PopupMenuItem(
-                    onTap: () => startMigration(context, mangaId, data),
-                    child: Text(context.l10n.migrate),
-                  ),
-                  if (data?.realUrl != null)
-                    PopupMenuItem(
-                      onTap: () => shareSeries(context, data!),
-                      child: Text(context.l10n.share),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.lightbulb_24_regular,
+                        label: context.l10n.seeRecommendations,
+                      ),
                     ),
                   if (inLibrary && data != null)
                     PopupMenuItem(
                       onTap: () => openMangaNotes(context, data),
-                      child: Text(context.l10n.notes),
-                  ),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.note_edit_24_regular,
+                        label: context.l10n.notes,
+                      ),
+                    ),
+                  if (inLibrary)
+                    PopupMenuItem(
+                      onTap: () => startMigration(context, mangaId, data),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.arrow_swap_24_regular,
+                        label: context.l10n.migrate,
+                      ),
+                    ),
+                  if (data?.realUrl != null)
+                    PopupMenuItem(
+                      onTap: () => shareSeries(context, data!),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.share_24_regular,
+                        label: context.l10n.share,
+                      ),
+                    ),
+                  if (data != null)
+                    PopupMenuItem(
+                      onTap: () =>
+                          MangaDescription.openInBrowser(context, ref, data),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.globe_24_regular,
+                        label: context.l10n.webView,
+                      ),
+                    ),
                   PopupMenuItem(
                     onTap: () => refresh(true),
-                    child: Text(context.l10n.refresh),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.arrow_clockwise_24_regular,
+                      label: context.l10n.refresh,
+                    ),
                   ),
                   if (data?.realUrl != null)
                     PopupMenuItem(
                       onTap: () => openInBrowser(data!.realUrl!),
-                      child: Text(context.l10n.openSourceInBrowser),
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.open_24_regular,
+                        label: context.l10n.openSourceInBrowser,
+                      ),
                     ),
                   PopupMenuItem(
                     onTap: openOnServer,
-                    child: Text(context.l10n.openOnServer),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.server_24_regular,
+                      label: context.l10n.openOnServer,
+                    ),
                   ),
                 ],
                 popUpAnimationStyle: context.motionStyle,
-              ),
-            if (twoColumn && inLibrary && data != null)
-              IconButton(
-                tooltip: context.l10n.notes,
-                icon: const Icon(Icons.edit_note_rounded),
-                onPressed: () => openMangaNotes(context, data),
-              ),
-            if (twoColumn && inLibrary)
-              IconButton(
-                tooltip: context.l10n.migrate,
-                icon: const Icon(Icons.sync_alt_rounded),
-                onPressed: () => startMigration(context, mangaId, data),
-              ),
-            if (twoColumn && inLibrary)
-              IconButton(
-                tooltip: context.l10n.editCategory,
-                icon: const Icon(Icons.label_outline_rounded),
-                onPressed: openEditCategories,
-              ),
-            if (twoColumn && data?.realUrl != null)
-              IconButton(
-                tooltip: context.l10n.share,
-                icon: const Icon(Icons.share_rounded),
-                onPressed: () => shareSeries(context, data!),
               ),
           ];
           final scaffold = FocusScope(
@@ -396,7 +418,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   ? AppBar(
                       leading: IconButton(
                         onPressed: () => selectedChapters.value = ({}),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(FluentIcons.dismiss_24_regular),
                       ),
                       title: Text(
                         context.l10n.numSelected(selectedChapters.value.length),
@@ -460,7 +482,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                             ? context.l10n.resume
                             : context.l10n.start,
                       ),
-                      icon: const Icon(Icons.play_arrow_rounded),
+                      icon: const Icon(FluentIcons.play_24_regular),
                       onPressed: () {
                         ReaderRoute(
                           mangaId: firstUnreadChapter.mangaId,
@@ -537,7 +559,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               content: DesktopTitleSlot(
                 leading: IconButton(
                   onPressed: () => selectedChapters.value = ({}),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(FluentIcons.dismiss_24_regular),
                 ),
                 title: Text(
                   context.l10n.numSelected(selectedChapters.value.length),
@@ -592,7 +614,7 @@ class MultiSelectPopupButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton(
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
-      icon: const Icon(Icons.more_vert_rounded),
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
       itemBuilder: (context) => [
         PopupMenuItem(
           onTap: () {
@@ -619,7 +641,10 @@ class MultiSelectPopupButton extends StatelessWidget {
                 if (!i.user.isRead.ifNull()) i.id: i,
             });
           },
-          child: Text(context.l10n.selectUnread),
+          child: ChapterMenuRow(
+            icon: FluentIcons.multiselect_ltr_24_regular,
+            label: context.l10n.selectUnread,
+          ),
         ),
         PopupMenuItem(
           onTap: () {

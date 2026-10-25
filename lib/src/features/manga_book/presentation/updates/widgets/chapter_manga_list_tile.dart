@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -108,7 +109,7 @@ class ChapterMangaListTile extends StatelessWidget {
                         children: [
                           if ((chapterWithMangaDto.user.isBookmarked)
                               .ifNull()) ...[
-                            const Icon(Icons.bookmark_rounded, size: 20),
+                            const Icon(FluentIcons.bookmark_24_filled, size: 20),
                             const Gap(4),
                           ],
                           Expanded(

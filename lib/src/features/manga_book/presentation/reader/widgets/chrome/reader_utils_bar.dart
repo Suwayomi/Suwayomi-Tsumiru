@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -102,7 +103,7 @@ class ReaderUtilsBar extends ConsumerWidget {
                           ),
                           // Faster = shorter interval, so "-" lowers seconds.
                           IconButton(
-                            icon: Icon(Icons.remove, color: cs.onSurface),
+                            icon: Icon(FluentIcons.subtract_24_regular, color: cs.onSurface),
                             onPressed: () => setInterval(interval - 1),
                           ),
                           Text(
@@ -110,7 +111,7 @@ class ReaderUtilsBar extends ConsumerWidget {
                             style: TextStyle(color: cs.onSurface),
                           ),
                           IconButton(
-                            icon: Icon(Icons.add, color: cs.onSurface),
+                            icon: Icon(FluentIcons.add_24_regular, color: cs.onSurface),
                             onPressed: () => setInterval(interval + 1),
                           ),
                         ],
@@ -129,8 +130,8 @@ class ReaderUtilsBar extends ConsumerWidget {
                   onPressed: () => expanded.value = !expanded.value,
                   icon: Icon(
                     isOpen
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
+                        ? FluentIcons.chevron_up_24_regular
+                        : FluentIcons.chevron_down_24_regular,
                     color: cs.onSurface,
                   ),
                 ),

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -30,7 +31,7 @@ class AppErrorApp extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline_rounded, size: 48),
+                    const Icon(FluentIcons.error_circle_24_regular, size: 48),
                     const SizedBox(height: 16),
                     const Text(
                       "Tsumiru couldn't start",
@@ -58,7 +59,7 @@ class AppErrorApp extends StatelessWidget {
                           );
                         }
                       },
-                      icon: const Icon(Icons.copy_all_rounded),
+                      icon: const Icon(FluentIcons.copy_24_regular),
                       label: const Text('Copy log'),
                     ),
                     if (logPath != null) ...[

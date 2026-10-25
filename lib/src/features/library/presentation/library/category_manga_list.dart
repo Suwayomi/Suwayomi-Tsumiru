@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -266,7 +267,7 @@ class CategoryMangaList extends HookConsumerWidget {
                                     context: context,
                                     builder: (ctx) => AlertDialog(
                                       icon: Icon(
-                                        Icons.delete_outline_rounded,
+                                        FluentIcons.delete_24_regular,
                                         color: ctx.theme.colorScheme.error,
                                       ),
                                       title: Text(
@@ -537,7 +538,7 @@ class _SelectionBar extends StatelessWidget {
       leading: [
         IconButton(
           tooltip: 'Clear',
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(FluentIcons.dismiss_24_regular),
           onPressed: onClear,
         ),
         Text('$count', style: context.textTheme.titleMedium),
@@ -545,7 +546,7 @@ class _SelectionBar extends StatelessWidget {
       actions: [
         IconButton(
           tooltip: 'Edit categories',
-          icon: const Icon(Icons.label_outline_rounded),
+          icon: const Icon(FluentIcons.tag_24_regular),
           onPressed: onEditCategories,
         ),
         IconButton(
@@ -561,13 +562,13 @@ class _SelectionBar extends StatelessWidget {
         DownloadPresetsMenu(onSelected: onDownloadToServer),
         PopupMenuButton<VoidCallback>(
           tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
-          icon: const Icon(Icons.more_vert),
+          icon: const Icon(FluentIcons.more_vertical_24_regular),
           onSelected: (action) => action(),
           itemBuilder: (context) => [
-            _moreItem(Icons.select_all_rounded, 'Select all', onSelectAll),
-            _moreItem(Icons.save_alt_rounded, 'Keep on device', onKeepOffline),
+            _moreItem(FluentIcons.select_all_on_24_regular, 'Select all', onSelectAll),
+            _moreItem(FluentIcons.arrow_circle_down_24_regular, 'Keep on device', onKeepOffline),
             _moreItem(
-              Icons.swap_horiz,
+              FluentIcons.arrow_swap_24_regular,
               context.l10n.bulkMigrationTitle,
               onMigrate,
             ),

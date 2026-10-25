@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -73,14 +74,14 @@ class BrowseScreen extends HookConsumerWidget {
         IconButton(
           tooltip: context.l10n.filterSources,
           onPressed: () => const SourceFilterRoute().push(context),
-          icon: const Icon(Icons.filter_list_rounded),
+          icon: const Icon(FluentIcons.filter_24_regular),
         ),
       ],
       if (tabController.index == 1) ...[
         IconButton(
           tooltip: context.l10n.extensionStores,
           onPressed: () => const ExtensionStoreRoute().push(context),
-          icon: const Icon(Icons.dns_rounded),
+          icon: const Icon(FluentIcons.puzzle_piece_24_regular),
         ),
         const InstallExtensionFile(),
       ],
@@ -93,7 +94,7 @@ class BrowseScreen extends HookConsumerWidget {
                 : const ExtensionLanguageFilterDialog(),
             animationStyle: context.motionStyle,
           ),
-          icon: const Icon(Icons.translate_rounded),
+          icon: const Icon(FluentIcons.translate_24_regular),
         ),
     ];
     final tabBar = TabBar(

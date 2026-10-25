@@ -6,6 +6,7 @@
 
 import 'dart:math' as math;
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,6 +15,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
+import '../../../../../widgets/fluent_expansion_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../category/controller/edit_category_controller.dart';
@@ -333,8 +335,8 @@ class LibraryRatingFilter extends ConsumerWidget {
                   padding: const EdgeInsets.all(2),
                   child: Icon(
                     star <= min
-                        ? Icons.star_rounded
-                        : Icons.star_border_rounded,
+                        ? FluentIcons.star_24_filled
+                        : FluentIcons.star_24_regular,
                     size: 22,
                     color: star <= min
                         ? brandStarColor(context.theme.brightness)
@@ -598,9 +600,9 @@ Widget _tagRow(
   final scheme = context.theme.colorScheme;
   final Widget? leading;
   if (state == true) {
-    leading = Icon(Icons.check_rounded, size: 18, color: scheme.primary);
+    leading = Icon(FluentIcons.checkmark_24_regular, size: 18, color: scheme.primary);
   } else if (state == false) {
-    leading = Icon(Icons.block_rounded, size: 18, color: scheme.error);
+    leading = Icon(FluentIcons.dismiss_square_24_regular, size: 18, color: scheme.error);
   } else {
     leading = null;
   }
@@ -652,7 +654,7 @@ class _TagSearchHeader extends StatelessWidget {
           style: context.theme.textTheme.bodyMedium,
           decoration: InputDecoration(
             hintText: context.l10n.searchTags,
-            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+            prefixIcon: const Icon(FluentIcons.search_24_regular, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -737,13 +739,13 @@ class CategoryFilterDialog extends ConsumerWidget {
     final excludeColor = context.theme.colorScheme.error;
     if (value == null) {
       return Icon(
-        Icons.check_box_outline_blank_rounded,
+        FluentIcons.checkbox_unchecked_24_regular,
         color: context.theme.unselectedWidgetColor,
       );
     } else if (value == true) {
-      return Icon(Icons.check_box_rounded, color: activeColor);
+      return Icon(FluentIcons.checkbox_checked_24_regular, color: activeColor);
     } else {
-      return Icon(Icons.disabled_by_default_rounded, color: excludeColor);
+      return Icon(FluentIcons.dismiss_square_24_regular, color: excludeColor);
     }
   }
 
@@ -836,7 +838,7 @@ class LibraryEntryFilter extends ConsumerWidget {
           };
     final entries = labels.entries.toList()
       ..sort((a, b) => a.value.compareTo(b.value));
-    return ExpansionTile(
+    return FluentExpansionTile(
       title: Text(
         kind == 'status' ? context.l10n.trackStatus : context.l10n.source,
       ),
@@ -844,9 +846,9 @@ class LibraryEntryFilter extends ConsumerWidget {
         for (final entry in entries)
           ListTile(
             leading: Icon(switch (selected[entry.key]) {
-              true => Icons.check_box_rounded,
-              false => Icons.disabled_by_default_rounded,
-              null => Icons.check_box_outline_blank_rounded,
+              true => FluentIcons.checkbox_checked_24_regular,
+              false => FluentIcons.dismiss_square_24_regular,
+              null => FluentIcons.checkbox_unchecked_24_regular,
             }),
             title: Text(entry.value),
             onTap: () =>

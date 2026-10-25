@@ -33,8 +33,15 @@ class AsyncTextButton extends HookWidget {
               isLoading.value = (false);
             }
           : null,
-      icon: isLoading.value ? const SizedBox.shrink() : icon,
-      label: isLoading.value ? const MiniCircularProgressIndicator() : child,
+      icon: isLoading.value && icon != null
+          ? const MiniCircularProgressIndicator()
+          : icon,
+      label: isLoading.value && icon == null
+          ? const MiniCircularProgressIndicator(
+              size: 16,
+              padding: EdgeInsets.all(8),
+            )
+          : child,
     );
   }
 }

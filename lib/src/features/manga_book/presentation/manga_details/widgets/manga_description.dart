@@ -6,6 +6,7 @@
 
 import 'dart:ui' show ImageFilter;
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -34,6 +35,7 @@ import '../controller/manga_details_controller.dart';
 import '../controller/next_update_controller.dart';
 import '../manga_notes_screen.dart';
 import '../server_web_url.dart';
+import 'chapter_context_menu.dart';
 import 'chapter_download_presets_button.dart';
 import 'edit_manga_category_dialog.dart';
 import 'manga_action_button.dart';
@@ -77,7 +79,7 @@ class MangaDescription extends HookConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.public_rounded),
+              leading: const Icon(FluentIcons.globe_24_regular),
               title: Text(sheetContext.l10n.openSourceInBrowser),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -85,7 +87,7 @@ class MangaDescription extends HookConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.dns_rounded),
+              leading: const Icon(FluentIcons.server_24_regular),
               title: Text(sheetContext.l10n.openOnServer),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -186,7 +188,7 @@ class MangaDescription extends HookConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.hourglass_empty_rounded,
+                  FluentIcons.hourglass_24_regular,
                   size: 14,
                   color: soonDays <= 1
                       ? cs.primary
@@ -411,8 +413,8 @@ class MangaDescription extends HookConsumerWidget {
                             active: inLibrary,
                             icon: Icon(
                               inLibrary
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
+                                  ? FluentIcons.heart_24_filled
+                                  : FluentIcons.heart_24_regular,
                             ),
                             label: inLibrary
                                 ? context.l10n.inLibrary
@@ -423,7 +425,7 @@ class MangaDescription extends HookConsumerWidget {
                       Expanded(
                         child: MangaActionButton(
                           active: manga.trackRecords.nodes.isNotEmpty,
-                          icon: const Icon(Icons.sync_rounded),
+                          icon: const Icon(FluentIcons.arrow_sync_24_regular),
                           label: context.l10n.tracking,
                           onPressed: () => showTrackSheet(
                             context,
@@ -475,19 +477,28 @@ class MangaDescription extends HookConsumerWidget {
                             itemBuilder: (context) => [
                               PopupMenuItem(
                                 value: 'categories',
-                                child: Text(context.l10n.categories),
+                                child: ChapterMenuRow(
+                                  icon: FluentIcons.tag_24_regular,
+                                  label: context.l10n.categories,
+                                ),
                               ),
                               PopupMenuItem(
                                 value: 'migrate',
-                                child: Text(context.l10n.migrate),
+                                child: ChapterMenuRow(
+                                  icon: FluentIcons.arrow_swap_24_regular,
+                                  label: context.l10n.migrate,
+                                ),
                               ),
                               PopupMenuItem(
                                 value: 'web',
-                                child: Text(context.l10n.webView),
+                                child: ChapterMenuRow(
+                                  icon: FluentIcons.globe_24_regular,
+                                  label: context.l10n.webView,
+                                ),
                               ),
                             ],
                             child: MangaActionButton(
-                              icon: const Icon(Icons.more_horiz_rounded),
+                              icon: const Icon(FluentIcons.more_horizontal_24_regular),
                               label: context.l10n.more,
                               onPressed: () =>
                                   moreKey.currentState?.showButtonMenu(),
@@ -575,7 +586,7 @@ class MangaDescriptionBody extends StatelessWidget {
             alignment: Alignment.center,
             child: TextButton.icon(
               onPressed: onEditNotes,
-              icon: const Icon(Icons.edit_note, size: 16),
+              icon: const Icon(FluentIcons.note_edit_24_regular, size: 16),
               label: Text(context.l10n.editNotes),
       ),
           ),
@@ -643,8 +654,8 @@ class MangaDescriptionBody extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2, bottom: 6),
               child: Icon(
                 isExpanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded,
+                    ? FluentIcons.chevron_up_24_regular
+                    : FluentIcons.chevron_down_24_regular,
               ),
             ),
           ),

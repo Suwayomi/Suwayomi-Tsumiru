@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -95,7 +96,7 @@ class OfflineFilesView extends HookConsumerWidget {
                   const DownloadStallBanner(),
                   ListTile(
                     dense: true,
-                    leading: const Icon(Icons.sd_storage_outlined),
+                    leading: const Icon(FluentIcons.storage_24_regular),
                     title: Text(context.l10n.offlineStorageUsage),
                     trailing: Text(formatBytes(totalBytes)),
                   ),
@@ -151,7 +152,7 @@ class OfflineFilesView extends HookConsumerWidget {
               ),
               trailing: IconButton(
                 tooltip: context.l10n.manageDownloadsChangeRule,
-                icon: const Icon(Icons.tune_rounded),
+                icon: const Icon(FluentIcons.options_24_regular),
                 onPressed: () => _openSeriesSheet(context, ref, s.manga),
               ),
               onTap: selecting
@@ -178,7 +179,7 @@ class OfflineFilesView extends HookConsumerWidget {
               leading: [
                 IconButton(
                   tooltip: context.l10n.cancel,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(FluentIcons.dismiss_24_regular),
                   onPressed: clear,
                 ),
                 Text(
@@ -189,7 +190,7 @@ class OfflineFilesView extends HookConsumerWidget {
               actions: [
                 IconButton(
                   tooltip: context.l10n.manageDownloadsChangeRule,
-                  icon: const Icon(Icons.tune_rounded),
+                  icon: const Icon(FluentIcons.options_24_regular),
                   onPressed: !canDownload
                       ? null
                       : () => _bulkChangeRule(
@@ -201,7 +202,7 @@ class OfflineFilesView extends HookConsumerWidget {
                 ),
                 IconButton(
                   tooltip: context.l10n.manageDownloadsStopKeep,
-                  icon: const Icon(Icons.bookmark_remove_outlined),
+                  icon: const Icon(FluentIcons.bookmark_off_24_regular),
                   onPressed: () => _bulkStopKeep(
                     context,
                     ref,
@@ -211,7 +212,7 @@ class OfflineFilesView extends HookConsumerWidget {
                 ),
                 IconButton(
                   tooltip: context.l10n.manageDownloadsStopDelete,
-                  icon: const Icon(Icons.delete_outline_rounded),
+                  icon: const Icon(FluentIcons.delete_24_regular),
                   onPressed: () => _bulkStopDelete(
                     context,
                     ref,
@@ -254,12 +255,12 @@ class OfflineFilesView extends HookConsumerWidget {
                     ),
                   for (final n in _bufferSizes)
                     ListTile(
-                      leading: const Icon(Icons.bookmark_add_outlined),
+                      leading: const Icon(FluentIcons.bookmark_add_24_regular),
                       title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
                       trailing:
                           (manga.keepRule == OfflineKeepRule.nUnread &&
                               manga.keepUnreadCount == n)
-                          ? const Icon(Icons.check_rounded)
+                          ? const Icon(FluentIcons.checkmark_24_regular)
                           : null,
                       onTap: canDownload
                           ? () {
@@ -274,10 +275,10 @@ class OfflineFilesView extends HookConsumerWidget {
                           : null,
                     ),
                   ListTile(
-                    leading: const Icon(Icons.menu_book_outlined),
+                    leading: const Icon(FluentIcons.book_open_24_regular),
                     title: Text(sheetContext.l10n.keepOfflineAllUnread),
                     trailing: manga.keepRule == OfflineKeepRule.allUnread
-                        ? const Icon(Icons.check_rounded)
+                        ? const Icon(FluentIcons.checkmark_24_regular)
                         : null,
                     onTap: canDownload
                         ? () {
@@ -292,10 +293,10 @@ class OfflineFilesView extends HookConsumerWidget {
                         : null,
                   ),
                   ListTile(
-                    leading: const Icon(Icons.library_books_outlined),
+                    leading: const Icon(FluentIcons.library_24_regular),
                     title: Text(sheetContext.l10n.keepOfflineAll),
                     trailing: manga.keepRule == OfflineKeepRule.all
-                        ? const Icon(Icons.check_rounded)
+                        ? const Icon(FluentIcons.checkmark_24_regular)
                         : null,
                     onTap: canDownload
                         ? () {
@@ -311,7 +312,7 @@ class OfflineFilesView extends HookConsumerWidget {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.bookmark_remove_outlined),
+                    leading: const Icon(FluentIcons.bookmark_off_24_regular),
                     title: Text(sheetContext.l10n.manageDownloadsStopKeep),
                     onTap: () {
                       Navigator.pop(sheetContext);
@@ -320,7 +321,7 @@ class OfflineFilesView extends HookConsumerWidget {
                   ),
                   ListTile(
                     leading: Icon(
-                      Icons.delete_outline_rounded,
+                      FluentIcons.delete_24_regular,
                       color: sheetContext.theme.colorScheme.error,
                     ),
                     title: Text(

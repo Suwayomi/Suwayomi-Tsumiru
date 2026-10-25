@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -22,7 +23,7 @@ class ServerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final access = ref.watch(settledAccountAccessProvider);
     final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
-    const chevron = Icon(Icons.chevron_right_rounded);
+    const chevron = Icon(FluentIcons.chevron_right_24_regular);
 
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.server);
@@ -40,7 +41,7 @@ class ServerScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.group_outlined,
+                      icon: FluentIcons.people_24_regular,
                       title: context.l10n.serverUsers,
                       trailing: chevron,
                       onTap: () => const ManageUsersRoute().push(context),
@@ -52,41 +53,41 @@ class ServerScreen extends ConsumerWidget {
                 children: [
                   if (canManage)
                     SettingsGroupRow(
-                      icon: Icons.login_rounded,
+                      icon: FluentIcons.arrow_enter_20_regular,
                       title: context.l10n.serverSignIn,
                       trailing: chevron,
                       onTap: () => const ServerSignInRoute().push(context),
                     ),
                   if (canManage)
                     SettingsGroupRow(
-                      icon: Icons.lan_outlined,
+                      icon: FluentIcons.organization_24_regular,
                       title: context.l10n.network,
                       trailing: chevron,
                       onTap: () => const ServerNetworkRoute().push(context),
                     ),
                   if (canManage)
                     SettingsGroupRow(
-                      icon: Icons.web_outlined,
+                      icon: FluentIcons.window_24_regular,
                       title: context.l10n.webInterface,
                       trailing: chevron,
                       onTap: () =>
                           const ServerWebInterfaceRoute().push(context),
                     ),
                   SettingsGroupRow(
-                    icon: Icons.rss_feed_outlined,
+                    icon: FluentIcons.rss_24_regular,
                     title: context.l10n.opds,
                     trailing: chevron,
                     onTap: () => const ServerOpdsRoute().push(context),
                   ),
                   SettingsGroupRow(
-                    icon: Icons.image_outlined,
+                    icon: FluentIcons.image_24_regular,
                     title: context.l10n.images,
                     trailing: chevron,
                     onTap: () => const ServerImagesRoute().push(context),
                   ),
                   if (canManage)
                     SettingsGroupRow(
-                      icon: Icons.storage_outlined,
+                      icon: FluentIcons.database_24_regular,
                       title: context.l10n.database,
                       trailing: chevron,
                       onTap: () => const ServerDatabaseRoute().push(context),
@@ -98,7 +99,7 @@ class ServerScreen extends ConsumerWidget {
                 SettingsGroupCard(
                   children: [
                     SettingsGroupRow(
-                      icon: Icons.receipt_long_outlined,
+                      icon: FluentIcons.receipt_24_regular,
                       title: context.l10n.logs,
                       trailing: chevron,
                       onTap: () => const ServerLogsRoute().push(context),

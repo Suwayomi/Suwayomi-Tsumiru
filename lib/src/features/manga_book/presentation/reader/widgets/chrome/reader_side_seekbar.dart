@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -39,7 +40,7 @@ class ReaderSideSeekBar extends StatelessWidget {
     return Column(
       children: [
         BrandFilledCircleButton(
-          icon: Icons.skip_previous_rounded,
+          icon: FluentIcons.previous_24_filled,
           quarterTurns: 1,
           color: navSurface,
           onPressed: onPreviousChapter,
@@ -56,7 +57,7 @@ class ReaderSideSeekBar extends StatelessWidget {
         ),
         const Gap(8),
         BrandFilledCircleButton(
-          icon: Icons.skip_next_rounded,
+          icon: FluentIcons.next_24_filled,
           quarterTurns: 1,
           color: navSurface,
           onPressed: onNextChapter,

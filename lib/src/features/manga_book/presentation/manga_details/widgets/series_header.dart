@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -101,7 +102,7 @@ class SeriesHeader extends ConsumerWidget {
               Expanded(flex: equalButtons ? 1 : width.ceil(), child: pill);
           Widget resumePill() => SeriesHeaderPill(
             gradient: true,
-            icon: Icons.play_arrow_rounded,
+            icon: FluentIcons.play_24_regular,
             label: resumeLabel,
             onPressed: () => ReaderRoute(
               mangaId: next!.mangaId,
@@ -111,8 +112,8 @@ class SeriesHeader extends ConsumerWidget {
           );
           Widget libraryPill() => SeriesHeaderPill(
             icon: inLibrary
-                ? Icons.favorite_rounded
-                : Icons.favorite_border_rounded,
+                ? FluentIcons.heart_24_filled
+                : FluentIcons.heart_24_regular,
             label: libraryLabel,
             onPressed: onLibraryPressed,
           );

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../routes/router_config.dart';
@@ -40,7 +41,7 @@ class DesktopBrandRow extends StatelessWidget {
             child: Text('Tsumiru', style: brandNameStyle(context)),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(FluentIcons.chevron_left_24_regular),
             tooltip: context.l10n.collapseSidebar,
             onPressed: onCollapse,
           ),

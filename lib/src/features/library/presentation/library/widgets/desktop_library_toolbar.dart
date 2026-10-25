@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -161,7 +162,7 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
       };
     }, [filterFocus, displayFocus]);
     final activeFilters = watchLibraryFilterActiveCount(ref);
-    Widget filterIcon = const Icon(Icons.filter_list_rounded, size: 18);
+    Widget filterIcon = const Icon(FluentIcons.filter_24_regular, size: 20);
     if (activeFilters > 0) {
       filterIcon = Badge.count(
         count: activeFilters,
@@ -194,7 +195,7 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
                 iconSize: 20,
                 padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                icon: const Icon(Icons.help_outline_rounded),
+                icon: const Icon(FluentIcons.question_circle_24_regular),
                 tooltip: context.l10n.searchTips,
                 onPressed: () => showSearchTips(context),
               ),
@@ -217,7 +218,7 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
                   children: [
                     filterIcon,
                     if (!compact) Text(context.l10n.filter),
-                    const Icon(Icons.arrow_drop_down_rounded, size: 22),
+                    const Icon(FluentIcons.caret_down_24_filled, size: 20),
                   ],
                 ),
               ),
@@ -239,8 +240,8 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
                   child: Row(
                     spacing: 2,
                     children: [
-                      Icon(Icons.grid_view_rounded, size: 20),
-                      Icon(Icons.arrow_drop_down_rounded, size: 22),
+                      Icon(FluentIcons.grid_24_regular, size: 20),
+                      Icon(FluentIcons.caret_down_24_filled, size: 20),
                     ],
                   ),
                 ),
@@ -259,7 +260,11 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
               else
                 filterBox,
               displayBox,
-              ...trailing,
+              for (final item in trailing)
+                IconTheme.merge(
+                  data: const IconThemeData(size: 20),
+                  child: item,
+                ),
             ],
           );
           if (!compact || !constraints.hasBoundedWidth) {
@@ -291,14 +296,11 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
 
 // Shared toolbar widths keep the compact breakpoint and layout calculations consistent.
 const _sortFullWidth = 230.0;
-// Horizontal padding, 18 px icon, 22 px caret, and two 8 px gaps.
-const _filterFullChrome = 12.0 + 6.0 + 18.0 + 8.0 + 8.0 + 22.0;
+const _filterFullChrome = 12.0 + 6.0 + 20.0 + 8.0 + 8.0 + 20.0;
 // Same chrome as Filter with one gap and no label.
-const _filterCompactWidth = 12.0 + 6.0 + 18.0 + 8.0 + 22.0;
-// Horizontal padding, 20 px icon, 22 px caret, and 2 px gap.
-const _displayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 22.0;
-// 48 px trigger, 1 px divider, 40 px direction button.
-const _sortCompactWidth = 48.0 + 1.0 + 40.0;
+const _filterCompactWidth = 12.0 + 6.0 + 20.0 + 8.0 + 20.0;
+const _displayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 20.0;
+const _sortCompactWidth = 40.0 + 1.0 + 40.0;
 // Content-width boxes need 2 px for borders; the full Sort width already includes them.
 const _boxBorderWidth = 2.0;
 // Trailing actions reserve the default 48 px IconButton/PopupMenuButton width.
@@ -371,7 +373,7 @@ class _DesktopSortControl extends ConsumerWidget {
       for (final sort in sorts)
         MenuItemButton(
           leadingIcon: sort == current
-              ? const Icon(Icons.check_rounded, size: 18)
+              ? const Icon(FluentIcons.checkmark_24_regular, size: 18)
               : null,
           onPressed: () {
             if (sort == MangaSort.random && sort == current) {
@@ -392,7 +394,7 @@ class _DesktopSortControl extends ConsumerWidget {
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         icon: Icon(
-          ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          ascending ? FluentIcons.arrow_sort_up_24_regular : FluentIcons.arrow_sort_down_24_regular,
         ),
         onPressed: isRandom
             ? null
@@ -406,7 +408,7 @@ class _DesktopSortControl extends ConsumerWidget {
         child: Row(
           children: [
             SizedBox(
-              width: 48,
+              width: 40,
               child: MenuAnchor(
                 style: const MenuStyle(
                   minimumSize: WidgetStatePropertyAll(Size(230, 0)),
@@ -418,7 +420,7 @@ class _DesktopSortControl extends ConsumerWidget {
                     onTap: () => menu.isOpen ? menu.close() : menu.open(),
                     child: Center(
                       child: Icon(
-                        Icons.sort_rounded,
+                        FluentIcons.arrow_sort_24_regular,
                         size: 20,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -451,7 +453,7 @@ class _DesktopSortControl extends ConsumerWidget {
                     spacing: 8,
                     children: [
                       Icon(
-                        Icons.sort_rounded,
+                        FluentIcons.arrow_sort_24_regular,
                         size: 20,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -462,7 +464,7 @@ class _DesktopSortControl extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.arrow_drop_down_rounded, size: 22),
+                      const Icon(FluentIcons.caret_down_24_filled, size: 20),
                     ],
                   ),
                 ),

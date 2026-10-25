@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -228,7 +229,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
                 leading: [
                   IconButton(
                     tooltip: 'Clear',
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(FluentIcons.dismiss_24_regular),
                     onPressed: () => selection.value = const {},
                   ),
                   Text(
@@ -239,7 +240,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
                 actions: [
                   IconButton(
                     tooltip: 'Select all',
-                    icon: const Icon(Icons.select_all_rounded),
+                    icon: const Icon(FluentIcons.select_all_on_24_regular),
                     onPressed: () => selection.value = {
                       for (final m in controller.items ?? const <MangaDto>[])
                         m.id,
@@ -247,7 +248,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
                   ),
                   IconButton(
                     tooltip: context.l10n.addToLibrary,
-                    icon: const Icon(Icons.favorite_rounded),
+                    icon: const Icon(FluentIcons.heart_24_regular),
                     onPressed: addSelectionToLibrary,
                   ),
                 ],

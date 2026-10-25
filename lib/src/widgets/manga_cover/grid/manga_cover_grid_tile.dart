@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -293,7 +294,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
               top: 4,
               right: 4,
               child: Icon(
-                Icons.check_circle_rounded,
+                FluentIcons.checkmark_circle_24_filled,
                 color: context.theme.colorScheme.primary,
                 shadows: const [Shadow(blurRadius: 4)],
               ),

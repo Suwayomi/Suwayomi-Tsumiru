@@ -8,6 +8,7 @@
 // expanded surfaces the auto-scroll toggle + interval stepper and writes
 // through to the shared providers.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -58,13 +59,13 @@ void main() {
     // Default is 3 (DBKeys.autoScrollIntervalSeconds initial).
     expect(container.read(autoScrollIntervalSecondsProvider), 3);
 
-    await tester.tap(find.byIcon(Icons.remove));
+    await tester.tap(find.byIcon(FluentIcons.subtract_24_regular));
     await tester.pumpAndSettle();
     // 3 (fallback) - 1 = 2.
     expect(container.read(autoScrollIntervalSecondsProvider), 2);
 
     for (var i = 0; i < 10; i++) {
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byIcon(FluentIcons.add_24_regular));
       await tester.pumpAndSettle();
     }
     expect(container.read(autoScrollIntervalSecondsProvider), 12);

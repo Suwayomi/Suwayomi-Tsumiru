@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -16,6 +17,7 @@ import '../../library/data/default_category.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/presentation/library/widgets/library_random_entry.dart';
 import '../data/updates/updates_repository.dart';
+import '../presentation/manga_details/widgets/chapter_context_menu.dart';
 
 class UpdateStatusPopupMenu extends ConsumerWidget {
   const UpdateStatusPopupMenu({
@@ -30,7 +32,7 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
     final defaultId = ref.watch(settledDefaultCategoryIdProvider);
     final failedCount = ref.watch(failedUpdateCountProvider).value ?? 0;
     return PopupMenuButton(
-      icon: const Icon(Icons.more_vert_rounded),
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
       itemBuilder: (context) {
         final category = getCategory?.call();
@@ -38,11 +40,17 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
           if (showDuplicatesButton && !context.usesDesktopShell)
             PopupMenuItem(
               onTap: randomLibraryEntryAction(context, ref),
-              child: Text(context.l10n.openRandomEntry),
+              child: ChapterMenuRow(
+                icon: FluentIcons.arrow_shuffle_24_regular,
+                label: context.l10n.openRandomEntry,
+              ),
             ),
           if (category != null && defaultId != null && category.id != defaultId)
             PopupMenuItem(
-              child: Text(context.l10n.categoryUpdate),
+              child: ChapterMenuRow(
+                icon: FluentIcons.tag_24_regular,
+                label: context.l10n.categoryUpdate,
+              ),
               onTap: () {
                 ref.read(updateOptimisticProvider.notifier).arm();
                 ref
@@ -55,16 +63,25 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
               ref.read(updateOptimisticProvider.notifier).arm();
               ref.read(updatesRepositoryProvider).fetchUpdates();
             },
-            child: Text(context.l10n.globalUpdate),
+            child: ChapterMenuRow(
+              icon: FluentIcons.arrow_clockwise_24_regular,
+              label: context.l10n.globalUpdate,
+            ),
           ),
           PopupMenuItem(
             onTap: () => const LibraryUpdateErrorsRoute().push(context),
-            child: Text(context.l10n.libraryUpdateErrorsCount(failedCount)),
+            child: ChapterMenuRow(
+              icon: FluentIcons.error_circle_24_regular,
+              label: context.l10n.libraryUpdateErrorsCount(failedCount),
+            ),
           ),
           if (showDuplicatesButton)
             PopupMenuItem(
               onTap: () => const LibraryDuplicatesRoute().push(context),
-              child: Text(context.l10n.scanForDuplicates),
+              child: ChapterMenuRow(
+                icon: FluentIcons.copy_24_regular,
+                label: context.l10n.scanForDuplicates,
+              ),
             ),
         ];
       },

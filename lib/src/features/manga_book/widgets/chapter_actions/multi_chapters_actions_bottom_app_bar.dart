@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -53,7 +54,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
       leading: [
         IconButton(
           tooltip: 'Clear',
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(FluentIcons.dismiss_24_regular),
           onPressed: () => refresh(false),
         ),
         Text(
@@ -64,7 +65,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
       actions: [
         IconButton(
           tooltip: 'Select all',
-          icon: const Icon(Icons.select_all_rounded),
+          icon: const Icon(FluentIcons.select_all_on_24_regular),
           onPressed: chapterList == null
               ? null
               : () => selectedChapters.value = {
@@ -88,7 +89,11 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           tooltip: allBookmarked
               ? context.l10n.removeBookmark
               : context.l10n.bookmark,
-          icon: const Icon(Icons.bookmark_rounded),
+          icon: Icon(
+            allBookmarked
+                ? FluentIcons.bookmark_24_filled
+                : FluentIcons.bookmark_24_regular,
+          ),
           onPressed: () => setChaptersBookmark(
             ref: ref,
             chapters: selected,
@@ -98,7 +103,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
         ),
         IconButton(
           tooltip: context.l10n.markPreviousAsRead,
-          icon: const Icon(Icons.history_rounded),
+          icon: const Icon(FluentIcons.text_bullet_list_checkmark_20_regular),
           onPressed: chapterList == null || selected.isEmpty
               ? null
               : () => markPreviousAsRead(
@@ -113,7 +118,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           tooltip: canDownload
               ? context.l10n.keepOffline
               : context.l10n.accountPermissionDenied,
-          icon: const Icon(Icons.save_alt_rounded),
+          icon: const Icon(FluentIcons.arrow_circle_down_24_regular),
           onPressed: !canDownload
               // Download first: clearing selection disposes this bar mid-loop.
               ? null
@@ -128,7 +133,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           tooltip: canDownload
               ? context.l10n.downloads
               : context.l10n.accountPermissionDenied,
-          icon: const Icon(Icons.cloud_download_outlined),
+          icon: const Icon(FluentIcons.cloud_arrow_down_24_regular),
           onPressed: !canDownload
               ? null
               : () => queueServerDownload(
@@ -140,7 +145,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
         ),
         IconButton(
           tooltip: context.l10n.delete,
-          icon: const Icon(Icons.delete_rounded),
+          icon: const Icon(FluentIcons.delete_24_regular),
           onPressed: () async {
             final deleted = await deleteChaptersFromServerWithConfirm(
               context: context,

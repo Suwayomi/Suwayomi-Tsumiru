@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -206,7 +207,7 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
               onPressed: () => _isDownload
                   ? ref.invalidate(imagesDownloadSettingsProvider)
                   : ref.invalidate(serveConversionsProvider),
-              child: const Icon(Icons.refresh_rounded),
+              child: const Icon(FluentIcons.arrow_clockwise_24_regular),
             ),
           ],
         ),
@@ -647,7 +648,7 @@ class _RuleCard extends StatelessWidget {
               child: Tooltip(
                 message: l10n.delete,
                 child: IconButton(
-                  icon: const Icon(Icons.delete_rounded),
+                  icon: const Icon(FluentIcons.delete_24_regular),
                   onPressed: canEdit && !isRowDisabled ? onDelete : null,
                 ),
               ),
@@ -812,7 +813,7 @@ class _KeyValueRowState extends State<_KeyValueRow> {
           Tooltip(
             message: l10n.delete,
             child: IconButton(
-              icon: const Icon(Icons.delete_rounded),
+              icon: const Icon(FluentIcons.delete_24_regular),
               onPressed: widget.canEdit ? widget.onDelete : null,
             ),
           ),

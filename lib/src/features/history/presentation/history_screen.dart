@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -75,7 +76,7 @@ class HistoryScreen extends ConsumerWidget {
         const PhoneSearchEntry(origin: PhoneSearchOrigin.history),
       ],
       IconButton(
-        icon: const Icon(Icons.filter_list_rounded),
+        icon: const Icon(FluentIcons.filter_24_regular),
         tooltip: l10n.filter,
         color: hasActiveFilters ? context.theme.colorScheme.primary : null,
         onPressed: () => showModalBottomSheet(
@@ -91,7 +92,7 @@ class HistoryScreen extends ConsumerWidget {
       ),
       IconButton(
         onPressed: () => ref.read(readingHistoryProvider.notifier).refresh(),
-        icon: const Icon(Icons.refresh),
+        icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
       ),
     ];
     final backButton = detailNavigationBackButton(context);
@@ -243,7 +244,7 @@ class HistoryEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Emoticons(iconData: Icons.history),
+            const Emoticons(iconData: FluentIcons.history_24_regular),
             const SizedBox(height: 16),
             Text(
               l10n.noHistoryFound,
@@ -269,7 +270,7 @@ class HistoryNoSearchResults extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Emoticons(iconData: Icons.search_off),
+            const Emoticons(iconData: FluentIcons.search_info_24_regular),
             const SizedBox(height: 16),
             Text(
               l10n.noSearchResults,
@@ -310,7 +311,7 @@ class HistoryErrorState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Emoticons(iconData: Icons.error_outline),
+            const Emoticons(iconData: FluentIcons.error_circle_24_regular),
             const SizedBox(height: 16),
             Text(
               l10n.errorOccurred,

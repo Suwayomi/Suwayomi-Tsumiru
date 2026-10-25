@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
@@ -27,7 +28,7 @@ class SortListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     IconData icon =
-        ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
+        ascending ? FluentIcons.arrow_sort_up_24_regular : FluentIcons.arrow_sort_down_24_regular;
 
     return ListTile(
       leading: selected

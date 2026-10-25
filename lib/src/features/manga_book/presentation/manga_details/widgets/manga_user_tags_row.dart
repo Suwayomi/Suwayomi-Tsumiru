@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -67,7 +68,7 @@ class AddUserTagChip extends ConsumerWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: cs.primary.withValues(alpha: 0.45)),
           ),
-          child: Icon(Icons.add_rounded, size: 16, color: cs.primary),
+          child: Icon(FluentIcons.add_24_regular, size: 16, color: cs.primary),
         ),
       ),
     );
@@ -94,14 +95,14 @@ class MangaUserTagsRow extends ConsumerWidget {
           for (final tag in tags)
             Builder(
               builder: (chipContext) => InputChip(
-                avatar: Icon(Icons.sell_rounded,
+                avatar: Icon(FluentIcons.tag_24_regular,
                     size: 16,
                     color: context.theme.colorScheme.onSecondaryContainer),
                 label: Text(tag),
                 backgroundColor: context.theme.colorScheme.secondaryContainer,
                 onPressed: () =>
                     showTagActionsMenu(chipContext, ref, tag: tag),
-                deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                deleteIcon: const Icon(FluentIcons.dismiss_24_regular, size: 16),
                 onDeleted: () => notifier.remove(tag),
                 visualDensity: VisualDensity.compact,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

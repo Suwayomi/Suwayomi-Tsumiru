@@ -12,11 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/navigation_bar_data.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/widgets/shell/animated_nav_icon.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 
@@ -71,12 +71,27 @@ void main() {
     await _pumpCollapsed(tester, prefs);
     expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
 
+    final navIcons = {
+      for (final d in NavigationBarData.desktopNavList)
+        ...[d.icon, d.activeIcon],
+    };
     final icons = find.descendant(
       of: find.byType(DesktopSidebar),
-      matching: find.byType(AnimatedNavIcon),
+      matching: find.byWidgetPredicate(
+        (w) => w is Icon && navIcons.contains(w.icon),
+      ),
     );
     // Five destinations: More left the desktop sidebar for the foot below.
     expect(icons, findsNWidgets(5));
+    // The selected destination settles on its filled glyph.
+    expect(
+      find.byIcon(NavigationBarData.desktopNavList[0].activeIcon),
+      findsOneWidget,
+    );
+    expect(
+      find.byIcon(NavigationBarData.desktopNavList[0].icon),
+      findsNothing,
+    );
     for (var i = 0; i < 5; i++) {
       expect(
         tester.getSize(icons.at(i)),

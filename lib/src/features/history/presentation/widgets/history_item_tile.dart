@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/web_route_link.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../domain/history_item.dart';
 import '../../domain/history_menu_action.dart';
 
@@ -88,7 +90,7 @@ class HistoryItemTile extends ConsumerWidget {
                         children: [
                           if (timeString.isNotEmpty) ...[
                             Icon(
-                              Icons.access_time,
+                              FluentIcons.clock_24_regular,
                               size: 14,
                               color: context.theme.colorScheme.onSurfaceVariant,
                             ),
@@ -109,8 +111,8 @@ class HistoryItemTile extends ConsumerWidget {
                             const SizedBox(width: 8),
                             Icon(
                               _isChapterCompleted()
-                                  ? Icons.check_circle
-                                  : Icons.bookmark,
+                                  ? FluentIcons.checkmark_circle_24_filled
+                                  : FluentIcons.bookmark_24_regular,
                               size: 14,
                               color: _isChapterCompleted()
                                   ? context.theme.colorScheme.secondary
@@ -154,7 +156,7 @@ class HistoryItemTile extends ConsumerWidget {
                 ),
                 PopupMenuButton<HistoryMenuAction>(
                   icon: Icon(
-                    Icons.more_vert,
+                    FluentIcons.more_vertical_24_regular,
                     color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                   onSelected: (action) {
@@ -168,7 +170,10 @@ class HistoryItemTile extends ConsumerWidget {
                       .map(
                         (action) => PopupMenuItem(
                           value: action,
-                          child: Text(action.toLocale(context)),
+                          child: ChapterMenuRow(
+                            icon: action.icon,
+                            label: action.toLocale(context),
+                          ),
                         ),
                       )
                       .toList(),

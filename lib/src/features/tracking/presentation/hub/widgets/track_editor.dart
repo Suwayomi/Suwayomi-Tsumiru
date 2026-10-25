@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,6 +15,7 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../controller/manga_track_records_controller.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
@@ -79,7 +81,7 @@ class TrackEditor extends ConsumerWidget {
                 imageUrl: tracker.icon,
                 size: const Size.square(20),
                 progressIndicatorBuilder: (_, _, _) =>
-                    const Icon(Icons.sync_rounded, size: 20),
+                    const Icon(FluentIcons.arrow_sync_24_regular, size: 20),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -117,26 +119,35 @@ class TrackEditor extends ConsumerWidget {
                   ),
                 ),
               PopupMenuButton<_MenuAction>(
-                icon: const Icon(Icons.more_vert_rounded),
+                icon: const Icon(FluentIcons.more_vertical_24_regular),
                 onSelected: (action) =>
                     _handleMenuAction(context, ref, repo, action),
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: _MenuAction.changeEntry,
-                    child: Text(context.l10n.trackChangeEntry),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.edit_24_regular,
+                      label: context.l10n.trackChangeEntry,
+                    ),
                   ),
                   if (tracker.supportsPrivateTracking)
                     PopupMenuItem(
                       value: _MenuAction.togglePrivate,
-                      child: Text(
-                        trackRecord.private
+                      child: ChapterMenuRow(
+                        icon: trackRecord.private
+                            ? FluentIcons.eye_24_regular
+                            : FluentIcons.eye_off_24_regular,
+                        label: trackRecord.private
                             ? context.l10n.trackMarkPublic
                             : context.l10n.trackMarkPrivate,
                       ),
                     ),
                   PopupMenuItem(
                     value: _MenuAction.remove,
-                    child: Text(context.l10n.trackRemoveEntry),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.delete_24_regular,
+                      label: context.l10n.trackRemoveEntry,
+                    ),
                   ),
                 ],
                 popUpAnimationStyle: context.motionStyle,
@@ -150,6 +161,9 @@ class TrackEditor extends ConsumerWidget {
         _EditorRow(
           label: context.l10n.trackStatus,
           child: DropdownButton<int>(
+            icon: const Icon(
+              FluentIcons.caret_down_24_filled,
+            ),
             value: tracker.statuses
                     .any((s) => s.value == trackRecord.status)
                 ? trackRecord.status
@@ -177,6 +191,9 @@ class TrackEditor extends ConsumerWidget {
         _EditorRow(
           label: context.l10n.trackScore,
           child: DropdownButton<String>(
+            icon: const Icon(
+              FluentIcons.caret_down_24_filled,
+            ),
             value: tracker.scores.contains(trackRecord.displayScore)
                 ? trackRecord.displayScore
                 : null,
@@ -388,6 +405,12 @@ class _DateRow extends StatelessWidget {
                     initialDate: date ?? DateTime.now(),
                     firstDate: DateTime(1900),
                     lastDate: DateTime(2100),
+                    switchToInputEntryModeIcon: const Icon(
+                      FluentIcons.edit_24_regular,
+                    ),
+                    switchToCalendarEntryModeIcon: const Icon(
+                      FluentIcons.calendar_24_regular,
+                    ),
                   );
                   if (picked != null) onPick(picked);
                 },
@@ -406,7 +429,7 @@ class _DateRow extends StatelessWidget {
           ),
           if (date != null)
             IconButton(
-              icon: const Icon(Icons.clear_rounded, size: 16),
+              icon: const Icon(FluentIcons.dismiss_24_regular, size: 16),
               onPressed: onClear,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,

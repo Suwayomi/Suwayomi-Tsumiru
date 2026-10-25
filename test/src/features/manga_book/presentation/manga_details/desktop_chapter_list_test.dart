@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -337,13 +338,13 @@ void main() {
     expect(
       find.descendant(
         of: topBar,
-        matching: find.byIcon(Icons.filter_list_rounded),
+        matching: find.byIcon(FluentIcons.filter_24_regular),
       ),
       findsOneWidget,
     );
     final overflow = find.descendant(
       of: topBar,
-      matching: find.byIcon(Icons.more_vert_rounded),
+      matching: find.byIcon(FluentIcons.more_vertical_24_regular),
     );
     expect(overflow, findsOneWidget);
     await tester.tap(overflow);
@@ -367,7 +368,7 @@ void main() {
     await tester.pumpAndSettle();
     final selectAll = find.descendant(
       of: topBar,
-      matching: find.byIcon(Icons.select_all_rounded),
+      matching: find.byIcon(FluentIcons.select_all_on_24_regular),
     );
     expect(selectAll, findsOneWidget);
     await tester.tap(selectAll);
@@ -378,7 +379,7 @@ void main() {
     );
     // Close the selection so the two-column checks below start clean.
     await tester.tap(
-      find.descendant(of: topBar, matching: find.byIcon(Icons.close_rounded)),
+      find.descendant(of: topBar, matching: find.byIcon(FluentIcons.dismiss_24_regular)),
     );
     await tester.pumpAndSettle();
     expect(selectAll, findsNothing);

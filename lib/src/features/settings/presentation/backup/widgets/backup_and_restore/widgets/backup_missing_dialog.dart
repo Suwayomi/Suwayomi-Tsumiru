@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../../../utils/extensions/custom_extensions.dart';
@@ -29,7 +30,7 @@ class BackupMissingDialog extends StatelessWidget {
               ),
               ...backupMissing.map(
                 (e) => ListTile(
-                  leading: const Icon(Icons.extension_rounded),
+                  leading: const Icon(FluentIcons.puzzle_piece_24_regular),
                   title: Text(e),
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -93,7 +94,7 @@ class ExtensionInfoScreen extends HookConsumerWidget {
                       trailing: source.isConfigurable
                           ? IconButton(
                               tooltip: context.l10n.settings,
-                              icon: const Icon(Icons.settings_rounded),
+                              icon: const Icon(FluentIcons.settings_24_regular),
                               onPressed: () => SourcePreferenceRoute(
                                 sourceId: source.id,
                               ).push(context),

@@ -7,6 +7,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -197,19 +198,19 @@ Future<void> showReaderPageActionsSheet({
         final actions = [
           _PageAction(
             key: copyKey,
-            icon: Icons.content_copy_rounded,
+            icon: FluentIcons.copy_24_regular,
             label: copyLabel,
             onTap: copyAction(resolve),
           ),
           _PageAction(
             key: shareKey,
-            icon: Icons.share_rounded,
+            icon: FluentIcons.share_24_regular,
             label: shareLabel,
             onTap: shareAction(resolve),
           ),
           _PageAction(
             key: saveKey,
-            icon: Icons.save_alt_rounded,
+            icon: FluentIcons.arrow_circle_down_24_regular,
             label: saveLabel,
             onTap: saveAction(resolve),
           ),
@@ -259,7 +260,7 @@ Future<void> showReaderPageActionsSheet({
         rows.add([
           _PageAction(
             key: const ValueKey('reader-page-action-open-web'),
-            icon: Icons.public_rounded,
+            icon: FluentIcons.globe_24_regular,
             label: context.l10n.openInWeb,
             onTap: () {
               if (!current()) return;

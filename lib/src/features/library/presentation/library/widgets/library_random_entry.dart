@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -81,7 +82,7 @@ class LibraryRandomEntryButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => IconButton(
     tooltip: context.l10n.openRandomEntry,
-    icon: const Icon(Icons.shuffle_rounded),
+    icon: const Icon(FluentIcons.arrow_shuffle_24_regular),
     onPressed: randomLibraryEntryAction(libraryContext, ref),
   );
 }

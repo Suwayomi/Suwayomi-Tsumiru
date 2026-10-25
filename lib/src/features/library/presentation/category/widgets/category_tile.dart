@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -48,7 +49,7 @@ class CategoryTile extends HookConsumerWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Icon(
-                        Icons.drag_handle_rounded,
+                        FluentIcons.re_order_24_regular,
                         color: context.theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -57,7 +58,7 @@ class CategoryTile extends HookConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Icon(
-                      Icons.label_rounded,
+                      FluentIcons.tag_24_regular,
                       color: context.theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -86,7 +87,7 @@ class CategoryTile extends HookConsumerWidget {
                           ),
                           animationStyle: context.motionStyle,
                         ),
-                  icon: const Icon(Icons.edit_rounded),
+                  icon: const Icon(FluentIcons.edit_24_regular),
                   color: context.theme.colorScheme.onSurfaceVariant,
                 ),
                 IconButton(
@@ -124,8 +125,8 @@ class CategoryTile extends HookConsumerWidget {
                   },
                   icon: Icon(
                     isHidden
-                        ? Icons.visibility_rounded
-                        : Icons.visibility_off_rounded,
+                        ? FluentIcons.eye_24_regular
+                        : FluentIcons.eye_off_24_regular,
                   ),
                   color: context.theme.colorScheme.onSurfaceVariant,
                 ),
@@ -175,7 +176,7 @@ class CategoryTile extends HookConsumerWidget {
                           animationStyle: context.motionStyle,
                         )
                       : null,
-                  icon: const Icon(Icons.delete_rounded),
+                  icon: const Icon(FluentIcons.delete_24_regular),
                   color: context.theme.colorScheme.onSurfaceVariant,
                 ),
               ],

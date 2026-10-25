@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -161,7 +162,7 @@ class _SectionMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.info_outline_rounded, color: context.theme.hintColor),
+            Icon(FluentIcons.info_24_regular, color: context.theme.hintColor),
             const SizedBox(height: 8),
             Text(
               text,

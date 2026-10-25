@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -98,7 +99,7 @@ class DownloadsScreen extends HookConsumerWidget {
             });
             result.showToastOnError(toast);
           },
-          icon: const Icon(Icons.replay_rounded),
+          icon: const Icon(FluentIcons.replay_24_regular),
         ),
       if (!onDeviceTab && (downloadsChapterIds).isNotBlank)
         IconButton(
@@ -120,7 +121,7 @@ class DownloadsScreen extends HookConsumerWidget {
                   );
                 },
           tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
-          icon: const Icon(Icons.delete_sweep_rounded),
+          icon: const Icon(FluentIcons.delete_dismiss_24_regular),
         ),
     ];
     final scaffold = Scaffold(
@@ -205,7 +206,7 @@ class OfflineDownloadsFab extends ConsumerWidget {
     // Hide idle queues, including paused queues with no pending work.
     if (!hasPending) return const SizedBox.shrink();
     return FloatingActionButton.extended(
-      icon: Icon(paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+      icon: Icon(paused ? FluentIcons.play_24_regular : FluentIcons.pause_24_regular),
       label: Text(paused ? context.l10n.resume : context.l10n.pause),
       tooltip: !canDownload && paused
           ? context.l10n.accountPermissionDenied
@@ -261,7 +262,7 @@ class _ServerDownloads extends ConsumerWidget {
                     ),
                   ListTile(
                     dense: true,
-                    leading: const Icon(Icons.download_rounded),
+                    leading: const Icon(FluentIcons.arrow_download_24_regular),
                     title: Text(context.l10n.downloadsQueue),
                     trailing: Text("$downloadsCount"),
                   ),

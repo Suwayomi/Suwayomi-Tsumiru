@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -125,7 +126,7 @@ class ReaderBottomControls extends ConsumerWidget {
                     color: readerNavSurface(context.theme.colorScheme),
                     child: IconButton(
                       onPressed: chapterButtons.leading,
-                      icon: const Icon(Icons.skip_previous_rounded),
+                      icon: const Icon(FluentIcons.previous_24_filled),
                     ),
                   ),
                   Expanded(
@@ -144,7 +145,7 @@ class ReaderBottomControls extends ConsumerWidget {
                     color: readerNavSurface(context.theme.colorScheme),
                     child: IconButton(
                       onPressed: chapterButtons.trailing,
-                      icon: const Icon(Icons.skip_next_rounded),
+                      icon: const Icon(FluentIcons.next_24_filled),
                     ),
                   ),
                 ],
@@ -164,7 +165,7 @@ class ReaderBottomControls extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.format_list_numbered_rounded),
+                      icon: const Icon(FluentIcons.text_number_list_ltr_24_regular),
                       onPressed: () => _showChapterPicker(
                         context: context,
                         mangaId: chapter.mangaId,
@@ -182,8 +183,8 @@ class ReaderBottomControls extends ConsumerWidget {
                       tooltip: context.l10n.cropBorders,
                       icon: Icon(
                         cropBorders
-                            ? Icons.crop_rounded
-                            : Icons.crop_free_rounded,
+                            ? FluentIcons.crop_24_regular
+                            : FluentIcons.full_screen_maximize_24_regular,
                       ),
                       onPressed: toggleCropBorders,
                     ),
@@ -196,7 +197,7 @@ class ReaderBottomControls extends ConsumerWidget {
                     IconButton(
                       tooltip: context.l10n.settings,
                       onPressed: onOpenSettings,
-                      icon: const Icon(Icons.settings_rounded),
+                      icon: const Icon(FluentIcons.settings_24_regular),
                     ),
                   ],
                 ),
@@ -210,19 +211,19 @@ class ReaderBottomControls extends ConsumerWidget {
 }
 
 IconData _readerModeIcon(ReaderMode mode) => switch (mode) {
-  ReaderMode.webtoon || ReaderMode.continuousVertical => Icons.public_rounded,
+  ReaderMode.webtoon || ReaderMode.continuousVertical => FluentIcons.globe_24_regular,
   ReaderMode.singleHorizontalLTR ||
   ReaderMode.singleHorizontalRTL ||
   ReaderMode.singleVertical ||
   ReaderMode.continuousHorizontalLTR ||
-  ReaderMode.continuousHorizontalRTL => Icons.menu_book_rounded,
-  ReaderMode.defaultReader => Icons.auto_stories_rounded,
+  ReaderMode.continuousHorizontalRTL => FluentIcons.book_open_24_regular,
+  ReaderMode.defaultReader => FluentIcons.book_open_24_regular,
 };
 
 IconData _pageLayoutIcon(PageLayout pageLayout) => switch (pageLayout) {
-  PageLayout.singlePage => Icons.menu_book_rounded,
-  PageLayout.doublePages => Icons.chrome_reader_mode_rounded,
-  PageLayout.automatic => Icons.auto_stories_rounded,
+  PageLayout.singlePage => FluentIcons.document_one_page_24_regular,
+  PageLayout.doublePages => FluentIcons.book_open_24_regular,
+  PageLayout.automatic => FluentIcons.arrow_autofit_content_24_regular,
 };
 
 Future<void> _showChapterPicker({
@@ -364,8 +365,8 @@ class _ReaderChapterSheet extends StatelessWidget {
                 selectedColor: colorScheme.onPrimaryContainer,
                 leading: Icon(
                   chapter.user.isRead.ifNull()
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.radio_button_unchecked_rounded,
+                      ? FluentIcons.checkmark_circle_24_regular
+                      : FluentIcons.circle_24_regular,
                   size: 20,
                 ),
                 title: Text(

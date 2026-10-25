@@ -1,3 +1,4 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -287,7 +288,7 @@ class _SettingsWindowPageListState
                 style: context.textTheme.bodySmall,
                 decoration: InputDecoration(
                   hintText: l.settingsSearchHint,
-                  prefixIcon: const Icon(Icons.search, size: 18),
+                  prefixIcon: const Icon(FluentIcons.search_24_regular, size: 18),
                   filled: true,
                   fillColor: cs.surface,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -316,29 +317,29 @@ class _SettingsWindowPageListState
                     children: [
                       group(l.settingsGroupApp, [
                         (
-                          icon: Icons.tune_outlined,
+                          icon: FluentIcons.options_24_regular,
                           title: l.general,
                           location: const GeneralSettingsRoute().location,
                         ),
                         (
-                          icon: Icons.palette_outlined,
+                          icon: FluentIcons.color_24_regular,
                           title: l.appearance,
                           location: const AppearanceSettingsRoute().location,
                         ),
                         (
-                          icon: Icons.chrome_reader_mode_outlined,
+                          icon: FluentIcons.book_open_24_regular,
                           title: l.reader,
                           location: const ReaderSettingsRoute().location,
                         ),
                         if (isKeyboardRuntime)
                           (
-                            icon: Icons.keyboard_outlined,
+                            icon: FluentIcons.keyboard_24_regular,
                             title: l.keyboardShortcuts,
                             location: const HotkeysSettingsRoute().location,
                           ),
                         if (isAndroidNative)
                           (
-                            icon: Icons.notifications_outlined,
+                            icon: FluentIcons.alert_24_regular,
                             title: l.notifications,
                             location:
                                 const NotificationsSettingsRoute().location,
@@ -346,56 +347,56 @@ class _SettingsWindowPageListState
                       ]),
                       group(l.library, [
                         (
-                          icon: Icons.collections_bookmark_outlined,
+                          icon: FluentIcons.library_24_regular,
                           title: l.library,
                           location: const LibrarySettingsRoute().location,
                         ),
                         (
-                          icon: Icons.download_outlined,
+                          icon: FluentIcons.arrow_download_24_regular,
                           title: l.downloads,
                           location: const DownloadsSettingsRoute().location,
                         ),
                         (
-                          icon: Icons.sync_outlined,
+                          icon: FluentIcons.arrow_sync_24_regular,
                           title: l.tracking,
                           location: const TrackingSettingsRoute().location,
                         ),
                         (
-                          icon: Icons.explore_outlined,
+                          icon: FluentIcons.compass_northwest_24_regular,
                           title: l.browse,
                           location: const BrowseSettingsRoute().location,
                         ),
                         (
-                          icon: Icons.settings_backup_restore_outlined,
+                          icon: FluentIcons.arrow_counterclockwise_24_regular,
                           title: l.backup,
                           location: const BackupRoute().location,
                         ),
                       ]),
                       group(l.settingsGroupSuwayomi, [
                         (
-                          icon: Icons.dns_outlined,
+                          icon: FluentIcons.server_24_regular,
                           title: l.connection,
                           location: const ConnectionRoute().location,
                         ),
                         (
-                          icon: Icons.cloud_sync_outlined,
+                          icon: FluentIcons.cloud_sync_24_regular,
                           title: l.sync,
                           location: const SyncRoute().location,
                         ),
                         (
-                          icon: Icons.admin_panel_settings_outlined,
+                          icon: FluentIcons.desktop_24_regular,
                           title: l.server,
                           location: const ServerSettingsRoute().location,
                         ),
                       ]),
                       const Divider(height: 16),
                       row((
-                        icon: Icons.build_outlined,
+                        icon: FluentIcons.wrench_24_regular,
                         title: l.advanced,
                         location: const AdvancedRoute().location,
                       )),
                       row((
-                        icon: Icons.info_outline_rounded,
+                        icon: FluentIcons.info_24_regular,
                         title: l.about,
                         location: const AboutRoute().location,
                       )),
@@ -412,7 +413,7 @@ class _SettingsWindowPageListState
                             child: Row(
                               children: [
                                 Icon(
-                                  Icons.help_outline_rounded,
+                                  FluentIcons.question_circle_24_regular,
                                   size: 20,
                                   color: cs.onSurfaceVariant,
                                 ),

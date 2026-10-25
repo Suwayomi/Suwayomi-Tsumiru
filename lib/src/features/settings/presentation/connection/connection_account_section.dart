@@ -11,6 +11,7 @@ import '../../../../constants/enum.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/fluent_expansion_tile.dart';
 import '../../../account/data/account_actions.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../account/domain/account_access.dart';
@@ -76,7 +77,7 @@ class ConnectionAccountSection extends ConsumerWidget {
                         animationStyle: context.motionStyle,
                       ),
               ),
-              ExpansionTile(
+              FluentExpansionTile(
                 title: Text(context.l10n.accountPermissions),
                 subtitle: Text(
                   !verified

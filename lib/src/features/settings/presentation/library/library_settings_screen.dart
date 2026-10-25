@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/db_keys.dart';
@@ -261,7 +262,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                             id: 'automaticallyRefreshMetadata',
                             child: SettingsPropTile(
                               title: context.l10n.automaticallyRefreshMetadata,
-                              trailing: const Icon(Icons.now_wallpaper_rounded),
+                              trailing: const Icon(FluentIcons.image_24_regular),
                               subtitle:
                                   personalState ==
                                       PersonalSettingsState.unavailable

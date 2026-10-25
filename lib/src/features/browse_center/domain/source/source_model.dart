@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../graphql/__generated__/schema.graphql.dart';
@@ -37,16 +38,16 @@ extension SourceExtensions on SourceDto {
 
 extension SourceMangaTypeExtension on SourceType {
   IconData get icon => switch (this) {
-        SourceType.LATEST => Icons.new_releases_outlined,
-        SourceType.POPULAR => Icons.favorite_border_rounded,
-        SourceType.SEARCH => Icons.filter_list_outlined,
+        SourceType.LATEST => FluentIcons.news_24_regular,
+        SourceType.POPULAR => FluentIcons.heart_24_regular,
+        SourceType.SEARCH => FluentIcons.filter_24_regular,
         SourceType.$unknown => throw UnimplementedError(),
       };
 
   IconData get selectedIcon => switch (this) {
-        SourceType.LATEST => Icons.new_releases_rounded,
-        SourceType.POPULAR => Icons.favorite_rounded,
-        SourceType.SEARCH => Icons.filter_list_rounded,
+        SourceType.LATEST => FluentIcons.news_24_regular,
+        SourceType.POPULAR => FluentIcons.heart_24_regular,
+        SourceType.SEARCH => FluentIcons.filter_24_regular,
         SourceType.$unknown => throw UnimplementedError(),
       };
 

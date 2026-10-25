@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -104,7 +105,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (dialogCtx) => AlertDialog(
-          icon: const Icon(Icons.warning_amber_rounded),
+          icon: const Icon(FluentIcons.warning_24_regular),
           title: Text(context.l10n.authInsecureTransportTitle),
           content: Text(context.l10n.authInsecureTransportWarning),
           actions: [
@@ -211,6 +212,9 @@ class LoginCredentialsPopup extends HookConsumerWidget {
           children: [
             if (allowModeSelection)
               DropdownButtonFormField<AuthType>(
+                icon: const Icon(
+                  FluentIcons.caret_down_24_filled,
+                ),
                 initialValue: authType,
                 decoration: InputDecoration(
                   labelText: context.l10n.serverAuthMode,

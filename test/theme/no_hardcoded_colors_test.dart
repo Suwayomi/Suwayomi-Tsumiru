@@ -24,8 +24,6 @@ final _literalColor = RegExp(
 /// entry means the colours there really are theme-independent — app UI that
 /// follows light/dark belongs on a scheme role instead.
 const _allowlist = <String, String>{
-  'lib/src/constants/animated_nav_vectors.dart':
-      'vector fills, tinted at draw time by animated_nav_icon.dart',
   'lib/src/constants/app_theme.dart': 'theme picker swatches',
   'lib/src/constants/db_keys.dart': 'default custom seed',
   'lib/src/constants/enum.dart': 'reader page background choices',

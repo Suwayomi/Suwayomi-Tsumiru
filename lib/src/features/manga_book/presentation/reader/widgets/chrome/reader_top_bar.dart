@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,7 @@ import '../../../../../settings/presentation/koreader_sync/data/koreader_sync_re
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../../../manga_details/server_web_url.dart';
+import '../../../manga_details/widgets/chapter_context_menu.dart';
 import '../../utils/koreader_progress_actions.dart';
 import 'reader_bookmark_button.dart';
 
@@ -71,8 +73,24 @@ class ReaderTopBar extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
               ),
             ),
+            chapter.realUrl.isBlank
+                ? const SizedBox.shrink()
+                : IconButton(
+                    onPressed: () async {
+                      launchUrlInWeb(
+                        context,
+                        (chapter.realUrl ?? ""),
+                        ref.read(toastProvider),
+                      );
+                    },
+                    icon: const Icon(FluentIcons.globe_24_regular),
+                  ),
+            ReaderBookmarkButton(
+              chapterId: chapter.id,
+              fallbackIsBookmarked: chapter.user.isBookmarked,
+            ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded),
+              icon: const Icon(FluentIcons.more_vertical_24_regular),
               onSelected: (action) async {
                 switch (action) {
                   case 'retry':
@@ -115,48 +133,47 @@ class ReaderTopBar extends ConsumerWidget {
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'retry',
-                  child: Text(context.l10n.retryErroredPages),
+                  child: ChapterMenuRow(
+                    icon: FluentIcons.replay_24_regular,
+                    label: context.l10n.retryErroredPages,
+                  ),
                 ),
                 PopupMenuItem(
                   value: 'web',
                   enabled: serverMangaUrl != null && link.isNotBlank,
-                  child: Text(context.l10n.openChapterInWebView),
+                  child: ChapterMenuRow(
+                    icon: FluentIcons.globe_24_regular,
+                    label: context.l10n.openChapterInWebView,
+                  ),
                 ),
                 if (link.isNotBlank)
                   PopupMenuItem(
                     value: 'share',
-                    child: Text(context.l10n.shareChapterLink),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.share_24_regular,
+                      label: context.l10n.shareChapterLink,
+                    ),
                   ),
                 if (connected) ...[
                   PopupMenuItem(
                     value: 'push',
                     enabled: koSyncOnline(ref),
-                    child: Text(context.l10n.pushKoReaderProgress),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.cloud_arrow_up_24_regular,
+                      label: context.l10n.pushKoReaderProgress,
+                    ),
                   ),
                   PopupMenuItem(
                     value: 'pull',
                     enabled: koSyncOnline(ref),
-                    child: Text(context.l10n.pullKoReaderProgress),
+                    child: ChapterMenuRow(
+                      icon: FluentIcons.cloud_arrow_down_24_regular,
+                      label: context.l10n.pullKoReaderProgress,
+                    ),
                   ),
                 ],
               ],
             ),
-            ReaderBookmarkButton(
-              chapterId: chapter.id,
-              fallbackIsBookmarked: chapter.user.isBookmarked,
-            ),
-            chapter.realUrl.isBlank
-                ? const SizedBox.shrink()
-                : IconButton(
-                    onPressed: () async {
-                      launchUrlInWeb(
-                        context,
-                        (chapter.realUrl ?? ""),
-                        ref.read(toastProvider),
-                      );
-                    },
-                    icon: const Icon(Icons.public_rounded),
-                  ),
           ],
         ),
       ),

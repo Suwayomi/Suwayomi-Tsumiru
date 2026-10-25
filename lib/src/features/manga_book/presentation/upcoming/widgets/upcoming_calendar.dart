@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
@@ -64,12 +65,12 @@ class _Header extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: onPrev,
-                icon: const Icon(Icons.keyboard_arrow_left_rounded),
+                icon: const Icon(FluentIcons.chevron_left_24_regular),
                 tooltip: MaterialLocalizations.of(context).previousMonthTooltip,
               ),
               IconButton(
                 onPressed: onNext,
-                icon: const Icon(Icons.keyboard_arrow_right_rounded),
+                icon: const Icon(FluentIcons.chevron_right_24_regular),
                 tooltip: MaterialLocalizations.of(context).nextMonthTooltip,
               ),
             ],

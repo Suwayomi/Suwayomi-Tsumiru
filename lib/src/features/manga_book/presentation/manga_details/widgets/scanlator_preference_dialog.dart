@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -50,21 +51,21 @@ class ScanlatorPreferenceDialog extends HookConsumerWidget {
               ReorderableListView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                buildDefaultDragHandles: true,
+                buildDefaultDragHandles: false,
                 onReorderItem: (oldIndex, newIndex) {
                   final list = [...ranked.value];
                   list.insert(newIndex, list.removeAt(oldIndex));
                   ranked.value = list;
                 },
                 children: [
-                  for (final g in ranked.value)
-                    CheckboxListTile(
-                      key: ValueKey('ranked-$g'),
-                      value: true,
-                      title: Text(label(g)),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      onChanged: (_) =>
-                          ranked.value = [...ranked.value]..remove(g),
+                  for (var i = 0; i < ranked.value.length; i++)
+                    _RankedGroupTile(
+                      key: ValueKey('ranked-${ranked.value[i]}'),
+                      index: i,
+                      title: label(ranked.value[i]),
+                      onRemove: () =>
+                          ranked.value = [...ranked.value]
+                            ..remove(ranked.value[i]),
                     ),
                 ],
               ),
@@ -107,5 +108,41 @@ class ScanlatorPreferenceDialog extends HookConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+class _RankedGroupTile extends StatelessWidget {
+  const _RankedGroupTile({
+    super.key,
+    required this.index,
+    required this.title,
+    required this.onRemove,
+  });
+
+  final int index;
+  final String title;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    final desktop =
+        platform == TargetPlatform.linux ||
+        platform == TargetPlatform.windows ||
+        platform == TargetPlatform.macOS;
+    final tile = CheckboxListTile(
+      value: true,
+      title: Text(title),
+      controlAffinity: ListTileControlAffinity.leading,
+      onChanged: (_) => onRemove(),
+      secondary: desktop
+          ? ReorderableDragStartListener(
+              index: index,
+              child: const Icon(FluentIcons.re_order_24_regular),
+            )
+          : null,
+    );
+    if (desktop) return tile;
+    return ReorderableDelayedDragStartListener(index: index, child: tile);
   }
 }

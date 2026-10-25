@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -55,8 +56,8 @@ class TextFieldDialog extends HookWidget {
             suffixIcon: canObscure
                 ? IconButton(
                     icon: isObscured.value
-                        ? const Icon(Icons.visibility_rounded)
-                        : const Icon(Icons.visibility_off_rounded),
+                        ? const Icon(FluentIcons.eye_24_regular)
+                        : const Icon(FluentIcons.eye_off_24_regular),
                     onPressed: () => isObscured.value = !isObscured.value,
                   )
                 : null,

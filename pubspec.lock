@@ -33,14 +33,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
-  animated_vector:
-    dependency: "direct main"
-    description:
-      name: animated_vector
-      sha256: f1beb10e6fcfd8bd15abb788e20345def786d1c7391d7c1426bb2a1f2adf2132
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.2"
   ansicolor:
     dependency: transitive
     description:
@@ -457,6 +449,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.1"
+  fluentui_system_icons:
+    dependency: "direct main"
+    description:
+      name: fluentui_system_icons
+      sha256: "1592ae32dae75fb66741ab2c0607bc6554ef086f1c457e27ef937fb4901d33da"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.273"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -1158,14 +1158,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
-  path_parsing:
-    dependency: transitive
-    description:
-      name: path_parsing
-      sha256: "883402936929eac138ee0a45da5b0f2c80f89913e6dc3bf77eb65b84b409c6ca"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
   path_provider:
     dependency: "direct main"
     description:

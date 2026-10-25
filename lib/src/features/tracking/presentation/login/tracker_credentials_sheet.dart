@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -69,8 +70,8 @@ class _TrackerCredentialsSheetState extends State<TrackerCredentialsSheet> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
+                      ? FluentIcons.eye_off_24_regular
+                      : FluentIcons.eye_24_regular,
                 ),
                 onPressed: () =>
                     setState(() => _obscurePassword = !_obscurePassword),

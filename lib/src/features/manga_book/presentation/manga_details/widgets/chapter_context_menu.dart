@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -77,7 +78,9 @@ Future<void> showChapterContextMenu({
           refresh();
         },
         child: ChapterMenuRow(
-          icon: Icons.bookmark_rounded,
+          icon: bookmarked
+              ? FluentIcons.bookmark_24_filled
+              : FluentIcons.bookmark_24_regular,
           label: bookmarked
               ? context.l10n.removeBookmark
               : context.l10n.bookmark,
@@ -111,8 +114,8 @@ Future<void> showChapterContextMenu({
             },
             child: ChapterMenuRow(
               icon: push
-                  ? Icons.cloud_upload_outlined
-                  : Icons.cloud_download_outlined,
+                  ? FluentIcons.cloud_arrow_up_24_regular
+                  : FluentIcons.cloud_arrow_down_24_regular,
               label: push
                   ? context.l10n.pushKoReaderProgress
                   : context.l10n.pullKoReaderProgress,
@@ -129,14 +132,14 @@ Future<void> showChapterContextMenu({
           refresh: (_) => refresh(),
         ),
         child: ChapterMenuRow(
-          icon: Icons.done_all_rounded,
+          icon: FluentIcons.text_bullet_list_checkmark_20_regular,
           label: context.l10n.markPreviousAsRead,
         ),
       ),
       PopupMenuItem(
         onTap: () => replaceSelection({chapter.id: chapter}, chapter.id),
         child: ChapterMenuRow(
-          icon: Icons.check_box_outline_blank_rounded,
+          icon: FluentIcons.checkbox_unchecked_24_regular,
           label: context.l10n.select,
         ),
       ),
@@ -150,7 +153,7 @@ Future<void> showChapterContextMenu({
           replaceSelection(next, chapter.id);
         },
         child: ChapterMenuRow(
-          icon: Icons.playlist_add_check_rounded,
+          icon: FluentIcons.task_list_ltr_24_regular,
           label: context.l10n.selectNext10,
         ),
       ),
@@ -164,7 +167,7 @@ Future<void> showChapterContextMenu({
           replaceSelection(next, chapter.id);
         },
         child: ChapterMenuRow(
-          icon: Icons.vertical_align_bottom_rounded,
+          icon: FluentIcons.arrow_down_24_regular,
           label: context.l10n.selectBelow,
         ),
       ),
@@ -174,7 +177,7 @@ Future<void> showChapterContextMenu({
             if (!c.user.isRead.ifNull()) c.id: c,
         }, chapter.id),
         child: ChapterMenuRow(
-          icon: Icons.filter_list_rounded,
+          icon: FluentIcons.multiselect_ltr_24_regular,
           label: context.l10n.selectUnread,
         ),
       ),
@@ -183,7 +186,7 @@ Future<void> showChapterContextMenu({
           for (final c in orderedChapters) c.id: c,
         }, chapter.id),
         child: ChapterMenuRow(
-          icon: Icons.select_all_rounded,
+          icon: FluentIcons.select_all_on_24_regular,
           label: context.l10n.selectAll,
         ),
       ),
@@ -204,7 +207,7 @@ Future<void> showChapterContextMenu({
             }, chapter.id);
           },
           child: ChapterMenuRow(
-            icon: Icons.select_all_rounded,
+            icon: FluentIcons.arrow_autofit_height_24_regular,
             label: context.l10n.selectInBetween,
           ),
         ),
@@ -214,7 +217,7 @@ Future<void> showChapterContextMenu({
           onTap: () =>
               openChapterInBrowser(context, ref, chapter, manga.realUrl),
           child: ChapterMenuRow(
-            icon: Icons.public_rounded,
+            icon: FluentIcons.globe_24_regular,
             label: context.l10n.openInBrowser,
           ),
         ),
@@ -240,7 +243,7 @@ Future<void> showChapterContextMenu({
             await refresh();
           },
           child: ChapterMenuRow(
-            icon: onDevice ? Icons.offline_pin_rounded : Icons.save_alt_rounded,
+            icon: onDevice ? FluentIcons.checkmark_circle_24_filled : FluentIcons.arrow_circle_down_24_regular,
             label: onDevice
                 ? context.l10n.removeFromDevice
                 : context.l10n.keepOffline,
@@ -248,7 +251,7 @@ Future<void> showChapterContextMenu({
         ),
       if (chapter.user.isDownloaded.ifNull())
         _DangerMenuItem(
-          icon: Icons.delete_rounded,
+          icon: FluentIcons.delete_24_regular,
           label: context.l10n.deleteFromServer,
           onTap: () async {
             final deleted = await deleteChaptersFromServerWithConfirm(
@@ -269,7 +272,7 @@ Future<void> showChapterContextMenu({
             refresh: (_) => refresh(),
           ),
           child: ChapterMenuRow(
-            icon: Icons.cloud_download_outlined,
+            icon: FluentIcons.cloud_arrow_down_24_regular,
             label: context.l10n.download,
           ),
         ),
@@ -298,7 +301,9 @@ Future<void> showChapterContextMenu({
           refresh: (_) => refresh(),
         ),
         child: ChapterMenuRow(
-          icon: Icons.bookmark_rounded,
+          icon: allBookmarked
+              ? FluentIcons.bookmark_24_filled
+              : FluentIcons.bookmark_24_regular,
           label: allBookmarked
               ? context.l10n.removeBookmark
               : context.l10n.bookmark,
@@ -327,7 +332,7 @@ Future<void> showChapterContextMenu({
           refresh: (_) => refresh(),
         ),
         child: ChapterMenuRow(
-          icon: Icons.save_alt_rounded,
+          icon: FluentIcons.arrow_circle_down_24_regular,
           label: context.l10n.keepOffline,
         ),
       ),
@@ -340,13 +345,13 @@ Future<void> showChapterContextMenu({
           refresh: (_) => refresh(),
         ),
         child: ChapterMenuRow(
-          icon: Icons.cloud_download_outlined,
+          icon: FluentIcons.cloud_arrow_down_24_regular,
           label: context.l10n.download,
         ),
       ),
       const PopupMenuDivider(),
       _DangerMenuItem(
-        icon: Icons.delete_rounded,
+        icon: FluentIcons.delete_24_regular,
         label: context.l10n.deleteFromServer,
         onTap: () async {
           final deleted = await deleteChaptersFromServerWithConfirm(

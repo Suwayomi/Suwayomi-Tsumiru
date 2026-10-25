@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -317,7 +318,7 @@ class _SearchFilterChips extends ConsumerWidget {
         if (hasPinned) ...[
           FilterChip(
             showCheckmark: false,
-            avatar: const Icon(Icons.push_pin_outlined, size: 18),
+            avatar: const Icon(FluentIcons.pin_24_regular, size: 18),
             label: Text(context.l10n.pinnedSources),
             selected: scope == GlobalSearchSourceFilter.pinned,
             onSelected: (_) {
@@ -331,7 +332,7 @@ class _SearchFilterChips extends ConsumerWidget {
         ],
         FilterChip(
           showCheckmark: false,
-          avatar: const Icon(Icons.done_all_rounded, size: 18),
+          avatar: const Icon(FluentIcons.checkmark_starburst_24_regular, size: 18),
           label: Text(context.l10n.all),
           selected: !hasPinned || scope == GlobalSearchSourceFilter.all,
           onSelected: (_) {
@@ -344,7 +345,7 @@ class _SearchFilterChips extends ConsumerWidget {
         const SizedBox(width: 12),
         FilterChip(
           showCheckmark: false,
-          avatar: const Icon(Icons.filter_list_rounded, size: 18),
+          avatar: const Icon(FluentIcons.filter_24_regular, size: 18),
           label: Text(context.l10n.hasResults),
           selected: onlyHasResults,
           onSelected: (_) {

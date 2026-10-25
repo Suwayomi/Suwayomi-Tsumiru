@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -396,7 +397,7 @@ class UpdatesScreen extends HookConsumerWidget {
     final topBar = showsMergedTopBar(context);
     final closeSelection = IconButton(
       onPressed: () => selectedChapters.value = ({}),
-      icon: const Icon(Icons.close_rounded),
+      icon: const Icon(FluentIcons.dismiss_24_regular),
     );
     final selectionTitle = Text(
       context.l10n.numSelected(selectedChapters.value.length),
@@ -413,7 +414,7 @@ class UpdatesScreen extends HookConsumerWidget {
         const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
       SyncYomiSyncButton(onSynced: resetList),
       IconButton(
-        icon: const Icon(Icons.filter_list_rounded),
+        icon: const Icon(FluentIcons.filter_24_regular),
         tooltip: context.l10n.filter,
         color: hasActiveFilters ? context.theme.colorScheme.primary : null,
         onPressed: () => showModalBottomSheet(
@@ -428,7 +429,7 @@ class UpdatesScreen extends HookConsumerWidget {
         ),
       ),
       IconButton(
-        icon: const Icon(Icons.calendar_month_rounded),
+        icon: const Icon(FluentIcons.calendar_month_24_regular),
         tooltip: context.l10n.upcoming,
         onPressed: () => const UpcomingRoute().push(context),
       ),
