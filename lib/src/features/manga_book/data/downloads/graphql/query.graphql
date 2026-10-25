@@ -12,6 +12,12 @@ mutation DequeueChapterDownloads($input: DequeueChapterDownloadInput!) {
   }
 }
 
+mutation DequeueChapterDownloadsBatch($input: DequeueChapterDownloadsInput!) {
+  dequeueChapterDownloads(input: $input) {
+    __typename
+  }
+}
+
 mutation StopDownloader($input: StopDownloaderInput!) {
   stopDownloader(input: $input) {
     __typename

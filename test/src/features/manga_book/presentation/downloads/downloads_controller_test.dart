@@ -83,8 +83,13 @@ Map<String, dynamic> _queueItem({
   'manga': {
     'id': 1,
     'title': 'Series',
-    'user': {'downloadCount': 0, '__typename': 'MangaUserType'},
+    'user': {
+      'downloadCount': 0,
+      'inLibrary': true,
+      '__typename': 'MangaUserType',
+    },
     'thumbnailUrl': null,
+    'source': null,
     '__typename': 'MangaType',
   },
   'progress': 0.0,

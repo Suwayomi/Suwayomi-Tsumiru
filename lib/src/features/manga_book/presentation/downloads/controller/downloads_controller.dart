@@ -3,6 +3,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../account/data/account_providers.dart';
+import '../../../../account/domain/account_access.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
@@ -174,6 +176,18 @@ class DownloadsMap extends _$DownloadsMap {
     _publish({});
     ref.invalidate(downloadStatusProvider);
   }
+
+  /// Dequeues [chapterIds]; survivors are still requested by another account.
+  Future<Set<int>> cancelQueuedChapters(List<int> chapterIds) async {
+    final repo = ref.read(downloadsRepositoryProvider);
+    for (final id in chapterIds) {
+      await repo.removeChapterFromDownloadQueue(id);
+    }
+    final fresh = await repo.getDownloadStatus();
+    if (ref.mounted && fresh != null) _publish(getStateFromUpdates(fresh));
+    final remaining = stateOrNull ?? const <int, DownloadDto>{};
+    return {for (final id in chapterIds) if (remaining.containsKey(id)) id};
+  }
 }
 
 @riverpod
@@ -185,6 +199,30 @@ List<int> downloadsChapterIds(Ref ref) {
   final downloads = ref.watch(downloadsMapProvider).values.toList();
   downloads.sort((a, b) => a.position.compareTo(b.position));
   return downloads.map((d) => d.chapter.id).toList();
+}
+
+@riverpod
+bool manageAllDownloads(Ref ref) {
+  final access = ref.watch(settledAccountAccessProvider);
+  return access.canManageUsers ||
+      access.capability == AccountCapability.unsupported;
+}
+
+@riverpod
+({bool manageAll, List<int> mineIds, List<int> visibleIds})
+downloadsVisibility(Ref ref) {
+  final manageAll = ref.watch(manageAllDownloadsProvider);
+  final ordered = ref.watch(downloadsChapterIdsProvider);
+  final map = ref.watch(downloadsMapProvider);
+  final mineIds = [
+    for (final id in ordered)
+      if (map[id]?.manga.user.inLibrary ?? manageAll) id,
+  ];
+  return (
+    manageAll: manageAll,
+    mineIds: mineIds,
+    visibleIds: manageAll ? ordered : mineIds,
+  );
 }
 
 @riverpod

@@ -20,6 +20,7 @@ import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
+import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
 import '../../offline/data/background/catchup_work_spec.dart';
 import '../../offline/data/offline_background_downloads.dart';
@@ -168,6 +169,9 @@ Future<void> recoverBulkMigrationsAtLaunch(ProviderContainer container) {
         repo: repo,
         journal: journal,
         isSessionCurrent: current,
+        onSourceRemoved: (id) async {
+          if (current()) container.invalidate(downloadStatusProvider);
+        },
       );
     } catch (_) {}
   });
@@ -345,7 +349,9 @@ BulkMigrationRunner buildBulkMigrationRunner({
     waitAuthReady: (token) =>
         current() ? waitAuthReady(container, token) : Future.value(),
     onSourceRemoved: (id) async {
-      if (current()) await onSourceRemoved?.call(id);
+      if (!current()) return;
+      container.invalidate(downloadStatusProvider);
+      await onSourceRemoved?.call(id);
     },
     migrateLocalState: (fromId, toId, opts) => current()
         ? migrateOfflineLocalState(container, fromId, toId, opts)
