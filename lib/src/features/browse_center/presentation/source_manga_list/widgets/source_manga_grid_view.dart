@@ -59,9 +59,9 @@ class SourceMangaGridView extends ConsumerWidget {
         fetchNextPage: fetchNextPage,
         builderDelegate: PagedChildBuilderDelegate<MangaDto>(
           firstPageProgressIndicatorBuilder: (context) =>
-              const CenterSorayomiShimmerIndicator(),
+              const CenterTsumiruShimmerIndicator(),
           newPageProgressIndicatorBuilder: (context) =>
-              const CenterSorayomiShimmerIndicator(),
+              const CenterTsumiruShimmerIndicator(),
           firstPageErrorIndicatorBuilder: (context) => Emoticons(
             title: state.error.toString(),
             button: TextButton(

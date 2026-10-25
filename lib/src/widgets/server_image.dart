@@ -261,7 +261,7 @@ class ServerImage extends HookConsumerWidget {
           height: size?.height,
           fit: fit ?? BoxFit.cover,
           frameBuilder: (ctx, child, frame, wasSync) =>
-              frame != null ? child : const CenterSorayomiShimmerIndicator(),
+              frame != null ? child : const CenterTsumiruShimmerIndicator(),
           errorBuilder: (ctx, error, stack) => AppUtils.wrapOn(
             wrapper,
             Icon(
@@ -409,7 +409,7 @@ class ServerImage extends HookConsumerWidget {
     // Delay shimmer so quick cache re-decodes do not flash a placeholder.
     final defaultIndicator = cover
         ? const DelayedShimmer()
-        : const CenterSorayomiShimmerIndicator();
+        : const CenterTsumiruShimmerIndicator();
     finalProgressIndicatorBuilder(
       BuildContext context,
       String url,
@@ -620,7 +620,7 @@ class ServerImageWithCpi extends StatelessWidget {
               imageUrl: url,
               size: innerSize,
               progressIndicatorBuilder: (context, url, progress) =>
-                  const CenterSorayomiShimmerIndicator(),
+                  const CenterTsumiruShimmerIndicator(),
             ),
           ],
         ),

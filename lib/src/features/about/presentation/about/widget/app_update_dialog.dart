@@ -68,7 +68,7 @@ void appUpdateDialog({
                 onPressed: () {
                   launchUrlInWeb(
                     context,
-                    url ?? AppUrls.sorayomiLatestReleaseUrl.url,
+                    url ?? AppUrls.latestReleaseUrl.url,
                     toast,
                   );
                   Navigator.pop(context);

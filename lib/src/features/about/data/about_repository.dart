@@ -71,7 +71,7 @@ class AboutRepository {
     final gitResponse = await AsyncValue.guard<Map<String, dynamic>?>(
       () async => json.decode(
         (await http.get(
-          Uri.parse(AppUrls.sorayomiLatestReleaseApiUrl.url),
+          Uri.parse(AppUrls.latestReleaseApiUrl.url),
         )).body,
       ),
     );

@@ -204,7 +204,7 @@ class AboutScreen extends HookConsumerWidget {
                         onTap: () async {
                           await launchUrlInWeb(
                             context,
-                            AppUrls.sorayomiWhatsNew.url,
+                            AppUrls.whatsNew.url,
                             toast,
                           );
                         },
@@ -298,7 +298,7 @@ class AboutScreen extends HookConsumerWidget {
                         MediaLaunchButton(
                           title: context.l10n.githubTsumiru,
                           icon: Icon(BrandIcons.github),
-                          url: AppUrls.sorayomiGithubUrl.url,
+                          url: AppUrls.githubUrl.url,
                           toast: toast,
                         ),
                         if ((about?.github).isNotBlank)

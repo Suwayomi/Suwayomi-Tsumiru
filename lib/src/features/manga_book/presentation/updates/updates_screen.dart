@@ -371,7 +371,7 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         fetchNextPage: fetchNextPage,
         builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
           firstPageProgressIndicatorBuilder: (context) =>
-              const CenterSorayomiShimmerIndicator(),
+              const CenterTsumiruShimmerIndicator(),
           firstPageErrorIndicatorBuilder: (context) => Emoticons(
             title: state.error.toString(),
             button: TextButton(

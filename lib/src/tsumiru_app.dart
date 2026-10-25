@@ -35,8 +35,8 @@ import 'utils/theme/app_theme_builder.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
 import 'widgets/web_page_title.dart';
 
-class Sorayomi extends HookConsumerWidget {
-  const Sorayomi({super.key, this.sessionChanging = false});
+class TsumiruApp extends HookConsumerWidget {
+  const TsumiruApp({super.key, this.sessionChanging = false});
 
   final bool sessionChanging;
 

@@ -104,7 +104,7 @@ class MigrationSourceShortSearch extends ConsumerWidget {
           child: const Center(
             child: SizedBox.square(
               dimension: 48,
-              child: SorayomiShimmerIndicator(),
+              child: TsumiruShimmerIndicator(),
             ),
           ),
         ),

@@ -127,7 +127,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
       },
       loading: () => AppUtils.wrapOn(
         wrapper,
-        loadingWidget ?? const CenterSorayomiShimmerIndicator(),
+        loadingWidget ?? const CenterTsumiruShimmerIndicator(),
       ),
     );
   }

@@ -1177,7 +1177,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   @override
   Widget build(BuildContext context) {
     if (widget.window.isEmpty) {
-      return const Center(child: CenterSorayomiShimmerIndicator());
+      return const Center(child: CenterTsumiruShimmerIndicator());
     }
     return LayoutBuilder(
       builder: (context, constraints) {

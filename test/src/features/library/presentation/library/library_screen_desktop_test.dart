@@ -24,7 +24,7 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/sorayomi.dart';
+import 'package:tsumiru/src/tsumiru_app.dart';
 import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(

@@ -53,7 +53,7 @@ import 'src/features/settings/presentation/server/widget/credential_popup/login_
 import 'src/features/tracking/data/native_tracker_oauth.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/routes/router_config.dart';
-import 'src/sorayomi.dart';
+import 'src/tsumiru_app.dart';
 import 'src/utils/crash/crash_log.dart';
 import 'src/utils/crash/diagnostics.dart';
 import 'src/utils/crash/provider_failure_logger.dart';
@@ -353,7 +353,7 @@ Future<void> _startApp() async {
           session.read(offlineRuntimeStorageProvider),
         );
       },
-      builder: (changing) => Sorayomi(sessionChanging: changing),
+      builder: (changing) => TsumiruApp(sessionChanging: changing),
       loading: const AccountSessionLoading(),
       errorBuilder: (error) =>
           AppErrorApp(message: redactTokens('$error'), logPath: _crashLogPath),

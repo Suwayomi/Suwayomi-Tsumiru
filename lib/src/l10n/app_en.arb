@@ -45,7 +45,7 @@
     "description": "Radio button text for Suwayomi server's ui_login (JWT) auth mode, marked as recommended"
   },
   "@authReverseProxyHelp": {
-    "description": "Helper text under the login fields explaining how to use Sorayomi with a reverse proxy in front of Suwayomi"
+    "description": "Helper text under the login fields explaining how to use Tsumiru with a reverse proxy in front of Suwayomi"
   },
   "@authTestConnection": {
     "description": "Button text for testing the entered credentials against the server"
@@ -345,7 +345,7 @@
     "description": "Toast text to show that the message has been copied",
     "placeholders": {
       "msg": {
-        "example": "Client : Sorayomi",
+        "example": "Client : Tsumiru",
         "type": "String"
       }
     }
@@ -461,7 +461,7 @@
     "description": "Error Description to show when App failed to launch an URL and copied the URL to clipboard",
     "placeholders": {
       "url": {
-        "example": "http://sorayomi.suwayomi.org",
+        "example": "http://tsumiru.suwayomi.org",
         "type": "String"
       }
     }
