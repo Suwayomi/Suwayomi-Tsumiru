@@ -96,7 +96,7 @@ class AdvancedScreen extends ConsumerWidget {
                         );
                         if (!context.mounted) return;
                         if (library.hasError) {
-                          toast?.show(context.l10n.error);
+                          toast?.showError(context.l10n.error);
                           return;
                         }
                         final ids = (library.value ?? const <MangaDto>[])
@@ -121,7 +121,7 @@ class AdvancedScreen extends ConsumerWidget {
                           );
                           if (!context.mounted) return;
                           if (deleted.hasError) {
-                            toast?.show(context.l10n.error);
+                            toast?.showError(context.l10n.error);
                             return;
                           }
                           for (final id in ids) {
