@@ -284,6 +284,27 @@ class MangaBookRepository {
           )
           .getData<Object>((data) => null);
 
+  /// Deletes one meta key from every listed series in a single request.
+  Future<void> deleteMangaMetas({
+    required Iterable<int> mangaIds,
+    required String key,
+  }) async => client
+      .mutate$DeleteMangaMetas(
+        Options$Mutation$DeleteMangaMetas(
+          variables: Variables$Mutation$DeleteMangaMetas(
+            input: Input$DeleteMangaMetasInput(
+              items: [
+                Input$DeleteMangaMetasItemInput(
+                  mangaIds: mangaIds.toList(),
+                  keys: [key],
+                ),
+              ],
+            ),
+          ),
+        ),
+      )
+      .getData<Object>((data) => null);
+
   /// Re-scrapes the source; fall back to [getStoredChapterList] if the source is unavailable.
   Future<List<ChapterDto>?> getChapterList(int mangaId) async => client
       .mutate$GetChaptersByMangaId(

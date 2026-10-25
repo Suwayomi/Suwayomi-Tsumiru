@@ -4339,5 +4339,9 @@
   "confirmRemoveOwnAdminMessage": "You will lose access to the settings controlled by the role or permission you remove.",
   "confirmTrackerLogoutMessage": "This signs everyone on the server out of this tracker.",
   "confirmWebInterfaceChangeTitle": "Change web interface?",
-  "confirmWebInterfaceChangeMessage": "This changes the web interface the server serves for everyone."
+  "confirmWebInterfaceChangeMessage": "This changes the web interface the server serves for everyone.",
+  "removeCustomCovers": "Remove custom covers",
+  "removeCustomCoversTitle": "Remove custom covers?",
+  "removeCustomCoversBody": "Every series goes back to its server cover on all your Tsumiru clients.",
+  "customCoversRemoved": "Custom covers removed"
 }

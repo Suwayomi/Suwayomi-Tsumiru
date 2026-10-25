@@ -111,6 +111,12 @@ mutation DeleteMangaMeta($input: DeleteMangaMetaInput!) {
   }
 }
 
+mutation DeleteMangaMetas($input: DeleteMangaMetasInput!) {
+  deleteMangaMetas(input: $input) {
+    __typename
+  }
+}
+
 mutation GetChaptersByMangaId($input: FetchChaptersInput!) {
   fetchChapters(input:  $input) {
     chapters {
