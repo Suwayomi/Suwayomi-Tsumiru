@@ -73,8 +73,9 @@ class Toast {
         overlayContext != null && overlayContext.mounted
         ? overlayContext
         : _context;
-    // Place the entry above the calling route so the action wins taps over fullscreen routes.
-    _fToast = FToast().init(target);
+    // Anchor to the root navigator so the entry lands above every route, including dialogs.
+    final rootContext = Navigator.of(target, rootNavigator: true).context;
+    _fToast = FToast().init(rootContext);
     _actionTimer?.cancel();
     _actionVisible = true;
     _actionTimer = Timer(
