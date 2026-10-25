@@ -128,6 +128,14 @@ Map<String, String> _decodeMeta(String? metaJson) {
   }
 }
 
+extension OfflineMangaCover on OfflineManga {
+  /// Cover to draw: the custom link when set, else the server cover.
+  String get displayCoverUrl => resolveDisplayCover(
+    thumbnailUrl: thumbnailUrl,
+    meta: _decodeMeta(metaJson).entries.map((e) => (key: e.key, value: e.value)),
+  );
+}
+
 ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
   id: c.id,
   mangaId: c.mangaId,

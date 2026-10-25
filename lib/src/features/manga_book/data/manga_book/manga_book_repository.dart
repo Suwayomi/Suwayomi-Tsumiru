@@ -250,6 +250,22 @@ class MangaBookRepository {
           .getData((data) {});
   }
 
+  /// Stores the custom cover link shown instead of the server cover.
+  Future<void> setCustomCover({
+    required int mangaId,
+    required String coverUrl,
+  }) => patchMangaMeta(
+    mangaId: mangaId,
+    key: MangaMetaKeys.customCover.key,
+    value: coverUrl,
+  );
+
+  /// Restores the server cover.
+  Future<void> clearCustomCover({required int mangaId}) => deleteMangaMeta(
+    mangaId: mangaId,
+    key: MangaMetaKeys.customCover.key,
+  );
+
   /// Removes a per-series meta override so the app-wide default applies again.
   Future<void> deleteMangaMeta({
     required int mangaId,

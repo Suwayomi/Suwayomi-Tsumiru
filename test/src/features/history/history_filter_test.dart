@@ -27,6 +27,7 @@ HistoryItemDto _item({
   manga: Fragment$HistoryChapterDto$manga(
     id: 7,
     title: 'Series',
+    meta: const [],
     user: Fragment$HistoryChapterDto$manga$user(
       inLibrary: inLibrary,
       unreadCount: unreadCount,

@@ -136,6 +136,36 @@ String appendUiLoginToken(String url, String? token) {
   return '$url${separator}token=${Uri.encodeQueryComponent(token)}';
 }
 
+/// Absolute http(s) URL hosted anywhere but the configured server; those load
+/// with no server credentials, so an unparsable server matches nothing.
+bool isExternalImageUrl({
+  required String imageUrl,
+  required String? baseUrl,
+  required int? port,
+  required bool addPort,
+}) {
+  final uri = Uri.tryParse(imageUrl);
+  if (uri == null ||
+      (uri.scheme != 'http' && uri.scheme != 'https') ||
+      uri.host.isEmpty) {
+    return false;
+  }
+  final server = Uri.tryParse(
+    Endpoints.baseApi(
+      baseUrl: baseUrl,
+      port: port,
+      addPort: addPort,
+      appendApiToUrl: false,
+    ),
+  );
+  if (server == null ||
+      (server.scheme != 'http' && server.scheme != 'https') ||
+      server.host.isEmpty) {
+    return true;
+  }
+  return uri.origin != server.origin;
+}
+
 class ServerImage extends HookConsumerWidget {
   const ServerImage({
     super.key,
@@ -151,11 +181,15 @@ class ServerImage extends HookConsumerWidget {
     this.cropBorders = false,
     this.memCacheWidth,
     this.memCacheHeight,
+    this.fallbackImageUrl,
   });
 
   final String? localFilePath;
 
   final String imageUrl;
+
+  /// Drawn when [imageUrl] fails; never chains to another fallback.
+  final String? fallbackImageUrl;
   final Size? size;
   final BoxFit? fit;
   final bool appendApiToUrl;
@@ -312,46 +346,62 @@ class ServerImage extends HookConsumerWidget {
     final credentials = ref.read(authCredentialsStoreProvider).value;
     final uiAccessTokenSnapshot = credentials?.uiAccessToken;
 
+    final serverUrl = ref.watch(serverUrlProvider);
+    final serverPort = ref.watch(serverPortProvider);
+    final serverAddPort = ref.watch(serverPortToggleProvider).ifNull();
+    final external = isExternalImageUrl(
+      imageUrl: imageUrl,
+      baseUrl: serverUrl,
+      port: serverPort,
+      addPort: serverAddPort,
+    );
+
     final baseApi = serverFileUrl(
       path: imageUrl,
-      baseUrl: ref.watch(serverUrlProvider),
-      port: ref.watch(serverPortProvider),
-      addPort: ref.watch(serverPortToggleProvider).ifNull(),
+      baseUrl: serverUrl,
+      port: serverPort,
+      addPort: serverAddPort,
       appendApiToUrl: appendApiToUrl,
     );
 
-    final cacheKey = accountImageCacheKey(
+    // External covers cache under their own URL and carry no server credentials.
+    final serverCacheKey = accountImageCacheKey(
       baseApi,
       authType: authType,
       store: ref.read(authCredentialsStoreProvider.notifier),
       credentials: credentials,
     );
+    final cacheKey = external ? baseApi : serverCacheKey;
 
     Map<String, String>? httpHeaders;
-    if (authType == AuthType.basic && basicToken != null) {
+    final requestAuthType = external ? null : authType;
+    if (requestAuthType == AuthType.basic && basicToken != null) {
       httpHeaders = {"Authorization": basicToken};
-    } else if (authType == AuthType.simpleLogin) {
+    } else if (requestAuthType == AuthType.simpleLogin) {
       httpHeaders = simpleCookieHeader;
     }
     final customHeaders =
         ref.watch(customHttpHeadersProvider).value ?? const {};
-    if (customHeaders.isNotEmpty) {
+    if (!external && customHeaders.isNotEmpty) {
       httpHeaders = applyCustomHeaders(
         Map<String, String>.from(httpHeaders ?? const {}),
         customHeaders,
       );
     }
 
-    final uiToken = authType == AuthType.uiLogin ? uiAccessTokenSnapshot : null;
+    final uiToken = !external && authType == AuthType.uiLogin
+        ? uiAccessTokenSnapshot
+        : null;
     httpHeaders = withUiLoginImageAuth(httpHeaders, uiToken);
     final fetchUrl = uiLoginImageUrl(baseApi, uiToken);
 
-    final cacheManager = isCoverImagePath(imageUrl)
+    final cover = isCoverImagePath(imageUrl) || external;
+    final cacheManager = cover
         ? ref.watch(coverCacheManagerProvider)
         : ref.watch(serverPageCacheManagerProvider);
 
     // Delay shimmer so quick cache re-decodes do not flash a placeholder.
-    final defaultIndicator = isCoverImagePath(imageUrl)
+    final defaultIndicator = cover
         ? const DelayedShimmer()
         : const CenterSorayomiShimmerIndicator();
     finalProgressIndicatorBuilder(
@@ -393,6 +443,19 @@ class ServerImage extends HookConsumerWidget {
 
     Widget errorWidget(BuildContext context, String error, stackTrace) {
       failed.value = true;
+      final fallback = fallbackImageUrl;
+      if (fallback != null && fallback.isNotEmpty && fallback != imageUrl) {
+        return AppUtils.wrapOn(
+          wrapper,
+          ServerImage(
+            imageUrl: fallback,
+            size: size,
+            fit: fit,
+            memCacheWidth: cacheWidth,
+            memCacheHeight: cacheHeight,
+          ),
+        );
+      }
       if (showReloadButton) {
         return AppUtils.wrapOn(
           wrapper,
@@ -467,7 +530,10 @@ class ServerImage extends HookConsumerWidget {
         fadeInDuration: fadeDuration,
         memCacheWidth: imageBuilder == null ? cacheWidth : null,
         memCacheHeight: imageBuilder == null ? cacheHeight : null,
-        imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
+        // HTML elements need no CORS fetch; byte fetching stays for server images.
+        imageRenderMethodForWeb: external && kIsWeb
+            ? ImageRenderMethodForWeb.HtmlImage
+            : ImageRenderMethodForWeb.HttpGet,
         progressIndicatorBuilder: finalProgressIndicatorBuilder,
         imageBuilder: imageBuilderCapped,
         errorWidget: errorWidget,
@@ -543,13 +609,31 @@ serverImageRequest(
   final basicToken = ref.read(credentialsProvider).value;
   final creds = ref.read(authCredentialsStoreProvider).value;
 
+  final serverUrl = ref.read(serverUrlProvider);
+  final serverPort = ref.read(serverPortProvider);
+  final serverAddPort = ref.read(serverPortToggleProvider).ifNull();
+
   final rawUrl = serverFileUrl(
     path: imageUrl,
-    baseUrl: ref.read(serverUrlProvider),
-    port: ref.read(serverPortProvider),
-    addPort: ref.read(serverPortToggleProvider).ifNull(),
+    baseUrl: serverUrl,
+    port: serverPort,
+    addPort: serverAddPort,
     appendApiToUrl: appendApiToUrl,
   );
+
+  if (isExternalImageUrl(
+    imageUrl: imageUrl,
+    baseUrl: serverUrl,
+    port: serverPort,
+    addPort: serverAddPort,
+  )) {
+    return (
+      fetchUrl: rawUrl,
+      cacheKey: rawUrl,
+      headers: null,
+      localPath: null,
+    );
+  }
 
   Map<String, String>? headers;
   if (authType == AuthType.basic && basicToken != null) {
@@ -596,13 +680,21 @@ ImageProvider serverPageImageProvider(
   if (request.localPath != null) {
     return offlineImageProvider(request.localPath!);
   }
+  final external = isExternalImageUrl(
+    imageUrl: imageUrl,
+    baseUrl: ref.read(serverUrlProvider),
+    port: ref.read(serverPortProvider),
+    addPort: ref.read(serverPortToggleProvider).ifNull(),
+  );
   return CachedNetworkImageProvider(
     request.fetchUrl,
     cacheKey: request.cacheKey,
-    cacheManager: isCoverImagePath(imageUrl)
+    cacheManager: isCoverImagePath(imageUrl) || external
         ? ref.read(coverCacheManagerProvider)
         : ref.read(serverPageCacheManagerProvider),
     headers: request.headers,
-    imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
+    imageRenderMethodForWeb: external && kIsWeb
+        ? ImageRenderMethodForWeb.HtmlImage
+        : ImageRenderMethodForWeb.HttpGet,
   );
 }

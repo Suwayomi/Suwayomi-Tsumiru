@@ -296,7 +296,7 @@ class MangaDescription extends HookConsumerWidget {
         else
           Stack(
             children: [
-              if (showBackdrop && manga.thumbnailUrl.isNotBlank)
+              if (showBackdrop && manga.displayCoverUrl.isNotBlank)
                 Positioned.fill(
                   child: ClipRect(
                     child: ImageFiltered(
@@ -330,7 +330,8 @@ class MangaDescription extends HookConsumerWidget {
                                 BlendMode.dst,
                               ),
                         child: ServerImage(
-                          imageUrl: manga.thumbnailUrl ?? "",
+                          imageUrl: manga.displayCoverUrl,
+                          fallbackImageUrl: manga.thumbnailUrl,
                           fit: BoxFit.cover,
                         ),
                       ),

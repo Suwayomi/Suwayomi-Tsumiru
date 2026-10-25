@@ -59,7 +59,8 @@ class HistoryItemTile extends ConsumerWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ServerImage(
-                    imageUrl: item.manga.thumbnailUrl ?? "",
+                    imageUrl: item.manga.displayCoverUrl,
+                    fallbackImageUrl: item.manga.thumbnailUrl,
                     size: const Size(56, 80),
                   ),
                 ),

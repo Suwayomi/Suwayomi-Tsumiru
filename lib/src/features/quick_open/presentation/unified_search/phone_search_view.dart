@@ -566,7 +566,8 @@ class _PhoneSearchResults extends ConsumerWidget {
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: ServerImage(
-                  imageUrl: item.manga.thumbnailUrl ?? '',
+                  imageUrl: item.manga.displayCoverUrl,
+                  fallbackImageUrl: item.manga.thumbnailUrl,
                   size: const Size(40, 56),
                 ),
               ),
@@ -644,7 +645,8 @@ class _PhoneSearchResults extends ConsumerWidget {
                 final m = libraryHits[index];
                 return _PhoneLibraryCoverCard(
                   title: m.title,
-                  thumbnailUrl: m.thumbnailUrl,
+                  thumbnailUrl: m.displayCoverUrl,
+                  fallbackThumbnailUrl: m.thumbnailUrl,
                   onTap: () =>
                       onLeave(() => MangaRoute(mangaId: m.id).push(context)),
                 );
@@ -657,7 +659,8 @@ class _PhoneSearchResults extends ConsumerWidget {
                 leading: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: ServerImage(
-                    imageUrl: m.thumbnailUrl ?? '',
+                    imageUrl: m.displayCoverUrl,
+                    fallbackImageUrl: m.thumbnailUrl,
                     size: const Size(40, 56),
                   ),
                 ),
@@ -721,11 +724,13 @@ class _PhoneLibraryCoverCard extends StatelessWidget {
   const _PhoneLibraryCoverCard({
     required this.title,
     required this.thumbnailUrl,
+    required this.fallbackThumbnailUrl,
     required this.onTap,
   });
 
   final String title;
   final String? thumbnailUrl;
+  final String? fallbackThumbnailUrl;
   final VoidCallback onTap;
 
   @override
@@ -742,6 +747,7 @@ class _PhoneLibraryCoverCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: ServerImage(
               imageUrl: thumbnailUrl ?? '',
+              fallbackImageUrl: fallbackThumbnailUrl,
               size: const Size(110, 165),
             ),
           ),

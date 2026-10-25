@@ -15,6 +15,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../domain/chapter/chapter_model.dart';
+import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/download_status_icon.dart';
 
 class ChapterMangaListTile extends StatelessWidget {
@@ -72,7 +73,7 @@ class ChapterMangaListTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                if (manga.thumbnailUrl != null)
+                if (manga.displayCoverUrl.isNotEmpty)
                   ClipRRect(
                     borderRadius: KBorderRadius.r8.radius,
                     child: WebRouteLink(
@@ -93,7 +94,8 @@ class ChapterMangaListTile extends StatelessWidget {
                           },
                         ),
                         child: ServerImage(
-                          imageUrl: manga.thumbnailUrl ?? "",
+                          imageUrl: manga.displayCoverUrl,
+                          fallbackImageUrl: manga.thumbnailUrl,
                           size: const Size(56, 80),
                         ),
                       ),

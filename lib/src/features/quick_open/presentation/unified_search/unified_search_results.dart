@@ -335,7 +335,8 @@ class UnifiedSearchResults extends HookConsumerWidget {
                   leading: ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: ServerImage(
-                      imageUrl: m.thumbnailUrl ?? "",
+                      imageUrl: m.displayCoverUrl,
+                      fallbackImageUrl: m.thumbnailUrl,
                       size: const Size(40, 56),
                     ),
                   ),

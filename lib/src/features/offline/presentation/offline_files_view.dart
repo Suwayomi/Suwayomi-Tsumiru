@@ -20,6 +20,7 @@ import '../../account/data/account_providers.dart';
 import '../data/account_storage_recovery_state.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
+import '../data/offline_dto_mappers.dart';
 import '../data/offline_repository.dart';
 import '../data/offline_series_entry.dart';
 import 'download_stall_banner.dart';
@@ -126,7 +127,8 @@ class OfflineFilesView extends HookConsumerWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: ServerImage(
-                    imageUrl: s.manga.thumbnailUrl ?? '',
+                    imageUrl: s.manga.displayCoverUrl,
+                    fallbackImageUrl: s.manga.thumbnailUrl,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -162,7 +164,8 @@ class OfflineFilesView extends HookConsumerWidget {
                         builder: (_) => OfflineSeriesChaptersScreen(
                           mangaId: s.manga.id,
                           mangaTitle: s.manga.title,
-                          thumbnailUrl: s.manga.thumbnailUrl,
+                          thumbnailUrl: s.manga.displayCoverUrl,
+                          fallbackThumbnailUrl: s.manga.thumbnailUrl,
                         ),
                       ),
                     ),

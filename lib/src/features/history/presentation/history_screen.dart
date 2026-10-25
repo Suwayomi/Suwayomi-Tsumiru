@@ -212,7 +212,8 @@ class HistoryDropdownRow extends StatelessWidget {
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: ServerImage(
-          imageUrl: item.manga.thumbnailUrl ?? "",
+          imageUrl: item.manga.displayCoverUrl,
+          fallbackImageUrl: item.manga.thumbnailUrl,
           size: const Size(40, 56),
         ),
       ),

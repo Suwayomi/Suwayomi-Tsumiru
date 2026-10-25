@@ -9,6 +9,10 @@ fragment HistoryChapterDto on ChapterType {
     title
     thumbnailUrl
     author
+    meta {
+      key
+      value
+    }
     user {
       inLibrary
       unreadCount

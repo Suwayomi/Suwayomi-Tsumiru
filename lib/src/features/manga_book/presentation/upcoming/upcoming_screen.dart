@@ -221,7 +221,8 @@ class _UpcomingTile extends StatelessWidget {
             ClipRRect(
               borderRadius: KBorderRadius.r8.radius,
               child: ServerImage(
-                imageUrl: manga.thumbnailUrl ?? "",
+                imageUrl: manga.displayCoverUrl,
+                fallbackImageUrl: manga.thumbnailUrl,
                 size: const Size(56, 80),
               ),
             ),

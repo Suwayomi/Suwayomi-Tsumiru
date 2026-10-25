@@ -168,7 +168,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 fullscreenDialog: true,
                 opaque: false,
                 pageBuilder: (context, _, _) => MangaThumbnailViewer(
-                  imageUrl: widget.manga.thumbnailUrl ?? "",
+                  imageUrl: widget.manga.displayCoverUrl,
+                  fallbackImageUrl: widget.manga.thumbnailUrl,
                 ),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
@@ -347,7 +348,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
   );
 
   Widget _cover(BuildContext context, {required bool freeform}) {
-    if (widget.manga.thumbnailUrl.isBlank) {
+    final coverUrl = widget.manga.displayCoverUrl;
+    if (coverUrl.isBlank) {
       final fallback = ImageIcon(
         AssetImage(Assets.icons.darkIcon.path),
         size: context.height * .2,
@@ -381,7 +383,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       // Decode at tile size to keep full-resolution covers from exhausting the image-cache budget.
       child: LayoutBuilder(
         builder: (context, constraints) => ServerImage(
-          imageUrl: widget.manga.thumbnailUrl ?? "",
+          imageUrl: coverUrl,
+          fallbackImageUrl: widget.manga.thumbnailUrl,
           memCacheWidth: constraints.hasBoundedWidth
               ? (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
                     .round()

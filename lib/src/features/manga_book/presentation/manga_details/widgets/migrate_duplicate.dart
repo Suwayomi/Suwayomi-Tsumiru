@@ -46,7 +46,7 @@ Future<bool> migrateDuplicateIntoCandidate(
       BulkMigrationEntry(
         fromMangaId: from.id,
         fromTitle: from.title,
-        fromThumbnailUrl: from.thumbnailUrl,
+        fromThumbnailUrl: from.displayCoverUrl,
         fromSourceName: from.source?.displayName,
         fromChapterCount: from.chapters.totalCount,
       ),
