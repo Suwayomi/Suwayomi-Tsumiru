@@ -6,6 +6,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/next_update/next_update_predictor.dart';
+import 'package:tsumiru/src/features/manga_book/domain/next_update/release_pattern.dart';
 
 void main() {
   final now = DateTime(2026, 6, 23);
@@ -100,6 +101,23 @@ void main() {
       expect(
         predictNextUpdate(overdue, now: day(2019, 12, 20)).intervalDays,
         6,
+      );
+
+      // Pacific/Apia skipped 2011-12-30; calendar maths must still land on it.
+      final apiaChapters = chaptersOn([
+        day(2011, 12, 27),
+        day(2011, 12, 28),
+        day(2011, 12, 29),
+      ]);
+      final apiaToday = DateTime.utc(2011, 12, 29);
+      expect(
+        ReleaseSchedule.estimate(apiaChapters, apiaToday).nextCheck(apiaToday),
+        DateTime.utc(2011, 12, 30),
+      );
+      expect(
+        const Weekdays({DateTime.monday, DateTime.thursday})
+            .previousBefore(DateTime.utc(2011, 12, 31)),
+        DateTime.utc(2011, 12, 29),
       );
     });
 

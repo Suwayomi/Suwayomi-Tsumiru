@@ -1,15 +1,12 @@
 import 'dart:math';
 
-DateTime startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
+// Calendar days as UTC midnights, so zones that skip a date can't shift or loop them.
+DateTime startOfDay(DateTime d) => DateTime.utc(d.year, d.month, d.day);
 
 DateTime addDays(DateTime day, int n) =>
-    DateTime(day.year, day.month, day.day + n);
+    DateTime.utc(day.year, day.month, day.day + n);
 
-int daysBetween(DateTime from, DateTime to) => DateTime.utc(
-      to.year,
-      to.month,
-      to.day,
-    ).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+int daysBetween(DateTime from, DateTime to) => to.difference(from).inDays;
 
 int mod(int a, int n) => ((a % n) + n) % n;
 
@@ -149,25 +146,25 @@ sealed class Monthly extends ReleasePattern {
 
   @override
   DateTime nextAfter(DateTime date) {
-    var first = DateTime(date.year, date.month, 1);
+    var first = DateTime.utc(date.year, date.month, 1);
     while (true) {
       final days = daysIn(first)..sort();
       for (final day in days) {
         if (day.isAfter(date)) return day;
       }
-      first = DateTime(first.year, first.month + 1, 1);
+      first = DateTime.utc(first.year, first.month + 1, 1);
     }
   }
 
   @override
   DateTime previousBefore(DateTime date) {
-    var first = DateTime(date.year, date.month, 1);
+    var first = DateTime.utc(date.year, date.month, 1);
     while (true) {
       final days = daysIn(first)..sort((a, b) => b.compareTo(a));
       for (final day in days) {
         if (day.isBefore(date)) return day;
       }
-      first = DateTime(first.year, first.month - 1, 1);
+      first = DateTime.utc(first.year, first.month - 1, 1);
     }
   }
 }
@@ -181,12 +178,12 @@ class DaysOfMonth extends Monthly {
   @override
   List<DateTime> daysIn(DateTime firstOfMonth) {
     final lastDay = addDays(
-      DateTime(firstOfMonth.year, firstOfMonth.month + 1, 1),
+      DateTime.utc(firstOfMonth.year, firstOfMonth.month + 1, 1),
       -1,
     ).day;
     return {
       for (final day in days)
-        DateTime(
+        DateTime.utc(
           firstOfMonth.year,
           firstOfMonth.month,
           min(day, lastDay),
@@ -208,7 +205,7 @@ class WeekdayOfMonth extends Monthly {
   List<DateTime> daysIn(DateTime firstOfMonth) {
     if (week == lastWeek) {
       final lastOfMonth = addDays(
-        DateTime(firstOfMonth.year, firstOfMonth.month + 1, 1),
+        DateTime.utc(firstOfMonth.year, firstOfMonth.month + 1, 1),
         -1,
       );
       return [
@@ -245,7 +242,7 @@ ReleasePattern? _weekdayOfMonth(List<DateTime> days) {
       .where(
         (day) =>
             day.day + 7 >
-            addDays(DateTime(day.year, day.month + 1, 1), -1).day,
+            addDays(DateTime.utc(day.year, day.month + 1, 1), -1).day,
       )
       .length;
   if (lastWeekCount >= days.length * _coverage) {

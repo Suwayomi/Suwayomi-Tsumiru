@@ -55,9 +55,12 @@ NextUpdatePrediction predictNextUpdate(
   }
   return NextUpdatePrediction(
     intervalDays: schedule.interval,
-    nextUpdate: schedule.nextCheck(today),
+    nextUpdate: toLocalDay(schedule.nextCheck(today)),
   );
 }
+
+// Days inside the schedule are UTC midnights; callers keep local midnights.
+DateTime toLocalDay(DateTime day) => DateTime(day.year, day.month, day.day);
 
 /// How often an entry releases, and so when to check it for the next release.
 class ReleaseSchedule {
@@ -153,7 +156,7 @@ class ReleaseSchedule {
       for (final stamp in stamps) {
         if (stamp <= 0) continue;
         final date = DateTime.fromMillisecondsSinceEpoch(stamp);
-        final day = DateTime(date.year, date.month, date.day);
+        final day = DateTime.utc(date.year, date.month, date.day);
         if (day.isAfter(latestPlausibleDay)) continue;
         if (seen.add(day.millisecondsSinceEpoch)) days.add(day);
       }

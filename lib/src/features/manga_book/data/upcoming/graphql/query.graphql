@@ -6,14 +6,12 @@ query GetLibraryMangas($withFirstUnread: Boolean!, $withLibraryFields: Boolean!)
   }
 }
 
-# Just the recent release dates for one series — enough for the next-update
-# prediction (which only windows the latest few distinct days), and far lighter
-# than pulling every chapter of every library series for the Upcoming calendar.
+# Every chapter date for one series, so Upcoming predicts from the same
+# history as the series page; still lighter than full chapter objects.
 query RecentChapterDates($mangaId: Int!) {
   chapters(
     condition: { mangaId: $mangaId }
     order: [{ by: SOURCE_ORDER, byType: DESC }]
-    first: 40
   ) {
     nodes {
       uploadDate
