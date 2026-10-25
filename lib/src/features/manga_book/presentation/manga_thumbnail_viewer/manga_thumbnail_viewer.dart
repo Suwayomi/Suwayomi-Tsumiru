@@ -95,19 +95,29 @@ class MangaThumbnailViewer extends ConsumerWidget {
 
     Future<void> deleteCover(String previous) async {
       final updatedMsg = context.l10n.coverUpdated;
+      final failedMsg = context.l10n.coverUpdateFailed;
       final undoLabel = context.l10n.undo;
-      await ref
+      final cleared = await ref
           .read(mangaCustomCoverProvider(mangaId: manga.id).notifier)
           .clear();
       if (!current()) return;
+      if (!cleared) {
+        ref.read(toastProvider)?.showError(failedMsg);
+        return;
+      }
       ref
           .read(toastProvider)
           ?.showWithAction(
             updatedMsg,
             actionLabel: undoLabel,
-            onAction: () => ref
+            onAction: () async {
+              if (!current()) return;
+              final restored = await ref
                 .read(mangaCustomCoverProvider(mangaId: manga.id).notifier)
-                .setCover(previous),
+                .setCover(previous);
+              if (!current()) return;
+              if (!restored) ref.read(toastProvider)?.showError(failedMsg);
+            },
           );
     }
 
@@ -117,7 +127,6 @@ class MangaThumbnailViewer extends ConsumerWidget {
             defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent),
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [

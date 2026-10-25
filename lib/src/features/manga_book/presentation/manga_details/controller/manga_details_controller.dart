@@ -482,26 +482,28 @@ class MangaCustomCover extends _$MangaCustomCover {
         ?.value;
   }
 
-  Future<void> setCover(String coverUrl) async {
+  Future<bool> setCover(String coverUrl) async {
     final result = await AsyncValue.guard(
       () => ref
           .read(mangaBookRepositoryProvider)
           .setCustomCover(mangaId: mangaId, coverUrl: coverUrl),
     );
-    if (!ref.mounted || result.hasError) return;
+    if (!ref.mounted || result.hasError) return false;
     state = coverUrl;
     _refreshCovers();
+    return true;
   }
 
-  Future<void> clear() async {
+  Future<bool> clear() async {
     final result = await AsyncValue.guard(
       () => ref
           .read(mangaBookRepositoryProvider)
           .clearCustomCover(mangaId: mangaId),
     );
-    if (!ref.mounted || result.hasError) return;
+    if (!ref.mounted || result.hasError) return false;
     state = null;
     _refreshCovers();
+    return true;
   }
 
   void _refreshCovers() {

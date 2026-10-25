@@ -326,8 +326,14 @@ class _EditCoverPicker extends HookConsumerWidget {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: GridView.builder(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GridView.builder(
               padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               gridDelegate: mangaCoverGridDelegate(null),
               itemCount: covers.length + pending.length * 2,
               itemBuilder: (context, index) {
@@ -352,7 +358,6 @@ class _EditCoverPicker extends HookConsumerWidget {
                 return _PendingCoverTile(label: origin.label);
               },
             ),
-          ),
           if (failed.isNotEmpty || showEmpty) ...[
             const SizedBox(height: 8),
             for (final origin in failed)
@@ -390,6 +395,10 @@ class _EditCoverPicker extends HookConsumerWidget {
                 ),
               ),
           ],
+                ],
+              ),
+            ),
+          ),
           const Divider(height: 1),
           SafeArea(
             top: false,
@@ -681,20 +690,19 @@ class _CoverPreviewDialog extends HookConsumerWidget {
           onPressed: () => Navigator.of(context).pop(false),
           child: Text(l10n.cancel),
         ),
-        TextButton(
+        FilledButton(
           onPressed: loadFailed.value || saving.value
               ? null
               : () async {
                   saving.value = true;
-                  await ref
+                  final saved = await ref
                       .read(mangaCustomCoverProvider(mangaId: mangaId).notifier)
                       .setCover(saveValue);
                   if (!context.mounted) return;
-                  saving.value = false;
-                  if (ref.read(mangaCustomCoverProvider(mangaId: mangaId)) ==
-                      saveValue) {
+                  if (saved) {
                     Navigator.of(context).pop(true);
                   } else {
+                    saving.value = false;
                     ref.read(toastProvider)?.showError(l10n.coverUpdateFailed);
                   }
                 },
