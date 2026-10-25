@@ -231,6 +231,7 @@ void main() {
       expect(find.text('Mine Manga'), findsOneWidget);
       expect(find.text('Foreign Manga'), findsNothing);
       expect(find.textContaining(l10n.notInYourLibrary), findsNothing);
+      expect(find.text('1'), findsOneWidget);
     });
   });
 }

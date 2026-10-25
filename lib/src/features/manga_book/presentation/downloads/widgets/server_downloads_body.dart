@@ -66,14 +66,15 @@ class ServerDownloadsBody extends ConsumerWidget {
     final access = ref.watch(settledAccountAccessProvider);
     final canDownload = access.allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final onlyMine = ref.watch(onlyMyDownloadsProvider).ifNull();
-    final inLibrary = [
-      for (final id in downloadsChapterIds)
-        ref.watch(downloadsFromIdProvider(id))?.manga.user.inLibrary ?? true,
-    ];
     // Single-user servers have no accounts to tell apart; they manage everything.
     final manageAll =
         access.canManageUsers ||
         access.capability == AccountCapability.unsupported;
+    final inLibrary = [
+      for (final id in downloadsChapterIds)
+        ref.watch(downloadsFromIdProvider(id))?.manga.user.inLibrary ??
+            manageAll,
+    ];
     final mineIds = [
       for (var index = 0; index < downloadsChapterIds.length; index++)
         if (inLibrary[index]) downloadsChapterIds[index],
@@ -92,7 +93,9 @@ class ServerDownloadsBody extends ConsumerWidget {
         } else if (visibleIds.isBlank) {
           return Emoticons(title: context.l10n.noDownloads);
         } else {
-          final downloadsCount = (downloadsChapterIds.length)
+          final downloadsCount = (manageAll
+                  ? downloadsChapterIds.length
+                  : visibleIds.length)
               .getValueOnNullOrNegative();
           Future<void> onRefresh() => ref.refresh(downloadStatusProvider.future);
           if (!grouped) {
@@ -110,9 +113,22 @@ class ServerDownloadsBody extends ConsumerWidget {
                 ),
                 onReorderItem: !canDownload
                     ? (_, _) {}
-                    : (oldIndex, newIndex) => ref
-                          .read(downloadsMapProvider.notifier)
-                          .reorder(visibleIds[oldIndex], newIndex),
+                    : (oldIndex, newIndex) {
+                        if (manageAll) {
+                          ref
+                              .read(downloadsMapProvider.notifier)
+                              .reorder(visibleIds[oldIndex], newIndex);
+                          return;
+                        }
+                        final target = newIndex >= visibleIds.length
+                            ? downloadsChapterIds.length
+                            : downloadsChapterIds.indexOf(
+                                visibleIds[newIndex],
+                              );
+                        ref
+                            .read(downloadsMapProvider.notifier)
+                            .reorder(visibleIds[oldIndex], target);
+                      },
                 itemBuilder: (context, index) =>
                     _queueTile(visibleIds[index], index, visibleIds.length),
                 itemCount: visibleIds.length,

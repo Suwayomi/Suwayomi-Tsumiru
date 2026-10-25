@@ -142,24 +142,23 @@ Future<void> cancelQueuedDownloadsForManga(
   final queue = await client
       .query$GetDownloadStatus()
       .getData((data) => data.downloadStatus.queue);
-  final ids = [
+  final ids = <int>[
     for (final item in queue ?? const [])
       if (item.manga.id == mangaId &&
           (item.state == Enum$DownloadState.QUEUED ||
               item.state == Enum$DownloadState.ERROR))
         item.chapter.id,
   ];
-  for (final id in ids) {
-    await client
-        .mutate$DequeueChapterDownloads(
-          Options$Mutation$DequeueChapterDownloads(
-            variables: Variables$Mutation$DequeueChapterDownloads(
-              input: Input$DequeueChapterDownloadInput(id: id),
-            ),
+  if (ids.isEmpty) return;
+  await client
+      .mutate$DequeueChapterDownloadsBatch(
+        Options$Mutation$DequeueChapterDownloadsBatch(
+          variables: Variables$Mutation$DequeueChapterDownloadsBatch(
+            input: Input$DequeueChapterDownloadsInput(ids: ids),
           ),
-        )
-        .getData((data) {});
-  }
+        ),
+      )
+      .getData((data) {});
 }
 
 @riverpod
