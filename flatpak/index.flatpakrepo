@@ -1,6 +1,6 @@
 [Flatpak Repo]
 Title=Suwayomi-Tsumiru
-Description=A native manga & manhwa reader for Suwayomi-Server - enhanced fork of Tachidesk-Sorayomi, with a rebuilt reader and offline download support.
+Description=Read manga from a Suwayomi server
 Url=https://flatpak.tsumiru.app
 Homepage=https://tsumiru.app
 Icon=https://raw.githubusercontent.com/flatpak/flatpak/main/flatpak.png

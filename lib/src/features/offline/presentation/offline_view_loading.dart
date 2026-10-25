@@ -23,7 +23,7 @@ class OfflineViewLoading extends ConsumerWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Expanded(child: CenterSorayomiShimmerIndicator()),
+        const Expanded(child: CenterTsumiruShimmerIndicator()),
         if (hasCatalog)
           Padding(
             padding: const EdgeInsets.only(bottom: 24),

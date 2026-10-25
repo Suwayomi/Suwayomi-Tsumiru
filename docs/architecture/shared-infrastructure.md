@@ -14,7 +14,7 @@
 ## Constants
 
 - **`enum.dart`:** `AuthType` (none/basic/simpleLogin/uiLogin), `ReaderMode` (8; default webtoon), `ReaderNavigationLayout` (default disabled), `MangaSort` (7; default lastRead), `ChapterSort` (source/uploadDate/fetchedDate), `DisplayMode` (grid/list/descriptiveList), `MangaStatus`, `IncludeOrExclude` (tri-state). Most carry `toLocale(BuildContext)`.
-- **`urls.dart`:** external URLs for the Suwayomi-hosted Tsumiru repo, docs site, and related services (`sorayomiGithubUrl`, `...LatestReleaseUrl`, `...ApiUrl`, `tachideskHelp`, `sorayomiWhatsNew`, `flareSolverr`).
+- **`urls.dart`:** external URLs for the Suwayomi-hosted Tsumiru repo, docs site, and related services (`githubUrl`, `...LatestReleaseUrl`, `...ApiUrl`, `tachideskHelp`, `whatsNew`, `flareSolverr`).
 - **`endpoints.dart`:** `Endpoints.baseApi(...)` — the central URL builder (`baseUrl`, `port`, `addPort`, `isGraphQl`, `isWebsocket`); plus per-area URL classes.
 - **`app_constants.dart`:** `kDuration` (500ms), `kInstantDuration`, `kLongDuration`, `kCurve`, magnifier constants, `kDebounceDuration` (500ms), `kPositionPlaceholder` (-1).
 - **`app_sizes.dart`:** `KEdgeInsets` / `KBorderRadius` / `KRadius` tokens; `mangaCoverGridDelegate(double?)`.
@@ -34,7 +34,7 @@
 - **`ServerImage`** (`widgets/server_image.dart`): auth-aware `CachedNetworkImage`. Dispatches by `authTypeKeyProvider`; `simple_login` cookie watched reactively (`.select`), `ui_login` token via `ref.read` (non-reactive, to avoid webtoon rebuild storms), `accountImageCacheKey` separates verified accounts while preserving keys across token refresh and restart. Unverified/changing accounts receive ephemeral session keys; legacy auth modes retain URL keys. Error reload evicts only the captured account key. `ServerImageWithCpi` adds a progress ring.
 - **`MangaCoverGridTile` / `MangaBadgesRow` / `MangaBadge`** (`widgets/manga_cover/`): cover tiles with `showTitle`/`showBadges`/`showCountBadges`; badges read `downloadedBadgeProvider` / `unreadBadgeProvider`. `languageBadge` is commented out.
 - **Async buttons** (`widgets/async_buttons/`): six variants, all `useState(false)` loading → disable + spinner.
-- **`Emoticons`** (error state), **`CenterSorayomiShimmerIndicator`** (loading), **popup widgets** (Radio/MultiSelect/Slider/TextField popups), **`SettingsPropTile`** (generic settings row).
+- **`Emoticons`** (error state), **`CenterTsumiruShimmerIndicator`** (loading), **popup widgets** (Radio/MultiSelect/Slider/TextField popups), **`SettingsPropTile`** (generic settings row).
 - **Shell widgets** (`widgets/shell/`): see [app-shell-navigation.md](app-shell-navigation.md).
 
 ## Gotchas

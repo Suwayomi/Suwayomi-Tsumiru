@@ -20,14 +20,13 @@ enum CoverSite {
   anilist('AniList'),
   myanimelist('MyAnimeList'),
   kitsu('Kitsu'),
-  mangaupdates('MangaUpdates'),
-  bangumi('Bangumi');
+  mangaupdates('MangaUpdates');
 
   const CoverSite(this.label);
   final String label;
 
   bool get supportsWeb => switch (this) {
-    CoverSite.anilist || CoverSite.kitsu || CoverSite.bangumi => true,
+    CoverSite.anilist || CoverSite.kitsu => true,
     CoverSite.myanimelist || CoverSite.mangaupdates => false,
   };
 }
@@ -67,7 +66,6 @@ Future<List<CoverCandidate>> searchCoverSite(
   CoverSite.myanimelist => _searchMyAnimeList(client, query),
   CoverSite.kitsu => _searchKitsu(client, query),
   CoverSite.mangaupdates => _searchMangaUpdates(client, query),
-  CoverSite.bangumi => _searchBangumi(client, query),
 }.timeout(const Duration(seconds: 30));
 
 Future<List<CoverCandidate>> _searchAnilist(
@@ -189,45 +187,6 @@ Future<List<CoverCandidate>> _searchMangaUpdates(
             as String?;
     if (cover == null || cover.isEmpty) continue;
     out.add((title: (record?['title'] as String?) ?? '', coverUrl: cover));
-    if (out.length == 10) break;
-  }
-  return out;
-}
-
-Future<List<CoverCandidate>> _searchBangumi(
-  http.Client client,
-  String query,
-) async {
-  final response = await client.post(
-    Uri.parse('https://api.bgm.tv/v0/search/subjects')
-        .replace(queryParameters: {'limit': '10'}),
-    // Bangumi rejects requests without a client identifier.
-    headers: const {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Tsumiru',
-    },
-    body: jsonEncode({
-      'keyword': query,
-      'filter': {
-        'type': [1],
-      },
-    }),
-  );
-  if (response.statusCode != 200) {
-    throw RecommendationHttpException(response.statusCode);
-  }
-  final data = (jsonDecode(response.body)['data'] as List?) ?? const [];
-  final out = <CoverCandidate>[];
-  for (final entry in data) {
-    final subject = entry as Map;
-    final images = subject['images'] as Map?;
-    final cover = images?['large'] as String?;
-    if (cover == null || cover.isEmpty) continue;
-    out.add((
-      title:
-          (subject['name_cn'] as String?) ?? (subject['name'] as String?) ?? '',
-      coverUrl: cover,
-    ));
     if (out.length == 10) break;
   }
   return out;

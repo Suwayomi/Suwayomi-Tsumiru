@@ -7,6 +7,7 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
+import '../../constants/app_constants.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../tsumiru_logo.dart';
@@ -38,7 +39,7 @@ class DesktopBrandRow extends StatelessWidget {
           ),
           const SizedBox(width: kBrandGap),
           Expanded(
-            child: Text('Tsumiru', style: brandNameStyle(context)),
+            child: Text(kAppName, style: brandNameStyle(context)),
           ),
           IconButton(
             icon: const Icon(FluentIcons.chevron_left_24_regular),

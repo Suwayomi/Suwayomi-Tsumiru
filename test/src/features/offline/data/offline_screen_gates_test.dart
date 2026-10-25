@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hooks_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
+import 'package:tsumiru/src/features/offline/data/offline_read_fallback.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -171,6 +173,41 @@ void main() {
     ]);
     final mangas = await list.read(categoryMangaListProvider(0).future);
     expect(mangas!.map((m) => m.id), [1]);
+  });
+
+  // A rating edit with offline viewing on must be what the series screen
+  // shows afterwards: the server write mirrors into the offline catalog.
+  test('rating edit with offline viewing on is served from the mirror', () async {
+    await db.upsertMangaMetadata(
+      id: 1,
+      title: 'Saved',
+      updatedAt: DateTime(2026),
+    );
+    final client = GraphQLClient(
+      link: Link.function((request, [forward]) {
+        return Stream.value(
+          Response(
+            data: const {'__typename': 'Mutation', 'setMangaMeta': null},
+            response: const {},
+          ),
+        );
+      }),
+      cache: GraphQLCache(),
+    );
+    final repo = MangaBookRepository(client, readOfflineDb: () => db);
+    await repo.patchMangaMeta(
+      mangaId: 1,
+      key: 'flutter_rating',
+      value: '4',
+    );
+    final served = await mangaWithOfflineFallback(
+      fetch: () => throw const SocketException('offline'),
+      db: db,
+      offlineEnabled: true,
+      mangaId: 1,
+      offlineFirst: true,
+    );
+    expect(served?.metaData.rating, 4);
   });
 
   // A slow connection used to park the reader on its shimmer for the full 15 s

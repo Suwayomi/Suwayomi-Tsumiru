@@ -18,6 +18,8 @@ import '../../manga_book/data/manga_book/__generated__/query.graphql.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
+import '../../offline/data/offline_database.dart';
+import '../../offline/data/offline_repository.dart';
 import '../../tracking/data/tracker_repository.dart';
 import '../domain/chapter_matcher.dart';
 import '../domain/migration_models.dart';
@@ -74,8 +76,9 @@ abstract class MigrationRepository {
 
 class MigrationRepositoryImpl implements MigrationRepository {
   final GraphQLClient client;
+  final OfflineDatabase? Function()? readOfflineDb;
 
-  MigrationRepositoryImpl(this.client);
+  MigrationRepositoryImpl(this.client, {this.readOfflineDb});
 
   @override
   Future<List<MigrationSource>?> getMigrationSources(
@@ -411,7 +414,10 @@ class MigrationRepositoryImpl implements MigrationRepository {
 
       // Meta overrides are best-effort; a missing override must not block removal.
       try {
-        final mangaRepo = MangaBookRepository(client);
+        final mangaRepo = MangaBookRepository(
+          client,
+          readOfflineDb: readOfflineDb,
+        );
         for (final entry in sourceManga.meta) {
           final carry =
               _alwaysMetaKeys.contains(entry.key) ||
@@ -579,5 +585,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
 }
 
 @riverpod
-MigrationRepository migrationRepository(Ref ref) =>
-    MigrationRepositoryImpl(ref.watch(graphQlClientProvider));
+MigrationRepository migrationRepository(Ref ref) => MigrationRepositoryImpl(
+  ref.watch(graphQlClientProvider),
+  readOfflineDb: () => ref.read(offlineReadDatabaseProvider),
+);

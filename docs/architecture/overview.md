@@ -21,7 +21,7 @@ After adding `@riverpod` annotations or `.graphql` files: `dart run build_runner
 lib/
   main.dart                 # bootstrap: Hive, prefs, auth preload, runApp
   src/
-    sorayomi.dart           # root widget: GraphQLProvider + MaterialApp.router + theming
+    tsumiru_app.dart        # root widget: GraphQLProvider + MaterialApp.router + theming
     routes/                 # go_router typed route tree (+ sub_routes/ part files)
     global_providers/       # GraphQL clients, SharedPreferences, HiveStore, auth-type
     graphql/                # shared schema + fragments + codegen output

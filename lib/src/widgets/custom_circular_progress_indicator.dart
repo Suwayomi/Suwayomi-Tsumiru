@@ -13,8 +13,8 @@ import '../constants/gen/assets.gen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
 
-class CenterSorayomiShimmerIndicator extends StatelessWidget {
-  const CenterSorayomiShimmerIndicator({super.key, this.value});
+class CenterTsumiruShimmerIndicator extends StatelessWidget {
+  const CenterTsumiruShimmerIndicator({super.key, this.value});
 
   final double? value;
   @override
@@ -22,7 +22,7 @@ class CenterSorayomiShimmerIndicator extends StatelessWidget {
         child: SizedBox(
           height: context.height * .35,
           width: context.width * .35,
-          child: const SorayomiShimmerIndicator(),
+          child: const TsumiruShimmerIndicator(),
         ),
       );
 }
@@ -57,7 +57,7 @@ class _DelayedShimmerState extends State<DelayedShimmer> {
 
   @override
   Widget build(BuildContext context) {
-    const indicator = CenterSorayomiShimmerIndicator();
+    const indicator = CenterTsumiruShimmerIndicator();
     if (context.reduceMotion) {
       return Opacity(opacity: _visible ? 1 : 0, child: indicator);
     }
@@ -69,8 +69,8 @@ class _DelayedShimmerState extends State<DelayedShimmer> {
   }
 }
 
-class SorayomiShimmerIndicator extends StatelessWidget {
-  const SorayomiShimmerIndicator({super.key});
+class TsumiruShimmerIndicator extends StatelessWidget {
+  const TsumiruShimmerIndicator({super.key});
 
   @override
   Widget build(BuildContext context) {

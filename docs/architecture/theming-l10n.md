@@ -11,7 +11,7 @@ Dart copies its `[data-theme='<id>']` and
 
 ### Layers
 
-`Sorayomi.build()` sets `theme:`/`darkTheme:` to `buildAppTheme(...)` and
+`TsumiruApp.build()` sets `theme:`/`darkTheme:` to `buildAppTheme(...)` and
 `themeMode:` to `appThemeModeProvider`. The construction stack:
 
 | File | Responsibility |
@@ -108,7 +108,7 @@ Config (`l10n.yaml`): `arb-dir: lib/src/l10n`, `template-arb-file: app_en.arb`,
 
 - 27 ARB locales; English is the source of truth. New locales arrive via Weblate post-merge.
 - Generate with `flutter gen-l10n` (manual / not auto-run by build_runner).
-- Wired in `Sorayomi` via `AppLocalizations.localizationsDelegates` + `supportedLocales`; `locale:` is `ref.watch(l10nProvider)` (nullable → OS default).
+- Wired in `TsumiruApp` via `AppLocalizations.localizationsDelegates` + `supportedLocales`; `locale:` is `ref.watch(l10nProvider)` (nullable → OS default).
 - Access in widgets: `context.l10n.someKey`.
 - New theme display names use plain string literals in `AppThemeLabel.label()` (proper nouns / brand names — not localized); the original three still use l10n keys.
 

@@ -1,14 +1,16 @@
 import 'package:graphql/client.dart';
 
+import '../../features/offline/data/offline_database.dart';
 import '../../graphql/__generated__/schema.graphql.dart';
 import '../extensions/custom_extensions.dart';
 import '__generated__/webui_meta.graphql.dart';
 import 'webui_meta_codec.dart';
 
 class WebUiMetaRepository {
-  const WebUiMetaRepository(this.client);
+  const WebUiMetaRepository(this.client, {this.readOfflineDb});
 
   final GraphQLClient client;
+  final OfflineDatabase? Function()? readOfflineDb;
 
   Future<void> writeMangaValue(
     int mangaId,
@@ -54,6 +56,9 @@ class WebUiMetaRepository {
             ),
           )
           .getData((data) => data.setMangaMetas);
+      for (final entry in plan.set.entries) {
+        await mirrorMangaMeta(readOfflineDb, mangaId, entry.key, entry.value);
+      }
     }
     if (plan.delete.isNotEmpty) {
       Future<void> cleanup() async {
@@ -79,6 +84,9 @@ class WebUiMetaRepository {
         await cleanup();
       } catch (_) {
         await cleanup();
+      }
+      for (final key in plan.delete) {
+        await mirrorMangaMeta(readOfflineDb, mangaId, key);
       }
     }
   }
@@ -217,4 +225,20 @@ class WebUiMetaRepository {
       }
     }
   }
+}
+
+// Offline-first screens read the mirror, so reflect confirmed server writes there.
+Future<void> mirrorMangaMeta(
+  OfflineDatabase? Function()? readOfflineDb,
+  int mangaId,
+  String key, [
+  String? value,
+]) async {
+  try {
+    await readOfflineDb?.call()?.updateMangaMetaValue(
+      mangaId: mangaId,
+      key: key,
+      value: value,
+    );
+  } catch (_) {}
 }

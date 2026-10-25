@@ -323,7 +323,7 @@ class UpcomingScreen extends HookConsumerWidget {
           ),
         Expanded(
           child: upcoming.when(
-            loading: () => const CenterSorayomiShimmerIndicator(),
+            loading: () => const CenterTsumiruShimmerIndicator(),
             error: (e, _) => Emoticons(
               title: e.toString(),
               button: TextButton(

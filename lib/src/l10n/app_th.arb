@@ -16,10 +16,6 @@
     "@addCategory": {
         "description": "Popup title and Button text to add new category in Edit Category Screen"
     },
-    "appTitle": "ทาจิเดสก์ โซราโยมิ",
-    "@appTitle": {
-        "description": "Name of the app (Tachidesk Sorayomi in native script)"
-    },
     "appearance": "รูปร่าง",
     "@appearance": {
         "description": "Screen title and Button text of Appearance screen"

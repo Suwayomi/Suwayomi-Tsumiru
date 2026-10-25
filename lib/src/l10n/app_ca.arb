@@ -865,10 +865,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme Mode"
     },
-    "appTitle": "Tsumiru",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "authType": "Tipus d'autenticació",
     "@authType": {
         "description": "Popup title and Button text to change App Authentication"

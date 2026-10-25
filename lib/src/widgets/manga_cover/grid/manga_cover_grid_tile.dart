@@ -565,7 +565,7 @@ class _FreeformCoverPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AspectRatio(
     aspectRatio: _kBookAspectRatio,
-    child: Center(child: SorayomiShimmerIndicator()),
+    child: Center(child: TsumiruShimmerIndicator()),
   );
 }
 

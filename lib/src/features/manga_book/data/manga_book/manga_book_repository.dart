@@ -13,6 +13,8 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../../library/domain/category/category_model.dart';
+import '../../../offline/data/offline_database.dart';
+import '../../../offline/data/offline_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../domain/chapter_page/chapter_page_model.dart';
@@ -23,8 +25,9 @@ import './__generated__/query.graphql.dart';
 part 'manga_book_repository.g.dart';
 
 class MangaBookRepository {
-  const MangaBookRepository(this.client);
+  const MangaBookRepository(this.client, {this.readOfflineDb});
   final GraphQLClient client;
+  final OfflineDatabase? Function()? readOfflineDb;
 
   Future<MangaDto?> addMangaToLibrary(int mangaId) => client
       .mutate$UpdateManga(
@@ -226,7 +229,10 @@ class MangaBookRepository {
     required dynamic value,
   }) async {
     if (key == 'webUI_sortBy' || key == 'webUI_reverse') {
-      await WebUiMetaRepository(client).writeMangaValue(
+      await WebUiMetaRepository(
+        client,
+        readOfflineDb: readOfflineDb,
+      ).writeMangaValue(
         mangaId,
         key.substring('webUI_'.length),
         value as String,
@@ -248,6 +254,7 @@ class MangaBookRepository {
             ),
           )
           .getData((data) {});
+    await mirrorMangaMeta(readOfflineDb, mangaId, key, '$value');
   }
 
   Future<void> setCustomCover({
@@ -280,7 +287,8 @@ class MangaBookRepository {
               ),
             ),
           )
-          .getData<Object>((data) => null);
+          .getData<Object>((data) => null)
+          .then((_) => mirrorMangaMeta(readOfflineDb, mangaId, key));
 
   Future<void> deleteMangaMetas({
     required Iterable<int> mangaIds,
@@ -300,7 +308,12 @@ class MangaBookRepository {
           ),
         ),
       )
-      .getData<Object>((data) => null);
+      .getData<Object>((data) => null)
+      .then((_) async {
+        for (final mangaId in mangaIds) {
+          await mirrorMangaMeta(readOfflineDb, mangaId, key);
+        }
+      });
 
   /// Re-scrapes the source; fall back to [getStoredChapterList] if the source is unavailable.
   Future<List<ChapterDto>?> getChapterList(int mangaId) async => client
@@ -350,5 +363,7 @@ class MangaBookRepository {
 
 // Keep the repository alive across in-flight progress writes.
 @Riverpod(keepAlive: true)
-MangaBookRepository mangaBookRepository(Ref ref) =>
-    MangaBookRepository(ref.watch(graphQlClientProvider));
+MangaBookRepository mangaBookRepository(Ref ref) => MangaBookRepository(
+  ref.watch(graphQlClientProvider),
+  readOfflineDb: () => ref.read(offlineReadDatabaseProvider),
+);

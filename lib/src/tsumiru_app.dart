@@ -13,6 +13,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'constants/app_constants.dart';
 import 'constants/app_theme.dart';
 import 'features/auth/presentation/reauth_banner.dart';
 import 'features/notifications/controller/notifications_controller.dart';
@@ -34,8 +35,8 @@ import 'utils/theme/app_theme_builder.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
 import 'widgets/web_page_title.dart';
 
-class Sorayomi extends HookConsumerWidget {
-  const Sorayomi({super.key, this.sessionChanging = false});
+class TsumiruApp extends HookConsumerWidget {
+  const TsumiruApp({super.key, this.sessionChanging = false});
 
   final bool sessionChanging;
 
@@ -143,7 +144,7 @@ class Sorayomi extends HookConsumerWidget {
           ),
         );
       },
-      onGenerateTitle: (context) => context.l10n.appTitle,
+      title: kAppName,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(
         theme: appTheme,

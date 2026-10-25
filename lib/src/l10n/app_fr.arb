@@ -28,10 +28,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme"
     },
-    "appTitle": "Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "browse": "Parcourir",
     "@browse": {
         "description": "Screen title, Navigation Bar text and Button text of both Browse screen and Browse Settings Screen"

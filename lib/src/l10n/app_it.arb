@@ -12,10 +12,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme Mode"
     },
-    "appTitle": "Tachidesk Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Tachidesk Sorayomi in native script)"
-    },
     "appearance": "Aspetto",
     "@appearance": {
         "description": "Screen title and Button text of Appearance screen"

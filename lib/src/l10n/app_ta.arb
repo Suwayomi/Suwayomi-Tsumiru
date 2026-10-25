@@ -4,10 +4,6 @@
     "@appLanguage": {
         "description": "Popup title and Button text to change App Language"
     },
-    "appTitle": "சோரயோமி",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "appTheme": "பயன்பாட்டு கருப்பொருள் பயன்முறை",
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme Mode"

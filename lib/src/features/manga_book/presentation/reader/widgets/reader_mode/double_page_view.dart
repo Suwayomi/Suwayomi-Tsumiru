@@ -69,7 +69,7 @@ class DoublePageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (pages.isEmpty) {
-      return const Center(child: CenterSorayomiShimmerIndicator());
+      return const Center(child: CenterTsumiruShimmerIndicator());
     }
 
     if (entry.first.half != PageHalf.full) {
@@ -103,7 +103,7 @@ class DoublePageView extends StatelessWidget {
 
   Widget _slot(PageUnit unit, {Alignment alignment = Alignment.center}) {
     if (unit.raw >= pages.length) {
-      return const Center(child: CenterSorayomiShimmerIndicator());
+      return const Center(child: CenterTsumiruShimmerIndicator());
     }
     return ServerImage(
       showReloadButton: true,
@@ -125,7 +125,7 @@ class DoublePageView extends StatelessWidget {
         naturalSize: naturalSize,
       ),
       progressIndicatorBuilder: (context, url, downloadProgress) =>
-          CenterSorayomiShimmerIndicator(value: downloadProgress.progress),
+          CenterTsumiruShimmerIndicator(value: downloadProgress.progress),
     );
   }
 }

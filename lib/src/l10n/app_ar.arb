@@ -20,10 +20,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme"
     },
-    "appTitle": "تاشيديسك سورايومي",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "authType": "نوع المصادقة",
     "@authType": {
         "description": "Popup title and Button text to change App Authentication"

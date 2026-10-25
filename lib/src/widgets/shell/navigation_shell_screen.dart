@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import '../../constants/app_constants.dart';
 import '../../constants/app_distribution.dart';
 import '../../features/about/data/about_repository.dart';
 import '../../features/about/data/server_update_alerts_repository.dart';
@@ -58,7 +59,7 @@ class NavigationShellScreen extends HookConsumerWidget {
           if (skipped != null && version.compareTo(skipped) <= 0) return;
         }
         appUpdateDialog(
-          title: title ?? context.l10n.appTitle,
+          title: title ?? kAppName,
           newRelease: "v${version.canonicalizedVersion}",
           context: context,
           toast: toast,

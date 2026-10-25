@@ -338,10 +338,6 @@
     "@authType": {
         "description": "Popup title and Button text to change App Authentication"
     },
-    "appTitle": "Tsumiru",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "credentials": "認證",
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"

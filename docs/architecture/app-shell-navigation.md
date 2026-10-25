@@ -9,7 +9,7 @@ App bootstrap, the `go_router` typed route tree, and the stateful navigation she
 | Path | Responsibility |
 |---|---|
 | `lib/main.dart` | Bootstrap: Hive init, auth migration, auth preload, `ProviderContainer` setup, `runApp` |
-| `lib/src/sorayomi.dart` | Root widget `Sorayomi`; wires `GraphQLProvider`, `MaterialApp.router`, theming, locale, `ReauthBannerHost` |
+| `lib/src/tsumiru_app.dart` | Root widget `TsumiruApp`; wires `GraphQLProvider`, `MaterialApp.router`, theming, locale, `ReauthBannerHost` |
 | `lib/src/routes/router_config.dart` | `@riverpod routerConfig` `GoRouter`; typed `ShellRoute`/`GoRoute` defs; `Routes` constants; navigator keys |
 | `lib/src/routes/router_config.g.dart` | Generated `$appRoutes` (build_runner) |
 | `lib/src/routes/sub_routes/*.dart` | `part` files, one per nav section |
@@ -26,11 +26,11 @@ App bootstrap, the `go_router` typed route tree, and the stateful navigation she
 4. `migrateBasicAuthCredentials` — one-shot legacy basic-auth → secure storage migration (non-fatal).
 5. `Future.wait([authCredentialsStoreProvider.future, credentialsProvider.future])` — both auth providers loaded **before first frame** (prevents tokenless image requests caching as 401s).
 6. `container.read(authCoordinatorProvider.notifier)` — eagerly construct so the proactive-refresh listener is live before any image request.
-7. `runApp(UncontrolledProviderScope(container, child: Sorayomi()))`.
+7. `runApp(UncontrolledProviderScope(container, child: TsumiruApp()))`.
 
 Initial location: `/library/0`.
 
-`Sorayomi.build()` wraps: `GraphQLProvider` → `MaterialApp.router` → `FToastBuilder` → `ReauthBannerHost`.
+`TsumiruApp.build()` wraps: `GraphQLProvider` → `MaterialApp.router` → `FToastBuilder` → `ReauthBannerHost`.
 
 ## Routing
 

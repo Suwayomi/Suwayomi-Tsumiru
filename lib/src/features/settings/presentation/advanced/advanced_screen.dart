@@ -21,7 +21,6 @@ import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../../manga_book/presentation/upcoming/controller/upcoming_controller.dart';
-import '../../../offline/data/offline_repository.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'copy_crash_log_tile.dart';
@@ -133,17 +132,8 @@ class AdvancedScreen extends ConsumerWidget {
                             toast?.showError(context.l10n.error);
                             return;
                           }
-                          final db = ref.read(offlineReadDatabaseProvider);
                           for (final id in ids) {
                             ref.invalidate(mangaWithIdProvider(mangaId: id));
-                            if (db != null) {
-                              await AsyncValue.guard(
-                                () => db.updateMangaMetaValue(
-                                  mangaId: id,
-                                  key: MangaMetaKeys.customCover.key,
-                                ),
-                              );
-                            }
                           }
                         }
                         if (!context.mounted) return;

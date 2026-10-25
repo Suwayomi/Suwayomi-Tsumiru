@@ -8,7 +8,7 @@ App/server version info + update checks.
 
 - `data/about_repository.dart` — **two update paths**: `checkUpdate()` hits the **GitHub Releases REST API** directly in ordinary native/standalone builds; `checkServerUpdate()` uses the server's GraphQL `checkForServerUpdates`. Both use `pub_semver`.
 - `controllers/about_controller.dart` — `aboutProvider` (GraphQL `GetAbout`); `packageInfoProvider` is `throw UnimplementedError()` (overridden in `main.dart`).
-- URLs (all in `lib/src/constants/urls.dart`): `sorayomiGithubUrl` = `github.com/Suwayomi/Suwayomi-Tsumiru`, `sorayomiLatestReleaseUrl`/`...ApiUrl` (releases + GitHub API), `sorayomiWhatsNew` = GitHub releases page, `tachideskHelp` = `tsumiru.app/docs/...`.
+- URLs (all in `lib/src/constants/urls.dart`): `githubUrl` = `github.com/Suwayomi/Suwayomi-Tsumiru`, `latestReleaseUrl`/`...ApiUrl` (releases + GitHub API), `whatsNew` = GitHub releases page, `tachideskHelp` = `tsumiru.app/docs/...`.
 - Release checks accept version tags with or without a leading `v`, then compare versions with `pub_semver`.
 - About includes a localized Privacy policy row linking to `https://tsumiru.app/privacy/` in every distribution.
 - With `--dart-define=TSUMIRU_GOOGLE_PLAY=true`, `isGooglePlayBuild` disables app-version HTTP requests in both `AboutRepository` and `NotificationBackgroundClient`. The shell skips app-update startup work, and the shared dialog suppresses app prompts. Server dialogs use an explicit `isServerUpdate` flag, including when their release URL is absent.
