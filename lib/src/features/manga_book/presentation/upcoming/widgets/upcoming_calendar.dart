@@ -627,7 +627,10 @@ class UpcomingSeriesTile extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
             child: ServerImage(
-              imageUrl: series.thumbnailUrl ?? '',
+              imageUrl: series.displayCoverUrl,
+              fallbackImageUrl: series.thumbnailUrl,
+              coverVersion: series.coverVersion,
+              fallbackCoverVersion: series.thumbnailUrlLastFetched,
               size: coverSize,
             ),
           ),

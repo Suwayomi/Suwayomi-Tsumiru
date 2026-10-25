@@ -174,6 +174,7 @@ class _FakeToast implements Toast {
     required String actionLabel,
     required VoidCallback onAction,
     Duration duration = const Duration(seconds: 5),
+    BuildContext? overlayContext,
   }) {
     undoLabel = actionLabel;
     undo = onAction;

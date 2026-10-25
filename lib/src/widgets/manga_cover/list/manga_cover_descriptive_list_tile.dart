@@ -24,6 +24,7 @@ class MangaCoverDescriptiveListTile extends StatefulWidget {
     super.key,
     required this.manga,
     this.onPressed,
+    this.onCoverPressed,
     this.onLongPress,
     this.onContinueReading,
     this.onTitleClicked,
@@ -41,6 +42,7 @@ class MangaCoverDescriptiveListTile extends StatefulWidget {
   final bool showBadges;
   final bool showCountBadges;
   final VoidCallback? onPressed;
+  final VoidCallback? onCoverPressed;
   final VoidCallback? onLongPress;
 
   /// Non-null adds a button opening the next unread chapter.
@@ -136,6 +138,7 @@ class _MangaCoverDescriptiveListTileState
                   kDescriptiveCoverWidth * widget.scale),
                   child: MangaCoverGridTile(
                     manga: widget.manga,
+                    onPressed: widget.onCoverPressed,
                     showBadges: false,
                     showTitle: false,
                     showDarkOverlay: false,

@@ -18,6 +18,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/desktop/desktop_window.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../domain/manga/manga_model.dart';
 import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
 
@@ -184,6 +185,9 @@ class UpcomingScreen extends HookConsumerWidget {
                 id: manga.id,
                 title: manga.title,
                 thumbnailUrl: manga.thumbnailUrl,
+                displayCoverUrl: manga.displayCoverUrl,
+                coverVersion: manga.coverVersion,
+                thumbnailUrlLastFetched: manga.thumbnailUrlLastFetched,
               ),
           }.values.toList(),
       };

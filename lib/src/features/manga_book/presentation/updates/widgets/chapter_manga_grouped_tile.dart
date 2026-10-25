@@ -17,6 +17,7 @@ import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../domain/chapter/chapter_model.dart';
+import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/download_status_icon.dart';
 import '../../manga_details/widgets/chapter_context_menu.dart';
 import '../controller/updates_grouping_controller.dart';
@@ -234,7 +235,7 @@ class _HeadTile extends HookConsumerWidget {
                         visualDensity: VisualDensity.compact,
                         onChanged: (_) => toggleSelect(chapter),
                       ),
-                    if (manga.thumbnailUrl != null)
+                    if (manga.displayCoverUrl.isNotEmpty)
                       ClipRRect(
                         borderRadius: KBorderRadius.r8.radius,
                         child: WebRouteLink(
@@ -255,7 +256,11 @@ class _HeadTile extends HookConsumerWidget {
                               },
                             ),
                             child: ServerImage(
-                              imageUrl: manga.thumbnailUrl ?? "",
+                              imageUrl: manga.displayCoverUrl,
+                              fallbackImageUrl: manga.thumbnailUrl,
+                              coverVersion: manga.coverVersion,
+                              fallbackCoverVersion:
+                                  manga.thumbnailUrlLastFetched,
                               size: const Size(56, 80),
                             ),
                           ),

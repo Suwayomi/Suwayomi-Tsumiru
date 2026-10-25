@@ -37,6 +37,7 @@ import '../../domain/updates/updates_row_patch.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import '../../widgets/update_status_fab.dart';
 import '../../widgets/update_status_popup_menu.dart';
+import '../manga_details/controller/manga_details_controller.dart';
 import '../manga_details/widgets/chapter_selection_header.dart';
 import '../reader/controller/reader_controller.dart';
 import 'controller/updates_filter_controller.dart';
@@ -483,6 +484,17 @@ class UpdatesScreen extends HookConsumerWidget {
       selectionAnchor.value = null;
       controller.refresh();
     }, []);
+    // Custom covers arrive through meta the cached rows were fetched without.
+    final coverRevision = ref.watch(customCoverRevisionProvider);
+    final isCoverRevisionMount = useRef(true);
+    useEffect(() {
+      if (isCoverRevisionMount.value) {
+        isCoverRevisionMount.value = false;
+        return null;
+      }
+      resetList();
+      return null;
+    }, [coverRevision]);
     // Use the running-only socket to detect completion; prepend new rows without losing scroll position.
     final lastRunningUpdates = useRef<bool>(false);
     Future<void> liveUpdate() async {

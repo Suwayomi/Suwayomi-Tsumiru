@@ -250,6 +250,20 @@ class MangaBookRepository {
           .getData((data) {});
   }
 
+  Future<void> setCustomCover({
+    required int mangaId,
+    required String coverUrl,
+  }) => patchMangaMeta(
+    mangaId: mangaId,
+    key: MangaMetaKeys.customCover.key,
+    value: coverUrl,
+  );
+
+  Future<void> clearCustomCover({required int mangaId}) => deleteMangaMeta(
+    mangaId: mangaId,
+    key: MangaMetaKeys.customCover.key,
+  );
+
   /// Removes a per-series meta override so the app-wide default applies again.
   Future<void> deleteMangaMeta({
     required int mangaId,
@@ -267,6 +281,26 @@ class MangaBookRepository {
             ),
           )
           .getData<Object>((data) => null);
+
+  Future<void> deleteMangaMetas({
+    required Iterable<int> mangaIds,
+    required String key,
+  }) async => client
+      .mutate$DeleteMangaMetas(
+        Options$Mutation$DeleteMangaMetas(
+          variables: Variables$Mutation$DeleteMangaMetas(
+            input: Input$DeleteMangaMetasInput(
+              items: [
+                Input$DeleteMangaMetasItemInput(
+                  mangaIds: mangaIds.toList(),
+                  keys: [key],
+                ),
+              ],
+            ),
+          ),
+        ),
+      )
+      .getData<Object>((data) => null);
 
   /// Re-scrapes the source; fall back to [getStoredChapterList] if the source is unavailable.
   Future<List<ChapterDto>?> getChapterList(int mangaId) async => client

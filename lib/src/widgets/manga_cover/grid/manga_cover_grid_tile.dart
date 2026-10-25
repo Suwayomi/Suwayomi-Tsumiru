@@ -15,9 +15,8 @@ import '../../../constants/app_sizes.dart';
 import '../../../constants/enum.dart';
 import '../../../constants/gen/assets.gen.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
-import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
+import '../../../features/manga_book/presentation/manga_thumbnail_viewer/cover_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
-import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/theme/brand.dart';
 import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
@@ -64,6 +63,9 @@ class MangaCoverGridTile extends StatefulWidget {
     this.highlighted = false,
     this.linkLocation,
     this.coverUrlOverride,
+    this.coverVersionOverride,
+    this.fallbackImageUrlOverride,
+    this.fallbackCoverVersionOverride,
     this.titleOverride,
     this.badgeCountOverride,
     this.subtitle,
@@ -75,6 +77,9 @@ class MangaCoverGridTile extends StatefulWidget {
   final VoidCallback? onLongPress;
 
   final String? coverUrlOverride;
+  final String? coverVersionOverride;
+  final String? fallbackImageUrlOverride;
+  final String? fallbackCoverVersionOverride;
   final String? titleOverride;
   final int? badgeCountOverride;
   final String? subtitle;
@@ -144,7 +149,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
   bool get _overlayTitle => widget.showTitle && !widget.titleBelow;
 
   String? get _coverUrl =>
-      widget.coverUrlOverride ?? widget.manga?.thumbnailUrl;
+      widget.coverUrlOverride ?? widget.manga?.displayCoverUrl;
 
   String get _title => widget.titleOverride ?? widget.manga?.title ?? '';
 
@@ -179,41 +184,10 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
           _focusNode.requestFocus();
           if (widget.onPressed != null) {
             WebRouteLink.handleTap(openInNewTab, widget.onPressed!);
-          } else {
-            Navigator.push(
-              context,
-              PageRouteBuilder(
-                fullscreenDialog: true,
-                opaque: false,
-                pageBuilder: (context, _, _) =>
-                    MangaThumbnailViewer(imageUrl: _coverUrl ?? ""),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                      if (context.reduceMotion) {
-                        return ReducedRouteTransition(
-                          animation: animation,
-                          child: child,
-                        );
-                      }
-
-                      const begin = Offset(-1.0, 0.0);
-                      const end = Offset.zero;
-                      const curve = Curves.ease;
-
-                      final tween = Tween(begin: begin, end: end);
-                      final curvedAnimation = CurvedAnimation(
-                        parent: animation,
-                        curve: curve,
-                      );
-
-                      return SlideTransition(
-                        position: tween.animate(curvedAnimation),
-                        child: child,
-                      );
-                    },
-              ),
-            );
+          } else if (widget.manga != null) {
+            openCoverViewer(context, widget.manga!);
           }
+          // Manga-less cards always set onPressed, so there is no default tap.
         },
         onLongPress: widget.onLongPress,
         child: freeform
@@ -385,7 +359,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
   );
 
   Widget _cover(BuildContext context, {required bool freeform}) {
-    if (_coverUrl.isBlank) {
+    final coverUrl = _coverUrl;
+    if (coverUrl.isBlank) {
       final fallback = ImageIcon(
         AssetImage(Assets.icons.darkIcon.path),
         size: context.height * .2,
@@ -419,7 +394,14 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       // Decode at tile size to keep full-resolution covers from exhausting the image-cache budget.
       child: LayoutBuilder(
         builder: (context, constraints) => ServerImage(
-          imageUrl: _coverUrl ?? "",
+          imageUrl: coverUrl ?? "",
+          fallbackImageUrl:
+              widget.fallbackImageUrlOverride ?? widget.manga?.thumbnailUrl,
+          coverVersion:
+              widget.coverVersionOverride ?? widget.manga?.coverVersion,
+          fallbackCoverVersion:
+              widget.fallbackCoverVersionOverride ??
+              widget.manga?.thumbnailUrlLastFetched,
           memCacheWidth: constraints.hasBoundedWidth
               ? (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
                     .round()

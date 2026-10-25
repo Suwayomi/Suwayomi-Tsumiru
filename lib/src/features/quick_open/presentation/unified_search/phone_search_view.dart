@@ -565,7 +565,10 @@ class _PhoneSearchResults extends ConsumerWidget {
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: ServerImage(
-                  imageUrl: item.manga.thumbnailUrl ?? '',
+                  imageUrl: item.manga.displayCoverUrl,
+                  fallbackImageUrl: item.manga.thumbnailUrl,
+                  coverVersion: item.manga.coverVersion,
+                  fallbackCoverVersion: item.manga.thumbnailUrlLastFetched,
                   size: const Size(40, 56),
                 ),
               ),
@@ -643,7 +646,10 @@ class _PhoneSearchResults extends ConsumerWidget {
                 final m = libraryHits[index];
                 return _PhoneLibraryCoverCard(
                   title: m.title,
-                  thumbnailUrl: m.thumbnailUrl,
+                  thumbnailUrl: m.displayCoverUrl,
+                  fallbackThumbnailUrl: m.thumbnailUrl,
+                  coverVersion: m.coverVersion,
+                  fallbackCoverVersion: m.thumbnailUrlLastFetched,
                   onTap: () =>
                       onLeave(() => MangaRoute(mangaId: m.id).push(context)),
                 );
@@ -656,7 +662,10 @@ class _PhoneSearchResults extends ConsumerWidget {
                 leading: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: ServerImage(
-                    imageUrl: m.thumbnailUrl ?? '',
+                    imageUrl: m.displayCoverUrl,
+                    fallbackImageUrl: m.thumbnailUrl,
+                    coverVersion: m.coverVersion,
+                    fallbackCoverVersion: m.thumbnailUrlLastFetched,
                     size: const Size(40, 56),
                   ),
                 ),
@@ -720,11 +729,17 @@ class _PhoneLibraryCoverCard extends StatelessWidget {
   const _PhoneLibraryCoverCard({
     required this.title,
     required this.thumbnailUrl,
+    required this.fallbackThumbnailUrl,
     required this.onTap,
+    this.coverVersion,
+    this.fallbackCoverVersion,
   });
 
   final String title;
   final String? thumbnailUrl;
+  final String? fallbackThumbnailUrl;
+  final String? coverVersion;
+  final String? fallbackCoverVersion;
   final VoidCallback onTap;
 
   @override
@@ -741,6 +756,9 @@ class _PhoneLibraryCoverCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: ServerImage(
               imageUrl: thumbnailUrl ?? '',
+              fallbackImageUrl: fallbackThumbnailUrl,
+              coverVersion: coverVersion,
+              fallbackCoverVersion: fallbackCoverVersion,
               size: const Size(110, 165),
             ),
           ),

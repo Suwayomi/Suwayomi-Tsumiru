@@ -7,9 +7,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../manga_book/domain/manga/manga_model.dart';
 import '../data/graphql/__generated__/query.graphql.dart';
 
 typedef HistoryItemDto = Fragment$HistoryChapterDto;
+
+extension HistoryMangaCover on Fragment$HistoryChapterDto$manga {
+  String get displayCoverUrl => resolveDisplayCover(
+    thumbnailUrl: thumbnailUrl,
+    meta: meta.map((m) => (key: m.key, value: m.value)),
+  );
+
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
+}
 
 extension HistoryItemExtension on HistoryItemDto {
   DateTime? get readAt => user.lastReadAt.parseTimestamp;

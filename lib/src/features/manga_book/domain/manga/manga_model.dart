@@ -35,6 +35,15 @@ extension MangaExtensions on MangaDto {
   String? get webUiNotes =>
       readWebUiValue({for (final m in meta) m.key: m.value}, 'notes');
 
+  String get displayCoverUrl => resolveDisplayCover(
+    thumbnailUrl: thumbnailUrl,
+    meta: meta.map((m) => (key: m.key, value: m.value)),
+  );
+
+  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
+
   /// Suwayomi Local source ID "0" already holds server files, so server downloads do not apply.
   bool get isLocalSource => sourceId == '0';
 
@@ -141,7 +150,33 @@ extension MangaMetaPreferences on MangaMeta {
   }
 }
 
+extension MangaBaseExtensions on MangaBaseDto {
+  String get displayCoverUrl => resolveDisplayCover(
+    thumbnailUrl: thumbnailUrl,
+    meta: meta.map((m) => (key: m.key, value: m.value)),
+  );
+
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
+}
+
+/// Cover to draw: the custom link when set, else the server cover.
+String resolveDisplayCover({
+  required String? thumbnailUrl,
+  required Iterable<({String key, String value})> meta,
+}) {
+  for (final entry in meta) {
+    if (entry.key == MangaMetaKeys.customCover.key) {
+      final custom = entry.value.trim();
+      if (custom.isNotEmpty) return custom;
+      break;
+    }
+  }
+  return thumbnailUrl ?? '';
+}
+
 enum MangaMetaKeys {
+  customCover("tsumiru_customCover"),
   invertTap("flutter_readerNavigationLayoutInvert"),
   readerNavigationLayout("flutter_readerNavigationLayout"),
   readerMode("flutter_readerMode"),

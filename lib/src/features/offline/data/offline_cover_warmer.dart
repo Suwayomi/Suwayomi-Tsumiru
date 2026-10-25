@@ -45,45 +45,67 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
 
     final authType = ref.read(authTypeKeyProvider);
     final credentials = ref.read(authCredentialsStoreProvider).value;
-    final pending = <({String url, String cacheKey})>[];
+    final pending = <({String url, String cacheKey, bool external})>[];
     for (final manga in mangas) {
-      final thumb = manga.thumbnailUrl;
+      final thumb = manga.displayCoverUrl;
       if (thumb.isBlank) continue;
       final url = serverFileUrl(
-        path: thumb!,
+        path: thumb,
         baseUrl: baseUrl,
         port: port,
         addPort: addPort,
         appendApiToUrl: false,
       );
       if (url.isEmpty) continue;
-      final cacheKey = accountImageCacheKey(
+      // External covers cache under their own URL, like their widgets do.
+      final external = isExternalImageUrl(
+        imageUrl: thumb,
+        baseUrl: baseUrl,
+        port: port,
+        addPort: addPort,
+      );
+      final serverCacheKey = accountImageCacheKey(
         url,
         authType: authType,
         store: auth,
         credentials: credentials,
+        coverVersion: manga.coverVersion,
       );
+      final cacheKey = external ? url : serverCacheKey;
       if (_inFlight.contains(cacheKey)) continue;
-      pending.add((url: url, cacheKey: cacheKey));
+      pending.add((url: url, cacheKey: cacheKey, external: external));
     }
 
-    Future<void> warmOne(({String url, String cacheKey}) request) async {
+    Future<void> warmOne(
+      ({String url, String cacheKey, bool external}) request,
+    ) async {
       final cacheKey = request.cacheKey;
       if (!current() || !_inFlight.add(cacheKey)) return;
       try {
         final cached = await manager.getFileFromCache(cacheKey);
         if (!current() || cached != null) return;
-        final authType = ref.read(authTypeKeyProvider);
-        final basicToken = ref.read(credentialsProvider).value;
-        final creds = ref.read(authCredentialsStoreProvider).value;
+        // External covers carry no server credentials; the null auth type
+        // below keeps every header branch empty and the token unset.
+        final authType = request.external
+            ? null
+            : ref.read(authTypeKeyProvider);
+        final basicToken = request.external
+            ? null
+            : ref.read(credentialsProvider).value;
+        final creds = request.external
+            ? null
+            : ref.read(authCredentialsStoreProvider).value;
         Map<String, String>? headers;
         if (authType == AuthType.basic && basicToken != null) {
           headers = {"Authorization": basicToken};
         } else if (authType == AuthType.simpleLogin) {
           headers = creds?.simpleLoginCookieHeader;
         }
-        final customHeaders =
+        final serverCustomHeaders =
             ref.read(customHttpHeadersProvider).value ?? const {};
+        final customHeaders = request.external
+            ? const <String, String>{}
+            : serverCustomHeaders;
         if (customHeaders.isNotEmpty) {
           headers = applyCustomHeaders(
             Map<String, String>.from(headers ?? const {}),

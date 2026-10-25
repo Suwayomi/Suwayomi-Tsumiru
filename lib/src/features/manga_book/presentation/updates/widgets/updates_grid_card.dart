@@ -17,6 +17,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../domain/chapter/chapter_model.dart';
+import '../../../domain/manga/manga_model.dart';
 import '../../../domain/updates/updates_grouping.dart';
 import '../../manga_details/widgets/chapter_context_menu.dart';
 import 'updates_row_actions.dart';
@@ -99,7 +100,10 @@ class UpdatesGridCard extends HookConsumerWidget {
         child: Stack(
           children: [
             MangaCoverGridTile(
-              coverUrlOverride: manga.thumbnailUrl,
+              coverUrlOverride: manga.displayCoverUrl,
+              coverVersionOverride: manga.coverVersion,
+              fallbackImageUrlOverride: manga.thumbnailUrl,
+              fallbackCoverVersionOverride: manga.thumbnailUrlLastFetched,
               titleOverride: manga.title,
               badgeCountOverride: unread > 0 ? unread : null,
               subtitle: head.name,

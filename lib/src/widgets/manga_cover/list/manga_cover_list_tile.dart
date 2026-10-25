@@ -135,7 +135,11 @@ class _MangaCoverListTileState extends State<MangaCoverListTile> {
                   child: ClipRRect(
                     borderRadius: KBorderRadius.r8.radius,
                     child: ServerImage(
-                      imageUrl: widget.manga.thumbnailUrl ?? "",
+                      imageUrl: widget.manga.displayCoverUrl,
+                      fallbackImageUrl: widget.manga.thumbnailUrl,
+                      coverVersion: widget.manga.coverVersion,
+                      fallbackCoverVersion:
+                          widget.manga.thumbnailUrlLastFetched,
                       memCacheWidth: (kCompactCoverWidth *
                               widget.scale *
                               MediaQuery.devicePixelRatioOf(context))

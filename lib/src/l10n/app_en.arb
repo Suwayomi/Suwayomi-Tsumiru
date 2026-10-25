@@ -4183,6 +4183,30 @@
       }
     }
   },
+  "editCover": "Edit cover",
+  "@editCover": {
+    "description": "Title of the custom cover picker"
+  },
+  "coverUpdated": "Cover updated",
+  "@coverUpdated": {
+    "description": "Confirmation after saving a custom cover"
+  },
+  "coverUpdateFailed": "Failed to update cover",
+  "@coverUpdateFailed": {
+    "description": "Error after saving a custom cover fails"
+  },
+  "customCoversTsumiruOnly": "Custom covers only show in Tsumiru clients.",
+  "@customCoversTsumiruOnly": {
+    "description": "Note under the cover picker search field"
+  },
+  "thumbnailUrl": "Thumbnail url",
+  "@thumbnailUrl": {
+    "description": "Label of the pasted image link field in the cover picker"
+  },
+  "paste": "Paste",
+  "@paste": {
+    "description": "Tooltip for the paste button in the cover picker"
+  },
   "lockToPortrait": "Lock to portrait",
   "@lockToPortrait": {
     "description": "General setting: lock the app to portrait orientation"
@@ -4319,5 +4343,9 @@
   "confirmRemoveOwnAdminMessage": "You will lose access to the settings controlled by the role or permission you remove.",
   "confirmTrackerLogoutMessage": "This signs everyone on the server out of this tracker.",
   "confirmWebInterfaceChangeTitle": "Change web interface?",
-  "confirmWebInterfaceChangeMessage": "This changes the web interface the server serves for everyone."
+  "confirmWebInterfaceChangeMessage": "This changes the web interface the server serves for everyone.",
+  "removeCustomCovers": "Remove custom covers",
+  "removeCustomCoversTitle": "Remove custom covers?",
+  "removeCustomCoversBody": "Every series goes back to its server cover on all your Tsumiru clients.",
+  "customCoversRemoved": "Custom covers removed"
 }

@@ -90,6 +90,13 @@ List<SettingsSearchEntry> get advancedSettingsSearchEntries => [
     open: (c) => const AdvancedRoute(highlight: 'clearCache').push(c),
     visible: (_, _) => true,
   ),
+  SettingsSearchEntry(
+    id: 'removeCustomCovers',
+    title: (l) => l.removeCustomCovers,
+    breadcrumb: (l) => l.advanced,
+    open: (c) => const AdvancedRoute(highlight: 'removeCustomCovers').push(c),
+    visible: (_, _) => true,
+  ),
 ];
 
 List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [

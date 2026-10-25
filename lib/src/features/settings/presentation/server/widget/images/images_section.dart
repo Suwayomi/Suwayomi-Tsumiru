@@ -109,6 +109,10 @@ class ImagesSection extends HookConsumerWidget {
                               await ref
                                   .read(coverCacheManagerProvider)
                                   .emptyCache();
+                              // Decoded covers stay in memory until restart otherwise.
+                              PaintingBinding.instance.imageCache.clear();
+                              PaintingBinding.instance.imageCache
+                                  .clearLiveImages();
                               if (context.mounted) {
                                 ref
                                     .read(toastProvider)

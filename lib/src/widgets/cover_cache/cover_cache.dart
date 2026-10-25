@@ -28,8 +28,13 @@ String accountImageCacheKey(
   required AuthType? authType,
   required AuthCredentialsStore store,
   required AuthCredentialsState? credentials,
+  String? coverVersion,
 }) {
-  if (authType != AuthType.uiLogin) return url;
+  // A changed server cover gets a new key and downloads; an unchanged one keeps its key.
+  final versionSuffix = (coverVersion == null || coverVersion.isEmpty)
+      ? ''
+      : '#cover-$coverVersion';
+  if (authType != AuthType.uiLogin) return '$url$versionSuffix';
   final uri = Uri.tryParse(url);
   if (uri != null && uri.queryParameters.containsKey('token')) {
     final query = Map<String, dynamic>.from(uri.queryParametersAll)
@@ -39,10 +44,10 @@ String accountImageCacheKey(
   }
   final binding = credentials?.accountBinding;
   if (!store.sessionChanging && binding != null) {
-    return 'tsumiru-image:account:${Uri.encodeComponent(binding.catalogId)}/$url';
+    return 'tsumiru-image:account:${Uri.encodeComponent(binding.catalogId)}/$url$versionSuffix';
   }
   final session = _imageCacheSessions[store] ??= const Uuid().v4();
-  return 'tsumiru-image:session:$session:${store.sessionEpoch}/$url';
+  return 'tsumiru-image:session:$session:${store.sessionEpoch}/$url$versionSuffix';
 }
 
 /// Native covers are durable; web memory caches rotate with endpoint credentials.

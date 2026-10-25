@@ -137,7 +137,14 @@ Future<UpcomingData> upcoming(Ref ref) async {
   return buildUpcomingData(entries, today: now);
 }
 
-typedef CalendarSeries = ({int id, String title, String? thumbnailUrl});
+typedef CalendarSeries = ({
+  int id,
+  String title,
+  String? thumbnailUrl,
+  String displayCoverUrl,
+  String? coverVersion,
+  String? thumbnailUrlLastFetched,
+});
 
 @riverpod
 Future<Map<DateTime, List<CalendarSeries>>> upcomingPastReleases(
@@ -159,6 +166,9 @@ Future<Map<DateTime, List<CalendarSeries>>> upcomingPastReleases(
       id: manga.id,
       title: manga.title,
       thumbnailUrl: manga.thumbnailUrl,
+      displayCoverUrl: manga.displayCoverUrl,
+      coverVersion: manga.coverVersion,
+      thumbnailUrlLastFetched: manga.thumbnailUrlLastFetched,
     );
   }
   return {for (final day in byDay.entries) day.key: day.value.values.toList()};

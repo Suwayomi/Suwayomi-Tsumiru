@@ -22,11 +22,13 @@ import '../../../../../features/settings/presentation/library/widgets/refresh_ch
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
+import '../../../../history/presentation/history_controller.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../../upcoming/controller/upcoming_controller.dart';
 import 'chapter_list_entry.dart';
 import 'scanlator_dedup.dart';
 import 'scanlator_propagation.dart';
@@ -457,6 +459,76 @@ class MangaUserTags extends _$MangaUserTags {
 
   Future<void> remove(String tag) =>
       _persist(state.where((t) => t != tag).toList());
+}
+
+/// Mounted lists refetch their rows when this changes; the updates list keeps
+/// a local paging controller no provider invalidation can reach.
+@riverpod
+class CustomCoverRevision extends _$CustomCoverRevision {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+@riverpod
+class MangaCustomCover extends _$MangaCustomCover {
+  @override
+  String? build({required int mangaId}) {
+    final meta = ref.watch(mangaWithIdProvider(mangaId: mangaId)).value?.meta;
+    return meta
+        ?.where((m) => m.key == MangaMetaKeys.customCover.key)
+        .firstOrNull
+        ?.value;
+  }
+
+  Future<bool> setCover(String coverUrl) async {
+    final result = await AsyncValue.guard(
+      () => ref
+          .read(mangaBookRepositoryProvider)
+          .setCustomCover(mangaId: mangaId, coverUrl: coverUrl),
+    );
+    if (!ref.mounted || result.hasError) return false;
+    state = coverUrl;
+    await _syncOfflineMirror(coverUrl);
+    _refreshCovers();
+    return true;
+  }
+
+  Future<bool> clear() async {
+    final result = await AsyncValue.guard(
+      () => ref
+          .read(mangaBookRepositoryProvider)
+          .clearCustomCover(mangaId: mangaId),
+    );
+    if (!ref.mounted || result.hasError) return false;
+    state = null;
+    await _syncOfflineMirror(null);
+    _refreshCovers();
+    return true;
+  }
+
+  Future<void> _syncOfflineMirror(String? coverUrl) async {
+    final db = ref.read(offlineReadDatabaseProvider);
+    if (db == null) return;
+    await AsyncValue.guard(
+      () => db.updateMangaMetaValue(
+        mangaId: mangaId,
+        key: MangaMetaKeys.customCover.key,
+        value: coverUrl,
+      ),
+    );
+  }
+
+  void _refreshCovers() {
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    ref.invalidate(libraryMangaListProvider);
+    ref.invalidate(upcomingLibraryMangasProvider);
+    ref.invalidate(upcomingPastReleasesProvider);
+    ref.invalidate(readingHistoryProvider);
+    ref.invalidate(mangaReadingHistoryProvider);
+    ref.read(customCoverRevisionProvider.notifier).bump();
+  }
 }
 
 @riverpod

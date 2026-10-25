@@ -18,6 +18,7 @@ import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../browse_center/presentation/source/controller/source_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
+import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../controller/bulk_migration_providers.dart';
 import '../../domain/migration_models.dart';
 
@@ -213,8 +214,8 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final library = ref.watch(libraryMangaListProvider);
-    final mangas = [
-      for (final m in library.value ?? const [])
+    final mangas = <MangaDto>[
+      for (final m in library.value ?? const <MangaDto>[])
         if (m.sourceId == data.sourceId) m,
     ];
     final selection = useState<Set<int>>({});
@@ -278,7 +279,10 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                   leading: ClipRRect(
                     borderRadius: KBorderRadius.r8.radius,
                     child: ServerImage(
-                      imageUrl: m.thumbnailUrl ?? '',
+                      imageUrl: m.displayCoverUrl,
+                      fallbackImageUrl: m.thumbnailUrl,
+                      coverVersion: m.coverVersion,
+                      fallbackCoverVersion: m.thumbnailUrlLastFetched,
                       size: const Size.square(40),
                     ),
                   ),

@@ -31,6 +31,7 @@ import '../../../../offline/presentation/series_offline_button.dart';
 import '../../../../settings/presentation/appearance/widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import '../../../../tracking/presentation/hub/track_sheet.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../../manga_thumbnail_viewer/cover_viewer.dart';
 import '../controller/manga_details_controller.dart';
 import '../controller/next_update_controller.dart';
 import '../manga_notes_screen.dart';
@@ -296,7 +297,7 @@ class MangaDescription extends HookConsumerWidget {
         else
           Stack(
             children: [
-              if (showBackdrop && manga.thumbnailUrl.isNotBlank)
+              if (showBackdrop && manga.displayCoverUrl.isNotBlank)
                 Positioned.fill(
                   child: ClipRect(
                     child: ImageFiltered(
@@ -330,7 +331,11 @@ class MangaDescription extends HookConsumerWidget {
                                 BlendMode.dst,
                               ),
                         child: ServerImage(
-                          imageUrl: manga.thumbnailUrl ?? "",
+                          imageUrl: manga.displayCoverUrl,
+                          fallbackImageUrl: manga.thumbnailUrl,
+                          coverVersion: manga.coverVersion,
+                          fallbackCoverVersion:
+                              manga.thumbnailUrlLastFetched,
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -383,6 +388,7 @@ class MangaDescription extends HookConsumerWidget {
                 child: MangaCoverDescriptiveListTile(
                   manga: manga,
                   showBadges: false,
+                  onCoverPressed: () => openCoverViewer(context, manga),
                   onTitleClicked: (query) =>
                       openGlobalSearch(context, query: query),
                   belowStatus: soonWidget,

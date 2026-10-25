@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../../utils/crash/diagnostics.dart';
@@ -21,6 +23,8 @@ class OfflineMangas extends Table {
   IntColumn get id => integer()();
   TextColumn get title => text()();
   TextColumn get thumbnailUrl => text().nullable()();
+  // Server cover version for the cache key; null draws the unversioned key.
+  TextColumn get thumbnailUrlLastFetched => text().nullable()();
   TextColumn get thumbnailRelPath => text().nullable()();
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get keepRule => textEnum<OfflineKeepRule>().withDefault(
@@ -164,7 +168,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -385,6 +389,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.fetchedAt,
         );
       }
+      if (from < 19 && await _hasTable(offlineMangas)) {
+        await _addColumnIfMissing(
+          m,
+          offlineMangas,
+          offlineMangas.thumbnailUrlLastFetched,
+        );
+      }
     },
     beforeOpen: (details) async {
       if (!details.wasCreated) await _addMissingColumns();
@@ -479,6 +490,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     required int id,
     required String title,
     String? thumbnailUrl,
+    String? thumbnailUrlLastFetched,
     required DateTime updatedAt,
     String? sourceId,
     String? sourceName,
@@ -504,6 +516,9 @@ class OfflineDatabase extends _$OfflineDatabase {
       thumbnailUrl: thumbnailUrl == null
           ? const Value.absent()
           : Value(thumbnailUrl),
+      thumbnailUrlLastFetched: thumbnailUrlLastFetched == null
+          ? const Value.absent()
+          : Value(thumbnailUrlLastFetched),
       sourceId: Value(sourceId),
       sourceName: Value(sourceName),
       sourceLang: Value(sourceLang),
@@ -723,6 +738,40 @@ class OfflineDatabase extends _$OfflineDatabase {
       (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
         OfflineMangasCompanion(thumbnailRelPath: Value(relPath)),
       );
+
+  // Read-modify-write runs in one transaction so a concurrent sync mirror cannot slip between.
+  Future<void> updateMangaMetaValue({
+    required int mangaId,
+    required String key,
+    String? value,
+  }) => transaction(
+    () => _updateMangaMetaValue(mangaId: mangaId, key: key, value: value),
+  );
+
+  Future<void> _updateMangaMetaValue({
+    required int mangaId,
+    required String key,
+    String? value,
+  }) async {
+    final row = await mangaById(mangaId);
+    if (row == null) return;
+    // Mirror the sync writer's encoding so offline-first reads see the edit.
+    final meta = <String, String>{};
+    final raw = row.metaJson;
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        meta.addAll(Map<String, String>.from(jsonDecode(raw) as Map));
+      } catch (_) {}
+    }
+    if (value == null) {
+      meta.remove(key);
+    } else {
+      meta[key] = value;
+    }
+    await (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
+      OfflineMangasCompanion(metaJson: Value(jsonEncode(meta))),
+    );
+  }
 
   Future<void> setKeepRule(int mangaId, OfflineKeepRule rule, int count) =>
       (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
