@@ -652,20 +652,31 @@ class _CoverPreviewDialog extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saving = useState(false);
     final loadFailed = useState(false);
+    final loaded = useState(false);
     useEffect(() {
       loadFailed.value = false;
+      loaded.value = false;
       var cancelled = false;
       final provider = serverPageImageProvider(
         ref,
         imageUrl,
         coverVersion: coverVersion,
       );
-      precacheImage(provider, context).then(
-        (_) {},
-        onError: (_) {
-          if (!cancelled) loadFailed.value = true;
-        },
-      );
+      // precacheImage completes normally on failure; only this callback
+      // reports it.
+      void markFailed(Object error, StackTrace? stackTrace) {
+        if (cancelled) return;
+        loadFailed.value = true;
+      }
+
+      // precacheImage resolves inherited widgets, which is forbidden during
+      // initHook, so probe after the first frame instead.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (cancelled || !context.mounted) return;
+        precacheImage(provider, context, onError: markFailed).then((_) {
+          if (!cancelled && !loadFailed.value) loaded.value = true;
+        });
+      });
       return () {
         cancelled = true;
       };
@@ -703,7 +714,7 @@ class _CoverPreviewDialog extends HookConsumerWidget {
           child: Text(l10n.cancel),
         ),
         FilledButton(
-          onPressed: loadFailed.value || saving.value
+          onPressed: loadFailed.value || saving.value || !loaded.value
               ? null
               : () async {
                   saving.value = true;
