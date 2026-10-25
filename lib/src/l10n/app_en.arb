@@ -1543,10 +1543,18 @@
   "continueReadingButton": "Continue reading button",
   "languageBadge": "Language",
   "sourceBadge": "Source icon",
+  "sourceRemoved": "Source removed",
+  "@sourceRemoved": {
+    "description": "Downloads queue state when the series' source is no longer installed on the server"
+  },
   "browse": "Browse",
   "buildTime": "Build time",
   "cacheCleared": "Cleared the cache",
   "cancel": "Cancel",
+  "cancelAllForThisSeries": "Cancel all for this series",
+  "@cancelAllForThisSeries": {
+    "description": "Downloads queue menu item: dequeue every queued chapter of the same series"
+  },
   "categories": "Categories",
   "categoryUpdate": "Category update",
   "channel": "Channel",
@@ -2250,6 +2258,10 @@
   "noDownloads": "No downloads",
   "noMangaFound": "No manga found",
   "noOfChapters": "{count} chapters",
+  "notInYourLibrary": "Not in your library",
+  "@notInYourLibrary": {
+    "description": "Downloads queue group for queued chapters of series outside the current account's library"
+  },
   "notes": "Notes",
   "numberedList": "Numbered list",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
@@ -2379,6 +2391,10 @@
   "opdsCbzLegacy": "Legacy",
   "opdsCbzModern": "Modern",
   "opdsCbzCompatible": "Compatible",
+  "onlyMyDownloads": "Only my downloads",
+  "@onlyMyDownloads": {
+    "description": "Downloads queue toggle: show only queued chapters of series in the current account's library"
+  },
   "openInWeb": "Open in browser",
   "openSourceInBrowser": "Open source page",
   "openInBrowser": "Open in browser",
@@ -2860,6 +2876,10 @@
   "sourceTypePopular": "Popular",
   "sources": "Sources",
   "start": "Start",
+  "stillRequestedByAnotherAccount": "Still requested by another account",
+  "@stillRequestedByAnotherAccount": {
+    "description": "Toast after cancelling a download that remains queued because another account requested it"
+  },
   "systemTrayIcon": "Show icon in system tray",
   "systemTrayIconDescription": "This icon will be shown on the system that is running the server",
   "thatHaventBeenStarted": "That haven't been started",

@@ -14,8 +14,12 @@ fragment DownloadDto on DownloadType {
         title
         user {
             downloadCount
+            inLibrary
         }
         thumbnailUrl
+        source {
+            id
+        }
     }
     progress
     state

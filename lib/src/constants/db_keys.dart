@@ -117,6 +117,7 @@ enum DBKeys {
   // Low concurrency avoids saturating self-hosted servers.
   offlineDownloadConcurrency(2),
   downloadOnlyOverWifi(true),
+  onlyMyDownloads(true),
   // Persist explicit device-download pauses across restarts.
   offlineDownloadsPaused(false),
   offlineDownloadsStalled(null),

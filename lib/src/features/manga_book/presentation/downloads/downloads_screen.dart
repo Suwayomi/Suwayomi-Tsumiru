@@ -15,7 +15,6 @@ import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
-import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../offline/data/offline_download_providers.dart';
@@ -29,8 +28,8 @@ import '../../data/downloads/downloads_repository.dart';
 import '../../domain/downloads/downloads_model.dart';
 import '../../domain/downloads_queue/downloads_queue_model.dart';
 import 'controller/downloads_controller.dart';
-import 'widgets/download_progress_list_tile.dart';
 import 'widgets/downloads_fab.dart';
+import 'widgets/server_downloads_body.dart';
 
 class DownloadsScreen extends HookConsumerWidget {
   const DownloadsScreen({super.key});
@@ -231,69 +230,13 @@ class _ServerDownloads extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canDownload = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
-    final toast = ref.watch(toastProvider);
     // The status query remains authoritative when the live socket is not
     // available on an otherwise-working LAN route.
     ref.watch(downloadUpdatesProvider);
-    return queueStatus.showUiWhenData(
-      context,
-      (data) {
-        if (data == null) {
-          return Emoticons(title: context.l10n.errorSomethingWentWrong);
-        } else if (downloadsChapterIds.isBlank) {
-          return Emoticons(title: context.l10n.noDownloads);
-        } else {
-          final downloadsCount = (downloadsChapterIds.length)
-              .getValueOnNullOrNegative();
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(downloadStatusProvider.future),
-            child: ReorderableListView.builder(
-              buildDefaultDragHandles: false,
-              padding: const EdgeInsets.only(bottom: 88),
-              header: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (!canDownload)
-                    ListTile(
-                      subtitle: Text(context.l10n.accountPermissionDenied),
-                    ),
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(FluentIcons.arrow_download_24_regular),
-                    title: Text(context.l10n.downloadsQueue),
-                    trailing: Text("$downloadsCount"),
-                  ),
-                  const Divider(height: 1),
-                ],
-              ),
-              onReorderItem: !canDownload
-                  ? (_, _) {}
-                  : (oldIndex, newIndex) => ref
-                        .read(downloadsMapProvider.notifier)
-                        .reorder(downloadsChapterIds[oldIndex], newIndex),
-              itemBuilder: (context, index) {
-                final chapterId = downloadsChapterIds[index];
-                return DownloadProgressListTile(
-                  key: ValueKey("$chapterId"),
-                  index: index,
-                  downloadsCount: downloadsCount,
-                  chapterId: chapterId,
-                  toast: toast,
-                );
-              },
-              itemCount: downloadsCount,
-            ),
-          );
-        }
-      },
-      refresh: () {
-        ref.invalidate(downloadStatusProvider);
-        ref.invalidate(downloadUpdatesProvider);
-      },
-      showGenericError: true,
+    return ServerDownloadsBody(
+      downloadsChapterIds: downloadsChapterIds,
+      queueStatus: queueStatus,
+      toast: ref.watch(toastProvider),
     );
   }
 }

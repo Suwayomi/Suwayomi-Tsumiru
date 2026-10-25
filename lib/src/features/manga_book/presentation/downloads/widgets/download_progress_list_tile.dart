@@ -68,11 +68,30 @@ class DownloadProgressListTile extends HookConsumerWidget {
         '${(downloadUpdate.progress * 100).toInt()}%';
   }
 
+  Future<void> cancelQueued(
+    BuildContext context,
+    WidgetRef ref,
+    List<int> chapterIds,
+  ) async {
+    final result = await AsyncValue.guard(
+      () =>
+          ref.read(downloadsMapProvider.notifier).cancelQueuedChapters(chapterIds),
+    );
+    if (!context.mounted) return;
+    final toast = ref.read(toastProvider);
+    result.showToastOnError(toast);
+    if ((result.asData?.value ?? const <int>{}).isNotEmpty) {
+      toast?.show(context.l10n.stillRequestedByAnotherAccount);
+    }
+  }
+
   String _stateText(BuildContext context, DownloadDto downloadUpdate) =>
       switch (downloadUpdate.state) {
         DownloadState.QUEUED => context.l10n.queued,
         DownloadState.DOWNLOADING => _downloadingText(context, downloadUpdate),
-        DownloadState.ERROR ||
+        DownloadState.ERROR => downloadUpdate.manga.source == null
+            ? context.l10n.sourceRemoved
+            : downloadUpdate.toDisplayName(context),
         DownloadState.FINISHED => downloadUpdate.toDisplayName(context),
         DownloadState.$unknown => throw UnimplementedError(),
       };
@@ -163,11 +182,26 @@ class DownloadProgressListTile extends HookConsumerWidget {
                         icon: FluentIcons.dismiss_24_regular,
                         label: context.l10n.cancel,
                       ),
-                      onTap: () => toggleChapterToQueue(
-                        toast,
+                      onTap: () => cancelQueued(
+                        context,
                         ref,
-                        false,
-                        downloadUpdate.chapter.id,
+                        [downloadUpdate.chapter.id],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      child: ChapterMenuRow(
+                        icon: FluentIcons.dismiss_circle_24_regular,
+                        label: context.l10n.cancelAllForThisSeries,
+                      ),
+                      onTap: () => cancelQueued(
+                        context,
+                        ref,
+                        [
+                          for (final download
+                              in ref.read(downloadsMapProvider).values)
+                            if (download.manga.id == downloadUpdate.manga.id)
+                              download.chapter.id,
+                        ],
                       ),
                     ),
                     if (!index.isZero)

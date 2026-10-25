@@ -174,6 +174,18 @@ class DownloadsMap extends _$DownloadsMap {
     _publish({});
     ref.invalidate(downloadStatusProvider);
   }
+
+  /// Dequeues [chapterIds]; survivors are still requested by another account.
+  Future<Set<int>> cancelQueuedChapters(List<int> chapterIds) async {
+    final repo = ref.read(downloadsRepositoryProvider);
+    for (final id in chapterIds) {
+      await repo.removeChapterFromDownloadQueue(id);
+    }
+    final fresh = await repo.getDownloadStatus();
+    if (ref.mounted && fresh != null) _publish(getStateFromUpdates(fresh));
+    final remaining = stateOrNull ?? const <int, DownloadDto>{};
+    return {for (final id in chapterIds) if (remaining.containsKey(id)) id};
+  }
 }
 
 @riverpod
