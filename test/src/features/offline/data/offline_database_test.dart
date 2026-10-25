@@ -17,7 +17,7 @@ void main() {
   tearDown(() => db.close());
 
   test('schema version and defaults round-trip', () async {
-    expect(db.schemaVersion, 18);
+    expect(db.schemaVersion, 19);
 
     await db
         .into(db.offlineMangas)

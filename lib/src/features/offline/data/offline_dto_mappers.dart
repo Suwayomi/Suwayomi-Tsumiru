@@ -137,9 +137,8 @@ extension OfflineMangaCover on OfflineManga {
   );
 
   /// Version for the server cover cache key; null for custom covers, which key by URL or path.
-  String? get coverVersion => displayCoverUrl == thumbnailUrl
-      ? thumbnailUrlLastFetched
-      : null;
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
 }
 
 ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
