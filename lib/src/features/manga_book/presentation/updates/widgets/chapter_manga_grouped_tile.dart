@@ -19,7 +19,9 @@ import '../../../../../widgets/web_route_link.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/download_status_icon.dart';
+import '../../manga_details/widgets/chapter_context_menu.dart';
 import '../controller/updates_grouping_controller.dart';
+import 'updates_row_actions.dart';
 
 /// An empty [tail] behaves like ChapterMangaListTile.
 class ChapterMangaGroupedTile extends HookConsumerWidget {
@@ -29,9 +31,14 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
     required this.tail,
     required this.updatePairFor,
     required this.refreshManga,
+    required this.refreshRowActions,
     required this.isSelectedFor,
-    required this.canTapSelect,
     required this.toggleSelect,
+    required this.selectedChapters,
+    required this.selectionAnchor,
+    required this.orderedChapters,
+    required this.canTapSelect,
+    required this.desktop,
   });
 
   final ChapterWithMangaDto head;
@@ -42,16 +49,21 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
   final Future<void> Function() Function(ChapterWithMangaDto) updatePairFor;
 
   final Future<void> Function() refreshManga;
+  final Future<void> Function(Set<int> mangaIds) refreshRowActions;
 
   /// Selection is per chapter: head and tail rows can be selected independently.
   final bool Function(ChapterWithMangaDto) isSelectedFor;
-  final bool canTapSelect;
   final ValueChanged<ChapterWithMangaDto> toggleSelect;
+  final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
+  final ValueNotifier<int?> selectionAnchor;
+  final List<ChapterDto> orderedChapters;
+  final bool canTapSelect;
+  final bool desktop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupingMode =
-        ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.disabled;
+        ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.collapsed;
 
     final isExpanded = useState(groupingMode == UpdatesGroupingMode.expanded);
     useEffect(() {
@@ -69,9 +81,14 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
                   chapter: chapter,
                   updatePair: updatePairFor(chapter),
                   refreshManga: refreshManga,
+                  refreshRowActions: refreshRowActions,
                   isSelected: isSelectedFor(chapter),
                   canTapSelect: canTapSelect,
                   toggleSelect: toggleSelect,
+                  selectedChapters: selectedChapters,
+                  selectionAnchor: selectionAnchor,
+                  orderedChapters: orderedChapters,
+                  desktop: desktop,
                 ),
             ],
           )
@@ -90,9 +107,14 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
               : null,
           updatePair: updatePairFor(head),
           refreshManga: refreshManga,
+          refreshRowActions: refreshRowActions,
           isSelected: isSelectedFor(head),
           canTapSelect: canTapSelect,
           toggleSelect: toggleSelect,
+          selectedChapters: selectedChapters,
+          selectionAnchor: selectionAnchor,
+          orderedChapters: orderedChapters,
+          desktop: desktop,
         ),
         if (isGroup)
           context.reduceMotion
@@ -108,8 +130,7 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
   }
 }
 
-
-class _HeadTile extends StatelessWidget {
+class _HeadTile extends HookConsumerWidget {
   const _HeadTile({
     required this.chapter,
     required this.isGroup,
@@ -118,9 +139,14 @@ class _HeadTile extends StatelessWidget {
     required this.onToggleExpand,
     required this.updatePair,
     required this.refreshManga,
+    required this.refreshRowActions,
     required this.isSelected,
     required this.canTapSelect,
     required this.toggleSelect,
+    required this.selectedChapters,
+    required this.selectionAnchor,
+    required this.orderedChapters,
+    required this.desktop,
   });
 
   final ChapterWithMangaDto chapter;
@@ -130,20 +156,42 @@ class _HeadTile extends StatelessWidget {
   final VoidCallback? onToggleExpand;
   final Future<void> Function() updatePair;
   final Future<void> Function() refreshManga;
+  final Future<void> Function(Set<int> mangaIds) refreshRowActions;
   final bool isSelected;
   final bool canTapSelect;
   final ValueChanged<ChapterWithMangaDto> toggleSelect;
+  final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
+  final ValueNotifier<int?> selectionAnchor;
+  final List<ChapterDto> orderedChapters;
+  final bool desktop;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hovered = useState(false);
     final color = (chapter.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapter.manga;
 
+    void openMenuAt(Offset position) {
+      showUpdatesChapterMenu(
+        context: context,
+        ref: ref,
+        position: menuAnchorForPoint(context, position),
+        chapter: chapter,
+        seriesUrl: manga.realUrl,
+        selectedChapters: selectedChapters,
+        selectionAnchor: selectionAnchor,
+        orderedChapters: orderedChapters,
+        refreshSeries: refreshRowActions,
+      );
+    }
+
     return Material(
       color: isSelected
-          ? context.theme.colorScheme.secondaryContainer
+          ? desktop
+                ? context.theme.colorScheme.primary.withValues(alpha: 0.16)
+                : context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
       child: WebRouteLink(
         location: ReaderRoute(
@@ -151,134 +199,185 @@ class _HeadTile extends StatelessWidget {
           chapterId: chapter.id,
           showReaderLayoutAnimation: true,
         ).location,
-        builder: (context, openInNewTab) => InkWell(
-          onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
-            if (canTapSelect) {
-              toggleSelect(chapter);
-            } else {
-              await ReaderRoute(
-                mangaId: manga.id,
-                chapterId: chapter.id,
-                showReaderLayoutAnimation: true,
-              ).push(context);
-              if (!context.mounted) return;
-              await refreshManga();
-            }
-          }),
-          onLongPress: () => toggleSelect(chapter),
-          onSecondaryTap: () => toggleSelect(chapter),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                if (manga.displayCoverUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: KBorderRadius.r8.radius,
-                    child: WebRouteLink(
-                      location: MangaRoute(mangaId: manga.id).location,
-                      enabled: false,
-                      builder: (context, openMangaInNewTab) => InkWell(
-                        onTap: () => WebRouteLink.handleAsyncTap(
-                          openMangaInNewTab,
-                          () async {
-                            if (canTapSelect) {
-                              toggleSelect(chapter);
-                              return;
-                            }
-                            await MangaRoute(mangaId: manga.id).push(context);
-                            if (!context.mounted) return;
-                            await refreshManga();
-                          },
-                        ),
-                        child: ServerImage(
-                          imageUrl: manga.displayCoverUrl,
-                          fallbackImageUrl: manga.thumbnailUrl,
-                          coverVersion: manga.coverVersion,
-                          fallbackCoverVersion: manga.thumbnailUrlLastFetched,
-                          size: const Size(56, 80),
-                        ),
+        builder: (context, openInNewTab) => GestureDetector(
+          onSecondaryTapDown: desktop
+              ? (details) => openMenuAt(details.globalPosition)
+              : null,
+          child: MouseRegion(
+            onEnter: (_) => hovered.value = true,
+            onExit: (_) => hovered.value = false,
+            child: InkWell(
+              onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
+                if (canTapSelect) {
+                  toggleSelect(chapter);
+                } else {
+                  await ReaderRoute(
+                    mangaId: manga.id,
+                    chapterId: chapter.id,
+                    showReaderLayoutAnimation: true,
+                  ).push(context);
+                  if (!context.mounted) return;
+                  await refreshManga();
+                }
+              }),
+              onLongPress: () => toggleSelect(chapter),
+              onSecondaryTap: desktop ? null : () => toggleSelect(chapter),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    if (desktop && canTapSelect)
+                      Checkbox(
+                        value: isSelected,
+                        visualDensity: VisualDensity.compact,
+                        onChanged: (_) => toggleSelect(chapter),
                       ),
-                    ),
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          if ((chapter.user.isBookmarked).ifNull()) ...[
-                            const Icon(FluentIcons.bookmark_24_filled, size: 20),
-                            const SizedBox(width: 4),
-                          ],
-                          Expanded(
-                            child: Text(
-                              manga.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: color),
+                    if (manga.displayCoverUrl.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: KBorderRadius.r8.radius,
+                        child: WebRouteLink(
+                          location: MangaRoute(mangaId: manga.id).location,
+                          enabled: false,
+                          builder: (context, openMangaInNewTab) => InkWell(
+                            onTap: () => WebRouteLink.handleAsyncTap(
+                              openMangaInNewTab,
+                              () async {
+                                if (canTapSelect) {
+                                  toggleSelect(chapter);
+                                  return;
+                                }
+                                await MangaRoute(mangaId: manga.id)
+                                    .push(context);
+                                if (!context.mounted) return;
+                                await refreshManga();
+                              },
+                            ),
+                            child: ServerImage(
+                              imageUrl: manga.displayCoverUrl,
+                              fallbackImageUrl: manga.thumbnailUrl,
+                              coverVersion: manga.coverVersion,
+                              fallbackCoverVersion:
+                                  manga.thumbnailUrlLastFetched,
+                              size: const Size(56, 80),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        chapter.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color:
-                              color ??
-                              context.theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (isGroup)
-                        HoverTapTarget(
-                          builder: (context, hovered) => GestureDetector(
-                            onTap: onToggleExpand,
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    context.l10n.updatesGroupingShowMore(
-                                      tailCount,
-                                    ),
-                                    style: context.textTheme.labelSmall
-                                        ?.copyWith(
-                                          color:
-                                              context.theme.colorScheme.primary,
-                                          decoration: hovered
-                                              ? TextDecoration.underline
-                                              : TextDecoration.none,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              if ((chapter.user.isBookmarked).ifNull()) ...[
+                                const Icon(
+                                  FluentIcons.bookmark_24_filled,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  manga.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: color),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            chapter.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color:
+                                  color ??
+                                  context.theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          if (isGroup)
+                            HoverTapTarget(
+                              builder: (context, hovered) => GestureDetector(
+                                onTap: onToggleExpand,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        context.l10n.updatesGroupingShowMore(
+                                          tailCount,
                                         ),
+                                        style: context.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color: context
+                                                  .theme
+                                                  .colorScheme
+                                                  .primary,
+                                              decoration: hovered
+                                                  ? TextDecoration.underline
+                                                  : TextDecoration.none,
+                                            ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        isExpanded
+                                            ? FluentIcons.chevron_up_24_regular
+                                            : FluentIcons
+                                                  .chevron_down_24_regular,
+                                        size: 14,
+                                        color:
+                                            context.theme.colorScheme.primary,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 2),
-                                  Icon(
-                                    isExpanded
-                                        ? FluentIcons.chevron_up_24_regular
-                                        : FluentIcons.chevron_down_24_regular,
-                                    size: 14,
-                                    color: context.theme.colorScheme.primary,
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (desktop)
+                      SizedBox(
+                        width: 84,
+                        child: Text(
+                          int.tryParse(chapter.fetchedAt)
+                              .toShortTimeFromSeconds(context),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                    if (desktop && !canTapSelect)
+                      UpdatesRowActions(
+                        chapter: chapter,
+                        seriesUrl: manga.realUrl,
+                        selectedChapters: selectedChapters,
+                        selectionAnchor: selectionAnchor,
+                        orderedChapters: orderedChapters,
+                        refreshSeries: refreshRowActions,
+                        hovered: hovered.value,
+                      ),
+                    DownloadStatusIcon(
+                      isDownloaded: (chapter.user.isDownloaded).ifNull(),
+                      mangaId: manga.id,
+                      chapter: chapter,
+                      updateData: updatePair,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                DownloadStatusIcon(
-                  isDownloaded: (chapter.user.isDownloaded).ifNull(),
-                  mangaId: manga.id,
-                  chapter: chapter,
-                  updateData: updatePair,
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -287,37 +386,63 @@ class _HeadTile extends StatelessWidget {
   }
 }
 
-
-class _TailTile extends StatelessWidget {
+class _TailTile extends HookConsumerWidget {
   const _TailTile({
     required this.chapter,
     required this.updatePair,
     required this.refreshManga,
+    required this.refreshRowActions,
     required this.isSelected,
     required this.canTapSelect,
     required this.toggleSelect,
+    required this.selectedChapters,
+    required this.selectionAnchor,
+    required this.orderedChapters,
+    required this.desktop,
   });
 
   final ChapterWithMangaDto chapter;
   final Future<void> Function() updatePair;
   final Future<void> Function() refreshManga;
+  final Future<void> Function(Set<int> mangaIds) refreshRowActions;
   final bool isSelected;
   final bool canTapSelect;
   final ValueChanged<ChapterWithMangaDto> toggleSelect;
+  final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
+  final ValueNotifier<int?> selectionAnchor;
+  final List<ChapterDto> orderedChapters;
+  final bool desktop;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hovered = useState(false);
     final color = (chapter.user.isRead).ifNull()
         ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
         : null;
     final manga = chapter.manga;
 
     // Align with head text: 16px padding + 56px cover + 12px gap.
-    const leadingIndent = 84.0;
+    const leadingIndent = 68.0;
+
+    void openMenuAt(Offset position) {
+      showUpdatesChapterMenu(
+        context: context,
+        ref: ref,
+        position: menuAnchorForPoint(context, position),
+        chapter: chapter,
+        seriesUrl: manga.realUrl,
+        selectedChapters: selectedChapters,
+        selectionAnchor: selectionAnchor,
+        orderedChapters: orderedChapters,
+        refreshSeries: refreshRowActions,
+      );
+    }
 
     return Material(
       color: isSelected
-          ? context.theme.colorScheme.secondaryContainer
+          ? desktop
+                ? context.theme.colorScheme.primary.withValues(alpha: 0.16)
+                : context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
       child: WebRouteLink(
         location: ReaderRoute(
@@ -325,55 +450,82 @@ class _TailTile extends StatelessWidget {
           chapterId: chapter.id,
           showReaderLayoutAnimation: true,
         ).location,
-        builder: (context, openInNewTab) => InkWell(
-          onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
-            if (canTapSelect) {
-              toggleSelect(chapter);
-            } else {
-              await ReaderRoute(
-                mangaId: manga.id,
-                chapterId: chapter.id,
-                showReaderLayoutAnimation: true,
-              ).push(context);
-              if (!context.mounted) return;
-              await refreshManga();
-            }
-          }),
-          onLongPress: () => toggleSelect(chapter),
-          onSecondaryTap: () => toggleSelect(chapter),
-          child: Padding(
-            padding: const EdgeInsets.only(
-              left: leadingIndent,
-              right: 16,
-              top: 6,
-              bottom: 6,
-            ),
-            child: Row(
-              children: [
-                if ((chapter.user.isBookmarked).ifNull()) ...[
-                  const Icon(FluentIcons.bookmark_24_filled, size: 20),
-                  const SizedBox(width: 4),
-                ],
-                Expanded(
-                  child: Text(
-                    chapter.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color:
-                          color ?? context.theme.colorScheme.onSurfaceVariant,
+        builder: (context, openInNewTab) => GestureDetector(
+          onSecondaryTapDown: desktop
+              ? (details) => openMenuAt(details.globalPosition)
+              : null,
+          child: MouseRegion(
+            onEnter: (_) => hovered.value = true,
+            onExit: (_) => hovered.value = false,
+            child: InkWell(
+              onTap: () => WebRouteLink.handleAsyncTap(openInNewTab, () async {
+                if (canTapSelect) {
+                  toggleSelect(chapter);
+                } else {
+                  await ReaderRoute(
+                    mangaId: manga.id,
+                    chapterId: chapter.id,
+                    showReaderLayoutAnimation: true,
+                  ).push(context);
+                  if (!context.mounted) return;
+                  await refreshManga();
+                }
+              }),
+              onLongPress: () => toggleSelect(chapter),
+              onSecondaryTap: desktop ? null : () => toggleSelect(chapter),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 6,
+                  bottom: 6,
+                ),
+                child: Row(
+                  children: [
+                    if (desktop && canTapSelect)
+                      Checkbox(
+                        value: isSelected,
+                        visualDensity: VisualDensity.compact,
+                        onChanged: (_) => toggleSelect(chapter),
+                      ),
+                    const SizedBox(width: leadingIndent),
+                    if ((chapter.user.isBookmarked).ifNull()) ...[
+                      const Icon(FluentIcons.bookmark_24_filled, size: 20),
+                      const SizedBox(width: 4),
+                    ],
+                    Expanded(
+                      child: Text(
+                        chapter.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color:
+                              color ??
+                              context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    if (desktop && !canTapSelect)
+                      UpdatesRowActions(
+                        chapter: chapter,
+                        seriesUrl: manga.realUrl,
+                        selectedChapters: selectedChapters,
+                        selectionAnchor: selectionAnchor,
+                        orderedChapters: orderedChapters,
+                        refreshSeries: refreshRowActions,
+                        hovered: hovered.value,
+                      ),
+                    DownloadStatusIcon(
+                      isDownloaded: (chapter.user.isDownloaded).ifNull(),
+                      mangaId: manga.id,
+                      chapter: chapter,
+                      updateData: updatePair,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                DownloadStatusIcon(
-                  isDownloaded: (chapter.user.isDownloaded).ifNull(),
-                  mangaId: manga.id,
-                  chapter: chapter,
-                  updateData: updatePair,
-                ),
-              ],
+              ),
             ),
           ),
         ),

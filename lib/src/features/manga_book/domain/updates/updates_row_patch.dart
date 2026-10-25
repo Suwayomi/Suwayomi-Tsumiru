@@ -39,10 +39,12 @@ Future<List<ChapterDto>> fetchChaptersInBatches({
 }
 
 /// Unfetched rows stay unchanged; lagging refetches must not turn read rows unread.
+/// [freshWins] applies the refetched read state verbatim after an explicit action.
 List<ChapterWithMangaDto> patchRowsForManga({
   required List<ChapterWithMangaDto> rows,
   required int mangaId,
   required List<ChapterDto> chapters,
+  bool freshWins = false,
 }) {
   final fresh = {
     for (final chapter in chapters)
@@ -56,7 +58,9 @@ List<ChapterWithMangaDto> patchRowsForManga({
           ? row
           : row.copyWith(
               user: row.user.copyWith(
-                isRead: chapter.user.isRead || row.user.isRead,
+                isRead: freshWins
+                    ? chapter.user.isRead
+                    : chapter.user.isRead || row.user.isRead,
                 isBookmarked: chapter.user.isBookmarked,
                 isDownloaded: chapter.user.isDownloaded,
                 lastPageRead: chapter.user.lastPageRead,

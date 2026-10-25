@@ -49,6 +49,7 @@ class SelectionActionBar extends StatelessWidget {
                     Flexible(
                       child: Align(
                         alignment: Alignment.centerRight,
+                        heightFactor: 1.0,
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(children: actions),

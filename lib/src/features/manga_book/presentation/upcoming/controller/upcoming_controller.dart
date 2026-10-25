@@ -8,14 +8,38 @@ import 'dart:math' as math;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../constants/db_keys.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../data/upcoming/graphql/__generated__/query.graphql.dart';
+import '../../../data/updates/updates_repository.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../domain/next_update/next_update_predictor.dart';
 
 part 'upcoming_controller.g.dart';
+
+enum UpcomingView { month, week }
+
+@riverpod
+class UpcomingViewNotifier extends _$UpcomingViewNotifier
+    with SharedPreferenceEnumClientMixin<UpcomingView> {
+  @override
+  UpcomingView? build() => initialize(
+    DBKeys.upcomingView,
+    enumList: UpcomingView.values,
+    initial: UpcomingView.week,
+  );
+}
+
+@riverpod
+class UpcomingShowPastReleasesNotifier
+    extends _$UpcomingShowPastReleasesNotifier
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.upcomingShowPastReleases);
+}
 
 class UpcomingGroup {
   const UpcomingGroup({required this.date, required this.mangas});
@@ -111,4 +135,41 @@ Future<UpcomingData> upcoming(Ref ref) async {
         results.whereType<({MangaDto manga, DateTime date})>());
   }
   return buildUpcomingData(entries, today: now);
+}
+
+typedef CalendarSeries = ({
+  int id,
+  String title,
+  String? thumbnailUrl,
+  String displayCoverUrl,
+  String? coverVersion,
+  String? thumbnailUrlLastFetched,
+});
+
+@riverpod
+Future<Map<DateTime, List<CalendarSeries>>> upcomingPastReleases(
+  Ref ref, {
+  required DateTime start,
+  required DateTime end,
+}) async {
+  final chapters = await ref
+      .watch(updatesRepositoryProvider)
+      .getChaptersInRange(start: start, end: end);
+  final byDay = <DateTime, Map<int, CalendarSeries>>{};
+  for (final chapter in chapters) {
+    final seconds = int.tryParse(chapter.fetchedAt);
+    if (seconds == null) continue;
+    final fetched = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+    final day = DateTime(fetched.year, fetched.month, fetched.day);
+    final manga = chapter.manga;
+    (byDay[day] ??= {})[manga.id] = (
+      id: manga.id,
+      title: manga.title,
+      thumbnailUrl: manga.thumbnailUrl,
+      displayCoverUrl: manga.displayCoverUrl,
+      coverVersion: manga.coverVersion,
+      thumbnailUrlLastFetched: manga.thumbnailUrlLastFetched,
+    );
+  }
+  return {for (final day in byDay.entries) day.key: day.value.values.toList()};
 }

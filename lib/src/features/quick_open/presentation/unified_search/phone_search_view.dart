@@ -25,10 +25,10 @@ import '../../../history/presentation/history_controller.dart';
 import '../../../library/domain/library_search_query.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
-import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../../settings/search/settings_search_registry.dart';
+import 'search_tips.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
@@ -319,17 +319,16 @@ class PhoneSearchOverlay extends HookConsumerWidget {
             onSubmitted: (_) => submit(),
           ),
         ),
-        if (origin == PhoneSearchOrigin.library)
-          IconButton(
-            tooltip: l.searchTips,
-            icon: const Icon(FluentIcons.question_circle_24_regular),
-            onPressed: () async {
-              await showSearchTips(context);
-              if (fieldFocused && context.mounted) {
-                focusNode.requestFocus();
-              }
-            },
-          ),
+        IconButton(
+          tooltip: l.searchTips,
+          icon: const Icon(FluentIcons.question_circle_24_regular),
+          onPressed: () async {
+            await showSearchTips(context);
+            if (fieldFocused && context.mounted) {
+              focusNode.requestFocus();
+            }
+          },
+        ),
         if (query.isNotEmpty)
           IconButton(
             tooltip: l.close,
