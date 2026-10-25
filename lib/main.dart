@@ -90,6 +90,9 @@ void main() {
 
 Future<void> _startApp() async {
   _TsumiruWidgetsBinding.ensureInitialized();
+  if (kIsWeb) {
+    await BrowserContextMenu.disableContextMenu();
+  }
   // 256 MiB is a cache cap, not an allocation, and retains covers across tab switches.
   PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
   registerBrandIconsLicense();
