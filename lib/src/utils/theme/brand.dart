@@ -30,6 +30,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
     required this.onGradient,
     required this.success,
     this.neutral = false,
+    this.navSelectedFill,
   });
 
   final Gradient gradient;
@@ -41,17 +42,21 @@ class BrandColors extends ThemeExtension<BrandColors> {
   /// Monochrome light removes hues from genre chips and cover backdrops.
   final bool neutral;
 
+  final Color? navSelectedFill;
+
   @override
   BrandColors copyWith({
     Gradient? gradient,
     Color? onGradient,
     Color? success,
     bool? neutral,
+    Color? navSelectedFill,
   }) => BrandColors(
     gradient: gradient ?? this.gradient,
     onGradient: onGradient ?? this.onGradient,
     success: success ?? this.success,
     neutral: neutral ?? this.neutral,
+    navSelectedFill: navSelectedFill ?? this.navSelectedFill,
   );
 
   @override
@@ -62,6 +67,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
       onGradient: Color.lerp(onGradient, other.onGradient, t)!,
       success: Color.lerp(success, other.success, t)!,
       neutral: t < 0.5 ? neutral : other.neutral,
+      navSelectedFill: Color.lerp(navSelectedFill, other.navSelectedFill, t),
     );
   }
 
@@ -108,19 +114,6 @@ double brandHueFor(String label) {
     h = (h * 31 + c) % 360;
   }
   return h.toDouble();
-}
-
-Widget brandGradientIcon(
-  BuildContext context,
-  IconData icon, {
-  double size = 24,
-}) {
-  return ShaderMask(
-    blendMode: BlendMode.srcIn,
-    shaderCallback: (bounds) =>
-        BrandColors.of(context).gradient.createShader(bounds),
-    child: Icon(icon, size: size, color: Colors.white),
-  );
 }
 
 Widget _brandRow({

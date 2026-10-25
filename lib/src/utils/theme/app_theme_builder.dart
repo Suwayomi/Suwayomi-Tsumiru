@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../constants/app_theme.dart';
 import 'app_color_scheme.dart';
 import 'brand.dart';
+import 'oklch_contrast.dart';
 import 'theme_tokens.dart';
 
 /// The [ColorScheme] a theme uses at [brightness]; Custom is seed-derived.
@@ -12,9 +13,25 @@ ColorScheme schemeFor(
   AppTheme theme,
   Brightness brightness,
   Color customSeed,
-) => theme == AppTheme.custom
-    ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
-    : schemeFromTokens(tokensFor(theme, brightness), brightness);
+) {
+  if (theme != AppTheme.custom) {
+    return schemeFromTokens(tokensFor(theme, brightness), brightness);
+  }
+  final seeded = ColorScheme.fromSeed(
+    seedColor: customSeed,
+    brightness: brightness,
+  );
+  if (brightness == Brightness.light) return seeded;
+  return seeded.copyWith(
+    primary: solveContrast(
+      seeded.primary,
+      seeded.surface,
+      contrastRatio(seeded.onSurfaceVariant, seeded.surface),
+      lighten: true,
+    ),
+    onPrimary: const Color(0xFF0A0A12),
+  );
+}
 
 /// Named themes use brand tokens; Custom is seed-derived. AMOLED affects dark mode only.
 ThemeData buildAppTheme({
@@ -30,12 +47,19 @@ ThemeData buildAppTheme({
     scheme = applyAmoled(scheme);
   }
 
+  final navFill =
+      tokens?.accentFill ??
+      (brightness == Brightness.dark
+          ? solveContrast(scheme.primary, scheme.onSurface, 7, lighten: false)
+          : null);
+
   // Named light themes use their own gradients and on-accent colors.
   final brandColors = BrandColors(
     gradient: tokens?.grad ?? schemeBrandGradient(scheme),
     onGradient: tokens?.onAccent ?? const Color(0xFF0B0D1A),
     success: brandSuccessColor(brightness),
     neutral: theme == AppTheme.mono && brightness == Brightness.light,
+    navSelectedFill: navFill,
   );
 
   final primary = scheme.primary;
@@ -101,34 +125,42 @@ ThemeData buildAppTheme({
     ),
     tabBarTheme: const TabBarThemeData(tabAlignment: TabAlignment.center),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: scheme.surface,
+      backgroundColor: scheme.surfaceContainer,
       elevation: 0,
-      indicatorColor: primary.withValues(alpha: 0.22),
+      indicatorColor: navFill ?? scheme.secondaryContainer,
       iconTheme: WidgetStateProperty.resolveWith(
         (s) => IconThemeData(
           color: s.contains(WidgetState.selected)
-              ? primary
+              ? (navFill != null
+                    ? scheme.onSurface
+                    : scheme.onSecondaryContainer)
               : scheme.onSurfaceVariant,
         ),
       ),
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (s) => TextStyle(
+      labelTextStyle: WidgetStateProperty.resolveWith((s) {
+        final selected = s.contains(WidgetState.selected);
+        return TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: s.contains(WidgetState.selected)
-              ? primary
-              : scheme.onSurfaceVariant,
-        ),
-      ),
+          height: 1.33,
+          letterSpacing: 0.5,
+          overflow: TextOverflow.ellipsis,
+          fontWeight: selected && navFill != null
+              ? FontWeight.w700
+              : FontWeight.w500,
+          color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+        );
+      }),
     ),
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: scheme.surface,
-      indicatorColor: primary.withValues(alpha: 0.22),
-      selectedIconTheme: IconThemeData(color: primary),
+      indicatorColor: navFill ?? primary.withValues(alpha: 0.22),
+      selectedIconTheme: IconThemeData(
+        color: navFill != null ? scheme.onSurface : primary,
+      ),
       unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
       selectedLabelTextStyle: TextStyle(
-        color: primary,
-        fontWeight: FontWeight.w600,
+        color: navFill != null ? scheme.onSurface : primary,
+        fontWeight: navFill != null ? FontWeight.w700 : FontWeight.w600,
       ),
       unselectedLabelTextStyle: TextStyle(color: scheme.onSurfaceVariant),
     ),

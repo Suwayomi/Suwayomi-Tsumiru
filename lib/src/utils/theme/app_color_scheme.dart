@@ -6,18 +6,15 @@ import 'theme_tokens.dart';
 ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
   Color mix(Color a, Color b, double amt) => Color.lerp(a, b, amt)!;
 
-  // Light themes supply accent background/on-accent tokens; dark themes derive them.
   final accentBg = t.accentBg;
 
   return ColorScheme(
     brightness: brightness,
     primary: t.accent,
-    // Light accents need dark content for contrast.
-    onPrimary: accentBg != null
-        ? t.onAccent!
-        : ThemeData.estimateBrightnessForColor(t.accent) == Brightness.light
+    onPrimary: t.onAccent ??
+        (ThemeData.estimateBrightnessForColor(t.accent) == Brightness.light
             ? Colors.black
-            : Colors.white,
+            : Colors.white),
     primaryContainer: accentBg ?? mix(t.accent, t.bg, 0.72),
     onPrimaryContainer: t.accent,
     secondary: t.accent2,

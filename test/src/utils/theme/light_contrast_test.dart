@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/app_theme.dart';
 import 'package:tsumiru/src/utils/theme/app_color_scheme.dart';
+import 'package:tsumiru/src/utils/theme/app_theme_builder.dart';
+import 'package:tsumiru/src/utils/theme/brand.dart';
 import 'package:tsumiru/src/utils/theme/theme_tokens.dart';
 
 /// WCAG 2.x relative luminance for one sRGB channel (0..1).
@@ -70,4 +72,36 @@ void main() {
       }
     });
   }
+
+  test('dark selected states meet WCAG contrast', () {
+    final themes = {
+      for (final theme in AppTheme.values.where((t) => t != AppTheme.custom))
+        theme.name: buildAppTheme(
+          theme: theme,
+          brightness: Brightness.dark,
+          customSeed: const Color(0xFF7C7BFF),
+          amoled: false,
+        ),
+      for (final seed in [0xFF7C7BFF, 0xFFFF0000, 0xFF00FF00])
+        'custom ${seed.toRadixString(16)}': buildAppTheme(
+          theme: AppTheme.custom,
+          brightness: Brightness.dark,
+          customSeed: Color(seed),
+          amoled: false,
+        ),
+    };
+
+    themes.forEach((name, theme) {
+      final s = theme.colorScheme;
+      final fill = theme.extension<BrandColors>()!.navSelectedFill!;
+
+      expect(
+        contrastRatio(s.primary, s.surface),
+        greaterThanOrEqualTo(contrastRatio(s.onSurfaceVariant, s.surface)),
+        reason: '$name: primary/surface below onSurfaceVariant/surface',
+      );
+      _expectRatio(s.onPrimary, s.primary, 4.5, '$name: onPrimary/primary');
+      _expectRatio(s.onSurface, fill, 7.0, '$name: onSurface/accentFill');
+    });
+  });
 }
