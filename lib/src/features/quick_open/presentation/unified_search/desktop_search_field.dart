@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/legacy.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/search_field.dart';
+import 'search_tips.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
@@ -380,6 +381,17 @@ class DesktopSearchField extends HookConsumerWidget {
                     suffixIcon: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Library operators also filter library hits in app-wide search.
+                        IconButton(
+                          iconSize: 20,
+                          padding: const EdgeInsets.all(8),
+                          constraints: iconConstraints,
+                          icon: const Icon(
+                            FluentIcons.question_circle_24_regular,
+                          ),
+                          tooltip: l.searchTips,
+                          onPressed: () => showSearchTips(context),
+                        ),
                         ...suffixActions,
                         if (controller.text.isNotEmpty)
                           IconButton(
