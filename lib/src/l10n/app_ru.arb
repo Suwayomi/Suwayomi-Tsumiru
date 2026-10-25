@@ -36,7 +36,7 @@
     "@authTypeBasic": {
         "description": "Radio button text for the Basic Authentication type"
     },
-    "backup": "Бэкап и восстановление",
+    "backup": "Резервное копирование и восстановление",
     "@backup": {
         "description": "Screen title and Button text of Backup & Restore screen"
     },
@@ -68,7 +68,7 @@
     "@categories": {
         "description": "Button text of edit Categories screen in Library settings screen"
     },
-    "categoryUpdate": "Обновление категорий",
+    "categoryUpdate": "Обновление категории",
     "@categoryUpdate": {
         "description": "Button text to update the mangas in the Category"
     },
@@ -98,7 +98,7 @@
     "@chapterSortUploadDate": {
         "description": "Radio button text for sort by Upload Date"
     },
-    "checkForServerUpdates": "Проверка обновлений сервера",
+    "checkForServerUpdates": "Проверить обновления сервера",
     "@checkForServerUpdates": {
         "description": "Button text to check for Server updates"
     },
@@ -122,7 +122,7 @@
     "@close": {
         "description": "Text for close button"
     },
-    "copyMsg": "'{msg}' Скопировано!",
+    "copyMsg": "Скопировано в буфер обмена:\n{msg}",
     "@copyMsg": {
         "description": "Toast text to show that the message has been copied",
         "placeholders": {
@@ -148,7 +148,7 @@
     "@delete": {
         "description": "Text for delete button"
     },
-    "deleteCategoryDescription": "Вся манга из этой Категории будет перемещена в По умолчанию!",
+    "deleteCategoryDescription": "Вся манга из этой категории будет перемещена в «По умолчанию».",
     "@deleteCategoryDescription": {
         "description": "Popup description when deleting Category"
     },
@@ -180,7 +180,7 @@
     "@edit": {
         "description": "Popup button text to edit Category in Edit category screen"
     },
-    "editCategory": "Отредактировать категорию",
+    "editCategory": "Изменить категорию",
     "@editCategory": {
         "description": "Screen title, Button text and  of Downloads screen"
     },
@@ -192,7 +192,7 @@
     "@errorExtension": {
         "description": "Error Description to show when user selected unknown extension from list"
     },
-    "errorFilePick": "Файл не выбран!",
+    "errorFilePick": "Файл не выбран",
     "@errorFilePick": {
         "description": "Error Description to show when user does not selected an file"
     },
@@ -200,7 +200,7 @@
     "@errorFilePickUnknownExtension": {
         "description": "Error Description to show when user selected unknown extension file"
     },
-    "errorSomethingWentWrong": "Что-то пошло не так!",
+    "errorSomethingWentWrong": "Что-то пошло не так",
     "@errorSomethingWentWrong": {
         "description": "Error Description to show that Something went wrong!"
     },
@@ -208,11 +208,11 @@
     "@errorUserName": {
         "description": "Error Description to show that UserName cannot be empty"
     },
-    "extensionInstalled": "Расширение установлено!",
+    "extensionInstalled": "Расширение установлено",
     "@extensionInstalled": {
         "description": "Toast text to show that the Extension Installed successfully"
     },
-    "extensionListEmpty": "Список расширений пуст",
+    "extensionListEmpty": "Расширения не найдены",
     "@extensionListEmpty": {
         "description": "Description to show that Extension list is empty in Extension list tab of Browse screen"
     },
@@ -272,7 +272,7 @@
     "@mangaSortDateAdded": {
         "description": "Radio button text for Manga sort Type - Date Added"
     },
-    "mangaSortLastRead": "По последнему прочтению",
+    "mangaSortLastRead": "По последнему чтению",
     "@mangaSortLastRead": {
         "description": "Radio button text for Manga sort Type - Last Read"
     },
@@ -308,7 +308,7 @@
     "@defaultCategory": {
         "description": "Checkbox description when creating a Category to add manga to the Category by Default"
     },
-    "deleteCategoryTitle": "Вы уверены?",
+    "deleteCategoryTitle": "Удалить категорию",
     "@deleteCategoryTitle": {
         "description": "Popup title when deleting Category"
     },
@@ -320,7 +320,7 @@
     "@downloaded": {
         "description": "Text to show downloaded chapters status in Filters  "
     },
-    "errorLaunchURL": "Не удалось открыть!\nКопирование \"{url}\" в буфер обмена",
+    "errorLaunchURL": "Не удалось открыть «{url}». Скопировано в буфер обмена.",
     "@errorLaunchURL": {
         "description": "Error Description to show when App failed to launch an URL and copied the URL to clipboard",
         "placeholders": {
@@ -362,11 +362,11 @@
     "@mangaStatusOnHiatus": {
         "description": "Text to show Manga Status On Hiatus in Manga details screen"
     },
-    "missingExtension": "Пропавшие расширения",
+    "missingExtension": "Отсутствующие расширения",
     "@missingExtension": {
         "description": "Group title to show the Missing Extensions when restoring Backup"
     },
-    "readerNavigationLayoutRightAndLeft": "Справа и Слева",
+    "readerNavigationLayoutRightAndLeft": "Справа и слева",
     "@readerNavigationLayoutRightAndLeft": {
         "description": "Radio button text for Reader Navigation Layout - Right And Left"
     },
@@ -415,7 +415,7 @@
     "@themeModeSystem": {
         "description": "Radio button text for App theme - System"
     },
-    "whatsNew": "Что нового?",
+    "whatsNew": "Что нового",
     "@whatsNew": {
         "description": "Button text to open whats new page of app in web"
     },
@@ -423,15 +423,15 @@
     "@yesterday": {
         "description": "Yesterday Text to show the release date of manga"
     },
-    "noCategoriesFoundAlt": "У вас нет ни одной категории. \nСоздайте их в настройках для организации вашей библиотеки",
+    "noCategoriesFoundAlt": "У вас пока нет ни одной категории.",
     "@noCategoriesFoundAlt": {
         "description": "Hint text to add new Category in Settings when category list is empty"
     },
-    "noCategoryMangaFound": "В этой категории манга не найдена. \n(Совет: проверьте свой поиск и фильтры!)",
+    "noCategoryMangaFound": "В этой категории ничего не найдено",
     "@noCategoryMangaFound": {
         "description": "Hint text to check filter when manga list is empty in Category tab in Library"
     },
-    "pinchToZoom": "Зажмите для увеличения",
+    "pinchToZoom": "Масштабирование жестом",
     "@pinchToZoom": {
         "description": "Switch title to enable pinch to zoom in reader screen"
     },
@@ -443,7 +443,7 @@
     "@readerNavigationLayoutKindlish": {
         "description": "Radio button text for Reader Navigation Layout - Kindle-ish"
     },
-    "readerNavigationLayoutLShaped": "L-формы",
+    "readerNavigationLayoutLShaped": "L-образная",
     "@readerNavigationLayoutLShaped": {
         "description": "Radio button text for Reader Navigation Layout - L Shaped"
     },
@@ -459,7 +459,7 @@
     "@readerModeSingleVertical": {
         "description": "Radio button text for Reader Mode Type - Single Vertical"
     },
-    "numSelected": "{num} Выбрано",
+    "numSelected": "Выбрано: {num}",
     "@numSelected": {
         "description": "Title text to show the number of chapters selected in the Manga details screen and Updates screen",
         "placeholders": {
@@ -521,7 +521,7 @@
     "@newUpdateAvailable": {
         "description": "Popup title to show that the App/Server has and update"
     },
-    "noChaptersFound": "Не найдено ни одной главы",
+    "noChaptersFound": "Главы не найдены",
     "@noChaptersFound": {
         "description": "Text to show that the Chapter list is empty in Manga details Screen"
     },
@@ -533,7 +533,7 @@
     "@noMangaFound": {
         "description": "Text to show that the Manga list is empty"
     },
-    "noOfChapters": "{count} Глав",
+    "noOfChapters": "{count} глав",
     "@noOfChapters": {
         "description": "Title text to show the number of chapters in the Manga details screen",
         "placeholders": {
@@ -567,7 +567,7 @@
     "@nsfw": {
         "description": "Switch text to show/hide the nsfw extensions"
     },
-    "readerPadding": "Вместить изображения",
+    "readerPadding": "Отступы читалки",
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
     },
@@ -655,15 +655,15 @@
     "@remove": {
         "description": "Remove Button text"
     },
-    "removeFromLibrary": "Удалить из библиотеки?",
+    "removeFromLibrary": "Удалить из библиотеки",
     "@removeFromLibrary": {
         "description": "Remove From Library Popup text"
     },
-    "restoreBackupTitle": "Восстановить",
+    "restoreBackupTitle": "Восстановить резервную копию",
     "@restoreBackupTitle": {
         "description": "Button text to create backup"
     },
-    "restored": "Восстановлено!",
+    "restored": "Резервная копия восстановлена.",
     "@restored": {
         "description": "Toast Text to show that the backup has been restored"
     },
@@ -699,7 +699,7 @@
     "@selectNext10": {
         "description": "Toast Text for selecting next 10 chapters"
     },
-    "selectUnread": "Выберите Непрочитанное",
+    "selectUnread": "Выбрать непрочитанные",
     "@selectUnread": {
         "description": "Popup Text for selecting unread chapters"
     },
@@ -779,7 +779,7 @@
     "@userName": {
         "description": "Title text for User Name field"
     },
-    "versionAvailable": "Версия {version} доступна для {app}!!",
+    "versionAvailable": "Доступна версия {version} для {app}",
     "@versionAvailable": {
         "description": "Text to show that there is an update to App/Server",
         "placeholders": {
@@ -793,15 +793,15 @@
             }
         }
     },
-    "webUI": "Открыть в Веб",
+    "webUI": "Открыть в браузере",
     "@webUI": {
         "description": "Button text to open in web UI"
     },
-    "webView": "Веб-просмотр",
+    "webView": "WebView",
     "@webView": {
         "description": "Button text to open manga website"
     },
-    "noCategoriesFound": "У вас нет никаких категорий. \n(Совет: Нажмите кнопку \"Плюс\", чтобы создать категорию для организации библиотеки)",
+    "noCategoriesFound": "У вас пока нет ни одной категории.",
     "@noCategoriesFound": {
         "description": "Hint text to add new Category when category list is empty"
     },
@@ -857,11 +857,11 @@
     "showPageNumber": "Номер страницы",
     "automaticallyRefreshMetadata": "Обновлять метаданные",
     "automaticallyRefreshMetadataSubtitle": "При обновлении библиотеки проверять наличие новой обложки и сведений",
-    "backupAndRestore": "Резервная копия",
-    "backupCleanup": "Очистка резервной копии",
-    "backupInterval": "Частота автоматических резервных копий",
-    "backupLocation": "Расположение резервной копии",
-    "backupLocationDescription": "Путь к директории на сервере, в которой должны сохраняться автоматические резервные копии",
+    "backupAndRestore": "Резервное копирование и восстановление",
+    "backupCleanup": "Очистка резервных копий",
+    "backupInterval": "Интервал резервного копирования",
+    "backupLocation": "Расположение резервных копий",
+    "backupLocationDescription": "Папка на сервере, в которой сохраняются автоматические резервные копии.",
     "backupTime": "Время резервного копирования",
     "categoryNumberOfItems": "Показывать количество серий",
     "categoryTabs": "Показать вкладки категорий",
@@ -876,7 +876,7 @@
     "chapterDisplayChapterNumber": "Номер главы",
     "chapterDisplaySourceTitle": "Название источника",
     "chapterSortAlphabetical": "Алфавит",
-    "chapterSortChapterNumber": "Номер главы",
+    "chapterSortChapterNumber": "По номеру главы",
     "cloudflareBypass": "Обход Cloudflare",
     "back": "Назад",
     "next": "Следующее",
@@ -913,24 +913,24 @@
     "groupStyleTabs": "Вкладки",
     "downloadAllChapters": "Все",
     "downloadLocation": "Куда скачивать",
-    "downloadLocationHint": "Путь к каталогу на сервере, в котором должны быть сохранены загруженные файлы",
+    "downloadLocationHint": "Папка на сервере, в которой сохраняются загрузки.",
     "downloading": "Загружается",
     "downloadNextChapter": "Следующая глава",
     "downloadUnreadChapters": "Непрочитанные главы",
     "incognitoMode": "Режим инкогнито",
     "incognitoModeDescription": "Приостанавливает историю чтения",
-    "enableSocksProxy": "Используйте прокси-сервер SOCKS",
+    "enableSocksProxy": "Использовать SOCKS-прокси",
     "error": "Ошибка",
     "excludeEntryWithUnreadChapters": "Игнорировать автоматические загрузки глав для записей с непрочитанными главами",
-    "flareSolverrRequestTimeout": "Таймаут запроса FlareSolverr",
-    "flareSolverrServerUrl": "url сервера FlareSolverr",
+    "flareSolverrRequestTimeout": "Тайм-аут запроса FlareSolverr",
+    "flareSolverrServerUrl": "URL сервера FlareSolverr",
     "flareSolverrSessionName": "FlareSolverr имя сессии",
     "flareSolverrSessionTTL": "TTL сессия FlareSolverr",
     "includeCategories": "Категории",
     "includeChapters": "Главы",
     "includeHistory": "История",
     "includeTracking": "Отслеживается",
-    "includeClientData": "Настройки приложения",
+    "includeClientData": "Данные клиента",
     "appThemeTitle": "Тема",
     "appThemeCustom": "Собственный",
     "customFilter": "Пользовательский фильтр",
@@ -950,12 +950,12 @@
     "grayscale": "Чёрно-белый фильтр",
     "invertedColors": "Цвета наоборот",
     "localSourceLocation": "Расположение локального источника",
-    "localSourceLocationDescription": "Путь к директории на сервере, в которой хранятся локальные исходные файлы",
+    "localSourceLocationDescription": "Папка на сервере, в которой хранятся файлы локальных источников.",
     "mangaSortLastChapterDate": "Последняя глава",
-    "mangaSortLastUpdated": "Последнее получение главы",
+    "mangaSortLastUpdated": "По дате получения главы",
     "mangaSortRandom": "Случайно",
     "mangaSortTrackerScore": "Оценка сервиса отслеживания",
-    "mangaSortTotalChapters": "Количество глав",
+    "mangaSortTotalChapters": "Всего глав",
     "soon": "Скоро",
     "smartUpdate": "Умное обновление",
     "suggestions": "Предложения",
@@ -1019,7 +1019,7 @@
     "restore": "Восстановить",
     "saveAsCBZArchive": "Сохранить как архив CBZ",
     "serverAddress": "Адрес сервера",
-    "serverBindings": "Связывание с сервером",
+    "serverBindings": "Привязки сервера",
     "skipUpdatingEntries": "Пропустить обновление записей",
     "socksHost": "Хост SOCKS",
     "socksPassword": "Пароль SOCKS",
@@ -1094,7 +1094,7 @@
     "possibleDuplicatesBody": "В вашей библиотеке есть серии с похожим названием.\n\nВыберите серию, чтобы её перенести, или же добавить как дупликат.",
     "notificationsWifiOnly": "Только по Wi-Fi",
     "updatingLibrary": "Обновление библиотеки",
-    "withCompletedStatus": "Со статусом \"Завершено\"",
+    "withCompletedStatus": "Со статусом «Завершено»",
     "scrollAmountTiny": "Очень маленький",
     "scrollAmountSmall": "Маленький",
     "scrollAmountMedium": "Средний",
@@ -1109,7 +1109,7 @@
     "notificationChapterSingleAndMore": "Глава {number} и ещё {count}",
     "notificationChaptersMultiple": "Главы {numbers}",
     "smartUpdateExpected": "Выход новых глав ожидается примерно через {predicted}, следующая проверка будет через {interval}.",
-    "removeExtensionStoreBody": "Вы хотите удалить хранилище расширений \"{name}\" ({url})?",
+    "removeExtensionStoreBody": "Удалить «{name}»?\n{url}",
     "trackRemoveAlsoOnRemote": "Также удалить из {trackerName}",
     "libraryLastUpdated": "Последнее обновление библиотеки: {time}",
     "libraryUpdateErrorsCount": "Ошибки обновления библиотеки ({count})",
@@ -1122,5 +1122,2554 @@
     "migrationHideWithoutUpdates": "Скрывать серии без новых глав",
     "offlineStorageUsage": "Использование хранилища",
     "updateProgressManualMarkRead": "Обновлять прогресс, когда отмечено как «Прочитано»",
-    "noMoreChaptersAhead": "Следующей главы нет"
+    "noMoreChaptersAhead": "Следующей главы нет",
+    "settingsSearchHint": "Поиск настроек",
+    "accountPermissionDenied": "У вашей учётной записи нет прав на это действие.",
+    "migrationIdentityUnavailable": "Перед миграцией подключитесь к серверу и войдите.",
+    "accountSettingsUnavailable": "Не удалось проверить настройки аккаунта. Переподключитесь и повторите попытку.",
+    "manageSettingsPermissionRequired": "Нужны права на управление настройками сервера.",
+    "authTypeUiLogin": "Вход через UI (рекомендуется)",
+    "@authTypeUiLogin": {
+        "description": "Radio button text for Suwayomi server's ui_login (JWT) auth mode, marked as recommended"
+    },
+    "authReverseProxyHelp": "Настройте обратный прокси так, чтобы он пропускал запросы, а аутентификацию выполнял Suwayomi.",
+    "@authReverseProxyHelp": {
+        "description": "Helper text under the login fields explaining how to use Tsumiru with a reverse proxy in front of Suwayomi"
+    },
+    "authTestConnection": "Проверить подключение",
+    "@authTestConnection": {
+        "description": "Button text for testing the entered credentials against the server"
+    },
+    "authTestConnectionSuccess": "Подключено.",
+    "@authTestConnectionSuccess": {
+        "description": "Success toast text after Test Connection succeeds"
+    },
+    "authTestConnectionFailedNetwork": "Не удалось связаться с сервером. Проверьте URL и соединение.",
+    "@authTestConnectionFailedNetwork": {
+        "description": "Error message when Test Connection cannot reach the server"
+    },
+    "authTestConnectionFailedAuth": "Вход не выполнен. Проверьте имя пользователя и пароль.",
+    "@authTestConnectionFailedAuth": {
+        "description": "Error message when Test Connection reaches the server but credentials are rejected"
+    },
+    "authTestConnectionFailedMode": "Возможно, сервер работает не в выбранном режиме аутентификации. Проверьте параметр authMode сервера.",
+    "@authTestConnectionFailedMode": {
+        "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
+    },
+    "authBrowserSessionUnverified": "Сервер не подтвердил сеанс браузера. Проверьте режим аутентификации и подключение. Для Simple Login размещайте Tsumiru на том же сайте, что и сервер.",
+    "authTestConnectionFailedShape": "Сервер ответил неожиданным образом. Убедитесь, что URL указывает на Suwayomi.",
+    "@authTestConnectionFailedShape": {
+        "description": "Error message when the server's response is not the expected shape"
+    },
+    "authTestConnectionFailedTls": "Ошибка TLS-рукопожатия. Проверьте, использует ли сервер http:// или https://.",
+    "@authTestConnectionFailedTls": {
+        "description": "Error message when the client sends TLS bytes to a plaintext server, or vice versa — typically a wrong scheme (http vs https) or wrong port"
+    },
+    "authSessionExpired": "Сеанс истёк. Войдите снова.",
+    "@authSessionExpired": {
+        "description": "Banner text shown at top of screens when the session has expired and the user must re-authenticate"
+    },
+    "authCredentialsNotSaved": "Вы вошли. Устройству не удалось сохранить данные входа, поэтому при следующем запуске потребуется войти снова.",
+    "@authCredentialsNotSaved": {
+        "description": "Toast shown after signing in when the device refused to save the credentials; the sign-in works for this run only"
+    },
+    "authReauthenticate": "Войти заново",
+    "@authReauthenticate": {
+        "description": "Button text on the session-expired banner that opens the re-auth prompt"
+    },
+    "authInsecureTransportTitle": "Небезопасное подключение",
+    "@authInsecureTransportTitle": {
+        "description": "Title of the http:// warning confirmation dialog"
+    },
+    "authInsecureTransportWarning": "Имя пользователя и пароль будут переданы по HTTP без шифрования. Используйте HTTPS, если только вы не доверяете сети полностью.",
+    "@authInsecureTransportWarning": {
+        "description": "Warning body shown when the user is about to send credentials over http:// instead of https://"
+    },
+    "authInsecureTransportContinue": "Я понимаю, продолжить",
+    "@authInsecureTransportContinue": {
+        "description": "Button text to acknowledge the http:// warning and proceed anyway"
+    },
+    "authLogoutConfirm": "Выйти и удалить сохранённые данные входа? Для работы с этим сервером потребуется войти снова.",
+    "@authLogoutConfirm": {
+        "description": "Confirmation dialog text shown when the user taps Log out"
+    },
+    "authImageUrlLogWarning": "При UI-входе URL изображений содержат ваш токен доступа, который может попасть в журналы доступа сервера.",
+    "@authImageUrlLogWarning": {
+        "description": "Additional note in helper text explaining the ui_login image URL token leak risk"
+    },
+    "autoDownloadCategoriesAll": "Все категории",
+    "autoDownloadCategoriesHint": "Исключённые категории имеют приоритет. Нажимайте для переключения: ✓ включить · – исключить · пусто — по умолчанию.",
+    "autoDownloadCategoriesIncluded": "Включены: {names}",
+    "@autoDownloadCategoriesIncluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "autoDownloadCategoriesExcluded": "Исключены: {names}",
+    "@autoDownloadCategoriesExcluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCategories": "Категории для обновления",
+    "updateCategoriesAll": "Все категории",
+    "updateCategoriesHint": "Исключённые категории имеют приоритет. Нажимайте для переключения: ✓ включить · – исключить · пусто — по умолчанию.",
+    "updateCategoriesIncluded": "Включены: {names}",
+    "@updateCategoriesIncluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCategoriesExcluded": "Исключены: {names}",
+    "@updateCategoriesExcluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "autoWebtoonSnack": "Чтение в стиле вебтуна",
+    "@autoWebtoonSnack": {
+        "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
+    },
+    "automaticBackup": "Автоматическая резервная копия",
+    "@automaticBackup": {
+        "description": "Settings group title for automatic backup settings"
+    },
+    "automaticUpdate": "Автоматические обновления",
+    "@automaticUpdate": {
+        "description": "Popup title and Settings text to update Automatic Global Update interval"
+    },
+    "centerMarginDoubleAndWide": "Двойные и широкие",
+    "@centerMarginDoubleAndWide": {
+        "description": "Center margin chip"
+    },
+    "centerMarginDoublePages": "Двойные страницы",
+    "@centerMarginDoublePages": {
+        "description": "Center margin chip"
+    },
+    "centerMarginType": "Тип центрального поля",
+    "@centerMarginType": {
+        "description": "Section label for the paged center-margin chip row"
+    },
+    "centerMarginWidePages": "Широкие страницы",
+    "@centerMarginWidePages": {
+        "description": "Center margin chip"
+    },
+    "dualPageSpreadInLandscape": "Двухстраничный разворот в альбомной ориентации",
+    "invertDoublePages": "Инвертировать двойные страницы",
+    "@invertDoublePages": {
+        "description": "Paged reader toggle"
+    },
+    "invertWidePageRotation": "Инвертировать поворот широких страниц",
+    "pageLayout": "Раскладка страниц",
+    "@pageLayout": {
+        "description": "Section label for the paged page-layout chip row"
+    },
+    "pageLayoutAutomatic": "Автоматически",
+    "@pageLayoutAutomatic": {
+        "description": "Page layout chip"
+    },
+    "readerGroupEInk": "E-Ink",
+    "@readerGroupEInk": {
+        "description": "Reader settings group heading for E-Ink screen options"
+    },
+    "autoWebtoonMode": "Автоматический режим чтения",
+    "autoWebtoonModeSubtitle": "Открывать манхву, маньхуа и вебтуны в режиме прокрутки вебтуна.",
+    "flashEveryPages": "{count, plural, =1{1 страница} few{{count} страницы} many{{count} страниц} other{{count} страницы}}",
+    "@flashEveryPages": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "forceHorizontalSeekbar": "Принудительно горизонтальный ползунок",
+    "leftHandedVerticalSeekbar": "Вертикальный ползунок для левшей",
+    "showVerticalSeekbarInLandscape": "Показывать вертикальный ползунок в альбомной ориентации",
+    "refreshChaptersFromSource": "Обновлять главы из источника",
+    "@refreshChaptersFromSource": {
+        "description": "Switch title for refreshing chapters from the source when opening an entry"
+    },
+    "refreshChaptersFromSourceSubtitle": "Проверять новые главы в источнике при открытии записи.",
+    "@refreshChaptersFromSourceSubtitle": {
+        "description": "Switch subtitle explaining the refresh-chapters-from-source toggle"
+    },
+    "backupCleanupDescription": "{count, select, 0{Никогда} 01{Удалять копии старше 1 дня} other{Удалять копии старше {count} дней}}",
+    "backupData": "Данные резервной копии",
+    "@backupData": {
+        "description": "Title for the automatic backup contents row"
+    },
+    "backupDataExclude": "Исключить: {list}",
+    "@backupDataExclude": {
+        "description": "Automatic backup contents summary, excluded kinds comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "backupDataInclude": "Включить: {list}",
+    "@backupDataInclude": {
+        "description": "Automatic backup contents summary, included kinds comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "bookmark": "Закладка",
+    "removeBookmark": "Удалить закладку",
+    "bold": "Полужирный",
+    "bulletedList": "Маркированный список",
+    "categoryVisibilityDeviceOnly": "Изменено только на этом устройстве до переподключения",
+    "@categoryVisibilityDeviceOnly": {
+        "description": "Toast when hiding or showing a category offline: the change lives on the device mirror and the server setting returns on the next online sync"
+    },
+    "sectionHeadersShowAllCategories": "Показывать все категории",
+    "@sectionHeadersShowAllCategories": {
+        "description": "Library Group checkbox to scroll all sections together in Section headers mode"
+    },
+    "scrollAmount": "Расстояние прокрутки с клавиатуры",
+    "@scrollAmount": {
+        "description": "Keyboard scroll step, fraction of the screen"
+    },
+    "autoAdvance": "Автопереход",
+    "@autoAdvance": {
+        "description": "Reader utils bar: auto-advance toggle label (paged)"
+    },
+    "autoScrollInterval": "Интервал автопрокрутки",
+    "@autoScrollInterval": {
+        "description": "Long-strip auto-scroll: seconds per advance"
+    },
+    "autoAdvanceInterval": "Интервал автоперехода",
+    "@autoAdvanceInterval": {
+        "description": "Paged reader auto-advance: seconds per page turn"
+    },
+    "autoScrollSeconds": "{count, plural, =1{1 секунда} few{{count} секунды} many{{count} секунд} other{{count} секунды}}",
+    "@autoScrollSeconds": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "sourceRemoved": "Источник удалён",
+    "@sourceRemoved": {
+        "description": "Downloads queue state when the series' source is no longer installed on the server"
+    },
+    "cancelAllForThisSeries": "Отменить всё для этой серии",
+    "@cancelAllForThisSeries": {
+        "description": "Downloads queue menu item: dequeue every queued chapter of the same series"
+    },
+    "clearCookiesAndCache": "Очистить cookies и кэш",
+    "clearedWebViewCookiesAndCache": "Cookies и кэш WebView очищены",
+    "couldNotClearWebViewCookiesAndCache": "Не удалось очистить cookies и кэш WebView",
+    "collapseSidebar": "Свернуть боковую панель",
+    "connection": "Подключение",
+    "connectionAuthNone": "Без аутентификации",
+    "connectionAuthSignedIn": "Выполнен вход",
+    "connectionAuthSignInNeeded": "Требуется вход",
+    "copied": "Скопировано в буфер обмена",
+    "@copied": {
+        "description": "Copied Text"
+    },
+    "finish": "Готово",
+    "onboardingWelcomeTitle": "Добро пожаловать в Tsumiru",
+    "onboardingWelcomeSubtitle": "Читалка для вашей библиотеки Suwayomi.",
+    "onboardingChooseTheme": "Выберите тему",
+    "onboardingServerTitle": "Подключите сервер",
+    "onboardingServerPortHint": "По умолчанию Suwayomi работает на порту 4567.",
+    "onboardingServerStepLabel": "ШАГ 2 ИЗ 3",
+    "onboardingNoServerLink": "Как настроить сервер",
+    "onboardingTestConnection": "Проверить подключение",
+    "onboardingResolvedAddress": "Сервер найден по адресу {url}",
+    "@onboardingResolvedAddress": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingFoundAt": "по адресу {address}",
+    "@onboardingFoundAt": {
+        "placeholders": {
+            "address": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingSearchNetwork": "Искать в моей сети",
+    "onboardingCheckingConnection": "Проверка подключения…",
+    "onboardingSigningIn": "Выполняется вход…",
+    "onboardingSearching": "Поиск в вашей сети…",
+    "onboardingNoServerFound": "Сервер Suwayomi в вашей сети не найден. Введите адрес вручную.",
+    "onboardingChooseServer": "Выберите сервер",
+    "onboardingNeedsLogin": "Этот сервер требует входа",
+    "onboardingEnterAddress": "Введите адрес сервера или нажмите «Искать в моей сети».",
+    "onboardingSignIn": "Войти",
+    "onboardingCredsRejected": "Эти данные не подошли. Проверьте имя пользователя, пароль и способ входа.",
+    "onboardingNotReachedHttpsHint": "Если сервер за обратным прокси, попробуйте его https-адрес.",
+    "onboardingAuthMode": "Способ входа",
+    "onboardingAuthModeBasic": "Basic-аутентификация",
+    "onboardingResolvedUnconfirmed": "Адрес {url} доступен, но не отвечает как сервер Suwayomi. Проверьте адрес и порт.",
+    "@onboardingResolvedUnconfirmed": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingNotReached": "Не удалось связаться с сервером по этому адресу. Убедитесь, что он запущен и доступен с этого устройства.",
+    "webUnsupportedAuthMode": "Этот сервер использует способ входа, недоступный в браузерной версии. Установите на сервере режим UI login или используйте приложение для Android, iOS или ПК.",
+    "@webUnsupportedAuthMode": {
+        "description": "Shown on web instead of the generic unreachable message when the server answers but uses Basic auth or Simple login, which a cross-origin page cannot use"
+    },
+    "webServerAuthUnconfirmed": "Сервер не принял запрос браузера. Если используется Basic-аутентификация или Simple login, установите режим UI login или используйте приложение для Android, iOS или ПК. Иначе проверьте адрес.",
+    "@webServerAuthUnconfirmed": {
+        "description": "Shown on web when the server answers 404 Not Found, which can mean Basic auth or a mistyped subpath"
+    },
+    "webUiLoginOnlyHint": "Браузерная версия работает только с UI login (настройка сервера: server.authMode).",
+    "@webUiLoginOnlyHint": {
+        "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
+    },
+    "onboardingConnected": "Подключено к Suwayomi v{version}",
+    "@onboardingConnected": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingDoneTitle": "Всё готово",
+    "onboardingDoneSubtitle": "Откройте источники, чтобы начать добавлять мангу в библиотеку.",
+    "minutesAgo": "{minutes, plural, =1{1 минуту назад} few{{minutes} минуты назад} many{{minutes} минут назад} other{{minutes} минуты назад}}",
+    "@minutesAgo": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "{hours, plural, =1{1 час назад} few{{hours} часа назад} many{{hours} часов назад} other{{hours} часа назад}}",
+    "@hoursAgo": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "debugInformation": "Отладочная информация",
+    "debugLogs": "Журналы отладки",
+    "@debugLogs": {
+        "description": "Switch title for Debug logs in settings"
+    },
+    "defaultFolderPath": "По умолчанию",
+    "deleteFromServer": "Удалить с сервера…",
+    "deleteOnDeviceDownloads": "Удалить загрузки на устройстве",
+    "deleteOnDeviceDownloadsDescription": "На сервере копия сохранится.",
+    "deleteServerDownloads": "Удалить загрузки с сервера",
+    "deleteServerDownloadsDescription": "Также удаляет копию на этом устройстве. Настройки общие с веб-интерфейсом.",
+    "downloadProtectionWindowTitle": "Хранить недавно прочитанные главы",
+    "downloadProtectionWindowDescription": "Заново скачивать недавно прочитанные главы, отсутствующие на устройстве.",
+    "gridStyle": "Стиль сетки",
+    "@gridStyle": {
+        "description": "Library Display section label for the grid cover-geometry chip row"
+    },
+    "gridStyleUniform": "Одинаковый",
+    "@gridStyleUniform": {
+        "description": "Grid style chip: every cover cropped into the same fixed cell"
+    },
+    "gridStyleNonUniform": "Разнородный",
+    "@gridStyleNonUniform": {
+        "description": "Grid style chip: covers keep their aspect ratio, rows still align"
+    },
+    "gridStyleStaggered": "Шахматный",
+    "@gridStyleStaggered": {
+        "description": "Grid style chip: masonry layout where columns pack independently"
+    },
+    "outlineOnCovers": "Обводка обложек",
+    "@outlineOnCovers": {
+        "description": "Library Display checkbox to draw a thin outline around every cover"
+    },
+    "filterStateAny": "Любой",
+    "@filterStateAny": {
+        "description": "Tri-state filter chip to not filter on this at all"
+    },
+    "filterStateIncluded": "Включено",
+    "@filterStateIncluded": {
+        "description": "Generic tri-state filter chip to show only entries that match"
+    },
+    "filterStateExcluded": "Исключено",
+    "@filterStateExcluded": {
+        "description": "Generic tri-state filter chip to hide entries that match"
+    },
+    "filterHeaderDownloadStatus": "Статус загрузки",
+    "@filterHeaderDownloadStatus": {
+        "description": "Section label for the downloaded filter chip row"
+    },
+    "filterOptionNotDownloaded": "Не скачано",
+    "@filterOptionNotDownloaded": {
+        "description": "Download-status filter chip: only entries with nothing downloaded"
+    },
+    "filterHeaderStorage": "Хранилище",
+    "@filterHeaderStorage": {
+        "description": "Section label for the on-device filter chip row"
+    },
+    "filterOptionOnDevice": "На устройстве",
+    "@filterOptionOnDevice": {
+        "description": "Storage filter chip: only entries kept on this device"
+    },
+    "filterOptionRemote": "Удалённо",
+    "@filterOptionRemote": {
+        "description": "Storage filter chip: only entries with nothing kept on this device"
+    },
+    "filterHeaderReadStatus": "Статус чтения",
+    "@filterHeaderReadStatus": {
+        "description": "Section label for the unread filter chip row"
+    },
+    "filterHeaderProgress": "Прогресс",
+    "@filterHeaderProgress": {
+        "description": "Section label for the started filter chip row"
+    },
+    "filterOptionNotStarted": "Не начато",
+    "@filterOptionNotStarted": {
+        "description": "Progress filter chip: only entries with no chapters read yet"
+    },
+    "filterHeaderBookmarks": "Закладки",
+    "@filterHeaderBookmarks": {
+        "description": "Section label for the bookmarked filter chip row"
+    },
+    "filterOptionNotBookmarked": "Без закладок",
+    "@filterOptionNotBookmarked": {
+        "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
+    },
+    "filterHeaderSeries": "Серия",
+    "@filterHeaderSeries": {
+        "description": "Section label for the series-progress filter chip row"
+    },
+    "filterOptionUnfinished": "Не завершено",
+    "@filterOptionUnfinished": {
+        "description": "Series filter chip: only series with chapters left to read"
+    },
+    "filterOptionNotInLibrary": "Не в библиотеке",
+    "@filterOptionNotInLibrary": {
+        "description": "Library filter chip: only entries not saved to the library"
+    },
+    "filterShortDownloaded": "Скачано",
+    "@filterShortDownloaded": {
+        "description": "Short filter segment heading for the downloaded tri-state"
+    },
+    "filterShortStarted": "Начато",
+    "@filterShortStarted": {
+        "description": "Short filter segment heading for the started tri-state"
+    },
+    "filterShortBookmarked": "В закладках",
+    "@filterShortBookmarked": {
+        "description": "Short filter segment heading for the bookmarked tri-state"
+    },
+    "filterShortCompleted": "Завершено",
+    "@filterShortCompleted": {
+        "description": "Short filter segment heading for the completed tri-state"
+    },
+    "filterShortLewd": "18+",
+    "@filterShortLewd": {
+        "description": "Short filter segment heading for the lewd tri-state"
+    },
+    "allTags": "Все теги",
+    "@allTags": {
+        "description": "Tags filter row that clears the tag selection"
+    },
+    "anyCategory": "Любая категория",
+    "@anyCategory": {
+        "description": "Categories filter summary when no category is included or excluded"
+    },
+    "searchTags": "Поиск тегов…",
+    "@searchTags": {
+        "description": "Hint in the tags filter search field"
+    },
+    "limitTitleLines": "Ограничить названия двумя строками",
+    "@limitTitleLines": {
+        "description": "Library Display checkbox to cap titles at two ellipsized lines"
+    },
+    "longStripWidthLimit": "Максимальная ширина",
+    "@longStripWidthLimit": {
+        "description": "Long strip slider: cap the strip at a percentage of the window or an absolute pixel width"
+    },
+    "longStripWidthLimitFullWidth": "На всю ширину",
+    "@longStripWidthLimitFullWidth": {
+        "description": "Readout at the width slider's 100% position (the off state)"
+    },
+    "longStripWidthLimitPercent": "{percent}%",
+    "@longStripWidthLimitPercent": {
+        "description": "Value readout for the width slider in percent mode",
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitPx": "{px} px",
+    "@longStripWidthLimitPx": {
+        "description": "Value readout for the width slider in pixel mode",
+        "placeholders": {
+            "px": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitUnitPercent": "%",
+    "@longStripWidthLimitUnitPercent": {
+        "description": "Width slider unit chip: percent of window"
+    },
+    "listSize": "Размер списка",
+    "@listSize": {
+        "description": "Library Display section label for the List and Descriptive List scale slider"
+    },
+    "unreadBadgeModeCount": "Показывать количество",
+    "@unreadBadgeModeCount": {
+        "description": "Unread badge chip: show the number of unread chapters"
+    },
+    "unreadBadgeModeDot": "Показывать простой значок",
+    "@unreadBadgeModeDot": {
+        "description": "Unread badge chip: show a plain accent chip with no number"
+    },
+    "badgeLayout": "Раскладка значков",
+    "@badgeLayout": {
+        "description": "Library Badges section label for the drag-to-reorder badge list"
+    },
+    "badgeLayoutHint": "Перетащите для изменения порядка. Стрелка перемещает значок в другой угол.",
+    "@badgeLayoutHint": {
+        "description": "Helper text under Badge layout explaining the drag handle and side toggle"
+    },
+    "badgeMoveToLeft": "Переместить в левый угол",
+    "@badgeMoveToLeft": {
+        "description": "Tooltip on the badge side toggle when the badge is on the right"
+    },
+    "badgeMoveToRight": "Переместить в правый угол",
+    "@badgeMoveToRight": {
+        "description": "Tooltip on the badge side toggle when the badge is on the left"
+    },
+    "groupStyle": "Отображение групп",
+    "@groupStyle": {
+        "description": "Library Group section label for the group presentation chip row"
+    },
+    "groupStyleHeaders": "Заголовки разделов",
+    "@groupStyleHeaders": {
+        "description": "Group display chip: one continuous scroll with a sticky header per group"
+    },
+    "groupStyleSections": "Разделы",
+    "@groupStyleSections": {
+        "description": "Group display radio in the desktop Display panel: sections style"
+    },
+    "groupByTag": "По тегу",
+    "@groupByTag": {
+        "description": "Group mode: one tab per source genre and user tag"
+    },
+    "groupByLanguage": "По языку",
+    "@groupByLanguage": {
+        "description": "Group mode: one tab per source language"
+    },
+    "downloadNextChaptersN": "Следующие {n} глав",
+    "@downloadNextChaptersN": {
+        "description": "Bulk-download menu item: queue the next N chapters after the last read.",
+        "placeholders": {
+            "n": {
+                "type": "int"
+            }
+        }
+    },
+    "onDeviceDownloads": "Загрузки на устройстве",
+    "@onDeviceDownloads": {
+        "description": "Settings entry: on-device (offline) downloads screen"
+    },
+    "downloadToServer": "Скачать на сервер",
+    "editNotes": "Изменить заметки",
+    "hideCategory": "Скрыть категорию",
+    "showCategory": "Показать категорию",
+    "libraryPersistentSearchBar": "Постоянная строка поиска",
+    "@libraryPersistentSearchBar": {
+        "description": "Library setting: always show the search bar under the app bar instead of behind the search button"
+    },
+    "libraryPersistentSearchBarSubtitle": "Показывать поле поиска под заголовком на каждой странице вместо значка поиска",
+    "@libraryPersistentSearchBarSubtitle": {
+        "description": "Subtitle for the persistent search bar library setting"
+    },
+    "incognitoShort": "Инкогнито",
+    "@incognitoShort": {
+        "description": "Short Incognito label for the desktop sidebar foot row and its collapsed tooltip"
+    },
+    "enterProp": "Введите {prop}",
+    "@enterProp": {
+        "description": "Hint text for text field to enter value of Property"
+    },
+    "errorBackupCreate": "Не удалось создать резервную копию",
+    "@errorBackupCreate": {
+        "description": "Error Text to show that backup creating failed"
+    },
+    "errorBackupRestore": "Не удалось восстановить резервную копию",
+    "@errorBackupRestore": {
+        "description": "toast to show that backup restoration failed"
+    },
+    "expandSidebar": "Развернуть боковую панель",
+    "ignoreReuploadedChapters": "Игнорировать перезалитые главы",
+    "flareSolverr": "FlareSolverr",
+    "@flareSolverr": {
+        "description": "Toggle title to enable FlareSolverr"
+    },
+    "responseFallback": "Резервный ответ",
+    "responseFallbackDescription": "Использовать ответ FlareSolverr, если сервер получает задание Cloudflare, а FlareSolverr — нет и потому не может его решить (не работает для изображений)",
+    "githubServer": "GitHub-сервер",
+    "githubTsumiru": "GitHub Tsumiru",
+    "helpTranslate": "Помочь с переводом",
+    "informAboutAvailableUpdate": "Сообщать о доступном обновлении",
+    "informAboutVersionUpdate": "Сообщать об обновлении версии",
+    "includeManga": "Записи библиотеки",
+    "includeServerSettings": "Настройки сервера",
+    "invalidProp": "Недопустимое значение {property}",
+    "@invalidProp": {
+        "description": "Toast text for select invalid property value"
+    },
+    "ip": "IP-адрес",
+    "@ip": {
+        "description": "Option title for Server IP Address in Server settings"
+    },
+    "ipHintText": "Введите IP-адрес привязки сервера",
+    "italic": "Курсив",
+    "appThemeIndigoNight": "Индиговая ночь",
+    "appThemeCarbon": "Карбон",
+    "appThemePlum": "Слива",
+    "customColor": "Свой цвет",
+    "@customColor": {
+        "description": "Tile to pick a custom seed color"
+    },
+    "customHeaders": "Свои HTTP-заголовки",
+    "@customHeaders": {
+        "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
+    },
+    "onboardingCustomHeadersHint": "Нужны только для некоторых прокси и шлюзов доступа.",
+    "customHeaderEmpty": "Своих заголовков нет.",
+    "@customHeaderEmpty": {
+        "description": "Empty state for the custom headers list"
+    },
+    "customHeaderName": "Имя заголовка",
+    "@customHeaderName": {
+        "description": "Label for the custom header name field"
+    },
+    "customHeaderValue": "Значение заголовка",
+    "@customHeaderValue": {
+        "description": "Label for the custom header value field"
+    },
+    "customHeaderAdd": "Добавить заголовок",
+    "@customHeaderAdd": {
+        "description": "Button to add a custom HTTP header"
+    },
+    "customHeaderNameInvalid": "Имена заголовков не могут содержать пробелы и двоеточия.",
+    "@customHeaderNameInvalid": {
+        "description": "Validation error for a bad custom header name"
+    },
+    "customHeaderExists": "Заголовок с таким именем уже существует.",
+    "@customHeaderExists": {
+        "description": "Validation error for a duplicate custom header name"
+    },
+    "pureBlackAmoled": "Чистый чёрный (AMOLED)",
+    "@pureBlackAmoled": {
+        "description": "AMOLED dark variant toggle"
+    },
+    "libraryColumnsLandscape": "Столбцы (альбомная)",
+    "@libraryColumnsLandscape": {
+        "description": "Library Display section heading for the landscape column count slider"
+    },
+    "libraryColumnsPortrait": "Столбцы (портретная)",
+    "@libraryColumnsPortrait": {
+        "description": "Library Display section heading for the portrait column count slider"
+    },
+    "lockToPortrait": "Фиксировать портретную ориентацию",
+    "@lockToPortrait": {
+        "description": "General setting: lock the app to portrait orientation"
+    },
+    "mangaThumbnailBackdrop": "Миниатюра манги как фон",
+    "mangaSortLastUpdate": "Последнее обновление",
+    "mangaSortRating": "Рейтинг",
+    "minimumRating": "Минимальный рейтинг",
+    "nChapters": "{n, plural, =0{Нет} =1{1 глава} few{{n} главы} many{{n} глав} other{{n} главы}}",
+    "@nChapters": {
+        "description": "Text for showing N chapters"
+    },
+    "nDays": "{count, select, 01{1 день} other{{count} дней}}",
+    "@nDays": {
+        "description": "to show Number of days with plural"
+    },
+    "inNDays": "{days, plural, =1{Через 1 день} few{Через {days} дня} many{Через {days} дней} other{Через {days} дня}}",
+    "@inNDays": {
+        "description": "Next-chapter estimate on the manga details page",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "dayCount": "{count, plural, =1{1 день} few{{count} дня} many{{count} дней} other{{count} дня}}",
+    "@dayCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "nHours": "{n, plural, =1{1 час} few{{n} часа} many{{n} часов} other{{n} часа}}",
+    "@nHours": {
+        "description": "Text to represent 'n' hours"
+    },
+    "nMinutes": "{n, plural, =1{1 минута} few{{n} минуты} many{{n} минут} other{{n} минуты}}",
+    "@nMinutes": {
+        "description": "Text to represent 'n' Minutes"
+    },
+    "nSeconds": "{n, plural, =1{1 секунда} few{{n} секунды} many{{n} секунд} other{{n} секунды}}",
+    "@nSeconds": {
+        "description": "Text to represent 'n' seconds"
+    },
+    "nSources": "{n, plural, =1{1 источник} few{{n} источника} many{{n} источников} other{{n} источника}}",
+    "@nSources": {
+        "description": "Text to represent n number Parallel source requests"
+    },
+    "nothingToDownload": "Нечего скачивать",
+    "@nothingToDownload": {
+        "description": "Toast shown when a bulk-download preset would queue zero chapters."
+    },
+    "noVisibleCategories": "Нет видимых категорий",
+    "needsServerConnection": "Требуется подключение к серверу",
+    "@needsServerConnection": {
+        "description": "Error toast when a server-stored setting is changed while the server is unreachable"
+    },
+    "notInYourLibrary": "Не в вашей библиотеке",
+    "@notInYourLibrary": {
+        "description": "Downloads queue group for queued chapters of series outside the current account's library"
+    },
+    "notes": "Заметки",
+    "numberedList": "Нумерованный список",
+    "missingChapters": "{count, plural, =1{Пропущена 1 глава} few{Пропущено {count} главы} many{Пропущено {count} глав} other{Пропущено {count} главы}}",
+    "@missingChapters": {
+        "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapWarning": "{count, plural, =1{Пропускается 1 глава. Возможно, она отсутствует в источнике или скрыта фильтром.} few{Пропускается {count} главы. Возможно, они отсутствуют в источнике или скрыты фильтром.} many{Пропускается {count} глав. Возможно, они отсутствуют в источнике или скрыты фильтром.} other{Пропускается {count} главы. Возможно, они отсутствуют в источнике или скрыты фильтром.}}",
+    "@readerChapterGapWarning": {
+        "description": "Reader warning before crossing a gap in chapter numbering, including filtered chapters",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapContinue": "Продолжить",
+    "@readerChapterGapContinue": {
+        "description": "Confirm skipping chapters in the reader"
+    },
+    "seeRecommendations": "Посмотреть рекомендации",
+    "@seeRecommendations": {
+        "description": "Button on the manga details page opening the recommendations screen"
+    },
+    "recommendations": "Рекомендации",
+    "@recommendations": {
+        "description": "Title of the recommendations screen"
+    },
+    "noRecommendationsForTitle": "Сейчас для этого тайтла нет рекомендаций",
+    "@noRecommendationsForTitle": {
+        "description": "Empty state on the recommendations screen when no provider returned results"
+    },
+    "similarTo": "Похоже на «{title}»",
+    "@similarTo": {
+        "description": "Recommendations screen title for a single manga",
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "seriesSeeAll": "Показать все",
+    "seriesTagsMore": "Ещё {count}",
+    "@seriesTagsMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesNextChapterExpected": "Следующая глава ожидается {days, plural, =0{скоро} =1{через 1 день} few{через {days} дня} many{через {days} дней} other{через {days} дня}}",
+    "@seriesNextChapterExpected": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesPage": "Страница серии",
+    "showRecommendations": "Показывать рекомендации",
+    "@showRecommendations": {
+        "description": "Appearance setting toggling the suggestions row on manga details"
+    },
+    "showRecommendationsSubtitle": "Показывать строку похожих тайтлов на странице манги",
+    "@showRecommendationsSubtitle": {
+        "description": "Subtitle for the show recommendations setting"
+    },
+    "noPropFound": "{prop} не найдено",
+    "@noPropFound": {
+        "description": "Template text to say No value for property found"
+    },
+    "removeFromDevice": "Удалить с устройства",
+    "download": "Скачать",
+    "undo": "Отменить",
+    "filtered": "отфильтровано",
+    "unreadCount": "{count, plural, =1{1 непрочитанная} few{{count} непрочитанные} many{{count} непрочитанных} other{{count} непрочитанные}}",
+    "@unreadCount": {
+        "description": "Chapter header subline unread segment",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "6"
+            }
+        }
+    },
+    "onDeviceSize": "{size} на устройстве",
+    "@onDeviceSize": {
+        "description": "Chapter header subline on-device segment",
+        "placeholders": {
+            "size": {
+                "type": "String",
+                "example": "2.1 GB"
+            }
+        }
+    },
+    "onDevice": "На устройстве",
+    "offlineBulkDeleteWarning": "{count} из них сохранены на этом устройстве и тоже будут удалены.",
+    "@offlineBulkDeleteWarning": {
+        "description": "Bulk server-delete confirm: warns N selected chapters are also on this device",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "opds": "OPDS",
+    "opdsBinaryFileSize": "Двоичные размеры файлов",
+    "opdsBinaryFileSizeDescription": "Показывать размеры файлов в двоичных единицах (КиБ, МиБ, ГиБ) вместо десятичных (КБ, МБ, ГБ)",
+    "opdsItemsPerPage": "Элементов на странице",
+    "opdsItemsPerPageDescription": "Количество элементов на странице в лентах OPDS (например, история библиотеки, главы манги).\nБольшие значения могут снизить производительность клиента.",
+    "opdsEnablePageReadProgress": "Включить прогресс чтения по страницам",
+    "opdsEnablePageReadProgressDescription": "Отслеживать и обновлять прогресс чтения по страницам для каждой главы при постраничной потоковой передаче",
+    "opdsMarkAsReadOnDownload": "Отмечать главы прочитанными при скачивании",
+    "opdsMarkAsReadOnDownloadDescription": "Автоматически отмечать главы прочитанными при их скачивании.",
+    "opdsShowOnlyUnreadChapters": "Показывать только непрочитанные главы",
+    "opdsShowOnlyUnreadChaptersDescription": "Фильтровать ленту манги, показывая только ещё не прочитанные главы.",
+    "opdsShowOnlyDownloadedChapters": "Показывать только скачанные главы",
+    "opdsShowOnlyDownloadedChaptersDescription": "Фильтровать ленту манги, показывая только скачанные главы.",
+    "opdsSkipChapterMetadataFeed": "Пропускать ленту метаданных глав",
+    "opdsSkipChapterMetadataFeedDescription": "Ссылки на скачивание попадают прямо в список глав.",
+    "opdsChapterSortOrder": "Порядок сортировки глав",
+    "opdsChapterSortOrderDescription": "Выберите порядок отображения глав.",
+    "opdsSortAscending": "По возрастанию",
+    "opdsSortDescending": "По убыванию",
+    "opdsCbzMimeType": "MIME-тип CBZ",
+    "opdsCbzMimeTypeDescription": "Управляет MimeType, который Suwayomi передаёт в записях OPDS для архивов CBZ. Также влияет на глобальную загрузку CBZ.\nModern соответствует свежему стандарту IANA (2017), а LEGACY (устаревший mimetype для .cbz) и COMPATIBLE (устаревший mimetype для всех архивов комиксов) могут лучше подходить старым клиентам.",
+    "opdsCbzLegacy": "Legacy",
+    "opdsCbzModern": "Modern",
+    "opdsCbzCompatible": "Compatible",
+    "onlyMyDownloads": "Только мои загрузки",
+    "@onlyMyDownloads": {
+        "description": "Downloads queue toggle: show only queued chapters of series in the current account's library"
+    },
+    "openInWeb": "Открыть в браузере",
+    "@openInWeb": {
+        "description": "Button title text for open the url in web"
+    },
+    "openSourceInBrowser": "Открыть страницу источника",
+    "@openSourceInBrowser": {
+        "description": "Menu item: open the manga page on the original source website"
+    },
+    "openInBrowser": "Открыть в браузере",
+    "openOnServer": "Открыть на сервере",
+    "@openOnServer": {
+        "description": "Menu item: open the manga in the Suwayomi server WebUI"
+    },
+    "or": "или",
+    "@or": {
+        "description": "text literal for word or"
+    },
+    "pageOfTotal": "Страница {current} из {total}",
+    "@pageOfTotal": {
+        "description": "Tooltip on the current chapter's progress line",
+        "placeholders": {
+            "current": {
+                "type": "int",
+                "example": "12"
+            },
+            "total": {
+                "type": "int",
+                "example": "45"
+            }
+        }
+    },
+    "pinnedSources": "Закреплённые источники",
+    "filterSources": "Фильтр источников",
+    "allSources": "Все источники",
+    "readerMouseScrollSpeed": "Скорость прокрутки колесом мыши",
+    "@readerMouseScrollSpeed": {
+        "description": "Desktop-only reader setting: how far one wheel notch scrolls."
+    },
+    "readerModeChipLegacyContinuous": "Непрерывно по горизонтали (устаревший)",
+    "@readerModeChipLegacyContinuous": {
+        "description": "Reading-mode chip shown when a series still uses the legacy continuous-horizontal mode"
+    },
+    "readerNoPages": "Страницы не найдены",
+    "@readerNoPages": {
+        "description": "Shown instead of the reader when the source returns a chapter with no pages."
+    },
+    "readerNoPagesSubtitle": "Возможно, глава заблокирована или источник требует входа.",
+    "@readerNoPagesSubtitle": {
+        "description": "Explains why a chapter can have no pages, under readerNoPages. Paid chapters that are still locked come back empty."
+    },
+    "readerFeedbackToasts": "Уведомления о чтении",
+    "@readerFeedbackToasts": {
+        "description": "Switch title for the toggle that shows reader feedback toasts"
+    },
+    "readerFeedbackToastsSubtitle": "Показывать сообщения вроде «загрузка следующей главы» и «глав больше нет»",
+    "@readerFeedbackToastsSubtitle": {
+        "description": "Switch subtitle explaining the reader feedback toasts toggle"
+    },
+    "readerLastPageSwipeToggle": "Свайп на последней странице",
+    "@readerLastPageSwipeToggle": {
+        "description": "Last page swipe"
+    },
+    "readerLastPageSwipeToggleDescription": "Переход к следующей главе свайпом только на последней странице",
+    "@readerLastPageSwipeToggleDescription": {
+        "description": "Swipe to next chapter only at last page"
+    },
+    "loadingNextChapter": "Загрузка следующей главы...",
+    "@loadingNextChapter": {
+        "description": "Loading text shown when loading next chapter in continuous reading"
+    },
+    "loadingPreviousChapter": "Загрузка предыдущей главы...",
+    "@loadingPreviousChapter": {
+        "description": "Loading text shown when loading previous chapter in continuous reading"
+    },
+    "noMoreChaptersBehind": "Предыдущей главы нет",
+    "@noMoreChaptersBehind": {
+        "description": "Notification text shown when user tries to scroll past the first chapter"
+    },
+    "nextChapterLoaded": "Загружено: {chapterName}",
+    "@nextChapterLoaded": {
+        "description": "Success message shown when next chapter is loaded",
+        "placeholders": {
+            "chapterName": {
+                "type": "String",
+                "description": "The name of the loaded chapter"
+            }
+        }
+    },
+    "previousChapterLoaded": "Загружено: {chapterName}",
+    "@previousChapterLoaded": {
+        "description": "Success message shown when previous chapter is loaded",
+        "placeholders": {
+            "chapterName": {
+                "type": "String",
+                "description": "The name of the loaded chapter"
+            }
+        }
+    },
+    "failedToLoadNextChapter": "Не удалось загрузить следующую главу",
+    "@failedToLoadNextChapter": {
+        "description": "Error message shown when next chapter fails to load"
+    },
+    "failedToLoadPreviousChapter": "Не удалось загрузить предыдущую главу",
+    "@failedToLoadPreviousChapter": {
+        "description": "Error message shown when previous chapter fails to load"
+    },
+    "chapterCompleted": "Глава завершена",
+    "@chapterCompleted": {
+        "description": "Text shown when a chapter is completed in continuous reading"
+    },
+    "readerIgnoreSafeAreaToggle": "Игнорировать безопасную область",
+    "@readerIgnoreSafeAreaToggle": {
+        "description": "Toggle text to ignore safe area in reader"
+    },
+    "readerIgnoreSafeAreaToggleDescription": "Разрешить контенту заходить в область «чёлки» и индикатора «Домой»",
+    "@readerIgnoreSafeAreaToggleDescription": {
+        "description": "Description for ignore safe area toggle in reader settings"
+    },
+    "migrateChapters": "Перенести главы",
+    "migrateCategories": "Перенести категории",
+    "migrateDownloads": "Перенести загрузки",
+    "migrateTracking": "Перенести трекинг",
+    "migrateReaderSettings": "Настройки читалки",
+    "migrateOfflineSettings": "Правило офлайн-хранения",
+    "migrationSettings": "Настройки миграции",
+    "bulkMigrationTitle": "Перенести источники",
+    "migrationSelectSourcesTitle": "Выберите источники",
+    "migrationListTitleProgress": "Перенос ({done}/{total})",
+    "@migrationListTitleProgress": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDataUnavailable": "Эта миграция не была восстановлена. Вернитесь назад и запустите её снова.",
+    "migrationLatestChapter": "Последняя глава: {chapter}",
+    "@migrationLatestChapter": {
+        "placeholders": {
+            "chapter": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationSelectPinned": "Выбрать закреплённые",
+    "migrationSelectEnabled": "Выбрать включённые",
+    "migrationAdditionalSearchQuery": "Дополнительный поисковый запрос",
+    "migrationAdditionalSearchQueryHint": "Добавляется к каждому названию при поиске по источникам.",
+    "migrationHideWithoutUpdatesSubtitle": "Скрывать серии, у которых в новом источнике нет новых глав.",
+    "migrationPickSourceTitle": "Уйти с источника",
+    "migrationFilterObsolete": "Показывать только устаревшие",
+    "migrationSortMode": "Режим сортировки",
+    "migrationSortDirection": "Направление сортировки",
+    "migrationNoLibrarySources": "Библиотека пуста — переносить нечего.",
+    "migrationActionMigrateDescription": "Перенести каждую серию в новый источник и удалить оригинал.",
+    "migrationActionCopyDescription": "Добавить каждую серию в новый источник, сохранив оригинал.",
+    "migrateSeriesCount": "Перенести серии: {count}",
+    "@migrateSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "copySeriesCount": "Скопировать серии: {count}",
+    "@copySeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDoneMigrated": "Перенесено серий: {count}",
+    "@migrationDoneMigrated": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDoneCopied": "Скопировано серий: {count}",
+    "@migrationDoneCopied": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationNewChaptersTitle": "Новые главы",
+    "notificationNewChaptersSummary": "Обновления для серий: {count}",
+    "@notificationNewChaptersSummary": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChaptersGeneric": "Новых глав: {count}",
+    "@notificationChaptersGeneric": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChaptersMultipleAndMore": "Главы {numbers} и ещё {count}",
+    "@notificationChaptersMultipleAndMore": {
+        "placeholders": {
+            "numbers": {
+                "type": "String"
+            },
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "libraryUpdateErrorsEmpty": "Ошибок обновления нет",
+    "notificationLibraryErrorTitle": "Не удалось обновить библиотеку",
+    "notificationLibraryErrorBody": "Не удалось обновить серии: {count}",
+    "@notificationLibraryErrorBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationDownloadErrorTitle": "Ошибка загрузки",
+    "notificationDownloadErrorBody": "Не удалось скачать главы: {count}",
+    "@notificationDownloadErrorBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "backgroundDownloadScheduleFailed": "Не удалось запланировать фоновые загрузки. Повторите из раздела «Загрузки».",
+    "notificationDownloadsPausedBackground": "Android приостановил фоновые загрузки. Откройте Tsumiru, чтобы повторить.",
+    "notificationDownloadsPausedService": "Не удалось запустить загрузки. Нажмите «Повторить» в разделе «Загрузки».",
+    "notificationDownloadsPausedNoServer": "Нет подключения. Загрузки возобновятся, когда оно вернётся.",
+    "@notificationDownloadsPausedNoServer": {
+        "description": "Body when downloads pause because the Suwayomi server is unreachable"
+    },
+    "notificationDownloadsPausedWifi": "Ожидание Wi-Fi.",
+    "@notificationDownloadsPausedWifi": {
+        "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
+    },
+    "notificationAppUpdateBody": "Доступна версия Tsumiru {version}",
+    "@notificationAppUpdateBody": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationExtensionUpdateBody": "Обновления доступны для расширений: {count}",
+    "@notificationExtensionUpdateBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationIncognitoBody": "Обновление истории и прогресса приостановлено",
+    "privacyPolicy": "Политика конфиденциальности",
+    "notificationsAppUpdates": "Уведомления об обновлениях приложения",
+    "notificationsExtensionUpdates": "Уведомления об обновлениях расширений",
+    "notificationDownloadsCompleteTitle": "Загрузки завершены",
+    "notificationDownloadsCompleteBody": "Скачано глав: {count}",
+    "@notificationDownloadsCompleteBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "network": "Сеть",
+    "notifications": "Уведомления",
+    "notificationsSectionNewChapters": "Новые главы",
+    "@notificationsSectionNewChapters": {
+        "description": "Section header for new-chapter notification settings"
+    },
+    "notificationsSectionOther": "Прочее",
+    "@notificationsSectionOther": {
+        "description": "Section header for the remaining notification kinds"
+    },
+    "notificationsNewChapters": "Уведомления о новых главах",
+    "notificationsNewChaptersSubtitle": "Уведомлять, когда у отслеживаемых серий появляются новые главы",
+    "notificationsDownloadsComplete": "Уведомления о загрузках",
+    "notificationsCheckInterval": "Интервал проверки",
+    "notificationsChargingOnly": "Только при зарядке",
+    "notificationsHideContentSubtitle": "Показывать только количество, без названий и обложек",
+    "notificationsCheckNow": "Проверить сейчас",
+    "notificationsReliabilityNote": "Проверки выполняются периодически, а не мгновенно. Некоторые устройства ограничивают фоновые обновления.",
+    "errorGettingMigrationSources": "Не удалось получить источники для миграции",
+    "errorSearchingMangaInSource": "Не удалось найти мангу в источнике",
+    "errorFetchingSourceManga": "Не удалось получить мангу из источника",
+    "errorSourceMangaNotFound": "Манга в источнике не найдена",
+    "errorFetchingTargetManga": "Не удалось получить целевую мангу",
+    "errorTargetMangaNotFound": "Целевая манга не найдена",
+    "webtoonScaleType": "Масштаб длинной полосы",
+    "@webtoonScaleType": {
+        "description": "Section label for the long-strip scale chip row"
+    },
+    "yes": "Да",
+    "no": "Нет",
+    "searchAllSources": "Искать во всех источниках",
+    "retryAll": "Повторить всё",
+    "searchLibraryHint": "Поиск по названию или автору...",
+    "@searchLibraryHint": {
+        "description": "Placeholder text in the library search field"
+    },
+    "select": "Выбрать",
+    "selectAll": "Выбрать всё",
+    "selectBelow": "Выбрать ниже",
+    "serverSignedOutTitle": "Вход выполнен",
+    "@serverSignedOutTitle": {
+        "description": "Title shown when the server rejects the app's credentials."
+    },
+    "serverSignedOutSubtitle": "Сервер не принял эти данные входа. Войдите снова в настройках подключения.",
+    "@serverSignedOutSubtitle": {
+        "description": "Subtitle shown when the server rejects the app's credentials."
+    },
+    "serverUnreachableTitle": "Не удаётся связаться с сервером",
+    "@serverUnreachableTitle": {
+        "description": "Shown when the app cannot connect to the Suwayomi server"
+    },
+    "serverUnreachableSubtitle": "Убедитесь, что он запущен, затем проверьте настройки подключения.",
+    "@serverUnreachableSubtitle": {
+        "description": "Guidance under the server-unreachable message"
+    },
+    "serverUnreachableAction": "Настройки подключения",
+    "@serverUnreachableAction": {
+        "description": "Button that opens the connection settings screen"
+    },
+    "serverUpdateAvailable": "Доступно обновление сервера",
+    "serverUpdatedTo": "Сервер обновлён до {version}",
+    "@serverUpdatedTo": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "offlineViewBannerTitle": "Вы просматриваете офлайн-данные",
+    "@offlineViewBannerTitle": {
+        "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
+    },
+    "offlineViewGoOnline": "Перейти в онлайн",
+    "@offlineViewGoOnline": {
+        "description": "Banner button that leaves the offline view and loads from the server again"
+    },
+    "clearCrashLog": "Очистить журнал отладки",
+    "copyCrashLog": "Скопировать журнал отладки",
+    "copyCrashLogSubtitle": "Недавние ошибки и диагностика читалки для отчётов об ошибках",
+    "crashLogCleared": "Журнал отладки очищен",
+    "crashLogCopied": "Журнал отладки скопирован в буфер обмена",
+    "noCrashLog": "Журнал отладки не найден",
+    "addLocalNetworkAddress": "Добавить адрес локальной сети",
+    "serverLanUrl": "Внутренний / LAN-адрес",
+    "serverLanUrlOptional": "Необязательно",
+    "serverLanUrlHintText": "http://192.168.1.100:4567",
+    "serverActiveUrl": "Активное подключение",
+    "serverUsingLanUrl": "Используется LAN",
+    "serverUsingExternalUrl": "Используется удалённый адрес",
+    "cleartextAddressWarning": "Этот адрес использует незашифрованный http:// через интернет: данные входа и сеанс передаются открыто и доступны любому в пути. Используйте https://, например через обратный прокси.",
+    "@cleartextAddressWarning": {
+        "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
+    },
+    "serverUsers": "Пользователи",
+    "@serverUsers": {
+        "description": "Server hub entry that opens user management"
+    },
+    "settingsGroupApp": "Приложение",
+    "settingsGroupSuwayomi": "Suwayomi",
+    "@settingsGroupSuwayomi": {
+        "description": "Group header for Suwayomi server settings"
+    },
+    "skipThisVersion": "Не напоминать об этой версии",
+    "stillRequestedByAnotherAccount": "Всё ещё запрошено другим аккаунтом",
+    "@stillRequestedByAnotherAccount": {
+        "description": "Toast after cancelling a download that remains queued because another account requested it"
+    },
+    "systemTrayIconDescription": "Этот значок будет показан в системе, где запущен сервер",
+    "tomorrow": "Завтра",
+    "upcomingViewMonth": "Месяц",
+    "upcomingViewWeek": "Неделя",
+    "upcomingShowPastReleases": "Показывать прошедшие выходы",
+    "upcomingCalendarOptions": "Параметры календаря",
+    "upcomingGuide": "Что это?",
+    "upcomingGuideBody": "Прогнозируемые даты следующих выходов для вашей библиотеки, оценённые по недавней частоте обновлений каждой серии. Это оценки, а не гарантии; завершённые серии не учитываются.",
+    "upcomingEmpty": "Пока нет прогнозов будущих выходов. Они появятся здесь, когда в библиотеке накопится достаточно истории глав для оценки.",
+    "unifiedSearchHint": "Поиск по библиотеке, приложению и источникам",
+    "@unifiedSearchHint": {
+        "description": "Placeholder text in the unified search field"
+    },
+    "unifiedSearchGoToSection": "Перейти",
+    "@unifiedSearchGoToSection": {
+        "description": "Unified search section header for app navigation"
+    },
+    "unifiedSearchFiltersSection": "Фильтры",
+    "@unifiedSearchFiltersSection": {
+        "description": "Unified search section header for operator autocomplete suggestions"
+    },
+    "unifiedSearchExamplesSection": "Примеры",
+    "@unifiedSearchExamplesSection": {
+        "description": "Unified search section header for example queries in the empty state"
+    },
+    "unifiedSearchAllSources": "Искать во всех источниках «{query}»",
+    "@unifiedSearchAllSources": {
+        "description": "Row that hands off to global source search",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchLibraryFor": "Искать в библиотеке «{query}»",
+    "@phoneSearchLibraryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Library filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchHistoryFor": "Искать в истории «{query}»",
+    "@phoneSearchHistoryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the History filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchSourcesFor": "Искать в источниках «{query}»",
+    "@phoneSearchSourcesFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Sources filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchNoResults": "Ничего не найдено",
+    "@phoneSearchNoResults": {
+        "description": "Phone search: trailing label on the dimmed page row when nothing on the page matches"
+    },
+    "reinstall": "Переустановить",
+    "@reinstall": {
+        "description": "Button tooltip on an installed extension: uninstall it and install it again"
+    },
+    "reinstalling": "Переустановка",
+    "readProgressBar": "Полоса прогресса чтения",
+    "updateAll": "Обновить всё",
+    "updatesGroupingLabel": "Группировка глав",
+    "updatesGroupingHint": "Объединять главы одной серии за один день в одну раскрываемую запись.",
+    "updatesGroupingModeCollapsed": "Свёрнуто",
+    "updatesGroupingModeExpanded": "Развёрнуто",
+    "updatesGroupingShowMore": "+{count} ещё",
+    "@updatesGroupingShowMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "updatingLibraryProgress": "Обновление библиотеки ({percent}% · {checked}/{total})",
+    "@updatingLibraryProgress": {
+        "description": "App-root banner text while a library update is running, once the job total is known. Percent alongside the raw checked/total counts (locked in the design spec: Komikku's banner is percent-only, ours adds counts since the data is already available).",
+        "placeholders": {
+            "percent": {
+                "example": "37",
+                "type": "int"
+            },
+            "checked": {
+                "example": "44",
+                "type": "int"
+            },
+            "total": {
+                "example": "120",
+                "type": "int"
+            }
+        }
+    },
+    "validating": "Проверка",
+    "@validating": {
+        "description": "toast to show backup validation is in progress"
+    },
+    "kcefWebView": "WebView",
+    "kcefWebViewDescription": "Включить WebView через CEF (Chromium)",
+    "searchHistory": "Поиск по истории...",
+    "noHistoryFound": "История чтения не найдена",
+    "noSearchResults": "Нет результатов поиска",
+    "tryDifferentSearchTerm": "Попробуйте другой поисковый запрос",
+    "errorOccurred": "Произошла ошибка",
+    "viewManga": "Просмотреть мангу",
+    "timeouts": "Тайм-ауты",
+    "serverRequestTimeout": "Тайм-аут запросов к серверу",
+    "@serverRequestTimeout": {
+        "description": "Controls how long to wait for server responses"
+    },
+    "autoRefreshOnTimeout": "Автообновление при тайм-ауте",
+    "@autoRefreshOnTimeout": {
+        "description": "Toggle automatic retry on timeout"
+    },
+    "autoRefreshOnTimeoutDescription": "Автоматически повторять запросы, завершившиеся тайм-аутом",
+    "autoRefreshRetryDelay": "Задержка повтора автообновления",
+    "@autoRefreshRetryDelay": {
+        "description": "Delay between auto retry attempts in seconds"
+    },
+    "offlineStorageSection": "Хранилище",
+    "@offlineStorageSection": {
+        "description": "Section header in Offline Settings"
+    },
+    "offlineRemoveAllDownloads": "Удалить все загрузки",
+    "@offlineRemoveAllDownloads": {
+        "description": "Label for the remove-all tile in Offline Settings"
+    },
+    "offlineRemoveAllConfirm": "Удалить все скачанные главы с этого устройства? Библиотека на сервере останется без изменений.",
+    "@offlineRemoveAllConfirm": {
+        "description": "Body text for remove-all confirmation dialog"
+    },
+    "offlineBackgroundSection": "Фон",
+    "@offlineBackgroundSection": {
+        "description": "Section header for background download settings"
+    },
+    "downloadOverWifiOnly": "Скачивать только по Wi-Fi",
+    "@downloadOverWifiOnly": {
+        "description": "Toggle to restrict background downloads to Wi-Fi connections"
+    },
+    "downloadNewChaptersInBackground": "Скачивать новые главы в фоне",
+    "downloadNewChaptersInBackgroundDescription": "Загружать новые главы для серий, хранимых офлайн, не открывая приложение",
+    "backgroundCatchupFetchFiles": "Скачивать файлы в фоне",
+    "backgroundCatchupFetchFilesDescription": "Если выключено, фоновая проверка только находит и ставит в очередь новые главы. Файлы скачаются при следующем открытии приложения.",
+    "@backgroundCatchupFetchFilesDescription": {
+        "description": "Sub-option under downloadNewChaptersInBackground: whether the background run also downloads chapter files, or only detects/queues them"
+    },
+    "offlineConcurrencyLabel": "Одновременные загрузки",
+    "@offlineConcurrencyLabel": {
+        "description": "Label for the download concurrency slider"
+    },
+    "offlineConcurrencyValue": "{count} одновременно",
+    "@offlineConcurrencyValue": {
+        "description": "Value subtitle for the download concurrency slider",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineStorageCapEnable": "Ограничить офлайн-хранилище",
+    "@offlineStorageCapEnable": {
+        "description": "Toggle to enable the storage cap safety net"
+    },
+    "offlineStorageCapLimit": "Лимит хранилища",
+    "@offlineStorageCapLimit": {
+        "description": "Label for the storage cap MB slider"
+    },
+    "offlineMegabytes": "{count} МБ",
+    "@offlineMegabytes": {
+        "description": "Storage cap value shown as megabytes",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineTimeEvictEnable": "Автоудаление старых загрузок",
+    "@offlineTimeEvictEnable": {
+        "description": "Toggle to enable time-based eviction"
+    },
+    "offlineKeepDaysLabel": "Хранить загрузки",
+    "@offlineKeepDaysLabel": {
+        "description": "Label for the keep-days slider"
+    },
+    "offlineDays": "{count} дн.",
+    "@offlineDays": {
+        "description": "Keep-days value shown as days",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineNotAvailable": "Офлайн-загрузки недоступны на этой платформе.",
+    "@offlineNotAvailable": {
+        "description": "Shown in Offline Settings when offline storage is unavailable"
+    },
+    "keepOffline": "Хранить офлайн",
+    "@keepOffline": {
+        "description": "Tooltip for the per-series keep-offline popup button in manga details"
+    },
+    "keepOfflineNextUnread": "Хранить следующие {count} непрочитанных",
+    "@keepOfflineNextUnread": {
+        "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "keepOfflineAllUnread": "Хранить все непрочитанные",
+    "@keepOfflineAllUnread": {
+        "description": "Keep-offline rule: keep all unread chapters on device"
+    },
+    "keepOfflineAll": "Хранить все главы",
+    "@keepOfflineAll": {
+        "description": "Keep-offline rule: keep every chapter on device"
+    },
+    "keepOfflineNextUnreadShort": "{count} непрочитанных",
+    "@keepOfflineNextUnreadShort": {
+        "description": "Short keep-offline status on the series page button",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "keepOfflineAllUnreadShort": "Все непрочитанные",
+    "@keepOfflineAllUnreadShort": {
+        "description": "Short keep-offline status on the series page button"
+    },
+    "keepOfflineAllShort": "Все главы",
+    "@keepOfflineAllShort": {
+        "description": "Short keep-offline status on the series page button"
+    },
+    "offlineDownloadAction": "Офлайн",
+    "@offlineDownloadAction": {
+        "description": "Series offline button label when nothing is downloaded yet"
+    },
+    "offlineOnDevice": "На устройстве",
+    "@offlineOnDevice": {
+        "description": "Series offline button label when the series has downloads on this device"
+    },
+    "offlineSheetTitle": "Офлайн-чтение",
+    "viewOffline": "Смотреть офлайн",
+    "@viewOffline": {
+        "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
+    },
+    "offlineSheetSubtitle": "Хранить главы на этом устройстве с автопополнением по мере чтения.",
+    "offlineRemoveSeries": "Удалить загрузки",
+    "@offlineRemoveSeries": {
+        "description": "Series offline action: remove this series' downloads from the device"
+    },
+    "offlineDownloadingToast": "Загрузка на это устройство…",
+    "@offlineDownloadingToast": {
+        "description": "Snackbar shown after starting a series download"
+    },
+    "markAsRead": "Отметить прочитанным",
+    "settingsSectionBehavior": "Поведение",
+    "@settingsSectionBehavior": {
+        "description": "Section header for library behaviour settings"
+    },
+    "chapterSwipeToLeft": "Действие при свайпе влево",
+    "chapterSwipeToRight": "Действие при свайпе вправо",
+    "chapterSwipeDisabled": "Отключено",
+    "chapterSwipeBookmarkChapter": "Добавить главу в закладки",
+    "markAsUnread": "Отметить непрочитанным",
+    "markPreviousAsRead": "Отметить предыдущие прочитанными",
+    "markedAsRead": "{count, plural, =1{1 глава отмечена прочитанной} few{{count} главы отмечены прочитанными} many{{count} глав отмечены прочитанными} other{{count} главы отмечены прочитанными}}",
+    "@markedAsRead": {
+        "description": "Toast after bulk mark-read, with an Undo action",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "markedAsUnread": "{count, plural, =1{1 глава отмечена непрочитанной} few{{count} главы отмечены непрочитанными} many{{count} глав отмечены непрочитанными} other{{count} главы отмечены непрочитанными}}",
+    "@markedAsUnread": {
+        "description": "Toast after bulk mark-unread, with an Undo action",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "manageDownloadsNothingYet": "Пока ничего не скачано",
+    "offlineManualOnly": "Только вручную",
+    "manageDownloadsChangeRule": "Изменить правило",
+    "manageDownloadsStopKeep": "Прекратить хранение",
+    "manageDownloadsStopDelete": "Прекратить хранение и удалить файлы",
+    "manageDownloadsKeepFilesConfirm": "Прекратить автохранение серий ({count}), но оставить уже скачанные главы на этом устройстве?",
+    "@manageDownloadsKeepFilesConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "manageDownloadsDeleteConfirm": "Прекратить хранение серий ({count}) и удалить их скачанные главы с этого устройства? Копии на сервере останутся без изменений.",
+    "@manageDownloadsDeleteConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "manageDownloadsGrowConfirm": "Будет скачано больше глав для серий ({count}). Продолжить?",
+    "@manageDownloadsGrowConfirm": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineDownloadingCount": "Загрузка: {count}",
+    "@offlineDownloadingCount": {
+        "description": "Series button label while N chapters are downloading",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "downloadsOnDeviceTab": "На устройстве",
+    "@downloadsOnDeviceTab": {
+        "description": "Downloads tab: files downloaded on this device"
+    },
+    "downloadsQueue": "Очередь",
+    "@downloadsQueue": {
+        "description": "Header title above the server download queue"
+    },
+    "downloadPagesProgress": "{done}/{total} стр.",
+    "@downloadPagesProgress": {
+        "description": "Progress text for a downloading chapter, e.g. 24/25 pages",
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineNoFiles": "На это устройство пока ничего не скачано",
+    "@offlineNoFiles": {
+        "description": "Empty state for the on-device downloads tab"
+    },
+    "yourRating": "Ваша оценка",
+    "addTag": "Добавить тег",
+    "tags": "Теги",
+    "searchForExtensions": "Поиск расширений",
+    "searchSourcesHint": "Поиск источников...",
+    "@searchSourcesHint": {
+        "description": "Placeholder in the desktop Browse search box on the Sources and Migrate tabs"
+    },
+    "searchExtensionsHint": "Поиск расширений...",
+    "@searchExtensionsHint": {
+        "description": "Placeholder in the desktop Browse search box on the Extensions tab"
+    },
+    "searchTips": "Советы по поиску",
+    "searchTipsPlainWords": "Обычные слова ищутся по названию, автору, жанрам и тегам.",
+    "@searchTipsPlainWords": {
+        "description": "First paragraph of the search tips dialog"
+    },
+    "searchTipsField": "Введите поле и двоеточие, например {example}, чтобы искать по одному полю. Подсказки появляются по мере ввода.",
+    "@searchTipsField": {
+        "description": "Second paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "searchTipsExclude": "Исключить с помощью минуса: {example}",
+    "@searchTipsExclude": {
+        "description": "Third paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "updateProgressManualMarkReadDesc": "Не применяется к массовой отметке «прочитано»",
+    "@updateProgressManualMarkReadDesc": {
+        "description": "Subtitle for the manual-mark-read progress toggle"
+    },
+    "reLogin": "Токен истёк. Войдите снова.",
+    "@reLogin": {
+        "description": "Subtitle shown on a tracker tile when the token is expired, prompting the user to log in again"
+    },
+    "trackerLoginSuccess": "Выполнен вход в {trackerName}",
+    "@trackerLoginSuccess": {
+        "description": "Toast shown after a successful tracker login",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "manageTrackers": "Управление трекерами",
+    "@manageTrackers": {
+        "description": "Button / list-tile label that opens the Tracking settings screen from the track hub sheet"
+    },
+    "noTrackersLoggedIn": "Войдите в трекер",
+    "@noTrackersLoggedIn": {
+        "description": "Empty-state message shown in the track hub sheet when no tracker account is logged in"
+    },
+    "logInToEdit": "Войдите, чтобы изменить",
+    "@logInToEdit": {
+        "description": "Button shown on a read-only tracker card when the tracker account is logged out but the manga already has a bound record; tapping pops the sheet and opens Tracking Settings"
+    },
+    "trackBindSuccess": "Добавлено в {trackerName}",
+    "@trackBindSuccess": {
+        "description": "Success toast shown after a manga is successfully bound to a tracker",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackChaptersRead": "Прочитано глав",
+    "@trackChaptersRead": {
+        "description": "Row label for the chapters-read field in the track editor"
+    },
+    "trackRemoveEntry": "Удалить трекинг",
+    "@trackRemoveEntry": {
+        "description": "Overflow menu item that removes the track record"
+    },
+    "trackRemoveConfirmTitle": "Удалить трекинг?",
+    "@trackRemoveConfirmTitle": {
+        "description": "Title of the confirmation dialog when removing a track record"
+    },
+    "trackRemoveConfirmBody": "Запись трекинга будет удалена из {trackerName}.",
+    "@trackRemoveConfirmBody": {
+        "description": "Body of the remove-tracking confirmation dialog",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackChangeEntry": "Изменить запись",
+    "@trackChangeEntry": {
+        "description": "Overflow menu item that opens the tracker search to rebind to a different entry"
+    },
+    "trackPrivateBadge": "Приватная",
+    "@trackPrivateBadge": {
+        "description": "Badge shown on a private track record in the track editor header"
+    },
+    "group": "Группировка",
+    "@group": {
+        "description": "Label for the Group tab in the library organizer sheet (Filter/Sort/Display/Group)"
+    },
+    "groupByDefault": "По умолчанию",
+    "@groupByDefault": {
+        "description": "Group mode: by category (the existing category tabs behaviour)"
+    },
+    "groupBySource": "По источнику",
+    "@groupBySource": {
+        "description": "Group mode: one tab per manga source"
+    },
+    "groupByStatus": "По статусу",
+    "@groupByStatus": {
+        "description": "Group mode: one tab per publication status"
+    },
+    "groupUngrouped": "Без группировки",
+    "@groupUngrouped": {
+        "description": "Group mode: single tab containing all library manga"
+    },
+    "groupByTrackStatus": "По статусу трекинга",
+    "@groupByTrackStatus": {
+        "description": "Group mode: one tab per tracker status (Reading, Completed, etc.); gated on logged-in trackers"
+    },
+    "copiedImage": "Изображение скопировано",
+    "@copiedImage": {
+        "description": "Toast shown after the current page image was copied to the clipboard"
+    },
+    "shareImage": "Поделиться изображением",
+    "@shareImage": {
+        "description": "Reader page-actions sheet: share the current page image file via the system share sheet"
+    },
+    "share": "Поделиться",
+    "@share": {
+        "description": "Series page: share the series source link via the system share sheet"
+    },
+    "saveToGallery": "Сохранить в галерею",
+    "@saveToGallery": {
+        "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
+    },
+    "copyFirstPage": "Копировать первую",
+    "@copyFirstPage": {
+        "description": "Reader page-actions sheet: copy the first page image in a two-page spread"
+    },
+    "shareFirstPage": "Поделиться первой",
+    "@shareFirstPage": {
+        "description": "Reader page-actions sheet: share the first page image in a two-page spread"
+    },
+    "saveFirstPage": "Сохранить первую",
+    "@saveFirstPage": {
+        "description": "Reader page-actions sheet: save the first page image in a two-page spread"
+    },
+    "copySecondPage": "Копировать вторую",
+    "@copySecondPage": {
+        "description": "Reader page-actions sheet: copy the second page image in a two-page spread"
+    },
+    "shareSecondPage": "Поделиться второй",
+    "@shareSecondPage": {
+        "description": "Reader page-actions sheet: share the second page image in a two-page spread"
+    },
+    "saveSecondPage": "Сохранить вторую",
+    "@saveSecondPage": {
+        "description": "Reader page-actions sheet: save the second page image in a two-page spread"
+    },
+    "copySpread": "Копировать разворот",
+    "@copySpread": {
+        "description": "Reader page-actions sheet: copy a combined two-page spread image"
+    },
+    "shareSpread": "Поделиться разворотом",
+    "@shareSpread": {
+        "description": "Reader page-actions sheet: share a combined two-page spread image"
+    },
+    "saveSpread": "Сохранить разворот",
+    "@saveSpread": {
+        "description": "Reader page-actions sheet: save a combined two-page spread image"
+    },
+    "savedToGallery": "Сохранено в галерею",
+    "@savedToGallery": {
+        "description": "Toast shown after the current page image was saved to the device gallery"
+    },
+    "offlineServerMismatch": "Ваши офлайн-загрузки относятся к другому серверу.",
+    "offlineServerMismatchDisabled": "Офлайн здесь отключён. Удалите загрузки другого сервера, чтобы включить его.",
+    "offlineServerMismatchClear": "Удалить старые загрузки",
+    "offlineServerMismatchDismiss": "Скрыть",
+    "offlineServerMismatchConfirmTitle": "Удалить офлайн-данные?",
+    "offlineServerMismatchConfirmBody": "Это удалит всю мангу на устройстве и очередь загрузок с предыдущего сервера.",
+    "offlineCatalogClearFailed": "Не удалось удалить офлайн-данные. Приостановите загрузки и повторите.",
+    "offlineServerMismatchClearAction": "Удалить офлайн-данные",
+    "keyboardShortcuts": "Сочетания клавиш",
+    "@keyboardShortcuts": {
+        "description": "Settings tile + Hotkeys page title"
+    },
+    "hotkeysGlobalSection": "Глобальные",
+    "@hotkeysGlobalSection": {
+        "description": "Hotkeys page section header"
+    },
+    "hotkeyGoBack": "Назад",
+    "@hotkeyGoBack": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenLibrary": "Открыть библиотеку",
+    "@hotkeyOpenLibrary": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenDownloads": "Открыть загрузки",
+    "@hotkeyOpenDownloads": {
+        "description": "Hotkey action"
+    },
+    "hotkeyReaderFirstPage": "Первая страница",
+    "@hotkeyReaderFirstPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderLastPage": "Последняя страница",
+    "@hotkeyReaderLastPage": {
+        "description": "Reader hotkey action"
+    },
+    "extensionStoresDescription": "Добавьте хранилища расширений, из которых устанавливает сервер",
+    "@extensionStoresDescription": {
+        "description": "Subtitle for the Extension stores settings row when no stores are added yet"
+    },
+    "recommendsInOverflow": "Рекомендации в меню «Ещё»",
+    "@recommendsInOverflow": {
+        "description": "Setting to move the recommendations button into the overflow menu"
+    },
+    "recommendsInOverflowSubtitle": "Показывать их в меню ⋮, а не строкой на странице манги",
+    "@recommendsInOverflowSubtitle": {
+        "description": "Subtitle for the recommendations-in-overflow setting"
+    },
+    "preferredScanlationGroups": "Предпочитаемые группы",
+    "@preferredScanlationGroups": {
+        "description": "Title for the preferred scanlation groups filter-sheet row and ranking dialog"
+    },
+    "preferredGroupsHint": "Отмеченные группы предпочитаются по порядку. Главы, которых у них нет, берутся у других групп.",
+    "@preferredGroupsHint": {
+        "description": "Hint text explaining the preferred scanlation groups ranking dialog"
+    },
+    "noGroupPreference": "Без предпочтений",
+    "@noGroupPreference": {
+        "description": "Subtitle shown when no preferred scanlation groups are set"
+    },
+    "showAllChapterVersions": "Показывать все версии",
+    "@showAllChapterVersions": {
+        "description": "Switch title to show every scanlator's copy of each chapter instead of the deduped preferred version"
+    },
+    "duplicateSameTrackerEntry": "Та же запись в {tracker}",
+    "@duplicateSameTrackerEntry": {
+        "description": "Label on a duplicate candidate that shares a tracker binding, naming the tracker",
+        "placeholders": {
+            "tracker": {
+                "type": "String"
+            }
+        }
+    },
+    "duplicateSameTrackerEntryGeneric": "Та же запись трекера",
+    "@duplicateSameTrackerEntryGeneric": {
+        "description": "Label on a duplicate candidate that shares a tracker binding when the tracker's name isn't known"
+    },
+    "bulkAddedSkipped": "Добавлено: {added}, пропущено: {skipped}",
+    "@bulkAddedSkipped": {
+        "description": "Summary toast after a bulk add where some entries were skipped as duplicates",
+        "placeholders": {
+            "added": {
+                "type": "int"
+            },
+            "skipped": {
+                "type": "int"
+            }
+        }
+    },
+    "bulkAdded": "Добавлено в библиотеку: {added}",
+    "@bulkAdded": {
+        "description": "Summary toast after a bulk add where no entries were skipped",
+        "placeholders": {
+            "added": {
+                "type": "int"
+            }
+        }
+    },
+    "scanForDuplicates": "Искать дубликаты",
+    "@scanForDuplicates": {
+        "description": "Button text to run the library-wide duplicate scan"
+    },
+    "duplicatesOfflineTitleOnly": "Офлайн: сопоставление только по названию",
+    "@duplicatesOfflineTitleOnly": {
+        "description": "Notice shown during the duplicate scan while offline, since tracker and description matching need server data"
+    },
+    "duplicatesRemoveConfirm": "{count, plural, =1{Удалить 1 запись из библиотеки?} few{Удалить {count} записи из библиотеки?} many{Удалить {count} записей из библиотеки?} other{Удалить {count} записи из библиотеки?}} Также будут удалены скачанные главы на этом устройстве.",
+    "@duplicatesRemoveConfirm": {
+        "description": "Confirmation dialog body for removing entries found by the duplicate scan",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatesRemoveOfflineTooltip": "Переподключитесь к серверу, чтобы удалить записи",
+    "@duplicatesRemoveOfflineTooltip": {
+        "description": "Tooltip on the disabled remove action in the duplicate scan while offline"
+    },
+    "duplicatesRemoved": "Удалено из библиотеки: {count}",
+    "@duplicatesRemoved": {
+        "description": "Toast after removing entries from the duplicate scan when all removals succeeded",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatesRemovedPartial": "Удалено {removed} из {total}. Остальные удалить не удалось.",
+    "@duplicatesRemovedPartial": {
+        "description": "Toast after removing entries from the duplicate scan when a removal failed partway, so fewer were removed than requested",
+        "placeholders": {
+            "removed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineChaptersActiveSection": "Загружается / в очереди",
+    "@offlineChaptersActiveSection": {
+        "description": "Section header for chapters currently downloading or queued in the offline chapter list"
+    },
+    "offlineChaptersErrorSection": "С ошибкой",
+    "@offlineChaptersErrorSection": {
+        "description": "Section header for chapters that failed to download"
+    },
+    "offlineChaptersEmpty": "На это устройство пока не сохранено ни одной главы.",
+    "@offlineChaptersEmpty": {
+        "description": "Empty state for the offline chapter drill-down screen"
+    },
+    "offlineChapterDelete": "Удалить с устройства",
+    "@offlineChapterDelete": {
+        "description": "Button / tooltip to remove an on-device chapter"
+    },
+    "notificationDownloadsPausedBudget": "Достигнут лимит фоновых загрузок Android. Откройте Tsumiru, чтобы повторить.",
+    "accountRegistrationTitle": "Создать аккаунт",
+    "accountRecoveryTitle": "Сбросить пароль",
+    "accountRegistrationCode": "Код регистрации",
+    "accountRecoveryCode": "Код восстановления",
+    "accountCodeRequired": "Введите код",
+    "accountCurrentPassword": "Текущий пароль",
+    "accountNewPassword": "Новый пароль",
+    "accountConfirmPassword": "Подтвердите пароль",
+    "accountPasswordsDoNotMatch": "Пароли не совпадают",
+    "accountChangePassword": "Изменить пароль",
+    "accountTitle": "Аккаунт",
+    "accountPermissions": "Права",
+    "accountPermissionsSummary": "Разрешено {allowed} из {total}",
+    "@accountPermissionsSummary": {
+        "placeholders": {
+            "allowed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "accountPermissionsFullAccess": "Полный доступ",
+    "accountPermissionsUnavailable": "Недоступно",
+    "accountPermissionAllowed": "Разрешено",
+    "accountPermissionRestricted": "Ограничено",
+    "accountRoleAdmin": "Администратор",
+    "accountRoleUser": "Пользователь",
+    "accountRoleVisitor": "Гость",
+    "accountRoleUnknown": "Неизвестная роль",
+    "accountSignOut": "Выйти",
+    "accountSignOutConfirmation": "Выйти из этого аккаунта? Скачанные главы останутся на этом устройстве.",
+    "accountPermissionInstallExtensions": "Устанавливать расширения",
+    "accountPermissionInstallExternalExtensions": "Устанавливать файлы расширений",
+    "accountPermissionUninstallExtensions": "Удалять расширения",
+    "accountPermissionDownloadChapters": "Скачивать главы",
+    "accountPermissionManageSettings": "Управлять настройками сервера",
+    "accountPermissionManageUsers": "Управлять пользователями",
+    "accountPermissionManageExtensionStores": "Управлять хранилищами расширений",
+    "accountPermissionManageSourcePreferences": "Управлять настройками источников",
+    "accountPermissionManageCache": "Управлять кэшем сервера",
+    "accountPasswordUnconfirmed": "Не удалось подтвердить смену пароля. Войдите снова, чтобы продолжить.",
+    "accountPasswordSignInRequired": "Войдите снова, чтобы продолжить.",
+    "accountSearchUsers": "Поиск пользователей",
+    "accountCreateUser": "Создать аккаунт",
+    "accountCodes": "Действующие коды",
+    "accountNoUsers": "Пользователи не найдены",
+    "accountNoCodes": "Действующих кодов нет",
+    "accountPreviousPage": "Предыдущая страница",
+    "accountRole": "Роль",
+    "accountBuiltInReadOnly": "Роль и права встроенного администратора изменить нельзя.",
+    "accountNoUserRemoval": "Удаление пользователей на этом сервере пока не поддерживается.",
+    "accountCodeShownOnce": "Скопируйте код до закрытия. Он больше не будет показан.",
+    "accountCodeExpires": "Истекает {date}",
+    "@accountCodeExpires": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "accountRevokeCode": "Отозвать код",
+    "accountRevokeCodeConfirmation": "Отозвать этот код? Его больше нельзя будет использовать для создания аккаунта или сброса пароля.",
+    "accountIssueRecoveryCode": "Создать код восстановления",
+    "accountIssueRegistrationCode": "Создать код регистрации",
+    "accountPasswordWhitespace": "Этот сервер требует пароль без пробелов в начале и в конце.",
+    "accountCatalogueWithoutLogin": "Загрузки без входа в аккаунт",
+    "accountInactiveCatalogues": "Загрузки неактивных аккаунтов",
+    "accountCatalogueOwner": "Аккаунт {id}",
+    "@accountCatalogueOwner": {
+        "placeholders": {
+            "id": {
+                "type": "String"
+            }
+        }
+    },
+    "accountCatalogueUnknownServer": "Неизвестный сервер",
+    "accountCataloguesUnavailable": "Не удалось загрузить сохранённые загрузки аккаунта.",
+    "accountCatalogueRemoveTitle": "Удалить загрузки аккаунта?",
+    "accountCatalogueRemoveConfirm": "Удалить с этого устройства скачанные главы и офлайн-библиотеку аккаунта {account} на сервере {server}? Данные на сервере останутся без изменений.",
+    "@accountCatalogueRemoveConfirm": {
+        "placeholders": {
+            "account": {
+                "type": "String"
+            },
+            "server": {
+                "type": "String"
+            }
+        }
+    },
+    "accountCatalogueRemoveFailed": "Не удалось удалить загрузки аккаунта. Возможно, они используются.",
+    "offlineRecoveryRunning": "Восстановление загрузок. Вы можете продолжать пользоваться приложением.",
+    "offlineRecoveryFailed": "Восстановление загрузок остановлено. Существующие файлы сохранены. Повторите, чтобы продолжить.",
+    "offlineRecoveryUnavailable": "Сохранённые главы временно недоступны, пока восстанавливаются загрузки.",
+    "offlineRecoveryCompleted": "Восстановлено изображений: {count}",
+    "@offlineRecoveryCompleted": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineRecoveryConflicts": "У некоторых глав разный прогресс чтения в исходной и текущей копиях. Выберите, какой прогресс сохранить. Обе копии будут сохранены в резервной копии.",
+    "offlineRecoveryReview": "Проверить прогресс",
+    "offlineRecoveryOriginal": "Использовать исходный",
+    "offlineRecoveryCurrent": "Использовать текущий",
+    "offlineRecoveryOriginalAll": "Использовать исходный для всех",
+    "offlineRecoveryCurrentAll": "Использовать текущий для всех",
+    "offlineRecoveryNotBookmarked": "Без закладки",
+    "offlineRecoveryLastRead": "Последнее чтение: {time}",
+    "@offlineRecoveryLastRead": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "offlineRecoveryUnknownTime": "Не записано",
+    "offlineRecoveryPendingSync": "Ожидает синхронизации: {fields}",
+    "@offlineRecoveryPendingSync": {
+        "placeholders": {
+            "fields": {
+                "type": "String"
+            }
+        }
+    },
+    "offlineRecoveryNoPendingSync": "Нет ожидающих изменений",
+    "offlineRecoveryPagePosition": "позиция на странице",
+    "offlineRecoveryReadStatus": "статус чтения",
+    "offlineRecoveryBookmark": "закладка",
+    "offlineRecoveryManualRead": "Статус чтения изменён вручную",
+    "bulkDownloadPresetDescription": "{preset} для каждой выбранной серии. Уже скачанные главы будут пропущены.",
+    "@bulkDownloadPresetDescription": {
+        "description": "Confirmation for applying a chapter download preset to selected library series",
+        "placeholders": {
+            "preset": {
+                "type": "String"
+            }
+        }
+    },
+    "sync": "Синхронизация",
+    "syncyomi": "SyncYomi",
+    "@syncyomi": {
+        "description": "Settings entry and screen title for the SyncYomi library sync server"
+    },
+    "syncyomiSubtitle": "Синхронизировать библиотеку и прогресс чтения через сервер SyncYomi",
+    "syncYomiEnabled": "Синхронизация с SyncYomi",
+    "syncYomiHost": "Хост",
+    "@syncYomiHost": {
+        "description": "Base URL of the SyncYomi server, e.g. the origin only, without /api/sync"
+    },
+    "syncYomiHostHint": "https://syncyomi.example.com",
+    "syncYomiHostInvalid": "Введите URL, начинающийся с http:// или https://",
+    "syncYomiApiKey": "Ключ API",
+    "syncYomiSet": "Задан",
+    "syncYomiNotSet": "Не задан",
+    "syncYomiSyncInterval": "Интервал синхронизации",
+    "syncYomiEvery30Minutes": "Каждые 30 минут",
+    "syncYomiEveryHour": "Каждый час",
+    "syncYomiEvery3Hours": "Каждые 3 часа",
+    "syncYomiEvery6Hours": "Каждые 6 часов",
+    "syncYomiEvery12Hours": "Каждые 12 часов",
+    "syncYomiDaily": "Ежедневно",
+    "syncYomiWeekly": "Еженедельно",
+    "syncYomiEveryNHours": "{count, plural, =1{Каждый час} few{Каждые {count} часа} many{Каждые {count} часов} other{Каждые {count} часа}}",
+    "@syncYomiEveryNHours": {
+        "description": "Interval wording for a server-set interval the picker does not offer",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncYomiEveryNMinutes": "{count, plural, =1{Каждую минуту} few{Каждые {count} минуты} many{Каждые {count} минут} other{Каждые {count} минуты}}",
+    "@syncYomiEveryNMinutes": {
+        "description": "Interval wording for a server-set interval under an hour",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncYomiSyncData": "Данные синхронизации",
+    "@syncYomiSyncData": {
+        "description": "Which kinds of data a SyncYomi sync carries"
+    },
+    "syncYomiSyncDataNone": "Ничего не выбрано",
+    "syncYomiSyncDataInclude": "Включить: {list}",
+    "@syncYomiSyncDataInclude": {
+        "description": "Summary of the data kinds a sync includes, comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiSyncDataManga": "Записи библиотеки",
+    "syncYomiSyncDataChapters": "Главы",
+    "syncYomiSyncDataCategories": "Категории",
+    "syncYomiSyncDataHistory": "История",
+    "syncYomiSyncDataTracking": "Трекинг",
+    "syncYomiSyncNow": "Синхронизировать сейчас",
+    "syncYomiNeverSynced": "Ни разу не синхронизировано",
+    "syncYomiLastSynced": "Последняя синхронизация: {time}",
+    "@syncYomiLastSynced": {
+        "description": "Status line after a successful sync; time is a localised date and time",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiLastSyncFailed": "Последняя синхронизация не удалась: {error}",
+    "@syncYomiLastSyncFailed": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiUnknownError": "Неизвестная ошибка",
+    "syncYomiSyncing": "Синхронизация…",
+    "@syncYomiSyncing": {
+        "description": "Status line and tooltip while a step the app does not know is running"
+    },
+    "syncYomiSyncingStep": "Синхронизация: {step}",
+    "@syncYomiSyncingStep": {
+        "placeholders": {
+            "step": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiStepStarting": "Запуск",
+    "syncYomiStepCreatingBackup": "Создание резервной копии",
+    "syncYomiStepDownloading": "Скачивание",
+    "syncYomiStepMerging": "Объединение",
+    "syncYomiStepUploading": "Отправка",
+    "syncYomiStepRestoring": "Восстановление",
+    "syncYomiSyncStarted": "Синхронизация запущена",
+    "syncYomiAlreadyRunning": "Синхронизация уже выполняется",
+    "syncYomiDisabled": "Сначала включите синхронизацию с SyncYomi",
+    "syncYomiUnsupported": "Этот сервер не поддерживает SyncYomi. Обновите Suwayomi, чтобы использовать её.",
+    "@syncYomiUnsupported": {
+        "description": "Message on the SyncYomi settings screen when the server has no SyncYomi settings"
+    },
+    "koreaderSync": "Синхронизация с KOReader",
+    "koreaderSyncSubtitle": "Синхронизировать прогресс чтения с KOReader",
+    "koreaderSyncStatus": "Состояние синхронизации",
+    "koreaderSyncStatusDisconnected": "Не подключено",
+    "koreaderSyncConnectedAs": "Подключено как {username} к {serverAddress}",
+    "@koreaderSyncConnectedAs": {
+        "description": "KOReader Sync connection status subtitle",
+        "placeholders": {
+            "username": {
+                "type": "String"
+            },
+            "serverAddress": {
+                "type": "String"
+            }
+        }
+    },
+    "koreaderSyncConnectTitle": "Подключиться к серверу KOReader Sync",
+    "koreaderSyncDisconnectTitle": "Отключиться от сервера KOReader Sync",
+    "koreaderSyncConnect": "Подключиться",
+    "koreaderSyncDisconnect": "Отключиться",
+    "koreaderSyncUsername": "Имя пользователя",
+    "koreaderSyncConnectFailed": "Не удалось подключиться к серверу KOReader Sync.",
+    "koreaderSyncDisconnectFailed": "Не удалось отключиться от сервера KOReader Sync.",
+    "koreaderSyncUnknownError": "Неизвестная ошибка",
+    "koreaderSyncStrategyForward": "Синхронизировать к более новому состоянию",
+    "koreaderSyncStrategyBackward": "Синхронизировать к более старому состоянию",
+    "koreaderSyncStrategyPrompt": "Спрашивать",
+    "koreaderSyncStrategyKeepLocal": "Оставить локальное",
+    "koreaderSyncStrategyKeepRemote": "Оставить удалённое",
+    "koreaderSyncStrategyDisabled": "Отключено",
+    "koreaderSyncChecksumMethod": "Способ сопоставления документов",
+    "koreaderSyncChecksumBinary": "Двоичный",
+    "koreaderSyncChecksumFilename": "Имя файла",
+    "koreaderSyncPercentageTolerance": "Допуск в процентах",
+    "koreaderSyncPercentageToleranceDescription": "Синхронизация не запускается, если разница прогресса укладывается в этот допуск.",
+    "koreaderSyncPercentageToleranceInvalid": "Введите число от 0 до 1.",
+    "koreaderSyncShowPassword": "Показать пароль",
+    "koreaderSyncHidePassword": "Скрыть пароль",
+    "koreaderSyncUnsupported": "Этот сервер не поддерживает KOReader Sync. Обновите Suwayomi, чтобы использовать её.",
+    "webInterface": "Веб-интерфейс",
+    "webInterfaceUnsupported": "Этот сервер не поддерживает настройки веб-интерфейса.",
+    "unsupportedPreference": "Это приложение не поддерживает данную настройку.",
+    "webInterfaceInterface": "Интерфейс",
+    "webInterfaceOpenWith": "Открывать с помощью",
+    "webInterfaceBrowser": "Браузер",
+    "webInterfaceElectron": "Electron",
+    "webInterfaceLaunchDescription": "Где запускать WebUI при старте сервера",
+    "initialOpenInBrowserEnabled": "Открывать WebUI при старте сервера",
+    "electronPath": "Путь Electron",
+    "electronPathDescription": "Путь к установленному Electron на сервере",
+    "electronPathDefault": "По умолчанию",
+    "images": "Изображения",
+    "imageProcessingClearCache": "Очистить кэш",
+    "imageProcessingClearedCache": "Кэш очищен",
+    "imageProcessingCouldNotClearCache": "Не удалось очистить кэш",
+    "imageDownloadProcessing": "Конвертировать скачанные изображения",
+    "imageServeProcessing": "Конвертировать отдаваемые изображения",
+    "imageProcessingMimeType": "Тип изображения",
+    "imageProcessingTargetMode": "Действие",
+    "imageProcessingMimeTypeTarget": "Конвертировать в",
+    "imageProcessingCompressionLevel": "Качество",
+    "imageProcessingCallTimeout": "Тайм-аут вызова",
+    "imageProcessingConnectTimeout": "Тайм-аут подключения",
+    "imageProcessingSearchParameters": "Параметры поиска",
+    "imageProcessingSearchParametersCount": "Параметры поиска ({count})",
+    "@imageProcessingSearchParametersCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "imageProcessingHeaders": "Заголовки",
+    "imageProcessingHeadersCount": "Заголовки ({count})",
+    "@imageProcessingHeadersCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "imageProcessingName": "Имя",
+    "imageProcessingValue": "Значение",
+    "imageProcessingSecond": "Второй",
+    "imageProcessingInvalidInput": "Недопустимое значение",
+    "imageProcessingFailedToSave": "Не удалось сохранить изменения",
+    "imageProcessingDisabled": "Отключено",
+    "imageProcessingImage": "Изображение",
+    "imageProcessingUrl": "URL",
+    "imageProcessingImageDescription": "Конвертировать изображения в разные форматы",
+    "imageProcessingUrlDescription": "Конвертировать изображения в разные форматы",
+    "database": "База данных",
+    "databaseType": "Тип",
+    "databaseTypeH2": "H2",
+    "databaseTypePostgresql": "PostgreSQL",
+    "databaseUrl": "URL базы данных",
+    "databaseUrlHint": "postgresql://localhost:5432/suwayomi",
+    "databaseUsername": "Имя пользователя",
+    "databasePassword": "Пароль",
+    "hikariConnectionPool": "Переиспользовать подключения к БД",
+    "hikariConnectionPoolDescription": "Быстрее, но в некоторых конфигурациях вызывает ошибки чтения.",
+    "logs": "Журналы",
+    "logFileCleanup": "Очистка журналов",
+    "maxLogFileSize": "Максимальный размер файла журнала",
+    "maxLogFolderSize": "Максимальный размер всех журналов",
+    "logSizeExamples": "Примеры возможных значений: 1 (байт), 1KB (килобайт), 1MB (мегабайт), 1GB (гигабайт)",
+    "webInterfaceWebUI": "WebUI",
+    "webInterfaceWebUIDescription": "Использовать WebUI по умолчанию",
+    "webInterfaceVUI": "VUI",
+    "webInterfaceVUIDescription": "Веб-интерфейс с упором на предпросмотр, созданный на svelte",
+    "webInterfaceTsumiru": "Tsumiru",
+    "webInterfaceTsumiruDescription": "Веб-интерфейс на Flutter с приложениями для всех платформ",
+    "webInterfaceCustom": "Свой",
+    "webInterfaceCustomDescription": "Использовать свой WebUI. Замените содержимое каталога «webUI» в корне сервера файлами своего WebUI.",
+    "webInterfaceUnknown": "Неизвестный интерфейс",
+    "webInterfaceChannel": "Канал обновлений",
+    "webInterfaceBundled": "Встроенный",
+    "webInterfaceBundledDescription": "Использовать версию, поставляемую с релизом сервера",
+    "webInterfaceStable": "Стабильный",
+    "webInterfaceStableDescription": "Использовать последнюю выпущенную версию.",
+    "webInterfacePreview": "Предпросмотр",
+    "webInterfacePreviewDescription": "Использовать новейшие функции и помочь нам довести их до стабильного релиза.",
+    "webInterfaceBundledOnly": "Встроенный режим работает только с WebUI по умолчанию. Для других интерфейсов выберите «Стабильный» или «Предпросмотр».",
+    "webInterfaceAutomaticUpdates": "Автоматические обновления",
+    "webInterfaceOff": "Выключено",
+    "webInterfaceHours": "{hours, plural, =1{Каждый час} few{Каждые {hours} часа} many{Каждые {hours} часов} other{Каждые {hours} часа}}",
+    "@webInterfaceHours": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "webInterfaceInstalledVersion": "Установленная версия",
+    "webInterfaceCheckUpdate": "Проверить обновление",
+    "webInterfaceInstallUpdate": "Установить",
+    "webInterfaceUpdateAvailable": "Доступно обновление: {tag}",
+    "@webInterfaceUpdateAvailable": {
+        "placeholders": {
+            "tag": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceInstallSwitch": "Установите, чтобы переключить сервер на {name}",
+    "@webInterfaceInstallSwitch": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceUpToDate": "Актуально",
+    "webInterfaceInstalling": "Установка обновления: {progress}%",
+    "@webInterfaceInstalling": {
+        "placeholders": {
+            "progress": {
+                "type": "int"
+            }
+        }
+    },
+    "webInterfaceInstalled": "Обновление веб-интерфейса установлено.",
+    "webInterfaceUpdateFailed": "Сервер не смог установить обновление веб-интерфейса. Проверьте журналы сервера и повторите попытку.",
+    "webInterfaceError": "Веб-интерфейс: {error}",
+    "@webInterfaceError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceCustomUpdates": "Свои интерфейсы устанавливаются вручную в каталог «webUI» сервера.",
+    "updatedByYourServer": "Обновлено вашим сервером",
+    "serverInstalledNewTsumiru": "На вашем сервере установлена новая версия Tsumiru",
+    "reloadWebBuild": "Перезагрузить",
+    "couldntReachSource": "Не удалось связаться с {source}",
+    "@couldntReachSource": {
+        "description": "Inline error in a global search source row",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "editCover": "Изменить обложку",
+    "@editCover": {
+        "description": "Title of the custom cover picker"
+    },
+    "coverUpdated": "Обложка обновлена",
+    "@coverUpdated": {
+        "description": "Confirmation after saving a custom cover"
+    },
+    "coverUpdateFailed": "Не удалось обновить обложку",
+    "@coverUpdateFailed": {
+        "description": "Error after saving a custom cover fails"
+    },
+    "customCoversTsumiruOnly": "Свои обложки отображаются только в клиентах Tsumiru.",
+    "@customCoversTsumiruOnly": {
+        "description": "Note under the cover picker search field"
+    },
+    "thumbnailUrl": "URL миниатюры",
+    "@thumbnailUrl": {
+        "description": "Label of the pasted image link field in the cover picker"
+    },
+    "paste": "Вставить",
+    "@paste": {
+        "description": "Tooltip for the paste button in the cover picker"
+    },
+    "recommendationsLoadFailed": "Не удалось загрузить рекомендации из {provider}. Повторите позже.",
+    "@recommendationsLoadFailed": {
+        "placeholders": {
+            "provider": {
+                "type": "String"
+            }
+        }
+    },
+    "recommendationsServiceUnavailable": "{provider} временно недоступен. Повторите позже.",
+    "@recommendationsServiceUnavailable": {
+        "placeholders": {
+            "provider": {
+                "type": "String"
+            }
+        }
+    },
+    "suggestionsFetching": "Загрузка предложений…",
+    "suggestionsEmpty": "Для этого тайтла предложений не найдено.",
+    "suggestionsLoadFailed": "Не удалось загрузить предложения. Повторите позже.",
+    "trackerOAuthLinkInvalid": "Эта ссылка для входа больше недействительна. Начните вход в трекер заново.",
+    "trackerOAuthSaveFailed": "Не удалось сохранить запрос на вход. Повторите попытку.",
+    "trackerOAuthBrowserFallback": "Не удалось открыть браузер. Ссылка для входа скопирована в буфер обмена.",
+    "serverSignIn": "Вход",
+    "serverAuthMode": "Режим аутентификации",
+    "serverAuthNone": "Нет",
+    "serverAuthBasic": "Basic-аутентификация",
+    "serverAuthSimple": "Simple login",
+    "serverAuthUi": "UI login",
+    "serverAuthUsername": "Имя пользователя",
+    "serverAuthPassword": "Пароль",
+    "serverAdminUsername": "Имя администратора",
+    "serverAdminPassword": "Пароль администратора",
+    "serverJwtAudience": "Claim audience JWT",
+    "serverAccessExpiry": "Срок действия токена доступа",
+    "serverRefreshExpiry": "Оставаться в системе",
+    "serverSignInConfirmTitle": "Изменить настройки входа?",
+    "serverSignInConfirmBody": "Это изменит способ входа на сервер для всех.",
+    "serverSignInChange": "Изменить",
+    "serverSignInCredentialsRequired": "Сначала введите имя пользователя и пароль.",
+    "serverSignInAdminOnly": "Изменить эти данные входа может только администратор.",
+    "serverSignInWebMode": "Этот режим входа нельзя выбрать в браузере.",
+    "serverSignInWebCredentials": "Эти данные входа нельзя изменить из браузера.",
+    "serverSignInSeparateSaves": "Сохраните данные входа до переключения на UI login.",
+    "serverSignInUsernameTaken": "Это имя пользователя занято другим аккаунтом.",
+    "serverSignInManageUsers": "Для смены имени администратора нужно право управления пользователями.",
+    "serverSignInUnknown": "Не удалось проверить настройки входа сервера.",
+    "serverSignInMinutes": "{count, plural, =1{1 минута} few{{count} минуты} many{{count} минут} other{{count} минуты}}",
+    "@serverSignInMinutes": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "serverSignInDays": "{count, plural, =1{1 день} few{{count} дня} many{{count} дней} other{{count} дня}}",
+    "@serverSignInDays": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "databaseSchema": "Схема",
+    "hikariMaxPoolSize": "Максимум подключений",
+    "includeUserSettings": "Настройки пользователя",
+    "removeMangaFromCategories": "Забыть категории манги",
+    "ignoreFilters": "Игнорировать фильтры при поиске",
+    "fuzzySearch": "Нечёткий поиск",
+    "cleanupDatabase": "Очистка базы данных",
+    "cleanupDatabaseConfirm": "Удалить из категорий записи, отсутствующие в библиотеке?",
+    "downloadAhead": "Загрузка наперёд",
+    "autoDownloadWhileReading": "Автозагрузка во время чтения",
+    "downloadAheadLimit": "Число непрочитанных глав для загрузки",
+    "hideLibraryEntries": "Скрывать записи, уже имеющиеся в библиотеке",
+    "retryErroredPages": "Повторить страницы с ошибками",
+    "openChapterInWebView": "Открыть в WebView",
+    "shareChapterLink": "Поделиться ссылкой на главу",
+    "pushKoReaderProgress": "Отправить прогресс в KOReader",
+    "pullKoReaderProgress": "Забрать прогресс из KOReader",
+    "koSyncLocationPrompt": "Синхронизировать на страницу {page} с устройства «{device}»?",
+    "@koSyncLocationPrompt": {
+        "placeholders": {
+            "page": {
+                "type": "int"
+            },
+            "device": {
+                "type": "String"
+            }
+        }
+    },
+    "duplicateChapters": "Дубликаты глав",
+    "openRandomEntry": "Открыть случайную запись",
+    "savedSearches": "Сохранённые поиски",
+    "saveSearch": "Сохранить поиск",
+    "saveCurrentSearch": "Сохранить текущий поиск",
+    "deleteSearch": "Удалить поиск",
+    "openHomepage": "Открыть в WebView",
+    "extensionInfo": "Сведения о расширении",
+    "extensionLibrary": "Библиотека",
+    "extensionStore": "Хранилище",
+    "extensionVersion": "Версия",
+    "extensionLanguage": "Язык",
+    "confirmDatabaseTitle": "Изменить настройки базы данных",
+    "confirmDatabaseMessage": "Изменение этих настроек может отключить сервер или переключить его базу данных.",
+    "confirmNetworkTitle": "Изменить сеть сервера",
+    "confirmNetworkMessage": "Изменение этой настройки может сделать сервер недоступным.",
+    "confirmImageCacheMessage": "Это очистит кэшированные изображения на сервере и этом устройстве.",
+    "confirmWebViewCacheMessage": "Это очистит cookies и кэш WebView и может вывести вас из источников.",
+    "confirmUninstallMessage": "Это удалит расширение и его источники с сервера.",
+    "confirmKoPushMessage": "Это заменит прогресс главы в KOReader вашим текущим прогрессом.",
+    "confirmKoPullMessage": "Это заменит локальный прогресс и прогресс на сервере прогрессом из KOReader.",
+    "confirmSeriesReadMessage": "Это заменит прогресс чтения для каждой главы выбранных серий.",
+    "confirmClearQueueTitle": "Очистить очередь загрузок",
+    "confirmClearQueueMessage": "Это удалит все главы из очереди загрузок сервера.",
+    "confirmDeleteNoteTitle": "Удалить заметку",
+    "confirmDeleteNoteMessage": "Сохранение пустой заметки удаляет существующую.",
+    "confirmOverwriteSearchTitle": "Перезаписать сохранённый поиск",
+    "confirmOverwriteSearchMessage": "Это заменит запрос и фильтры, сохранённые под этим именем.",
+    "confirmOverwriteAction": "Перезаписать",
+    "confirmDeleteBothDownloadsMessage": "Это удалит скачанную главу с сервера и этого устройства, включая совпадающие копии от сканаляторов.",
+    "confirmDeleteDeviceMessage": "Это удалит загрузку главы с этого устройства.",
+    "confirmDeleteSeriesDeviceMessage": "Это прекратит офлайн-хранение серии и удалит все её загрузки на устройстве.",
+    "confirmServerOriginTitle": "Изменить адрес сервера",
+    "confirmServerOriginMessage": "Изменение схемы, имени хоста или порта удалит сохранённые данные входа на этом устройстве. Потребуется войти снова.",
+    "confirmNoSignInTitle": "Использовать вход без аутентификации",
+    "confirmNoSignInMessage": "Это удалит сохранённые данные входа на этом устройстве. Их придётся ввести снова, если сервер требует входа.",
+    "clearSignInCredentials": "Удалить данные входа",
+    "confirmKeepRuleTitle": "Изменить офлайн-правило",
+    "confirmKeepRuleMessage": "Это изменение удалит главы, уже скачанные на это устройство.",
+    "confirmDuplicateMigrationMessage": "Перенести из {source} в {target}? Данные серии будут скопированы в целевой источник, а оригинал удалён из библиотеки.",
+    "@confirmDuplicateMigrationMessage": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            },
+            "target": {
+                "type": "String"
+            }
+        }
+    },
+    "confirmSyncYomiMessage": "SyncYomi объединит локальные и удалённые данные библиотеки, загрузит объединённую резервную копию и восстановит её на этом сервере. Продолжить?",
+    "accountAdminCheckFailed": "Не удалось проверить других администраторов. Повторите попытку перед удалением доступа.",
+    "accountAdminCheckLoading": "Проверка других администраторов перед удалением доступа…",
+    "accountLastManagerRequired": "Хотя бы один аккаунт должен сохранять доступ к управлению пользователями.",
+    "confirmRemoveOwnAdminTitle": "Удалить собственный доступ администратора?",
+    "confirmRemoveOwnAdminMessage": "Вы потеряете доступ к настройкам, которые контролируются удаляемой ролью или правом.",
+    "confirmTrackerLogoutMessage": "Это выведет всех пользователей сервера из этого трекера.",
+    "confirmWebInterfaceChangeTitle": "Изменить веб-интерфейс?",
+    "confirmWebInterfaceChangeMessage": "Это изменит веб-интерфейс, который сервер отдаёт всем.",
+    "removeCustomCovers": "Удалить свои обложки",
+    "removeCustomCoversTitle": "Удалить свои обложки?",
+    "removeCustomCoversBody": "Все серии вернутся к серверным обложкам во всех ваших клиентах Tsumiru.",
+    "customCoversRemoved": "Свои обложки удалены"
 }
