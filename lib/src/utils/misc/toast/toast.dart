@@ -57,7 +57,14 @@ class Toast {
     required String actionLabel,
     required VoidCallback onAction,
     Duration duration = const Duration(seconds: 5),
+    BuildContext? overlayContext,
   }) {
+    final target =
+        overlayContext != null && overlayContext.mounted
+        ? overlayContext
+        : _context;
+    // Place the entry above the calling route so the action wins taps over fullscreen routes.
+    _fToast = FToast().init(target);
     _fToast.showToast(
       child: ToastWidget(
         text: msg,

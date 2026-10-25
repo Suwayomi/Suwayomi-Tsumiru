@@ -100,7 +100,7 @@ class MangaThumbnailViewer extends ConsumerWidget {
       final cleared = await ref
           .read(mangaCustomCoverProvider(mangaId: manga.id).notifier)
           .clear();
-      if (!current()) return;
+      if (!context.mounted || !sessionCurrent()) return;
       if (!cleared) {
         ref.read(toastProvider)?.showError(failedMsg);
         return;
@@ -110,6 +110,7 @@ class MangaThumbnailViewer extends ConsumerWidget {
           ?.showWithAction(
             updatedMsg,
             actionLabel: undoLabel,
+            overlayContext: context,
             onAction: () async {
               if (!current()) return;
               final restored = await ref
