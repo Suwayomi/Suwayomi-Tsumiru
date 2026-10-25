@@ -57,7 +57,7 @@ class WebUiMetaRepository {
           )
           .getData((data) => data.setMangaMetas);
       for (final entry in plan.set.entries) {
-        await _mirrorMangaMeta(mangaId, entry.key, entry.value);
+        await mirrorMangaMeta(readOfflineDb, mangaId, entry.key, entry.value);
       }
     }
     if (plan.delete.isNotEmpty) {
@@ -86,20 +86,9 @@ class WebUiMetaRepository {
         await cleanup();
       }
       for (final key in plan.delete) {
-        await _mirrorMangaMeta(mangaId, key);
+        await mirrorMangaMeta(readOfflineDb, mangaId, key);
       }
     }
-  }
-
-  // Offline-first screens read the mirror, so reflect confirmed server writes there.
-  Future<void> _mirrorMangaMeta(int mangaId, String key, [String? value]) async {
-    try {
-      await readOfflineDb?.call()?.updateMangaMetaValue(
-        mangaId: mangaId,
-        key: key,
-        value: value,
-      );
-    } catch (_) {}
   }
 
   Future<Map<String, String>> readSourceMetas(String sourceId) async {
@@ -236,4 +225,20 @@ class WebUiMetaRepository {
       }
     }
   }
+}
+
+// Offline-first screens read the mirror, so reflect confirmed server writes there.
+Future<void> mirrorMangaMeta(
+  OfflineDatabase? Function()? readOfflineDb,
+  int mangaId,
+  String key, [
+  String? value,
+]) async {
+  try {
+    await readOfflineDb?.call()?.updateMangaMetaValue(
+      mangaId: mangaId,
+      key: key,
+      value: value,
+    );
+  } catch (_) {}
 }

@@ -254,18 +254,7 @@ class MangaBookRepository {
             ),
           )
           .getData((data) {});
-    await _mirrorMangaMeta(mangaId, key, '$value');
-  }
-
-  // Offline-first screens read the mirror, so reflect confirmed server writes there.
-  Future<void> _mirrorMangaMeta(int mangaId, String key, [String? value]) async {
-    try {
-      await readOfflineDb?.call()?.updateMangaMetaValue(
-        mangaId: mangaId,
-        key: key,
-        value: value,
-      );
-    } catch (_) {}
+    await mirrorMangaMeta(readOfflineDb, mangaId, key, '$value');
   }
 
   Future<void> setCustomCover({
@@ -299,7 +288,7 @@ class MangaBookRepository {
             ),
           )
           .getData<Object>((data) => null)
-          .then((_) => _mirrorMangaMeta(mangaId, key));
+          .then((_) => mirrorMangaMeta(readOfflineDb, mangaId, key));
 
   Future<void> deleteMangaMetas({
     required Iterable<int> mangaIds,
@@ -322,7 +311,7 @@ class MangaBookRepository {
       .getData<Object>((data) => null)
       .then((_) async {
         for (final mangaId in mangaIds) {
-          await _mirrorMangaMeta(mangaId, key);
+          await mirrorMangaMeta(readOfflineDb, mangaId, key);
         }
       });
 
