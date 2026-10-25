@@ -249,11 +249,9 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
             ),
           );
           // Keep search in the same Expanded slot across modes to preserve focus, selection and dropdown.
-          final row = Row(
-            spacing: 10,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(child: searchField),
+          final row = desktopToolbarRow(
+            search: searchField,
+            actions: [
               _DesktopSortControl(compact: compact),
               if (compact)
                 Tooltip(message: context.l10n.filter, child: filterBox)
@@ -268,25 +266,16 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
             ],
           );
           if (!compact || !constraints.hasBoundedWidth) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: row,
-            );
+            return row;
           }
           // Retain the same row and zero-width search state inside a scroller when fixed controls cannot fit.
           final minWidth = _compactFixedWidth(trailing.length);
           if (constraints.maxWidth >= minWidth) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: row,
-            );
+            return row;
           }
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(width: minWidth - 24.0, child: row),
-            ),
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(width: minWidth, child: row),
           );
         },
       ),
@@ -308,8 +297,8 @@ const _trailingButtonWidth = 48.0;
 
 /// Fixed controls' minimum width; below it the zero-width search stays mounted while the row scrolls.
 double _compactFixedWidth(int trailingCount) =>
-    24.0 +
-    (3 + trailingCount) * 10.0 +
+    2 * kDesktopToolbarSlotHPadding +
+    (3 + trailingCount) * kDesktopTopBarGap +
     (_sortCompactWidth + _boxBorderWidth) +
     (_filterCompactWidth + _boxBorderWidth) +
     (_displayBoxWidth + _boxBorderWidth) +
@@ -318,6 +307,40 @@ double _compactFixedWidth(int trailingCount) =>
 /// Minimum compact toolbar width including a usable search field.
 double libraryTopBarSlotMinWidth(int trailingCount) =>
     _compactFixedWidth(trailingCount) + kTopBarSearchMinWidth;
+
+/// SyncYomi is always budgeted so showing it never overflows.
+double updatesTopBarSlotMinWidth(
+  BuildContext context, {
+  required String updateLabel,
+  required String upcomingLabel,
+  required String filterLabel,
+}) {
+  final scaler = MediaQuery.textScalerOf(context);
+  double textWidth(String value) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: value,
+        style: DefaultTextStyle.of(context).style,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: scaler,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
+  const updateChrome = 12.0 + 12.0 + 20.0 + 8.0;
+  const upcomingChrome = 12.0 + 12.0 + 20.0 + 8.0;
+  return 2 * kDesktopToolbarSlotHPadding +
+      6 * kDesktopTopBarGap +
+      (updateChrome + textWidth(updateLabel) + _boxBorderWidth) +
+      (upcomingChrome + textWidth(upcomingLabel) + _boxBorderWidth) +
+      (_filterFullChrome + textWidth(filterLabel) + _boxBorderWidth) +
+      (_displayBoxWidth + _boxBorderWidth) +
+      2 * _trailingButtonWidth +
+      kTopBarSearchMinWidth;
+}
 
 bool _toolbarIsCompact(
   BuildContext context,
@@ -336,9 +359,9 @@ bool _toolbarIsCompact(
   )..layout();
   final labelWidth = label.width;
   label.dispose();
-  final gaps = (3 + trailingCount) * 10.0;
+  final gaps = (3 + trailingCount) * kDesktopTopBarGap;
   final neededBesidesSearch =
-      24.0 +
+      2 * kDesktopToolbarSlotHPadding +
       gaps +
       _sortFullWidth +
       _filterFullChrome +

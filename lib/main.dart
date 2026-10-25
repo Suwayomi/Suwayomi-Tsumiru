@@ -147,6 +147,22 @@ Future<void> _startApp() async {
   }
 
   try {
+    const migratedKey = 'updatesGroupingCollapsedMigrated';
+    if (sharedPreferences.getBool(migratedKey) != true) {
+      if (sharedPreferences.getInt('updatesGroupingMode') ==
+          UpdatesGroupingMode.disabled.index) {
+        await sharedPreferences.setInt(
+          'updatesGroupingMode',
+          UpdatesGroupingMode.collapsed.index,
+        );
+      }
+      await sharedPreferences.setBool(migratedKey, true);
+    }
+  } catch (e, st) {
+    debugPrint('updatesGrouping migration failed: $e\n$st');
+  }
+
+  try {
     await seedFirstRunPreferences(sharedPreferences);
   } catch (e, st) {
     debugPrint('onboarding migration failed: $e\n$st');

@@ -48,7 +48,7 @@ double _titleBlockHeight(BuildContext context, int maxLines) =>
 class MangaCoverGridTile extends StatefulWidget {
   const MangaCoverGridTile({
     super.key,
-    required this.manga,
+    this.manga,
     this.onPressed,
     this.onLongPress,
     this.onContinueReading,
@@ -63,10 +63,23 @@ class MangaCoverGridTile extends StatefulWidget {
     this.limitTitleLines = true,
     this.highlighted = false,
     this.linkLocation,
+    this.coverUrlOverride,
+    this.titleOverride,
+    this.badgeCountOverride,
+    this.subtitle,
+    this.subtitleSuffix,
+    this.dimmed = false,
   });
-  final MangaDto manga;
+  final MangaDto? manga;
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
+
+  final String? coverUrlOverride;
+  final String? titleOverride;
+  final int? badgeCountOverride;
+  final String? subtitle;
+  final Widget? subtitleSuffix;
+  final bool dimmed;
 
   /// Non-null adds a button opening the next unread chapter.
   final VoidCallback? onContinueReading;
@@ -130,6 +143,11 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
 
   bool get _overlayTitle => widget.showTitle && !widget.titleBelow;
 
+  String? get _coverUrl =>
+      widget.coverUrlOverride ?? widget.manga?.thumbnailUrl;
+
+  String get _title => widget.titleOverride ?? widget.manga?.title ?? '';
+
   bool get _keyboardFocused =>
       _focused &&
       !_pointerFocused &&
@@ -167,9 +185,8 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
               PageRouteBuilder(
                 fullscreenDialog: true,
                 opaque: false,
-                pageBuilder: (context, _, _) => MangaThumbnailViewer(
-                  imageUrl: widget.manga.thumbnailUrl ?? "",
-                ),
+                pageBuilder: (context, _, _) =>
+                    MangaThumbnailViewer(imageUrl: _coverUrl ?? ""),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
                       if (context.reduceMotion) {
@@ -212,20 +229,26 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                   card,
                   if (widget.titleBelow)
                     _TitleBlock(
-                      title: widget.manga.title,
+                      title: _title,
                       limitLines: widget.limitTitleLines,
+                      subtitle: widget.subtitle,
+                      subtitleSuffix: widget.subtitleSuffix,
+                      dimmed: widget.dimmed,
                     ),
                 ],
               )
             : widget.titleBelow
             ? LayoutBuilder(
                 builder: (context, constraints) {
-                  final twoLines = _titleBlockHeight(context, 2);
+                  final textLines = _titleBlockHeight(
+                    context,
+                    widget.subtitle == null ? 2 : 3,
+                  );
                   final cap = constraints.hasBoundedHeight
                       ? constraints.maxHeight * _kMaxTitleShare
-                      : twoLines;
+                      : textLines;
                   final blockHeight = widget.limitTitleLines
-                      ? min(twoLines, cap)
+                      ? min(textLines, cap)
                       : cap;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,8 +257,11 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                       SizedBox(
                         height: blockHeight,
                         child: _TitleBlock(
-                          title: widget.manga.title,
+                          title: _title,
                           limitLines: widget.limitTitleLines,
+                          subtitle: widget.subtitle,
+                          subtitleSuffix: widget.subtitleSuffix,
+                          dimmed: widget.dimmed,
                         ),
                       ),
                     ],
@@ -271,7 +297,12 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       child: Stack(
         fit: freeform ? StackFit.loose : StackFit.passthrough,
         children: [
-          _cover(context, freeform: freeform),
+          widget.dimmed
+              ? Opacity(
+                  opacity: .55,
+                  child: _cover(context, freeform: freeform),
+                )
+              : _cover(context, freeform: freeform),
           if (_overlayTitle)
             Positioned(
               left: 0,
@@ -279,13 +310,20 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
               bottom: 0,
               child: _overlayTitleBar(context),
             ),
-          if (widget.showBadges)
+          if (widget.badgeCountOverride != null &&
+              widget.badgeCountOverride! > 0)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _CountBadge(count: widget.badgeCountOverride!),
+            )
+          else if (widget.showBadges && widget.manga != null)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: MangaBadgesRow(
-                manga: widget.manga,
+                manga: widget.manga!,
                 showCountBadges: widget.showCountBadges,
               ),
             ),
@@ -310,12 +348,12 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 onPressed: widget.onContinueReading!,
               ),
             ),
-          if (widget.showBadges)
+          if (widget.showBadges && widget.manga != null)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: _CoverReadProgressBar(manga: widget.manga),
+              child: _CoverReadProgressBar(manga: widget.manga!),
             ),
         ],
       ),
@@ -326,7 +364,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
     dense: true,
     title: Text(
-      widget.manga.title,
+      _title,
       overflow: TextOverflow.ellipsis,
       maxLines: 2,
       // Cover-art text stays white over a black scrim, independent of the theme.
@@ -347,7 +385,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
   );
 
   Widget _cover(BuildContext context, {required bool freeform}) {
-    if (widget.manga.thumbnailUrl.isBlank) {
+    if (_coverUrl.isBlank) {
       final fallback = ImageIcon(
         AssetImage(Assets.icons.darkIcon.path),
         size: context.height * .2,
@@ -381,7 +419,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
       // Decode at tile size to keep full-resolution covers from exhausting the image-cache budget.
       child: LayoutBuilder(
         builder: (context, constraints) => ServerImage(
-          imageUrl: widget.manga.thumbnailUrl ?? "",
+          imageUrl: _coverUrl ?? "",
           memCacheWidth: constraints.hasBoundedWidth
               ? (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
                     .round()
@@ -419,10 +457,19 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
 
 /// Uncapped titles wrap in growing tiles; uniform tiles cap at a whole-line boundary.
 class _TitleBlock extends StatelessWidget {
-  const _TitleBlock({required this.title, required this.limitLines});
+  const _TitleBlock({
+    required this.title,
+    required this.limitLines,
+    this.subtitle,
+    this.subtitleSuffix,
+    this.dimmed = false,
+  });
 
   final String title;
   final bool limitLines;
+  final String? subtitle;
+  final Widget? subtitleSuffix;
+  final bool dimmed;
 
   static const _style = TextStyle(
     fontSize: _kTitleFontSize,
@@ -430,24 +477,25 @@ class _TitleBlock extends StatelessWidget {
   );
 
   /// Skia ellipsis with null maxLines collapses to one line; uncapped text must wrap.
-  static Widget _text(String title, int? maxLines) => Text(
+  static Widget _text(String title, int? maxLines, [Color? color]) => Text(
     title,
     maxLines: maxLines,
     softWrap: true,
     overflow: maxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
-    style: _style,
+    style: color == null ? _style : _style.copyWith(color: color),
   );
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(_kTitlePadding),
-      child: limitLines
-          ? _text(title, 2)
+    final scheme = context.theme.colorScheme;
+    final dimmedColor = scheme.onSurface.withValues(alpha: 0.38);
+    Widget titleWidget({bool flex = false}) {
+      final uncapped = limitLines
+          ? _text(title, 2, dimmed ? dimmedColor : null)
           : LayoutBuilder(
               builder: (context, constraints) {
                 if (!constraints.hasBoundedHeight) {
-                  return _text(title, null);
+                  return _text(title, null, dimmed ? dimmedColor : null);
                 }
                 final lineHeight =
                     MediaQuery.textScalerOf(context).scale(_kTitleFontSize) *
@@ -455,9 +503,76 @@ class _TitleBlock extends StatelessWidget {
                 return _text(
                   title,
                   max(1, (constraints.maxHeight / lineHeight).floor()),
+                  dimmed ? dimmedColor : null,
                 );
               },
+            );
+      // Flexible keeps the title bounded by the capped block.
+      return flex ? Flexible(child: uncapped) : uncapped;
+    }
+
+    Row subtitleRow() => Row(
+      children: [
+        Flexible(
+          child: Text(
+            subtitle!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: _style.copyWith(
+              color: dimmed ? dimmedColor : scheme.onSurfaceVariant,
             ),
+          ),
+        ),
+        ?subtitleSuffix,
+      ],
+    );
+    if (subtitle == null) {
+      return Padding(
+        padding: const EdgeInsets.all(_kTitlePadding),
+        child: titleWidget(),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(_kTitlePadding),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            titleWidget(flex: constraints.hasBoundedHeight),
+            subtitleRow(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.theme.colorScheme;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 22, minHeight: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.primary,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '$count',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: scheme.onPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          height: 1,
+        ),
+      ),
     );
   }
 }

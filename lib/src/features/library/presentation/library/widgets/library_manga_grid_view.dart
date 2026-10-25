@@ -24,9 +24,6 @@ import '../../../../manga_book/presentation/manga_details/controller/manga_detai
 import '../../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../controller/library_controller.dart';
 
-/// Desktop scrollbar clearance: 10 px at maximum thumb width plus 4 px gap.
-const double _libraryScrollbarGutter = 14.0;
-
 class LibraryMangaGridView extends StatelessWidget {
   const LibraryMangaGridView({
     super.key,
@@ -120,14 +117,11 @@ class LibraryMangaSliver extends ConsumerWidget {
     }
 
     SliverGridDelegate uniformDelegate({bool titleBelow = false}) =>
-        fixedCols > 0
-        ? MangaCoverFixedCountGridDelegate(
-            crossAxisCount: fixedCols,
-            crossAxisSpacing: 2.0,
-            mainAxisSpacing: 2.0,
-            titleExtent: titleBelow ? kGridTitleExtent : 0.0,
-          )
-        : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
+        mangaCoverUniformGridDelegate(
+          gridWidth,
+          fixedCols,
+          titleBelow: titleBelow,
+        );
 
     SliverSimpleGridDelegate freeformDelegate() => fixedCols > 0
         ? SliverSimpleGridDelegateWithFixedCrossAxisCount(
@@ -272,7 +266,7 @@ class LibraryMangaSliver extends ConsumerWidget {
     // Reserve scrollbar clearance inside the desktop sliver so covers stay left of the thumb.
     if (!context.usesDesktopShell) return sliver;
     return SliverPadding(
-      padding: const EdgeInsets.only(right: _libraryScrollbarGutter),
+      padding: const EdgeInsets.only(right: kDesktopScrollbarGutter),
       sliver: sliver,
     );
   }

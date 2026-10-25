@@ -23,12 +23,6 @@ import 'library_filter_content.dart';
 import 'library_filter_segments.dart';
 import 'library_manga_badges.dart';
 
-/// [rect] must use the nearest Overlay's coordinates; a branch Navigator excludes the sidebar.
-RelativeRect menuAnchorForRect(BuildContext context, Rect rect) {
-  final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
-  return RelativeRect.fromRect(rect, Offset.zero & overlay.size);
-}
-
 /// Aligns below the anchor's right edge, clamped to an 8 px overlay margin.
 class _LibraryPanelLayout extends SingleChildLayoutDelegate {
   _LibraryPanelLayout(this.anchor);
@@ -207,22 +201,22 @@ Future<void> _openPanel({
 }) async {
   final box = buttonKey.currentContext?.findRenderObject() as RenderBox?;
   if (box == null) return;
-  // Use overlay-relative coordinates because the branch Navigator excludes the sidebar.
+  // Root overlay covers the top bar; a branch Navigator's barrier would leave its buttons clickable.
+  final navigator = Navigator.of(context, rootNavigator: true);
   final overlayBox =
-      Overlay.of(context).context.findRenderObject()! as RenderBox;
+      navigator.overlay!.context.findRenderObject()! as RenderBox;
   final topLeft = box.localToGlobal(Offset.zero, ancestor: overlayBox);
   final bottomRight = box.localToGlobal(
     box.size.bottomRight(Offset.zero),
     ancestor: overlayBox,
   );
   final rect = Rect.fromPoints(topLeft, bottomRight);
-  final navigator = Navigator.of(context);
   await navigator.push(
     _LibraryPanelRoute(
       // Anchor at the button's bottom-right; the layout delegate already applies panel width.
-      position: menuAnchorForRect(
-        context,
+      position: RelativeRect.fromRect(
         Rect.fromLTWH(rect.right, rect.bottom + 6, 0, 0),
+        Offset.zero & overlayBox.size,
       ),
       panelWidth: panelWidth,
       panelHeight: panelHeight,
@@ -237,6 +231,22 @@ Future<void> _openPanel({
   );
   if (context.mounted) focusNode.requestFocus();
 }
+
+Future<void> showAnchoredPanel({
+  required BuildContext context,
+  required GlobalKey buttonKey,
+  required FocusNode focusNode,
+  required double panelWidth,
+  double? panelHeight,
+  required Widget child,
+}) => _openPanel(
+  context: context,
+  buttonKey: buttonKey,
+  focusNode: focusNode,
+  panelWidth: panelWidth,
+  panelHeight: panelHeight,
+  child: child,
+);
 
 /// Opens a 720 px two-column panel; changes apply live.
 Future<void> showLibraryFilterPanel({

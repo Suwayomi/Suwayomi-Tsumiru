@@ -5,82 +5,71 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../widgets/organizer_heading.dart';
-import '../../../../../widgets/tri_state_filter_tile.dart';
-import '../controller/updates_filter_controller.dart';
-import '../controller/updates_grouping_controller.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
+import 'updates_filter_content.dart';
 
-class UpdatesFilterSheet extends ConsumerWidget {
+class UpdatesFilterSheet extends StatelessWidget {
   const UpdatesFilterSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final groupingMode = ref.watch(updatesGroupingModeProvider) ??
-        UpdatesGroupingMode.disabled;
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      animationDuration: context.reduceMotion
+          ? Duration.zero
+          : kTabScrollDuration,
+      child: _UpdatesFilterBody(),
+    );
+  }
+}
 
+class _UpdatesFilterBody extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final controller = DefaultTabController.of(context);
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
+    final filterTab = Tab(text: context.l10n.filter);
+    final displayTab = Tab(text: context.l10n.display);
+    final tabs = <Widget>[
+      ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [UpdatesFilterHeader(), UpdatesFilterSegments()],
+      ),
+      ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [UpdatesGroupingSegment()],
+      ),
+    ];
     return SafeArea(
       top: false,
-      child: ListView(
-        shrinkWrap: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          OrganizerHeading(context.l10n.updatesGroupingLabel),
-          OrganizerHint(context.l10n.updatesGroupingHint),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final mode in UpdatesGroupingMode.values)
-                  FilterChip(
-                    selected: groupingMode == mode,
-                    showCheckmark: false,
-                    visualDensity: VisualDensity.compact,
-                    label: Text(mode.toLocale(context)),
-                    onSelected: (_) => ref
-                        .read(updatesGroupingModeProvider.notifier)
-                        .update(mode),
-                  ),
-              ],
+          TabBar(
+            tabAlignment: TabAlignment.fill,
+            tabs: [filterTab, displayTab],
+          ),
+          Flexible(
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                final content = ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight),
+                  child: tabs[controller.index],
+                );
+                if (context.reduceMotion) return content;
+                return AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  alignment: Alignment.topCenter,
+                  child: content,
+                );
+              },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            child: Text(
-              context.l10n.filter,
-              style: context.textTheme.titleMedium,
-            ),
-          ),
-          TriStateFilterTile(
-            header: context.l10n.filterHeaderDownloadStatus,
-            provider: updatesFilterDownloadedProvider,
-            onChanged: ref.read(updatesFilterDownloadedProvider.notifier).update,
-            includedLabel: context.l10n.filterOptionDownloaded,
-            excludedLabel: context.l10n.filterOptionNotDownloaded,
-          ),
-          TriStateFilterTile(
-            header: context.l10n.filterHeaderReadStatus,
-            provider: updatesFilterUnreadProvider,
-            onChanged: ref.read(updatesFilterUnreadProvider.notifier).update,
-            includedLabel: context.l10n.filterOptionUnread,
-            excludedLabel: context.l10n.filterOptionRead,
-          ),
-          TriStateFilterTile(
-            header: context.l10n.filterHeaderProgress,
-            provider: updatesFilterStartedProvider,
-            onChanged: ref.read(updatesFilterStartedProvider.notifier).update,
-            includedLabel: context.l10n.filterOptionStarted,
-            excludedLabel: context.l10n.filterOptionNotStarted,
-          ),
-          TriStateFilterTile(
-            header: context.l10n.filterHeaderBookmarks,
-            provider: updatesFilterBookmarkedProvider,
-            onChanged: ref.read(updatesFilterBookmarkedProvider.notifier).update,
-            includedLabel: context.l10n.filterOptionBookmarked,
-            excludedLabel: context.l10n.filterOptionNotBookmarked,
           ),
         ],
       ),

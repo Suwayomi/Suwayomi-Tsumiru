@@ -114,10 +114,12 @@ double titleTopBarSlotMinWidth(int actionCount) =>
     48.0 + kDesktopTopBarGap + 120.0 + actionCount * 48.0;
 
 double searchTopBarSlotMinWidth(int actionCount, [bool hasLeading = false]) =>
+    // Match desktopToolbarRow: side padding plus one gap between each child.
     kTopBarSearchMinWidth +
-    (hasLeading ? 48.0 + kDesktopTopBarGap : 0) +
-    actionCount * (48.0 + kDesktopTopBarGap) +
-    kDesktopTopBarGap;
+    2 * kDesktopToolbarSlotHPadding +
+    (hasLeading ? 48.0 : 0) +
+    actionCount * 48.0 +
+    (actionCount + (hasLeading ? 1 : 0)) * kDesktopTopBarGap;
 
 BoxConstraints settingsPageConstraints(
   BuildContext context, {
@@ -200,25 +202,40 @@ Widget titleTopBarSlot({
   },
 );
 
+const double kDesktopToolbarSlotHPadding = 12.0;
+
+const double kDesktopSearchMaxWidth = 600.0;
+
+Widget desktopToolbarRow({
+  required Widget search,
+  required List<Widget> actions,
+  Widget? leading,
+}) => Padding(
+  padding: const EdgeInsets.symmetric(horizontal: kDesktopToolbarSlotHPadding),
+  child: Row(
+    spacing: kDesktopTopBarGap,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      ?leading,
+      Expanded(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: kDesktopSearchMaxWidth),
+            child: search,
+          ),
+        ),
+      ),
+      ...actions,
+    ],
+  ),
+);
+
 Widget desktopSearchSlotContent({
   Widget? leading,
   required Widget search,
   required List<Widget> actions,
-}) => Row(
-  children: [
-    leading ?? const SizedBox.shrink(),
-    Expanded(
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: search,
-        ),
-      ),
-    ),
-    ...actions,
-  ],
-);
+}) => desktopToolbarRow(leading: leading, search: search, actions: actions);
 
 /// Supply the page's back button: this toolbar sits outside its Navigator.
 class DesktopTitleSlot extends StatelessWidget {
