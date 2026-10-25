@@ -69,6 +69,7 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
         authType: authType,
         store: auth,
         credentials: credentials,
+        coverVersion: manga.coverVersion,
       );
       final cacheKey = external ? url : serverCacheKey;
       if (_inFlight.contains(cacheKey)) continue;

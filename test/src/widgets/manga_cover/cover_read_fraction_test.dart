@@ -110,6 +110,19 @@ void main() {
       expect(drawn.imageUrl, thumb);
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    test('cover cache key changes when the server cover timestamp changes', () {
+      String key(String? version) => accountImageCacheKey(
+        'https://server.example/api/v1/manga/1/thumbnail',
+        authType: AuthType.basic,
+        store: _EmptySession(),
+        credentials: null,
+        coverVersion: version,
+      );
+      expect(key(null), 'https://server.example/api/v1/manga/1/thumbnail');
+      expect(key('100'), isNot(key('200')));
+      expect(key('100'), isNot(key(null)));
+    });
   });
 }
 

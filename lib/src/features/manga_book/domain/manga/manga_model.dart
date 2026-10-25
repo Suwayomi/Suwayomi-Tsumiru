@@ -41,6 +41,10 @@ extension MangaExtensions on MangaDto {
     meta: meta.map((m) => (key: m.key, value: m.value)),
   );
 
+  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
+
   /// Suwayomi Local source ID "0" already holds server files, so server downloads do not apply.
   bool get isLocalSource => sourceId == '0';
 
@@ -153,6 +157,10 @@ extension MangaBaseExtensions on MangaBaseDto {
     thumbnailUrl: thumbnailUrl,
     meta: meta.map((m) => (key: m.key, value: m.value)),
   );
+
+  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
 }
 
 /// Custom cover link when set and non-blank, else the server cover.

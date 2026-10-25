@@ -193,6 +193,7 @@ class _HeadTile extends StatelessWidget {
                         child: ServerImage(
                           imageUrl: manga.displayCoverUrl,
                           fallbackImageUrl: manga.thumbnailUrl,
+                          coverVersion: manga.coverVersion,
                           size: const Size(56, 80),
                         ),
                       ),

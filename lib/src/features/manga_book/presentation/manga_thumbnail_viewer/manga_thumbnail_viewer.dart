@@ -17,9 +17,11 @@ class MangaThumbnailViewer extends StatelessWidget {
     super.key,
     required this.imageUrl,
     this.fallbackImageUrl,
+    this.coverVersion,
   });
   final String imageUrl;
   final String? fallbackImageUrl;
+  final String? coverVersion;
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -39,6 +41,7 @@ class MangaThumbnailViewer extends StatelessWidget {
                 child: ServerImage(
                   imageUrl: imageUrl,
                   fallbackImageUrl: fallbackImageUrl,
+                  coverVersion: coverVersion,
                 ),
               ),
             ),

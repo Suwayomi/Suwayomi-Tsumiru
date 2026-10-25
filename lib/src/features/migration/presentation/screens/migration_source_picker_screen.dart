@@ -281,6 +281,7 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                     child: ServerImage(
                       imageUrl: m.displayCoverUrl,
                       fallbackImageUrl: m.thumbnailUrl,
+                      coverVersion: m.coverVersion,
                       size: const Size.square(40),
                     ),
                   ),

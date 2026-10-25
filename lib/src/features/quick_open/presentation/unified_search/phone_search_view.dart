@@ -647,6 +647,7 @@ class _PhoneSearchResults extends ConsumerWidget {
                   title: m.title,
                   thumbnailUrl: m.displayCoverUrl,
                   fallbackThumbnailUrl: m.thumbnailUrl,
+                  coverVersion: m.coverVersion,
                   onTap: () =>
                       onLeave(() => MangaRoute(mangaId: m.id).push(context)),
                 );
@@ -661,6 +662,7 @@ class _PhoneSearchResults extends ConsumerWidget {
                   child: ServerImage(
                     imageUrl: m.displayCoverUrl,
                     fallbackImageUrl: m.thumbnailUrl,
+                    coverVersion: m.coverVersion,
                     size: const Size(40, 56),
                   ),
                 ),
@@ -726,11 +728,13 @@ class _PhoneLibraryCoverCard extends StatelessWidget {
     required this.thumbnailUrl,
     required this.fallbackThumbnailUrl,
     required this.onTap,
+    this.coverVersion,
   });
 
   final String title;
   final String? thumbnailUrl;
   final String? fallbackThumbnailUrl;
+  final String? coverVersion;
   final VoidCallback onTap;
 
   @override
@@ -748,6 +752,7 @@ class _PhoneLibraryCoverCard extends StatelessWidget {
             child: ServerImage(
               imageUrl: thumbnailUrl ?? '',
               fallbackImageUrl: fallbackThumbnailUrl,
+              coverVersion: coverVersion,
               size: const Size(110, 165),
             ),
           ),

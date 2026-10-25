@@ -170,6 +170,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 pageBuilder: (context, _, _) => MangaThumbnailViewer(
                   imageUrl: widget.manga.displayCoverUrl,
                   fallbackImageUrl: widget.manga.thumbnailUrl,
+                  coverVersion: widget.manga.coverVersion,
                 ),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
@@ -385,6 +386,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
         builder: (context, constraints) => ServerImage(
           imageUrl: coverUrl,
           fallbackImageUrl: widget.manga.thumbnailUrl,
+          coverVersion: widget.manga.coverVersion,
           memCacheWidth: constraints.hasBoundedWidth
               ? (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
                     .round()

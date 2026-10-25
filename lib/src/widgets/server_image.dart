@@ -182,6 +182,7 @@ class ServerImage extends HookConsumerWidget {
     this.memCacheWidth,
     this.memCacheHeight,
     this.fallbackImageUrl,
+    this.coverVersion,
   });
 
   final String? localFilePath;
@@ -190,6 +191,7 @@ class ServerImage extends HookConsumerWidget {
 
   /// Drawn when [imageUrl] fails; never chains to another fallback.
   final String? fallbackImageUrl;
+  final String? coverVersion;
   final Size? size;
   final BoxFit? fit;
   final bool appendApiToUrl;
@@ -370,6 +372,7 @@ class ServerImage extends HookConsumerWidget {
       authType: authType,
       store: ref.read(authCredentialsStoreProvider.notifier),
       credentials: credentials,
+      coverVersion: coverVersion,
     );
     final cacheKey = external ? baseApi : serverCacheKey;
 
@@ -453,6 +456,7 @@ class ServerImage extends HookConsumerWidget {
             fit: fit,
             memCacheWidth: cacheWidth,
             memCacheHeight: cacheHeight,
+            coverVersion: coverVersion,
           ),
         );
       }
@@ -592,6 +596,7 @@ serverImageRequest(
   WidgetRef ref,
   String imageUrl, {
   bool appendApiToUrl = false,
+  String? coverVersion,
 }) {
   final localPath = imageUrl.startsWith('file:')
       ? Uri.parse(imageUrl).toFilePath()
@@ -657,6 +662,7 @@ serverImageRequest(
     authType: authType,
     store: ref.read(authCredentialsStoreProvider.notifier),
     credentials: creds,
+    coverVersion: coverVersion,
   );
   return (
     fetchUrl: fetchUrl,
@@ -671,11 +677,13 @@ ImageProvider serverPageImageProvider(
   WidgetRef ref,
   String imageUrl, {
   bool appendApiToUrl = false,
+  String? coverVersion,
 }) {
   final request = serverImageRequest(
     ref,
     imageUrl,
     appendApiToUrl: appendApiToUrl,
+    coverVersion: coverVersion,
   );
   if (request.localPath != null) {
     return offlineImageProvider(request.localPath!);

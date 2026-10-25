@@ -137,6 +137,7 @@ class _MangaCoverListTileState extends State<MangaCoverListTile> {
                     child: ServerImage(
                       imageUrl: widget.manga.displayCoverUrl,
                       fallbackImageUrl: widget.manga.thumbnailUrl,
+                      coverVersion: widget.manga.coverVersion,
                       memCacheWidth: (kCompactCoverWidth *
                               widget.scale *
                               MediaQuery.devicePixelRatioOf(context))
