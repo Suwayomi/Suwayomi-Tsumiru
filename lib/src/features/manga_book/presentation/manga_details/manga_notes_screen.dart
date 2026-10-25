@@ -9,6 +9,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/popup_widgets/confirm_action.dart';
+import '../../../offline/data/offline_repository.dart';
 import 'controller/manga_details_controller.dart';
 import 'widgets/manga_notes_save.dart';
 import 'widgets/manga_notes_toolbar.dart';
@@ -52,6 +53,7 @@ class MangaNotesScreen extends HookConsumerWidget {
         mangaId: mangaId,
         rawText: controller.text,
         existingMetas: existingMetas,
+        offlineDb: ref.read(offlineReadDatabaseProvider),
         onSaved: () {
           if (context.mounted) {
             ref.invalidate(mangaWithIdProvider(mangaId: mangaId));

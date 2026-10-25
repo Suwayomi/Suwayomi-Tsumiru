@@ -490,7 +490,6 @@ class MangaCustomCover extends _$MangaCustomCover {
     );
     if (!ref.mounted || result.hasError) return false;
     state = coverUrl;
-    await _syncOfflineMirror(coverUrl);
     _refreshCovers();
     return true;
   }
@@ -503,21 +502,8 @@ class MangaCustomCover extends _$MangaCustomCover {
     );
     if (!ref.mounted || result.hasError) return false;
     state = null;
-    await _syncOfflineMirror(null);
     _refreshCovers();
     return true;
-  }
-
-  Future<void> _syncOfflineMirror(String? coverUrl) async {
-    final db = ref.read(offlineReadDatabaseProvider);
-    if (db == null) return;
-    await AsyncValue.guard(
-      () => db.updateMangaMetaValue(
-        mangaId: mangaId,
-        key: MangaMetaKeys.customCover.key,
-        value: coverUrl,
-      ),
-    );
   }
 
   void _refreshCovers() {
