@@ -13,7 +13,7 @@ query RecentChapterDates($mangaId: Int!) {
   chapters(
     condition: { mangaId: $mangaId }
     order: [{ by: SOURCE_ORDER, byType: DESC }]
-    first: 16
+    first: 40
   ) {
     nodes {
       uploadDate
