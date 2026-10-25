@@ -57,7 +57,16 @@ class MangaThumbnailViewer extends ConsumerWidget {
             request.fetchUrl,
             key: request.cacheKey,
             headers: request.headers ?? const {},
-          );
+          )
+          .catchError((Object err) async {
+        if (coverVersion == null || coverVersion.isEmpty) throw err;
+        final unversioned = serverImageRequest(ref, imageUrl);
+        final cached = await ref
+            .read(coverCacheManagerProvider)
+            .getFileFromCache(unversioned.cacheKey);
+        if (cached != null) return cached.file;
+        throw err;
+      });
     }
 
     Future<void> shareCover() async {
@@ -70,7 +79,7 @@ class MangaThumbnailViewer extends ConsumerWidget {
           ShareParams(files: [XFile(file.path)]),
         );
       } catch (_) {
-        if (current()) toast?.showError(errorMsg, instantShow: true);
+        if (current()) toast?.showError(errorMsg);
       }
     }
 
@@ -82,14 +91,14 @@ class MangaThumbnailViewer extends ConsumerWidget {
         final file = await resolveCoverFile();
         if (!current()) return;
         if (!await Gal.requestAccess()) {
-          toast?.showError(errorMsg, instantShow: true);
+          toast?.showError(errorMsg);
           return;
         }
         if (!current()) return;
         await Gal.putImage(file.path);
-        toast?.show(savedMsg, instantShow: true);
+        toast?.show(savedMsg);
       } catch (_) {
-        if (current()) toast?.showError(errorMsg, instantShow: true);
+        if (current()) toast?.showError(errorMsg);
       }
     }
 

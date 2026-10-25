@@ -15,10 +15,13 @@ import '../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../history/presentation/history_controller.dart';
+import '../../../library/data/category_repository.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../../manga_book/presentation/upcoming/controller/upcoming_controller.dart';
+import '../../../offline/data/offline_repository.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
 import 'copy_crash_log_tile.dart';
@@ -93,15 +96,19 @@ class AdvancedScreen extends ConsumerWidget {
                         );
                         if (confirmed != true || !context.mounted) return;
                         final toast = ref.read(toastProvider);
-                        final library = await AsyncValue.guard(
-                          () => ref.read(libraryMangaListProvider.future),
+                        // The offline-filtered library can omit series, so ask the server directly.
+                        final remote = await AsyncValue.guard(
+                          () => ref
+                              .read(categoryRepositoryProvider)
+                              .getAllLibraryMangas(withFirstUnread: false),
                         );
                         if (!context.mounted) return;
-                        if (library.hasError) {
+                        final mangas = remote.value;
+                        if (remote.hasError || mangas == null) {
                           toast?.showError(context.l10n.error);
                           return;
                         }
-                        final ids = (library.value ?? const <MangaDto>[])
+                        final ids = mangas
                             .where(
                               (manga) => manga.meta.any(
                                 (entry) =>
@@ -126,11 +133,22 @@ class AdvancedScreen extends ConsumerWidget {
                             toast?.showError(context.l10n.error);
                             return;
                           }
+                          final db = ref.read(offlineReadDatabaseProvider);
                           for (final id in ids) {
                             ref.invalidate(mangaWithIdProvider(mangaId: id));
+                            if (db != null) {
+                              await AsyncValue.guard(
+                                () => db.updateMangaMetaValue(
+                                  mangaId: id,
+                                  key: MangaMetaKeys.customCover.key,
+                                ),
+                              );
+                            }
                           }
                         }
+                        if (!context.mounted) return;
                         ref.invalidate(libraryMangaListProvider);
+                        ref.invalidate(upcomingLibraryMangasProvider);
                         ref.invalidate(readingHistoryProvider);
                         ref.invalidate(mangaReadingHistoryProvider);
                         ref.read(customCoverRevisionProvider.notifier).bump();

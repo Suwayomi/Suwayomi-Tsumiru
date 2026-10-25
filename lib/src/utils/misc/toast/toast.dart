@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gap/gap.dart';
@@ -19,10 +21,14 @@ part 'toast.g.dart';
 
 class Toast {
   Toast(this._context) {
-    _fToast = FToast().init(_context);
+    // A pending Undo keeps its overlay; re-pointing would strand its queued followers.
+    if (!_actionVisible) _fToast = FToast().init(_context);
   }
   final BuildContext _context;
-  late FToast _fToast;
+  FToast _fToast = FToast();
+
+  static bool _actionVisible = false;
+  static Timer? _actionTimer;
 
   Duration get _fadeDuration =>
       _context.reduceMotion ? Duration.zero : const Duration(milliseconds: 350);
@@ -33,7 +39,7 @@ class Toast {
     bool instantShow = false,
   }) {
     toast() {
-      if (instantShow) close();
+      if (instantShow && !_actionVisible) close();
       _fToast.showToast(
         child: ToastWidget(
           text: msg,
@@ -65,6 +71,12 @@ class Toast {
         : _context;
     // Place the entry above the calling route so the action wins taps over fullscreen routes.
     _fToast = FToast().init(target);
+    _actionTimer?.cancel();
+    _actionVisible = true;
+    _actionTimer = Timer(
+      duration + _fadeDuration,
+      () => _actionVisible = false,
+    );
     _fToast.showToast(
       child: ToastWidget(
         text: msg,
@@ -72,6 +84,8 @@ class Toast {
         textColor: _context.colorScheme.onInverseSurface,
         action: TextButton(
           onPressed: () {
+            _actionTimer?.cancel();
+            _actionVisible = false;
             close();
             onAction();
           },
@@ -95,7 +109,7 @@ class Toast {
         ? error.trim()
         : _context.l10n.errorSomethingWentWrong;
     toast() {
-      if (instantShow) close();
+      if (instantShow && !_actionVisible) close();
       _fToast.showToast(
         child: ToastWidget(
           text: text,

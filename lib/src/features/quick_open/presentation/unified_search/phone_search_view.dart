@@ -568,6 +568,7 @@ class _PhoneSearchResults extends ConsumerWidget {
                 child: ServerImage(
                   imageUrl: item.manga.displayCoverUrl,
                   fallbackImageUrl: item.manga.thumbnailUrl,
+                  coverVersion: item.manga.coverVersion,
                   fallbackCoverVersion: item.manga.thumbnailUrlLastFetched,
                   size: const Size(40, 56),
                 ),

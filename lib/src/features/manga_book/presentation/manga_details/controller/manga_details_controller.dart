@@ -28,6 +28,7 @@ import '../../../../library/presentation/library/controller/library_manga_list.d
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../../upcoming/controller/upcoming_controller.dart';
 import 'chapter_list_entry.dart';
 import 'scanlator_dedup.dart';
 import 'scanlator_propagation.dart';
@@ -490,6 +491,7 @@ class MangaCustomCover extends _$MangaCustomCover {
     );
     if (!ref.mounted || result.hasError) return false;
     state = coverUrl;
+    await _syncOfflineMirror(coverUrl);
     _refreshCovers();
     return true;
   }
@@ -502,13 +504,27 @@ class MangaCustomCover extends _$MangaCustomCover {
     );
     if (!ref.mounted || result.hasError) return false;
     state = null;
+    await _syncOfflineMirror(null);
     _refreshCovers();
     return true;
+  }
+
+  Future<void> _syncOfflineMirror(String? coverUrl) async {
+    final db = ref.read(offlineReadDatabaseProvider);
+    if (db == null) return;
+    await AsyncValue.guard(
+      () => db.updateMangaMetaValue(
+        mangaId: mangaId,
+        key: MangaMetaKeys.customCover.key,
+        value: coverUrl,
+      ),
+    );
   }
 
   void _refreshCovers() {
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     ref.invalidate(libraryMangaListProvider);
+    ref.invalidate(upcomingLibraryMangasProvider);
     ref.invalidate(readingHistoryProvider);
     ref.invalidate(mangaReadingHistoryProvider);
     ref.read(customCoverRevisionProvider.notifier).bump();

@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../../utils/crash/diagnostics.dart';
@@ -736,6 +738,31 @@ class OfflineDatabase extends _$OfflineDatabase {
       (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
         OfflineMangasCompanion(thumbnailRelPath: Value(relPath)),
       );
+
+  Future<void> updateMangaMetaValue({
+    required int mangaId,
+    required String key,
+    String? value,
+  }) async {
+    final row = await mangaById(mangaId);
+    if (row == null) return;
+    // Mirror the sync writer's encoding so offline-first reads see the edit.
+    final meta = <String, String>{};
+    final raw = row.metaJson;
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        meta.addAll(Map<String, String>.from(jsonDecode(raw) as Map));
+      } catch (_) {}
+    }
+    if (value == null) {
+      meta.remove(key);
+    } else {
+      meta[key] = value;
+    }
+    await (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
+      OfflineMangasCompanion(metaJson: Value(jsonEncode(meta))),
+    );
+  }
 
   Future<void> setKeepRule(int mangaId, OfflineKeepRule rule, int count) =>
       (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
