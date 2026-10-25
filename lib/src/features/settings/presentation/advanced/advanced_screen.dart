@@ -66,7 +66,9 @@ class AdvancedScreen extends ConsumerWidget {
                         },
                       ),
                     ),
-                    ListTile(
+                    SettingsHighlightTarget(
+                      id: 'removeCustomCovers',
+                      child: ListTile(
                       title: Text(context.l10n.removeCustomCovers),
                       onTap: () async {
                         final confirmed = await showDialog<bool>(
@@ -134,6 +136,7 @@ class AdvancedScreen extends ConsumerWidget {
                         ref.read(customCoverRevisionProvider.notifier).bump();
                         toast?.show(context.l10n.customCoversRemoved);
                       },
+                    ),
                     ),
                     const CopyCrashLogTile(),
                   ],

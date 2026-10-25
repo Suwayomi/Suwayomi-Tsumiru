@@ -27,6 +27,7 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
     required this.thumbnailUrl,
     this.fallbackThumbnailUrl,
     this.coverVersion,
+    this.fallbackCoverVersion,
   });
 
   final int mangaId;
@@ -34,6 +35,7 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
   final String? thumbnailUrl;
   final String? fallbackThumbnailUrl;
   final String? coverVersion;
+  final String? fallbackCoverVersion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +78,7 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
                       imageUrl: thumbnailUrl!,
                       fallbackImageUrl: fallbackThumbnailUrl,
                       coverVersion: coverVersion,
+                      fallbackCoverVersion: fallbackCoverVersion,
                       fit: BoxFit.cover,
                       size: const Size(32, 42),
                     )

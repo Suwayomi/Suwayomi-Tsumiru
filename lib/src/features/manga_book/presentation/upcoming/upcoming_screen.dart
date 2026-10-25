@@ -224,6 +224,7 @@ class _UpcomingTile extends StatelessWidget {
                 imageUrl: manga.displayCoverUrl,
                 fallbackImageUrl: manga.thumbnailUrl,
                 coverVersion: manga.coverVersion,
+                fallbackCoverVersion: manga.thumbnailUrlLastFetched,
                 size: const Size(56, 80),
               ),
             ),

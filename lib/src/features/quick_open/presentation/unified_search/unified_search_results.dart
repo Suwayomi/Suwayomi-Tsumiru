@@ -338,6 +338,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
                       imageUrl: m.displayCoverUrl,
                       fallbackImageUrl: m.thumbnailUrl,
                       coverVersion: m.coverVersion,
+                      fallbackCoverVersion: m.thumbnailUrlLastFetched,
                       size: const Size(40, 56),
                     ),
                   ),

@@ -183,6 +183,7 @@ class ServerImage extends HookConsumerWidget {
     this.memCacheHeight,
     this.fallbackImageUrl,
     this.coverVersion,
+    this.fallbackCoverVersion,
   });
 
   final String? localFilePath;
@@ -192,6 +193,9 @@ class ServerImage extends HookConsumerWidget {
   /// Drawn when [imageUrl] fails; never chains to another fallback.
   final String? fallbackImageUrl;
   final String? coverVersion;
+
+  /// Version for [fallbackImageUrl]; the primary [coverVersion] is null for custom covers.
+  final String? fallbackCoverVersion;
   final Size? size;
   final BoxFit? fit;
   final bool appendApiToUrl;
@@ -470,7 +474,7 @@ class ServerImage extends HookConsumerWidget {
             fit: fit,
             memCacheWidth: cacheWidth,
             memCacheHeight: cacheHeight,
-            coverVersion: coverVersion,
+            coverVersion: fallbackCoverVersion ?? coverVersion,
           ),
         );
       }

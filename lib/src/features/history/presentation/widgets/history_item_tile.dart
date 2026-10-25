@@ -62,6 +62,7 @@ class HistoryItemTile extends ConsumerWidget {
                     imageUrl: item.manga.displayCoverUrl,
                     fallbackImageUrl: item.manga.thumbnailUrl,
                     coverVersion: item.manga.coverVersion,
+                    fallbackCoverVersion: item.manga.thumbnailUrlLastFetched,
                     size: const Size(56, 80),
                   ),
                 ),

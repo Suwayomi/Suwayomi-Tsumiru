@@ -130,6 +130,7 @@ class OfflineFilesView extends HookConsumerWidget {
                     imageUrl: s.manga.displayCoverUrl,
                     fallbackImageUrl: s.manga.thumbnailUrl,
                     coverVersion: s.manga.coverVersion,
+                    fallbackCoverVersion: s.manga.thumbnailUrlLastFetched,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -168,6 +169,8 @@ class OfflineFilesView extends HookConsumerWidget {
                           thumbnailUrl: s.manga.displayCoverUrl,
                           fallbackThumbnailUrl: s.manga.thumbnailUrl,
                           coverVersion: s.manga.coverVersion,
+                          fallbackCoverVersion:
+                              s.manga.thumbnailUrlLastFetched,
                         ),
                       ),
                     ),

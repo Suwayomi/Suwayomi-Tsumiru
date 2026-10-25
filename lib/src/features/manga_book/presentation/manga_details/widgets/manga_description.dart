@@ -333,6 +333,8 @@ class MangaDescription extends HookConsumerWidget {
                           imageUrl: manga.displayCoverUrl,
                           fallbackImageUrl: manga.thumbnailUrl,
                           coverVersion: manga.coverVersion,
+                          fallbackCoverVersion:
+                              manga.thumbnailUrlLastFetched,
                           fit: BoxFit.cover,
                         ),
                       ),
