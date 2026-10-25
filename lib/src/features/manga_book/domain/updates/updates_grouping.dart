@@ -17,46 +17,55 @@ class UpdatesGroupedEntry {
   int get mangaId => head.mangaId;
 }
 
-/// Groups only consecutive same-manga/same-day rows; choose the head after collecting the full run.
+/// Joins a series' rows from the same day even when another series sits between them.
 List<UpdatesGroupedEntry> groupUpdatesForDisplay(
   List<ChapterWithMangaDto> items,
 ) {
-  final runs = <List<ChapterWithMangaDto>>[];
+  final groups = <List<ChapterWithMangaDto>>[];
   for (final item in items) {
-    final last = runs.lastOrNull;
-    if (last != null &&
-        last.first.mangaId == item.mangaId &&
-        int.tryParse(
-          item.fetchedAt,
-        ).isSameDayAs(int.tryParse(last.first.fetchedAt))) {
-      last.add(item);
-    } else {
-      runs.add([item]);
+    var placed = false;
+    for (final group in groups) {
+      if (group.first.mangaId == item.mangaId &&
+          _sameFetchDay(group.first, item)) {
+        group.add(item);
+        placed = true;
+        break;
+      }
     }
+    if (!placed) groups.add([item]);
   }
-  return [for (final run in runs) _closeRun(run)];
+  return [for (final group in groups) _closeGroup(group)];
 }
 
-UpdatesGroupedEntry _closeRun(List<ChapterWithMangaDto> run) {
-  final head = pickGroupHead(run);
+UpdatesGroupedEntry _closeGroup(List<ChapterWithMangaDto> group) {
+  final head = pickGroupHead(group);
   return UpdatesGroupedEntry(
     head: head,
     tail: [
-      for (final c in run)
+      for (final c in group)
         if (c.id != head.id) c,
     ],
   );
 }
 
-/// Chooses the newest unread release, or newest release if all are read; requires a nonempty list.
+// Unparsable timestamps share one null day per manga.
+bool _sameFetchDay(ChapterWithMangaDto a, ChapterWithMangaDto b) {
+  final fa = int.tryParse(a.fetchedAt);
+  final fb = int.tryParse(b.fetchedAt);
+  if (fa == null || fb == null) return fa == null && fb == null;
+  return fa.isSameDayAs(fb);
+}
+
 ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
   assert(chapters.isNotEmpty);
   final unread = [
     for (final c in chapters)
       if (!c.user.isRead) c,
   ];
-  final candidates = unread.isNotEmpty ? unread : chapters;
-  return candidates.reduce((a, b) => _releasedAfter(b, a) ? b : a);
+  if (unread.isEmpty) {
+    return chapters.reduce((a, b) => _releasedAfter(b, a) ? b : a);
+  }
+  return unread.reduce((a, b) => _releasedAfter(b, a) ? a : b);
 }
 
 /// Break equal fetch timestamps by sourceOrder, which increases in reading order.
@@ -83,13 +92,65 @@ Set<int> dateHeaderIndices(List<ChapterWithMangaDto> items) {
   return headerIndices;
 }
 
-/// Maps head flat indices to display indices; absent entries are tails and should render nothing.
-Map<int, int> headFlatIndexToDisplayIndex(List<UpdatesGroupedEntry> groups) {
-  final map = <int, int>{};
-  var flatCursor = 0;
+class UpdatesDaySection {
+  const UpdatesDaySection({
+    required this.headerFlatIndex,
+    required this.dayKey,
+    required this.groups,
+  });
+
+  final int headerFlatIndex;
+  final int? dayKey;
+  final List<UpdatesGroupedEntry> groups;
+}
+
+List<UpdatesDaySection> groupUpdatesByDay(
+  List<ChapterWithMangaDto> items,
+  List<UpdatesGroupedEntry> groups,
+) {
+  final groupOfId = <int, int>{};
   for (var g = 0; g < groups.length; g++) {
-    map[flatCursor] = g;
-    flatCursor += 1 + groups[g].tail.length;
+    groupOfId[groups[g].head.id] = g;
+    for (final c in groups[g].tail) {
+      groupOfId[c.id] = g;
+    }
+  }
+  final sections = <int?, UpdatesDaySection>{};
+  final placed = <int>{};
+  for (var i = 0; i < items.length; i++) {
+    final g = groupOfId[items[i].id];
+    if (g == null || !placed.add(g)) continue;
+    final fetchedAt = int.tryParse(items[i].fetchedAt);
+    final dayKey = fetchedAt == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
+            fetchedAt * 1000,
+          ).startOfDay.millisecondsSinceEpoch;
+    (sections[dayKey] ??= UpdatesDaySection(
+      headerFlatIndex: i,
+      dayKey: dayKey,
+      groups: [],
+    )).groups.add(groups[g]);
+  }
+  return sections.values.toList();
+}
+
+Map<int, int> headFlatIndexToDisplayIndex(
+  List<ChapterWithMangaDto> items,
+  List<UpdatesGroupedEntry> groups,
+) {
+  final groupOfId = <int, int>{};
+  for (var g = 0; g < groups.length; g++) {
+    groupOfId[groups[g].head.id] = g;
+    for (final c in groups[g].tail) {
+      groupOfId[c.id] = g;
+    }
+  }
+  final map = <int, int>{};
+  final seenGroups = <int>{};
+  for (var i = 0; i < items.length; i++) {
+    final g = groupOfId[items[i].id];
+    if (g != null && seenGroups.add(g)) map[i] = g;
   }
   return map;
 }

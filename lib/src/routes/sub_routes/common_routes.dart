@@ -152,7 +152,17 @@ class UpcomingRoute extends GoRouteData with $UpcomingRoute {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, _screen);
+      context.usesDesktopShell
+      ? CustomTransitionPage<void>(
+          key: state.pageKey,
+          opaque: false,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              child,
+          child: _screen,
+        )
+      : detailNavigationPage(context, state, _screen);
 }
 
 @TypedGoRoute<OnboardingRoute>(path: Routes.onboarding)

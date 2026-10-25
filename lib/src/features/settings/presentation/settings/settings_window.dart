@@ -1,6 +1,5 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -12,6 +11,7 @@ import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/platform/is_android_native.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/desktop/desktop_window.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../account/presentation/manage_users_screen.dart';
 import '../../search/settings_search_registry.dart';
@@ -21,10 +21,6 @@ import '../server/server_screen.dart';
 import '../server/server_sign_in_screen.dart';
 import 'settings_pane_scope.dart';
 import 'settings_screen.dart';
-
-class _CloseSettingsIntent extends Intent {
-  const _CloseSettingsIntent();
-}
 
 class SettingsWindow extends StatelessWidget {
   const SettingsWindow({super.key, required this.child});
@@ -61,93 +57,30 @@ class SettingsWindow extends StatelessWidget {
             path.endsWith('/offline') ||
             path.endsWith('/duplicates');
         void back() => router.pop();
-        return Shortcuts(
-          shortcuts: const {
-            SingleActivator(LogicalKeyboardKey.escape): _CloseSettingsIntent(),
-          },
-          child: Actions(
-            actions: {
-              _CloseSettingsIntent: CallbackAction<_CloseSettingsIntent>(
-                onInvoke: (_) {
-                  close();
-                  return null;
-                },
+        return DesktopWindow(
+          windowKey: const ValueKey('settingsWindow'),
+          onClose: close,
+          child: Row(
+            children: [
+              SizedBox(width: 244, child: SettingsWindowPageList(path: path)),
+              VerticalDivider(
+                width: 1,
+                thickness: 1,
+                color: context.colorScheme.outlineVariant,
               ),
-            },
-            child: Focus(
-              autofocus: true,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ModalBarrier(
-                      onDismiss: close,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.scrim.withValues(alpha: .45),
-                    ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SettingsPaneScope(
+                    width: constraints.maxWidth,
+                    nested: nested,
+                    onClose: close,
+                    onBack: back,
+                    tabs: _isServerPath(path) ? _ServerTabs(path: path) : null,
+                    child: child,
                   ),
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 24,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 1080,
-                          maxHeight: 760,
-                        ),
-                        child: SizedBox.expand(
-                          key: const ValueKey('settingsWindow'),
-                          child: Material(
-                            color: context.colorScheme.surface,
-                            elevation: 24,
-                            shadowColor: context.colorScheme.shadow.withValues(
-                              alpha: .55,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(
-                                color: context.colorScheme.outlineVariant,
-                              ),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 244,
-                                  child: SettingsWindowPageList(path: path),
-                                ),
-                                VerticalDivider(
-                                  width: 1,
-                                  thickness: 1,
-                                  color: context.colorScheme.outlineVariant,
-                                ),
-                                Expanded(
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) =>
-                                        SettingsPaneScope(
-                                          width: constraints.maxWidth,
-                                          nested: nested,
-                                          onClose: close,
-                                          onBack: back,
-                                          tabs: _isServerPath(path)
-                                              ? _ServerTabs(path: path)
-                                              : null,
-                                          child: child,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       },

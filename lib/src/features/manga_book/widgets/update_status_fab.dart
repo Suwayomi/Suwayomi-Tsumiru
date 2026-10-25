@@ -14,27 +14,46 @@ import '../../../widgets/shell/update_banner_state.dart';
 import '../data/updates/updates_repository.dart';
 import '../domain/update_status/update_status_model.dart';
 
+({bool running, String label}) updateStatusOf(
+  AsyncValue<UpdateProgressDto?> progress,
+  String idleLabel,
+) {
+  final running = (progress.value?.isUpdateChecking).ifNull();
+  return (
+    running: running,
+    label: running
+        ? "${progress.value?.updateChecked.padLeft()}"
+              "/${progress.value?.total.padLeft()}"
+        : idleLabel,
+  );
+}
+
+void toggleLibraryUpdate(WidgetRef ref, bool running) {
+  if (running) {
+    ref.read(updatesRepositoryProvider).stopUpdates();
+  } else {
+    ref.read(updateOptimisticProvider.notifier).arm();
+    ref.read(updatesRepositoryProvider).fetchUpdates();
+  }
+}
+
 class UpdateStatusFab extends ConsumerWidget {
   const UpdateStatusFab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final updateStatus = ref.watch(updateProgressSocketProvider);
-    final showStatus = (updateStatus.value?.isUpdateChecking).ifNull();
+    final status = updateStatusOf(
+      ref.watch(updateProgressSocketProvider),
+      context.l10n.update,
+    );
     return BrandFab(
-      icon: Icon(showStatus ? FluentIcons.stop_24_regular : FluentIcons.arrow_clockwise_24_regular),
-      onPressed: () {
-        if (showStatus) {
-          ref.read(updatesRepositoryProvider).stopUpdates();
-        } else {
-          ref.read(updateOptimisticProvider.notifier).arm();
-          ref.read(updatesRepositoryProvider).fetchUpdates();
-        }
-      },
-      label: showStatus
-          ? Text("${updateStatus.value?.updateChecked.padLeft()}"
-              "/${updateStatus.value?.total.padLeft()}")
-          : Text(context.l10n.update),
+      icon: Icon(
+        status.running
+            ? FluentIcons.stop_24_regular
+            : FluentIcons.arrow_clockwise_24_regular,
+      ),
+      onPressed: () => toggleLibraryUpdate(ref, status.running),
+      label: Text(status.label),
     );
   }
 }

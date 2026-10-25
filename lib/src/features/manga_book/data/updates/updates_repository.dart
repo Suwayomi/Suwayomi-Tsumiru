@@ -100,6 +100,48 @@ class UpdatesRepository {
           )
           .getData((data) => data.chapters);
 
+  Future<List<ChapterWithMangaDto>> getChaptersInRange({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    const pageSize = 200;
+    final chapters = <ChapterWithMangaDto>[];
+    for (var offset = 0; ; offset += pageSize) {
+      final page =
+          await client
+              .query$GetChapterWithMangaPage(
+                Options$Query$GetChapterWithMangaPage(
+                  variables: Variables$Query$GetChapterWithMangaPage(
+                    filter: Input$ChapterFilterInput(
+                      inLibrary: Input$BooleanFilterInput(equalTo: true),
+                      fetchedAt: Input$LongFilterInput(
+                        greaterThanOrEqualTo:
+                            '${start.millisecondsSinceEpoch ~/ 1000}',
+                        lessThan: '${end.millisecondsSinceEpoch ~/ 1000}',
+                      ),
+                    ),
+                    first: pageSize,
+                    offset: offset,
+                    order: [
+                      Input$ChapterOrderInput(
+                        by: Enum$ChapterOrderBy.FETCHED_AT,
+                        byType: Enum$SortOrder.DESC,
+                      ),
+                      Input$ChapterOrderInput(
+                        by: Enum$ChapterOrderBy.ID,
+                        byType: Enum$SortOrder.DESC,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .getData((data) => data.chapters.nodes) ??
+          const <ChapterWithMangaDto>[];
+      chapters.addAll(page);
+      if (page.length < pageSize) return chapters;
+    }
+  }
+
   Future<void> fetchUpdates({
     int? categoryId,
   }) async {

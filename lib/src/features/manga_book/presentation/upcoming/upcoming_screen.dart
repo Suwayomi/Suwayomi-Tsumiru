@@ -7,20 +7,17 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
-import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
-import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/desktop/desktop_window.dart';
 import '../../../../widgets/emoticons.dart';
-import '../../../../widgets/server_image.dart';
-import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
-import '../../domain/manga/manga_model.dart';
 import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
 
@@ -29,13 +26,66 @@ class UpcomingScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final selectedMonth = useState(DateTime(now.year, now.month));
-    final itemScrollController = useMemoized(ItemScrollController.new);
+    final today = calendarDay(DateTime.now());
+    final desktop = context.usesDesktopShell;
+    final anchor = useState(today);
+    final selectedDay = useState(today);
+    final view = ref.watch(upcomingViewProvider) ?? UpcomingView.week;
+    final showPast = ref.watch(upcomingShowPastReleasesProvider) ?? true;
+    final scrollController = useMemoized(ItemScrollController.new);
     final upcoming = ref.watch(upcomingProvider);
+    final month = DateTime(anchor.value.year, anchor.value.month);
+    final week = anchor.value;
+    final monthStart = calendarWeekStart(context, month);
+    final monthEnd = DateTime.utc(month.year, month.month + 1);
+    final monthDays = monthEnd
+        .difference(
+          DateTime.utc(monthStart.year, monthStart.month, monthStart.day),
+        )
+        .inDays;
+    final monthRows = (monthDays / 7).ceil();
+    final start = !desktop || view == UpcomingView.week ? week : monthStart;
+    final end = !desktop || view == UpcomingView.week
+        ? DateTime(week.year, week.month, week.day + 7)
+        : DateTime(
+            monthStart.year,
+            monthStart.month,
+            monthStart.day + monthRows * 7,
+          );
+    final tomorrow = DateTime(today.year, today.month, today.day + 1);
+    final pastEnd = end.isBefore(tomorrow) ? end : tomorrow;
+    final pastProvider = upcomingPastReleasesProvider(
+      start: desktop ? start : today,
+      end: desktop ? pastEnd : tomorrow,
+    );
+    final past = !desktop || (showPast && start.isBefore(pastEnd))
+        ? ref.watch(pastProvider)
+        : const AsyncData<Map<DateTime, List<CalendarSeries>>>({});
 
-    final topBar = showsMergedTopBar(context);
-    final title = Text(context.l10n.upcoming);
+    void close() {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        const UpdatesRoute().go(context);
+      }
+    }
+
+    void openSeries(CalendarSeries series) {
+      final router = GoRouter.of(context);
+      if (desktop) close();
+      router.push(MangaRoute(mangaId: series.id).location);
+    }
+
+    void move(int direction) {
+      anchor.value = desktop && view == UpcomingView.month
+          ? DateTime(month.year, month.month + direction)
+          : DateTime(
+              anchor.value.year,
+              anchor.value.month,
+              anchor.value.day + direction * 7,
+            );
+    }
+
     final actions = <Widget>[
       IconButton(
         icon: const Icon(FluentIcons.question_circle_24_regular),
@@ -55,115 +105,239 @@ class UpcomingScreen extends HookConsumerWidget {
           animationStyle: context.motionStyle,
         ),
       ),
-    ];
-    final scaffold = Scaffold(
-      appBar: topBar
-          ? null
-          : AppBar(
-              title: title,
-              actions: actions,
+      if (desktop) ...[
+        PopupMenuButton<bool>(
+          tooltip: context.l10n.upcomingCalendarOptions,
+          icon: const Icon(FluentIcons.more_vertical_24_regular),
+          itemBuilder: (context) => [
+            CheckedPopupMenuItem(
+              value: !showPast,
+              checked: showPast,
+              child: Text(context.l10n.upcomingShowPastReleases),
             ),
-      body: upcoming.when(
-        loading: () => const CenterSorayomiShimmerIndicator(),
-        error: (e, _) => Emoticons(
-          title: e.toString(),
-          button: TextButton(
-            onPressed: () => ref.invalidate(upcomingProvider),
-            child: Text(context.l10n.retry),
-          ),
+          ],
+          onSelected: ref
+              .read(upcomingShowPastReleasesProvider.notifier)
+              .update,
         ),
-        data: (data) {
-          if (data.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: () async => ref.invalidate(upcomingProvider),
-              child: ListView(
-                children: [
-                  UpcomingCalendar(
-                    month: selectedMonth.value,
-                    events: data.events,
-                    onMonthChanged: (m) => selectedMonth.value = m,
-                    onDaySelected: (_) {},
-                  ),
-                  const SizedBox(height: 48),
-                  Center(child: Text(context.l10n.upcomingEmpty)),
-                ],
-              ),
-            );
-          }
+        IconButton(
+          tooltip: context.l10n.close,
+          onPressed: close,
+          icon: const Icon(FluentIcons.dismiss_24_regular),
+        ),
+      ],
+    ];
 
-          // Track flattened day-header indices so calendar taps can scroll to the matching group.
-          final rows = <_Row>[const _CalendarRow()];
-          final dateToIndex = <DateTime, int>{};
-          for (final g in data.groups) {
-            dateToIndex[g.date] = rows.length;
-            rows.add(_HeaderRow(g.date, g.mangas.length));
-            for (final m in g.mangas) {
-              rows.add(_MangaRow(m));
-            }
-          }
-
-          void scrollToDay(DateTime day) {
-            final idx = dateToIndex[DateTime(day.year, day.month, day.day)];
-            if (idx == null) return;
-            if (context.reduceMotion) {
-              itemScrollController.jumpTo(index: idx);
-              return;
-            }
-            itemScrollController.scrollTo(
-              index: idx,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          }
-
-          return ScrollablePositionedList.builder(
-            itemScrollController: itemScrollController,
-            itemCount: rows.length,
-            itemBuilder: (context, i) {
-              final row = rows[i];
-              return switch (row) {
-                _CalendarRow() => UpcomingCalendar(
-                    month: selectedMonth.value,
-                    events: data.events,
-                    onMonthChanged: (m) => selectedMonth.value = m,
-                    onDaySelected: scrollToDay,
-                  ),
-                _HeaderRow(:final date, :final count) =>
-                  _DateHeading(date: date, count: count),
-                _MangaRow(:final manga) => _UpcomingTile(manga: manga),
-              };
-            },
-          );
-        },
+    final controls = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              desktop && view == UpcomingView.month
+                  ? DateFormat.yMMMM(context.currentLocale.toLanguageTag())
+                        .format(month)
+                  : calendarWeekLabel(context, week),
+              style: context.textTheme.titleLarge,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            tooltip: MaterialLocalizations.of(context).previousPageTooltip,
+            onPressed: () => move(-1),
+            icon: const Icon(FluentIcons.chevron_left_24_regular),
+          ),
+          IconButton(
+            tooltip: MaterialLocalizations.of(context).nextPageTooltip,
+            onPressed: () => move(1),
+            icon: const Icon(FluentIcons.chevron_right_24_regular),
+          ),
+          if (desktop) ...[
+            OutlinedButton(
+              onPressed: () {
+                anchor.value = today;
+                selectedDay.value = today;
+              },
+              child: Text(context.l10n.today),
+            ),
+            const SizedBox(width: 24),
+            UpcomingViewSwitch(
+              value: view,
+              onChanged: ref.read(upcomingViewProvider.notifier).update,
+            ),
+          ],
+        ],
       ),
     );
-    return titleTopBarSlot(
-      topBar: topBar,
-      leading: detailNavigationBackButton(context),
-      title: title,
-      actions: actions,
-      child: scaffold,
+
+    Widget content(UpcomingData predictions) {
+      final days = <DateTime, List<CalendarSeries>>{
+        ...?past.asData?.value,
+        for (final group in predictions.groups)
+          group.date: <int, CalendarSeries>{
+            for (final series
+                in past.asData?.value[group.date] ?? <CalendarSeries>[])
+              series.id: series,
+            for (final manga in group.mangas)
+              manga.id: (
+                id: manga.id,
+                title: manga.title,
+                thumbnailUrl: manga.thumbnailUrl,
+              ),
+          }.values.toList(),
+      };
+      if (desktop) {
+        return UpcomingCalendar(
+          view: view,
+          start: start,
+          month: month,
+          rows: monthRows,
+          days: days,
+          onOpen: openSeries,
+        );
+      }
+      final dates = days.keys
+          .where(
+            (day) => desktop
+                ? !day.isBefore(start) && day.isBefore(end)
+                : !day.isBefore(today) && days[day]!.isNotEmpty,
+          )
+          .toSet();
+      final sorted = dates.toList()..sort();
+      final rows = <({DateTime? date, CalendarSeries? series})>[];
+      final indices = <DateTime, int>{};
+      for (final day in sorted) {
+        indices[day] = rows.length;
+        rows.add((date: day, series: null));
+        for (final series in days[day] ?? <CalendarSeries>[]) {
+          rows.add((date: day, series: series));
+        }
+      }
+      final list = rows.isEmpty
+          ? Center(child: Text(context.l10n.upcomingEmpty))
+          : ScrollablePositionedList.builder(
+              itemScrollController: scrollController,
+              itemCount: rows.length,
+              itemBuilder: (context, index) {
+                final row = rows[index];
+                final series = row.series;
+                final day = row.date!;
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 880),
+                    child: Opacity(
+                      opacity: day.isBefore(today) ? .55 : 1,
+                      child: series == null
+                          ? _DateHeading(
+                              date: day,
+                              count: days[day]?.length ?? 0,
+                            )
+                          : UpcomingSeriesTile(
+                              series: series,
+                              coverSize: const Size(40, 56),
+                              onTap: () => openSeries(series),
+                            ),
+                    ),
+                  ),
+                );
+              },
+            );
+      return Column(
+        children: [
+          if (!desktop) ...[
+            UpcomingWeekStrip(
+              start: week,
+              selected: selectedDay.value,
+              days: days,
+              onSelected: (day) {
+                selectedDay.value = day;
+                int? index;
+                for (final date in sorted) {
+                  if (!date.isBefore(day)) {
+                    index = indices[date];
+                    break;
+                  }
+                }
+                if (index == null || !scrollController.isAttached) return;
+                if (context.reduceMotion) {
+                  scrollController.jumpTo(index: index);
+                } else {
+                  scrollController.scrollTo(
+                    index: index,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+            ),
+            const Divider(height: 16),
+          ],
+          Expanded(child: list),
+        ],
+      );
+    }
+
+    final body = Column(
+      children: [
+        if (desktop)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.upcoming,
+                    style: context.textTheme.titleMedium,
+                  ),
+                ),
+                ...actions,
+              ],
+            ),
+          ),
+        controls,
+        if (past.isLoading) const LinearProgressIndicator(),
+        if (past.hasError)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    past.error.toString(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => ref.invalidate(pastProvider),
+                  child: Text(context.l10n.retry),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: upcoming.when(
+            loading: () => const CenterSorayomiShimmerIndicator(),
+            error: (e, _) => Emoticons(
+              title: e.toString(),
+              button: TextButton(
+                onPressed: () => ref.invalidate(upcomingProvider),
+                child: Text(context.l10n.retry),
+              ),
+            ),
+            data: content,
+          ),
+        ),
+      ],
+    );
+    if (desktop) return DesktopWindow(onClose: close, child: body);
+    return Scaffold(
+      appBar: AppBar(title: Text(context.l10n.upcoming), actions: actions),
+      body: body,
     );
   }
-}
-
-sealed class _Row {
-  const _Row();
-}
-
-class _CalendarRow extends _Row {
-  const _CalendarRow();
-}
-
-class _HeaderRow extends _Row {
-  const _HeaderRow(this.date, this.count);
-  final DateTime date;
-  final int count;
-}
-
-class _MangaRow extends _Row {
-  const _MangaRow(this.manga);
-  final MangaDto manga;
 }
 
 class _DateHeading extends StatelessWidget {
@@ -173,81 +347,26 @@ class _DateHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = context.theme.colorScheme;
+    final today = calendarDay(DateTime.now());
+    final label = date == today
+        ? context.l10n.today
+        : date == DateTime(today.year, today.month, today.day + 1)
+        ? context.l10n.tomorrow
+        : DateFormat.MMMEd(context.currentLocale.toLanguageTag()).format(date);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
           Text(
-            _relativeDate(context, date),
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+            label,
+            style: context.textTheme.titleSmall?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: cs.primary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$count',
-              style: TextStyle(
-                  color: cs.onPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
+          UpcomingCountChip(count: count),
         ],
       ),
     );
   }
-}
-
-class _UpcomingTile extends StatelessWidget {
-  const _UpcomingTile({required this.manga});
-  final MangaDto manga;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => MangaRoute(mangaId: manga.id).push(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: KBorderRadius.r8.radius,
-              child: ServerImage(
-                imageUrl: manga.thumbnailUrl ?? "",
-                size: const Size(56, 80),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                manga.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: context.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _relativeDate(BuildContext context, DateTime date) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final d = DateTime(date.year, date.month, date.day);
-  final diff = d.difference(today).inDays;
-  if (diff == 0) return context.l10n.today;
-  if (diff == 1) return context.l10n.tomorrow;
-  return DateFormat.MMMEd(context.currentLocale.toLanguageTag()).format(d);
 }

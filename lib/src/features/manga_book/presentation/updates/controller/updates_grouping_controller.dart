@@ -10,7 +10,8 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
-export '../../../../../constants/enum.dart' show UpdatesGroupingMode;
+export '../../../../../constants/enum.dart'
+    show UpdatesDisplayMode, UpdatesGroupingMode;
 
 part 'updates_grouping_controller.g.dart';
 
@@ -21,6 +22,17 @@ class UpdatesGroupingModeNotifier extends _$UpdatesGroupingModeNotifier
   UpdatesGroupingMode? build() => initialize(
         DBKeys.updatesGroupingMode,
         enumList: UpdatesGroupingMode.values,
-        initial: UpdatesGroupingMode.disabled,
+        initial: UpdatesGroupingMode.collapsed,
+      );
+}
+
+@riverpod
+class UpdatesDisplayModeNotifier extends _$UpdatesDisplayModeNotifier
+    with SharedPreferenceEnumClientMixin<UpdatesDisplayMode> {
+  @override
+  UpdatesDisplayMode? build() => initialize(
+        DBKeys.updatesDisplayMode,
+        enumList: UpdatesDisplayMode.values,
+        initial: UpdatesDisplayMode.grid,
       );
 }

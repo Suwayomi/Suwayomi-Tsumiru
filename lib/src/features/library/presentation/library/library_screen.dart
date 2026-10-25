@@ -31,6 +31,7 @@ import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
+import '../../../quick_open/presentation/unified_search/search_tips.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../domain/category/category_model.dart';

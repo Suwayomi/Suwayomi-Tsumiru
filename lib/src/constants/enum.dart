@@ -567,6 +567,16 @@ enum IncludeOrExclude implements ValueEnum {
 
 enum GlobalSearchSourceFilter { pinned, all }
 
+enum UpdatesDisplayMode {
+  grid,
+  list;
+
+  String toLocale(BuildContext context) => switch (this) {
+    UpdatesDisplayMode.grid => context.l10n.displayModeGrid,
+    UpdatesDisplayMode.list => context.l10n.displayModeList,
+  };
+}
+
 /// disabled is flat; collapsed and expanded group chapters with the named initial state.
 enum UpdatesGroupingMode {
   disabled,

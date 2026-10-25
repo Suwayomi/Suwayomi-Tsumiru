@@ -197,13 +197,37 @@ class MangaCoverFixedCountGridDelegate extends SliverGridDelegate {
       oldDelegate.titleExtent != titleExtent;
 }
 
+/// Desktop scrollbar clearance: 10 px at maximum thumb width plus 4 px gap.
+const kDesktopScrollbarGutter = 14.0;
+
 SliverGridDelegate mangaCoverGridDelegate(
   double? size, {
   bool titleBelow = false,
+  double extraTitleExtent = 0.0,
 }) =>
     MangaCoverGridDelegate(
       maxCrossAxisExtent: size ?? DBKeys.gridMangaCoverWidth.initial,
       crossAxisSpacing: 2.0,
       mainAxisSpacing: 2.0,
-      titleExtent: titleBelow ? kGridTitleExtent : 0.0,
+      titleExtent: (titleBelow ? kGridTitleExtent : 0.0) + extraTitleExtent,
     );
+
+SliverGridDelegate mangaCoverUniformGridDelegate(
+  double? gridWidth,
+  int fixedColumns, {
+  bool titleBelow = false,
+  double extraTitleExtent = 0.0,
+}) =>
+    fixedColumns > 0
+        ? MangaCoverFixedCountGridDelegate(
+            crossAxisCount: fixedColumns,
+            crossAxisSpacing: 2.0,
+            mainAxisSpacing: 2.0,
+            titleExtent:
+                (titleBelow ? kGridTitleExtent : 0.0) + extraTitleExtent,
+          )
+        : mangaCoverGridDelegate(
+            gridWidth,
+            titleBelow: titleBelow,
+            extraTitleExtent: extraTitleExtent,
+          );
