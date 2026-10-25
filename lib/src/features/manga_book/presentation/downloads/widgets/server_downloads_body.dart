@@ -82,13 +82,14 @@ class ServerDownloadsBody extends ConsumerWidget {
       for (var index = 0; index < downloadsChapterIds.length; index++)
         if (!inLibrary[index]) downloadsChapterIds[index],
     ];
-    final grouped = (!manageAll || onlyMine) && foreignIds.isNotBlank;
+    final grouped = manageAll && onlyMine && foreignIds.isNotBlank;
+    final visibleIds = manageAll ? downloadsChapterIds : mineIds;
     return queueStatus.showUiWhenData(
       context,
       (data) {
         if (data == null) {
           return Emoticons(title: context.l10n.errorSomethingWentWrong);
-        } else if (downloadsChapterIds.isBlank) {
+        } else if (visibleIds.isBlank) {
           return Emoticons(title: context.l10n.noDownloads);
         } else {
           final downloadsCount = (downloadsChapterIds.length)
@@ -111,13 +112,10 @@ class ServerDownloadsBody extends ConsumerWidget {
                     ? (_, _) {}
                     : (oldIndex, newIndex) => ref
                           .read(downloadsMapProvider.notifier)
-                          .reorder(downloadsChapterIds[oldIndex], newIndex),
-                itemBuilder: (context, index) => _queueTile(
-                  downloadsChapterIds[index],
-                  index,
-                  downloadsCount,
-                ),
-                itemCount: downloadsCount,
+                          .reorder(visibleIds[oldIndex], newIndex),
+                itemBuilder: (context, index) =>
+                    _queueTile(visibleIds[index], index, visibleIds.length),
+                itemCount: visibleIds.length,
               ),
             );
           }

@@ -74,7 +74,7 @@ class MangaBookRepository {
     if (removed == null || removed.user.inLibrary) {
       throw StateError('Library removal was not confirmed');
     }
-    await cancelQueuedDownloadsForManga(client, mangaId);
+    await cancelQueuedDownloadsForManga(client, mangaId).catchError((_) {});
     if (forget != null && decodeWebUiBool(forget)) {
       await updateMangasCategories([mangaId], clearCategories: true);
     }
