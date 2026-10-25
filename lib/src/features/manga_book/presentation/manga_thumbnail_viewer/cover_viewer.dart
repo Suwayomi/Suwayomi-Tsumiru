@@ -186,9 +186,24 @@ List<Widget> coverShareSaveButtons(
   BuildContext context,
   WidgetRef ref,
   String imageUrl,
-  String? coverVersion,
-) {
+  String? coverVersion, {
+  bool labeled = false,
+}) {
   if (!_isShareSavePlatform()) return const [];
+  if (labeled) {
+    return [
+      TextButton.icon(
+        onPressed: () => _shareCover(context, ref, imageUrl, coverVersion),
+        icon: const Icon(FluentIcons.share_24_regular, size: 20),
+        label: Text(context.l10n.share),
+      ),
+      TextButton.icon(
+        onPressed: () => _saveCover(context, ref, imageUrl, coverVersion),
+        icon: const Icon(FluentIcons.save_24_regular, size: 20),
+        label: Text(context.l10n.save),
+      ),
+    ];
+  }
   return [
     IconButton(
       tooltip: context.l10n.share,
@@ -203,33 +218,54 @@ List<Widget> coverShareSaveButtons(
   ];
 }
 
+IconButton _coverActionButton(
+  String tooltip,
+  Widget icon,
+  VoidCallback onPressed,
+) {
+  return IconButton(tooltip: tooltip, icon: icon, onPressed: onPressed);
+}
+
 Widget coverEditButton(
   BuildContext context,
   WidgetRef ref,
-  MangaDto manga,
-  String? custom,
-) {
-  if (custom == null) {
-    return IconButton(
-      tooltip: context.l10n.editCover,
-      icon: const Icon(FluentIcons.edit_24_regular),
-      onPressed: () => showEditCoverPicker(context, ref, manga),
+  MangaDto manga, {
+  bool labeled = false,
+}) {
+  void open() => showEditCoverPicker(context, ref, manga);
+  if (labeled) {
+    return TextButton.icon(
+      onPressed: open,
+      icon: const Icon(FluentIcons.edit_24_regular, size: 20),
+      label: Text(context.l10n.editCover),
     );
   }
-  return PopupMenuButton<String>(
-    tooltip: context.l10n.editCover,
-    icon: const Icon(FluentIcons.edit_24_regular),
-    onSelected: (value) {
-      if (value == 'edit') {
-        showEditCoverPicker(context, ref, manga);
-      } else {
-        _deleteCover(context, ref, manga, custom);
-      }
-    },
-    itemBuilder: (menuContext) => [
-      PopupMenuItem(value: 'edit', child: Text(context.l10n.edit)),
-      PopupMenuItem(value: 'delete', child: Text(context.l10n.delete)),
-    ],
+  return _coverActionButton(
+    context.l10n.editCover,
+    const Icon(FluentIcons.edit_24_regular),
+    open,
+  );
+}
+
+Widget coverDeleteButton(
+  BuildContext context,
+  WidgetRef ref,
+  MangaDto manga,
+  String custom, {
+  bool labeled = false,
+}) {
+  void delete() => _deleteCover(context, ref, manga, custom);
+  if (labeled) {
+    return TextButton.icon(
+      onPressed: delete,
+      icon: const Icon(FluentIcons.delete_24_regular, size: 20),
+      label: Text(context.l10n.delete),
+    );
+  }
+  return _coverActionButton(
+    context.l10n.delete,
+    const Icon(FluentIcons.delete_24_regular),
+    delete,
   );
 }
 
@@ -275,13 +311,24 @@ class _CoverDialog extends ConsumerWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ...coverShareSaveButtons(context, ref, imageUrl, coverVersion),
+                ...coverShareSaveButtons(
+                  context,
+                  ref,
+                  imageUrl,
+                  coverVersion,
+                  labeled: true,
+                ),
                 if (manga.user.inLibrary)
-                  coverEditButton(
+                  coverEditButton(context, ref, manga, labeled: true),
+                if (manga.user.inLibrary &&
+                    custom != null &&
+                    custom.isNotEmpty)
+                  coverDeleteButton(
                     context,
                     ref,
                     manga,
-                    hasCustom ? custom : null,
+                    custom,
+                    labeled: true,
                   ),
               ],
             ),

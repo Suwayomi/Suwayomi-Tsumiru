@@ -33,8 +33,11 @@ class MangaThumbnailViewer extends ConsumerWidget {
     final coverVersion = hasCustom ? null : manga.thumbnailUrlLastFetched;
     final mediaButtons =
         coverShareSaveButtons(context, ref, imageUrl, coverVersion);
-    final editButton = manga.user.inLibrary
-        ? coverEditButton(context, ref, manga, hasCustom ? custom : null)
+    final editButton =
+        manga.user.inLibrary ? coverEditButton(context, ref, manga) : null;
+    final deleteButton =
+        manga.user.inLibrary && custom != null && custom.isNotEmpty
+        ? coverDeleteButton(context, ref, manga, custom)
         : null;
 
     return Scaffold(
@@ -83,6 +86,7 @@ class MangaThumbnailViewer extends ConsumerWidget {
                       ),
                       ...mediaButtons,
                       ?editButton,
+                      ?deleteButton,
                     ],
                   ),
                   const Spacer(),
