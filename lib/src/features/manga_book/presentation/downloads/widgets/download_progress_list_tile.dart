@@ -73,15 +73,15 @@ class DownloadProgressListTile extends HookConsumerWidget {
     WidgetRef ref,
     List<int> chapterIds,
   ) async {
+    final toast = ref.read(toastProvider);
+    final stillRequested = context.l10n.stillRequestedByAnotherAccount;
     final result = await AsyncValue.guard(
       () =>
           ref.read(downloadsMapProvider.notifier).cancelQueuedChapters(chapterIds),
     );
-    if (!context.mounted) return;
-    final toast = ref.read(toastProvider);
     result.showToastOnError(toast);
     if ((result.asData?.value ?? const <int>{}).isNotEmpty) {
-      toast?.show(context.l10n.stillRequestedByAnotherAccount);
+      toast?.show(stillRequested);
     }
   }
 

@@ -8,7 +8,6 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/fluent_expansion_tile.dart';
 import '../../../../account/data/account_providers.dart';
-import '../../../../account/domain/account_access.dart';
 import '../../../domain/downloads_queue/downloads_queue_model.dart';
 import '../controller/downloads_controller.dart';
 import 'download_progress_list_tile.dart';
@@ -66,25 +65,17 @@ class ServerDownloadsBody extends ConsumerWidget {
     final access = ref.watch(settledAccountAccessProvider);
     final canDownload = access.allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final onlyMine = ref.watch(onlyMyDownloadsProvider).ifNull();
+    final visibility = ref.watch(downloadsVisibilityProvider);
     // Single-user servers have no accounts to tell apart; they manage everything.
-    final manageAll =
-        access.canManageUsers ||
-        access.capability == AccountCapability.unsupported;
-    final inLibrary = [
-      for (final id in downloadsChapterIds)
-        ref.watch(downloadsFromIdProvider(id))?.manga.user.inLibrary ??
-            manageAll,
-    ];
-    final mineIds = [
-      for (var index = 0; index < downloadsChapterIds.length; index++)
-        if (inLibrary[index]) downloadsChapterIds[index],
-    ];
+    final manageAll = visibility.manageAll;
+    final mineIds = visibility.mineIds;
+    final mineSet = mineIds.toSet();
     final foreignIds = [
-      for (var index = 0; index < downloadsChapterIds.length; index++)
-        if (!inLibrary[index]) downloadsChapterIds[index],
+      for (final id in downloadsChapterIds)
+        if (!mineSet.contains(id)) id,
     ];
     final grouped = manageAll && onlyMine && foreignIds.isNotBlank;
-    final visibleIds = manageAll ? downloadsChapterIds : mineIds;
+    final visibleIds = visibility.visibleIds;
     return queueStatus.showUiWhenData(
       context,
       (data) {
@@ -129,8 +120,11 @@ class ServerDownloadsBody extends ConsumerWidget {
                             .read(downloadsMapProvider.notifier)
                             .reorder(visibleIds[oldIndex], target);
                       },
-                itemBuilder: (context, index) =>
-                    _queueTile(visibleIds[index], index, visibleIds.length),
+                itemBuilder: (context, index) => _queueTile(
+                  visibleIds[index],
+                  index,
+                  downloadsChapterIds.length,
+                ),
                 itemCount: visibleIds.length,
               ),
             );

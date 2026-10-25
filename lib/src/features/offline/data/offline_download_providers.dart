@@ -32,6 +32,7 @@ import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
+import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_propagation.dart';
@@ -1200,6 +1201,7 @@ Future<void> _removeMangaFromLibraryAndPurgeOwned(
       .removeMangaFromLibrary(mangaId);
   if (!current()) return;
   container.invalidate(libraryMangaListProvider);
+  container.invalidate(downloadStatusProvider);
   if (db == null) return;
   await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
   // Cancel incomplete downloads too, or in-flight work can recreate files after removal.

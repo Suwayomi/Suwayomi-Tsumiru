@@ -43,6 +43,9 @@ class DownloadsScreen extends HookConsumerWidget {
     final queueStatus = ref.watch(downloadStatusProvider);
     final downloaderRunState = ref.watch(downloaderRunStateProvider);
     final showDownloadsFAB = ref.watch(showDownloadsFABProvider);
+    final visibility = ref.watch(downloadsVisibilityProvider);
+    final visibleIds = visibility.visibleIds;
+    final visibleSet = visibleIds.toSet();
     final erroredChapterIds = ref.watch(
       downloadsMapProvider.select(
         (map) => [
@@ -51,6 +54,10 @@ class DownloadsScreen extends HookConsumerWidget {
         ],
       ),
     );
+    final visibleErrored = [
+      for (final id in erroredChapterIds)
+        if (visibleSet.contains(id)) id,
+    ];
     final tabController = useTabController(
       initialLength: 2,
       animationDuration: context.reduceMotion
@@ -84,23 +91,23 @@ class DownloadsScreen extends HookConsumerWidget {
     final actions = <Widget>[
       if (phone && !persistentBox)
         const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
-      if (!onDeviceTab && erroredChapterIds.isNotEmpty)
+      if (!onDeviceTab && visibleErrored.isNotEmpty)
         IconButton(
           tooltip: context.l10n.retryAll,
           onPressed: () async {
             final toast = ref.read(toastProvider);
             final repo = ref.read(downloadsRepositoryProvider);
             final result = await AsyncValue.guard(() async {
-              for (final id in erroredChapterIds) {
+              for (final id in visibleErrored) {
                 await repo.removeChapterFromDownloadQueue(id);
               }
-              await repo.addChaptersBatchToDownloadQueue(erroredChapterIds);
+              await repo.addChaptersBatchToDownloadQueue(visibleErrored);
             });
             result.showToastOnError(toast);
           },
           icon: const Icon(FluentIcons.replay_24_regular),
         ),
-      if (!onDeviceTab && (downloadsChapterIds).isNotBlank)
+      if (!onDeviceTab && visibleIds.isNotBlank)
         IconButton(
           onPressed: !canDownload
               ? null
@@ -114,8 +121,13 @@ class DownloadsScreen extends HookConsumerWidget {
                       !context.mounted) {
                     return;
                   }
+                  final clear = visibility.manageAll
+                      ? ref.read(downloadsMapProvider.notifier).clearAll
+                      : () => ref
+                          .read(downloadsMapProvider.notifier)
+                          .cancelQueuedChapters(visibleIds);
                   await AppUtils.guard(
-                  ref.read(downloadsMapProvider.notifier).clearAll,
+                  clear,
                   ref.read(toastProvider),
                   );
                 },
@@ -147,7 +159,8 @@ class DownloadsScreen extends HookConsumerWidget {
       // Unknown run state offers Resume: starting an already-running downloader is a no-op.
       floatingActionButton: onDeviceTab
           ? const OfflineDownloadsFab()
-          : (showDownloadsFAB
+          : (showDownloadsFAB &&
+                  (visibility.manageAll || visibleIds.isNotBlank)
                 ? DownloadsFab(
                     status: downloaderRunState ?? DownloaderState.STOPPED,
                   )

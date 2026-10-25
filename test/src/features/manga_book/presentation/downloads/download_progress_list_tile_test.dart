@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -15,8 +16,11 @@ import 'package:tsumiru/src/features/manga_book/domain/downloads/downloads_model
 import 'package:tsumiru/src/features/manga_book/domain/downloads/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/downloads_queue/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/controller/downloads_controller.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/downloads/downloads_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/widgets/download_progress_list_tile.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/downloads/widgets/downloads_fab.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/widgets/server_downloads_body.dart';
+import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -142,11 +146,18 @@ void main() {
     ) async {
       SharedPreferences.setMockInitialValues(const {});
       final prefs = await SharedPreferences.getInstance();
+      final manageAll = access.canManageUsers ||
+          access.capability == AccountCapability.unsupported;
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             settledAccountAccessProvider.overrideWithValue(access),
             sharedPreferencesProvider.overrideWithValue(prefs),
+            downloadsVisibilityProvider.overrideWithValue((
+              manageAll: manageAll,
+              mineIds: const [1],
+              visibleIds: manageAll ? const [1, 2] : const [1],
+            )),
             downloadsFromIdProvider(1).overrideWithValue(
               _download(
                 state: DownloadState.QUEUED,
@@ -232,6 +243,66 @@ void main() {
       expect(find.text('Foreign Manga'), findsNothing);
       expect(find.textContaining(l10n.notInYourLibrary), findsNothing);
       expect(find.text('1'), findsOneWidget);
+    });
+
+    testWidgets('regulars get no queue actions without visible items', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      final status = Fragment$DownloadStatusDto(
+        state: DownloaderState.STOPPED,
+        queue: [
+          _download(
+            state: DownloadState.ERROR,
+            chapterId: 2,
+            mangaId: 20,
+            mangaTitle: 'Foreign Manga',
+            inLibrary: false,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            settledAccountAccessProvider.overrideWithValue(
+              AccountAccess(
+                capability: AccountCapability.supported,
+                user: Fragment$AccountDto(
+                  id: 2,
+                  username: 'reader',
+                  permissions: const [],
+                  roles: const [Enum$UserRole.USER],
+                ),
+              ),
+            ),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            downloadStatusProvider.overrideWith(
+              (ref) => Future.value(status),
+            ),
+            downloadUpdatesProvider.overrideWith(
+              (ref) => const Stream<DownloadUpdatesDto?>.empty(),
+            ),
+            offlineEnabledProvider.overrideWithValue(false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: DownloadsScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n =
+          AppLocalizations.of(tester.element(find.byType(DownloadsScreen)))!;
+
+      expect(find.byTooltip(l10n.retryAll), findsNothing);
+      expect(
+        find.byIcon(FluentIcons.delete_dismiss_24_regular),
+        findsNothing,
+      );
+      expect(find.byType(DownloadsFab), findsNothing);
+      expect(find.text(l10n.noDownloads), findsOneWidget);
     });
   });
 }
