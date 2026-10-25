@@ -67,6 +67,7 @@ class OfflineSync {
         id: manga.id,
         title: manga.title,
         thumbnailUrl: manga.thumbnailUrl,
+        thumbnailUrlLastFetched: manga.thumbnailUrlLastFetched,
         updatedAt: DateTime.now(),
         sourceId: manga.source?.id,
         sourceName: manga.source?.name,

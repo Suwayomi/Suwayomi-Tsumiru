@@ -214,6 +214,7 @@ class HistoryDropdownRow extends StatelessWidget {
         child: ServerImage(
           imageUrl: item.manga.displayCoverUrl,
           fallbackImageUrl: item.manga.thumbnailUrl,
+          coverVersion: item.manga.coverVersion,
           size: const Size(40, 56),
         ),
       ),

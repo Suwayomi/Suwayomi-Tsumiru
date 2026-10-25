@@ -446,6 +446,20 @@ class ServerImage extends HookConsumerWidget {
 
     Widget errorWidget(BuildContext context, String error, stackTrace) {
       failed.value = true;
+      // Covers warmed before versioned keys existed sit under the unversioned
+      // key, so a failed versioned fetch draws that entry instead of an error.
+      if (coverVersion != null && !external) {
+        return AppUtils.wrapOn(
+          wrapper,
+          ServerImage(
+            imageUrl: imageUrl,
+            size: size,
+            fit: fit,
+            memCacheWidth: cacheWidth,
+            memCacheHeight: cacheHeight,
+          ),
+        );
+      }
       final fallback = fallbackImageUrl;
       if (fallback != null && fallback.isNotEmpty && fallback != imageUrl) {
         return AppUtils.wrapOn(

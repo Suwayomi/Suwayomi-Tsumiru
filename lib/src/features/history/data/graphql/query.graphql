@@ -8,6 +8,7 @@ fragment HistoryChapterDto on ChapterType {
     id
     title
     thumbnailUrl
+    thumbnailUrlLastFetched
     author
     meta {
       key

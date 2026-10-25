@@ -18,6 +18,10 @@ extension HistoryMangaCover on Fragment$HistoryChapterDto$manga {
     thumbnailUrl: thumbnailUrl,
     meta: meta.map((m) => (key: m.key, value: m.value)),
   );
+
+  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
+  String? get coverVersion =>
+      displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
 }
 
 extension HistoryItemExtension on HistoryItemDto {

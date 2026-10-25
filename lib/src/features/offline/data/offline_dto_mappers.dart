@@ -79,6 +79,7 @@ MangaDto offlineMangaToDto(
     id: m.id,
     title: m.title,
     thumbnailUrl: m.thumbnailUrl,
+    thumbnailUrlLastFetched: m.thumbnailUrlLastFetched,
     user: Fragment$MangaDto$user(
       bookmarkCount: m.bookmarkCount,
       downloadCount: m.downloadCount,
@@ -134,6 +135,11 @@ extension OfflineMangaCover on OfflineManga {
     thumbnailUrl: thumbnailUrl,
     meta: _decodeMeta(metaJson).entries.map((e) => (key: e.key, value: e.value)),
   );
+
+  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
+  String? get coverVersion => displayCoverUrl == thumbnailUrl
+      ? thumbnailUrlLastFetched
+      : null;
 }
 
 ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(

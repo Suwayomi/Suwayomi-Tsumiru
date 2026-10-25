@@ -21,6 +21,8 @@ class OfflineMangas extends Table {
   IntColumn get id => integer()();
   TextColumn get title => text()();
   TextColumn get thumbnailUrl => text().nullable()();
+  // Server cover version for the cache key; null draws the unversioned key.
+  TextColumn get thumbnailUrlLastFetched => text().nullable()();
   TextColumn get thumbnailRelPath => text().nullable()();
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get keepRule => textEnum<OfflineKeepRule>().withDefault(
@@ -164,7 +166,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -385,6 +387,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.fetchedAt,
         );
       }
+      if (from < 19 && await _hasTable(offlineMangas)) {
+        await _addColumnIfMissing(
+          m,
+          offlineMangas,
+          offlineMangas.thumbnailUrlLastFetched,
+        );
+      }
     },
     beforeOpen: (details) async {
       if (!details.wasCreated) await _addMissingColumns();
@@ -479,6 +488,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     required int id,
     required String title,
     String? thumbnailUrl,
+    String? thumbnailUrlLastFetched,
     required DateTime updatedAt,
     String? sourceId,
     String? sourceName,
@@ -504,6 +514,9 @@ class OfflineDatabase extends _$OfflineDatabase {
       thumbnailUrl: thumbnailUrl == null
           ? const Value.absent()
           : Value(thumbnailUrl),
+      thumbnailUrlLastFetched: thumbnailUrlLastFetched == null
+          ? const Value.absent()
+          : Value(thumbnailUrlLastFetched),
       sourceId: Value(sourceId),
       sourceName: Value(sourceName),
       sourceLang: Value(sourceLang),
