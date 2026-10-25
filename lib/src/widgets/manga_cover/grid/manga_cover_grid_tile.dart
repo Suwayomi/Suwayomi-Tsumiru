@@ -15,9 +15,8 @@ import '../../../constants/app_sizes.dart';
 import '../../../constants/enum.dart';
 import '../../../constants/gen/assets.gen.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
-import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
+import '../../../features/manga_book/presentation/manga_thumbnail_viewer/cover_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
-import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/theme/brand.dart';
 import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
@@ -162,39 +161,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
           if (widget.onPressed != null) {
             WebRouteLink.handleTap(openInNewTab, widget.onPressed!);
           } else {
-            Navigator.push(
-              context,
-              PageRouteBuilder(
-                fullscreenDialog: true,
-                opaque: false,
-                pageBuilder: (context, _, _) =>
-                    MangaThumbnailViewer(manga: widget.manga),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                      if (context.reduceMotion) {
-                        return ReducedRouteTransition(
-                          animation: animation,
-                          child: child,
-                        );
-                      }
-
-                      const begin = Offset(-1.0, 0.0);
-                      const end = Offset.zero;
-                      const curve = Curves.ease;
-
-                      final tween = Tween(begin: begin, end: end);
-                      final curvedAnimation = CurvedAnimation(
-                        parent: animation,
-                        curve: curve,
-                      );
-
-                      return SlideTransition(
-                        position: tween.animate(curvedAnimation),
-                        child: child,
-                      );
-                    },
-              ),
-            );
+            openCoverViewer(context, widget.manga);
           }
         },
         onLongPress: widget.onLongPress,

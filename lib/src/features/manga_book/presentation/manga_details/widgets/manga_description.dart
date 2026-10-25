@@ -31,7 +31,7 @@ import '../../../../offline/presentation/series_offline_button.dart';
 import '../../../../settings/presentation/appearance/widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import '../../../../tracking/presentation/hub/track_sheet.dart';
 import '../../../domain/manga/manga_model.dart';
-import '../../manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
+import '../../manga_thumbnail_viewer/cover_viewer.dart';
 import '../controller/manga_details_controller.dart';
 import '../controller/next_update_controller.dart';
 import '../manga_notes_screen.dart';
@@ -388,41 +388,7 @@ class MangaDescription extends HookConsumerWidget {
                 child: MangaCoverDescriptiveListTile(
                   manga: manga,
                   showBadges: false,
-                  onCoverPressed: () {
-                    Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        fullscreenDialog: true,
-                        opaque: false,
-                        pageBuilder: (context, _, _) =>
-                            MangaThumbnailViewer(manga: manga),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                              if (context.reduceMotion) {
-                                return ReducedRouteTransition(
-                                  animation: animation,
-                                  child: child,
-                                );
-                              }
-
-                              const begin = Offset(-1.0, 0.0);
-                              const end = Offset.zero;
-                              const curve = Curves.ease;
-
-                              final tween = Tween(begin: begin, end: end);
-                              final curvedAnimation = CurvedAnimation(
-                                parent: animation,
-                                curve: curve,
-                              );
-
-                              return SlideTransition(
-                                position: tween.animate(curvedAnimation),
-                                child: child,
-                              );
-                            },
-                      ),
-                    );
-                  },
+                  onCoverPressed: () => openCoverViewer(context, manga),
                   onTitleClicked: (query) =>
                       openGlobalSearch(context, query: query),
                   belowStatus: soonWidget,
