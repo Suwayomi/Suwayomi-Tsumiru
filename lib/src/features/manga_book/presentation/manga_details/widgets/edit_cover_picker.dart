@@ -26,7 +26,6 @@ final _visibleSites = [
     if (coverSiteVisible(site)) site,
 ];
 
-/// Grid of candidate covers from installed sources and cover sites, plus a pasted link.
 Future<void> showEditCoverPicker(
   BuildContext context,
   WidgetRef ref,

@@ -190,7 +190,6 @@ class ServerImage extends HookConsumerWidget {
 
   final String imageUrl;
 
-  /// Drawn when [imageUrl] fails; never chains to another fallback.
   final String? fallbackImageUrl;
   final String? coverVersion;
 
@@ -582,7 +581,6 @@ class ServerImage extends HookConsumerWidget {
         fadeInDuration: fadeDuration,
         memCacheWidth: imageBuilder == null ? cacheWidth : null,
         memCacheHeight: imageBuilder == null ? cacheHeight : null,
-        // HTML elements need no CORS fetch; byte fetching stays for server images.
         imageRenderMethodForWeb: external && kIsWeb
             ? ImageRenderMethodForWeb.HtmlImage
             : ImageRenderMethodForWeb.HttpGet,
@@ -742,7 +740,6 @@ ImageProvider serverPageImageProvider(
     port: ref.read(serverPortProvider),
     addPort: ref.read(serverPortToggleProvider).ifNull(),
   );
-  // Element-backed provider skips the CORS-blocked byte fetch on web.
   if (external && kIsWeb) {
     return NetworkImage(
       request.fetchUrl,

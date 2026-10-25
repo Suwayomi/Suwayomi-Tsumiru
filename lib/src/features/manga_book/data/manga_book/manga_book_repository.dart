@@ -250,7 +250,6 @@ class MangaBookRepository {
           .getData((data) {});
   }
 
-  /// Stores the custom cover link shown instead of the server cover.
   Future<void> setCustomCover({
     required int mangaId,
     required String coverUrl,
@@ -260,7 +259,6 @@ class MangaBookRepository {
     value: coverUrl,
   );
 
-  /// Restores the server cover.
   Future<void> clearCustomCover({required int mangaId}) => deleteMangaMeta(
     mangaId: mangaId,
     key: MangaMetaKeys.customCover.key,
@@ -284,7 +282,6 @@ class MangaBookRepository {
           )
           .getData<Object>((data) => null);
 
-  /// Deletes one meta key from every listed series in a single request.
   Future<void> deleteMangaMetas({
     required Iterable<int> mangaIds,
     required String key,

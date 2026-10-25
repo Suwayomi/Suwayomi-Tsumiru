@@ -13,13 +13,11 @@ import '../data/graphql/__generated__/query.graphql.dart';
 typedef HistoryItemDto = Fragment$HistoryChapterDto;
 
 extension HistoryMangaCover on Fragment$HistoryChapterDto$manga {
-  /// Cover to draw: the custom link when set, else the server cover.
   String get displayCoverUrl => resolveDisplayCover(
     thumbnailUrl: thumbnailUrl,
     meta: meta.map((m) => (key: m.key, value: m.value)),
   );
 
-  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
   String? get coverVersion =>
       displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
 }

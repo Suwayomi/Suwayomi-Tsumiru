@@ -130,13 +130,11 @@ Map<String, String> _decodeMeta(String? metaJson) {
 }
 
 extension OfflineMangaCover on OfflineManga {
-  /// Cover to draw: the custom link when set, else the server cover.
   String get displayCoverUrl => resolveDisplayCover(
     thumbnailUrl: thumbnailUrl,
     meta: _decodeMeta(metaJson).entries.map((e) => (key: e.key, value: e.value)),
   );
 
-  /// Version for the server cover cache key; null for custom covers, which key by URL or path.
   String? get coverVersion =>
       displayCoverUrl == thumbnailUrl ? thumbnailUrlLastFetched : null;
 }

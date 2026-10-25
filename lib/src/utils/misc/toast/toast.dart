@@ -22,7 +22,11 @@ part 'toast.g.dart';
 class Toast {
   Toast(this._context) {
     // A pending Undo keeps its overlay; re-pointing would strand its queued followers.
-    if (!_actionVisible) _fToast = FToast().init(_context);
+    // A closed cover view leaves that overlay unmounted, so re-init then.
+    final current = FToast().context;
+    if (!_actionVisible || current == null || !current.mounted) {
+      _fToast = FToast().init(_context);
+    }
   }
   final BuildContext _context;
   FToast _fToast = FToast();

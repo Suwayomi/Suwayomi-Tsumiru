@@ -471,7 +471,6 @@ class CustomCoverRevision extends _$CustomCoverRevision {
   void bump() => state++;
 }
 
-/// Custom cover link shown instead of the server cover; null restores it.
 @riverpod
 class MangaCustomCover extends _$MangaCustomCover {
   @override
