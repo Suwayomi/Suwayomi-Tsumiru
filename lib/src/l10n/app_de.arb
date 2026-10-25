@@ -96,10 +96,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme"
     },
-    "appTitle": "Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "appearance": "Aussehen",
     "@appearance": {
         "description": "Screen title and Button text of Appearance screen"

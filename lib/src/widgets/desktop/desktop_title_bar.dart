@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../constants/app_constants.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../tsumiru_logo.dart';
 
@@ -35,7 +36,7 @@ class DesktopBrandTitle extends StatelessWidget {
       children: [
         const TsumiruLogo(size: kBrandLogoSize),
         const SizedBox(width: kBrandGap),
-        Text('Tsumiru', style: brandNameStyle(context)),
+        Text(kAppName, style: brandNameStyle(context)),
       ],
     );
   }

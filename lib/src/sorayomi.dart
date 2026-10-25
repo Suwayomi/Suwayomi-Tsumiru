@@ -13,6 +13,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'constants/app_constants.dart';
 import 'constants/app_theme.dart';
 import 'features/auth/presentation/reauth_banner.dart';
 import 'features/notifications/controller/notifications_controller.dart';
@@ -143,7 +144,7 @@ class Sorayomi extends HookConsumerWidget {
           ),
         );
       },
-      onGenerateTitle: (context) => context.l10n.appTitle,
+      title: kAppName,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(
         theme: appTheme,

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../constants/app_constants.dart';
 import '../features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../features/manga_book/presentation/reader/controller/reader_controller.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -19,21 +20,20 @@ String webRouteTitle(
   String? mangaTitle,
   String? chapterName,
 }) {
-  final appTitle = l10n.appTitle;
-  String titled(String label) => '$label - $appTitle';
+  String titled(String label) => '$label - $kAppName';
   final segments = uri.pathSegments;
   if (segments.length >= 4 &&
       segments.first == 'manga' &&
       segments[2] == 'chapter') {
-    if (mangaTitle == null) return appTitle;
+    if (mangaTitle == null) return kAppName;
     final chapter = chapterName;
     return chapter == null
         ? titled(mangaTitle)
-        : '$mangaTitle: $chapter - $appTitle';
+        : '$mangaTitle: $chapter - $kAppName';
   }
   if (segments.length >= 2 && segments.first == 'manga') {
     final title = mangaTitle;
-    return title == null ? appTitle : titled(title);
+    return title == null ? kAppName : titled(title);
   }
   final screen = switch (segments) {
     ['library', ...] => l10n.library,
@@ -81,7 +81,7 @@ String webRouteTitle(
     ['more', 'settings', 'hotkeys'] => l10n.keyboardShortcuts,
     _ => null,
   };
-  return screen == null ? appTitle : titled(screen);
+  return screen == null ? kAppName : titled(screen);
 }
 
 class WebPageTitle extends ConsumerWidget {

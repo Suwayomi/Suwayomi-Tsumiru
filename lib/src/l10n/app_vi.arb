@@ -72,10 +72,6 @@
     "@buildTime": {
         "description": "Text title to show build time of Server in About Screen"
     },
-    "appTitle": "Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Tachidesk Sorayomi in native script)"
-    },
     "channel": "Kênh",
     "@channel": {
         "description": "Text title to show Channel of the Server (Stable, preview) in About Screen"

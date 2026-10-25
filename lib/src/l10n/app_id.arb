@@ -172,10 +172,6 @@
     "@addCategory": {
         "description": "Popup title and Button text to add new category in Edit Category Screen"
     },
-    "appTitle": "Tachidesk Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Tachidesk Sorayomi in native script)"
-    },
     "browse": "Jelajahi",
     "@browse": {
         "description": "Screen title, Navigation Bar text and Button text of both Browse screen and Browse Settings Screen"

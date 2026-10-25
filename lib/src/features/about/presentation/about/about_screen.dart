@@ -10,6 +10,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
+import '../../../../constants/app_constants.dart';
 import '../../../../constants/app_distribution.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/brand_icons.dart';
@@ -103,7 +104,7 @@ class AboutScreen extends HookConsumerWidget {
       data: (version) {
         if (version != null) {
           appUpdateDialog(
-            title: title ?? context.l10n.appTitle,
+            title: title ?? kAppName,
             newRelease: "v${version.canonicalizedVersion}",
             context: context,
             toast: toast,
@@ -165,7 +166,7 @@ class AboutScreen extends HookConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                context.l10n.appTitle,
+                                kAppName,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,

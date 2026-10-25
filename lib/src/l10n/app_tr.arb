@@ -1,9 +1,5 @@
 {
     "@@x_translationNotice": "This file includes translations adapted from upstream PO and Android XML. See assets/licenses/translation-notices.txt for attribution and licenses, and scripts/translations/provenance.json for per-string sources.",
-    "appTitle": "Tachidesk Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Tachidesk Sorayomi in native script)"
-    },
     "appearance": "Görünüş",
     "@appearance": {
         "description": "Screen title and Button text of Appearance screen"

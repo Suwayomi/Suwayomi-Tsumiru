@@ -15,3 +15,5 @@ const Curve kCurve = Curves.easeIn;
 const kDebounceDuration = Duration(milliseconds: 500);
 
 const kPositionPlaceholder = -1;
+
+const kAppName = 'Tsumiru';

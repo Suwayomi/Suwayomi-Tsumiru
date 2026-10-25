@@ -29,9 +29,6 @@
   "@appTheme": {
     "description": "Popup title and Button text to change App Theme Mode"
   },
-  "@appTitle": {
-    "description": "Name of the app (Sorayomi in native script)"
-  },
   "@appearance": {
     "description": "Screen title and Button text of Appearance screen"
   },
@@ -1302,7 +1299,6 @@
   "animatePageTransitions": "Animate page transitions",
   "appLanguage": "App language",
   "appTheme": "Theme mode",
-  "appTitle": "Tsumiru",
   "appearance": "Appearance",
   "authType": "Authentication type",
   "authTypeBasic": "Basic Auth",

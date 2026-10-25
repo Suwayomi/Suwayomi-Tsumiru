@@ -969,10 +969,6 @@
     "@withUnreadChapter": {
         "description": "Setting option Text for Skip updating entries to toggle With unread chapter(s)"
     },
-    "appTitle": "Sorayomi",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "ip": "IPアドレス",
     "@ip": {
         "description": "Option title for Server IP Address in Server settings"

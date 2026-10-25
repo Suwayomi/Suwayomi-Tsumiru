@@ -105,10 +105,6 @@
     "@appTheme": {
         "description": "Popup title and Button text to change App Theme"
     },
-    "appTitle": "Tsumiru",
-    "@appTitle": {
-        "description": "Name of the app (Sorayomi in native script)"
-    },
     "addToLibrary": "添加到书架",
     "@addToLibrary": {
         "description": "Button text to add Manga to Library in Manga Details Screen"

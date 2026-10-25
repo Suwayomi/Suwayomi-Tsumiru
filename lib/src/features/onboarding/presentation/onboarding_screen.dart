@@ -11,6 +11,7 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../constants/app_constants.dart';
 import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../constants/gen/assets.gen.dart';
@@ -197,7 +198,7 @@ class _BrandHeader extends StatelessWidget {
         Image.asset(_brandLogo(context).path, height: 26),
         const SizedBox(width: 8),
         Text(
-          'Tsumiru',
+          kAppName,
           style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
