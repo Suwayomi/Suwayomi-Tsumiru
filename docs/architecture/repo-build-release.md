@@ -33,7 +33,7 @@ A release is **maintainer-initiated as a draft, then auto-published once every p
 | Job | Runner | Output |
 |---|---|---|
 | android | ubuntu-latest | 4 APKs (universal + arm64-v8a + armeabi-v7a + x86_64), debug-keystore signed via repo secrets so upgrades stay clean |
-| linux | ubuntu-latest | AppImage (fastforge + appimagetool) |
+| linux | ubuntu-latest | AppImage + `.zsync` (fastforge, then repacked by appimagetool with `gh-releases-zsync` update info) |
 | web | ubuntu-latest | `*-web.zip` |
 | macos | macos-latest | `.app` zip |
 | ios | macos-latest | **unsigned** `.ipa` (no Apple Developer account; users re-sign via AltStore / SideStore / TrollStore) |

@@ -184,7 +184,7 @@ jobs:
           sudo wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
           sudo chmod +x /usr/local/bin/appimagetool
           # fastforge's AppImage maker may call `locate` for include resolution.
-          sudo apt-get install -y --no-install-recommends plocate && sudo updatedb || true
+          sudo apt-get install -y --no-install-recommends plocate zsync && sudo updatedb || true
           dart pub global activate fastforge
           export PATH="$PATH:$HOME/.pub-cache/bin"
           # Builds `flutter build linux --release` + packages an AppImage.
@@ -203,6 +203,13 @@ jobs:
           mv "$built" "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage"
           # Drop fastforge's version subdir so the release only attaches our named files.
           find dist -mindepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
+          # fastforge embeds no update info, so repack for delta updates.
+          mv "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage" ./fastforge-input.AppImage
+          ./fastforge-input.AppImage --appimage-extract > /dev/null
+          appimagetool -u "gh-releases-zsync|Suwayomi|Suwayomi-Tsumiru|latest|tsumiru-*-linux-x86_64.AppImage.zsync" \
+            squashfs-root "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage"
+          mv ./"${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage.zsync" dist/
+          rm -rf squashfs-root fastforge-input.AppImage
 
       - name: Package Web
         if: matrix.target == 'web'
