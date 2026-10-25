@@ -135,6 +135,33 @@ class DownloadsRepository {
       client.query$GetDownloadStatus().getData((data) => data.downloadStatus);
 }
 
+Future<void> cancelQueuedDownloadsForManga(
+  GraphQLClient client,
+  int mangaId,
+) async {
+  final queue = await client
+      .query$GetDownloadStatus()
+      .getData((data) => data.downloadStatus.queue);
+  final ids = [
+    for (final item in queue ?? const [])
+      if (item.manga.id == mangaId &&
+          (item.state == Enum$DownloadState.QUEUED ||
+              item.state == Enum$DownloadState.ERROR))
+        item.chapter.id,
+  ];
+  for (final id in ids) {
+    await client
+        .mutate$DequeueChapterDownloads(
+          Options$Mutation$DequeueChapterDownloads(
+            variables: Variables$Mutation$DequeueChapterDownloads(
+              input: Input$DequeueChapterDownloadInput(id: id),
+            ),
+          ),
+        )
+        .getData((data) {});
+  }
+}
+
 @riverpod
 DownloadsRepository downloadsRepository(Ref ref) {
   final current = watchAuthSession(ref);

@@ -1172,7 +1172,7 @@ Future<void> _deleteChapterFromDeviceOwned({
   }
 }
 
-/// Removes library membership and device copies while preserving server downloads.
+/// Removes library membership and device copies; queued server downloads are cancelled, files stay.
 /// Uses a container so navigation cannot interrupt cleanup.
 Future<void> removeMangaFromLibraryAndPurge(
   ProviderContainer container,

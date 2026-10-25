@@ -13,6 +13,7 @@ import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../browse_center/data/source_repository/graphql/__generated__/query.graphql.dart';
 import '../../browse_center/domain/source/source_model.dart';
+import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/__generated__/query.graphql.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
@@ -513,6 +514,12 @@ class MigrationRepositoryImpl implements MigrationRepository {
           );
         }
       }
+    }
+
+    try {
+      await cancelQueuedDownloadsForManga(client, fromMangaId);
+    } catch (e) {
+      warnings.add('Could not cancel queued downloads for the old series: $e');
     }
 
     return (success: true, warnings: warnings);

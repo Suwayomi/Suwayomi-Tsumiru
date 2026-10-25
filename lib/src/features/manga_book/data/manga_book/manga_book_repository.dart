@@ -17,6 +17,7 @@ import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../domain/chapter_page/chapter_page_model.dart';
 import '../../domain/manga/manga_model.dart';
+import '../downloads/downloads_repository.dart';
 import './__generated__/query.graphql.dart';
 
 part 'manga_book_repository.g.dart';
@@ -73,6 +74,7 @@ class MangaBookRepository {
     if (removed == null || removed.user.inLibrary) {
       throw StateError('Library removal was not confirmed');
     }
+    await cancelQueuedDownloadsForManga(client, mangaId);
     if (forget != null && decodeWebUiBool(forget)) {
       await updateMangasCategories([mangaId], clearCategories: true);
     }
