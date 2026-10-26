@@ -150,6 +150,268 @@ Future<void> pumpRoute(
 }
 
 void main() {
+  testWidgets('catalogue keeps its toolbar after push then go', (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    _mockWindowManager();
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final rootKey = GlobalKey<NavigatorState>();
+    final router = GoRouter(
+      navigatorKey: rootKey,
+      initialLocation: '/source',
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => Scaffold(
+            body: Column(
+              children: [
+                const DesktopTopBar(),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+          routes: [
+            StatefulShellRoute.indexedStack(
+              builder: (context, state, shell) => TopBarSlot(
+                minWidth: 500,
+                content: const TextField(
+                  decoration: InputDecoration(hintText: 'Search sources...'),
+                ),
+                child: shell,
+              ),
+              branches: [
+                StatefulShellBranch(
+                  routes: [
+                    GoRoute(
+                      path: '/source',
+                      builder: (context, state) => const SizedBox.expand(),
+                      routes: [
+                        GoRoute(
+                          path: ':sourceId/:sourceType',
+                          parentNavigatorKey: rootKey,
+                          builder: (context, state) => Scaffold(
+                            body: Column(
+                              children: [
+                                const DesktopTopBar(),
+                                Expanded(
+                                  child: TopBarSlot(
+                                    key: ValueKey(
+                                      state.pathParameters['sourceType'],
+                                    ),
+                                    minWidth: 500,
+                                    content: const TextField(
+                                      decoration: InputDecoration(
+                                        hintText: 'Search Asura Scans (EN)...',
+                                      ),
+                                    ),
+                                    child: const SizedBox.expand(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    final container = ProviderContainer(overrides: [..._overrides(prefs)]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    router.push<void>('/source/6247824327199706550/p-o-p-u-l-a-r');
+    await tester.pumpAndSettle();
+    final catalogueHint = find.descendant(
+      of: find.byType(DesktopTopBar),
+      matching: find.text('Search Asura Scans (EN)...'),
+    );
+    expect(catalogueHint, findsOneWidget);
+    router.go('/source/6247824327199706550/l-a-t-e-s-t');
+    await tester.pumpAndSettle();
+    expect(catalogueHint, findsOneWidget);
+    router.go('/source/6247824327199706550/s-e-a-r-c-h?query=solo');
+    await tester.pumpAndSettle();
+    expect(catalogueHint, findsOneWidget);
+    expect(router.canPop(), isTrue);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(router.state.matchedLocation, '/source');
+    expect(find.text('Search sources...'), findsOneWidget);
+  });
+
+  testWidgets('slot changed under a dialog shows new content after it closes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    _mockWindowManager();
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final label = ValueNotifier<String>('Toolbar v1');
+    addTearDown(label.dispose);
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        // Slot in the shell navigator, dialog on root: the slot's own route never notifies it.
+        ShellRoute(
+          builder: (context, state, child) => Scaffold(
+            body: Column(
+              children: [
+                const DesktopTopBar(),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => ValueListenableBuilder<String>(
+                valueListenable: label,
+                builder: (context, value, _) => TopBarSlot(
+                  minWidth: 500,
+                  content: SizedBox(
+                    height: 40,
+                    child: Center(child: Text(value)),
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [..._overrides(prefs)],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    Finder barText(String value) => find.descendant(
+      of: find.byType(DesktopTopBar),
+      matching: find.text(value),
+    );
+    expect(barText('Toolbar v1'), findsOneWidget);
+    final barContext = tester.element(find.byType(DesktopTopBar));
+    showDialog<void>(
+      context: barContext,
+      useRootNavigator: true,
+      builder: (context) => const AlertDialog(content: Text('Cover')),
+    );
+    await tester.pumpAndSettle();
+    label.value = 'Toolbar v2';
+    await tester.pumpAndSettle();
+    expect(barText('Toolbar v1'), findsOneWidget);
+    expect(barText('Toolbar v2'), findsNothing);
+    Navigator.of(barContext, rootNavigator: true).pop();
+    await tester.pumpAndSettle();
+    expect(barText('Toolbar v2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shell toolbar stays visible under a non-opaque window route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    _mockWindowManager();
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final rootKey = GlobalKey<NavigatorState>();
+    final router = GoRouter(
+      navigatorKey: rootKey,
+      initialLocation: '/library',
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => Scaffold(
+            body: Column(
+              children: [
+                const DesktopTopBar(),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+          routes: [
+            GoRoute(
+              path: '/library',
+              builder: (context, state) => TopBarSlot(
+                minWidth: 500,
+                content: const SizedBox(
+                  height: 40,
+                  child: Center(child: Text('Library toolbar')),
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/upcoming',
+          parentNavigatorKey: rootKey,
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            opaque: false,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) => child,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [..._overrides(prefs)],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final barText = find.descendant(
+      of: find.byType(DesktopTopBar),
+      matching: find.text('Library toolbar'),
+    );
+    expect(barText, findsOneWidget);
+    router.push<void>('/upcoming');
+    await tester.pumpAndSettle();
+    expect(barText, findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(barText, findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('merged bar, two-row fallback and macOS rail', (tester) async {
     addTearDown(() {
       debugDesktopPlatformOverride = null;

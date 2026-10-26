@@ -5,9 +5,28 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../constants/app_sizes.dart';
 import '../utils/extensions/custom_extensions.dart';
+
+void usePruneSelection(
+  ValueNotifier<Set<int>> selection,
+  Set<int> liveIds,
+  BuildContext context,
+) {
+  useEffect(() {
+    if (selection.value.any((id) => !liveIds.contains(id))) {
+      final previous = selection.value;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted && identical(selection.value, previous)) {
+          selection.value = previous.intersection(liveIds);
+        }
+      });
+    }
+    return null;
+  });
+}
 
 /// Read insets from FlutterView: shell/bottomSheet MediaQuery insets are zeroed.
 class SelectionActionBar extends StatelessWidget {

@@ -54,9 +54,78 @@ String _activeLeafLocation(BuildContext context) {
   return _matchedLocationOrNull(context) ?? '';
 }
 
+List<RouteMatchBase> _flattenMatches(List<RouteMatchBase> matches) {
+  final flat = <RouteMatchBase>[];
+  for (final match in matches) {
+    flat.add(match);
+    final List<RouteMatchBase> nested = match is ShellRouteMatch
+        ? match.matches
+        : match is ImperativeRouteMatch
+        ? match.matches.matches
+        : const <RouteMatchBase>[];
+    flat.addAll(_flattenMatches(nested));
+  }
+  return flat;
+}
+
+// Window routes may have no slot, so resolve the visible page through the match stack.
+String _resolveSlotKey(
+  BuildContext context,
+  Map<String, List<TopBarSlotEntry>> registry,
+) {
+  final router = GoRouter.maybeOf(context);
+  if (router == null) return _matchedLocationOrNull(context) ?? '';
+  late final RouteMatchList configuration;
+  try {
+    configuration = router.routerDelegate.currentConfiguration;
+  } catch (_) {
+    return _activeLeafLocation(context);
+  }
+  final flat = _flattenMatches(configuration.matches);
+  var start = 0;
+  // Beneath a non-opaque window the visible page sits below this page in the stack.
+  var beneathVisible = false;
+  final ownRoute = ModalRoute.of(context);
+  if (ownRoute != null) {
+    final ownPages = ownRoute.navigator?.widget.pages ?? const <Page>[];
+    final ownIndex = ownPages.indexWhere(
+      (page) => identical(page, ownRoute.settings),
+    );
+    if (ownIndex >= 0) {
+      final ownKey = ownPages[ownIndex].key;
+      final flatIndex = flat.lastIndexWhere(
+        (match) => match.pageKey == ownKey,
+      );
+      if (flatIndex >= 0) start = flatIndex;
+      beneathVisible =
+          ownIndex < ownPages.length - 1 &&
+          ownPages
+              .skip(ownIndex + 1)
+              .every((page) => page is CustomTransitionPage && !page.opaque);
+    }
+  }
+  for (var i = flat.length - 1; i >= start; i--) {
+    final entries = registry[flat[i].matchedLocation];
+    if (entries != null && entries.isNotEmpty) return flat[i].matchedLocation;
+  }
+  if (beneathVisible) {
+    for (var i = start - 1; i >= 0; i--) {
+      final entries = registry[flat[i].matchedLocation];
+      if (entries != null && entries.isNotEmpty) {
+        return flat[i].matchedLocation;
+      }
+    }
+  }
+  return _activeLeafLocation(context);
+}
+
 /// Shared one-row decision; macOS needs its sidebar brand only alongside the merged row.
 bool desktopTopBarShowsMergedRow(BuildContext context, WidgetRef ref) =>
-    _topBarLayout(context, ref, _activeLeafLocation(context)).merged;
+    _topBarLayout(
+      context,
+      ref,
+      _resolveSlotKey(context, ref.watch(topBarSlotRegistryProvider)),
+    ).merged;
 
 _TopBarLayout _topBarLayout(
   BuildContext context,
@@ -113,13 +182,13 @@ double topBarBreakpoint({
 double titleTopBarSlotMinWidth(int actionCount) =>
     48.0 + kDesktopTopBarGap + 120.0 + actionCount * 48.0;
 
-double searchTopBarSlotMinWidth(int actionCount, [bool hasLeading = false]) =>
+double searchTopBarSlotMinWidth(int actionCount, [double leadingWidth = 0]) =>
     // Match desktopToolbarRow: side padding plus one gap between each child.
     kTopBarSearchMinWidth +
     2 * kDesktopToolbarSlotHPadding +
-    (hasLeading ? 48.0 : 0) +
+    leadingWidth +
     actionCount * 48.0 +
-    (actionCount + (hasLeading ? 1 : 0)) * kDesktopTopBarGap;
+    (actionCount + (leadingWidth > 0 ? 1 : 0)) * kDesktopTopBarGap;
 
 BoxConstraints settingsPageConstraints(
   BuildContext context, {
@@ -375,10 +444,129 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   String _publishedKey = '';
   TopBarSlotEntry? _publishedEntry;
   bool _scheduled = false;
+  bool _covered = false;
+  List<ModalRoute> _watchedRoutes = const [];
 
+  // Publish under the owning route so windows without slots can retain the visible toolbar.
   String _currentRouteKey() => _matchedLocationOrNull(context) ?? '';
 
+  List<ModalRoute> _routeChain() {
+    final chain = <ModalRoute>[];
+    var routeContext = context;
+    while (true) {
+      final route = ModalRoute.of(routeContext);
+      if (route == null) break;
+      chain.add(route);
+      final navigator = route.navigator;
+      if (navigator == null) break;
+      routeContext = navigator.context;
+    }
+    return chain;
+  }
+
+  // An opaque page above hides this slot; dialogs are not pages.
+  bool _routeCoveredByOpaque(ModalRoute route) {
+    if (route.isCurrent) return false;
+    final pages = route.navigator?.widget.pages ?? const <Page>[];
+    final index = pages.indexWhere((page) => identical(page, route.settings));
+    if (index < 0) return false;
+    for (final page in pages.skip(index + 1)) {
+      if (page is! CustomTransitionPage || page.opaque) return true;
+    }
+    return false;
+  }
+
+  // A covered route with only window pages above it is still visible.
+  bool _routeHasWindowAbove(ModalRoute route) {
+    if (route.isCurrent) return false;
+    final pages = route.navigator?.widget.pages ?? const <Page>[];
+    final index = pages.indexWhere((page) => identical(page, route.settings));
+    if (index < 0) return false;
+    return pages
+        .skip(index + 1)
+        .any((page) => page is CustomTransitionPage && !page.opaque);
+  }
+
+  ({bool covered, bool coveredOpaque}) _coverStateOf(List<ModalRoute> chain) {
+    var covered = false;
+    var coveredOpaque = false;
+    for (final route in chain) {
+      if (_routeCoveredByOpaque(route)) {
+        covered = true;
+        coveredOpaque = true;
+      } else if (!route.isCurrent && !_routeHasWindowAbove(route)) {
+        covered = true;
+      }
+    }
+    return (covered: covered, coveredOpaque: coveredOpaque);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_handleCoverChanged);
+  }
+
+  // Dialogs/popups never animate the routes below them, so republish through build when focus moves.
+  void _handleCoverChanged() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_coverStateOf(_routeChain()).covered == _covered) return;
+      setState(() {});
+    });
+  }
+
+  void _onCoverStatus(AnimationStatus _) => _handleCoverChanged();
+
+  void _syncRouteWatch(List<ModalRoute> chain) {
+    if (chain.length == _watchedRoutes.length &&
+        Iterable.generate(
+          chain.length,
+        ).every((i) => identical(chain[i], _watchedRoutes[i]))) {
+      return;
+    }
+    _unwatchRoutes();
+    _watchedRoutes = List.of(chain);
+    for (final route in _watchedRoutes) {
+      route.animation?.addStatusListener(_onCoverStatus);
+      route.secondaryAnimation?.addStatusListener(_onCoverStatus);
+    }
+  }
+
+  void _unwatchRoutes() {
+    for (final route in _watchedRoutes) {
+      route.animation?.removeStatusListener(_onCoverStatus);
+      route.secondaryAnimation?.removeStatusListener(_onCoverStatus);
+    }
+    _watchedRoutes = const [];
+  }
+
+  void _scheduleRemoval() {
+    final previous = _publishedEntry;
+    if (previous == null) return;
+    final routeKey = _publishedKey;
+    _publishedEntry = null;
+    _publishedKey = '';
+    final registry = _registry;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!registry.alive) return;
+      registry.removeEntry(routeKey, previous);
+    });
+  }
+
   void _schedulePublish() {
+    final chain = _routeChain();
+    final cover = _coverStateOf(chain);
+    _syncRouteWatch(chain);
+    _covered = cover.covered;
+    // Opaque pages hide this slot, so drop its entry; dialogs keep it.
+    if (cover.coveredOpaque) {
+      _scheduleRemoval();
+      return;
+    }
+    if (!TickerMode.valuesOf(context).enabled) return;
+    if (cover.covered) return;
     _routeKey = _currentRouteKey();
     _entry = TopBarSlotEntry(
       content: widget.content,
@@ -413,17 +601,12 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
     super.didChangeDependencies();
     // Inherited lookups belong here; capture the registry because ref is unusable in dispose.
     _registry = ref.read(topBarSlotRegistryProvider.notifier);
-    _schedulePublish();
-  }
-
-  @override
-  void didUpdateWidget(TopBarSlot oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _schedulePublish();
   }
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_handleCoverChanged);
+    _unwatchRoutes();
     // Defer provider changes during unmount; remove only this slot's published instance.
     final registry = _registry;
     final routeKey = _publishedKey;
@@ -437,7 +620,10 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    _schedulePublish();
+    return widget.child;
+  }
 }
 
 /// Merge brand, toolbar and native controls when they fit; otherwise use two rows.
@@ -514,8 +700,11 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     }
     return ListenableBuilder(
       listenable: delegate,
-      builder: (context, _) =>
-          _buildBar(context, ref, _activeLeafLocation(context)),
+      builder: (context, _) => _buildBar(
+        context,
+        ref,
+        _resolveSlotKey(context, ref.watch(topBarSlotRegistryProvider)),
+      ),
     );
   }
 
@@ -580,12 +769,16 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
       duration: context.reduceMotion
           ? Duration.zero
           : const Duration(milliseconds: 150),
-      child: Container(
+      // Clamp the one-frame unbounded width during entry switches.
+      child: LimitedBox(
         key: ValueKey(key),
-        alignment: Alignment.center,
-        child: KeyedSubtree(
-          key: _slotContentKeys.putIfAbsent(key, GlobalKey.new),
-          child: entry.content,
+        maxWidth: entry.minWidth,
+        child: Container(
+          alignment: Alignment.center,
+          child: KeyedSubtree(
+            key: _slotContentKeys.putIfAbsent(key, GlobalKey.new),
+            child: entry.content,
+          ),
         ),
       ),
     );
