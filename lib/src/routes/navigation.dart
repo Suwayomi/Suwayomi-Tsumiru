@@ -15,12 +15,12 @@ Future<T?> pushDetailPage<T extends Object?>(
   String location,
 ) {
   final router = GoRouter.of(context);
-  final overReader =
-      router.routerDelegate.currentConfiguration.last.route.path ==
-      Routes.reader;
-  return overReader
-      ? router.pushReplacement<T>(location)
-      : router.push<T>(location);
+  final top = router.routerDelegate.currentConfiguration.last;
+  if (top.route.path == Routes.reader) {
+    if (top is ImperativeRouteMatch) top.complete();
+    return router.pushReplacement<T>(location);
+  }
+  return router.push<T>(location);
 }
 
 /// Push global search so replacing the stack cannot discard its return route.
