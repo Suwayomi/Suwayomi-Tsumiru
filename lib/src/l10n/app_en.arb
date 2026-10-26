@@ -2554,6 +2554,29 @@
   "migrationFilterObsolete": "Show obsolete only",
   "migrationSortMode": "Sort mode",
   "migrationSortDirection": "Sort direction",
+  "migrationSourceNotInstalled": "Source not installed",
+  "migrationSortCount": "Count",
+  "migrationSourcesAndOptions": "Sources and options",
+  "migrationReviewMatches": "Review matches",
+  "migrationSeriesCount": "{count} series",
+  "@migrationSeriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationSeriesFromSource": "{count} series from {source}",
+  "@migrationSeriesFromSource": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "migrationObsoleteSource": "Obsolete",
   "migrationNoLibrarySources": "Your library is empty — nothing to migrate.",
   "migrationInvertSelection": "Invert",
@@ -2593,6 +2616,71 @@
       }
     }
   },
+  "migrationNoObsoleteSources": "No obsolete sources",
+  "migrationShowAllSources": "Show all sources",
+  "migrationClearSearch": "Clear search",
+  "migrationFailedGeneric": "Migration failed",
+  "migrationFailedCount": "{count} failed",
+  "@migrationFailedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationFailedSnack": "{count, plural, =1{1 series failed to migrate} other{{count} series failed to migrate}}",
+  "@migrationFailedSnack": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationBlockedNoChapters": "No chapters on {source}",
+  "@migrationBlockedNoChapters": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationBlockedUnmatched": "{count, plural, =1{1 chapter with progress has no match on {source}} other{{count} chapters with progress have no match on {source}}}",
+  "@migrationBlockedUnmatched": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationBlockedChaptersUnavailable": "Couldn't load chapters from {source}",
+  "@migrationBlockedChaptersUnavailable": {
+    "description": "Reason shown when the target source's chapters could not be loaded",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationBlockedSelfTarget": "Target is the series itself or its own source",
+  "@migrationBlockedSelfTarget": {
+    "description": "Reason shown when the picked migration target is the series itself or lives on its origin source"
+  },
+  "migrationFailureUnsyncedReads": "Unsynced offline reads. Connect and sync, then retry.",
+  "@migrationFailureUnsyncedReads": {
+    "description": "Failure shown when offline reads are unsynced and the source cannot be removed yet"
+  },
+  "migrationFailureCopyFailed": "Copy failed",
+  "@migrationFailureCopyFailed": {
+    "description": "Failure shown when copying to the new source failed"
+  },
+  "migrationFailureRemovalFailed": "Copied to the new source, but removing the old one failed",
+  "@migrationFailureRemovalFailed": {
+    "description": "Failure shown when copying succeeded but removing the old source failed"
+  },
+  "migrationNeedsReview": "Check this match",
   "notificationNewChaptersTitle": "New chapters",
   "notificationNewChaptersSummary": "Updates for {count} series",
   "@notificationNewChaptersSummary": {
@@ -3237,6 +3325,39 @@
   "@downloadsQueue": {
     "description": "Header title above the server download queue"
   },
+  "moveSeriesToTop": "Move series to top",
+  "@moveSeriesToTop": {
+    "description": "Move all queued chapters of a series to the top"
+  },
+  "moveSeriesToBottom": "Move series to bottom",
+  "@moveSeriesToBottom": {
+    "description": "Move all queued chapters of a series to the bottom"
+  },
+  "keepOnThisDevice": "Keep on this device",
+  "@keepOnThisDevice": {
+    "description": "Heading for a series' offline keep rules"
+  },
+  "cancelDownloadsTitle": "{count, plural, =1{Cancel 1 download?} other{Cancel {count} downloads?}}",
+  "@cancelDownloadsTitle": {
+    "description": "Confirmation title before cancelling selected downloads",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cancelDownloadsMessage": "The selected chapters will be removed from the download queue.",
+  "@cancelDownloadsMessage": {
+    "description": "Confirmation message before cancelling selected downloads"
+  },
+  "cancelDownloads": "Cancel downloads",
+  "@cancelDownloads": {
+    "description": "Confirm cancelling selected downloads"
+  },
+  "offlineChapterRead": "Read",
+  "@offlineChapterRead": {
+    "description": "Open a downloaded chapter in the reader"
+  },
   "downloadPagesProgress": "{done}/{total} pages",
   "@downloadPagesProgress": {
     "description": "Progress text for a downloading chapter, e.g. 24/25 pages",
@@ -3265,6 +3386,64 @@
   "searchExtensionsHint": "Search extensions...",
   "@searchExtensionsHint": {
     "description": "Placeholder in the desktop Browse search box on the Extensions tab"
+  },
+  "hideSource": "Hide source",
+  "@hideSource": {
+    "description": "Menu item to hide a source from the Browse list"
+  },
+  "hiddenSources": "Hidden sources",
+  "@hiddenSources": {
+    "description": "Row in the Browse filter panel opening the hidden sources screen"
+  },
+  "sourceHidden": "{source} hidden",
+  "@sourceHidden": {
+    "description": "Toast after hiding a source, with an Undo action",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "clearSelection": "Clear selection",
+  "@clearSelection": {
+    "description": "Tooltip for the clear-selection button in the desktop source catalogue selection bar"
+  },
+  "historyChapterCompleted": "Completed",
+  "@historyChapterCompleted": {
+    "description": "Label on a History entry whose chapter is finished"
+  },
+  "searchSourceHint": "Search {source}...",
+  "@searchSourceHint": {
+    "description": "Placeholder in the desktop source catalogue search box",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchResults": "Search results",
+  "@searchResults": {
+    "description": "Label for the Search results view in the desktop source catalogue switch"
+  },
+  "pinned": "Pinned",
+  "@pinned": {
+    "description": "Heading for pinned sources in the desktop source switcher menu"
+  },
+  "recent": "Recent",
+  "@recent": {
+    "description": "Heading for recently opened sources in the desktop source switcher menu"
+  },
+  "browseAllSources": "All sources",
+  "@browseAllSources": {
+    "description": "Menu item returning to the Browse sources list from the desktop source switcher"
+  },
+  "searchOtherSources": "Search other sources",
+  "@searchOtherSources": {
+    "description": "Menu item opening Global search with a catalogue entry's title"
+  },
+  "open": "Open",
+  "@open": {
+    "description": "Menu item opening the selected entry"
   },
   "copyToClipboard": "Copy to clipboard",
   "copiedToClipboard": "Copied to clipboard",

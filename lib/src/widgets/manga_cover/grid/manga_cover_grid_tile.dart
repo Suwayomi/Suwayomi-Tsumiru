@@ -57,6 +57,7 @@ class MangaCoverGridTile extends StatefulWidget {
     this.showCountBadges = false,
     this.showDarkOverlay = true,
     this.selected = false,
+    this.showSelectedCheck = true,
     this.gridStyle = LibraryGridStyle.uniform,
     this.outlineOnCovers = false,
     this.limitTitleLines = true,
@@ -97,6 +98,7 @@ class MangaCoverGridTile extends StatefulWidget {
   final bool showDarkOverlay;
 
   final bool selected;
+  final bool showSelectedCheck;
 
   /// Uniform fills the cell; freeform styles derive height from the cover art.
   final LibraryGridStyle gridStyle;
@@ -301,7 +303,7 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                 showCountBadges: widget.showCountBadges,
               ),
             ),
-          if (widget.selected)
+          if (widget.selected && widget.showSelectedCheck)
             Positioned(
               top: 4,
               right: 4,

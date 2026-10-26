@@ -201,61 +201,78 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
 
 // Shared toolbar widths keep the compact breakpoint and layout calculations consistent.
 const _sortFullWidth = 230.0;
-const _filterFullChrome = 12.0 + 6.0 + 20.0 + 8.0 + 8.0 + 20.0;
+const kToolbarFilterFullChrome = 12.0 + 6.0 + 20.0 + 8.0 + 8.0 + 20.0;
 // Same chrome as Filter with one gap and no label.
-const _filterCompactWidth = 12.0 + 6.0 + 20.0 + 8.0 + 20.0;
-const _displayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 20.0;
+const kToolbarFilterCompactWidth = 12.0 + 6.0 + 20.0 + 8.0 + 20.0;
+const kToolbarDisplayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 20.0;
+const _iconOnlyBoxWidth = 12.0 + 12.0 + 20.0;
 const _sortCompactWidth = 40.0 + 1.0 + 40.0;
 // Content-width boxes need 2 px for borders; the full Sort width already includes them.
-const _boxBorderWidth = 2.0;
+const kToolbarBoxBorderWidth = 2.0;
 // Trailing actions reserve the default 48 px IconButton/PopupMenuButton width.
 const _trailingButtonWidth = 48.0;
+
+double measureToolbarLabelWidth(BuildContext context, String value) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: value,
+      style: DefaultTextStyle.of(context).style,
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
 
 /// Fixed controls' minimum width; below it the zero-width search stays mounted while the row scrolls.
 double _compactFixedWidth(int trailingCount) =>
     2 * kDesktopToolbarSlotHPadding +
     (3 + trailingCount) * kDesktopTopBarGap +
-    (_sortCompactWidth + _boxBorderWidth) +
-    (_filterCompactWidth + _boxBorderWidth) +
-    (_displayBoxWidth + _boxBorderWidth) +
+    (_sortCompactWidth + kToolbarBoxBorderWidth) +
+    (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
+    (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
     trailingCount * _trailingButtonWidth;
 
 /// Minimum compact toolbar width including a usable search field.
 double libraryTopBarSlotMinWidth(int trailingCount) =>
     _compactFixedWidth(trailingCount) + kTopBarSearchMinWidth;
 
-/// SyncYomi is always budgeted so showing it never overflows.
-double updatesTopBarSlotMinWidth(
-  BuildContext context, {
+// Compact controls first so the search retains its preferred width.
+double updatesTopBarSlotMinWidth() {
+  return 2 * kDesktopToolbarSlotHPadding +
+      6 * kDesktopTopBarGap +
+      2 * (_iconOnlyBoxWidth + kToolbarBoxBorderWidth) +
+      (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
+      (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
+      2 * _trailingButtonWidth +
+      kTopBarSearchMinWidth;
+}
+
+// Compact controls first so the search retains its preferred width.
+bool updatesToolbarIsCompact(
+  BuildContext context,
+  BoxConstraints constraints, {
   required String updateLabel,
   required String upcomingLabel,
   required String filterLabel,
 }) {
-  final scaler = MediaQuery.textScalerOf(context);
-  double textWidth(String value) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: value,
-        style: DefaultTextStyle.of(context).style,
-      ),
-      textDirection: Directionality.of(context),
-      textScaler: scaler,
-    )..layout();
-    final width = painter.width;
-    painter.dispose();
-    return width;
-  }
+  if (!constraints.hasBoundedWidth) return false;
+  double textWidth(String value) => measureToolbarLabelWidth(context, value);
 
-  const updateChrome = 12.0 + 12.0 + 20.0 + 8.0;
-  const upcomingChrome = 12.0 + 12.0 + 20.0 + 8.0;
-  return 2 * kDesktopToolbarSlotHPadding +
+  const labelledChrome = 12.0 + 12.0 + 20.0 + 8.0;
+  final neededBesidesSearch =
+      2 * kDesktopToolbarSlotHPadding +
       6 * kDesktopTopBarGap +
-      (updateChrome + textWidth(updateLabel) + _boxBorderWidth) +
-      (upcomingChrome + textWidth(upcomingLabel) + _boxBorderWidth) +
-      (_filterFullChrome + textWidth(filterLabel) + _boxBorderWidth) +
-      (_displayBoxWidth + _boxBorderWidth) +
-      2 * _trailingButtonWidth +
-      kTopBarSearchMinWidth;
+      (labelledChrome + textWidth(updateLabel) + kToolbarBoxBorderWidth) +
+      (labelledChrome + textWidth(upcomingLabel) + kToolbarBoxBorderWidth) +
+      (kToolbarFilterFullChrome +
+              textWidth(filterLabel) +
+              kToolbarBoxBorderWidth) +
+      (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
+      2 * _trailingButtonWidth;
+  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
 }
 
 bool _toolbarIsCompact(
@@ -264,29 +281,19 @@ bool _toolbarIsCompact(
   required int trailingCount,
 }) {
   if (!constraints.hasBoundedWidth) return false;
-  final scaler = MediaQuery.textScalerOf(context);
-  final label = TextPainter(
-    text: TextSpan(
-      text: context.l10n.filter,
-      style: DefaultTextStyle.of(context).style,
-    ),
-    textDirection: Directionality.of(context),
-    textScaler: scaler,
-  )..layout();
-  final labelWidth = label.width;
-  label.dispose();
+  final labelWidth = measureToolbarLabelWidth(context, context.l10n.filter);
   final gaps = (3 + trailingCount) * kDesktopTopBarGap;
   final neededBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
       gaps +
       _sortFullWidth +
-      _filterFullChrome +
+      kToolbarFilterFullChrome +
       labelWidth +
-      _boxBorderWidth +
-      _displayBoxWidth +
-      _boxBorderWidth +
+      kToolbarBoxBorderWidth +
+      kToolbarDisplayBoxWidth +
+      kToolbarBoxBorderWidth +
       trailingCount * _trailingButtonWidth;
-  return constraints.maxWidth - neededBesidesSearch < scaler.scale(280.0);
+  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
 }
 
 // Random re-rolls on selection and ignores direction; compact mode must preserve those controls.

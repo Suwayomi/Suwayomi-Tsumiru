@@ -598,7 +598,7 @@ class UpdatesScreen extends HookConsumerWidget {
         displayFocus.dispose();
       };
     }, [filterFocus, displayFocus]);
-    final filterBox = DesktopToolbarBox(
+    DesktopToolbarBox buildFilterBox(bool compact) => DesktopToolbarBox(
       key: filterButtonKey,
       borderColor: hasActiveFilters ? scheme.primary : null,
       child: InkWell(
@@ -616,7 +616,7 @@ class UpdatesScreen extends HookConsumerWidget {
             spacing: 8,
             children: [
               const Icon(FluentIcons.filter_24_regular, size: 20),
-              Text(context.l10n.filter),
+              if (!compact) Text(context.l10n.filter),
               const Icon(FluentIcons.caret_down_24_filled, size: 20),
             ],
           ),
@@ -653,46 +653,72 @@ class UpdatesScreen extends HookConsumerWidget {
       ref.watch(updateProgressSocketProvider),
       context.l10n.update,
     );
-    final updateBox = DesktopToolbarBox(
+    DesktopToolbarBox buildUpdateBox(bool compact) => DesktopToolbarBox(
       borderColor: updateState.running ? scheme.primary : null,
       child: InkWell(
         onTap: () => toggleLibraryUpdate(ref, updateState.running),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            spacing: 8,
-            children: [
-              Icon(
-                updateState.running
-                    ? FluentIcons.stop_24_regular
-                    : FluentIcons.arrow_clockwise_24_regular,
-                size: 20,
-              ),
-              Text(updateState.label),
-            ],
-          ),
+          child: compact
+              ? Icon(
+                  updateState.running
+                      ? FluentIcons.stop_24_regular
+                      : FluentIcons.arrow_clockwise_24_regular,
+                  size: 20,
+                )
+              : Row(
+                  spacing: 8,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      updateState.running
+                          ? FluentIcons.stop_24_regular
+                          : FluentIcons.arrow_clockwise_24_regular,
+                      size: 20,
+                    ),
+                    Text(updateState.label),
+                  ],
+                ),
         ),
       ),
     );
-    final upcomingBox = DesktopToolbarBox(
+    DesktopToolbarBox buildUpcomingBox(bool compact) => DesktopToolbarBox(
       child: InkWell(
         onTap: () => const UpcomingRoute().push(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            spacing: 8,
-            children: [
-              const Icon(FluentIcons.calendar_month_24_regular, size: 20),
-              Text(context.l10n.upcoming),
-            ],
-          ),
+          child: compact
+              ? const Icon(FluentIcons.calendar_month_24_regular, size: 20)
+              : Row(
+                  spacing: 8,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      FluentIcons.calendar_month_24_regular,
+                      size: 20,
+                    ),
+                    Text(context.l10n.upcoming),
+                  ],
+                ),
         ),
       ),
     );
-    final desktopActions = <Widget>[
-      updateBox,
-      upcomingBox,
-      filterBox,
+    List<Widget> desktopActions(bool compact) => [
+      if (compact)
+        Tooltip(message: updateState.label, child: buildUpdateBox(true))
+      else
+        buildUpdateBox(false),
+      if (compact)
+        Tooltip(
+          message: context.l10n.upcoming,
+          child: buildUpcomingBox(true),
+        )
+      else
+        buildUpcomingBox(false),
+      if (compact)
+        Tooltip(message: context.l10n.filter, child: buildFilterBox(true))
+      else
+        buildFilterBox(false),
       displayBox,
       IconTheme.merge(
         data: const IconThemeData(size: 20),
@@ -706,7 +732,7 @@ class UpdatesScreen extends HookConsumerWidget {
     final actions = <Widget>[
       if (phone && !persistentBox)
         const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
-      if (desktop) ...desktopActions else ...[
+      if (desktop) ...desktopActions(false) else ...[
         SyncYomiSyncButton(onSynced: resetList),
         IconButton(
           icon: const Icon(FluentIcons.filter_24_regular),
@@ -857,13 +883,22 @@ class UpdatesScreen extends HookConsumerWidget {
       );
     }
     return TopBarSlot(
-      content: desktopToolbarRow(search: search, actions: desktopActions),
-      minWidth: updatesTopBarSlotMinWidth(
-        context,
-        updateLabel: updateState.label,
-        upcomingLabel: context.l10n.upcoming,
-        filterLabel: context.l10n.filter,
+      content: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = updatesToolbarIsCompact(
+            context,
+            constraints,
+            updateLabel: updateState.label,
+            upcomingLabel: context.l10n.upcoming,
+            filterLabel: context.l10n.filter,
+          );
+          return desktopToolbarRow(
+            search: search,
+            actions: desktopActions(compact),
+          );
+        },
       ),
+      minWidth: updatesTopBarSlotMinWidth(),
       child: content,
     );
   }

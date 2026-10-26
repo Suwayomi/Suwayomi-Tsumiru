@@ -1,12 +1,20 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../extensions/custom_extensions.dart';
 import 'toast/toast.dart';
 
 abstract class AppUtils {
+  static bool isMultiSelectPressed() {
+    final keys = HardwareKeyboard.instance;
+    return keys.isControlPressed ||
+        keys.isMetaPressed ||
+        keys.isShiftPressed;
+  }
+
   static String? getPanFromGst(String gst) {
     return gst.isBlank || gst.length < 10
         ? null

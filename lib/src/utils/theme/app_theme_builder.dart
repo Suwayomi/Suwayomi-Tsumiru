@@ -240,7 +240,11 @@ ThemeData buildAppTheme({
     ),
     textButtonTheme: TextButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: WidgetStatePropertyAll(brightPrimary),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? scheme.onSurface.withValues(alpha: 0.38)
+              : brightPrimary,
+        ),
       ),
     ),
   );
