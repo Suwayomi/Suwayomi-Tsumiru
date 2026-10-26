@@ -14,7 +14,10 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../browse/browse_no_search_results.dart';
+import '../browse/browse_section_grid.dart';
 import 'controller/source_controller.dart';
+import 'widgets/source_card.dart';
 import 'widgets/source_list_tile.dart';
 
 class SourceScreen extends HookConsumerWidget {
@@ -54,15 +57,98 @@ class SourceScreen extends HookConsumerWidget {
     }, [sourceMapData.value]);
 
     final body = sourceMapData.showUiWhenData(context, (data) {
-      if ((sourceMap.isEmpty &&
-          localSource.isBlank &&
-          lastUsed.isBlank &&
-          pinned.isEmpty)) {
+      final hasVisible =
+          pinned.isNotEmpty ||
+          localSource.isNotBlank ||
+          lastUsed.isNotBlank ||
+          allSource.isNotBlank ||
+          sourceMap.values.any((list) => list.isNotBlank);
+      if (!hasVisible) {
+        if (query.isNotBlank) return const BrowseNoSearchResults();
         return Emoticons(
           title: context.l10n.noSourcesFound,
           button: TextButton(
             onPressed: refresh,
             child: Text(context.l10n.refresh),
+          ),
+        );
+      }
+      if (context.usesDesktopShell) {
+        return RefreshIndicator(
+          onRefresh: refresh,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: CustomScrollView(
+              slivers: [
+                if (pinned.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: BrowseSectionHeading(
+                      title: languageMap["pinned"]?.displayName ?? "",
+                      topPadding: 16,
+                    ),
+                  ),
+                  BrowseCardGrid(
+                    itemCount: pinned.length,
+                    itemBuilder: (context, index) =>
+                        SourceCard(source: pinned[index]),
+                  ),
+                ],
+                if (lastUsed.isNotBlank) ...[
+                  SliverToBoxAdapter(
+                    child: BrowseSectionHeading(
+                      title: languageMap["lastUsed"]?.displayName ?? "",
+                      topPadding: pinned.isEmpty ? 16 : 24,
+                    ),
+                  ),
+                  BrowseCardGrid(
+                    itemCount: lastUsed!.length,
+                    itemBuilder: (context, index) =>
+                        SourceCard(source: lastUsed[index]),
+                  ),
+                ],
+                if (allSource.isNotBlank) ...[
+                  SliverToBoxAdapter(
+                    child: BrowseSectionHeading(
+                      title: languageMap["all"]?.displayName ?? "",
+                      topPadding: pinned.isEmpty && lastUsed.isBlank ? 16 : 24,
+                    ),
+                  ),
+                  BrowseCardGrid(
+                    itemCount: allSource!.length,
+                    itemBuilder: (context, index) =>
+                        SourceCard(source: allSource[index]),
+                  ),
+                ],
+                for (final k in sourceMap.keys) ...[
+                  if (sourceMap[k].isNotBlank) ...[
+                    SliverToBoxAdapter(
+                      child: BrowseSectionHeading(
+                        title: languageMap[k]?.displayName ?? k,
+                        topPadding: 24,
+                      ),
+                    ),
+                    BrowseCardGrid(
+                      itemCount: sourceMap[k]!.length,
+                      itemBuilder: (context, index) =>
+                          SourceCard(source: sourceMap[k]![index]),
+                    ),
+                  ],
+                ],
+                if (localSource.isNotBlank) ...[
+                  SliverToBoxAdapter(
+                    child: BrowseSectionHeading(
+                      title: languageMap["localsourcelang"]?.displayName ?? "",
+                      topPadding: 24,
+                    ),
+                  ),
+                  BrowseCardGrid(
+                    itemCount: localSource!.length,
+                    itemBuilder: (context, index) =>
+                        SourceCard(source: localSource[index]),
+                  ),
+                ],
+              ],
+            ),
           ),
         );
       }

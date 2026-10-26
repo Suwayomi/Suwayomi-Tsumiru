@@ -22,6 +22,7 @@ enum DBKeys {
   migrationTargetSources(<String>[]),
   extensionLanguageFilter(["installed", "update", "en", "all"]),
   sourceLastUsed(null),
+  sourceRecentIds(<String>[]),
   // Fresh installs are seeded dark by seedFirstRunPreferences.
   themeMode(ThemeMode.system),
   isTrueBlack(false),

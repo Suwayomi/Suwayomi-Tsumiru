@@ -13,6 +13,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/desktop/desktop_view_switch.dart';
 import '../../../migration/controller/bulk_migration_providers.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
@@ -22,6 +23,7 @@ import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
 import '../source/controller/source_controller.dart' hide SourceLanguageFilter;
 import '../source/widgets/source_language_filter.dart';
+import 'browse_filter_panel.dart';
 
 class BrowseScreen extends HookConsumerWidget {
   const BrowseScreen({
@@ -64,6 +66,7 @@ class BrowseScreen extends HookConsumerWidget {
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
 
     final topBar = showsMergedTopBar(context);
+    final desktop = context.usesDesktopShell;
     final search = _BrowseDesktopSearch(tabIndex: tabController.index);
     final actions = <Widget>[
       if (tabController.index == 0) ...[
@@ -71,13 +74,17 @@ class BrowseScreen extends HookConsumerWidget {
           const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
           const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
         ],
-        IconButton(
-          tooltip: context.l10n.filterSources,
-          onPressed: () => const SourceFilterRoute().push(context),
-          icon: const Icon(FluentIcons.filter_24_regular),
-        ),
+        if (desktop)
+          BrowseFilterButton(tabIndex: tabController.index)
+        else
+          IconButton(
+            tooltip: context.l10n.filterSources,
+            onPressed: () => const SourceFilterRoute().push(context),
+            icon: const Icon(FluentIcons.filter_24_regular),
+          ),
       ],
       if (tabController.index == 1) ...[
+        if (desktop) BrowseFilterButton(tabIndex: tabController.index),
         IconButton(
           tooltip: context.l10n.extensionStores,
           onPressed: () => const ExtensionStoreRoute().push(context),
@@ -85,7 +92,7 @@ class BrowseScreen extends HookConsumerWidget {
         ),
         const InstallExtensionFile(),
       ],
-      if (tabController.index != 2)
+      if (tabController.index != 2 && !desktop)
         IconButton(
           onPressed: () => showDialog(
             context: context,
@@ -97,16 +104,25 @@ class BrowseScreen extends HookConsumerWidget {
           icon: const Icon(FluentIcons.translate_24_regular),
         ),
     ];
-    final tabBar = TabBar(
-      dividerColor: Colors.transparent,
-      isScrollable: context.windowSizeClass >= WindowSizeClass.medium,
-      controller: tabController,
-      tabs: [
-        Tab(text: context.l10n.sources),
-        Tab(text: context.l10n.extensions),
-        Tab(text: context.l10n.migrate),
-      ],
-    );
+    final PreferredSizeWidget tabBar = desktop
+        ? _BrowseDesktopSwitchBar(
+            controller: tabController,
+            tabs: [
+              context.l10n.sources,
+              context.l10n.extensions,
+              context.l10n.migrate,
+            ],
+          )
+        : TabBar(
+            dividerColor: Colors.transparent,
+            isScrollable: context.windowSizeClass >= WindowSizeClass.medium,
+            controller: tabController,
+            tabs: [
+              Tab(text: context.l10n.sources),
+              Tab(text: context.l10n.extensions),
+              Tab(text: context.l10n.migrate),
+            ],
+          );
     final scaffold = Scaffold(
       appBar: topBar
           ? null
@@ -144,6 +160,32 @@ class BrowseScreen extends HookConsumerWidget {
             child: scaffold,
           )
         : scaffold;
+  }
+}
+
+class _BrowseDesktopSwitchBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _BrowseDesktopSwitchBar({
+    required this.controller,
+    required this.tabs,
+  });
+
+  final TabController controller;
+  final List<String> tabs;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(68);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => DesktopViewSwitchBar(
+        labels: tabs,
+        selectedIndex: controller.index,
+        onChanged: controller.animateTo,
+      ),
+    );
   }
 }
 
