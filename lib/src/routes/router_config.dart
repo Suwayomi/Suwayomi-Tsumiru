@@ -151,6 +151,7 @@ abstract class Routes {
   static const libraryUpdateErrors = "/library-update-errors";
   static const about = 'about';
   static const globalSearch = '/global-search';
+  static const globalSearchSource = 'source/:sourceId';
   static const recommends = '/recommends/:mangaId';
   static const recommendsBrowse = '/recommends/:mangaId/:providerName';
   static const onboarding = '/onboarding';
@@ -385,7 +386,14 @@ GoRouter routerConfig(Ref ref) {
         TypedGoRoute<LibraryUpdateErrorsRoute>(
           path: Routes.libraryUpdateErrors,
         ),
-        TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
+        TypedGoRoute<GlobalSearchRoute>(
+          path: Routes.globalSearch,
+          routes: [
+            TypedGoRoute<GlobalSearchSourceRoute>(
+              path: Routes.globalSearchSource,
+            ),
+          ],
+        ),
         TypedGoRoute<LibraryDuplicatesRoute>(path: Routes.libraryDuplicates),
         TypedGoRoute<RecommendsRoute>(path: Routes.recommends),
         TypedGoRoute<RecommendsBrowseRoute>(path: Routes.recommendsBrowse),

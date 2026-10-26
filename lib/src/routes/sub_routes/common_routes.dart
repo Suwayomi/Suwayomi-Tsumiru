@@ -138,6 +138,22 @@ class GlobalSearchRoute extends GoRouteData with $GlobalSearchRoute {
   );
 }
 
+class GlobalSearchSourceRoute extends GoRouteData
+    with $GlobalSearchSourceRoute {
+  const GlobalSearchSourceRoute({required this.sourceId, this.query});
+  final String sourceId;
+  final String? query;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      SourceMangaListScreen(
+        key: ValueKey('$sourceId-${SourceType.SEARCH}'),
+        sourceId: sourceId,
+        sourceType: SourceType.SEARCH,
+        initialQuery: query,
+      );
+}
+
 @TypedGoRoute<UpcomingRoute>(path: Routes.upcoming)
 class UpcomingRoute extends GoRouteData with $UpcomingRoute {
   const UpcomingRoute();

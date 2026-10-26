@@ -37,11 +37,9 @@ class SourceShortSearch extends ConsumerWidget {
       Widget? child,
     }) => CoverRowSection(
       title: source.displayName,
-      onSeeAll: () => SourceTypeRoute(
-        sourceId: source.id,
-        sourceType: SourceType.SEARCH,
-        query: query,
-      ).push(context),
+      onSeeAll: () =>
+          GlobalSearchSourceRoute(sourceId: source.id, query: query)
+              .push(context),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       height: mangaCoverBoxHeight(kShortSearchCoverWidth),
       itemCount: itemCount,
