@@ -44,11 +44,13 @@ Future<void> showChapterContextMenu({
   required AsyncCallback refresh,
   void Function()? refocus,
   bool updatesMenu = false,
+  bool historyMenu = false,
   VoidCallback? onViewManga,
+  Future<void> Function()? onAddToLibrary,
   List<ChapterDto>? cachedBulkChapters,
   Future<List<ChapterDto>?> Function()? loadBulkChapters,
 }) async {
-  final connected = updatesMenu
+  final connected = updatesMenu || historyMenu
       ? false
       : koSyncOnline(ref)
       ? await ref
@@ -81,9 +83,9 @@ Future<void> showChapterContextMenu({
     final index = orderedChapters.indexWhere((c) => c.id == chapter.id);
 
     final PopupMenuItem<void> bookmarkItem = PopupMenuItem(
-      onTap: () {
-        toggleChapterBookmark(ref, chapter);
-        refresh();
+      onTap: () async {
+        await toggleChapterBookmark(ref, chapter);
+        await refresh();
       },
       child: ChapterMenuRow(
         icon: bookmarked
@@ -231,6 +233,43 @@ Future<void> showChapterContextMenu({
         if (deleted) await refresh();
       },
     );
+
+    final PopupMenuItem<void>? addToLibraryItem = onAddToLibrary == null
+        ? null
+        : PopupMenuItem(
+            onTap: () async {
+              await onAddToLibrary();
+              if (!context.mounted) return;
+              await refresh();
+            },
+            child: ChapterMenuRow(
+              icon: FluentIcons.heart_24_regular,
+              label: context.l10n.addToLibrary,
+            ),
+          );
+
+    if (historyMenu) {
+      return [
+        if (onViewManga != null) ...[
+          PopupMenuItem(
+            onTap: onViewManga,
+            child: ChapterMenuRow(
+              icon: FluentIcons.book_open_24_regular,
+              label: context.l10n.viewManga,
+            ),
+          ),
+          const PopupMenuDivider(),
+        ],
+        ?addToLibraryItem,
+        bookmarkItem,
+        markReadItem,
+        markPreviousItem,
+        const PopupMenuDivider(),
+        ?browserItem,
+        ?keepOfflineItem,
+        if (!downloaded) downloadItem,
+      ];
+    }
 
     if (updatesMenu) {
       return [

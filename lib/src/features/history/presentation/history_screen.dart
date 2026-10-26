@@ -6,6 +6,7 @@
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
@@ -17,6 +18,8 @@ import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/server_image.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../library/presentation/library/widgets/desktop_library_panels.dart';
+import '../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../quick_open/presentation/unified_search/unified_search_results.dart';
@@ -24,9 +27,18 @@ import '../../settings/presentation/library/widgets/persistent_search_bar/persis
 import '../domain/history_item.dart';
 import 'history_controller.dart';
 import 'widgets/history_filter.dart';
+import 'widgets/history_filter_panel.dart';
 import 'widgets/history_group_widget.dart';
 
-class HistoryScreen extends ConsumerWidget {
+Widget _historyColumn(Widget child) => Align(
+  alignment: Alignment.topCenter,
+  child: ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 1040),
+    child: SizedBox(width: double.infinity, child: child),
+  ),
+);
+
+class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
@@ -70,26 +82,57 @@ class HistoryScreen extends ConsumerWidget {
               return true;
             },
     );
+    final filterButtonKey = useMemoized(GlobalKey.new);
+    final filterFocus = useMemoized(FocusNode.new);
+    useEffect(() => filterFocus.dispose, [filterFocus]);
+    final scheme = context.theme.colorScheme;
     final actions = <Widget>[
       if (phone && !persistentBox) ...[
         const PhoneSearchClearFilter(origin: PhoneSearchOrigin.history),
         const PhoneSearchEntry(origin: PhoneSearchOrigin.history),
       ],
-      IconButton(
-        icon: const Icon(FluentIcons.filter_24_regular),
-        tooltip: l10n.filter,
-        color: hasActiveFilters ? context.theme.colorScheme.primary : null,
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          shape: RoundedRectangleBorder(
-            borderRadius: KBorderRadius.rT16.radius,
+      if (desktop)
+        DesktopToolbarBox(
+          key: filterButtonKey,
+          borderColor: hasActiveFilters ? scheme.primary : null,
+          child: InkWell(
+            focusNode: filterFocus,
+            onTap: () => showAnchoredPanel(
+              context: context,
+              buttonKey: filterButtonKey,
+              focusNode: filterFocus,
+              panelWidth: 400,
+              child: const HistoryFilterPanel(),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12, right: 6),
+              child: Row(
+                spacing: 8,
+                children: [
+                  const Icon(FluentIcons.filter_24_regular, size: 20),
+                  Text(l10n.filter),
+                  const Icon(FluentIcons.caret_down_24_filled, size: 20),
+                ],
+              ),
+            ),
           ),
-          clipBehavior: Clip.hardEdge,
-          builder: (_) => const HistoryFilterSheet(),
-          sheetAnimationStyle: context.motionStyle,
+        )
+      else
+        IconButton(
+          icon: const Icon(FluentIcons.filter_24_regular),
+          tooltip: l10n.filter,
+          color: hasActiveFilters ? scheme.primary : null,
+          onPressed: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: KBorderRadius.rT16.radius,
+            ),
+            clipBehavior: Clip.hardEdge,
+            builder: (_) => const HistoryFilterSheet(),
+            sheetAnimationStyle: context.motionStyle,
+          ),
         ),
-      ),
       IconButton(
         onPressed: () => ref.read(readingHistoryProvider.notifier).refresh(),
         icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
@@ -162,7 +205,8 @@ class HistoryScreen extends ConsumerWidget {
                     itemCount: historyGroups.length,
                     itemBuilder: (context, index) {
                       final group = historyGroups[index];
-                      return HistoryGroupWidget(group: group);
+                      final tile = HistoryGroupWidget(group: group);
+                      return desktop ? _historyColumn(tile) : tile;
                     },
                   ),
                 );
@@ -187,7 +231,7 @@ class HistoryScreen extends ConsumerWidget {
             ),
             minWidth: searchTopBarSlotMinWidth(
               actions.length,
-              backButton != null,
+              backButton != null ? 48.0 : 0.0,
             ),
             child: scaffold,
           )
