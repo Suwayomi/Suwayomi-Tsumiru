@@ -153,7 +153,7 @@ class DownloadsMap extends _$DownloadsMap {
     return downloadsMap;
   }
 
-  Future<void> reorder(int chapterId, int to) async {
+  Future<bool> reorder(int chapterId, int to) async {
     final current = ref
         .read(authCredentialsStoreProvider.notifier)
         .captureSession();
@@ -161,13 +161,40 @@ class DownloadsMap extends _$DownloadsMap {
       () =>
           ref.read(downloadsRepositoryProvider).reorderDownload(chapterId, to),
     );
-    if (!ref.mounted || !current()) return;
+    if (!ref.mounted || !current()) return false;
     if (result.hasError) {
       result.showToastOnError(ref.read(toastProvider));
+      return false;
     } else {
       _publish(getStateFromUpdates(result.value));
+      return true;
     }
   }
+
+  Future<void> moveChapters(List<int> chapterIds, {required bool toTop}) async {
+    final ids = chapterIds.toSet();
+    final ordered =
+        state.values.where((d) => ids.contains(d.chapter.id)).toList()
+          ..sort((a, b) => a.position.compareTo(b.position));
+    final current = ref
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    for (final download in toTop ? ordered.reversed : ordered) {
+      if (!ref.mounted || !current()) return;
+      // Later moves stack on stale positions after a failed reorder.
+      if (!await reorder(
+        download.chapter.id,
+        toTop ? 0 : state.length - 1,
+      )) {
+        return;
+      }
+    }
+  }
+
+  Future<void> moveSeries(int mangaId, {required bool toTop}) => moveChapters([
+    for (final d in state.values)
+      if (d.manga.id == mangaId) d.chapter.id,
+  ], toTop: toTop);
 
   /// Bulk clear may omit DEQUEUED events; clear locally and refetch the authoritative queue.
   Future<void> clearAll() async {

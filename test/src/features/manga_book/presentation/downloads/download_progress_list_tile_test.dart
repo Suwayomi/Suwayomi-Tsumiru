@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -86,6 +87,17 @@ Future<void> _pump(WidgetTester tester, DownloadDto download) async {
   await tester.pump();
 }
 
+Future<void> _openDesktopMenu(WidgetTester tester, Finder row) async {
+  final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+  await mouse.addPointer(location: Offset.zero);
+  await mouse.moveTo(tester.getCenter(row));
+  await tester.pump();
+  final l10n = AppLocalizations.of(tester.element(row))!;
+  await tester.tap(find.byTooltip(l10n.more));
+  await mouse.removePointer();
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('each row state renders its label, progress and menu action', (
     tester,
@@ -98,8 +110,7 @@ void main() {
     var l10n = l10nFor();
     expect(find.text(l10n.queued), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    await tester.tap(find.byType(PopupMenuButton));
-    await tester.pumpAndSettle();
+    await _openDesktopMenu(tester, find.byType(DownloadProgressListTile));
     expect(find.text(l10n.retry), findsNothing);
     expect(find.text(l10n.cancel), findsOneWidget);
 
@@ -115,8 +126,7 @@ void main() {
     l10n = l10nFor();
     expect(find.textContaining('24/25'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    await tester.tap(find.byType(PopupMenuButton));
-    await tester.pumpAndSettle();
+    await _openDesktopMenu(tester, find.byType(DownloadProgressListTile));
     expect(find.text(l10n.retry), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
@@ -125,8 +135,7 @@ void main() {
     expect(find.text(l10n.sourceRemoved), findsOneWidget);
     expect(find.textContaining('Error'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    await tester.tap(find.byType(PopupMenuButton));
-    await tester.pumpAndSettle();
+    await _openDesktopMenu(tester, find.byType(DownloadProgressListTile));
     expect(find.text(l10n.retry), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
@@ -215,8 +224,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Foreign Manga'), findsOneWidget);
 
-      await tester.tap(find.byType(PopupMenuButton).last);
-      await tester.pumpAndSettle();
+      await _openDesktopMenu(
+        tester,
+        find.byType(DownloadProgressListTile).last,
+      );
       expect(find.text(l10n.cancel), findsOneWidget);
       expect(find.text(l10n.cancelAllForThisSeries), findsOneWidget);
     });
@@ -242,7 +253,27 @@ void main() {
       expect(find.text('Mine Manga'), findsOneWidget);
       expect(find.text('Foreign Manga'), findsNothing);
       expect(find.textContaining(l10n.notInYourLibrary), findsNothing);
-      expect(find.text('1'), findsOneWidget);
+      expect(find.text(l10n.unknownSource), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text(l10n.downloadsQueue),
+            matching: find.byType(Row),
+          ),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text(l10n.unknownSource),
+            matching: find.byType(Row),
+          ),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('regulars get no queue actions without visible items', (

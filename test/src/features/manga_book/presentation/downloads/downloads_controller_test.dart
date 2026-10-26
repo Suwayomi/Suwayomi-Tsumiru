@@ -43,10 +43,11 @@ class _FakeRepo extends DownloadsRepository {
   Future<void> clearDownloads() async {}
 
   DownloadStatusDto? reorderResult;
+  Future<DownloadStatusDto?> Function(int, int)? onReorder;
 
   @override
   Future<DownloadStatusDto?> reorderDownload(int chapterId, int to) async =>
-      reorderResult;
+      onReorder?.call(chapterId, to) ?? reorderResult;
 }
 
 Map<String, dynamic> _dequeued(Map<String, dynamic> item) => {
@@ -71,6 +72,7 @@ Map<String, dynamic> _queueItem({
   required int position,
   String state = 'QUEUED',
   int tries = 0,
+  int mangaId = 1,
 }) => {
   'chapter': {
     'id': chapterId,
@@ -81,7 +83,7 @@ Map<String, dynamic> _queueItem({
     '__typename': 'ChapterType',
   },
   'manga': {
-    'id': 1,
+    'id': mangaId,
     'title': 'Series',
     'user': {
       'downloadCount': 0,
@@ -126,6 +128,45 @@ Future<ProviderContainer> _silentFeed(DownloadStatusDto status) async {
 }
 
 void main() {
+  test('moving a series to either end preserves its chapter order', () async {
+    var queue = [
+      _queueItem(chapterId: 10, mangaId: 2, position: 0),
+      _queueItem(chapterId: 11, position: 1),
+      _queueItem(chapterId: 12, mangaId: 2, position: 2),
+      _queueItem(chapterId: 13, position: 3),
+      _queueItem(chapterId: 14, mangaId: 2, position: 4),
+    ];
+    final repo = _FakeRepo.scripted([() async => _status('STOPPED', queue)]);
+    repo.onReorder = (id, to) async {
+      final item = queue.removeAt(
+        queue.indexWhere((d) => (d['chapter'] as Map)['id'] == id),
+      );
+      queue.insert(to, item);
+      queue = [
+        for (var i = 0; i < queue.length; i++) {...queue[i], 'position': i},
+      ];
+      return _status('STOPPED', queue);
+    };
+    final container = ProviderContainer(
+      overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith(
+          (ref) => const Stream<DownloadUpdatesDto?>.empty(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(downloadsChapterIdsProvider, (_, _) {});
+    await container.read(downloadStatusProvider.future);
+    final controller = container.read(downloadsMapProvider.notifier);
+
+    await controller.moveSeries(1, toTop: true);
+    expect(container.read(downloadsChapterIdsProvider), [11, 13, 10, 12, 14]);
+
+    await controller.moveSeries(1, toTop: false);
+    expect(container.read(downloadsChapterIdsProvider), [10, 12, 14, 11, 13]);
+  });
+
   group('showDownloadsFAB', () {
     test('shows for a queue the live feed has said nothing about', () async {
       // The regression (#313): the queue arrives via the subscription's
