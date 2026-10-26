@@ -11,6 +11,7 @@ import 'package:tsumiru/src/features/migration/data/bulk_migration_runner.dart';
 import 'package:tsumiru/src/features/migration/data/migration_journal.dart';
 import 'package:tsumiru/src/features/migration/data/migration_repository.dart';
 import 'package:tsumiru/src/features/migration/domain/bulk_migration_types.dart';
+import 'package:tsumiru/src/features/migration/domain/chapter_matcher.dart';
 import 'package:tsumiru/src/features/migration/domain/concurrency.dart';
 import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
 
@@ -18,7 +19,6 @@ import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
 class FakeMigrationRepository implements MigrationRepository {
   final List<int> copyCalls = [];
   final List<int> removeCalls = [];
-  final List<int> restoreCalls = [];
 
   /// Records the overwrite flag each copy was called with, keyed by fromMangaId.
   final Map<int, bool> copyOverwriteFlags = {};
@@ -87,12 +87,6 @@ class FakeMigrationRepository implements MigrationRepository {
   }
 
   @override
-  Future<bool> restoreSourceToLibrary(int mangaId) async {
-    restoreCalls.add(mangaId);
-    return true;
-  }
-
-  @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('${invocation.memberName} not stubbed');
 
@@ -100,8 +94,12 @@ class FakeMigrationRepository implements MigrationRepository {
   Future<void> cancelMigration() async {}
 }
 
-BulkMigrationEntry entry(int from, {int? to}) {
-  final e = BulkMigrationEntry(fromMangaId: from, fromTitle: 'M$from');
+BulkMigrationEntry entry(int from, {int? to, String? fromSourceId}) {
+  final e = BulkMigrationEntry(
+    fromMangaId: from,
+    fromTitle: 'M$from',
+    fromSourceId: fromSourceId,
+  );
   if (to != null) {
     e.toMangaId = to;
     e.toTitle = 'T$to';
@@ -123,6 +121,8 @@ BulkMigrationRunner makeRunner({
   Future<void> Function(CancelToken)? waitAuthReady,
   BulkMatcher? matcher,
   Future<void> Function(int)? onSourceRemoved,
+  Future<List<ChapterState>?> Function(int)? loadTargetChapters,
+  Future<List<ChapterState>?> Function(int)? loadSourceChapters,
 }) => BulkMigrationRunner(
   repo: repo,
   journal: journal,
@@ -133,6 +133,8 @@ BulkMigrationRunner makeRunner({
   matcher:
       matcher ??
       (e, t) async => MatchOutcome(toMangaId: e.toMangaId, confidence: 1.0),
+  loadTargetChapters: loadTargetChapters,
+  loadSourceChapters: loadSourceChapters,
   dirtyGate: dirtyGate ?? (id, t) async => true,
   isReauthNeeded: isReauthNeeded ?? () => false,
   waitAuthReady: waitAuthReady ?? (t) async {},
@@ -206,6 +208,87 @@ void main() {
       expect(journal.entryFor(1)!.state, MigrationPairState.failed);
     });
 
+    test(
+      'commitOne approves a needsReview match while bulk commit leaves it',
+      () async {
+        final repo = FakeMigrationRepository();
+        final runner = makeRunner(
+          repo: repo,
+          journal: journal,
+          entries: [entry(1, to: 100)..phase = BulkEntryPhase.needsReview],
+        );
+        await runner.commit(deleteSource: false);
+        expect(repo.copyCalls, isEmpty);
+        expect(runner.entries.single.phase, BulkEntryPhase.needsReview);
+        await runner.commitOne(1, deleteSource: false);
+        expect(repo.copyCalls, [1]);
+        expect(runner.entries.single.phase, BulkEntryPhase.done);
+      },
+    );
+
+  });
+
+  group('self-target refusal', () {
+    test('self-targets are refused and never committed', () async {
+      Future<void> check({required bool deleteSource}) async {
+        final repo = FakeMigrationRepository();
+        final runner = makeRunner(
+          repo: repo,
+          journal: journal,
+          entries: [
+            entry(1, fromSourceId: 's1'),
+            entry(2, fromSourceId: 's1'),
+          ],
+        );
+        runner.overrideTarget(1, 1, 'M1', toSourceId: 's1');
+        runner.overrideTarget(2, 200, 'T200', toSourceId: 's1');
+        await runner.commit(deleteSource: deleteSource);
+        expect(repo.copyCalls, isEmpty);
+        expect(repo.removeCalls, isEmpty);
+        for (final e in runner.entries) {
+          expect(e.phase, BulkEntryPhase.failed);
+          expect(e.blocksMigrate, isTrue);
+          expect(e.blockKind, MigrationBlockKind.selfTarget);
+          expect(e.message, isNull);
+        }
+      }
+
+      await check(deleteSource: true);
+      await check(deleteSource: false);
+    });
+  });
+
+  group('retryOne', () {
+    test('retry re-inspects a transient source chapter-load failure', () async {
+      var sourceCalls = 0;
+      final repo = FakeMigrationRepository();
+      final runner = makeRunner(
+        repo: repo,
+        journal: journal,
+        entries: [entry(1, to: 100)],
+        loadTargetChapters: (_) async => const [
+          ChapterState(
+            id: 10,
+            chapterNumber: 1,
+            name: 'c1',
+            isRead: false,
+            isBookmarked: false,
+            lastPageRead: 0,
+          ),
+        ],
+        loadSourceChapters: (_) async {
+          if (sourceCalls++ == 0) throw Exception('flaky network');
+          return const <ChapterState>[];
+        },
+      );
+      await runner.commit(deleteSource: true);
+      expect(runner.entries.single.phase, BulkEntryPhase.failed);
+      expect(runner.entries.single.blocksMigrate, isTrue);
+      await runner.retryOne(1);
+      expect(runner.entries.single.phase, BulkEntryPhase.done);
+      expect(repo.copyCalls, [1]);
+      expect(repo.removeCalls, [1]);
+    });
   });
 
   group('dirty-state gate', () {

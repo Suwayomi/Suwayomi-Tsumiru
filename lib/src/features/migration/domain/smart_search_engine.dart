@@ -91,6 +91,10 @@ BulkMatcher buildSmartMatcher({
 }) {
   return (entry, token) async {
     for (final sourceId in targetSourceIds) {
+      // The saved preference may still hold the entry's own source; never search it.
+      if (entry.fromSourceId != null && sourceId == entry.fromSourceId) {
+        continue;
+      }
       token.throwIfCancelled();
       final result = await engine.regularSearch(
         title: entry.fromTitle,
@@ -106,6 +110,7 @@ BulkMatcher buildSmartMatcher({
           toTitle: result.title,
           toThumbnailUrl: result.thumbnailUrl,
           toSourceName: sourceNames[sourceId],
+          toSourceId: sourceId,
           confidence: result.confidence,
         );
       }
