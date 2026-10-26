@@ -62,11 +62,11 @@ The build is unsigned, so it has to be sideloaded. Each badge adds the Tsumiru s
 ### Linux
 
 ```bash
-flatpak remote-add --if-not-exists tsumiru https://suwayomi.github.io/Suwayomi-Tsumiru/index.flatpakrepo
-flatpak install tsumiru io.github.aaronbamblett.tsumiru
+flatpak remote-add --if-not-exists tsumiru https://flatpak.tsumiru.app/index.flatpakrepo
+flatpak install tsumiru app.tsumiru.Tsumiru
 ```
 
-The Flatpak updates itself. An AppImage is also on [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest).
+The Flatpak updates itself. Existing installs keep receiving updates under `io.github.aaronbamblett.tsumiru`. An AppImage is also on [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest).
 
 ### Windows, macOS and web
 
