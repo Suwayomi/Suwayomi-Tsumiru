@@ -208,6 +208,47 @@ void main() {
       expect(journal.entryFor(1)!.state, MigrationPairState.failed);
     });
 
+    test('two concurrent commitOne calls on one entry produce one copy', () async {
+      final repo = FakeMigrationRepository();
+      final runner = makeRunner(
+        repo: repo,
+        journal: journal,
+        entries: [entry(1, to: 100)],
+      );
+      await Future.wait([
+        runner.commitOne(1, deleteSource: false),
+        runner.commitOne(1, deleteSource: false),
+      ]);
+      expect(repo.copyCalls, [1]);
+      expect(runner.entries.single.phase, BulkEntryPhase.done);
+    });
+
+    test('concurrent Copy and Migrate rows keep their own modes', () async {
+      final repo = FakeMigrationRepository();
+      final runner = makeRunner(
+        repo: repo,
+        journal: journal,
+        entries: [entry(1, to: 100), entry(2, to: 200)],
+      );
+      await Future.wait([
+        runner.commitOne(1, deleteSource: false),
+        runner.commitOne(2, deleteSource: true),
+      ]);
+      expect(runner.entries[0].phase, BulkEntryPhase.done);
+      expect(runner.entries[1].phase, BulkEntryPhase.done);
+      expect(repo.copyCalls, unorderedEquals([1, 2]));
+      expect(
+        repo.removeCalls,
+        contains(2),
+        reason: 'the Migrate row original is removed',
+      );
+      expect(
+        repo.removeCalls,
+        isNot(contains(1)),
+        reason: 'the Copy row original is kept',
+      );
+    });
+
     test(
       'commitOne approves a needsReview match while bulk commit leaves it',
       () async {
@@ -308,8 +349,8 @@ void main() {
   });
 
   group('recovery (simulated mid-batch kill)', () {
-    test('copied → resume removes the source, no duplicate copy', () async {
-      // Journal says copy already completed but source not yet removed.
+    test('copied → resume revalidates with a fresh copy, then removes', () async {
+      // Journal copy may predate newer reads; recovery recopies before removing.
       await journal.put(
         const MigrationJournalEntry(
           fromMangaId: 1,
@@ -322,7 +363,7 @@ void main() {
       final repo = FakeMigrationRepository();
       final runner = makeRunner(repo: repo, journal: journal, entries: []);
       await runner.recover();
-      expect(repo.copyCalls, isEmpty, reason: 'copy already proven — no redo');
+      expect(repo.copyCalls, [1], reason: 'removal needs a fresh copy');
       expect(repo.removeCalls, [1]);
       expect(journal.entries(), isEmpty);
     });
@@ -343,6 +384,5 @@ void main() {
       expect(repo.removeCalls, [1]);
       expect(journal.entries(), isEmpty);
     });
-
   });
 }
