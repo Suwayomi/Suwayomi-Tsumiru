@@ -169,6 +169,12 @@ Future<void> recoverBulkMigrationsAtLaunch(ProviderContainer container) {
         repo: repo,
         journal: journal,
         isSessionCurrent: current,
+        dirtyGate: (id, token) => current()
+            ? bulkMigrationDirtyGate(container, id, token)
+            : Future.value(false),
+        migrateLocalState: (fromId, toId, opts) => current()
+            ? migrateOfflineLocalState(container, fromId, toId, opts)
+            : Future.value(),
         onSourceRemoved: (id) async {
           if (current()) container.invalidate(downloadStatusProvider);
         },
@@ -268,9 +274,9 @@ Future<void> migrateOfflineLocalState(
         final pairs = matchChaptersByNumber(
           source: [
             for (final c in source)
-              if (c.user.isDownloaded) _chapterState(c),
+              if (c.user.isDownloaded) migrationChapterState(c),
           ],
-          target: [for (final c in target) _chapterState(c)],
+          target: [for (final c in target) migrationChapterState(c)],
         );
         if (pairs.isNotEmpty) {
           await downloads.addChaptersBatchToDownloadQueue([
@@ -288,7 +294,7 @@ Future<void> migrateOfflineLocalState(
   });
 }
 
-ChapterState _chapterState(ChapterDto c) => ChapterState(
+ChapterState migrationChapterState(ChapterDto c) => ChapterState(
   id: c.id,
   chapterNumber: c.chapterNumber,
   name: c.name,
@@ -310,6 +316,7 @@ BulkMigrationRunner buildBulkMigrationRunner({
   final current = _captureSession(container);
   final journal = _accountJournal(container);
   final repo = container.read(migrationRepositoryProvider);
+  final mangaRepo = container.read(mangaBookRepositoryProvider);
   final searchTimeout = Duration(
     milliseconds:
         container.read(serverRequestTimeoutProvider) ??
@@ -342,6 +349,16 @@ BulkMigrationRunner buildBulkMigrationRunner({
     entries: entries,
     matcher: matcher,
     rateLimiter: rateLimiter,
+    loadTargetChapters: (id) async {
+      final chapters = await mangaRepo.getChapterList(id);
+      if (chapters == null) return null;
+      return [for (final c in chapters) migrationChapterState(c)];
+    },
+    loadSourceChapters: (id) async {
+      final chapters = await mangaRepo.getStoredChapterList(id);
+      if (chapters == null) return null;
+      return [for (final c in chapters) migrationChapterState(c)];
+    },
     dirtyGate: (id, token) => current()
         ? bulkMigrationDirtyGate(container, id, token)
         : Future.value(false),

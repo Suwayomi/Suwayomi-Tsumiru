@@ -53,12 +53,14 @@ class BigScreenMangaDetails extends HookConsumerWidget {
     required this.onListRefresh,
     required this.onRefresh,
     required this.onDescriptionRefresh,
+    required this.onMigrate,
   });
   final SeriesInfoExpansion expansion;
   final MangaDto manga;
   final int mangaId;
   final AsyncValueSetter<bool> onListRefresh;
   final AsyncValueSetter<bool> onDescriptionRefresh;
+  final AsyncCallback onMigrate;
   final AsyncValueSetter<bool> onRefresh;
   final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
@@ -187,6 +189,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                   MangaDescription(
                     expansion: expansion,
                     manga: manga,
+                    onMigrate: onMigrate,
                     removeMangaFromLibrary: (() =>
                         removeMangaFromLibraryAndPurge(
                           ProviderScope.containerOf(context, listen: false),

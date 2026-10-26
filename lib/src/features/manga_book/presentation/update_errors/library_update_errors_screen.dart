@@ -16,7 +16,7 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
-import '../../../migration/domain/migration_models.dart';
+import '../../../migration/presentation/screens/migration_window.dart';
 import '../../data/updates/updates_repository.dart';
 
 class LibraryUpdateErrorsScreen extends ConsumerWidget {
@@ -64,9 +64,10 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
                       onPressed: () =>
                           MangaRoute(mangaId: manga.id).push(context),
                       trailing: _MigrateButton(
-                        onPressed: () => MigrationBulkConfigRoute(
-                          $extra: MigrationBulkConfigData(mangaIds: [manga.id]),
-                        ).push(context),
+                        onPressed: () => startMigration(
+                          context,
+                          mangaIds: [manga.id],
+                        ),
                       ),
                     );
                   },

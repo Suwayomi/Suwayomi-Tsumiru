@@ -16,7 +16,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../routes/navigation.dart';
-import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
@@ -25,7 +24,6 @@ import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
 import '../../../../../widgets/server_image.dart';
-import '../../../../migration/domain/migration_models.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../../offline/presentation/series_offline_button.dart';
 import '../../../../settings/presentation/appearance/widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
@@ -53,11 +51,13 @@ class MangaDescription extends HookConsumerWidget {
     required this.removeMangaFromLibrary,
     required this.addMangaToLibrary,
     required this.refresh,
+    required this.onMigrate,
     this.expansion,
   });
   final SeriesInfoExpansion? expansion;
   final MangaDto manga;
   final AsyncCallback refresh;
+  final AsyncCallback onMigrate;
   final AsyncCallback removeMangaFromLibrary;
   final AsyncCallback addMangaToLibrary;
 
@@ -460,7 +460,7 @@ class MangaDescription extends HookConsumerWidget {
                             key: moreKey,
                             tooltip: context.l10n.more,
                             popUpAnimationStyle: context.motionStyle,
-                            onSelected: (value) {
+                            onSelected: (value) async {
                               switch (value) {
                                 case 'categories':
                                   showDialog<void>(
@@ -471,11 +471,7 @@ class MangaDescription extends HookConsumerWidget {
                                     animationStyle: context.motionStyle,
                                   );
                                 case 'migrate':
-                                  MigrationBulkConfigRoute(
-                                    $extra: MigrationBulkConfigData(
-                                      mangaIds: [manga.id],
-                                    ),
-                                  ).push(context);
+                                  await onMigrate();
                                 case 'web':
                                   openInBrowser(context, ref, manga);
                               }

@@ -33,7 +33,7 @@ import '../../../manga_book/domain/chapter/chapter_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
-import '../../../migration/domain/migration_models.dart';
+import '../../../migration/presentation/screens/migration_window.dart';
 import '../../../offline/data/offline_chapter_catchup.dart';
 import '../../../offline/data/offline_database.dart';
 import '../../../offline/data/offline_download_providers.dart';
@@ -484,9 +484,7 @@ class CategoryMangaList extends HookConsumerWidget {
                       final ids = selection.value.toList();
                       if (ids.isEmpty) return;
                       selection.value = const {};
-                      MigrationBulkConfigRoute(
-                        $extra: MigrationBulkConfigData(mangaIds: ids),
-                      ).push(context);
+                      startMigration(context, mangaIds: ids);
                     },
                   ),
                 ),

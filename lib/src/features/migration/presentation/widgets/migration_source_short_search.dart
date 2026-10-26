@@ -24,11 +24,13 @@ class MigrationSourceShortSearch extends ConsumerWidget {
     required this.source,
     required this.mangaList,
     this.query,
+    this.onSelected,
   });
 
   final SourceDto source;
   final AsyncValue<List<MangaDto>> mangaList;
   final String? query;
+  final ValueChanged<MangaDto>? onSelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +64,9 @@ class MigrationSourceShortSearch extends ConsumerWidget {
                   child: MangaCoverGridTile(
                     manga: manga,
                     showDarkOverlay: manga.user.inLibrary.ifNull(),
-                    onPressed: () => _onMangaSelected(context, manga),
+                    onPressed: () => onSelected != null
+                        ? onSelected!(manga)
+                        : _onMangaSelected(context, manga),
                   ),
                 );
               },

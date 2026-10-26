@@ -28,7 +28,7 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
-import '../../../migration/domain/migration_models.dart';
+import '../../../migration/presentation/screens/migration_window.dart';
 import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
@@ -160,12 +160,15 @@ class MangaDetailsScreen extends HookConsumerWidget {
       );
     });
 
-    void startMigration(BuildContext context, int mangaId, dynamic manga) {
+    Future<void> startSeriesMigration(
+      BuildContext context,
+      int mangaId,
+      dynamic manga,
+    ) async {
       if (manga == null) return;
-
-      MigrationBulkConfigRoute(
-        $extra: MigrationBulkConfigData(mangaIds: [mangaId]),
-      ).push(context);
+      await startMigration(context, mangaIds: [mangaId]);
+      providerContainer.invalidate(mangaWithIdProvider(mangaId: mangaId));
+      providerContainer.invalidate(mangaChapterListProvider(mangaId: mangaId));
     }
 
     void openInBrowser(String url) =>
@@ -291,7 +294,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               IconButton(
                 tooltip: context.l10n.migrate,
                 icon: const Icon(FluentIcons.arrow_swap_24_regular),
-                onPressed: () => startMigration(context, mangaId, data),
+                onPressed: () => startSeriesMigration(context, mangaId, data),
               ),
             if (inLibrary)
               IconButton(
@@ -349,7 +352,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     ),
                   if (inLibrary)
                     PopupMenuItem(
-                      onTap: () => startMigration(context, mangaId, data),
+                      onTap: () => startSeriesMigration(context, mangaId, data),
                       child: ChapterMenuRow(
                         icon: FluentIcons.arrow_swap_24_regular,
                         label: context.l10n.migrate,
@@ -515,6 +518,11 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                         mangaId: mangaId,
                                         onRefresh: refresh,
                                         onDescriptionRefresh: mangaRefresh,
+                                        onMigrate: () => startSeriesMigration(
+                                          context,
+                                          mangaId,
+                                          data,
+                                        ),
                                         onListRefresh: chapterListRefresh,
                                         selectedChapters: selectedChapters,
                                       )
@@ -524,6 +532,11 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                         mangaId: mangaId,
                                         onRefresh: refresh,
                                         onDescriptionRefresh: mangaRefresh,
+                                        onMigrate: () => startSeriesMigration(
+                                          context,
+                                          mangaId,
+                                          data,
+                                        ),
                                         onListRefresh: chapterListRefresh,
                                         selectedChapters: selectedChapters,
                                       )

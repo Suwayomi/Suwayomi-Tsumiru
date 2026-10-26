@@ -23,15 +23,23 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
   const MigrationGlobalSearchScreen({
     super.key,
     required this.sourceManga,
+    this.onSelected,
+    this.onClose,
   });
 
   final MangaDto sourceManga;
+  final ValueChanged<MangaDto>? onSelected;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final query = useState<String?>(sourceManga.title);
-    final migrationSearchResult =
-        ref.watch(migrationGlobalSearchResultsProvider(query: query.value));
+    final migrationSearchResult = ref.watch(
+      migrationGlobalSearchResultsProvider(
+        query: query.value,
+        excludeSourceId: sourceManga.sourceId,
+      ),
+    );
 
     useEffect(() {
       final initialQuery = sourceManga.title;
@@ -41,7 +49,7 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
       return null;
     }, []);
 
-    final topBar = showsMergedTopBar(context);
+    final topBar = onClose == null && showsMergedTopBar(context);
     final title = Text(context.l10n.searchAllSources);
     final searchBox = Align(
       alignment: Alignment.centerRight,
@@ -72,6 +80,7 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
               itemBuilder: (context, index) {
                 return MigrationSourceShortSearch(
                   source: data[index].source,
+                  onSelected: onSelected,
                   mangaList: data[index].mangaList,
                   query: query.value,
                 );
@@ -83,7 +92,12 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
       appBar: topBar
           ? null
           : AppBar(
-              leading: detailNavigationBackButton(context),
+              leading: onClose == null
+                  ? detailNavigationBackButton(context)
+                  : IconButton(
+                      onPressed: onClose,
+                      icon: const Icon(Icons.close),
+                    ),
               title: title,
               bottom: PreferredSize(
                 preferredSize: kCalculateAppBarBottomSize([true]),

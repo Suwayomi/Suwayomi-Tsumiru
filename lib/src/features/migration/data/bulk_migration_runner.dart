@@ -7,10 +7,25 @@
 import 'package:flutter/foundation.dart';
 
 import '../domain/bulk_migration_types.dart';
+import '../domain/chapter_matcher.dart';
 import '../domain/concurrency.dart';
 import '../domain/migration_models.dart';
 import 'migration_journal.dart';
 import 'migration_repository.dart';
+
+class _CommitSnapshot {
+  const _CommitSnapshot({
+    required this.deleteSource,
+    required this.options,
+    required this.toMangaId,
+    required this.inspectionGeneration,
+  });
+
+  final bool deleteSource;
+  final MigrationOption options;
+  final int toMangaId;
+  final int inspectionGeneration;
+}
 
 /// Journals copy and removal before each server mutation so interrupted batches can recover.
 class BulkMigrationRunner extends ChangeNotifier {
@@ -25,6 +40,8 @@ class BulkMigrationRunner extends ChangeNotifier {
     required List<BulkMigrationEntry> entries,
     this.onSourceRemoved,
     this.isSessionCurrent,
+    this.loadTargetChapters,
+    this.loadSourceChapters,
     this.migrateLocalState,
     Semaphore? semaphore,
     RateLimiter? rateLimiter,
@@ -56,6 +73,10 @@ class BulkMigrationRunner extends ChangeNotifier {
   /// Evicts device copies after source removal; failures do not fail migration.
   final Future<void> Function(int fromMangaId)? onSourceRemoved;
 
+  // Optional fetchers let callers without chapter access skip inspection.
+  final Future<List<ChapterState>?> Function(int mangaId)? loadTargetChapters;
+  final Future<List<ChapterState>?> Function(int mangaId)? loadSourceChapters;
+
   /// Carries offline state after copy and before removal; failures do not block migration.
   final Future<void> Function(
     int fromMangaId,
@@ -74,6 +95,10 @@ class BulkMigrationRunner extends ChangeNotifier {
   final List<BulkMigrationEntry> _entries;
   List<BulkMigrationEntry> get entries => List.unmodifiable(_entries);
 
+  final Set<int> _inFlight = {};
+
+  bool isBusy(int fromMangaId) => _inFlight.contains(fromMangaId);
+
   CancelToken _token = CancelToken();
   bool get isCancelled =>
       _token.isCancelled || isSessionCurrent?.call() == false;
@@ -91,6 +116,13 @@ class BulkMigrationRunner extends ChangeNotifier {
     e.phase = phase;
     e.message = message;
     notifyListeners();
+  }
+
+  // Raw errors read like "Exception: ..."; the prefix adds no information.
+  String _displayError(Object err) {
+    const prefix = 'Exception: ';
+    final text = '$err';
+    return text.startsWith(prefix) ? text.substring(prefix.length) : text;
   }
 
 
@@ -113,6 +145,7 @@ class BulkMigrationRunner extends ChangeNotifier {
       e.toTitle = outcome.toTitle;
       e.toThumbnailUrl = outcome.toThumbnailUrl;
       e.toSourceName = outcome.toSourceName;
+      e.toSourceId = outcome.toSourceId;
       e.confidence = outcome.confidence;
       if (!outcome.hasMatch) {
         _set(e, BulkEntryPhase.noMatch);
@@ -125,7 +158,7 @@ class BulkMigrationRunner extends ChangeNotifier {
     } on CancelledException {
       // Leave queued/searching entries for a later run.
     } catch (err) {
-      _set(e, BulkEntryPhase.failed, '$err');
+      _set(e, BulkEntryPhase.failed, _displayError(err));
     }
   }
 
@@ -162,33 +195,220 @@ class BulkMigrationRunner extends ChangeNotifier {
   }
 
 
-  late bool _deleteSource = options.deleteSource;
-
-  /// [deleteSource] removes sources after copy; false keeps them.
-  Future<void> commit({required bool deleteSource}) async {
-    _deleteSource = deleteSource;
-    final work = _entries
-        .where((e) => e.phase == BulkEntryPhase.ready && e.toMangaId != null)
-        .map((e) => semaphore.withPermit(() => _commitOne(e), _token))
-        .toList();
-    await _settle(work);
+  Future<void> inspectTarget(int fromMangaId) async {
+    final e = _byId(fromMangaId);
+    final toId = e?.toMangaId;
+    if (e == null || toId == null || e.targetInspected) return;
+    if (_token.isCancelled || isSessionCurrent?.call() == false) return;
+    final loadTarget = loadTargetChapters;
+    final loadSource = loadSourceChapters;
+    if (loadTarget == null || loadSource == null) {
+      e.targetInspected = true;
+      notifyListeners();
+      return;
+    }
+    List<ChapterState>? target;
+    try {
+      target = await loadTarget(toId);
+    } on CancelledException {
+      return;
+    } catch (err) {
+      if (_token.isCancelled || isSessionCurrent?.call() == false) return;
+      if (e.toMangaId != toId) return;
+      final failure = _displayError(err);
+      e.toChaptersError = failure;
+      e.targetEmpty = failure.contains('No chapters found');
+      e.targetInspected = true;
+      notifyListeners();
+      return;
+    }
+    if (_token.isCancelled || isSessionCurrent?.call() == false) return;
+    if (e.toMangaId != toId) return;
+    e.toChapterCount = target?.length ?? 0;
+    e.toLatestChapter =
+        latestChapterNumber(target?.map((c) => c.chapterNumber));
+    e.toChaptersLoaded = target != null;
+    e.toChaptersError = target == null ? 'chapters unavailable' : null;
+    List<ChapterState>? source;
+    try {
+      source = await loadSource(e.fromMangaId);
+    } on CancelledException {
+      return;
+    } catch (err) {
+      if (_token.isCancelled || isSessionCurrent?.call() == false) return;
+      if (e.toMangaId != toId) return;
+      e.fromChaptersError = _displayError(err);
+      e.targetInspected = true;
+      notifyListeners();
+      return;
+    }
+    if (_token.isCancelled || isSessionCurrent?.call() == false) return;
+    if (e.toMangaId != toId) return;
+    if (source == null) {
+      e.fromChaptersError = 'chapters unavailable';
+      e.targetInspected = true;
+      notifyListeners();
+      return;
+    }
+    e.fromChaptersError = null;
+    e.toUnmatchedState = target == null
+        ? 0
+        : matchChapterState(source: source, target: target).unmatchedState;
+    e.targetInspected = true;
+    notifyListeners();
   }
+
+  /// Blocked targets never migrate (progress would be lost); copy may proceed.
+  Future<void> commit({required bool deleteSource}) async {
+    for (final e in _entries) {
+      if (e.toMangaId != null &&
+          e.isSelfTarget &&
+          e.phase == BulkEntryPhase.ready) {
+        e.lastDeleteSource = deleteSource;
+        _refuse(e);
+      }
+    }
+    final candidates = _entries.where(isCopyable).toList();
+    for (final e in candidates) {
+      _inFlight.add(e.fromMangaId);
+      e.lastDeleteSource = deleteSource;
+    }
+    if (candidates.isNotEmpty) notifyListeners();
+    try {
+      if (deleteSource) {
+        for (final e in candidates) {
+          if (e.phase != BulkEntryPhase.ready ||
+              e.toMangaId == null ||
+              e.targetInspected) {
+            continue;
+          }
+          final toId = e.toMangaId;
+          await inspectTarget(e.fromMangaId);
+          if (!e.targetInspected ||
+              e.toMangaId != toId ||
+              e.phase != BulkEntryPhase.ready ||
+              e.blocksMigrate) {
+            _refuse(e);
+          }
+        }
+      }
+      final work = candidates
+          .where(
+            (e) =>
+                e.phase == BulkEntryPhase.ready &&
+                e.toMangaId != null &&
+                !e.isSelfTarget &&
+                (!deleteSource || !e.blocksMigrate),
+          )
+          .map((e) {
+            final snapshot = _capture(e, deleteSource);
+            return semaphore.withPermit(() async {
+              try {
+                await _commitOne(e, snapshot);
+              } finally {
+                _inFlight.remove(e.fromMangaId);
+                notifyListeners();
+              }
+            }, _token);
+          })
+          .toList();
+      await _settle(work);
+    } finally {
+      var changed = false;
+      for (final e in candidates) {
+        changed |= _inFlight.remove(e.fromMangaId);
+      }
+      if (changed) notifyListeners();
+    }
+  }
+
+  /// Copy keeps the source, so only migrate is refused for blocked targets.
+  bool isCopyable(BulkMigrationEntry e) =>
+      e.phase == BulkEntryPhase.ready &&
+      e.toMangaId != null &&
+      !e.isSelfTarget &&
+      !_inFlight.contains(e.fromMangaId);
+
+  bool isMigratable(BulkMigrationEntry e) =>
+      isCopyable(e) && !e.blocksMigrate;
 
   Future<void> commitOne(int fromMangaId, {required bool deleteSource}) async {
-    _deleteSource = deleteSource;
     final e = _byId(fromMangaId);
     if (e == null || e.toMangaId == null) return;
-    await semaphore.withPermit(() => _commitOne(e), _token);
+    if (_inFlight.contains(fromMangaId)) return;
+    // A row action is explicit approval of its match.
+    if (e.phase == BulkEntryPhase.needsReview) {
+      _set(e, BulkEntryPhase.ready);
+    }
+    _inFlight.add(fromMangaId);
+    e.lastDeleteSource = deleteSource;
+    notifyListeners();
+    try {
+      if (e.isSelfTarget) {
+        _refuse(e);
+        return;
+      }
+      final toId = e.toMangaId;
+      if (deleteSource) {
+        if (!e.targetInspected) {
+          await inspectTarget(fromMangaId);
+        }
+        if (!e.targetInspected ||
+            e.toMangaId != toId ||
+            e.phase != BulkEntryPhase.ready ||
+            e.blocksMigrate) {
+          _refuse(e);
+          return;
+        }
+      } else if (e.phase != BulkEntryPhase.ready) {
+        _refuse(e);
+        return;
+      }
+      final snapshot = _capture(e, deleteSource);
+      await semaphore.withPermit(() => _commitOne(e, snapshot), _token);
+    } finally {
+      _inFlight.remove(fromMangaId);
+      notifyListeners();
+    }
   }
 
-  MigrationOption _optionsFor(BulkMigrationEntry e) => options.copyWith(
-    deleteSource: _deleteSource,
-    overwriteExistingTracking: e.overwriteTracking,
-  );
+  void _refuse(BulkMigrationEntry e) {
+    e.failureKind = null;
+    e.failureDetail = null;
+    _set(e, BulkEntryPhase.failed);
+  }
 
-  Future<void> _commitOne(BulkMigrationEntry e) async {
-    final toId = e.toMangaId;
-    if (toId == null) return;
+  // Pin each row's inputs so concurrent rows cannot change its mode or target.
+  _CommitSnapshot _capture(BulkMigrationEntry e, bool deleteSource) {
+    e.lastDeleteSource = deleteSource;
+    return _CommitSnapshot(
+      deleteSource: deleteSource,
+      options: options.copyWith(
+        deleteSource: deleteSource,
+        overwriteExistingTracking: e.overwriteTracking,
+      ),
+      toMangaId: e.toMangaId!,
+      inspectionGeneration: e.inspectionGeneration,
+    );
+  }
+
+  // Reject queued work if its target or inspection changes before the worker starts.
+  bool _snapshotValid(BulkMigrationEntry e, _CommitSnapshot s) {
+    if (e.toMangaId != s.toMangaId ||
+        e.inspectionGeneration != s.inspectionGeneration) {
+      return false;
+    }
+    if (e.isSelfTarget) return false;
+    if (s.deleteSource && (!e.targetInspected || e.blocksMigrate)) return false;
+    return true;
+  }
+
+  Future<void> _commitOne(BulkMigrationEntry e, _CommitSnapshot s) async {
+    final toId = s.toMangaId;
+    if (!_snapshotValid(e, s)) {
+      _refuse(e);
+      return;
+    }
     try {
       _checkActive();
       // Pause on reauth before processing further entries.
@@ -199,27 +419,33 @@ class BulkMigrationRunner extends ChangeNotifier {
         _paused = false;
       }
       _checkActive();
+      if (!_snapshotValid(e, s)) {
+        _refuse(e);
+        return;
+      }
 
       // Flush unsynced offline reads before copying a source that will be removed.
-      if (_deleteSource) {
+      if (s.deleteSource) {
         final clean = await dirtyGate(e.fromMangaId, _token);
         _checkActive();
         if (!clean) {
-          _set(
-            e,
-            BulkEntryPhase.dirtyBlocked,
-            'Unsynced offline reads — connect and sync, then retry.',
-          );
+          e.failureKind = MigrationFailureKind.unsyncedReads;
+          e.failureDetail = null;
+          _set(e, BulkEntryPhase.dirtyBlocked);
           return;
         }
       }
 
+      if (!_snapshotValid(e, s)) {
+        _refuse(e);
+        return;
+      }
       await journal.put(
         MigrationJournalEntry(
           fromMangaId: e.fromMangaId,
           toMangaId: toId,
           state: MigrationPairState.prepared,
-          options: _optionsFor(e),
+          options: s.options,
         ),
       );
       _checkActive();
@@ -227,11 +453,7 @@ class BulkMigrationRunner extends ChangeNotifier {
       _checkActive();
       _set(e, BulkEntryPhase.copying);
 
-      final copy = await repo.copyMangaData(
-        e.fromMangaId,
-        toId,
-        _optionsFor(e),
-      );
+      final copy = await repo.copyMangaData(e.fromMangaId, toId, s.options);
       _checkActive();
       e.copyResult = copy;
       if (!copy.success) {
@@ -240,11 +462,11 @@ class BulkMigrationRunner extends ChangeNotifier {
           MigrationPairState.failed,
           failureReason: copy.warnings.join('; '),
         );
-        _set(
-          e,
-          BulkEntryPhase.failed,
-          copy.warnings.isNotEmpty ? copy.warnings.first : 'Copy failed',
-        );
+        e.failureKind = MigrationFailureKind.copyFailed;
+        e.failureDetail = copy.warnings.isNotEmpty
+            ? copy.warnings.join('; ')
+            : null;
+        _set(e, BulkEntryPhase.failed);
         return;
       }
       await journal.advance(
@@ -257,13 +479,12 @@ class BulkMigrationRunner extends ChangeNotifier {
       final localHook = migrateLocalState;
       if (localHook != null) {
         try {
-          await localHook(e.fromMangaId, toId, _optionsFor(e));
-        } catch (_) {
-        }
+          await localHook(e.fromMangaId, toId, s.options);
+        } catch (_) {}
       }
 
       _checkActive();
-      if (!_deleteSource || !copy.sourceInLibrary) {
+      if (!s.deleteSource || !copy.sourceInLibrary) {
         await journal.removeEntry(e.fromMangaId);
         _set(e, BulkEntryPhase.done);
         return;
@@ -283,11 +504,11 @@ class BulkMigrationRunner extends ChangeNotifier {
           MigrationPairState.failed,
           failureReason: removal.warnings.join('; '),
         );
-        _set(
-          e,
-          BulkEntryPhase.failed,
-          'Copied to the new source, but removing the old one failed.',
-        );
+        e.failureKind = MigrationFailureKind.removalFailed;
+        e.failureDetail = removal.warnings.isNotEmpty
+            ? removal.warnings.join('; ')
+            : null;
+        _set(e, BulkEntryPhase.failed);
         return;
       }
       await journal.advance(e.fromMangaId, MigrationPairState.removed);
@@ -305,7 +526,7 @@ class BulkMigrationRunner extends ChangeNotifier {
         MigrationPairState.failed,
         failureReason: '$err',
       );
-      _set(e, BulkEntryPhase.failed, '$err');
+      _set(e, BulkEntryPhase.failed, _displayError(err));
     }
   }
 
@@ -313,6 +534,9 @@ class BulkMigrationRunner extends ChangeNotifier {
   Future<void> recover() => recoverMigrationJournal(
     repo: repo,
     journal: journal,
+    dirtyGate: dirtyGate,
+    cancelToken: _token,
+    migrateLocalState: migrateLocalState,
     onSourceRemoved: onSourceRemoved,
     isSessionCurrent: () =>
         !_token.isCancelled && (isSessionCurrent?.call() ?? true),
@@ -336,6 +560,7 @@ class BulkMigrationRunner extends ChangeNotifier {
   }
 
   void skip(int fromMangaId) {
+    if (_inFlight.contains(fromMangaId)) return;
     final e = _byId(fromMangaId);
     if (e != null) _set(e, BulkEntryPhase.skipped);
   }
@@ -352,25 +577,69 @@ class BulkMigrationRunner extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> retryOne(int fromMangaId) async {
+    if (_inFlight.contains(fromMangaId)) return;
+    final e = _byId(fromMangaId);
+    if (e == null || !e.isRetryable) return;
+    retryEntry(fromMangaId);
+    if (e.toMangaId == null) {
+      await semaphore.withPermit(() => _searchOne(e), _token);
+    } else {
+      await commitOne(fromMangaId, deleteSource: e.lastDeleteSource ?? false);
+    }
+  }
+
   /// Requeues failed, unmatched, or dirty-blocked entries; caller reruns search/commit.
   void retryEntry(int fromMangaId) {
+    if (_inFlight.contains(fromMangaId)) return;
     final e = _byId(fromMangaId);
     if (e == null || !e.isRetryable) return;
     if (_token.isCancelled) _token = CancelToken();
+    _clearInspection(e);
     e.phase = e.toMangaId == null
         ? BulkEntryPhase.queued
         : BulkEntryPhase.ready;
     e.message = null;
+    e.failureKind = null;
+    e.failureDetail = null;
     notifyListeners();
   }
 
-  void overrideTarget(int fromMangaId, int toMangaId, String? toTitle) {
+  void overrideTarget(
+    int fromMangaId,
+    int toMangaId,
+    String? toTitle, {
+    String? toThumbnailUrl,
+    String? toSourceName,
+    String? toSourceId,
+    bool allowSameSource = false,
+  }) {
+    if (_inFlight.contains(fromMangaId)) return;
     final e = _byId(fromMangaId);
     if (e == null) return;
     e.toMangaId = toMangaId;
     e.toTitle = toTitle;
+    e.toThumbnailUrl = toThumbnailUrl;
+    e.toSourceName = toSourceName;
+    e.toSourceId = toSourceId;
+    e.allowSameSourceTarget = allowSameSource;
+    _clearInspection(e);
     e.confidence = 1.0;
+    e.failureKind = null;
+    e.failureDetail = null;
     _set(e, BulkEntryPhase.ready);
+  }
+
+  void _clearInspection(BulkMigrationEntry e) {
+    e.inspectionGeneration++;
+    e.targetInspected = false;
+    e.toChaptersLoaded = false;
+    e.toChapterCount = 0;
+    e.toLatestChapter = null;
+    e.toChaptersError = null;
+    e.targetEmpty = false;
+    e.fromChaptersError = null;
+    e.toUnmatchedState = 0;
   }
 
   /// Requeues retryable entries for search/commit and resets cancellation.
@@ -378,18 +647,13 @@ class BulkMigrationRunner extends ChangeNotifier {
     _token = CancelToken();
     for (final e in _entries) {
       if (e.isRetryable) {
+        _clearInspection(e);
         e.phase = e.toMangaId == null
             ? BulkEntryPhase.queued
             : BulkEntryPhase.ready;
       }
     }
     notifyListeners();
-  }
-
-  /// Restores library membership only; copied chapters, categories, and tracker bindings remain.
-  Future<bool> restoreSource(int fromMangaId) {
-    _checkActive();
-    return repo.restoreSourceToLibrary(fromMangaId);
   }
 
   BulkMigrationEntry? _byId(int fromMangaId) {
@@ -416,8 +680,13 @@ Future<void> recoverMigrationJournal({
   required MigrationJournal journal,
   Future<void> Function(int fromMangaId)? onSourceRemoved,
   bool Function()? isSessionCurrent,
+  DirtyGate? dirtyGate,
+  CancelToken? cancelToken,
+  Future<void> Function(int fromMangaId, int toMangaId, MigrationOption options)?
+  migrateLocalState,
 }) async {
   bool current() => isSessionCurrent?.call() ?? true;
+  final gateToken = cancelToken ?? CancelToken();
   Future<void> evict(int id) async {
     if (!current() || onSourceRemoved == null) return;
     try {
@@ -435,6 +704,19 @@ Future<void> recoverMigrationJournal({
     var copiedRecords = entry.copiedSourceRecordIds;
     try {
       if (redoCopy) {
+        // The journal only proves an earlier copy; reread current progress first.
+        if (entry.deleteSource && dirtyGate != null) {
+          final clean = await dirtyGate(entry.fromMangaId, gateToken);
+          if (!current()) return;
+          if (!clean) {
+            await journal.advance(
+              entry.fromMangaId,
+              MigrationPairState.failed,
+              failureReason: 'unsynced offline progress',
+            );
+            return;
+          }
+        }
         await journal.advance(entry.fromMangaId, MigrationPairState.copying);
         if (!current()) return;
         final copy = await repo.copyMangaData(
@@ -457,6 +739,13 @@ Future<void> recoverMigrationJournal({
           MigrationPairState.copied,
           copiedSourceRecordIds: copiedRecords,
         );
+        if (!current()) return;
+        final hook = migrateLocalState;
+        if (hook != null) {
+          try {
+            await hook(entry.fromMangaId, entry.toMangaId, entry.options);
+          } catch (_) {}
+        }
         if (!current()) return;
         if (!copy.sourceInLibrary || !entry.deleteSource) {
           await journal.removeEntry(entry.fromMangaId);
@@ -508,7 +797,8 @@ Future<void> recoverMigrationJournal({
         await resume(entry, redoCopy: true);
       case MigrationPairState.copied:
       case MigrationPairState.removing:
-        await resume(entry, redoCopy: false);
+        // A removal needs a fresh copy against current state; copy-only clears.
+        await resume(entry, redoCopy: entry.deleteSource);
     }
   }
 }

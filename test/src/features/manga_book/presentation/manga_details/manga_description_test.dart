@@ -45,6 +45,7 @@ void main() {
                   inLibrary = false;
                 },
                 addMangaToLibrary: () async {},
+                onMigrate: () async {},
                 refresh: () async {
                   refreshes++;
                 },

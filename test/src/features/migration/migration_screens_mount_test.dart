@@ -28,6 +28,7 @@ import 'package:tsumiru/src/features/browse_center/presentation/source/controlle
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/migration/controller/migration_controller.dart';
@@ -104,6 +105,57 @@ class _HangingMigration extends Fake implements MigrationRepository {
   }
 }
 
+class _MismatchedChapters extends MangaBookRepository {
+  _MismatchedChapters(super.client);
+  @override
+  Future<List<ChapterDto>?> getChapterList(int mangaId) async {
+    if (mangaId == 2) {
+      return [
+        testChapter(id: 21, name: 'Chapter 1'),
+        testChapter(
+          id: 22,
+          name: 'Chapter 2',
+        ).copyWith(chapterNumber: 2.0),
+        testChapter(
+          id: 23,
+          name: 'Chapter 3',
+        ).copyWith(chapterNumber: 3.0),
+      ];
+    }
+    throw StateError('Missing source $mangaId');
+  }
+
+  @override
+  Future<List<ChapterDto>?> getStoredChapterList(int mangaId) async {
+    if (mangaId == 1) {
+      final read = testChapter(id: 50, name: 'Chapter 5');
+      return [
+        read.copyWith(
+          chapterNumber: 5.0,
+          user: read.user.copyWith(isRead: true),
+        ),
+      ];
+    }
+    return [testChapter()];
+  }
+}
+
+class _FailingCopyMigration extends _MatchingMigration {
+  @override
+  Future<MigrationCopyResult> copyMangaData(
+    int fromMangaId,
+    int toMangaId,
+    MigrationOption options, [
+    BuildContext? context,
+  ]) async {
+    return const MigrationCopyResult(
+      success: false,
+      sourceInLibrary: true,
+      warnings: ['simulated copy failure'],
+    );
+  }
+}
+
 class _MatchingMigration extends Fake implements MigrationRepository {
   @override
   Future<List<MangaDto>?> searchMangaInSource(
@@ -160,6 +212,7 @@ Future<ProviderContainer> _runContainer({
   _HangingSource? source,
   MigrationRepository? migration,
   Completer<List<SourceDto>?>? sourceList,
+  MangaBookRepository Function(GraphQLClient)? chapters,
 }) async {
   SharedPreferences.setMockInitialValues({
     CatchupStateStore.identityAuthorizedKey: true,
@@ -177,7 +230,9 @@ Future<ProviderContainer> _runContainer({
       authCredentialsStoreProvider.overrideWith(_MigrationSession.new),
       authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
       mangaBookRepositoryProvider.overrideWith(
-        (ref) => _DeadSourceChapters(client, storedFails: false),
+        (ref) =>
+            chapters?.call(client) ??
+            _DeadSourceChapters(client, storedFails: false),
       ),
       libraryMangaListProvider.overrideWith((ref) async => [testManga()]),
       if (sourceList == null)
@@ -402,6 +457,109 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Hanging source'), findsOneWidget);
     expect(find.text('target'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a failed entry shows its message and a Retry action', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final container = await _runContainer(migration: _FailingCopyMigration());
+    addTearDown(container.dispose);
+    var finished = false;
+    await tester.pumpWidget(
+      _app(
+        container,
+        MigrationBulkRunBody(
+          data: const MigrationBulkRunData(
+            mangaIds: [1],
+            targetSourceIds: ['target'],
+            options: MigrationOption(),
+          ),
+          onFinished: () => finished = true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MigrationBulkRunBody)),
+    )!;
+    expect(find.text('simulated copy failure'), findsNothing);
+    await tester.tap(find.byTooltip(l10n.migrationActionCopy));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(l10n.migrationActionCopy),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(finished, isTrue);
+    expect(find.text('simulated copy failure'), findsNothing);
+    expect(find.text(l10n.migrationFailureCopyFailed), findsOneWidget);
+    expect(find.text(l10n.migrationFailedCount(1)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byIcon(FluentIcons.more_vertical_24_regular));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.retry), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a target with no matching read chapters blocks Migrate', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1400, 1000);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    final container = await _runContainer(
+      migration: _MatchingMigration(),
+      chapters: _MismatchedChapters.new,
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      _app(
+        container,
+        MigrationBulkRunBody(
+          data: const MigrationBulkRunData(
+            mangaIds: [1],
+            targetSourceIds: ['target'],
+            options: MigrationOption(),
+          ),
+          onBack: () {},
+          windowed: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MigrationBulkRunBody)),
+    )!;
+    expect(
+      find.text(l10n.migrationBlockedUnmatched(1, 'Hanging source')),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(TextButton, l10n.migrationMigrateNow),
+      findsNothing,
+    );
+    expect(
+      tester
+          .widget<TextButton>(
+            find.widgetWithText(TextButton, l10n.migrationCopyNow),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }
