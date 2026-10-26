@@ -22,10 +22,12 @@ class FilterToWidget extends StatelessWidget {
     required this.filter,
     required this.currentChanges,
     required this.onChanged,
+    this.singleLineLabels = false,
   });
   final PrimitiveFilter filter;
   final List<FilterChange> currentChanges;
   final ValueChanged<List<FilterChange>> onChanged;
+  final bool singleLineLabels;
 
   @override
   Widget build(BuildContext context) {
@@ -50,16 +52,30 @@ class FilterToWidget extends StatelessWidget {
       FilterCheckBox(name: String? name, checkBoxState: bool? state) =>
         CheckboxListTile(
           value: firstCurrentChange?.checkBoxState ?? state.ifNull(),
-          title: Text(name),
+          title: singleLineLabels && name.isNotBlank
+              ? Tooltip(
+                  message: name,
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )
+              : Text(name),
           onChanged: (value) => onChanged([
             FilterChange(checkBoxState: value, position: kPositionPlaceholder),
           ]),
           controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: singleLineLabels ? EdgeInsets.zero : null,
+          horizontalTitleGap: singleLineLabels ? 8 : null,
+          dense: singleLineLabels ? true : null,
+          visualDensity: singleLineLabels ? VisualDensity.compact : null,
         ),
       FilterTriState(name: String? name, tristate: TriState state) =>
         _TriStateTile(
           name: name,
           state: firstCurrentChange?.triState ?? state,
+          singleLine: singleLineLabels,
           onChanged: (value) => onChanged([
             FilterChange(triState: value, position: kPositionPlaceholder),
           ]),
@@ -163,6 +179,7 @@ class FilterToWidget extends StatelessWidget {
           filters: state,
           currentChanges: currentChanges,
           onChanged: onChanged,
+          singleLineLabels: singleLineLabels,
         ),
       PrimitiveFilter() => throw UnimplementedError(),
     };
@@ -176,12 +193,16 @@ class FilterGroupWidget extends HookWidget {
     required this.filters,
     required this.currentChanges,
     required this.onChanged,
+    this.expanded = false,
+    this.singleLineLabels = false,
   });
 
   final String name;
   final List<PrimitiveFilter> filters;
   final List<FilterChange> currentChanges;
   final ValueChanged<List<FilterChange>> onChanged;
+  final bool expanded;
+  final bool singleLineLabels;
 
   void onChangedWrapper(Map<int, List<FilterChange>> filterChangeMap) {
     final filterChanges = filterChangeMap.values.fold(<FilterChange>[], (
@@ -221,26 +242,45 @@ class FilterGroupWidget extends HookWidget {
       return null;
     }, [currentChanges]);
 
+    Widget item(int index) => FilterToWidget(
+      key: ValueKey("$name-$index"),
+      filter: filters[index],
+      currentChanges: filterChangeMap.value[index] ?? const [],
+      singleLineLabels: singleLineLabels,
+      onChanged: (groupFilter) {
+        final updatedGroupFilters = <FilterChange>[];
+        for (final filter in groupFilter) {
+          updatedGroupFilters.add(filter.copyWith(position: index));
+        }
+        onChangedWrapper({
+          ...filterChangeMap.value,
+          index: updatedGroupFilters,
+        });
+      },
+    );
+    if (expanded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(name, style: context.textTheme.labelLarge),
+          for (var i = 0; i < filters.length; i += 2)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: item(i)),
+                if (i + 1 < filters.length)
+                  Expanded(child: item(i + 1))
+                else
+                  const Expanded(child: SizedBox.shrink()),
+              ],
+            ),
+        ],
+      );
+    }
     return FluentExpansionTile(
       title: Text(name, style: context.textTheme.labelLarge),
-      children: [
-        for (int index = 0; index < filters.length; index++)
-          FilterToWidget(
-            key: ValueKey("$name-$index"),
-            filter: filters[index],
-            currentChanges: filterChangeMap.value[index] ?? const [],
-            onChanged: (groupFilter) {
-              final updatedGroupFilters = <FilterChange>[];
-              for (final filter in groupFilter) {
-                updatedGroupFilters.add(filter.copyWith(position: index));
-              }
-              onChangedWrapper({
-                ...filterChangeMap.value,
-                index: updatedGroupFilters,
-              });
-            },
-          ),
-      ],
+      children: [for (int index = 0; index < filters.length; index++) item(index)],
     );
   }
 }
@@ -250,10 +290,12 @@ class _TriStateTile extends StatelessWidget {
     required this.name,
     required this.state,
     required this.onChanged,
+    this.singleLine = false,
   });
   final String name;
   final TriState state;
   final ValueChanged<TriState> onChanged;
+  final bool singleLine;
 
   @override
   Widget build(BuildContext context) {
@@ -270,8 +312,21 @@ class _TriStateTile extends StatelessWidget {
             ? scheme.onSurfaceVariant
             : scheme.primary,
       ),
-      title: Text(name),
+      title: singleLine && name.isNotBlank
+          ? Tooltip(
+              message: name,
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          : Text(name),
       onTap: () => onChanged(next),
+      contentPadding: singleLine ? EdgeInsets.zero : null,
+      horizontalTitleGap: singleLine ? 8 : null,
+      dense: singleLine ? true : null,
+      visualDensity: singleLine ? VisualDensity.compact : null,
     );
   }
 }

@@ -8,12 +8,14 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/cover_row_section.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../data/recommendations/recommendation_provider.dart';
 import '../../data/recommendations/recommendation_repository.dart';
 import 'recommendation_card.dart';
@@ -138,6 +140,22 @@ class _ProviderSection extends ConsumerWidget {
           ),
           data: (list) => list.isEmpty
               ? section(child: _SectionMessage(context.l10n.noResultFound))
+              : context.usesDesktopShell
+              ? section(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 12,
+                    children: [
+                      for (final rec in list)
+                        RecommendationCard(
+                          rec: rec,
+                          width:
+                              ref.watch(gridMinWidthProvider) ??
+                              DBKeys.gridMangaCoverWidth.initial,
+                        ),
+                    ],
+                  ),
+                )
               : section(
                   itemCount: list.length,
                   itemBuilder: (context, i) => RecommendationCard(rec: list[i]),

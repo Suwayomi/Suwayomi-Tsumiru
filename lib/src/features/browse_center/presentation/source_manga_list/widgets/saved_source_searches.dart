@@ -30,11 +30,17 @@ class SavedSourceSearches extends HookConsumerWidget {
     required this.currentQuery,
     required this.currentChanges,
     required this.onSelected,
+    this.hideHeader = false,
+    this.onSaveAction,
+    this.onCanSaveChanged,
   });
   final String sourceId;
   final String? Function() currentQuery;
   final List<FilterChange> Function() currentChanges;
   final void Function(String?, List<FilterChange>) onSelected;
+  final bool hideHeader;
+  final void Function(Future<void> Function())? onSaveAction;
+  final ValueChanged<bool>? onCanSaveChanged;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final source = ref.watch(sourceProvider(sourceId)).value;
@@ -152,25 +158,34 @@ class SavedSourceSearches extends HookConsumerWidget {
       }
     }
 
+    useEffect(() {
+      onSaveAction?.call(saveSearch);
+      return null;
+    });
+    useEffect(() {
+      onCanSaveChanged?.call(!saving.value && source != null);
+      return null;
+    });
     return Padding(
       padding: KEdgeInsets.h16v4.size,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  context.l10n.savedSearches,
-                  style: context.textTheme.titleSmall,
+          if (!hideHeader)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.savedSearches,
+                    style: context.textTheme.titleSmall,
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: saving.value || source == null ? null : saveSearch,
-                child: Text(context.l10n.save),
-              ),
-            ],
-          ),
+                TextButton(
+                  onPressed: saving.value || source == null ? null : saveSearch,
+                  child: Text(context.l10n.save),
+                ),
+              ],
+            ),
           Wrap(
             spacing: 8,
             children: [
