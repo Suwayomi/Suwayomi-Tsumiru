@@ -63,9 +63,6 @@ abstract class MigrationRepository {
     List<int> copiedSourceRecordIds,
   });
 
-  /// Restores membership without reversing copied chapters, categories, or tracker bindings.
-  Future<bool> restoreSourceToLibrary(int mangaId);
-
   Future<MigrationMergePreflight> preflightMerge(
     int fromMangaId,
     int toMangaId,
@@ -529,22 +526,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
     }
 
     return (success: true, warnings: warnings);
-  }
-
-  @override
-  Future<bool> restoreSourceToLibrary(int mangaId) async {
-    final result = await client.mutate$UpdateManga(
-      Options$Mutation$UpdateManga(
-        variables: Variables$Mutation$UpdateManga(
-          withLibraryFields: false,
-          input: Input$UpdateMangaInput(
-            id: mangaId,
-            patch: Input$UpdateMangaPatchInput(inLibrary: true),
-          ),
-        ),
-      ),
-    );
-    return !result.hasException && result.parsedData?.updateManga != null;
   }
 
   @override

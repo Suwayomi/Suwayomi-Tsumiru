@@ -205,8 +205,6 @@ class AccountSessionStartup {
   }
 
   Future<void> _initialize(String catalogId) async {
-    await recoverBulkMigrationsAtLaunch(container);
-    if (!_current) return;
     if (isAndroidNative) {
       try {
         await container.read(notificationsControllerProvider).sync();
@@ -214,7 +212,11 @@ class AccountSessionStartup {
         if (_current) debugPrint('Notification startup failed: $error');
       }
     }
-    if (!_current || !_offlineActiveNow()) return;
+    if (!_current) return;
+    if (!_offlineActiveNow()) {
+      await recoverBulkMigrationsAtLaunch(container);
+      return;
+    }
     final runtime = container.read(offlineRuntimeStorageProvider.notifier);
     // Recover disk state before reconcile/catch-up; Android uses worker replay, other platforms recover here.
     if (isAndroidNative) {
@@ -229,6 +231,9 @@ class AccountSessionStartup {
       if (!_current) return;
     }
     await pushPendingProgress(container);
+    if (!_current) return;
+    // Recovery may remove sources, so it runs after pending progress is pushed.
+    await recoverBulkMigrationsAtLaunch(container);
     if (!_current) return;
     await reconcileAllAtLaunch(container);
     if (!_current) return;

@@ -17,6 +17,7 @@ import '../../../../migration/controller/bulk_migration_providers.dart';
 import '../../../../migration/data/bulk_migration_runner.dart';
 import '../../../../migration/domain/bulk_migration_types.dart';
 import '../../../../migration/domain/migration_models.dart';
+import '../../../../migration/presentation/migration_block_reason_text.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/manga/manga_model.dart';
 
@@ -46,6 +47,7 @@ Future<bool> migrateDuplicateIntoCandidate(
       BulkMigrationEntry(
         fromMangaId: from.id,
         fromTitle: from.title,
+        fromSourceId: from.sourceId,
         fromThumbnailUrl: from.displayCoverUrl,
         fromSourceName: from.source?.displayName,
         fromChapterCount: from.chapters.totalCount,
@@ -56,7 +58,15 @@ Future<bool> migrateDuplicateIntoCandidate(
     // Use the container so reconciliation survives dialog disposal.
     onSourceRemoved: (id) => reconcileMangaContainer(container, id),
   );
-  runner.overrideTarget(from.id, to.id, to.title);
+  runner.overrideTarget(
+    from.id,
+    to.id,
+    to.title,
+    toThumbnailUrl: to.displayCoverUrl,
+    toSourceName: to.source?.displayName,
+    toSourceId: to.sourceId,
+    allowSameSource: true,
+  );
 
   unawaited(
     showDialog<void>(
@@ -73,15 +83,24 @@ Future<bool> migrateDuplicateIntoCandidate(
 
   // commitOne can throw CancelledException; finally must close the non-dismissible dialog.
   var done = false;
+  String? blockReason;
   try {
     await runner.commitOne(from.id, deleteSource: true);
     done = _isDone(runner, from.id);
+    if (!done && context.mounted) {
+      blockReason = _entryMessage(context, runner, from.id);
+    }
   } finally {
     if (context.mounted) {
       Navigator.of(context).pop(); // dismiss the progress dialog
       // Migration changes library membership, so invalidate the list on success.
       if (done) ref.invalidate(libraryMangaListProvider);
     }
+  }
+  if (!done && blockReason != null && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(blockReason)));
   }
   return done;
 }
@@ -91,6 +110,24 @@ bool _isDone(BulkMigrationRunner runner, int fromMangaId) {
     if (e.fromMangaId == fromMangaId) return e.phase == BulkEntryPhase.done;
   }
   return false;
+}
+
+String? _entryMessage(
+  BuildContext context,
+  BulkMigrationRunner runner,
+  int fromMangaId,
+) {
+  for (final e in runner.entries) {
+    if (e.fromMangaId != fromMangaId) continue;
+    final failure = migrationFailureText(context.l10n, e);
+    if (failure != null) return failure;
+    final blocked = migrationBlockReasonText(context.l10n, e);
+    if (blocked != null) return blocked;
+    final message = e.message?.trim();
+    if (message != null && message.isNotEmpty) return message;
+    return null;
+  }
+  return null;
 }
 
 class _SingleMigrationProgressDialog extends StatelessWidget {
