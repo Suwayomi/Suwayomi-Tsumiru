@@ -567,6 +567,9 @@ enum IncludeOrExclude implements ValueEnum {
 
 enum GlobalSearchSourceFilter { pinned, all }
 
+// Persisted by enum index: append only.
+enum MigrationSourceSort { alphabetical, total }
+
 enum UpdatesDisplayMode {
   grid,
   list;

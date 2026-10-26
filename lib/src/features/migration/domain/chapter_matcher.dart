@@ -53,6 +53,17 @@ class ChapterMatchResult {
   final int unmatchedState;
 }
 
+// Negative chapter numbers are unknown placeholders, not progress.
+double? latestChapterNumber(Iterable<num?>? values) {
+  double? best;
+  for (final value in values ?? const <num?>[]) {
+    final n = value?.toDouble();
+    if (n == null || n < 0) continue;
+    if (best == null || n > best) best = n;
+  }
+  return best;
+}
+
 /// Monotonic merge: recognized numbers use tolerance; unknown numbers require exact lowercase names.
 ChapterMatchResult matchChapterState({
   required List<ChapterState> source,

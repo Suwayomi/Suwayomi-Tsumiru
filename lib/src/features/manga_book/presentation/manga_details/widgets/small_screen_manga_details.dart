@@ -29,6 +29,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
     required this.mangaId,
     required this.onRefresh,
     required this.onDescriptionRefresh,
+    required this.onMigrate,
     required this.onListRefresh,
   });
   final int mangaId;
@@ -38,6 +39,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
   final AsyncValueSetter<bool> onListRefresh;
   final AsyncValueSetter<bool> onDescriptionRefresh;
+  final AsyncCallback onMigrate;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chapterEntries = chapterList.value;
@@ -52,6 +54,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
             child: SingleChildScrollView(
               child: MangaDescription(
                 manga: manga,
+                onMigrate: onMigrate,
                 refresh: () => onDescriptionRefresh(false),
                 removeMangaFromLibrary: () => removeMangaFromLibraryAndPurge(
                   ProviderScope.containerOf(context, listen: false),

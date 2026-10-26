@@ -56,13 +56,14 @@ Future<List<MangaDto>> migrationSourceQuickSearchMangaList(
 AsyncValue<List<MigrationQuickSearchResults>> migrationGlobalSearchResults(
   Ref ref, {
   String? query,
+  String? excludeSourceId,
 }) {
   final sourcesData = ref.watch(searchableSourcesProvider);
   final sourceList = sourcesData.value ?? const <SourceDto>[];
 
   final List<MigrationQuickSearchResults> sourceMangaListPairList = [];
   for (SourceDto source in sourceList) {
-    if (source.id.isNotBlank) {
+    if (source.id.isNotBlank && source.id != excludeSourceId) {
       final mangaList = ref.watch(
         migrationSourceQuickSearchMangaListProvider(source.id, query: query),
       );

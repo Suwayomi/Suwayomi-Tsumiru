@@ -20,6 +20,9 @@ enum DBKeys {
   sourceLanguageFilter(["all", "lastUsed", "en", "localsourcelang"]),
   // Source ids in descending migration priority.
   migrationTargetSources(<String>[]),
+  migrationSourceSort(MigrationSourceSort.alphabetical),
+  migrationSourceAscending(true),
+  migrationSourceObsoleteOnly(false),
   extensionLanguageFilter(["installed", "update", "en", "all"]),
   sourceLastUsed(null),
   sourceRecentIds(<String>[]),

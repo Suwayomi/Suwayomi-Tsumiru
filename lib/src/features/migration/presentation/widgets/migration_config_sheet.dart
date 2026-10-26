@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/compact_switch.dart';
+import '../../domain/migration_models.dart';
 
 class MigrationRunConfig {
   const MigrationRunConfig({
@@ -30,6 +31,47 @@ class MigrationRunConfig {
   final bool migrateDownloads;
   final bool hideUnmatched;
   final bool hideWithoutUpdates;
+  static const defaults = MigrationRunConfig(
+    migrateChapters: true,
+    migrateCategories: true,
+    migrateTracking: true,
+    migrateReaderSettings: true,
+    migrateOfflineSettings: true,
+    migrateDownloads: false,
+    hideUnmatched: false,
+    hideWithoutUpdates: false,
+  );
+
+  MigrationOption toOption({required bool deleteSource}) => MigrationOption(
+    migrateChapters: migrateChapters,
+    migrateCategories: migrateCategories,
+    migrateTracking: migrateTracking,
+    migrateReaderSettings: migrateReaderSettings,
+    migrateOfflineSettings: migrateOfflineSettings,
+    migrateDownloads: migrateDownloads,
+    deleteSource: deleteSource,
+  );
+
+  MigrationRunConfig copyWith({
+    bool? migrateChapters,
+    bool? migrateCategories,
+    bool? migrateTracking,
+    bool? migrateReaderSettings,
+    bool? migrateOfflineSettings,
+    bool? migrateDownloads,
+    bool? hideUnmatched,
+    bool? hideWithoutUpdates,
+  }) => MigrationRunConfig(
+    migrateChapters: migrateChapters ?? this.migrateChapters,
+    migrateCategories: migrateCategories ?? this.migrateCategories,
+    migrateTracking: migrateTracking ?? this.migrateTracking,
+    migrateReaderSettings: migrateReaderSettings ?? this.migrateReaderSettings,
+    migrateOfflineSettings:
+        migrateOfflineSettings ?? this.migrateOfflineSettings,
+    migrateDownloads: migrateDownloads ?? this.migrateDownloads,
+    hideUnmatched: hideUnmatched ?? this.hideUnmatched,
+    hideWithoutUpdates: hideWithoutUpdates ?? this.hideWithoutUpdates,
+  );
 }
 
 class MigrationConfigSheet extends HookWidget {
@@ -46,17 +88,7 @@ class MigrationConfigSheet extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = context.theme;
-
-    final chapters = useState(true);
-    final categories = useState(true);
-    final tracking = useState(true);
-    final readerSettings = useState(true);
-    final offlineSettings = useState(true);
-    // Moving or refetching downloads requires an explicit bandwidth/disk opt-in.
-    final downloads = useState(false);
-    final hideUnmatched = useState(false);
-    final hideWithoutUpdates = useState(false);
+    final config = useState(MigrationRunConfig.defaults);
     final extraSearch = useTextEditingController();
 
     return SafeArea(
@@ -64,86 +96,10 @@ class MigrationConfigSheet extends HookWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: Text(
-                      l10n.migrationDataToMigrateHeader,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        _FlagChip(
-                          label: l10n.migrateChapters,
-                          selected: chapters.value,
-                          onSelected: (v) => chapters.value = v,
-                        ),
-                        _FlagChip(
-                          label: l10n.migrateCategories,
-                          selected: categories.value,
-                          onSelected: (v) => categories.value = v,
-                        ),
-                        _FlagChip(
-                          label: l10n.migrateTracking,
-                          selected: tracking.value,
-                          onSelected: (v) => tracking.value = v,
-                        ),
-                        _FlagChip(
-                          label: l10n.migrateReaderSettings,
-                          selected: readerSettings.value,
-                          onSelected: (v) => readerSettings.value = v,
-                        ),
-                        _FlagChip(
-                          label: l10n.migrateOfflineSettings,
-                          selected: offlineSettings.value,
-                          onSelected: (v) => offlineSettings.value = v,
-                        ),
-                        _FlagChip(
-                          label: l10n.migrateDownloads,
-                          selected: downloads.value,
-                          onSelected: (v) => downloads.value = v,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    child: TextField(
-                      controller: extraSearch,
-                      decoration: InputDecoration(
-                        labelText: l10n.migrationAdditionalSearchQuery,
-                        helperText: l10n.migrationAdditionalSearchQueryHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  CompactSwitchListTile(
-                    title: Text(l10n.migrationHideUnmatched),
-                    value: hideUnmatched.value,
-                    onChanged: (v) => hideUnmatched.value = v,
-                  ),
-                  CompactSwitchListTile(
-                    title: Text(l10n.migrationHideWithoutUpdates),
-                    subtitle: Text(l10n.migrationHideWithoutUpdatesSubtitle),
-                    value: hideWithoutUpdates.value,
-                    onChanged: (v) => hideWithoutUpdates.value = v,
-                  ),
-                ],
-              ),
+            child: MigrationConfigOptions(
+              config: config.value,
+              onChanged: (value) => config.value = value,
+              extraSearch: extraSearch,
             ),
           ),
           const Divider(height: 1),
@@ -155,16 +111,7 @@ class MigrationConfigSheet extends HookWidget {
                 onPressed: () {
                   final q = extraSearch.text.trim();
                   onStart(
-                    MigrationRunConfig(
-                      migrateChapters: chapters.value,
-                      migrateCategories: categories.value,
-                      migrateTracking: tracking.value,
-                      migrateReaderSettings: readerSettings.value,
-                      migrateOfflineSettings: offlineSettings.value,
-                      migrateDownloads: downloads.value,
-                      hideUnmatched: hideUnmatched.value,
-                      hideWithoutUpdates: hideWithoutUpdates.value,
-                    ),
+                    config.value,
                     q.isEmpty ? null : q,
                   );
                 },
@@ -196,4 +143,107 @@ class _FlagChip extends StatelessWidget {
     onSelected: onSelected,
     showCheckmark: true,
   );
+}
+
+class MigrationConfigOptions extends StatelessWidget {
+  const MigrationConfigOptions({
+    super.key,
+    required this.config,
+    required this.onChanged,
+    required this.extraSearch,
+  });
+
+  final MigrationRunConfig config;
+  final ValueChanged<MigrationRunConfig> onChanged;
+  final TextEditingController extraSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = context.theme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(
+              l10n.migrationDataToMigrateHeader,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                _FlagChip(
+                  label: l10n.migrateChapters,
+                  selected: config.migrateChapters,
+                  onSelected: (v) =>
+                      onChanged(config.copyWith(migrateChapters: v)),
+                ),
+                _FlagChip(
+                  label: l10n.migrateCategories,
+                  selected: config.migrateCategories,
+                  onSelected: (v) =>
+                      onChanged(config.copyWith(migrateCategories: v)),
+                ),
+                _FlagChip(
+                  label: l10n.migrateTracking,
+                  selected: config.migrateTracking,
+                  onSelected: (v) =>
+                      onChanged(config.copyWith(migrateTracking: v)),
+                ),
+                _FlagChip(
+                  label: l10n.migrateReaderSettings,
+                  selected: config.migrateReaderSettings,
+                  onSelected: (v) =>
+                      onChanged(config.copyWith(migrateReaderSettings: v)),
+                ),
+                _FlagChip(
+                  label: l10n.migrateOfflineSettings,
+                  selected: config.migrateOfflineSettings,
+                  onSelected: (v) =>
+                      onChanged(config.copyWith(migrateOfflineSettings: v)),
+                ),
+                _FlagChip(
+                  label: l10n.migrateDownloads,
+                  selected: config.migrateDownloads,
+                  onSelected: (v) =>
+                      onChanged(config.copyWith(migrateDownloads: v)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextField(
+              controller: extraSearch,
+              decoration: InputDecoration(
+                labelText: l10n.migrationAdditionalSearchQuery,
+                helperText: l10n.migrationAdditionalSearchQueryHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ),
+          CompactSwitchListTile(
+            title: Text(l10n.migrationHideUnmatched),
+            value: config.hideUnmatched,
+            onChanged: (v) => onChanged(config.copyWith(hideUnmatched: v)),
+          ),
+          CompactSwitchListTile(
+            title: Text(l10n.migrationHideWithoutUpdates),
+            subtitle: Text(l10n.migrationHideWithoutUpdatesSubtitle),
+            value: config.hideWithoutUpdates,
+            onChanged: (v) => onChanged(config.copyWith(hideWithoutUpdates: v)),
+          ),
+        ],
+      ),
+    );
+  }
 }
