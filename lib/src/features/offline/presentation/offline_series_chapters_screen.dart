@@ -6,14 +6,17 @@
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/server_image.dart';
 import '../../account/data/account_providers.dart';
+import '../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import 'offline_action_confirmations.dart';
@@ -39,34 +42,6 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final chaptersAsync = ref.watch(offlineChaptersForMangaProvider(mangaId));
-    final chapters = chaptersAsync.value ?? const [];
-
-    final active =
-        chapters
-            .where(
-              (c) =>
-                  c.deviceState == OfflineDeviceState.queued ||
-                  c.deviceState == OfflineDeviceState.downloading,
-            )
-            .toList()
-          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
-
-    final downloaded =
-        chapters
-            .where((c) => c.deviceState == OfflineDeviceState.downloaded)
-            .toList()
-          ..sort((a, b) => b.chapterIndex.compareTo(a.chapterIndex));
-
-    final failed =
-        chapters
-            .where((c) => c.deviceState == OfflineDeviceState.error)
-            .toList()
-          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
-
-    final hasAny =
-        active.isNotEmpty || downloaded.isNotEmpty || failed.isNotEmpty;
-
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -107,29 +82,68 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
           ],
         ),
       ),
-      body: !hasAny
-          ? Emoticons(title: context.l10n.offlineChaptersEmpty)
-          : ListView(
-              padding: const EdgeInsets.only(bottom: 16),
-              children: [
-                if (active.isNotEmpty) ...[
-                  _SectionHeader(context.l10n.offlineChaptersActiveSection),
-                  for (final ch in active) _ActiveChapterTile(chapter: ch),
-                ],
-
-                if (downloaded.isNotEmpty) ...[
-                  _SectionHeader(context.l10n.offlineChaptersDownloadedSection),
-                  for (final ch in downloaded)
-                    _DownloadedChapterTile(chapter: ch, mangaId: mangaId),
-                ],
-
-                if (failed.isNotEmpty) ...[
-                  _SectionHeader(context.l10n.offlineChaptersErrorSection),
-                  for (final ch in failed) _FailedChapterTile(chapter: ch),
-                ],
-              ],
-            ),
+      body: OfflineSeriesChaptersBody(mangaId: mangaId),
     );
+  }
+}
+
+class OfflineSeriesChaptersBody extends ConsumerWidget {
+  const OfflineSeriesChaptersBody({super.key, required this.mangaId});
+
+  final int mangaId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chaptersAsync = ref.watch(offlineChaptersForMangaProvider(mangaId));
+    final chapters = chaptersAsync.value ?? const [];
+
+    final active =
+        chapters
+            .where(
+              (c) =>
+                  c.deviceState == OfflineDeviceState.queued ||
+                  c.deviceState == OfflineDeviceState.downloading,
+            )
+            .toList()
+          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
+
+    final downloaded =
+        chapters
+            .where((c) => c.deviceState == OfflineDeviceState.downloaded)
+            .toList()
+          ..sort((a, b) => b.chapterIndex.compareTo(a.chapterIndex));
+
+    final failed =
+        chapters
+            .where((c) => c.deviceState == OfflineDeviceState.error)
+            .toList()
+          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
+
+    final hasAny =
+        active.isNotEmpty || downloaded.isNotEmpty || failed.isNotEmpty;
+
+    return !hasAny
+        ? Emoticons(title: context.l10n.offlineChaptersEmpty)
+        : ListView(
+            padding: const EdgeInsets.only(bottom: 16),
+            children: [
+              if (active.isNotEmpty) ...[
+                _SectionHeader(context.l10n.offlineChaptersActiveSection),
+                for (final ch in active) _ActiveChapterTile(chapter: ch),
+              ],
+
+              if (downloaded.isNotEmpty) ...[
+                _SectionHeader(context.l10n.offlineChaptersDownloadedSection),
+                for (final ch in downloaded)
+                  _DownloadedChapterTile(chapter: ch, mangaId: mangaId),
+              ],
+
+              if (failed.isNotEmpty) ...[
+                _SectionHeader(context.l10n.offlineChaptersErrorSection),
+                for (final ch in failed) _FailedChapterTile(chapter: ch),
+              ],
+            ],
+          );
   }
 }
 
@@ -199,13 +213,16 @@ class _ActiveChapterTile extends ConsumerWidget {
       leading: leading,
       title: Text(chapter.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle),
-      onTap: () => deleteChapterFromDevice(ref, chapter.id),
+      trailing: TextButton(
+        onPressed: () => deleteChapterFromDevice(ref, chapter.id),
+        child: Text(context.l10n.cancel),
+      ),
     );
   }
 }
 
 
-class _DownloadedChapterTile extends ConsumerWidget {
+class _DownloadedChapterTile extends HookConsumerWidget {
   const _DownloadedChapterTile({required this.chapter, required this.mangaId});
 
   final OfflineChapter chapter;
@@ -214,40 +231,158 @@ class _DownloadedChapterTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isRead = chapter.isRead;
+    final desktop = context.usesDesktopShell;
+    final hovered = useState(false);
+    final pointer = useRef(Offset.zero);
 
-    return ListTile(
-      leading: Icon(
-        FluentIcons.checkmark_circle_24_filled,
-        color: isRead
-            ? context.theme.colorScheme.onSurfaceVariant
-            : context.theme.colorScheme.primary,
+    void read() => ReaderRoute(
+      mangaId: mangaId,
+      chapterId: chapter.id,
+      showReaderLayoutAnimation: false,
+    ).push(context);
+
+    Future<void> openMenu(Offset point) async {
+      final picked = await showMenu<String>(
+        context: context,
+        position: menuAnchorForPoint(context, point),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        popUpAnimationStyle: context.motionStyle,
+        items: [
+          PopupMenuItem(
+            value: 'read',
+            child: ChapterMenuRow(
+              icon: FluentIcons.book_open_24_regular,
+              label: context.l10n.offlineChapterRead,
+            ),
+          ),
+          PopupMenuItem(
+            value: 'view',
+            child: ChapterMenuRow(
+              icon: FluentIcons.book_24_regular,
+              label: context.l10n.viewManga,
+            ),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(
+                  FluentIcons.delete_24_regular,
+                  size: 20,
+                  color: context.colorScheme.error,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  context.l10n.offlineChapterDelete,
+                  style: TextStyle(color: context.colorScheme.error),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+      if (!context.mounted) return;
+      switch (picked) {
+        case 'read':
+          read();
+        case 'view':
+          MangaRoute(mangaId: mangaId).push(context);
+        case 'delete':
+          confirmDeleteChapterFromDevice(ref, chapter.id);
+      }
+    }
+
+    final tile = LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = desktop && constraints.maxWidth < 500;
+        return ListTile(
+          leading: Icon(
+            FluentIcons.checkmark_circle_24_filled,
+            color: isRead
+                ? context.theme.colorScheme.onSurfaceVariant
+                : context.theme.colorScheme.primary,
+          ),
+          title: Text(
+            chapter.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isRead ? context.theme.colorScheme.onSurfaceVariant : null,
+            ),
+          ),
+          subtitle: desktop
+              ? narrow
+                    ? Text(int.tryParse(chapter.uploadDate ?? '').toDateString)
+                    : null
+              : chapter.bytes > 0
+              ? Text(
+                  formatBytes(chapter.bytes),
+                  style: TextStyle(
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              : null,
+          trailing: desktop
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!narrow)
+                      Text(
+                        int.tryParse(chapter.uploadDate ?? '').toDateString,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    if (!narrow) const SizedBox(width: 12),
+                    IgnorePointer(
+                      ignoring: !hovered.value,
+                      child: Opacity(
+                        opacity: hovered.value ? 1 : 0,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: context.l10n.offlineChapterDelete,
+                              icon: const Icon(FluentIcons.delete_24_regular),
+                              onPressed: () => confirmDeleteChapterFromDevice(
+                                ref,
+                                chapter.id,
+                              ),
+                            ),
+                            Listener(
+                              onPointerDown: (event) =>
+                                  pointer.value = event.position,
+                              child: IconButton(
+                                tooltip: context.l10n.more,
+                                icon: const Icon(Icons.more_vert),
+                                onPressed: () => openMenu(pointer.value),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : IconButton(
+                  tooltip: context.l10n.offlineChapterDelete,
+                  icon: const Icon(FluentIcons.delete_24_regular),
+                  onPressed: () =>
+                      confirmDeleteChapterFromDevice(ref, chapter.id),
+                ),
+          onTap: read,
+        );
+      },
+    );
+    if (!desktop) return tile;
+    return MouseRegion(
+      onEnter: (_) => hovered.value = true,
+      onExit: (_) => hovered.value = false,
+      child: GestureDetector(
+        onSecondaryTapDown: (event) => openMenu(event.globalPosition),
+        child: tile,
       ),
-      title: Text(
-        chapter.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: isRead ? context.theme.colorScheme.onSurfaceVariant : null,
-        ),
-      ),
-      subtitle: chapter.bytes > 0
-          ? Text(
-              formatBytes(chapter.bytes),
-              style: TextStyle(
-                color: context.theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          : null,
-      trailing: IconButton(
-        tooltip: context.l10n.offlineChapterDelete,
-        icon: const Icon(FluentIcons.delete_24_regular),
-        onPressed: () => confirmDeleteChapterFromDevice(ref, chapter.id),
-      ),
-      onTap: () => ReaderRoute(
-        mangaId: mangaId,
-        chapterId: chapter.id,
-        showReaderLayoutAnimation: false,
-      ).push(context),
     );
   }
 }

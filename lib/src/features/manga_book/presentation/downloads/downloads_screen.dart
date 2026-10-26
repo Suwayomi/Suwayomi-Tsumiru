@@ -15,8 +15,10 @@ import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/desktop/desktop_view_switch.dart';
 import '../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../account/data/account_providers.dart';
+import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
 import '../../../offline/presentation/offline_files_view.dart';
@@ -30,6 +32,36 @@ import '../../domain/downloads_queue/downloads_queue_model.dart';
 import 'controller/downloads_controller.dart';
 import 'widgets/downloads_fab.dart';
 import 'widgets/server_downloads_body.dart';
+
+const _downloadsTextButtonChrome = 16.0 + 16.0 + 18.0 + 8.0;
+const _downloadsFilledButtonChrome = 16.0 + 24.0 + 18.0 + 8.0;
+
+// Compact controls first so the search retains its preferred width.
+bool _downloadsToolbarIsCompact(
+  BuildContext context,
+  BoxConstraints constraints, {
+  required bool showRetry,
+  required bool showClear,
+  required bool showToggle,
+  required String retryLabel,
+  required String clearLabel,
+  required String toggleLabel,
+}) {
+  if (!constraints.hasBoundedWidth) return false;
+  double textWidth(String value) => measureToolbarLabelWidth(context, value);
+
+  final actionCount =
+      (showRetry ? 1 : 0) + (showClear ? 1 : 0) + (showToggle ? 1 : 0);
+  final neededBesidesSearch =
+      2 * kDesktopToolbarSlotHPadding +
+      actionCount * kDesktopTopBarGap +
+      (showRetry ? _downloadsTextButtonChrome + textWidth(retryLabel) : 0.0) +
+      (showClear ? _downloadsTextButtonChrome + textWidth(clearLabel) : 0.0) +
+      (showToggle
+          ? _downloadsFilledButtonChrome + textWidth(toggleLabel)
+          : 0.0);
+  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
+}
 
 class DownloadsScreen extends HookConsumerWidget {
   const DownloadsScreen({super.key});
@@ -70,6 +102,7 @@ class DownloadsScreen extends HookConsumerWidget {
     final phone = context.windowSizeClass == WindowSizeClass.compact;
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
+    final desktop = context.usesDesktopShell;
     final tabBar = TabBar(
       controller: tabController,
       // Fill aligns the underline with each tab; the global center alignment serves scrollable categories.
@@ -78,6 +111,15 @@ class DownloadsScreen extends HookConsumerWidget {
         Tab(text: context.l10n.downloadsServerTab),
         Tab(text: context.l10n.downloadsOnDeviceTab),
       ],
+    );
+    final viewSwitch = DesktopViewSwitchBar(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+      labels: [
+        context.l10n.downloadsServerTab,
+        context.l10n.downloadsOnDeviceTab,
+      ],
+      selectedIndex: tabController.index,
+      onChanged: tabController.animateTo,
     );
     // The shell hosts desktop actions and search; tabs remain in the page body.
     final topBar = showsMergedTopBar(context);
@@ -88,12 +130,51 @@ class DownloadsScreen extends HookConsumerWidget {
       onNavigate: () =>
           ref.read(unifiedSearchQueryProvider.notifier).state = '',
     );
-    final actions = <Widget>[
+    Widget queueAction({
+      required String label,
+      required IconData icon,
+      required VoidCallback? onPressed,
+      String? tooltip,
+      bool compact = false,
+    }) => desktop && !compact
+        ? Tooltip(
+            message: tooltip ?? label,
+            child: TextButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 18),
+              label: Text(label),
+            ),
+          )
+        : IconButton(
+            tooltip: tooltip ?? label,
+            onPressed: onPressed,
+            icon: Icon(icon),
+          );
+    final showRetry = !onDeviceTab && visibleErrored.isNotEmpty;
+    final showClear = !onDeviceTab && visibleIds.isNotBlank;
+    final showToggle = desktop && !onDeviceTab && visibleIds.isNotEmpty;
+    final toggleLabel = downloaderRunState == DownloaderState.STARTED
+        ? context.l10n.pause
+        : context.l10n.resume;
+    final toggleIcon = downloaderRunState == DownloaderState.STARTED
+        ? FluentIcons.pause_24_regular
+        : FluentIcons.play_24_regular;
+    Future<void> toggleDownloads() async {
+      final repo = ref.read(downloadsRepositoryProvider);
+      (await AsyncValue.guard(
+        downloaderRunState == DownloaderState.STARTED
+            ? repo.stopDownloads
+            : repo.startDownloads,
+      )).showToastOnError(ref.read(toastProvider));
+    }
+
+    List<Widget> buildActions({bool compact = false}) => <Widget>[
       if (phone && !persistentBox)
         const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
-      if (!onDeviceTab && visibleErrored.isNotEmpty)
-        IconButton(
-          tooltip: context.l10n.retryAll,
+      if (showRetry)
+        queueAction(
+          label: context.l10n.retryAll,
+          compact: compact,
           onPressed: () async {
             final toast = ref.read(toastProvider);
             final repo = ref.read(downloadsRepositoryProvider);
@@ -105,10 +186,13 @@ class DownloadsScreen extends HookConsumerWidget {
             });
             result.showToastOnError(toast);
           },
-          icon: const Icon(FluentIcons.replay_24_regular),
+          icon: FluentIcons.replay_24_regular,
         ),
-      if (!onDeviceTab && visibleIds.isNotBlank)
-        IconButton(
+      if (showClear)
+        queueAction(
+          label: context.l10n.confirmClearQueueTitle,
+          compact: compact,
+          tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
           onPressed: !canDownload
               ? null
               : () async {
@@ -131,15 +215,29 @@ class DownloadsScreen extends HookConsumerWidget {
                   ref.read(toastProvider),
                   );
                 },
-          tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
-          icon: const Icon(FluentIcons.delete_dismiss_24_regular),
+          icon: FluentIcons.delete_dismiss_24_regular,
         ),
+      if (showToggle)
+        compact
+            ? Tooltip(
+                message: toggleLabel,
+                child: FilledButton(
+                  onPressed: !canDownload ? null : toggleDownloads,
+                  child: Icon(toggleIcon, size: 18),
+                ),
+              )
+            : FilledButton.icon(
+                onPressed: !canDownload ? null : toggleDownloads,
+                icon: Icon(toggleIcon, size: 18),
+                label: Text(toggleLabel),
+              ),
     ];
+    final actions = buildActions();
     final scaffold = Scaffold(
       appBar: topBar
           ? null
           : AppBar(
-              title: context.usesDesktopShell
+              title: desktop
                   ? Align(
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(
@@ -148,7 +246,9 @@ class DownloadsScreen extends HookConsumerWidget {
                       ),
                     )
                   : Text(context.l10n.downloads),
-              bottom: persistentBox
+              bottom: desktop
+                  ? null
+                  : persistentBox
                   ? PhoneSearchBoxBottom(
                       origin: PhoneSearchOrigin.plain,
                       below: tabBar,
@@ -157,7 +257,9 @@ class DownloadsScreen extends HookConsumerWidget {
               actions: actions,
       ),
       // Unknown run state offers Resume: starting an already-running downloader is a no-op.
-      floatingActionButton: onDeviceTab
+      floatingActionButton: desktop && !onDeviceTab
+          ? null
+          : onDeviceTab
           ? const OfflineDownloadsFab()
           : (showDownloadsFAB &&
                   (visibility.manageAll || visibleIds.isNotBlank)
@@ -166,10 +268,10 @@ class DownloadsScreen extends HookConsumerWidget {
                   )
                 : null),
       // Desktop has no page app bar to host these tabs.
-      body: topBar
+      body: topBar || desktop
           ? Column(
               children: [
-                tabBar,
+                if (desktop) viewSwitch else tabBar,
                 Expanded(
                   child: TabBarView(
                     controller: tabController,
@@ -197,7 +299,24 @@ class DownloadsScreen extends HookConsumerWidget {
     );
     return topBar
         ? TopBarSlot(
-            content: desktopSearchSlotContent(search: search, actions: actions),
+            content: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = _downloadsToolbarIsCompact(
+                  context,
+                  constraints,
+                  showRetry: showRetry,
+                  showClear: showClear,
+                  showToggle: showToggle,
+                  retryLabel: context.l10n.retryAll,
+                  clearLabel: context.l10n.confirmClearQueueTitle,
+                  toggleLabel: toggleLabel,
+                );
+                return desktopSearchSlotContent(
+                  search: search,
+                  actions: buildActions(compact: compact),
+                );
+              },
+            ),
             minWidth: searchTopBarSlotMinWidth(actions.length),
             child: scaffold,
           )
