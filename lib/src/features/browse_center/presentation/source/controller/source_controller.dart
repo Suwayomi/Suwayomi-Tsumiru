@@ -212,3 +212,19 @@ class SourceLastUsed extends _$SourceLastUsed
   @override
   String? build() => initialize(DBKeys.sourceLastUsed);
 }
+
+@riverpod
+class SourceRecentIds extends _$SourceRecentIds
+    with SharedPreferenceClientMixin<List<String>> {
+  static const maxRecentSources = 4;
+
+  @override
+  List<String>? build() => initialize(DBKeys.sourceRecentIds);
+
+  void recordOpened(String id) {
+    final current = state ?? const <String>[];
+    if (current.firstOrNull == id) return;
+    final next = [id, for (final e in current) if (e != id) e];
+    update(next.take(maxRecentSources).toList());
+  }
+}

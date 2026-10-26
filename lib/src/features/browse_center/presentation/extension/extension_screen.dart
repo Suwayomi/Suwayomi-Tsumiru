@@ -16,8 +16,11 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../domain/extension/extension_model.dart';
+import '../browse/browse_no_search_results.dart';
+import '../browse/browse_section_grid.dart';
 import 'controller/extension_actions.dart';
 import 'controller/extension_controller.dart';
+import 'widgets/extension_card.dart';
 import 'widgets/extension_list_tile.dart';
 
 class ExtensionScreen extends HookConsumerWidget {
@@ -28,22 +31,40 @@ class ExtensionScreen extends HookConsumerWidget {
     required String title,
     required List<Extension>? extensions,
     Widget? headerTrailing,
+    bool desktop = false,
   }) {
-    if (extensions.isBlank) return <Widget>[];
+    final list = extensions ?? const [];
+    if (list.isEmpty) return <Widget>[];
     return [
       SliverToBoxAdapter(
-        child: ListTile(title: Text(title), trailing: headerTrailing),
+        child: desktop
+            ? BrowseSectionHeading(
+                title: title,
+                count: list.length,
+                trailing: headerTrailing,
+              )
+            : ListTile(title: Text(title), trailing: headerTrailing),
       ),
-      SliverList(
-        key: key,
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => ExtensionListTile(
-            key: ValueKey(extensions[index].pkgName),
-            extension: extensions[index],
+      if (desktop)
+        BrowseCardGrid(
+          key: key,
+          itemCount: list.length,
+          itemBuilder: (context, index) => ExtensionCard(
+            key: ValueKey(list[index].pkgName),
+            extension: list[index],
           ),
-          childCount: extensions!.length,
+        )
+      else
+        SliverList(
+          key: key,
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => ExtensionListTile(
+              key: ValueKey(list[index].pkgName),
+              extension: list[index],
+            ),
+            childCount: list.length,
+          ),
         ),
-      ),
     ];
   }
 
@@ -78,68 +99,86 @@ class ExtensionScreen extends HookConsumerWidget {
       return;
     }, [extensionMapData.value]);
 
+    final query = ref.watch(extensionQueryProvider);
+    final desktop = context.usesDesktopShell;
     final body = extensionMapData.showUiWhenData(
       context,
-      (data) =>
-          (extensionMap.isEmpty &&
-              installed.isBlank &&
-              update.isBlank &&
-              all.isBlank)
-          ? Emoticons(
-              title: context.l10n.extensionListEmpty,
-              button: TextButton(
-                onPressed: refresh,
-                child: Text(context.l10n.refresh),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: refresh,
-              child: CustomScrollView(
-                slivers: [
-                  if (update.isNotBlank)
-                    ...extensionSet(
-                      key: const ValueKey("update"),
-                      title: languageMap["update"]?.displayName ?? "",
-                      extensions: update,
-                      headerTrailing: TextButton(
-                        onPressed: updatingAll.value
-                            ? null
-                            : () async {
-                                updatingAll.value = true;
-                                await AppUtils.guard(
-                                  () => ref
-                                      .read(extensionActionsProvider)
-                                      .updateAll([
-                                        for (final e in update ?? []) e.pkgName,
-                                      ]),
-                                  ref.read(toastProvider),
-                                );
-                                if (context.mounted) updatingAll.value = false;
-                              },
-                        child: Text(context.l10n.updateAll),
-                      ),
-                    ),
-                  if (installed.isNotBlank)
-                    ...extensionSet(
-                      key: const ValueKey("installed"),
-                      title: languageMap["installed"]?.displayName ?? "",
-                      extensions: installed,
-                    ),
-                  if (all.isNotBlank)
-                    ...extensionSet(
-                      key: const ValueKey("all"),
-                      title: languageMap["all"]?.displayName ?? "",
-                      extensions: all,
-                    ),
-                  for (final k in extensionMap.keys)
-                    ...extensionSet(
-                      key: ValueKey(k),
-                      title: languageMap[k]?.displayName ?? k,
-                      extensions: extensionMap[k],
-                    ),
-                ],
-              ),
+      (data) {
+        final hasVisible =
+            installed.isNotBlank ||
+            update.isNotBlank ||
+            all.isNotBlank ||
+            extensionMap.values.any((list) => list.isNotBlank);
+        if (!hasVisible) {
+          if (query.isNotBlank) return const BrowseNoSearchResults();
+          return Emoticons(
+            title: context.l10n.extensionListEmpty,
+            button: TextButton(
+              onPressed: refresh,
+              child: Text(context.l10n.refresh),
             ),
+          );
+        }
+        final scrollView = CustomScrollView(
+          slivers: [
+            if (update.isNotBlank)
+              ...extensionSet(
+                key: const ValueKey("update"),
+                title: languageMap["update"]?.displayName ?? "",
+                extensions: update,
+                desktop: desktop,
+                headerTrailing: TextButton(
+                  onPressed: updatingAll.value
+                      ? null
+                      : () async {
+                          updatingAll.value = true;
+                          await AppUtils.guard(
+                            () => ref
+                                .read(extensionActionsProvider)
+                                .updateAll([
+                                  for (final e in update ?? []) e.pkgName,
+                                ]),
+                            ref.read(toastProvider),
+                          );
+                          if (context.mounted) updatingAll.value = false;
+                        },
+                  child: Text(context.l10n.updateAll),
+                ),
+              ),
+            if (installed.isNotBlank)
+              ...extensionSet(
+                key: const ValueKey("installed"),
+                title: languageMap["installed"]?.displayName ?? "",
+                extensions: installed,
+                desktop: desktop,
+              ),
+            if (all.isNotBlank)
+              ...extensionSet(
+                key: const ValueKey("all"),
+                title: languageMap["all"]?.displayName ?? "",
+                extensions: all,
+                desktop: desktop,
+              ),
+            for (final k in extensionMap.keys)
+              if (extensionMap[k].isNotBlank)
+                ...extensionSet(
+                  key: ValueKey(k),
+                  title: languageMap[k]?.displayName ?? k,
+                  extensions: extensionMap[k],
+                  desktop: desktop,
+                ),
+          ],
+        );
+        return RefreshIndicator(
+          onRefresh: refresh,
+          child: desktop
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: scrollView,
+                )
+              : scrollView,
+        );
+      },
       refresh: refresh,
     );
 

@@ -11,7 +11,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
-import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
@@ -23,6 +22,8 @@ import '../../../../manga_book/presentation/manga_details/widgets/chapter_contex
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../controller/extension_actions.dart';
+import 'extension_context_menu.dart';
+import 'extension_info_dialog.dart';
 
 class ExtensionListTile extends HookConsumerWidget {
   const ExtensionListTile({super.key, required this.extension});
@@ -35,7 +36,7 @@ class ExtensionListTile extends HookConsumerWidget {
     final access = ref.watch(settledAccountAccessProvider);
     return ListTile(
       key: key,
-      onTap: () => ExtensionInfoRoute(pkgName: extension.pkgName).push(context),
+      onTap: () => openExtensionInfo(context, pkgName: extension.pkgName),
       leading: ClipRRect(
         borderRadius: KBorderRadius.r8.radius,
         child: ServerImageWithCpi(
@@ -134,8 +135,9 @@ class ExtensionListTileTailing extends StatelessWidget {
       Enum$UserPermission.UNINSTALL_EXTENSIONS,
     );
     final running = runningAction.value;
+    final desktop = context.usesDesktopShell;
     if (extension.isObsolete.ifNull()) {
-      return OutlinedButton(
+      final button = OutlinedButton(
         onPressed:
             extension.isInstalled.ifNull() && canUninstall && running == null
             ? () => _run(
@@ -148,9 +150,17 @@ class ExtensionListTileTailing extends StatelessWidget {
           style: TextStyle(color: context.colorScheme.error),
         ),
       );
+      if (!desktop) return button;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button,
+          _DesktopMoreButton(extension: extension, ref: ref),
+        ],
+      );
     }
     if (!extension.isInstalled.ifNull()) {
-      return TextButton(
+      final installButton = TextButton(
         onPressed: canInstall && running == null
             ? () => _run(context.l10n.installing, (actions) async {
                 if (extension.pkgName.isBlank) {
@@ -164,32 +174,49 @@ class ExtensionListTileTailing extends StatelessWidget {
             : null,
         child: Text(running ?? context.l10n.install),
       );
+      if (!desktop) return installButton;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          installButton,
+          _DesktopMoreButton(extension: extension, ref: ref),
+        ],
+      );
     }
     final hasUpdate = extension.hasUpdate.ifNull();
+    final actionButton = TextButton(
+      onPressed: (hasUpdate || canUninstall) && running == null
+          ? () => _run(
+              hasUpdate ? context.l10n.updating : context.l10n.uninstalling,
+              (actions) async {
+                if (extension.pkgName.isBlank) {
+                  throw context.l10n.errorExtension;
+                }
+                if (hasUpdate) {
+                  await actions.update(extension.pkgName);
+                } else {
+                  await actions.uninstall(extension.pkgName);
+                }
+              },
+            )
+          : null,
+      child: Text(
+        running ?? (hasUpdate ? context.l10n.update : context.l10n.uninstall),
+      ),
+    );
+    if (desktop) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          actionButton,
+          _DesktopMoreButton(extension: extension, ref: ref),
+        ],
+      );
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextButton(
-          onPressed: (hasUpdate || canUninstall) && running == null
-              ? () => _run(
-                  hasUpdate ? context.l10n.updating : context.l10n.uninstalling,
-                  (actions) async {
-                    if (extension.pkgName.isBlank) {
-                      throw context.l10n.errorExtension;
-                    }
-                    if (hasUpdate) {
-                      await actions.update(extension.pkgName);
-                    } else {
-                      await actions.uninstall(extension.pkgName);
-                    }
-                  },
-                )
-              : null,
-          child: Text(
-            running ??
-                (hasUpdate ? context.l10n.update : context.l10n.uninstall),
-          ),
-        ),
+        actionButton,
         // A third control squeezes the extension name off a phone screen.
         if (hasUpdate)
           PopupMenuButton<VoidCallback>(
@@ -242,4 +269,32 @@ class ExtensionListTileTailing extends StatelessWidget {
           languageCode: extension.language?.code,
         ),
       );
+}
+
+class _DesktopMoreButton extends StatelessWidget {
+  const _DesktopMoreButton({required this.extension, required this.ref});
+
+  final Extension extension;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: context.l10n.more,
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
+      onPressed: () {
+        final box = context.findRenderObject() as RenderBox?;
+        if (box == null) return;
+        showExtensionContextMenu(
+          context: context,
+          ref: ref,
+          position: menuAnchorForRect(
+            context,
+            box.localToGlobal(Offset.zero) & box.size,
+          ),
+          extension: extension,
+        );
+      },
+    );
+  }
 }

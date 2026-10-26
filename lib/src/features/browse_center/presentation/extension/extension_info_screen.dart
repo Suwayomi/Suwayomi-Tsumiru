@@ -86,20 +86,32 @@ class ExtensionInfoScreen extends HookConsumerWidget {
                         outerSize: const Size.square(48),
                         innerSize: const Size.square(24),
                       ),
-                      title: Text(source.displayName ?? source.name),
+                      title: Text(source.displayName),
                       onTap: () => SourceTypeRoute(
                         sourceId: source.id,
                         sourceType: SourceType.POPULAR,
                       ).push(context),
-                      trailing: source.isConfigurable
-                          ? IconButton(
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (source.supportsLatest)
+                            TextButton(
+                              onPressed: () => SourceTypeRoute(
+                                sourceId: source.id,
+                                sourceType: SourceType.LATEST,
+                              ).push(context),
+                              child: Text(context.l10n.latest),
+                            ),
+                          if (source.isConfigurable)
+                            IconButton(
                               tooltip: context.l10n.settings,
                               icon: const Icon(FluentIcons.settings_24_regular),
                               onPressed: () => SourcePreferenceRoute(
                                 sourceId: source.id,
                               ).push(context),
-                            )
-                          : null,
+                            ),
+                        ],
+                      ),
                     ),
               ],
             ),
