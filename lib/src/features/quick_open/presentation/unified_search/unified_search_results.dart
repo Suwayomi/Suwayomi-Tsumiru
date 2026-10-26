@@ -89,7 +89,7 @@ bool submitUnifiedQuery(
   if (includeLibrary) {
     final hits = ref.read(unifiedLibraryResultsForProvider(query));
     if (hits.isNotEmpty) {
-      MangaRoute(mangaId: hits.first.id).push(context);
+      pushDetailPage(context, MangaRoute(mangaId: hits.first.id).location);
       close();
       return true;
     }
@@ -328,7 +328,7 @@ class UnifiedSearchResults extends HookConsumerWidget {
             for (final m in libraryHits)
               selectable(
                 action: () {
-                  MangaRoute(mangaId: m.id).push(context);
+                  pushDetailPage(context, MangaRoute(mangaId: m.id).location);
                   close();
                 },
                 tile: (onTap) => ListTile(

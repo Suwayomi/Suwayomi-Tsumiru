@@ -45,6 +45,7 @@ String webRouteTitle(
     ['extension'] => l10n.extensions,
     ['migrate'] || ['migration', ...] => l10n.migrate,
     ['global-search'] => l10n.globalSearch,
+    ['global-search', 'source', _] => l10n.sources,
     ['library-duplicates'] => l10n.duplicatedEntries,
     ['library-update-errors'] => l10n.libraryUpdateErrors,
     ['source-filter'] => l10n.browse,

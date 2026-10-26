@@ -584,7 +584,10 @@ class _PhoneSearchResults extends ConsumerWidget {
                 style: context.textTheme.bodySmall,
               ),
               onTap: () => onLeave(
-                () => MangaRoute(mangaId: item.manga.id).push(context),
+                () => pushDetailPage(
+                  context,
+                  MangaRoute(mangaId: item.manga.id).location,
+                ),
               ),
             ),
         ],
@@ -650,8 +653,12 @@ class _PhoneSearchResults extends ConsumerWidget {
                   fallbackThumbnailUrl: m.thumbnailUrl,
                   coverVersion: m.coverVersion,
                   fallbackCoverVersion: m.thumbnailUrlLastFetched,
-                  onTap: () =>
-                      onLeave(() => MangaRoute(mangaId: m.id).push(context)),
+                  onTap: () => onLeave(
+                    () => pushDetailPage(
+                      context,
+                      MangaRoute(mangaId: m.id).location,
+                    ),
+                  ),
                 );
               },
             )
@@ -680,8 +687,12 @@ class _PhoneSearchResults extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodySmall,
                 ),
-                onTap: () =>
-                    onLeave(() => MangaRoute(mangaId: m.id).push(context)),
+                onTap: () => onLeave(
+                  () => pushDetailPage(
+                    context,
+                    MangaRoute(mangaId: m.id).location,
+                  ),
+                ),
               ),
           ],
         ],
