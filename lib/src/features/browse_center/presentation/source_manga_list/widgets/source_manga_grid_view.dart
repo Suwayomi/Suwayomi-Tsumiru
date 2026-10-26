@@ -11,6 +11,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/emoticons.dart';
@@ -19,6 +20,7 @@ import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../../domain/source/source_model.dart';
 import '../controller/source_manga_controller.dart';
+import 'desktop_source_cover_tile.dart';
 
 class SourceMangaGridView extends ConsumerWidget {
   const SourceMangaGridView({
@@ -29,6 +31,8 @@ class SourceMangaGridView extends ConsumerWidget {
     required this.selectedIds,
     required this.selecting,
     required this.onToggleSelection,
+    required this.onAddToLibrary,
+    this.addEnabled = true,
     this.source,
   });
   final PagingController<int, MangaDto> controller;
@@ -38,6 +42,8 @@ class SourceMangaGridView extends ConsumerWidget {
   final Set<int> selectedIds;
   final bool selecting;
   final void Function(int mangaId) onToggleSelection;
+  final void Function(MangaDto manga) onAddToLibrary;
+  final bool addEnabled;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,16 +82,34 @@ class SourceMangaGridView extends ConsumerWidget {
               child: Text(context.l10n.refresh),
             ),
           ),
-          itemBuilder: (context, item, index) => MangaCoverGridTile(
-            manga: item,
-            selected: selectedIds.contains(item.id),
-            showDarkOverlay: item.user.inLibrary.ifNull(),
-            linkLocation: MangaRoute(mangaId: item.id).location,
-            onLongPress: () => onToggleSelection(item.id),
-            onPressed: () => selecting
-                ? onToggleSelection(item.id)
-                : MangaRoute(mangaId: item.id).push(context),
-          ),
+          itemBuilder: (context, item, index) {
+            final tile = MangaCoverGridTile(
+              manga: item,
+              selected: selectedIds.contains(item.id),
+              showSelectedCheck: !context.usesDesktopShell,
+              showDarkOverlay: item.user.inLibrary.ifNull(),
+              linkLocation: MangaRoute(mangaId: item.id).location,
+              onLongPress: () => onToggleSelection(item.id),
+              onPressed: () =>
+                  selecting ||
+                      (context.usesDesktopShell &&
+                          AppUtils.isMultiSelectPressed())
+                  ? onToggleSelection(item.id)
+                  : MangaRoute(mangaId: item.id).push(context),
+            );
+            if (!context.usesDesktopShell) {
+              return tile;
+            }
+            return DesktopSourceCoverTile(
+              manga: item,
+              selecting: selecting,
+              selected: selectedIds.contains(item.id),
+              onToggleSelection: () => onToggleSelection(item.id),
+              onAddToLibrary: onAddToLibrary,
+              addEnabled: addEnabled,
+              child: tile,
+            );
+          },
         ),
         gridDelegate: mangaCoverGridDelegate(ref.watch(gridMinWidthProvider)),
       ),
