@@ -407,6 +407,7 @@ class _FailedChapterTile extends ConsumerWidget {
             : null,
       ),
       PopupMenuButton<String>(
+        icon: const Icon(FluentIcons.more_vertical_24_regular),
         onSelected: (_) => deleteChapterFromDevice(ref, chapter.id),
         itemBuilder: (context) => [
           PopupMenuItem(value: 'cancel', child: Text(context.l10n.cancel)),
