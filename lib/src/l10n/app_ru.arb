@@ -469,7 +469,7 @@
             }
         }
     },
-    "obsolete": "Устаревшее",
+    "obsolete": "Устаревшие",
     "@obsolete": {
         "description": "Text to show that the extension has become Obsolete"
     },
@@ -3671,5 +3671,185 @@
     "removeCustomCovers": "Удалить свои обложки",
     "removeCustomCoversTitle": "Удалить свои обложки?",
     "removeCustomCoversBody": "Все серии вернутся к серверным обложкам во всех ваших клиентах Tsumiru.",
-    "customCoversRemoved": "Свои обложки удалены"
+    "customCoversRemoved": "Свои обложки удалены",
+    "migrationSourceNotInstalled": "Источник не установлен",
+    "migrationSortCount": "Количество",
+    "migrationSourcesAndOptions": "Источники и параметры",
+    "migrationReviewMatches": "Проверить совпадения",
+    "migrationSeriesCount": "{count} серий",
+    "@migrationSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationSeriesFromSource": "{count} серий из {source}",
+    "@migrationSeriesFromSource": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationNoObsoleteSources": "Нет устаревших источников",
+    "migrationShowAllSources": "Показать все источники",
+    "migrationClearSearch": "Очистить поиск",
+    "migrationFailedGeneric": "Не удалось перенести",
+    "migrationFailedCount": "{count} с ошибкой",
+    "@migrationFailedCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationFailedSnack": "{count, plural, =1{Не удалось перенести 1 серию} other{{count} серий не удалось перенести}}",
+    "@migrationFailedSnack": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationBlockedNoChapters": "На {source} нет глав",
+    "@migrationBlockedNoChapters": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedUnmatched": "{count, plural, =1{1 глава с прогрессом не найдена на {source}} other{{count} глав с прогрессом не найдено на {source}}}",
+    "@migrationBlockedUnmatched": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedChaptersUnavailable": "Не удалось загрузить главы с {source}",
+    "@migrationBlockedChaptersUnavailable": {
+        "description": "Reason shown when the target source's chapters could not be loaded",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedSelfTarget": "Цель — сама серия или её исходный источник",
+    "@migrationBlockedSelfTarget": {
+        "description": "Reason shown when the picked migration target is the series itself or lives on its origin source"
+    },
+    "migrationFailureUnsyncedReads": "Есть несинхронизированные офлайн-прочтения. Подключитесь и синхронизируйте, затем повторите.",
+    "@migrationFailureUnsyncedReads": {
+        "description": "Failure shown when offline reads are unsynced and the source cannot be removed yet"
+    },
+    "migrationFailureCopyFailed": "Не удалось скопировать",
+    "@migrationFailureCopyFailed": {
+        "description": "Failure shown when copying to the new source failed"
+    },
+    "migrationFailureRemovalFailed": "Скопировано в новый источник, но удалить старый не удалось",
+    "@migrationFailureRemovalFailed": {
+        "description": "Failure shown when copying succeeded but removing the old source failed"
+    },
+    "migrationNeedsReview": "Проверить это совпадение",
+    "moveSeriesToTop": "Переместить серию наверх",
+    "@moveSeriesToTop": {
+        "description": "Move all queued chapters of a series to the top"
+    },
+    "moveSeriesToBottom": "Переместить серию вниз",
+    "@moveSeriesToBottom": {
+        "description": "Move all queued chapters of a series to the bottom"
+    },
+    "keepOnThisDevice": "Хранить на этом устройстве",
+    "@keepOnThisDevice": {
+        "description": "Heading for a series' offline keep rules"
+    },
+    "cancelDownloadsTitle": "{count, plural, =1{Отменить 1 загрузку?} other{Отменить {count} загрузок?}}",
+    "@cancelDownloadsTitle": {
+        "description": "Confirmation title before cancelling selected downloads",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cancelDownloadsMessage": "Выбранные главы будут удалены из очереди загрузки.",
+    "@cancelDownloadsMessage": {
+        "description": "Confirmation message before cancelling selected downloads"
+    },
+    "cancelDownloads": "Отменить загрузки",
+    "@cancelDownloads": {
+        "description": "Confirm cancelling selected downloads"
+    },
+    "offlineChapterRead": "Читать",
+    "@offlineChapterRead": {
+        "description": "Open a downloaded chapter in the reader"
+    },
+    "hideSource": "Скрыть источник",
+    "@hideSource": {
+        "description": "Menu item to hide a source from the Browse list"
+    },
+    "hiddenSources": "Скрытые источники",
+    "@hiddenSources": {
+        "description": "Row in the Browse filter panel opening the hidden sources screen"
+    },
+    "sourceHidden": "{source} скрыт",
+    "@sourceHidden": {
+        "description": "Toast after hiding a source, with an Undo action",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "clearSelection": "Снять выделение",
+    "@clearSelection": {
+        "description": "Tooltip for the clear-selection button in the desktop source catalogue selection bar"
+    },
+    "historyChapterCompleted": "Завершено",
+    "@historyChapterCompleted": {
+        "description": "Label on a History entry whose chapter is finished"
+    },
+    "searchSourceHint": "Поиск по {source}...",
+    "@searchSourceHint": {
+        "description": "Placeholder in the desktop source catalogue search box",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "searchResults": "Результаты поиска",
+    "@searchResults": {
+        "description": "Label for the Search results view in the desktop source catalogue switch"
+    },
+    "pinned": "Закреплённые",
+    "@pinned": {
+        "description": "Heading for pinned sources in the desktop source switcher menu"
+    },
+    "recent": "Недавние",
+    "@recent": {
+        "description": "Heading for recently opened sources in the desktop source switcher menu"
+    },
+    "browseAllSources": "Все источники",
+    "@browseAllSources": {
+        "description": "Menu item returning to the Browse sources list from the desktop source switcher"
+    },
+    "searchOtherSources": "Искать в других источниках",
+    "@searchOtherSources": {
+        "description": "Menu item opening Global search with a catalogue entry's title"
+    },
+    "open": "Открыть",
+    "@open": {
+        "description": "Menu item opening the selected entry"
+    },
+    "splitTallImages": "Разделять высокие изображения"
 }
