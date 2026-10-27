@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../../../../../utils/texture_limit.dart';
 import 'crop_isolate.dart';
 
 /// Shares ServerImage byte-cache identity and crops off-thread; uncropped images decode unchanged.
@@ -68,6 +69,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     final cropped = await cropImageBytes(
       bytes,
       threshold: threshold,
+      textureLimit: await deviceTextureLimit,
       targetWidth: targetWidth,
       targetHeight: targetHeight,
     );
@@ -87,7 +89,10 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     return file.readAsBytes();
   }
 
-  Future<ui.Image> _decodeRgba(CroppedImageData data) {
+  Future<ui.Image> _decodeRgba(CroppedImageData data) async {
+    final target = textureLimitedSize(
+      data.width, data.height, await deviceTextureLimit,
+    );
     final completer = Completer<ui.Image>();
     ui.decodeImageFromPixels(
       data.rgba,
@@ -95,6 +100,8 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
       data.height,
       ui.PixelFormat.rgba8888,
       completer.complete,
+      targetWidth: target?.width,
+      targetHeight: target?.height,
     );
     return completer.future;
   }
@@ -105,14 +112,15 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     ImageDecoderCallback decode,
   ) async {
     final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    final codec = await decode(
+    final codec = await decodeWithinTextureLimit(
       buffer,
+      decode,
       getTargetSize: (targetWidth == null && targetHeight == null)
           ? null
           : (int intrinsicWidth, int intrinsicHeight) =>
                 ui.TargetImageSize(width: targetWidth, height: targetHeight),
     );
-    final frame = await codec.getNextFrame();
+    final frame = await codec.getNextFrame().whenComplete(codec.dispose);
     return frame.image;
   }
 

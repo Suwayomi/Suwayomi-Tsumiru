@@ -123,3 +123,10 @@ class TrueDualPageSpread extends _$TrueDualPageSpread
   @override
   bool? build() => initialize(DBKeys.trueDualPageSpread);
 }
+
+@riverpod
+class SplitTallImages extends _$SplitTallImages
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.splitTallImages);
+}

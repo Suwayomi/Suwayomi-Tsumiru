@@ -209,6 +209,7 @@ enum DBKeys {
   navigateToPan(true),
   invertDoublePages(false),
   cropBorders(false),
+  splitTallImages(true),
   smallerTapZones(false),
   // Seeded from the global navigation keys on upgrade.
   pagedNavigationLayout(ReaderNavigationLayout.defaultNavigation),
