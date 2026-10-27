@@ -37,7 +37,7 @@ With SideStore or AltStore the app is re-signed periodically, which those tools 
 
 **Windows:** download `…-windows-x64.zip`, extract it anywhere, and run `tsumiru.exe`.
 
-**macOS:** download `…-macos-x64.zip`, extract it, and move the app to Applications. If macOS blocks the first launch, approve it under System Settings → Privacy & Security.
+**macOS:** download `…-macos-universal.zip`, extract it, and move the app to Applications. If macOS blocks the first launch, approve it under System Settings → Privacy & Security.
 
 **Linux:** the Flatpak is recommended and auto-updates.
 
