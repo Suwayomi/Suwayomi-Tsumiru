@@ -192,9 +192,10 @@ GoRouter routerConfig(Ref ref) {
         _pendingRouteAfterIdentityChange = null;
         if (state.matchedLocation != pending) return pending;
       }
-      // Redirect only the removed desktop /more entry; nested settings routes remain valid.
+      // Redirect /more only when the desktop sidebar shows its Settings foot.
       if (state.matchedLocation == const MoreRoute().location &&
-          context.usesDesktopShell) {
+          context.usesDesktopShell &&
+          context.windowSizeClass >= WindowSizeClass.expanded) {
         return const LibraryRoute(categoryId: 0).location;
       }
       return null;
