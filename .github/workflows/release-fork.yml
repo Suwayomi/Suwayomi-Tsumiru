@@ -223,6 +223,7 @@ jobs:
 
       - name: Package macOS
         if: matrix.target == 'macos'
+        shell: bash
         run: |
           mkdir -p dist
           APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
@@ -236,7 +237,29 @@ jobs:
             find "$APP/Contents/Frameworks" -maxdepth 1 2>/dev/null; exit 1
           fi
           echo "Bundled SQLite: $sqlite"
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/${pkg_name}-${{ github.ref_name }}-macos-x64.zip"
+          check_archs() {
+            local binary="$1" archs
+            if ! archs=$(lipo -archs "$binary"); then
+              echo "::error::Cannot read architectures of $binary: $archs"
+              exit 1
+            fi
+            case " $archs " in
+              *" x86_64 "*) ;;
+              *) echo "::error::$binary has architectures: $archs (requires x86_64 and arm64)"; exit 1 ;;
+            esac
+            case " $archs " in
+              *" arm64 "*) ;;
+              *) echo "::error::$binary has architectures: $archs (requires x86_64 and arm64)"; exit 1 ;;
+            esac
+          }
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+          check_archs "$APP/Contents/MacOS/$executable"
+          while IFS= read -r -d '' binary; do
+            if file -b "$binary" | grep -q 'Mach-O'; then
+              check_archs "$binary"
+            fi
+          done < <(find "$APP/Contents/Frameworks" -type f -print0)
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/${pkg_name}-${{ github.ref_name }}-macos-universal.zip"
 
       - name: Package iOS (unsigned IPA)
         if: matrix.target == 'ios'
