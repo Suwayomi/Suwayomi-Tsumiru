@@ -76,6 +76,21 @@ void main() {
       expect(c.pinned, true);
       expect(c.downloadedAt, DateTime(2026, 3, 15));
       expect(c.readStateManual, true);
+      await db.setChapterDeviceState(
+        10,
+        OfflineDeviceState.error,
+        failureReason: 'Source not installed: 687150405919946955',
+      );
+      await db.close();
+    }
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      expect(
+        (await db.chapterById(10))!.failureReason,
+        'Source not installed: 687150405919946955',
+      );
+      await db.setChapterDeviceState(10, OfflineDeviceState.queued);
+      expect((await db.chapterById(10))!.failureReason, isNull);
       await db.close();
     }
   });
@@ -123,6 +138,9 @@ void main() {
         pageCount: 1,
         updatedAt: DateTime(2026),
       );
+      await db.customStatement(
+        'ALTER TABLE offline_chapters DROP COLUMN failure_reason',
+      );
       await db.customStatement('PRAGMA user_version = 17');
       await db.close();
     }
@@ -137,6 +155,7 @@ void main() {
       )..where((t) => t.id.equals(10))).getSingle();
       expect(c.uploadDate, null);
       expect(c.fetchedAt, null);
+      expect(c.failureReason, isNull);
 
       await db.upsertMangaMetadata(
         id: 1,

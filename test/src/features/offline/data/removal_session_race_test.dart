@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -6,13 +7,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/account/data/account_providers.dart';
+import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_controller_shim.dart';
+import 'package:tsumiru/src/features/offline/data/offline_background_downloads.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
+import 'package:tsumiru/src/features/offline/data/offline_download_manager.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
+import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_runtime_storage.dart';
+import 'package:tsumiru/src/features/offline/presentation/offline_series_chapters_screen.dart';
 import 'package:tsumiru/src/features/offline/presentation/offline_settings_screen.dart';
 import 'package:tsumiru/src/features/offline/presentation/series_offline_button.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -83,6 +90,88 @@ Future<void> _seed(_Database db) async {
 }
 
 void main() {
+  testWidgets('failed chapter shows its reason and Cancel removes it', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final tmp = await Directory.systemTemp.createTemp('failed_chapter_');
+      final db = _Database(null);
+      await _seed(db);
+      await db.setKeepRule(1, OfflineKeepRule.off, 10);
+      const reason = 'Source not installed: 687150405919946955';
+      await db.setChapterDeviceState(
+        1,
+        OfflineDeviceState.error,
+        failureReason: reason,
+      );
+      final paths = OfflinePaths(tmp.path);
+      final manager = OfflineDownloadManager(
+        db: db,
+        store: IoOfflinePageStore(paths),
+        fetchPageUrls: (_) async => [],
+        fetchBytes: (_) async => throw UnimplementedError(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          offlineEnabledProvider.overrideWithValue(true),
+          offlineActiveProvider.overrideWithValue(true),
+          offlineDatabaseProvider.overrideWith((ref) => db),
+          offlineRepositoryProvider.overrideWith(
+            (ref) => OfflineRepository(db: db, paths: paths),
+          ),
+          offlineDownloadManagerProvider.overrideWith((ref) => manager),
+          offlineDownloadCoordinatorProvider.overrideWith((ref) => null),
+          settledAccountAccessProvider.overrideWithValue(
+            AccountAccess(capability: AccountCapability.unsupported),
+          ),
+        ],
+      );
+      addTearDown(() async {
+        container.dispose();
+        await db.close();
+        await tmp.delete(recursive: true);
+      });
+      await container.read(authCredentialsStoreProvider.future);
+      final series = container.listen(offlineSeriesProvider, (_, _) {});
+      addTearDown(series.close);
+      expect(
+        (await container.read(offlineSeriesProvider.future)).single.failed,
+        1,
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: OfflineSeriesChaptersBody(mangaId: 1)),
+          ),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await tester.pumpAndSettle();
+      expect(find.text(reason), findsOneWidget);
+      final text = tester.widget<Text>(find.text(reason));
+      expect(text.maxLines, 1);
+      expect(text.overflow, TextOverflow.ellipsis);
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await container.read(offlineRuntimeStorageProvider.notifier).whenIdle();
+      await tester.pumpAndSettle();
+      expect(find.text(reason), findsNothing);
+      expect(find.text('Chapter'), findsNothing);
+      expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.none);
+      expect(await container.read(offlineSeriesProvider.future), isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   testWidgets('a removal cannot continue into another account', (
     tester,
   ) async {

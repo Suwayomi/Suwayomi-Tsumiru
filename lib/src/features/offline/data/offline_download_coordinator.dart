@@ -290,7 +290,7 @@ class OfflineDownloadCoordinator {
       }
       if (outcome.error != null) {
         logger.e('Offline: chapter ${chapter.id} failed: ${outcome.error}');
-        await _applyTerminalError(chapter);
+        await _applyTerminalError(chapter, reason: outcome.error.toString());
         return;
       }
       logger.i(
@@ -325,7 +325,7 @@ class OfflineDownloadCoordinator {
         );
       } else {
         logger.e('Offline: chapter ${chapter.id} download error: $e');
-        await _applyTerminalError(chapter);
+        await _applyTerminalError(chapter, reason: e.toString());
       }
     } finally {
       _active.remove(chapter.id);
@@ -379,10 +379,14 @@ class OfflineDownloadCoordinator {
         latest.deviceState != OfflineDeviceState.downloaded;
   }
 
-  Future<void> _applyTerminalError(OfflineChapter chapter) =>
+  Future<void> _applyTerminalError(OfflineChapter chapter, {String? reason}) =>
       db.transaction(() async {
         if (!await _ownsAttempt(chapter)) return;
-        await db.setChapterDeviceState(chapter.id, OfflineDeviceState.error);
+        await db.setChapterDeviceState(
+          chapter.id,
+          OfflineDeviceState.error,
+          failureReason: reason,
+        );
       });
 
   /// Single-flight; resumes stranded downloads before queued chapters.

@@ -427,6 +427,7 @@ void main() {
       expect((await db.chapterById(id))!.deviceState, OfflineDeviceState.error);
     }
     expect((await db.chapterById(7))!.deviceState, OfflineDeviceState.downloaded);
+    expect((await db.chapterById(5))!.failureReason, message);
     expect(container.read(serverUnreachableProvider), isFalse);
     expect(container.read(offlineDownloadRestrictionProvider), isNull);
     expect(notices.where((reason) => reason == 'connection'), isEmpty);

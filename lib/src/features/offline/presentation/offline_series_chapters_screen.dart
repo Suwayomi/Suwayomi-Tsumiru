@@ -398,20 +398,43 @@ class _FailedChapterTile extends ConsumerWidget {
     final canDownload = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
-    return ListTile(
-      leading: Icon(
-        FluentIcons.error_circle_24_regular,
-        color: context.theme.colorScheme.error,
-      ),
-      title: Text(chapter.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: canDownload ? null : Text(context.l10n.accountPermissionDenied),
-      trailing: TextButton.icon(
+    final actions = [
+      TextButton.icon(
         icon: const Icon(FluentIcons.replay_24_regular, size: 18),
         label: Text(context.l10n.offlineChapterRetry),
         onPressed: canDownload
             ? () => saveChapterToDevice(ref, chapter.id)
             : null,
       ),
+      PopupMenuButton<String>(
+        onSelected: (_) => deleteChapterFromDevice(ref, chapter.id),
+        itemBuilder: (context) => [
+          PopupMenuItem(value: 'cancel', child: Text(context.l10n.cancel)),
+        ],
+      ),
+    ];
+    final subtitle = chapter.failureReason?.isNotEmpty == true || !canDownload
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (chapter.failureReason?.isNotEmpty == true)
+                Text(
+                  chapter.failureReason!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              if (!canDownload) Text(context.l10n.accountPermissionDenied),
+            ],
+          )
+        : null;
+    return ListTile(
+      leading: Icon(
+        FluentIcons.error_circle_24_regular,
+        color: context.theme.colorScheme.error,
+      ),
+      title: Text(chapter.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+      subtitle: subtitle,
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: actions),
     );
   }
 }

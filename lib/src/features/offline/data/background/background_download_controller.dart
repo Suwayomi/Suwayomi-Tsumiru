@@ -1248,6 +1248,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           db: _db,
           chapterId: chapterId,
           status: status,
+          reason: data['reason'] as String?,
           eventGeneration: data['gen'] as int? ?? 0,
         );
         if (status == 'error') {
