@@ -788,3 +788,14 @@ ImageProvider serverPageImageProvider(
         : ImageRenderMethodForWeb.HttpGet,
   );
 }
+
+Future<String> serverPageFilePath(WidgetRef ref, String imageUrl) async {
+  final request = serverImageRequest(ref, imageUrl);
+  if (request.localPath != null) return request.localPath!;
+  final file = await ref.read(serverPageCacheManagerProvider).getSingleFile(
+    request.fetchUrl,
+    key: request.cacheKey,
+    headers: request.headers,
+  );
+  return file.path;
+}
