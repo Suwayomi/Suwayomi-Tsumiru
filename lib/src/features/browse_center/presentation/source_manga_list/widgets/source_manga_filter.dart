@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../domain/filter/filter_model.dart';
 import 'filter_to_widget.dart';
@@ -49,7 +48,7 @@ class SourceMangaFilter extends HookWidget {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kAppBarBottomHeight),
+        preferredSize: const Size.fromHeight(kToolbarHeight),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(
