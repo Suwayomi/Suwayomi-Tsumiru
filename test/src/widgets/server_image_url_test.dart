@@ -6,6 +6,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/web_default_server_url.dart';
+import 'package:tsumiru/src/utils/texture_limit.dart';
 import 'package:tsumiru/src/widgets/server_image.dart';
 
 // Representative server-emitted paths: root-relative and already carrying the
@@ -23,6 +24,13 @@ String _build(String serverUrl, String path) => serverFileUrl(
 );
 
 void main() {
+  test('tall page decode keeps its proportions within the texture limit', () {
+    final size = textureLimitedSize(720, 10930, 8192)!;
+    expect(size.width, 540);
+    expect(size.height, 8192);
+    expect(textureLimitedSize(720, 5000, 8192), isNull);
+  });
+
   group('serverFileUrl', () {
     test('joins a server-relative path onto the origin, keeping subpaths', () {
       expect(

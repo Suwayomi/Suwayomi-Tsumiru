@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
@@ -28,11 +30,13 @@ class _CropRequest {
     this.threshold,
     this.targetWidth,
     this.targetHeight,
+    this.textureLimit,
   );
   final Uint8List encodedBytes;
   final int threshold;
   final int? targetWidth;
   final int? targetHeight;
+  final int? textureLimit;
 }
 
 /// Returns null if decoding/cropping fails; downscales raw cropped pixels because decode-time caps cannot.
@@ -41,10 +45,11 @@ Future<CroppedImageData?> cropImageBytes(
   int threshold = 20,
   int? targetWidth,
   int? targetHeight,
+  int? textureLimit,
 }) {
   return compute(
     _cropEntry,
-    _CropRequest(encodedBytes, threshold, targetWidth, targetHeight),
+    _CropRequest(encodedBytes, threshold, targetWidth, targetHeight, textureLimit),
   );
 }
 
@@ -68,10 +73,25 @@ CroppedImageData? _cropEntry(_CropRequest req) {
     dst += rowEnd - rowStart;
   }
 
+  var targetWidth = req.targetWidth;
+  var targetHeight = req.targetHeight;
+  final limit = req.textureLimit;
+  if (limit != null && math.max(rect.width, rect.height) > limit) {
+    final scale = math.min(
+      limit / math.max(rect.width, rect.height),
+      math.min(
+        (targetWidth ?? rect.width) / rect.width,
+        (targetHeight ?? rect.height) / rect.height,
+      ),
+    );
+    targetWidth = math.max(1, (rect.width * scale).round());
+    targetHeight = math.max(1, (rect.height * scale).round());
+  }
+
   // Only downscale; upscaling adds blur without recovering detail.
   final needsResize =
-      (req.targetWidth != null && req.targetWidth! < rect.width) ||
-      (req.targetHeight != null && req.targetHeight! < rect.height);
+      (targetWidth != null && targetWidth < rect.width) ||
+      (targetHeight != null && targetHeight < rect.height);
   if (!needsResize) {
     return CroppedImageData(rgba: out, width: rect.width, height: rect.height);
   }
@@ -84,8 +104,8 @@ CroppedImageData? _cropEntry(_CropRequest req) {
       numChannels: 4,
       order: img.ChannelOrder.rgba,
     ),
-    width: req.targetWidth,
-    height: req.targetHeight,
+    width: targetWidth,
+    height: targetHeight,
   );
   return CroppedImageData(
     rgba: resized.getBytes(order: img.ChannelOrder.rgba),

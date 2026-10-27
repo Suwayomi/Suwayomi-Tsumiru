@@ -24,6 +24,7 @@ import '../../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../../utils/platform/platform_runtime.dart';
+import '../../../../../../../utils/texture_limit.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
 import '../../../../../../history/presentation/history_controller.dart';
@@ -33,6 +34,7 @@ import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
@@ -57,6 +59,7 @@ import 'infinity_continuous_config.dart';
 import 'infinity_continuous_feedback.dart';
 import 'infinity_continuous_utils.dart';
 import 'measure_size.dart';
+import 'tall_page_image.dart';
 
 /// Pixels to advance this auto-scroll frame. [intervalSeconds] is the pace
 /// setting (seconds to glide one full viewport); [dtMs] is elapsed time since
@@ -459,6 +462,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       notifier.state = false;
       return () => notifier.state = false;
     }, const []);
+    final textureLimit = kIsWeb ? null : ref.watch(textureLimitProvider).value;
+    final splitTallImages = !kIsWeb &&
+        ref.watch(splitTallImagesProvider).ifNull(true) &&
+        textureLimit != null;
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
     final bool alwaysShowTransition = ref
         .watch(alwaysShowChapterTransitionProvider)
@@ -532,6 +539,27 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // Cache decoded aspect-derived extents before display so pages cannot resize on arrival.
     Future<void> decodeAndCacheHeight(String url, int gen) async {
       if (pageHeights.value.containsKey(url)) return;
+      final limit = kIsWeb ? null : await ref.read(textureLimitProvider.future);
+      if (limit != null && ref.read(splitTallImagesProvider).ifNull(true)) {
+        final size = await tallPageIntrinsicSize(
+          await serverPageFilePath(ref, url),
+        );
+        if (size.height > limit) {
+          if (context.mounted && prefetchGen.value == gen) {
+            final layout = layoutParams.value;
+            final cross = layout.naturalSize
+                ? math.min(
+                    isHorizontal ? size.height : size.width,
+                    isHorizontal ? context.height : context.width,
+                  )
+                : layout.columnWidth;
+            pageHeights.value[url] = isHorizontal
+                ? cross * size.width / size.height
+                : cross * size.height / size.width;
+          }
+          return;
+        }
+      }
       final provider = serverPageImageProvider(ref, url);
       final stream = provider.resolve(ImageConfiguration.empty);
       final completer = Completer<ImageInfo>();
@@ -1195,7 +1223,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               width: double.infinity,
               child: child,
             );
-      final page = ServerImage(
+      Widget page = ServerImage(
         showReloadButton: true,
         fit: fit,
         appendApiToUrl: false,
@@ -1256,6 +1284,23 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           return pagesAtNaturalSize ? Center(child: image) : image;
         },
       );
+      if (splitTallImages) {
+        page = TallPageImage(
+          key: ValueKey(serverImageRequest(ref, loc.imageUrl).cacheKey),
+          cacheKey: serverImageRequest(ref, loc.imageUrl).cacheKey,
+          filePath: () => serverPageFilePath(ref, loc.imageUrl),
+          limit: textureLimit,
+          crossAxisExtent: crossAxisExtent,
+          horizontal: isHorizontal,
+          naturalSize: pagesAtNaturalSize,
+          placeholder: placeholderBox(),
+          onSize: (size) {
+            final extent = isHorizontal ? size.width : size.height;
+            if (extent > 0) pageHeights.value[loc.imageUrl] = extent;
+          },
+          fallback: page,
+        );
+      }
       if (index != total - 1) return page;
       final endOfStrip = buildEndOfStrip(context);
       return Flex(

@@ -1375,6 +1375,7 @@
   "centerMarginNone": "None",
   "centerMarginType": "Center margin type",
   "centerMarginWidePages": "Wide pages",
+  "splitTallImages": "Split tall images",
   "cropBorders": "Crop borders",
   "dualPageSpreadInLandscape": "Dual page spread in landscape",
   "imageScaleType": "Scale type",

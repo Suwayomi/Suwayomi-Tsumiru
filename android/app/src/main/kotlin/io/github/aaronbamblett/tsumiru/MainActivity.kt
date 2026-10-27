@@ -4,9 +4,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.Rect
 import android.os.Build
 import android.view.WindowManager
 import androidx.core.content.FileProvider
@@ -21,6 +24,8 @@ import dev.darttools.flutter_android_volume_keydown.FlutterAndroidVolumeKeydownA
 private const val MAX_TRANSCODE_PIXELS = 16_000_000L
 
 class MainActivity: FlutterAndroidVolumeKeydownActivity() {
+    private val stripExecutor = Executors.newSingleThreadExecutor()
+    private val stripDecoders = mutableMapOf<String, Pair<BitmapRegionDecoder, MutableSet<String>>>()
     private val backgroundExecutor = Executors.newFixedThreadPool(3)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -94,6 +99,73 @@ class MainActivity: FlutterAndroidVolumeKeydownActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "tsumiru/page_strips")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "decodeStrip" && call.method != "release") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                val path = call.argument<String>("path")
+                val owner = call.argument<String>("owner")
+                if (path == null || owner == null) {
+                    result.error("INVALID_ARGS", "Path and owner are required", null)
+                    return@setMethodCallHandler
+                }
+                stripExecutor.execute {
+                    try {
+                        if (call.method == "release") {
+                            stripDecoders[path]?.let { entry ->
+                                entry.second.remove(owner)
+                                if (entry.second.isEmpty()) {
+                                    entry.first.recycle()
+                                    stripDecoders.remove(path)
+                                }
+                            }
+                            runOnUiThread { result.success(null) }
+                        } else {
+                            val top = call.argument<Int>("top") ?: -1
+                            val height = call.argument<Int>("height") ?: 0
+                            val entry = stripDecoders.getOrPut(path) {
+                                Pair(
+                                    requireNotNull(BitmapRegionDecoder.newInstance(path, false)),
+                                    mutableSetOf()
+                                )
+                            }
+                            entry.second.add(owner)
+                            val decoder = entry.first
+                            require(top >= 0 && height > 0 && height <= 4096 &&
+                                top.toLong() + height <= decoder.height)
+                            val options = BitmapFactory.Options().apply {
+                                inPreferredConfig = Bitmap.Config.ARGB_8888
+                                inScaled = false
+                            }
+                            val bitmap = requireNotNull(decoder.decodeRegion(
+                                Rect(0, top, decoder.width, top + height), options
+                            ))
+                            val payload = try {
+                                val pixels = IntArray(bitmap.width * bitmap.height)
+                                bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                                val rgba = ByteArray(pixels.size * 4)
+                                for (i in pixels.indices) {
+                                    val pixel = pixels[i]
+                                    val offset = i * 4
+                                    rgba[offset] = (pixel shr 16).toByte()
+                                    rgba[offset + 1] = (pixel shr 8).toByte()
+                                    rgba[offset + 2] = pixel.toByte()
+                                    rgba[offset + 3] = (pixel ushr 24).toByte()
+                                }
+                                mapOf("rgba" to rgba, "width" to bitmap.width, "height" to bitmap.height)
+                            } finally {
+                                bitmap.recycle()
+                            }
+                            runOnUiThread { result.success(payload) }
+                        }
+                    } catch (e: Exception) {
+                        stripDecoders.remove(path)?.first?.recycle()
+                        runOnUiThread { result.error("STRIP_FAILED", e.message, null) }
+                    }
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "tsumiru/display_cutout")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -138,6 +210,15 @@ class MainActivity: FlutterAndroidVolumeKeydownActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    override fun onDestroy() {
+        stripExecutor.execute {
+            stripDecoders.values.forEach { it.first.recycle() }
+            stripDecoders.clear()
+        }
+        stripExecutor.shutdown()
+        super.onDestroy()
     }
 
     private fun flattenOnWhite(bitmap: Bitmap): Bitmap {
