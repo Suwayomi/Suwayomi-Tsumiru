@@ -1087,10 +1087,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   int _sessionDownloaded = 0;
   int _sessionFailed = 0;
+  String? _sessionFailureMessage;
 
   Future<void> _notifyDownloadsComplete(bool Function() isCurrent) async {
     final done = _sessionDownloaded;
     final failed = _sessionFailed;
+    final message = _sessionFailureMessage;
+    _sessionFailureMessage = null;
     _sessionDownloaded = 0;
     _sessionFailed = 0;
     if (done == 0 && failed == 0) return;
@@ -1110,9 +1113,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         );
       }
       if (failed > 0 && isCurrent()) {
+        final body = l10n.notificationDownloadErrorBody(failed);
         await service.showDownloadError(
           l10n.notificationDownloadErrorTitle,
-          l10n.notificationDownloadErrorBody(failed),
+          message == null || message.isEmpty ? body : '$body\n$message',
         );
       }
     } catch (_) {
@@ -1246,10 +1250,17 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           status: status,
           eventGeneration: data['gen'] as int? ?? 0,
         );
-        if (status == 'error') _sessionFailed++;
+        if (status == 'error') {
+          _sessionFailed++;
+          final message = data['reason'] as String?;
+          if (message != null && message.isNotEmpty) {
+            _sessionFailureMessage = message;
+          }
+        }
         recordDiagnostic(
           '[${_now().toIso8601String()}] offline-fgs: chapter-terminal '
-          'mangaId=${data['mangaId']} chapterId=$chapterId status=$status\n',
+          'mangaId=${data['mangaId']} chapterId=$chapterId status=$status '
+          'reason=${data['reason']}\n',
         );
       }
     }

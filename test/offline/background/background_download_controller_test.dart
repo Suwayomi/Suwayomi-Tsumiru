@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_controller.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_work_order.dart';
@@ -18,9 +19,11 @@ import 'package:tsumiru/src/features/offline/data/background/download_task_handl
 import 'package:tsumiru/src/features/offline/data/background/foreground_service_gateway.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
+import 'package:tsumiru/src/features/offline/data/offline_download_stall.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
+import 'package:tsumiru/src/features/offline/data/offline_server_identity.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -28,6 +31,8 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../helpers/offline_test_db.dart';
+
+class _RealHttpOverrides extends HttpOverrides {}
 
 class FakeService extends ForegroundServiceGateway {
   DataCallback? callback;
@@ -290,6 +295,142 @@ void main() {
     }
     await pumpEventQueue();
   }
+
+  test('server chapter errors fail only those chapters and keep downloading',
+      () async {
+    const message = 'SourceNotInstalledException: Source is not installed';
+    final requests = <int>[];
+    final events = <Map>[];
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    server.listen((request) async {
+      if (request.method == 'GET') {
+        request.response.headers.contentType = ContentType('image', 'jpeg');
+        request.response.add([1, 2, 3]);
+        await request.response.close();
+        return;
+      }
+      request.response.headers.contentType = ContentType.json;
+      final body = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
+      if ((body['query'] as String).contains('OfflineServerIdentity')) {
+        request.response.write(jsonEncode({
+          'data': {
+            'metas': {
+              'nodes': [{'value': 'catalog-A'}],
+            },
+          },
+        }));
+      } else {
+        final id = body['variables']['input']['chapterId'] as int;
+        requests.add(id);
+        request.response.write(jsonEncode({
+          'data': {
+            'fetchChapterPages': id == 5
+                ? {'pages': ['/ignored.jpg']}
+                : id == 6
+                    ? null
+                    : {'pages': ['/page.jpg']},
+          },
+          if (id == 5) 'errors': [{'message': message}],
+        }));
+      }
+      await request.response.close();
+    });
+    for (final id in [6, 7]) {
+      await db.upsertChapterMetadata(
+        id: id,
+        mangaId: 1,
+        name: 'C$id',
+        chapterIndex: id,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: false,
+        pageCount: 0,
+        updatedAt: DateTime(2026),
+      );
+      await db.setChapterDeviceState(id, OfflineDeviceState.queued);
+    }
+    final base = 'http://127.0.0.1:${server.port}';
+    await prefs.setString('offlineLastServerId', 'catalog-A');
+    await prefs.setString('offlineLastServerAddress', serverAddress(
+      baseUrl: base, port: null, addPort: false,
+    ));
+    final order = BackgroundWorkOrder(
+      chapterIds: [5, 6, 7],
+      mangaIdByChapter: {5: 1, 6: 1, 7: 1},
+      serverBase: base,
+      port: null,
+      addPort: false,
+      wifiOnly: false,
+      auth: const BackgroundTokenRecord(gen: 0, authType: 'none'),
+      baseDir: container.read(offlinePathsProvider).baseDir,
+      attemptId: 'attempt-A',
+      catalogServerId: 'catalog-A',
+    );
+    final raw = jsonEncode(order.toJson());
+    service.running = true;
+    service.values[kWorkOrderKey] = raw;
+    controller.register();
+    await controller.startupSettled;
+    await FlutterForegroundTask.saveData(key: kWorkOrderKey, value: raw);
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+      (_) async => ['wifi'],
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('flutter_foreground_task/methods'),
+      (call) async => call.method == 'isRunningService' ? true : null,
+    );
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/connectivity'), null,
+      );
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('flutter_foreground_task/methods'), null,
+      );
+    });
+    FlutterForegroundTask.initCommunicationPort();
+    void onEvent(Object data) {
+      events.add(data as Map);
+      service.callback!(data);
+    }
+    FlutterForegroundTask.addTaskDataCallback(onEvent);
+    addTearDown(() async {
+      FlutterForegroundTask.removeTaskDataCallback(onEvent);
+      await FlutterForegroundTask.streamSubscription?.cancel();
+      FlutterForegroundTask.receivePort?.close();
+    });
+    await HttpOverrides.runZoned(() async {
+      final handler = DownloadTaskHandler();
+      try {
+        await handler.onStart(DateTime.now(), TaskStarter.developer)
+            .timeout(const Duration(seconds: 10));
+      } finally {
+        await handler.onDestroy(DateTime.now(), false);
+      }
+    }, createHttpClient: _RealHttpOverrides().createHttpClient);
+    await pumpUntil(() => events.any((e) => e['kind'] == 'drained'));
+    await pumpEventQueue();
+    expect(requests, [5, 6, 7]);
+    expect(events.where((e) => e['kind'] == 'parked'), isEmpty);
+    final failures = events.where((e) => e['kind'] == 'chapterDone').toList();
+    expect(failures.map((e) => e['status']), ['error', 'error', 'downloaded']);
+    expect(failures.first['reason'], message);
+    final entries = await BackgroundCompletionLog(
+      File('${order.baseDir}/.bg_completion.log'),
+    ).parse();
+    expect(entries.whereType<ChapterEntry>().first.reason, message);
+    for (final id in [5, 6]) {
+      expect((await db.chapterById(id))!.deviceState, OfflineDeviceState.error);
+    }
+    expect((await db.chapterById(7))!.deviceState, OfflineDeviceState.downloaded);
+    expect(container.read(serverUnreachableProvider), isFalse);
+    expect(container.read(offlineDownloadRestrictionProvider), isNull);
+    expect(notices.where((reason) => reason == 'connection'), isEmpty);
+  });
 
   test('old same-account attempt cannot park or restart a chapter', () async {
     service.running = true;

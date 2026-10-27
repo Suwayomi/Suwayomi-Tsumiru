@@ -21,9 +21,11 @@ class ChapterEntry extends LogEntry {
     this.status,
     this.pages,
     this.bytes,
-    this.generation,
-  );
+    this.generation, {
+    this.reason,
+  });
   final int chapterId, pages, bytes, generation;
+  final String? reason;
   final String status; // downloaded | error | authFailed | offline
 }
 
@@ -85,6 +87,7 @@ class BackgroundCompletionLog {
     required int pages,
     required int bytes,
     int generation = 0,
+    String? reason,
   }) => _append({
     't': 'chapter',
     'c': chapterId,
@@ -92,6 +95,7 @@ class BackgroundCompletionLog {
     'pages': pages,
     'bytes': bytes,
     'g': generation,
+    'reason': ?reason,
   });
 
   Future<void> appendDeleted(int chapterId, int generation) =>
@@ -138,6 +142,7 @@ class BackgroundCompletionLog {
               j['pages'] as int,
               j['bytes'] as int,
               j['g'] as int? ?? 0,
+              reason: j['reason'] as String?,
             ),
           );
         case 'deleted':
