@@ -318,6 +318,30 @@ class MangaShowAllScanlatorVersions extends _$MangaShowAllScanlatorVersions {
   void update(bool value) => state = value;
 }
 
+@riverpod
+class MangaChapterListMode extends _$MangaChapterListMode {
+  @override
+  ChapterListMode build({required int mangaId}) {
+    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
+    return manga.value?.metaData.chapterListMode ?? ChapterListMode.list;
+  }
+
+  Future<void> update(ChapterListMode mode) async {
+    await AsyncValue.guard(
+      () => ref
+          .read(mangaBookRepositoryProvider)
+          .patchMangaMeta(
+            mangaId: mangaId,
+            key: MangaMetaKeys.chapterListMode.key,
+            value: mode.name,
+          ),
+    );
+    if (!ref.mounted) return;
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    state = mode;
+  }
+}
+
 /// Uses per-manga webUI_sortBy meta, falling back to the app-wide sort.
 @riverpod
 class MangaChapterSortPreference extends _$MangaChapterSortPreference {

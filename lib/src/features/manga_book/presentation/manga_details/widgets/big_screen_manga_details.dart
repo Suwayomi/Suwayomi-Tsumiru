@@ -11,6 +11,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
@@ -23,6 +24,8 @@ import '../controller/chapter_list_entry.dart';
 import '../controller/manga_details_controller.dart';
 import 'add_to_library_category.dart';
 import 'chapter_context_menu.dart';
+import 'chapter_grid_tile.dart';
+import 'chapter_list_mode_toggle.dart';
 import 'chapter_list_tile.dart';
 import 'chapter_selection_header.dart';
 import 'manga_chapter_organizer.dart';
@@ -66,6 +69,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final listMode = ref.watch(mangaChapterListModeProvider(mangaId: mangaId));
     final desktop = context.windowSizeClass >= WindowSizeClass.expanded;
     final wide = context.windowSizeClass >= WindowSizeClass.large;
     final selection = useValueListenable(selectedChapters);
@@ -279,6 +283,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                             },
                           )
                         : _ChapterHeader(
+                            mangaId: mangaId,
                             totalCount: totalCount == 0
                                 ? chapterCount
                                 : totalCount,
@@ -292,7 +297,51 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                             onFilter: openFilterPanel,
                           ),
                     Expanded(
-                      child: ScrollablePositionedList.builder(
+                      child: listMode == ChapterListMode.grid
+                          ? GridView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 64,
+                                    mainAxisSpacing: 8,
+                                    crossAxisSpacing: 8,
+                                  ),
+                              itemCount: chapterEntries.length,
+                              itemBuilder: (context, index) {
+                                final entry = chapterEntries[index];
+                                return switch (entry) {
+                                  MangaChapterEntry() => ChapterGridTile(
+                                    key: ValueKey('${entry.chapter.id}'),
+                                    manga: manga,
+                                    chapter: entry.chapter,
+                                    isSelected: selection.containsKey(
+                                      entry.chapter.id,
+                                    ),
+                                    canTapSelect: selecting,
+                                    toggleSelect: (chapter) {
+                                      toggleSelect(chapter);
+                                      anchor.value = chapter.id;
+                                    },
+                                    onRowTap: (shift) =>
+                                        onRowTap(entry.chapter, shift),
+                                    onSecondaryTapAt: (pos) => openMenu(
+                                      menuAnchorForPoint(context, pos),
+                                      entry.chapter,
+                                      ordered,
+                                      bulk,
+                                      () {},
+                                    ),
+                                  ),
+                                  MissingChaptersEntry() =>
+                                    MissingChaptersGridTile(
+                                      key: ValueKey('missing-${entry.id}'),
+                                      count: entry.count,
+                                    ),
+                                };
+                              },
+                            )
+                          : ScrollablePositionedList.builder(
                         key: ValueKey(wide),
                         initialScrollIndex: restoreIndex.value ?? 0,
                         itemPositionsListener: itemPositionsListener,
@@ -365,6 +414,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
 
 class _ChapterHeader extends StatelessWidget {
   const _ChapterHeader({
+    required this.mangaId,
     required this.totalCount,
     required this.unreadCount,
     required this.onDeviceBytes,
@@ -375,6 +425,7 @@ class _ChapterHeader extends StatelessWidget {
     required this.onRefresh,
     required this.onFilter,
   });
+  final int mangaId;
   final int totalCount;
   final int unreadCount;
   final int onDeviceBytes;
@@ -452,6 +503,8 @@ class _ChapterHeader extends StatelessWidget {
               ],
             ),
           ),
+          ChapterListModeToggle(mangaId: mangaId),
+          const SizedBox(width: 4),
           if (desktop)
             TextButton.icon(
               onPressed: onRefresh,
