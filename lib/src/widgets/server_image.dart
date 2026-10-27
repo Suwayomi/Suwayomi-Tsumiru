@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:ui' as ui;
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
@@ -789,27 +787,4 @@ ImageProvider serverPageImageProvider(
         ? ImageRenderMethodForWeb.HtmlImage
         : ImageRenderMethodForWeb.HttpGet,
   );
-}
-
-Future<ui.Size> serverPageIntrinsicSize(WidgetRef ref, String imageUrl) async {
-  final request = serverImageRequest(ref, imageUrl);
-  final bytes = request.localPath != null
-      ? await (offlineImageProvider(request.localPath!) as FileImage)
-            .file.readAsBytes()
-      : await (await ref.read(serverPageCacheManagerProvider).getSingleFile(
-          request.fetchUrl,
-          key: request.cacheKey,
-          headers: request.headers,
-        )).readAsBytes();
-  final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-  try {
-    final descriptor = await ui.ImageDescriptor.encoded(buffer);
-    try {
-      return ui.Size(descriptor.width.toDouble(), descriptor.height.toDouble());
-    } finally {
-      descriptor.dispose();
-    }
-  } finally {
-    buffer.dispose();
-  }
 }

@@ -548,10 +548,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
       stream.addListener(listener);
       final info = await completer.future;
-      info.dispose();
-      final intrinsicSize = await serverPageIntrinsicSize(ref, url);
-      final w = intrinsicSize.width;
-      final h = intrinsicSize.height;
+      final w = info.image.width;
+      final h = info.image.height;
       // Reject a superseded decode so its old width cannot enter the reservation cache.
       if (w > 0 && h > 0 && context.mounted && prefetchGen.value == gen) {
         // Read via layoutParams, not closure capture, so a sweep started by
@@ -571,6 +569,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             ? renderedCrossAxis * w / h
             : renderedCrossAxis * h / w;
       }
+      info.dispose();
     }
 
     // Prefetch in reading order; a new seek or chapter load cancels the old sweep by generation.
