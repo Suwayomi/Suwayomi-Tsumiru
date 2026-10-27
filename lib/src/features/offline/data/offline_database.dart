@@ -81,6 +81,7 @@ class OfflineChapters extends Table {
   TextColumn get deviceState => textEnum<OfflineDeviceState>().withDefault(
     Constant(OfflineDeviceState.none.name),
   )();
+  TextColumn get failureReason => text().nullable()();
   IntColumn get pageCount => integer().withDefault(const Constant(0))();
   IntColumn get bytes => integer().withDefault(const Constant(0))();
   DateTimeColumn get updatedAt => dateTime()();
@@ -168,7 +169,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -394,6 +395,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           m,
           offlineMangas,
           offlineMangas.thumbnailUrlLastFetched,
+        );
+      }
+      if (from < 20 && await _hasTable(offlineChapters)) {
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.failureReason,
         );
       }
     },
@@ -796,9 +804,11 @@ class OfflineDatabase extends _$OfflineDatabase {
     OfflineDeviceState state, {
     int? bytes,
     DateTime? downloadedAt,
+    String? failureReason,
   }) => (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
     OfflineChaptersCompanion(
       deviceState: Value(state),
+      failureReason: Value(state == OfflineDeviceState.error ? failureReason : null),
       bytes: bytes == null ? const Value.absent() : Value(bytes),
       downloadedAt: downloadedAt == null
           ? const Value.absent()

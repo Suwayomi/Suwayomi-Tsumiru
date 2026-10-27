@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/graphql/legacy_user_fields_link.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../../utils/network/graphql_errors.dart';
@@ -88,7 +89,6 @@ void applyBackgroundAuthHeaders(
   applyIsolateCustomHeaders(headers, record.extraHeaders);
 }
 
-/// Returns data, [gqlAuthError], [gqlNetworkError], or null for other failures.
 Future<Object?> postBackgroundGraphql({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord record,
@@ -144,7 +144,6 @@ Future<Object?> _postBackgroundGraphql({
       target.onNetworkError?.call('HTTP ${res.statusCode} on GraphQL request');
       return gqlNetworkError;
     }
-    if (res.statusCode != 200) return null;
     final decoded = jsonDecode(res.body) as Map<String, Object?>;
     final errors = (decoded['errors'] as List? ?? const []).map((value) {
       final error = (value as Map).cast<String, dynamic>();
@@ -176,8 +175,9 @@ Future<Object?> _postBackgroundGraphql({
       if (isGraphqlAuthError(decoded['errors'])) {
         return gqlAuthError;
       }
-      return gqlNetworkError;
+      return exception;
     }
+    if (res.statusCode != 200) return null;
     return decoded['data'];
   } on AccountPermissionDenied {
     rethrow;
@@ -281,10 +281,13 @@ Future<List<String>?> resolveChapterPageUrls({
       return null;
     }
   }
-  // Unresolved auth is ambiguous; only a confirmed empty page list is terminal.
   if (result == gqlNetworkError || result == gqlAuthError) return null;
+  if (result is OperationException) throw OperationMessageException(result);
   if (result is Map<String, Object?>) {
     final chapter = result['fetchChapterPages'];
+    if (chapter == null) {
+      throw OperationMessageException(OperationException(graphqlErrors: []));
+    }
     final pages = chapter is Map ? chapter['pages'] : null;
     if (pages is List && pages.every((page) => page is String)) {
       return pages.cast<String>();

@@ -18,6 +18,7 @@ import '../../../../constants/endpoints.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
+import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../account/data/account_permission.dart';
 import '../../../auth/data/secure_credentials_provider.dart';
@@ -396,9 +397,14 @@ class DownloadTaskHandler extends TaskHandler {
     int mangaId, {
     bool afterRepick = false,
   }) async {
-    final List<String>? urls;
+    List<String>? urls;
+    String? errorMessage;
     try {
       urls = await _resolvePageUrls(chapterId);
+    } on OperationMessageException catch (error) {
+      if (_paused || _stopping || _cancelled.contains(chapterId)) return false;
+      errorMessage = error.toString();
+      urls = const [];
     } on AccountPermissionDenied {
       await _recordPermissionDenied(chapterId);
       return true;
@@ -421,12 +427,13 @@ class DownloadTaskHandler extends TaskHandler {
       await _log.appendChapter(
         chapterId: chapterId,
         status: 'error',
+        reason: errorMessage,
         pages: 0,
         bytes: 0,
         generation: _genOf[chapterId] ?? 0,
       );
       _done++;
-      _afterChapter(chapterId, 'error');
+      _afterChapter(chapterId, 'error', offlineReason: errorMessage);
       return false;
     }
 

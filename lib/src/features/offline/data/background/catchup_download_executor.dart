@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../utils/crash/diagnostics.dart';
+import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../account/data/account_permission.dart';
 import '../../../notifications/data/background/notification_background_client.dart'
     show NotificationEndpoint;
@@ -885,7 +886,13 @@ Future<ChapterAttempt> _downloadOneChapter({
     record: record,
     broker: broker,
     chapterId: row.id,
-  );
+  ).catchError((Object error) {
+    if (error is! OperationMessageException) throw error;
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'chapter-pages-failed chapterId=${row.id} error=$error\n');
+    return <String>[];
+  });
   // Null means unreachable; empty means the server answered with no pages.
   if ((isCancelled?.call() ?? false) || urls == null) {
     return (bytes: 0, transient: true);

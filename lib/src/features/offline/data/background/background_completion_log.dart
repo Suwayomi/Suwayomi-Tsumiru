@@ -21,9 +21,11 @@ class ChapterEntry extends LogEntry {
     this.status,
     this.pages,
     this.bytes,
-    this.generation,
-  );
+    this.generation, {
+    this.reason,
+  });
   final int chapterId, pages, bytes, generation;
+  final String? reason;
   final String status; // downloaded | error | authFailed | offline
 }
 
@@ -85,6 +87,7 @@ class BackgroundCompletionLog {
     required int pages,
     required int bytes,
     int generation = 0,
+    String? reason,
   }) => _append({
     't': 'chapter',
     'c': chapterId,
@@ -92,6 +95,7 @@ class BackgroundCompletionLog {
     'pages': pages,
     'bytes': bytes,
     'g': generation,
+    'reason': ?reason,
   });
 
   Future<void> appendDeleted(int chapterId, int generation) =>
@@ -138,6 +142,7 @@ class BackgroundCompletionLog {
               j['pages'] as int,
               j['bytes'] as int,
               j['g'] as int? ?? 0,
+              reason: j['reason'] as String?,
             ),
           );
         case 'deleted':
@@ -178,6 +183,7 @@ Future<void> applyBackgroundTerminalState({
   required int chapterId,
   required String status,
   int eventGeneration = 0,
+  String? reason,
 }) async {
   if (status != 'error' && status != 'permissionDenied') {
     return;
@@ -189,7 +195,11 @@ Future<void> applyBackgroundTerminalState({
     // chapterStart and terminal events are unawaited; a fast failure can arrive while still queued.
     if (c.deviceState == OfflineDeviceState.downloading ||
         c.deviceState == OfflineDeviceState.queued) {
-      await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
+      await db.setChapterDeviceState(
+        chapterId,
+        OfflineDeviceState.error,
+        failureReason: reason,
+      );
     }
   });
 }
@@ -301,7 +311,7 @@ Future<void> _applyTerminalEntries({
   required OfflineDatabase db,
   required List<LogEntry> entries,
 }) async {
-  final terminal = <int, String>{};
+  final terminal = <int, ChapterEntry>{};
   final gen = <int, int>{};
 
   void advance(int chapterId, int g) {
@@ -313,10 +323,10 @@ Future<void> _applyTerminalEntries({
 
   for (final e in entries) {
     switch (e) {
-      case ChapterEntry(:final chapterId, :final status, :final generation):
+      case ChapterEntry(:final chapterId, :final generation):
         advance(chapterId, generation);
         if (generation < (gen[chapterId] ?? 0)) break; // stale generation
-        terminal[chapterId] = status;
+        terminal[chapterId] = e;
       case DeletedEntry(:final chapterId, :final generation):
         advance(chapterId, generation);
         terminal.remove(chapterId);
@@ -331,7 +341,8 @@ Future<void> _applyTerminalEntries({
     await applyBackgroundTerminalState(
       db: db,
       chapterId: entry.key,
-      status: entry.value,
+      status: entry.value.status,
+      reason: entry.value.reason,
       eventGeneration: gen[entry.key] ?? 0,
     );
   }
