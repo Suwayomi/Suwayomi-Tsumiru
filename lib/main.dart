@@ -7,6 +7,7 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:connectivity_plus_linux_portal/connectivity_plus_linux_portal.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,6 +64,7 @@ import 'src/utils/extensions/custom_extensions.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/network/graphql_errors.dart';
+import 'src/utils/platform/is_flatpak.dart';
 import 'src/utils/soft_clear_image_cache.dart';
 import 'src/widgets/app_error_app.dart';
 import 'src/widgets/cover_cache/cover_cache.dart';
@@ -102,6 +104,9 @@ Future<void> _startApp() async {
   initForegroundTaskService();
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     Workmanager().initialize(notificationCallbackDispatcher);
+  }
+  if (isFlatpak) {
+    ConnectivityPlusLinuxPortalPlugin.registerWith();
   }
   final packageInfo = await PackageInfo.fromPlatform();
   _logBoot(

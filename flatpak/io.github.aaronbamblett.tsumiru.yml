@@ -17,9 +17,6 @@ finish-args:
   - --socket=fallback-x11
   - --device=dri               # GPU-accelerated rendering
   - --talk-name=org.freedesktop.secrets   # libsecret credential store (host keyring)
-  # connectivity_plus watches NetworkManager to notice a network change
-  # and re-check whether the LAN server address is reachable.
-  - --system-talk-name=org.freedesktop.NetworkManager
 
 modules:
   # flutter_secure_storage_linux needs libsecret, which isn't in the
