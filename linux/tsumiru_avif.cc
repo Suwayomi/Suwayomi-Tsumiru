@@ -25,19 +25,7 @@ enum : int {
   kEncodeFailed = 3,
 };
 
-void CropRgba8InPlace(uint8_t * pixels, uint32_t stride, const avifCropRect & rect) {
-  const uint32_t row_bytes = rect.width * 4u;
-  for (uint32_t row = 0; row < rect.height; ++row) {
-    uint8_t * dst = pixels + static_cast<uint64_t>(row) * stride;
-    const uint8_t * src = pixels + (static_cast<uint64_t>(rect.y + row) * stride) +
-                          static_cast<uint64_t>(rect.x) * 4u;
-    memmove(dst, src, row_bytes);
-  }
-}
-
-// A clap conversion failure means the requested crop is unusable.
-bool ApplyCleanAperture(const avifImage * image, avifRGBImage * rgb, uint32_t * out_width,
-                        uint32_t * out_height) {
+bool ApplyCleanAperture(const avifImage * image, GdkPixbuf ** pixbuf) {
   avifCropRect rect;
   avifDiagnostics diag;
   memset(&diag, 0, sizeof(diag));
@@ -49,31 +37,25 @@ bool ApplyCleanAperture(const avifImage * image, avifRGBImage * rgb, uint32_t * 
                                                           image->height, image->yuvFormat, &diag);
 #endif
   if (ok != AVIF_TRUE || rect.width == 0 || rect.height == 0 ||
-      static_cast<uint64_t>(rect.x) + rect.width > rgb->width ||
-      static_cast<uint64_t>(rect.y) + rect.height > rgb->height) {
+      static_cast<uint64_t>(rect.x) + rect.width >
+          static_cast<uint64_t>(gdk_pixbuf_get_width(*pixbuf)) ||
+      static_cast<uint64_t>(rect.y) + rect.height >
+          static_cast<uint64_t>(gdk_pixbuf_get_height(*pixbuf))) {
     return false;
   }
-  CropRgba8InPlace(rgb->pixels, rgb->rowBytes, rect);
-  *out_width = rect.width;
-  *out_height = rect.height;
+  GdkPixbuf * cropped =
+      gdk_pixbuf_new_subpixbuf(*pixbuf, static_cast<int>(rect.x), static_cast<int>(rect.y),
+                               static_cast<int>(rect.width), static_cast<int>(rect.height));
+  if (cropped == nullptr) {
+    return false;
+  }
+  g_object_unref(*pixbuf);
+  *pixbuf = cropped;
   return true;
 }
 
 int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
                 size_t * output_length) {
-  // A null output pointer itself cannot be cleared, so zero only what is addressable.
-  if (input == nullptr || input_length == 0 || output == nullptr || output_length == nullptr) {
-    if (output != nullptr) {
-      *output = nullptr;
-    }
-    if (output_length != nullptr) {
-      *output_length = 0;
-    }
-    return kInvalidInput;
-  }
-  *output = nullptr;
-  *output_length = 0;
-
   avifDecoder * decoder = avifDecoderCreate();
   if (decoder == nullptr) {
     return kDecodeFailed;
@@ -123,20 +105,17 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
       break;
     }
 
-    uint32_t out_width = rgb.width;
-    uint32_t out_height = rgb.height;
-    if ((image->transformFlags & AVIF_TRANSFORM_CLAP) != 0) {
-      if (!ApplyCleanAperture(image, &rgb, &out_width, &out_height)) {
-        break;
-      }
-    }
-
     pixbuf = gdk_pixbuf_new_from_data(rgb.pixels, GDK_COLORSPACE_RGB, TRUE, 8,
-                                      static_cast<int>(out_width), static_cast<int>(out_height),
+                                      static_cast<int>(rgb.width), static_cast<int>(rgb.height),
                                       static_cast<int>(rgb.rowBytes), nullptr, nullptr);
     if (pixbuf == nullptr) {
       result = kEncodeFailed;
       break;
+    }
+    if ((image->transformFlags & AVIF_TRANSFORM_CLAP) != 0) {
+      if (!ApplyCleanAperture(image, &pixbuf)) {
+        break;
+      }
     }
     if ((image->transformFlags & AVIF_TRANSFORM_IROT) != 0) {
       if (image->irot.angle > 3) {
@@ -190,6 +169,7 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
     result = 0;
   } while (false);
 
+  // Subpixbufs share the parent's pixels, so rgb outlives every pixbuf reference.
   if (pixbuf != nullptr) {
     g_object_unref(pixbuf);
   }
@@ -197,10 +177,6 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
     avifRGBImageFreePixels(&rgb);
   }
   avifDecoderDestroy(decoder);
-  if (result != 0) {
-    *output = nullptr;
-    *output_length = 0;
-  }
   return result;
 }
 
@@ -214,15 +190,12 @@ int tsumiru_avif_to_png(const uint8_t * input, size_t input_length, uint8_t ** o
   if (output_length != nullptr) {
     *output_length = 0;
   }
+  if (input == nullptr || input_length == 0 || output == nullptr || output_length == nullptr) {
+    return kInvalidInput;
+  }
   try {
     return DecodeToPng(input, input_length, output, output_length);
   } catch (...) {
-    if (output != nullptr) {
-      *output = nullptr;
-    }
-    if (output_length != nullptr) {
-      *output_length = 0;
-    }
     return kDecodeFailed;
   }
 }

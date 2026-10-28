@@ -3,12 +3,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-//
-// Custom-filter overlay contract (design §2.4 layer 3): the color math
-// (brightness alpha, page brightness multiplication, grayscale/invert
-// matrices), platform routing (page brightness on desktop/web, the
-// screen_brightness plugin only on Android/iOS), the rendered page pixels,
-// and native reset on teardown.
 
 import 'dart:ui' as ui;
 
@@ -37,7 +31,6 @@ const _captureKey = Key('capture');
 const _pageGrey = Color(0xFF808080);
 const _chromeGrey = Color(0xFF202020);
 
-/// A viewer page under the overlay, a black page area, and chrome painted on top.
 const _pageStack = RepaintBoundary(
   key: _captureKey,
   child: Stack(
@@ -194,24 +187,6 @@ void main() {
     expect(grayBright[0], closeTo(0.213 * 255 * 2, 0.001));
     expect(grayBright[0], grayBright[1]);
     expect(grayBright[1], grayBright[2]);
-
-    for (final platform in [
-      TargetPlatform.linux,
-      TargetPlatform.macOS,
-      TargetPlatform.windows,
-    ]) {
-      expect(usesPageBrightnessFor(isWeb: false, platform: platform), isTrue);
-      expect(isNativeScreenBrightnessPlatform(platform), isFalse);
-    }
-    expect(
-      usesPageBrightnessFor(isWeb: false, platform: TargetPlatform.android),
-      isFalse,
-    );
-    expect(
-      usesPageBrightnessFor(isWeb: true, platform: TargetPlatform.android),
-      isTrue,
-      reason: 'mobile browsers use the page path',
-    );
   });
 
   _overlayTest('desktop brightness multiplies rendered page pixels', (

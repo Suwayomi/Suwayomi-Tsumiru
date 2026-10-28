@@ -31,10 +31,9 @@ typedef _FreeDart = void Function(ffi.Pointer<ffi.Uint8>);
 
 const _libraryName = 'libtsumiru_avif.so';
 
-/// 64 MP of straight RGBA plus PNG overhead; anything larger is a bad result.
+/// Allow PNG overhead above the native decoder's 64 MP limit.
 const _maxPngBytes = 512 * 1024 * 1024;
 
-/// Thin Linux bridge to the bundled libavif shim. Never throws to callers.
 final class AvifNative {
   AvifNative._(this._toPng, this._free);
 
@@ -60,7 +59,6 @@ final class AvifNative {
   final _ToPngDart _toPng;
   final _FreeDart _free;
 
-  /// Returns PNG bytes, or null when the shim is missing or rejects the input.
   Uint8List? decode(Uint8List bytes) {
     if (bytes.isEmpty) return null;
     final input = calloc<ffi.Uint8>(bytes.length);
@@ -110,6 +108,5 @@ Iterable<String> _libraryCandidates() sync* {
   final bundle = p.dirname(Platform.resolvedExecutable);
   yield p.join(bundle, 'lib', _libraryName);
   yield p.join(bundle, _libraryName);
-  // Flatpak and test runs can place the soname on the loader path.
   yield _libraryName;
 }

@@ -60,8 +60,6 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 # System-level dependencies.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
-# AVIF decoder shim deps: libavif headers at build time, gdk-pixbuf for
-# lossless PNG encoding (both resolved via pkg-config, no new vendored deps).
 pkg_check_modules(AVIF REQUIRED IMPORTED_TARGET libavif)
 pkg_check_modules(GDKPIXBUF REQUIRED IMPORTED_TARGET gdk-pixbuf-2.0)
 # Absolute libavif path roots the install-time dependency scan below.
@@ -70,12 +68,6 @@ if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0" AND NOT TSUMIRU_AVIF_LIBRAR
   message(FATAL_ERROR "libavif not found; cannot bundle the AVIF runtime closure")
 endif()
 get_filename_component(TSUMIRU_AVIF_LIB_DIR "${TSUMIRU_AVIF_LIBRARY}" DIRECTORY)
-if(NOT CMAKE_OBJDUMP)
-  find_program(TSUMIRU_OBJDUMP NAMES objdump llvm-objdump)
-  if(TSUMIRU_OBJDUMP)
-    set(CMAKE_OBJDUMP "${TSUMIRU_OBJDUMP}")
-  endif()
-endif()
 
 add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
 
@@ -162,13 +154,12 @@ install(TARGETS tsumiru_avif
   LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
-# AppImage/self-host bundles ship the libavif codec closure next to the shim;
-# Flatpak sets TSUMIRU_BUNDLE_AVIF_DEPS=0 and uses the runtime libavif.so.16.
+# Flatpak supplies these libraries; other bundles need the codec dependencies.
 if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
-  install(CODE "set(TSUMIRU_AVIF_LIBRARY \"${TSUMIRU_AVIF_LIBRARY}\")")
-  install(CODE "set(TSUMIRU_AVIF_LIB_DIR \"${TSUMIRU_AVIF_LIB_DIR}\")")
-  install(CODE "set(TSUMIRU_AVIF_DEST \"\$ENV{DESTDIR}${INSTALL_BUNDLE_LIB_DIR}\")")
-  install(CODE "set(CMAKE_OBJDUMP \"${CMAKE_OBJDUMP}\")")
+  install(CODE "set(TSUMIRU_AVIF_LIBRARY \"${TSUMIRU_AVIF_LIBRARY}\")" COMPONENT Runtime)
+  install(CODE "set(TSUMIRU_AVIF_LIB_DIR \"${TSUMIRU_AVIF_LIB_DIR}\")" COMPONENT Runtime)
+  install(CODE "set(TSUMIRU_AVIF_DEST \"\$ENV{DESTDIR}${INSTALL_BUNDLE_LIB_DIR}\")" COMPONENT Runtime)
+  install(CODE "set(CMAKE_OBJDUMP \"${CMAKE_OBJDUMP}\")" COMPONENT Runtime)
   install(CODE [=[
     file(GET_RUNTIME_DEPENDENCIES
       RESOLVED_DEPENDENCIES_VAR _avif_resolved
@@ -191,21 +182,7 @@ if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
           continue()
         endif()
       endif()
-      execute_process(COMMAND readelf -d "${_dep}" OUTPUT_VARIABLE _dyn ERROR_QUIET
-        RESULT_VARIABLE _rc OUTPUT_STRIP_TRAILING_WHITESPACE)
-      set(_soname "${_name}")
-      if(_rc EQUAL 0)
-        string(REGEX MATCH "SONAME[^[]*\\[([^]]+)\\]" _m "${_dyn}")
-        if(CMAKE_MATCH_1)
-          set(_soname "${CMAKE_MATCH_1}")
-        endif()
-      endif()
-      execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_dep}"
-        "${TSUMIRU_AVIF_DEST}/${_soname}" RESULT_VARIABLE _cp_rc)
-      if(NOT _cp_rc EQUAL 0)
-        message(FATAL_ERROR "Failed to bundle ${_dep}")
-      endif()
-      message(STATUS "Bundled AVIF dep: ${_soname}")
+      file(INSTALL "${_dep}" DESTINATION "${TSUMIRU_AVIF_DEST}" FOLLOW_SYMLINK_CHAIN)
     endforeach()
   ]=] COMPONENT Runtime)
 endif()

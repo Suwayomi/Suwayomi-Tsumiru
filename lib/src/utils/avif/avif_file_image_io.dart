@@ -11,9 +11,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import 'avif_codec.dart';
-import 'avif_header.dart';
+import 'avif_file_io.dart';
 
-/// [FileImage] that converts AVIF bytes before the engine decodes them.
 @immutable
 class AvifAwareFileImage extends ImageProvider<AvifAwareFileImage> {
   const AvifAwareFileImage(this.file, {this.scale = 1.0});
@@ -48,7 +47,7 @@ class AvifAwareFileImage extends ImageProvider<AvifAwareFileImage> {
   }
 
   Future<ui.ImmutableBuffer> _buffer() async {
-    if (avifNormalizationSupported && await _isAvifFile(file)) {
+    if (avifNormalizationSupported && await isAvifFile(file)) {
       final bytes = await normalizeAvifBytes(await file.readAsBytes());
       return ui.ImmutableBuffer.fromUint8List(bytes);
     }
@@ -66,16 +65,4 @@ class AvifAwareFileImage extends ImageProvider<AvifAwareFileImage> {
 
   @override
   String toString() => 'AvifAwareFileImage("${file.path}", scale: $scale)';
-}
-
-Future<bool> _isAvifFile(File file) async {
-  try {
-    final header = await file
-        .openRead(0, avifHeaderProbeBytes)
-        .expand((chunk) => chunk)
-        .toList();
-    return isAvifHeader(header);
-  } catch (_) {
-    return false;
-  }
 }

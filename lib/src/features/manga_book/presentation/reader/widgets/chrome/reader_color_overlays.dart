@@ -22,17 +22,6 @@ double brightnessOverlayAlpha(int value) =>
 double? applicationBrightnessFor(int value) =>
     value > 0 ? (value / 100).clamp(0.0, 1.0) : null;
 
-bool isNativeScreenBrightnessPlatform(TargetPlatform platform) =>
-    platform == TargetPlatform.android || platform == TargetPlatform.iOS;
-
-bool usesPageBrightnessFor({
-  required bool isWeb,
-  required TargetPlatform platform,
-}) => isWeb || !isNativeScreenBrightnessPlatform(platform);
-
-bool _screenBrightnessSupportedFor(TargetPlatform platform) =>
-    !kIsWeb && isNativeScreenBrightnessPlatform(platform);
-
 double pageBrightnessFactor(int value) => (1 + value / 100).clamp(0.0, 2.0);
 
 List<double> brightnessColorMatrix(int value) {
@@ -59,11 +48,7 @@ List<double> pageBrightnessMatrix({
 }
 
 /// Null resets window brightness; missing-plugin and permission errors are non-fatal.
-Future<void> _applyScreenBrightness(
-  double? target,
-  TargetPlatform platform,
-) async {
-  if (!_screenBrightnessSupportedFor(platform)) return;
+Future<void> _applyScreenBrightness(double? target) async {
   try {
     if (target != null) {
       await ScreenBrightness.instance.setApplicationScreenBrightness(target);
@@ -73,8 +58,7 @@ Future<void> _applyScreenBrightness(
   } catch (_) {}
 }
 
-Future<void> _resetScreenBrightness(TargetPlatform platform) async {
-  if (!_screenBrightnessSupportedFor(platform)) return;
+Future<void> _resetScreenBrightness() async {
   try {
     await ScreenBrightness.instance.resetApplicationScreenBrightness();
   } catch (_) {}
@@ -140,28 +124,29 @@ class ReaderColorOverlays extends HookConsumerWidget {
     final blend = ref.watch(colorFilterBlendModeKeyProvider) ??
         DBKeys.colorFilterBlendMode.initial as ColorFilterBlendMode;
 
-    final platform = defaultTargetPlatform;
-    final pageBrightness = usesPageBrightnessFor(
-      isWeb: kIsWeb,
-      platform: platform,
-    );
-    final brightnessOnPage = brightnessOn && pageBrightness;
+    final useNativeBrightness = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    final brightnessOnPage = brightnessOn && !useNativeBrightness;
 
     useEffect(() {
+      if (!useNativeBrightness) return null;
       void sync() {
-        if (!_screenBrightnessSupportedFor(platform)) return;
         final value =
             brightnessOn ? (readerBrightnessPreview.value ?? brightness) : 0;
-        _applyScreenBrightness(applicationBrightnessFor(value), platform);
+        _applyScreenBrightness(applicationBrightnessFor(value));
       }
 
       sync();
       readerBrightnessPreview.addListener(sync);
       return () => readerBrightnessPreview.removeListener(sync);
-    }, [brightnessOn, brightness, platform]);
+    }, [brightnessOn, brightness, useNativeBrightness]);
 
     // Reader teardown → drop the override so it never leaks app-wide.
-    useEffect(() => () => _resetScreenBrightness(platform), [platform]);
+    useEffect(
+      () => useNativeBrightness ? () => _resetScreenBrightness() : null,
+      [useNativeBrightness],
+    );
 
     final filtersOn = grayscale || inverted;
 
@@ -180,7 +165,7 @@ class ReaderColorOverlays extends HookConsumerWidget {
               brightnessOn: brightnessOnPage,
               committed: brightness,
             ),
-          if (brightnessOn && !pageBrightness)
+          if (brightnessOn && useNativeBrightness)
             _BrightnessOverlay(committed: brightness),
           if (colorFilterOn)
             _ColorFilterOverlay(committed: color, blend: blend),

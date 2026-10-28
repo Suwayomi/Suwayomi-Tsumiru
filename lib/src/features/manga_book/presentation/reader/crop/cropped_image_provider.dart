@@ -94,6 +94,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
           );
       bytes = await file.readAsBytes();
     }
+    // Keep the uncropped fallback on the same normalized bytes.
     return normalizeAvifBytes(bytes);
   }
 

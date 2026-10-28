@@ -8,8 +8,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/utils/avif/avif_cache_transcode_io.dart';
 import 'package:tsumiru/src/utils/avif/avif_codec.dart';
+import 'package:tsumiru/src/utils/avif/avif_file_io.dart';
 
 List<int> _ftypAvif() => [
   0,

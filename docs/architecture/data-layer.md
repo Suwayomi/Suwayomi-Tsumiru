@@ -65,8 +65,8 @@ features/<f>/domain/<type>/graphql/fragment.graphql  # fragments near their doma
 
 - Flutter's Linux engine has no AVIF decoder. `lib/src/utils/avif/` detects AVIF from the ftyp box (`avif`/`avis` major or compatible brands) and converts to lossless PNG through the bundled `libtsumiru_avif.so`; the C ABI is declared in `linux/tsumiru_avif.h`.
 - The cover and reader-page cache managers replace an AVIF cache file in place with an atomic rename before bytes reach `CachedNetworkImage` or the engine decoder. Cache keys, directories, headers and expiry are unchanged. A failed conversion leaves the original file untouched and is retried when the file's identity changes.
-- Local and offline AVIF files are converted in memory only; the user's originals are never rewritten. Crop, tall-page strips, spread actions and `tallPageIntrinsicSize` share the same detector and decoder.
-- Conversions started from the UI isolate run in a background isolate with at most two at a time. Code that already runs inside a background isolate (crop, strips, spread) converts inline. Non-Linux platforms, non-AVIF bytes, a missing shim and malformed input pass through unchanged, so the image fails as an ordinary decode error.
+- Local and offline AVIF files are converted in memory only; the user's originals are never rewritten. The reader normalizes a page once before cropping, so the cropped result and the uncropped decode fallback both get decodable bytes. Tall-page strips, spread actions and `tallPageIntrinsicSize` share the same detector and decoder.
+- Conversions started from the UI isolate run in a background isolate with at most two at a time. Code that already runs inside a background isolate (strips, spread) converts inline. Non-Linux platforms, non-AVIF bytes, a missing shim and malformed input pass through unchanged, so the image fails as an ordinary decode error.
 
 ## Gotchas
 

@@ -6,7 +6,6 @@
 
 import 'dart:typed_data';
 
-/// Web and non-IO builds never load the Linux shim.
 bool get avifNormalizationSupported => false;
 
 Future<Uint8List> normalizeAvifBytes(Uint8List bytes) async => bytes;

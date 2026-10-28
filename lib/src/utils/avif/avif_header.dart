@@ -4,10 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Bytes needed to cover the ftyp box plus its compatible brands.
 const avifHeaderProbeBytes = 256;
 
-/// Detects an AVIF still or image sequence from the ISO-BMFF ftyp box.
 bool isAvifHeader(List<int> bytes) {
   if (bytes.length < 12 ||
       String.fromCharCodes(bytes.sublist(4, 8)) != 'ftyp') {
