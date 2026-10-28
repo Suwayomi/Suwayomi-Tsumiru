@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -52,7 +51,9 @@ class AdvancedScreen extends ConsumerWidget {
                         title: Text(context.l10n.clearCache),
                         onTap: () async {
                           // GraphQL uses an in-memory cache; only images need clearing on disk.
-                          await DefaultCacheManager().emptyCache();
+                          await ref
+                              .read(serverPageCacheManagerProvider)
+                              .emptyCache();
                           await ref
                               .read(coverCacheManagerProvider)
                               .emptyCache();

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:image/image.dart' as img;
 
+import '../../../../../../../utils/avif/avif_codec.dart';
 import 'measure_size.dart';
 
 const _stripChannel = MethodChannel('tsumiru/page_strips');
@@ -17,7 +18,7 @@ int _nextStripOwner = 0;
 
 Future<ui.Size> tallPageIntrinsicSize(String path) async {
   final buffer = await ui.ImmutableBuffer.fromUint8List(
-    await File(path).readAsBytes(),
+    await normalizeAvifBytes(await File(path).readAsBytes()),
   );
   try {
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
@@ -40,7 +41,8 @@ class _StripPixels {
 }
 
 List<_StripPixels> _cutStrips((String, int) request) {
-  final decoded = img.decodeImage(File(request.$1).readAsBytesSync());
+  final bytes = File(request.$1).readAsBytesSync();
+  final decoded = img.decodeImage(normalizeAvifBytesSync(bytes));
   if (decoded == null) throw StateError('Cannot decode page');
   return [
     for (var y = 0; y < decoded.height; y += request.$2)

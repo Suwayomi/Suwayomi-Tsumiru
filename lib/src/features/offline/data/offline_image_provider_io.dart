@@ -8,4 +8,8 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 
-ImageProvider offlineImageProvider(String path) => FileImage(File(path));
+import '../../../utils/avif/avif_file_image_io.dart';
+
+ImageProvider offlineImageProvider(String path) => Platform.isLinux
+    ? AvifAwareFileImage(File(path))
+    : FileImage(File(path));

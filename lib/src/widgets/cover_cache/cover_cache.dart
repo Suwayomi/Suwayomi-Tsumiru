@@ -73,8 +73,9 @@ CacheManager coverCacheManager(Ref ref) {
 }
 
 final serverPageCacheManagerProvider = Provider<CacheManager>(
-  (ref) =>
-      kIsWeb ? ref.watch(coverCacheManagerProvider) : DefaultCacheManager(),
+  (ref) => kIsWeb
+      ? ref.watch(coverCacheManagerProvider)
+      : createServerPageCacheManager(),
 );
 
 bool isCoverImagePath(String path) =>
