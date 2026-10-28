@@ -101,6 +101,8 @@ set_target_properties(tsumiru_avif PROPERTIES
   INSTALL_RPATH "$ORIGIN"
   BUILD_WITH_INSTALL_RPATH TRUE
 )
+# DT_RPATH lets libavif resolve its bundled codec dependencies.
+target_link_options(tsumiru_avif PRIVATE "-Wl,--disable-new-dtags")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
