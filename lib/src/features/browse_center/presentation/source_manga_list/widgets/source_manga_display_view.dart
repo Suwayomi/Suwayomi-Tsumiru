@@ -43,12 +43,14 @@ class SourceMangaDisplayView extends HookConsumerWidget {
     required this.sourceId,
     required this.sourceType,
     this.source,
+    this.onSelectingChanged,
   });
 
   final PagingController<int, MangaDto> controller;
   final SourceDto? source;
   final String sourceId;
   final SourceType sourceType;
+  final ValueChanged<bool>? onSelectingChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,6 +60,17 @@ class SourceMangaDisplayView extends HookConsumerWidget {
 
     final selection = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
+    useEffect(() {
+      final callback = onSelectingChanged;
+      if (callback == null || !selecting) return null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        callback(true);
+      });
+      return () => WidgetsBinding.instance.addPostFrameCallback(
+        (_) => callback(false),
+      );
+    }, [selecting]);
     final desktop = context.usesDesktopShell;
     final gridFocusNode = useFocusNode();
 

@@ -131,6 +131,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
     final source = ref.watch(sourceProvider(sourceId));
 
     final query = useState(initialQuery);
+    final selecting = useState(false);
     final searchDraft = useRef(initialQuery);
     useEffect(() {
       searchDraft.value = query.value;
@@ -297,6 +298,9 @@ class SourceMangaListScreen extends HookConsumerWidget {
             sourceType: sourceType,
             controller: controller,
             source: data,
+            onSelectingChanged: (v) {
+              if (context.mounted) selecting.value = v;
+            },
           ),
         );
         if (context.usesDesktopShell) {
@@ -679,7 +683,9 @@ class SourceMangaListScreen extends HookConsumerWidget {
               )
             : listBody,
         floatingActionButton:
-              sourceType == SourceType.SEARCH && filterList != null
+              !selecting.value &&
+                  sourceType == SourceType.SEARCH &&
+                  filterList != null
                 ? Builder(
                     builder: (context) => FloatingActionButton.extended(
                       icon: Icon(FluentIcons.filter_24_regular),
