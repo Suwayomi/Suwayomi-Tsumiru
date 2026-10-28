@@ -57,10 +57,12 @@ class _SupportFallback extends PathProviderPlatform {
 /// records without going through either.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   RecordSeal.debugKey = Uint8List.fromList(List<int>.generate(32, (i) => i));
-  final previous = PathProviderPlatform.instance;
-  final support = await Directory.systemTemp.createTemp(
-    'tsumiru-test-support-',
-  );
-  PathProviderPlatform.instance = _SupportFallback(previous, support.path);
+  if (!kIsWeb) {
+    final previous = PathProviderPlatform.instance;
+    final support = await Directory.systemTemp.createTemp(
+      'tsumiru-test-support-',
+    );
+    PathProviderPlatform.instance = _SupportFallback(previous, support.path);
+  }
   await testMain();
 }

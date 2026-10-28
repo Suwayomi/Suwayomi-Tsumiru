@@ -20,7 +20,6 @@ class CustomBrightness extends _$CustomBrightness
   bool? build() => initialize(DBKeys.customBrightness);
 }
 
-/// -75..100; negatives dim the page, positives are inert without a brightness plugin.
 @riverpod
 class CustomBrightnessValue extends _$CustomBrightnessValue
     with SharedPreferenceClientMixin<int> {
