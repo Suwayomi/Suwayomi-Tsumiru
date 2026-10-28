@@ -14,37 +14,34 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../utils/avif/avif_cache_transcode_io.dart';
+import '../../utils/avif/avif_header.dart';
+
+export '../../utils/avif/avif_header.dart' show isAvifHeader;
+
 const _transcoderChannel = MethodChannel('tsumiru/image_transcoder');
-const _avifHeaderBytes = 256;
 final _inFlightFileTranscodes = <String, Future<void>>{};
-final _failedFileTranscodes = <String>{};
+final _failedFileTranscodes = <String, _FileIdentity>{};
 Future<bool>? _androidSupportsAvifDecode;
 
-bool isAvifHeader(List<int> bytes) {
-  if (bytes.length < 12 ||
-      String.fromCharCodes(bytes.sublist(4, 8)) != 'ftyp') {
-    return false;
-  }
-  final boxSize =
-      (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-  if (boxSize < 16) {
-    return false;
-  }
-  final end = boxSize < bytes.length ? boxSize : bytes.length;
-  bool isAvifBrand(int offset) {
-    final brand = String.fromCharCodes(bytes.sublist(offset, offset + 4));
-    return brand == 'avif' || brand == 'avis';
-  }
+/// Identifies the bytes that failed, so a refreshed file is retried.
+class _FileIdentity {
+  const _FileIdentity(this.length, this.modified, this.changed);
 
-  if (isAvifBrand(8)) {
-    return true;
-  }
-  for (var offset = 16; offset + 4 <= end; offset += 4) {
-    if (isAvifBrand(offset)) {
-      return true;
-    }
-  }
-  return false;
+  factory _FileIdentity.of(io.FileStat stat) => _FileIdentity(
+    stat.size,
+    stat.modified.millisecondsSinceEpoch,
+    stat.changed.millisecondsSinceEpoch,
+  );
+
+  final int length;
+  final int modified;
+  final int changed;
+
+  bool matches(io.FileStat stat) =>
+      stat.size == length &&
+      stat.modified.millisecondsSinceEpoch == modified &&
+      stat.changed.millisecondsSinceEpoch == changed;
 }
 
 Future<bool> _loadAndroidSupportsAvifDecode() async {
@@ -58,37 +55,58 @@ Future<bool> _loadAndroidSupportsAvifDecode() async {
 
 Future<void> _transcodeAvif(io.File file) async {
   final path = file.path;
+  io.FileStat stat;
   try {
-    final supported = await (_androidSupportsAvifDecode ??=
-        _loadAndroidSupportsAvifDecode());
-    if (!supported || !await file.exists()) {
-      return;
-    }
+    if (!await file.exists()) return;
+    stat = await file.stat();
+  } catch (_) {
+    return;
+  }
+  final failed = _failedFileTranscodes[path];
+  if (failed != null && failed.matches(stat)) {
+    return;
+  }
+  try {
     final header = await file
-        .openRead(0, _avifHeaderBytes)
+        .openRead(0, avifHeaderProbeBytes)
         .expand((chunk) => chunk)
         .toList();
     if (!isAvifHeader(header)) {
+      _failedFileTranscodes.remove(path);
       return;
     }
-    final transcoded = await _transcoderChannel.invokeMethod<bool>(
-      'transcodeFileToJpeg',
-      {'path': path},
-    );
-    if (transcoded != true) {
-      _failedFileTranscodes.add(path);
+    final converted = io.Platform.isAndroid
+        ? await _transcodeAndroidAvif(path)
+        : await transcodeAvifFileToPng(file);
+    if (converted == true) {
+      _failedFileTranscodes.remove(path);
+    } else if (converted == false) {
+      _failedFileTranscodes[path] = _FileIdentity.of(stat);
     }
   } catch (_) {
-    _failedFileTranscodes.add(path);
+    _failedFileTranscodes[path] = _FileIdentity.of(stat);
   }
 }
 
+/// Null when the Android platform has no AVIF decoder and no work was needed.
+Future<bool?> _transcodeAndroidAvif(String path) async {
+  final supported = await (_androidSupportsAvifDecode ??=
+      _loadAndroidSupportsAvifDecode());
+  if (!supported) {
+    return null;
+  }
+  final transcoded = await _transcoderChannel.invokeMethod<bool>(
+    'transcodeFileToJpeg',
+    {'path': path},
+  );
+  return transcoded == true;
+}
+
 Future<void> _transcodeAvifIfNeeded(io.File file) {
-  final path = file.path;
-  if (!io.Platform.isAndroid || _failedFileTranscodes.contains(path)) {
+  if (!io.Platform.isAndroid && !io.Platform.isLinux) {
     return Future.value();
   }
-  return transcodeAvifInFlight(path, () => _transcodeAvif(file));
+  return transcodeAvifInFlight(file.path, () => _transcodeAvif(file));
 }
 
 @visibleForTesting
@@ -106,21 +124,18 @@ Future<FileInfo> _transcodeAvifInfo(FileInfo info) async {
   return info;
 }
 
-/// Durable app-support cover cache, separate from reader pages and immune to OS temp cleanup.
-CacheManager createCoverCacheManager({String? serverOrigin}) =>
-    _CoverCacheManager(
-      Config(
-        'tsumiruCovers',
-        stalePeriod: const Duration(days: 90),
-        maxNrOfCacheObjects: 5000,
-        fileSystem: _AppSupportFileSystem('tsumiruCovers'),
-      ),
-    );
+/// Reader pages keep the default cache key; only Linux adds AVIF conversion.
+CacheManager createServerPageCacheManager() {
+  if (!io.Platform.isLinux) return DefaultCacheManager();
+  return _serverPageCacheManager ??= _ServerPageCacheManager(
+    Config(DefaultCacheManager.key),
+  );
+}
 
-/// Ignore age until explicit eviction; Android 12+ transcodes AVIF to JPEG to avoid platform decoder failures.
-class _CoverCacheManager extends CacheManager {
-  _CoverCacheManager(super.config);
+CacheManager? _serverPageCacheManager;
 
+/// Convert AVIF before bytes reach the engine decoders.
+mixin _AvifTranscodingCacheManager on CacheManager {
   @override
   Future<FileInfo?> getFileFromCache(
     String key, {
@@ -151,11 +166,6 @@ class _CoverCacheManager extends CacheManager {
     Map<String, String>? headers,
     bool withProgress = false,
   }) async* {
-    final cached = await getFileFromCache(key ?? url);
-    if (cached != null) {
-      yield cached;
-      return;
-    }
     await for (final response in super.getFileStream(
       url,
       key: key,
@@ -167,6 +177,49 @@ class _CoverCacheManager extends CacheManager {
           : response;
     }
   }
+}
+
+/// Durable app-support cover cache, separate from reader pages and immune to OS temp cleanup.
+CacheManager createCoverCacheManager({String? serverOrigin}) =>
+    _CoverCacheManager(
+      Config(
+        'tsumiruCovers',
+        stalePeriod: const Duration(days: 90),
+        maxNrOfCacheObjects: 5000,
+        fileSystem: _AppSupportFileSystem('tsumiruCovers'),
+      ),
+    );
+
+/// Ignore age until explicit eviction; AVIF is pre-converted for the platform decoder.
+class _CoverCacheManager extends CacheManager
+    with _AvifTranscodingCacheManager {
+  _CoverCacheManager(super.config);
+
+  /// Keep the durable-cover fast path: a cache hit is final and never refetched.
+  @override
+  Stream<FileResponse> getFileStream(
+    String url, {
+    String? key,
+    Map<String, String>? headers,
+    bool withProgress = false,
+  }) async* {
+    final cached = await getFileFromCache(key ?? url);
+    if (cached != null) {
+      yield cached;
+      return;
+    }
+    yield* super.getFileStream(
+      url,
+      key: key,
+      headers: headers,
+      withProgress: withProgress,
+    );
+  }
+}
+
+class _ServerPageCacheManager extends CacheManager
+    with _AvifTranscodingCacheManager {
+  _ServerPageCacheManager(super.config);
 }
 
 /// Package IOFileSystem layout rooted in durable application-support.

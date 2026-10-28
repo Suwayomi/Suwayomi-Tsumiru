@@ -108,9 +108,7 @@ jobs:
           sudo apt-get $opts install -y --no-install-recommends \
             clang cmake ninja-build pkg-config \
             libgtk-3-dev libx11-dev libblkid-dev liblzma-dev \
-            libsecret-1-dev libjsoncpp-dev
-          # libsecret + jsoncpp are required by flutter_secure_storage_linux
-          # (used by the simple_login / ui_login credential store).
+            libsecret-1-dev libjsoncpp-dev libavif-dev # secure_storage needs the first two; libavif-dev builds the tsumiru_avif shim.
 
       - name: Enable desktop targets
         if: matrix.target == 'linux' || matrix.target == 'macos' || matrix.target == 'windows'
@@ -179,6 +177,7 @@ jobs:
         env:
           # appimagetool is itself an AppImage; extract-and-run avoids needing FUSE on CI.
           APPIMAGE_EXTRACT_AND_RUN: "1"
+          TSUMIRU_BUNDLE_AVIF_DEPS: "1" # AppImage must decode where no system libavif exists.
         run: |
           # Official appimagetool (fastforge shells out to it).
           sudo wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
@@ -197,6 +196,18 @@ jobs:
             find build/linux -iname '*.so' 2>/dev/null | head; exit 1
           fi
           echo "Bundled SQLite: $sqlite"
+          # Guard: without the shim + libavif closure, AVIF covers/pages hit the Dart loader failure path.
+          avif_shim="$(find build/linux -name 'libtsumiru_avif.so' | head -1)"
+          if [ -z "$avif_shim" ]; then
+            echo "::error::libtsumiru_avif.so missing from the Linux build"
+            find build/linux -iname '*.so' 2>/dev/null | head; exit 1
+          fi
+          avif_lib="$(find build/linux -name 'libavif.so.*' | head -1)"
+          if [ -z "$avif_lib" ]; then
+            echo "::error::libavif runtime closure missing from the Linux build"
+            find build/linux -iname '*.so' 2>/dev/null | head; exit 1
+          fi
+          echo "Bundled AVIF: $avif_shim + $avif_lib"
           # Collect the AppImage into dist/ with our release naming.
           mkdir -p dist
           built="$(find dist -name '*.AppImage' | head -1)"

@@ -12,7 +12,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../../../../../utils/avif/avif_codec.dart';
 import '../../../../../utils/texture_limit.dart';
+import '../../../../../widgets/cover_cache/server_page_cache_manager.dart';
 import 'crop_isolate.dart';
 
 /// Shares ServerImage byte-cache identity and crops off-thread; uncropped images decode unchanged.
@@ -80,13 +82,19 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   }
 
   Future<Uint8List> _fetchBytes() async {
-    if (localPath != null) return File(localPath!).readAsBytes();
-    final file = await (cacheManager ?? DefaultCacheManager()).getSingleFile(
-      fetchUrl,
-      key: cacheKey,
-      headers: headers ?? const <String, String>{},
-    );
-    return file.readAsBytes();
+    final Uint8List bytes;
+    if (localPath != null) {
+      bytes = await File(localPath!).readAsBytes();
+    } else {
+      final file = await (cacheManager ?? createServerPageCacheManager())
+          .getSingleFile(
+            fetchUrl,
+            key: cacheKey,
+            headers: headers ?? const <String, String>{},
+          );
+      bytes = await file.readAsBytes();
+    }
+    return normalizeAvifBytes(bytes);
   }
 
   Future<ui.Image> _decodeRgba(CroppedImageData data) async {

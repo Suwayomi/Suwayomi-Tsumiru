@@ -11,6 +11,9 @@ import 'package:http/http.dart' as http;
 CacheManager createCoverCacheManager({String? serverOrigin}) =>
     _BrowserImageCacheManager(_ServerImageClient(serverOrigin));
 
+/// Web pages reuse the browser cover cache; no native conversion applies.
+CacheManager createServerPageCacheManager() => DefaultCacheManager();
+
 class _ServerImageClient extends http.BaseClient {
   _ServerImageClient(this.serverOrigin);
 

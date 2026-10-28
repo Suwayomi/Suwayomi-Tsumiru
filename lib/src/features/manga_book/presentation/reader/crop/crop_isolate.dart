@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+import '../../../../../utils/avif/avif_codec.dart';
 import 'border_crop.dart';
 
 /// Tightly packed RGBA8888 with no row padding, ready for ui.decodeImageFromPixels.
@@ -54,7 +55,7 @@ Future<CroppedImageData?> cropImageBytes(
 }
 
 CroppedImageData? _cropEntry(_CropRequest req) {
-  final decoded = img.decodeImage(req.encodedBytes);
+  final decoded = img.decodeImage(normalizeAvifBytesSync(req.encodedBytes));
   if (decoded == null) return null;
 
   final width = decoded.width;

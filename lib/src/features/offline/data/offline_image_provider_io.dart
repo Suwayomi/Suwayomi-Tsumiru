@@ -8,4 +8,9 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 
-ImageProvider offlineImageProvider(String path) => FileImage(File(path));
+import '../../../utils/avif/avif_file_image_io.dart';
+
+/// Linux AVIF needs the native PNG conversion; other platforms decode directly.
+ImageProvider offlineImageProvider(String path) => Platform.isLinux
+    ? AvifAwareFileImage(File(path))
+    : FileImage(File(path));
