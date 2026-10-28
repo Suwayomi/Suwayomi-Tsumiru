@@ -18,6 +18,7 @@ import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
 import '../../features/account/data/account_providers.dart';
+import '../../features/auth/presentation/basic_auth_deprecation.dart';
 import '../../features/offline/data/account_storage_recovery_state.dart';
 import '../../features/offline/presentation/account_storage_recovery_banner.dart';
 import '../../graphql/__generated__/schema.graphql.dart';
@@ -45,8 +46,8 @@ class NavigationShellScreen extends HookConsumerWidget {
     final AsyncValue<Version?> versionResult = await updateCallback();
     toast?.close();
     if (!context.mounted) return;
-    versionResult.whenOrNull(
-      data: (version) {
+    await versionResult.whenOrNull<Future<void>>(
+      data: (version) async {
         if (version == null) return;
         final dismissed = ref.read(dismissedUpdateVersionProvider);
         if (dismissed != null && dismissed.isNotEmpty) {
@@ -58,7 +59,7 @@ class NavigationShellScreen extends HookConsumerWidget {
           }
           if (skipped != null && version.compareTo(skipped) <= 0) return;
         }
-        appUpdateDialog(
+        await appUpdateDialog(
           title: title ?? kAppName,
           newRelease: "v${version.canonicalizedVersion}",
           context: context,
@@ -127,11 +128,10 @@ class NavigationShellScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final serverHosted = ref.watch(serverHostedWebProvider);
     useEffect(() {
-      if (!serverHosted) {
-        if (isGooglePlayBuild) return null;
-        Future.microtask(() async {
-          await ref.read(startupWebRevisionProvider.future);
-          if (!context.mounted || ref.read(serverHostedWebProvider)) return;
+      Future.microtask(() async {
+        await ref.read(startupWebRevisionProvider.future);
+        if (!context.mounted) return;
+        if (!ref.read(serverHostedWebProvider) && !isGooglePlayBuild) {
           await checkForUpdate(
             title: ref.read(packageInfoProvider).appName,
             context: context,
@@ -141,9 +141,14 @@ class NavigationShellScreen extends HookConsumerWidget {
           );
           if (!context.mounted) return;
           await checkServerUpdateAlerts(context: context, ref: ref);
-        });
-        return null;
-      }
+        }
+        if (!context.mounted) return;
+        await maybeShowBasicAuthDeprecation(context: context, ref: ref);
+      });
+      return null;
+    }, const []);
+    useEffect(() {
+      if (!serverHosted) return null;
 
       // Widget subscriptions pause when About or Settings covers this shell.
       final container = ProviderScope.containerOf(context, listen: false);

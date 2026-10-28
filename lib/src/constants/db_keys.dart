@@ -156,6 +156,7 @@ enum DBKeys {
   forcePortrait(false),
   dismissedUpdateVersion(''),
   lastSeenServerVersion(''),
+  basicAuthDeprecationLastShown('{}'),
   updateProgressAfterReading(true),
   updateProgressManualMarkRead(true),
   // 0 selects automatic columns using gridMangaCoverWidth.

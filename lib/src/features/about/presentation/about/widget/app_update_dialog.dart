@@ -18,7 +18,7 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../data/about_repository.dart';
 import '../../../data/web_update_browser.dart';
 
-void appUpdateDialog({
+Future<void> appUpdateDialog({
   required String title,
   required String newRelease,
   required BuildContext context,
@@ -26,14 +26,14 @@ void appUpdateDialog({
   String? url,
   bool isServerUpdate = false,
   void Function(bool skip)? onSkipChanged,
-}) {
+}) async {
   if (!isServerUpdate && isGooglePlayBuild) return;
   if (kIsWeb &&
       !isServerUpdate &&
       ProviderScope.containerOf(context).read(serverHostedWebProvider)) {
     return;
   }
-  showDialog(
+  await showDialog<void>(
     context: context,
     builder: (context) {
       bool skip = false;

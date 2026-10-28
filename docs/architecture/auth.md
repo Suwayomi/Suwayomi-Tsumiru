@@ -80,6 +80,13 @@ cookie; an unexpected response or a connection failure can also cause it.
 - **Refresh client must stay un-authed** — if it ever gains a `SuwayomiAuthLink`, refresh recurses infinitely.
 - **`isLocalAddress` suppresses the insecure-transport warning** for `localhost`/`127.x`/`10.x`/`172.16–31.x`/`192.168.x` only.
 
+## Basic Auth deprecation reminder
+
+At startup, the authenticated `ServerSignInStatus` probe bypasses the cache.
+`BASIC_AUTH` shows a Close-only dialog if seven days have passed since the last notice.
+SharedPreferences stores timestamps by server address without credentials, query or fragment.
+The notice follows the release dialog and runs on Play and hosted web too, with no opt-out.
+
 ## Account session boundary
 
 `AuthCredentialsStore.withIdentityChange` closes request admission before credentials change and publishes a new session generation when the transition ends. HTTP and subscription clients follow that generation. Retained clients reject new requests and late responses once their session has ended; token refresh alone preserves the clients.
