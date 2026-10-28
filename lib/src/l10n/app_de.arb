@@ -24,7 +24,7 @@
     "@credentials": {
         "description": "Popup title and Button text to enter Authentication credentials"
     },
-    "copyMsg": "'{msg}' kopiert!",
+    "copyMsg": "In Zwischenablage kopiert:\n{msg}",
     "@copyMsg": {
         "description": "Toast text to show that the message has been copied",
         "placeholders": {
@@ -112,7 +112,7 @@
     "@authTypeNone": {
         "description": "Radio button text for no Authentication"
     },
-    "backup": "Sichern und wiederherstellen",
+    "backup": "Sichern und Wiederherstellen",
     "@backup": {
         "description": "Screen title and Button text of Backup & Restore screen"
     },
@@ -140,7 +140,7 @@
     "@categories": {
         "description": "Button text of edit Categories screen in Library settings screen"
     },
-    "categoryUpdate": "Kategorie aktualisierung",
+    "categoryUpdate": "Kategorie Aktualisierung",
     "@categoryUpdate": {
         "description": "Button text to update the mangas in the Category"
     },
@@ -207,7 +207,7 @@
     "backupCleanup": "Backup Bereinigung",
     "backupInterval": "Backup Intervall",
     "backupLocation": "Backup Speicherort",
-    "backupLocationDescription": "Der Pfad zum Verzeichnis auf dem Server, in dem automatisierte Backups gespeichert werden sollen",
+    "backupLocationDescription": "Verzeichnis auf dem Server, in dem automatisierte Backups gespeichert werden.",
     "backupTime": "Backup Zeit",
     "categoryNumberOfItems": "Anzahl der Elemente anzeigen",
     "categoryTabs": "Kategorienreiter anzeigen",
@@ -234,7 +234,7 @@
     "alwaysAsk": "Immer fragen",
     "setCategories": "Kategorien festlegen",
     "deleteChaptersConfirm": "Bist du sicher, dass du die ausgewählten Kapitel löschen willst?",
-    "deleteCategoryTitle": "Bist du dir sicher?",
+    "deleteCategoryTitle": "Kategorie löschen",
     "deleteChapterAfterManuallyMarkedRead": "Lösche Kapitel, nach sie manuell als gelesen markiert wurden",
     "deleteFinishedChaptersWhileReading": "Lösche beim Lesen beendete Kapitel",
     "allowDeletingBookmarkedChapters": "Erlauben, mit Lesezeichen versehene Kapitel zu löschen",
@@ -263,7 +263,7 @@
     "groupStyleTabs": "Registerkarten",
     "downloadAllChapters": "Alle",
     "downloadLocation": "Download-Speicherort",
-    "downloadLocationHint": "Der Pfad zum Verzeichnis auf dem Server in dem heruntergeladene Dateien gespeichert werden sollen",
+    "downloadLocationHint": "Verzeichnis auf dem Server, in dem heruntergeladene Dateien gespeichert werden.",
     "downloaded": "Heruntergeladen",
     "downloading": "Wird heruntergeladen",
     "downloadNextChapter": "Nächstes Kapitel",
@@ -288,7 +288,7 @@
     "includeCategories": "Kategorien",
     "includeChapters": "Kapitel",
     "includeHistory": "Verlauf",
-    "includeClientData": "App-Einstellungen",
+    "includeClientData": "Endgerät-Daten",
     "install": "Installieren",
     "installing": "Wird installiert",
     "appThemeTitle": "Thema",
@@ -310,21 +310,21 @@
     "invertedColors": "Invertiert",
     "latest": "Neueste",
     "localSourceLocation": "Lokal-Quelle Verzeichnis",
-    "localSourceLocationDescription": "Der Pfad zum Verzeichnis am Server, wo Dateien der lokalen Quelle gespeichert sind",
+    "localSourceLocationDescription": "Verzeichnis am Server, in dem Dateien der lokalen Quelle abgelegt werden.",
     "mangaSortDateAdded": "Hinzufügedatum",
     "mangaSortLastChapterDate": "Neuestes Kapitel",
     "mangaSortLastRead": "Zuletzt gelesen",
     "mangaSortLastUpdated": "Abrufdatum des Kapitels",
     "mangaSortRandom": "Zufällig",
     "mangaSortTrackerScore": "Tracker-Bewertung",
-    "mangaSortTotalChapters": "Kapitelanzahl",
+    "mangaSortTotalChapters": "Gesamte Anzahl der Kapitel",
     "mangaSortUnread": "Ungelesen",
     "mangaStatusCancelled": "Abgebrochen",
     "mangaStatusCompleted": "Abgeschlossen",
     "mangaStatusLicensed": "Lizenziert",
     "mangaStatusOnHiatus": "Unterbrochen",
     "mangaStatusOngoing": "Fortlaufend",
-    "mangaStatusPublishingFinished": "Veröffentlichung abgeschlossen",
+    "mangaStatusPublishingFinished": "Herausgabe abgeschlossen",
     "mangaStatusUnknown": "Unbekannt",
     "more": "Mehr",
     "moveToBottom": "Nach unten verschieben",
@@ -530,7 +530,7 @@
     "notificationsWifiOnly": "Nur über WLAN",
     "restored": "Backup wiederhergestellt.",
     "extensionInstalled": "Erweiterung installiert",
-    "installingExtension": "Erweiterung wird installiert…",
+    "installingExtension": "Erweiterung wird installiert",
     "whatsNew": "Was ist neu",
     "updatingLibrary": "Bibliothek wird aktualisiert",
     "withCompletedStatus": "Mit Status \"Abgeschlossen\"",
@@ -568,7 +568,7 @@
     "showUpdateProgressBanner": "Zeige Aktualisierungsfortschritts-Banner",
     "mangaSortAlphabetical": "Alphabetisch",
     "newUpdateAvailable": "Aktualisierung verfügbar",
-    "noCategoriesFound": "Keine Kategorien vorhanden. Tippe auf die Plus-Schaltfläche, um eine Kategorie zum Sortieren deiner Bibliothek zu erstellen.",
+    "noCategoriesFound": "Du hast noch keine Kategorien.",
     "noMangaFound": "Keine Manga gefunden",
     "noSourcesFound": "Keine Quelle gefunden",
     "migrationHideUnmatched": "Einträge ohne Treffer verbergen",
@@ -578,35 +578,35 @@
     "offlineStorageUsage": "Speichernutzung",
     "updateProgressManualMarkRead": "Fortschritt aktualisieren, wenn als gelesen markiert wird",
     "downloadNextChaptersN": "{n, plural, one{Nächstes Kapitel} other{Nächste {n} Kapitel}}",
-    "noOfChapters": "{count, plural, one{{count} Kapitel} other{{count} Kapitel}}",
+    "noOfChapters": "{count} Kapitel",
     "accountPermissionDenied": "Dein Konto hat keine Berechtigung für diese Aktion.",
     "migrationIdentityUnavailable": "Verbinde dich mit deinem Server und melde dich vor der Migration an.",
     "accountSettingsUnavailable": "Die Kontoeinstellungen konnten nicht überprüft werden. Stelle die Verbindung wieder her und versuche es erneut.",
     "manageSettingsPermissionRequired": "Du benötigst die Berechtigung zum Verwalten der Servereinstellungen.",
     "authTypeUiLogin": "UI Login (empfohlen)",
-    "authReverseProxyHelp": "Wenn du einen Reverse-Proxy vor Suwayomi verwendest (Pangolin, Authelia, Authentik, Cloudflare Access usw.), konfiguriere ihn so, dass er Anfragen durchlässt und Suwayomi hier die Authentifizierung übernimmt. Deaktiviere bei öffentlichen Hostnamen „Server-Port verwenden“ auf der Server-Seite, damit Anfragen über den Standardport 443 laufen.",
+    "authReverseProxyHelp": "Konfiguriere deinen Reverse-Proxy so, dass er Anfragen durchlässt und Suwayomi hier die Authentifizierung übernimmt.",
     "authTestConnection": "Verbindung testen",
     "authTestConnectionSuccess": "Verbunden.",
     "authTestConnectionFailedNetwork": "Server nicht erreichbar. Prüfe die URL und die Verbindung.",
     "authTestConnectionFailedAuth": "Anmeldung fehlgeschlagen. Prüfe Benutzername und Passwort.",
     "authTestConnectionFailedMode": "Der Server verwendet möglicherweise einen anderen Authentifizierungsmodus. Prüfe seine Einstellung authMode.",
     "authBrowserSessionUnverified": "Der Server hat deine Browsersitzung nicht bestätigt. Prüfe den Authentifizierungsmodus und die Verbindung. Bei einfacher Anmeldung muss Tsumiru von derselben Website wie dein Server bereitgestellt werden.",
-    "authTestConnectionFailedShape": "Der Server hat nicht wie erwartet geantwortet. Verweist deine URL auf die Suwayomi-API?",
-    "authTestConnectionFailedTls": "TLS-Verbindungsaufbau fehlgeschlagen. Häufige Ursachen: 1) Der Server verwendet unverschlüsseltes HTTP. Ändere die URL zu http://. 2) Öffentlicher Hostname hinter einem Reverse-Proxy. Deaktiviere „Server-Port verwenden“ auf der Server-Seite, damit Anfragen über den Standardport 443 laufen.",
+    "authTestConnectionFailedShape": "Der Server hat nicht wie erwartet geantwortet. Überprüfe, dass deine URL auf Suwayomi verweist.",
+    "authTestConnectionFailedTls": "TLS-Verbindungsaufbau fehlgeschlagen. Überprüfe, ob dein Server http:// oder https:// verwendet.",
     "authSessionExpired": "Sitzung abgelaufen. Melde dich erneut an.",
     "authReauthenticate": "Erneut anmelden",
     "authInsecureTransportTitle": "Unsichere Verbindung",
-    "authInsecureTransportWarning": "Deine Server-URL verwendet http://. Benutzername und Passwort werden unverschlüsselt über das Netzwerk gesendet. Verwende https://, sofern du dem Netzwerk nicht vollständig vertraust.",
+    "authInsecureTransportWarning": "Dein Benutzername und Passwort werden unverschlüsselt über das Netzwerk gesendet via HTTP. Verwende HTTPS, sofern du dem Netzwerk nicht vollständig vertraust.",
     "authInsecureTransportContinue": "Verstanden, fortfahren",
     "authLogoutConfirm": "Abmelden und gespeicherte Anmeldedaten löschen? Du musst dich erneut anmelden, um diesen Server zu verwenden.",
-    "authImageUrlLogWarning": "Hinweis: Bei UI Login enthalten Bild-URLs dein Zugriffstoken als Abfrageparameter. Es kann dadurch in den Zugriffsprotokollen deines Servers erscheinen.",
+    "authImageUrlLogWarning": "Bei UI Login enthalten Bild-URLs dein Zugriffstoken. Es kann dadurch in den Zugriffsprotokollen deines Servers erscheinen.",
     "autoDownloadCategoriesAll": "Alle Kategorien",
-    "autoDownloadCategoriesHint": "Neue Kapitel nur für eingeschlossene Kategorien automatisch herunterladen. Ausschließen hat immer Vorrang. Tippen zum Wechseln: ✓ einschließen · – ausschließen · leer: Standard.",
+    "autoDownloadCategoriesHint": "Ausschließen hat immer Vorrang. Tippen zum Wechseln: ✓ einschließen · – ausschließen · leer: Standard.",
     "autoDownloadCategoriesIncluded": "Eingeschlossen: {names}",
     "autoDownloadCategoriesExcluded": "Ausgeschlossen: {names}",
     "updateCategories": "Zu aktualisierende Kategorien",
     "updateCategoriesAll": "Alle Kategorien",
-    "updateCategoriesHint": "Bei einer vollständigen Bibliotheksaktualisierung werden nur eingeschlossene Kategorien geprüft. Ausschließen hat immer Vorrang. Tippen zum Wechseln: ✓ einschließen · – ausschließen · leer: Standard.",
+    "updateCategoriesHint": "Ausschließen hat immer Vorrang. Tippen zum Wechseln: ✓ einschließen · – ausschließen · leer: Standard.",
     "updateCategoriesIncluded": "Eingeschlossen: {names}",
     "updateCategoriesExcluded": "Ausgeschlossen: {names}",
     "autoWebtoonSnack": "Lesen im Webtoon-Modus",
@@ -622,12 +622,12 @@
     "pageLayoutAutomatic": "Automatisch",
     "readerGroupEInk": "E-Ink",
     "autoWebtoonMode": "Automatischer Lesemodus",
-    "autoWebtoonModeSubtitle": "Manhwa, Manhua und Webtoons im Webtoon-Scrollmodus öffnen. Für alle anderen Titel bleibt dein Standardlesemodus erhalten.",
+    "autoWebtoonModeSubtitle": "Manhwa, Manhua und Webtoons im Webtoon-Scrollmodus öffnen.",
     "forceHorizontalSeekbar": "Horizontale Fortschrittsleiste erzwingen",
     "leftHandedVerticalSeekbar": "Vertikale Fortschrittsleiste links",
     "showVerticalSeekbarInLandscape": "Vertikale Fortschrittsleiste im Querformat anzeigen",
     "refreshChaptersFromSource": "Kapitel von der Quelle aktualisieren",
-    "refreshChaptersFromSourceSubtitle": "Deaktiviert: Beim Öffnen eines Eintrags werden die bereits auf dem Server vorhandenen Kapitel angezeigt. Aktiviert: Zusätzlich wird die Quelle auf neue Kapitel geprüft.",
+    "refreshChaptersFromSourceSubtitle": "Beim Öffnen eines Eintrags die Quelle auf neue Kapitel prüfen.",
     "backupCleanupDescription": "{count, select, 0{Nie} 01{Sicherungen löschen, die älter als 1 Tag sind} other{Sicherungen löschen, die älter als {count} Tage sind}}",
     "categoryVisibilityDeviceOnly": "Bis zur nächsten Verbindung nur auf diesem Gerät geändert",
     "sectionHeadersShowAllCategories": "Alle Kategorien anzeigen",
@@ -640,7 +640,7 @@
     "connectionAuthNone": "Ohne Authentifizierung",
     "connectionAuthSignedIn": "Angemeldet",
     "connectionAuthSignInNeeded": "Anmeldung erforderlich",
-    "copied": "Kopiert!",
+    "copied": "In Zwischenablage kopiert",
     "finish": "Fertig",
     "onboardingWelcomeTitle": "Willkommen bei Tsumiru",
     "onboardingWelcomeSubtitle": "Ein Reader für deine Suwayomi-Bibliothek.",
@@ -664,7 +664,7 @@
     "onboardingNotReachedHttpsHint": "Falls er hinter einem Reverse-Proxy liegt, versuche stattdessen seine HTTPS-Adresse.",
     "onboardingAuthMode": "Anmeldemethode",
     "onboardingAuthModeBasic": "Basic Auth",
-    "onboardingResolvedUnconfirmed": "{url} ist erreichbar, antwortet aber nicht als Suwayomi-Server. Oft ist das ein Router oder eine andere App. Prüfe Adresse und Port oder verwende die Adresse trotzdem.",
+    "onboardingResolvedUnconfirmed": "{url} ist erreichbar, antwortet aber nicht als Suwayomi-Server. Prüfe Adresse und Port.",
     "onboardingNotReached": "Unter dieser Adresse ist kein Server erreichbar. Prüfe, ob er läuft und von diesem Gerät aus erreichbar ist.",
     "onboardingConnected": "Verbunden mit Suwayomi v{version}",
     "onboardingDoneTitle": "Alles bereit",
@@ -673,13 +673,13 @@
     "minutesAgo": "{minutes, plural, =1{Vor 1 Minute} other{Vor {minutes} Minuten}}",
     "hoursAgo": "{hours, plural, =1{Vor 1 Stunde} other{Vor {hours} Stunden}}",
     "debugLogs": "Debug-Protokolle",
-    "deleteCategoryDescription": "Alle Manga dieser Kategorie werden in die Standardkategorie verschoben!",
+    "deleteCategoryDescription": "Verschiebe alle Manga dieser Kategorie in die Standardkategorie.",
     "deleteOnDeviceDownloads": "Downloads auf dem Gerät löschen",
-    "deleteOnDeviceDownloadsDescription": "Entfernt die Kopie eines Kapitels beim Lesen von diesem Gerät. Die Kopie auf deinem Server bleibt erhalten. So wird nur Speicherplatz auf deinem Gerät freigegeben.",
+    "deleteOnDeviceDownloadsDescription": "Die Kopie auf deinem Server bleibt erhalten.",
     "deleteServerDownloads": "Server-Downloads löschen",
-    "deleteServerDownloadsDescription": "Entfernt die Kopie eines Kapitels beim Lesen von deinem Server und auch von diesem Gerät. Diese Einstellungen gelten auch für die Weboberfläche.",
+    "deleteServerDownloadsDescription": "Entfernt die Kopie auch von diesem Gerät. Diese Einstellungen gelten auch für die Weboberfläche.",
     "downloadProtectionWindowTitle": "Kürzlich gelesene Kapitel heruntergeladen behalten",
-    "downloadProtectionWindowDescription": "Kapitel aus dem Aufbewahrungsbereich erneut herunterladen, wenn sie auf dem Gerät fehlen. Erfordert, dass das Löschen beim Lesen aktiviert ist.",
+    "downloadProtectionWindowDescription": "Zuletzt-gelesene Kapitel erneut herunterladen, wenn sie auf dem Gerät fehlen.",
     "displayModeDescriptiveList": "Liste mit Beschreibung",
     "displayModeGrid": "Raster",
     "gridStyle": "Rasterstil",
@@ -727,20 +727,20 @@
     "libraryPersistentSearchBarSubtitle": "Die Suchleiste immer unter der App-Leiste anzeigen. Beim Scrollen bleibt sie oben sichtbar.",
     "emptyCategory": "Der Kategoriename darf nicht leer sein",
     "enterProp": "{prop} eingeben",
-    "errorBackupCreate": "Sicherung konnte nicht erstellt werden",
-    "errorBackupRestore": "Sicherung konnte nicht wiederhergestellt werden!",
+    "errorBackupCreate": "Konnte Sicherung nicht erstellen",
+    "errorBackupRestore": "Konnte Sicherung nicht wiederherstellen",
     "errorExtension": "Die ausgewählte Erweiterung wurde nicht gefunden",
-    "errorFilePick": "Keine Datei ausgewählt!",
+    "errorFilePick": "Keine Datei ausgewählt",
     "errorFilePickUnknownExtension": "Wähle eine Datei mit der Endung {extensionName}",
-    "errorLaunchURL": "Öffnen fehlgeschlagen!\n„{url}“ wird in die Zwischenablage kopiert",
+    "errorLaunchURL": "Konnte \"{url}\" nicht öffnen. In Zwischenablage kopiert.",
     "errorPassword": "Das Passwort darf nicht leer sein",
-    "errorSomethingWentWrong": "Etwas ist schiefgelaufen!",
+    "errorSomethingWentWrong": "Etwas ist schiefgelaufen",
     "errorUserName": "Der Benutzername darf nicht leer sein",
     "expandSidebar": "Seitenleiste ausklappen",
-    "extensionListEmpty": "Die Erweiterungsliste ist leer",
+    "extensionListEmpty": "Keine Erweiterungen gefunden",
     "findServer": "Suchen",
     "flareSolverr": "FlareSolverr",
-    "flareSolverrServerUrl": "FlareSolverr-Server-URL",
+    "flareSolverrServerUrl": "FlareSolverr Server-URL",
     "gitHub": "GitHub",
     "invalidProp": "Ungültiger Wert für {property}",
     "ip": "IP-Adresse",
@@ -751,11 +751,11 @@
     "customColor": "Eigene Farbe",
     "customHeaders": "Eigene HTTP-Header",
     "onboardingCustomHeadersHint": "Nur für manche Proxys und Zugangsgateways erforderlich.",
-    "customHeaderEmpty": "Keine eigenen Header. Füge einen hinzu, wenn dein Server hinter einem Authentifizierungsgateway oder Reverse-Proxy liegt, der zusätzliche Header verlangt.",
+    "customHeaderEmpty": "Keine eigenen Header.",
     "customHeaderName": "Header-Name",
     "customHeaderValue": "Header-Wert",
     "customHeaderAdd": "Header hinzufügen",
-    "customHeaderNameInvalid": "Ungültiger Header-Name. Leerzeichen und Doppelpunkte sind nicht erlaubt.",
+    "customHeaderNameInvalid": "Leerzeichen und Doppelpunkte sind nicht erlaubt in Header-Namen.",
     "customHeaderExists": "Ein Header mit diesem Namen ist bereits vorhanden.",
     "colorFilterAlpha": "Deckkraft",
     "pureBlackAmoled": "Reines Schwarz (AMOLED)",
@@ -774,9 +774,9 @@
     "nameCountDisplay": "{name}: {count}",
     "nothingToDownload": "Nichts zum Herunterladen",
     "noVisibleCategories": "Keine sichtbaren Kategorien",
-    "noCategoriesFoundAlt": "Du hast noch keine Kategorien.\nErstelle eine in den Einstellungen, um deine Bibliothek zu organisieren.",
+    "noCategoriesFoundAlt": "Du hast noch keine Kategorien.",
     "needsServerConnection": "Verbindung zum Server erforderlich",
-    "noCategoryMangaFound": "Keine Manga in dieser Kategorie gefunden.\nTipp: Prüfe deine Suche und Filter!",
+    "noCategoryMangaFound": "Keine Einträge in dieser Kategorie gefunden",
     "seeRecommendations": "Empfehlungen ansehen",
     "recommendations": "Empfehlungen",
     "noRecommendationsForTitle": "Zurzeit keine Empfehlungen für diesen Titel",
@@ -1148,5 +1148,334 @@
     "offlineRecoveryPagePosition": "Seitenposition",
     "offlineRecoveryReadStatus": "Lesestatus",
     "offlineRecoveryBookmark": "Lesezeichen",
-    "offlineRecoveryManualRead": "Lesestatus manuell geändert"
+    "offlineRecoveryManualRead": "Lesestatus manuell geändert",
+    "settingsSearchHint": "Sucheinstellungen",
+    "authCredentialsNotSaved": "Angemeldet. Der Login konnte auf diesem Gerät nicht gespeichert werden, du wirst dich also beim nächsten Mal wieder anmelden müssen.",
+    "@authCredentialsNotSaved": {
+        "description": "Toast shown after signing in when the device refused to save the credentials; the sign-in works for this run only"
+    },
+    "backupData": "Backup Daten",
+    "@backupData": {
+        "description": "Title for the automatic backup contents row"
+    },
+    "backupDataExclude": "Ausschließen: {list}",
+    "@backupDataExclude": {
+        "description": "Automatic backup contents summary, excluded kinds comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "backupDataInclude": "Einschließen: {list}",
+    "@backupDataInclude": {
+        "description": "Automatic backup contents summary, included kinds comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "bookmark": "Lesezeichen",
+    "removeBookmark": "Lesezeichen entfernen",
+    "bold": "Fett",
+    "bulletedList": "Stichpunkt-Liste",
+    "sourceRemoved": "Quelle entfernt",
+    "@sourceRemoved": {
+        "description": "Downloads queue state when the series' source is no longer installed on the server"
+    },
+    "cancelAllForThisSeries": "Alle für diese Serie abbrechen",
+    "@cancelAllForThisSeries": {
+        "description": "Downloads queue menu item: dequeue every queued chapter of the same series"
+    },
+    "clearCookiesAndCache": "Cookies und Zwischenspeicher leeren",
+    "clearedWebViewCookiesAndCache": "WebView Cookies und Zwischenspeicher geleert",
+    "couldNotClearWebViewCookiesAndCache": "Konnte WebView Cookies und Zwischenspeicher nicht leeren",
+    "onboardingChooseServer": "Server auswählen",
+    "webUnsupportedAuthMode": "Dieser Server nutzt eine Anmeldemethode, welche im Browser nicht unterstützt wird. Setze die Anmeldemethode zu UI login, oder nutze die Android, iOS oder Desktop-App.",
+    "@webUnsupportedAuthMode": {
+        "description": "Shown on web instead of the generic unreachable message when the server answers but uses Basic auth or Simple login, which a cross-origin page cannot use"
+    },
+    "webServerAuthUnconfirmed": "Der Server hat die Anfrage nicht akzeptiert. Wenn der Server Basic Auth oder Einfache Anmeldung verwendet, setze die Anmeldemethode zu UI Login, oder nutze die Android, iOS oder Desktop-App. Andernfalls prüfe die Adresse.",
+    "@webServerAuthUnconfirmed": {
+        "description": "Shown on web when the server answers 404 Not Found, which can mean Basic auth or a mistyped subpath"
+    },
+    "webUiLoginOnlyHint": "Die Browser-Version funktioniert nur mit UI Login (Server Einstellung: server.authMode).",
+    "@webUiLoginOnlyHint": {
+        "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
+    },
+    "debugInformation": "Debug Information",
+    "defaultFolderPath": "Standard",
+    "deleteFromServer": "Vom Server löschen…",
+    "filterShortDownloaded": "Heruntergeladen",
+    "@filterShortDownloaded": {
+        "description": "Short filter segment heading for the downloaded tri-state"
+    },
+    "filterShortStarted": "Gestartet",
+    "@filterShortStarted": {
+        "description": "Short filter segment heading for the started tri-state"
+    },
+    "filterShortBookmarked": "Lesezeichen gesetzt",
+    "@filterShortBookmarked": {
+        "description": "Short filter segment heading for the bookmarked tri-state"
+    },
+    "filterShortCompleted": "Abgeschlossen",
+    "@filterShortCompleted": {
+        "description": "Short filter segment heading for the completed tri-state"
+    },
+    "filterShortLewd": "Unanständig",
+    "@filterShortLewd": {
+        "description": "Short filter segment heading for the lewd tri-state"
+    },
+    "allTags": "Alle Tags",
+    "@allTags": {
+        "description": "Tags filter row that clears the tag selection"
+    },
+    "anyCategory": "Beliebige Kategorie",
+    "@anyCategory": {
+        "description": "Categories filter summary when no category is included or excluded"
+    },
+    "searchTags": "Tags durchsuchen…",
+    "@searchTags": {
+        "description": "Hint in the tags filter search field"
+    },
+    "groupStyleSections": "Sektionen",
+    "@groupStyleSections": {
+        "description": "Group display radio in the desktop Display panel: sections style"
+    },
+    "editNotes": "Notizen bearbeiten",
+    "incognitoShort": "Inkognito",
+    "@incognitoShort": {
+        "description": "Short Incognito label for the desktop sidebar foot row and its collapsed tooltip"
+    },
+    "ignoreReuploadedChapters": "Erneut hochgeladene Kapitel ignorieren",
+    "responseFallback": "Antwort Ausweichlösung",
+    "responseFallbackDescription": "Nutze die FlareSolverr Antwort im Fall, dass der Server eine Cloudflare Challenge sieht und FlareSolverr nicht, und somit die Challenge nicht gelöst werden kann (funktioniert nicht für Bilder)",
+    "githubServer": "GitHub Server",
+    "githubTsumiru": "GitHub Tsumiru",
+    "helpTranslate": "Übersetzen helfen",
+    "informAboutAvailableUpdate": "Informiere über verfügbares Update",
+    "informAboutVersionUpdate": "Benachrichtigen, wenn die Version aktualisiert wurde",
+    "includeManga": "Bibliothek Einträge",
+    "includeServerSettings": "Server Einstellungen",
+    "italic": "Kursiv",
+    "lockToPortrait": "Auf Hochformat fixieren",
+    "@lockToPortrait": {
+        "description": "General setting: lock the app to portrait orientation"
+    },
+    "mangaThumbnailBackdrop": "Manga Thumbnail als Hintergrund",
+    "notInYourLibrary": "Nicht in deiner Bibliothek",
+    "@notInYourLibrary": {
+        "description": "Downloads queue group for queued chapters of series outside the current account's library"
+    },
+    "notes": "Notizen",
+    "numberedList": "Nummerierte Liste",
+    "missingChapters": "{count, plural, =1{1 fehlendes Kapitel} other{{count} fehlende Kapitel}}",
+    "@missingChapters": {
+        "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapWarning": "{count, plural, =1{Überspringe 1 Kapitel. Es könnte bei der Quelle fehlen, oder wurde herausgefiltert.} other{Überspringe {count} Kapitel. Sie könnten bei der Quelle fehlen, oder wurden herausgefiltert.}}",
+    "@readerChapterGapWarning": {
+        "description": "Reader warning before crossing a gap in chapter numbering, including filtered chapters",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapContinue": "Fortfahren",
+    "@readerChapterGapContinue": {
+        "description": "Confirm skipping chapters in the reader"
+    },
+    "seriesSeeAll": "Alle sehen",
+    "seriesTagsMore": "{count} mehr",
+    "@seriesTagsMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesNextChapterExpected": "Nächstes Kapitel erwartet {days, plural, =0{soon} =1{in 1 Tag} other{in {days} Tagen}}",
+    "@seriesNextChapterExpected": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesPage": "Serien-Seite",
+    "removeFromDevice": "Vom Gerät entfernen",
+    "download": "Herunterladen",
+    "undo": "Rückgängig",
+    "filtered": "gefiltert",
+    "unreadCount": "{count, plural, =1{1 ungelesen} other{{count} ungelesen}}",
+    "@unreadCount": {
+        "description": "Chapter header subline unread segment",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "6"
+            }
+        }
+    },
+    "onDeviceSize": "{size} am Gerät",
+    "@onDeviceSize": {
+        "description": "Chapter header subline on-device segment",
+        "placeholders": {
+            "size": {
+                "type": "String",
+                "example": "2.1 GB"
+            }
+        }
+    },
+    "opds": "OPDS",
+    "opdsBinaryFileSize": "Binärdateigröße",
+    "opdsBinaryFileSizeDescription": "Dateigrößen in Binär (KiB, MiB, GiB) anstelle von Dezimal anzeigen (KB, MB, GB)",
+    "opdsItemsPerPage": "Einträge pro Seite",
+    "opdsItemsPerPageDescription": "Anzahl der Einträge pro Seite in OPDS feeds (z.B., Bibliothek, Verlauf, Manga Kapitel).\nHöhere Anzahlen können Client-Performance beeinflussen.",
+    "opdsEnablePageReadProgress": "Lesefortschritt aktivieren",
+    "opdsEnablePageReadProgressDescription": "Tracke und aktualisiere Lesefortschritt pro Seite für jedes Kapitel beim Lesen",
+    "opdsMarkAsReadOnDownload": "Kapitel als gelesen markieren",
+    "opdsMarkAsReadOnDownloadDescription": "Markiere Kapitel automatisch als gelesen, wenn du sie herunterlädst.",
+    "opdsShowOnlyUnreadChapters": "Zeige nur ungelesene Kapitel",
+    "opdsShowOnlyUnreadChaptersDescription": "Zeige nur Kapitel im Manga Feed, welche du noch nicht gelesen hast.",
+    "opdsShowOnlyDownloadedChapters": "Zeige nur heruntergeladene Kapitel",
+    "opdsShowOnlyDownloadedChaptersDescription": "Zeige nur Kapitel im Manga Feed, welche du heruntergeladen hast.",
+    "opdsSkipChapterMetadataFeed": "Metadaten-Feed für Kapitel auslassen",
+    "opdsSkipChapterMetadataFeedDescription": "Download-Links werden direkt in der Kapitel-Liste eingebettet.",
+    "opdsChapterSortOrder": "Kapitelsortierung",
+    "opdsChapterSortOrderDescription": "Die Reihenfolge, in der Kapitel angezeigt werden.",
+    "opdsSortAscending": "Aufsteigend",
+    "opdsSortDescending": "Absteigend",
+    "opdsCbzMimeType": "CBZ MIME-Typ",
+    "opdsCbzMimeTypeDescription": "Gibt den MimeType vor, den Suwayomi in OPDS Einträgen für CBZ Archive sendet. Beeinflusst auch den globalen CBZ Download.\nModern folgt neuen IANA Standards (2-17), während Legacy (alter MimeType für .cbz) und Kompatibel (alter MimeType für alle Comic-Buch Archive) Kompatibilität mit älteren Lesegeräten erhöhen können.",
+    "opdsCbzLegacy": "Legacy",
+    "opdsCbzModern": "Modern",
+    "opdsCbzCompatible": "Kompatibel",
+    "onlyMyDownloads": "Nur meine Downloads",
+    "@onlyMyDownloads": {
+        "description": "Downloads queue toggle: show only queued chapters of series in the current account's library"
+    },
+    "openInBrowser": "Im Browser öffnen",
+    "pageOfTotal": "Seite {current} von {total}",
+    "@pageOfTotal": {
+        "description": "Tooltip on the current chapter's progress line",
+        "placeholders": {
+            "current": {
+                "type": "int",
+                "example": "12"
+            },
+            "total": {
+                "type": "int",
+                "example": "45"
+            }
+        }
+    },
+    "readerNoPages": "Keine Seiten gefunden",
+    "@readerNoPages": {
+        "description": "Shown instead of the reader when the source returns a chapter with no pages."
+    },
+    "readerNoPagesSubtitle": "Dieses Kapitel könnte gesperrt sein, oder die Quelle braucht möglicherweise, dass du dich anmeldest.",
+    "@readerNoPagesSubtitle": {
+        "description": "Explains why a chapter can have no pages, under readerNoPages. Paid chapters that are still locked come back empty."
+    },
+    "migrationDataUnavailable": "Diese Migration konnte nicht geladen werden. Gehe zurück und starte sie erneut.",
+    "migrationSourceNotInstalled": "Quelle nicht installiert",
+    "migrationSortCount": "Anzahl",
+    "migrationSourcesAndOptions": "Quellen und Optionen",
+    "migrationReviewMatches": "Treffer prüfen",
+    "migrationSeriesCount": "{count} Serien",
+    "@migrationSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationSeriesFromSource": "{count} Serien von {source}",
+    "@migrationSeriesFromSource": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationNoObsoleteSources": "Keine veralteten Quellen",
+    "migrationShowAllSources": "Alle Quellen anzeigen",
+    "migrationClearSearch": "Suche zurücksetzen",
+    "migrationFailedGeneric": "Migration fehlgeschlagen",
+    "migrationFailedCount": "{count} fehlgeschlagen",
+    "@migrationFailedCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationFailedSnack": "{count, plural, =1{1 Serie konnte nicht migriert werden} other{{count} Serien konnten nicht migriert werden}}",
+    "@migrationFailedSnack": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationBlockedNoChapters": "Keine Kapitel auf {source}",
+    "@migrationBlockedNoChapters": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedUnmatched": "{count, plural, =1{1 Kapitel mit Fortschritt hat keinen Treffer auf {source}} other{{count} Kapitel mit Fortschritt haben keinen Treffer auf {source}}}",
+    "@migrationBlockedUnmatched": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedChaptersUnavailable": "Konnte Kapitel nicht von {source} laden",
+    "@migrationBlockedChaptersUnavailable": {
+        "description": "Reason shown when the target source's chapters could not be loaded",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedSelfTarget": "Das Ziel ist die Serie selbst oder dessen eigene Quelle",
+    "@migrationBlockedSelfTarget": {
+        "description": "Reason shown when the picked migration target is the series itself or lives on its origin source"
+    },
+    "migrationFailureUnsyncedReads": "Nicht-synchronisierter Offline Lesefortschritt. Verbinde und Synchronisiere, dann versuche es erneut.",
+    "@migrationFailureUnsyncedReads": {
+        "description": "Failure shown when offline reads are unsynced and the source cannot be removed yet"
+    },
+    "migrationFailureCopyFailed": "Kopieren fehlgeschlagen",
+    "@migrationFailureCopyFailed": {
+        "description": "Failure shown when copying to the new source failed"
+    },
+    "migrationFailureRemovalFailed": "Zur neuen Quelle kopiert, aber Entfernen des alten Eintrags fehlgeschlagen",
+    "@migrationFailureRemovalFailed": {
+        "description": "Failure shown when copying succeeded but removing the old source failed"
+    },
+    "migrationNeedsReview": "Diesen Treffer prüfen",
+    "privacyPolicy": "Datenschutzerklärung",
+    "network": "Netzwerk"
 }

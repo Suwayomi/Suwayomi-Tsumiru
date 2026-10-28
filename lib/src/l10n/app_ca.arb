@@ -2795,7 +2795,7 @@
         "description": "Button text to show that extension update is completed"
     },
     "updatesGroupingLabel": "Agrupació de capítols",
-    "updatesGroupingHint": "Agrupa els capítols consecutius de la mateixa sèrie en una sola entrada plegable.",
+    "updatesGroupingHint": "Agrupa els capítols d'una sèrie del mateix dia en una sola entrada plegable.",
     "updatesGroupingModeCollapsed": "Plegat",
     "updatesGroupingModeExpanded": "Desplegat",
     "updatesGroupingShowMore": "+{count} més",
@@ -3318,7 +3318,7 @@
     "@recommendsInOverflow": {
         "description": "Setting to move the recommendations button into the overflow menu"
     },
-    "recommendsInOverflowSubtitle": "Mou les recomanacions al menú de desbordament en lloc de mostrar la fila a la pàgina del manga",
+    "recommendsInOverflowSubtitle": "Mostra-les al menú ⋮ en lloc de mostrar-les com a fila a la pàgina del manga",
     "@recommendsInOverflowSubtitle": {
         "description": "Subtitle for the recommendations-in-overflow setting"
     },
@@ -4020,12 +4020,12 @@
     "imageProcessingClearCache": "Esborra la memòria cau",
     "imageProcessingClearedCache": "S'ha esborrat la memòria cau",
     "imageProcessingCouldNotClearCache": "No s'ha pogut esborrar la memòria cau",
-    "imageDownloadProcessing": "Processament de la baixada d'imatges",
-    "imageServeProcessing": "Processament del servei d'imatges",
-    "imageProcessingMimeType": "Tipus MIME",
-    "imageProcessingTargetMode": "Mode de destinació",
-    "imageProcessingMimeTypeTarget": "Destinació del tipus MIME",
-    "imageProcessingCompressionLevel": "Nivell de compressió",
+    "imageDownloadProcessing": "Converteix les imatges baixades",
+    "imageServeProcessing": "Converteix les imatges servides",
+    "imageProcessingMimeType": "Tipus d'imatge",
+    "imageProcessingTargetMode": "Acció",
+    "imageProcessingMimeTypeTarget": "Converteix a",
+    "imageProcessingCompressionLevel": "Qualitat",
     "imageProcessingCallTimeout": "Temps d'espera de la crida",
     "imageProcessingConnectTimeout": "Temps d'espera de connexió",
     "imageProcessingSearchParameters": "Paràmetres de cerca",
@@ -4069,5 +4069,442 @@
     "logFileCleanup": "Neteja dels fitxers de registre",
     "maxLogFileSize": "Mida màxima del fitxer de registre",
     "maxLogFolderSize": "Mida màxima de tots els fitxers de registre",
-    "logSizeExamples": "Exemple de valors possibles: 1 (bytes), 1KB (kilobytes), 1MB (megabytes), 1GB (gigabytes)"
+    "logSizeExamples": "Exemple de valors possibles: 1 (bytes), 1KB (kilobytes), 1MB (megabytes), 1GB (gigabytes)",
+    "network": "Xarxa",
+    "notificationsSectionNewChapters": "Capítols nous",
+    "@notificationsSectionNewChapters": {
+        "description": "Section header for new-chapter notification settings"
+    },
+    "notificationsSectionOther": "Altres",
+    "@notificationsSectionOther": {
+        "description": "Section header for the remaining notification kinds"
+    },
+    "serverUsers": "Usuaris",
+    "@serverUsers": {
+        "description": "Server hub entry that opens user management"
+    },
+    "settingsGroupApp": "Aplicació",
+    "settingsGroupSuwayomi": "Suwayomi",
+    "@settingsGroupSuwayomi": {
+        "description": "Group header for Suwayomi server settings"
+    },
+    "timeouts": "Temps d'espera",
+    "offlineBackgroundSection": "Segon pla",
+    "@offlineBackgroundSection": {
+        "description": "Section header for background download settings"
+    },
+    "settingsSectionBehavior": "Comportament",
+    "@settingsSectionBehavior": {
+        "description": "Section header for library behaviour settings"
+    },
+    "sync": "Sincronització",
+    "logs": "Registres",
+    "settingsSearchHint": "Cerca a la configuració",
+    "incognitoShort": "Incògnit",
+    "@incognitoShort": {
+        "description": "Short Incognito label for the desktop sidebar foot row and its collapsed tooltip"
+    },
+    "bold": "Negreta",
+    "bulletedList": "Llista de pics",
+    "debugInformation": "Informació de depuració",
+    "editNotes": "Edita les notes",
+    "githubServer": "Servidor a GitHub",
+    "githubTsumiru": "Tsumiru a GitHub",
+    "helpTranslate": "Ajudeu a traduir",
+    "informAboutAvailableUpdate": "Informa de les actualitzacions disponibles",
+    "informAboutVersionUpdate": "Informa de l'actualització de versió",
+    "italic": "Cursiva",
+    "mangaThumbnailBackdrop": "Miniatura del manga com a fons",
+    "notes": "Notes",
+    "numberedList": "Llista numerada",
+    "seriesPage": "Pàgina de la sèrie",
+    "serverUpdateAvailable": "Hi ha una actualització del servidor disponible",
+    "serverUpdatedTo": "S'ha actualitzat el servidor a la versió {version}",
+    "@serverUpdatedTo": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "share": "Comparteix",
+    "@share": {
+        "description": "Series page: share the series source link via the system share sheet"
+    },
+    "serverSignIn": "Inici de sessió",
+    "serverAuthMode": "Mode d'autenticació",
+    "serverAuthNone": "Cap",
+    "serverAuthBasic": "Autenticació bàsica",
+    "serverAuthSimple": "Inici de sessió simple",
+    "serverAuthUi": "Inici de sessió de la IU",
+    "serverAuthUsername": "Nom d'usuari",
+    "serverAuthPassword": "Contrasenya",
+    "serverAdminUsername": "Nom d'usuari de l'administrador",
+    "serverAdminPassword": "Contrasenya de l'administrador",
+    "serverJwtAudience": "Declaració d'audiència del JWT",
+    "serverAccessExpiry": "Caducitat del testimoni d'accés",
+    "serverRefreshExpiry": "Mantén la sessió iniciada durant",
+    "serverSignInConfirmTitle": "Voleu canviar la configuració d'inici de sessió?",
+    "serverSignInConfirmBody": "Això canvia com inicia la sessió tothom en aquest servidor.",
+    "serverSignInChange": "Canvia",
+    "serverSignInCredentialsRequired": "Primer introduïu un nom d'usuari i una contrasenya.",
+    "serverSignInAdminOnly": "Només l'administrador pot canviar aquestes credencials.",
+    "serverSignInWebMode": "Aquest mode d'inici de sessió no es pot seleccionar des d'un navegador.",
+    "serverSignInWebCredentials": "Aquestes credencials no es poden canviar des d'un navegador.",
+    "serverSignInSeparateSaves": "Deseu les credencials abans de canviar a l'inici de sessió de la IU.",
+    "serverSignInUsernameTaken": "Un altre compte ja fa servir aquest nom d'usuari.",
+    "serverSignInManageUsers": "Cal el permís «Gestionar els usuaris» per canviar el nom d'usuari de l'administrador.",
+    "serverSignInUnknown": "No s'ha pogut verificar la configuració d'inici de sessió del servidor.",
+    "serverSignInMinutes": "{count, plural, =1{1 minut} other{{count} minuts}}",
+    "@serverSignInMinutes": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "serverSignInDays": "{count, plural, =1{1 dia} other{{count} dies}}",
+    "@serverSignInDays": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "databaseSchema": "Esquema",
+    "hikariMaxPoolSize": "Connexions màximes",
+    "includeUserSettings": "Configuració de l'usuari",
+    "removeMangaFromCategories": "Oblida les categories del manga",
+    "ignoreFilters": "Ignora els filtres en cercar",
+    "fuzzySearch": "Cerca aproximada",
+    "cleanupDatabase": "Neteja la base de dades",
+    "cleanupDatabaseConfirm": "Voleu eliminar de les categories les entrades que no són a la biblioteca?",
+    "downloadAhead": "Baixa per endavant",
+    "autoDownloadWhileReading": "Baixa automàticament mentre llegiu",
+    "downloadAheadLimit": "Nombre de capítols no llegits que s'han de baixar",
+    "hideLibraryEntries": "Amaga les entrades que ja són a la biblioteca",
+    "retryErroredPages": "Torna a provar les pàgines amb error",
+    "openChapterInWebView": "Obre al WebView",
+    "shareChapterLink": "Comparteix l'enllaç del capítol",
+    "pushKoReaderProgress": "Envia el progrés a KOReader",
+    "pullKoReaderProgress": "Obtén el progrés de KOReader",
+    "koSyncLocationPrompt": "Voleu sincronitzar a la pàgina {page} des del dispositiu '{device}'?",
+    "@koSyncLocationPrompt": {
+        "placeholders": {
+            "page": {
+                "type": "int"
+            },
+            "device": {
+                "type": "String"
+            }
+        }
+    },
+    "duplicateChapters": "Capítols duplicats",
+    "openRandomEntry": "Obre una entrada a l'atzar",
+    "savedSearches": "Cerques desades",
+    "saveSearch": "Desa la cerca",
+    "saveCurrentSearch": "Desa la cerca actual",
+    "deleteSearch": "Elimina la cerca",
+    "openHomepage": "Obre al WebView",
+    "extensionInfo": "Informació de l'extensió",
+    "extensionLibrary": "Biblioteca",
+    "extensionStore": "Botiga",
+    "extensionVersion": "Versió",
+    "extensionLanguage": "Idioma",
+    "confirmDatabaseTitle": "Canvia la configuració de la base de dades",
+    "confirmDatabaseMessage": "Canviar aquests paràmetres pot desconnectar el servidor o canviar-ne la base de dades.",
+    "confirmNetworkTitle": "Canvia la xarxa del servidor",
+    "confirmNetworkMessage": "Canviar aquest paràmetre pot fer que el servidor sigui inaccessible.",
+    "confirmImageCacheMessage": "Això esborra les imatges de la memòria cau del servidor i d'aquest dispositiu.",
+    "confirmWebViewCacheMessage": "Això esborra les galetes i la memòria cau del WebView i us pot tancar la sessió de les fonts.",
+    "confirmUninstallMessage": "Això elimina l'extensió i les seves fonts del servidor.",
+    "confirmKoPushMessage": "Això substitueix el progrés de KOReader del capítol pel vostre progrés actual.",
+    "confirmKoPullMessage": "Això substitueix el progrés local i del servidor del capítol pel progrés de KOReader.",
+    "confirmSeriesReadMessage": "Això substitueix el progrés de lectura de tots els capítols de les sèries seleccionades.",
+    "confirmClearQueueTitle": "Buida la cua de baixades",
+    "confirmClearQueueMessage": "Això elimina tots els capítols de la cua de baixades del servidor.",
+    "confirmDeleteNoteTitle": "Elimina la nota",
+    "confirmDeleteNoteMessage": "Desar una nota buida elimina la nota existent.",
+    "confirmOverwriteSearchTitle": "Sobreescriu la cerca desada",
+    "confirmOverwriteSearchMessage": "Això substitueix la consulta i els filtres desats amb aquest nom.",
+    "confirmOverwriteAction": "Sobreescriu",
+    "confirmDeleteBothDownloadsMessage": "Això elimina el capítol baixat del servidor i d'aquest dispositiu, incloses les còpies d'altres scanlators que hi coincideixin.",
+    "confirmDeleteDeviceMessage": "Això elimina la baixada del capítol d'aquest dispositiu.",
+    "confirmDeleteSeriesDeviceMessage": "Això deixa de conservar la sèrie sense connexió i n'elimina totes les baixades del dispositiu.",
+    "confirmServerOriginTitle": "Canvia l'adreça del servidor",
+    "confirmServerOriginMessage": "Canviar l'esquema, el nom d'amfitrió o el port esborra les credencials d'inici de sessió desades en aquest dispositiu. Haureu de tornar a iniciar la sessió.",
+    "confirmNoSignInTitle": "Sense inici de sessió",
+    "confirmNoSignInMessage": "Això esborra les credencials d'inici de sessió desades en aquest dispositiu. Les haureu de tornar a introduir si el servidor requereix iniciar la sessió.",
+    "clearSignInCredentials": "Esborra les credencials",
+    "confirmKeepRuleTitle": "Canvia la regla de sense connexió",
+    "confirmKeepRuleMessage": "Aquest canvi elimina els capítols ja baixats en aquest dispositiu.",
+    "confirmDuplicateMigrationMessage": "Voleu migrar de {source} a {target}? Això copia les dades de la sèrie a la destinació i elimina l'original de la vostra biblioteca.",
+    "@confirmDuplicateMigrationMessage": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            },
+            "target": {
+                "type": "String"
+            }
+        }
+    },
+    "confirmSyncYomiMessage": "SyncYomi combinarà les dades locals i remotes de la biblioteca, pujarà la còpia de seguretat combinada i la restaurarà en aquest servidor. Voleu continuar?",
+    "accountAdminCheckFailed": "No s'han pogut verificar els altres administradors. Torneu-ho a provar abans de retirar l'accés.",
+    "accountAdminCheckLoading": "S'estan comprovant els altres administradors abans de retirar l'accés…",
+    "accountLastManagerRequired": "Almenys un compte ha de conservar l'accés per gestionar els usuaris.",
+    "confirmRemoveOwnAdminTitle": "Voleu retirar el vostre propi accés d'administrador?",
+    "confirmRemoveOwnAdminMessage": "Perdreu l'accés a la configuració que controla el rol o el permís que retireu.",
+    "confirmTrackerLogoutMessage": "Això tanca la sessió d'aquest servei de seguiment per a tothom al servidor.",
+    "confirmWebInterfaceChangeTitle": "Voleu canviar la interfície web?",
+    "confirmWebInterfaceChangeMessage": "Això canvia la interfície web que el servidor ofereix a tothom.",
+    "keepOfflineNextUnreadShort": "{count} no llegits",
+    "@keepOfflineNextUnreadShort": {
+        "description": "Short keep-offline status on the series page button",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "keepOfflineAllUnreadShort": "Tots els no llegits",
+    "@keepOfflineAllUnreadShort": {
+        "description": "Short keep-offline status on the series page button"
+    },
+    "keepOfflineAllShort": "Tots els capítols",
+    "@keepOfflineAllShort": {
+        "description": "Short keep-offline status on the series page button"
+    },
+    "sourceRemoved": "Font eliminada",
+    "@sourceRemoved": {
+        "description": "Downloads queue state when the series' source is no longer installed on the server"
+    },
+    "cancelAllForThisSeries": "Cancel·la-ho tot per a aquesta sèrie",
+    "@cancelAllForThisSeries": {
+        "description": "Downloads queue menu item: dequeue every queued chapter of the same series"
+    },
+    "notInYourLibrary": "No és a la vostra biblioteca",
+    "@notInYourLibrary": {
+        "description": "Downloads queue group for queued chapters of series outside the current account's library"
+    },
+    "onlyMyDownloads": "Només les meves baixades",
+    "@onlyMyDownloads": {
+        "description": "Downloads queue toggle: show only queued chapters of series in the current account's library"
+    },
+    "stillRequestedByAnotherAccount": "Encara ho ha sol·licitat un altre compte",
+    "@stillRequestedByAnotherAccount": {
+        "description": "Toast after cancelling a download that remains queued because another account requested it"
+    },
+    "upcomingViewMonth": "Mes",
+    "upcomingViewWeek": "Setmana",
+    "upcomingShowPastReleases": "Mostra les publicacions anteriors",
+    "upcomingCalendarOptions": "Opcions del calendari",
+    "editCover": "Edita la portada",
+    "@editCover": {
+        "description": "Title of the custom cover picker"
+    },
+    "coverUpdated": "S'ha actualitzat la portada",
+    "@coverUpdated": {
+        "description": "Confirmation after saving a custom cover"
+    },
+    "coverUpdateFailed": "No s'ha pogut actualitzar la portada",
+    "@coverUpdateFailed": {
+        "description": "Error after saving a custom cover fails"
+    },
+    "customCoversTsumiruOnly": "Les portades personalitzades només es mostren als clients de Tsumiru.",
+    "@customCoversTsumiruOnly": {
+        "description": "Note under the cover picker search field"
+    },
+    "thumbnailUrl": "URL de la miniatura",
+    "@thumbnailUrl": {
+        "description": "Label of the pasted image link field in the cover picker"
+    },
+    "paste": "Enganxa",
+    "@paste": {
+        "description": "Tooltip for the paste button in the cover picker"
+    },
+    "removeCustomCovers": "Elimina les portades personalitzades",
+    "removeCustomCoversTitle": "Voleu eliminar les portades personalitzades?",
+    "removeCustomCoversBody": "Totes les sèries tornen a la portada del servidor a tots els vostres clients de Tsumiru.",
+    "customCoversRemoved": "S'han eliminat les portades personalitzades",
+    "migrationSourceNotInstalled": "Font no instal·lada",
+    "migrationSortCount": "Nombre",
+    "migrationSourcesAndOptions": "Fonts i opcions",
+    "migrationReviewMatches": "Revisa les coincidències",
+    "migrationSeriesCount": "{count} sèries",
+    "@migrationSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationSeriesFromSource": "{count} sèries de {source}",
+    "@migrationSeriesFromSource": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationNoObsoleteSources": "No hi ha cap font obsoleta",
+    "migrationShowAllSources": "Mostra totes les fonts",
+    "migrationClearSearch": "Esborra la cerca",
+    "migrationFailedGeneric": "La migració ha fallat",
+    "migrationFailedCount": "{count} han fallat",
+    "@migrationFailedCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationFailedSnack": "{count, plural, =1{No s'ha pogut migrar 1 sèrie} other{No s'han pogut migrar {count} sèries}}",
+    "@migrationFailedSnack": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationBlockedNoChapters": "No hi ha capítols a {source}",
+    "@migrationBlockedNoChapters": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedUnmatched": "{count, plural, =1{1 capítol amb progrés no té coincidència a {source}} other{{count} capítols amb progrés no tenen coincidència a {source}}}",
+    "@migrationBlockedUnmatched": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedChaptersUnavailable": "No s'han pogut carregar els capítols de {source}",
+    "@migrationBlockedChaptersUnavailable": {
+        "description": "Reason shown when the target source's chapters could not be loaded",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedSelfTarget": "La destinació és la mateixa sèrie o la seva pròpia font",
+    "@migrationBlockedSelfTarget": {
+        "description": "Reason shown when the picked migration target is the series itself or lives on its origin source"
+    },
+    "migrationFailureUnsyncedReads": "Hi ha lectures sense connexió no sincronitzades. Connecteu-vos i sincronitzeu, i després torneu-ho a provar.",
+    "@migrationFailureUnsyncedReads": {
+        "description": "Failure shown when offline reads are unsynced and the source cannot be removed yet"
+    },
+    "migrationFailureCopyFailed": "La còpia ha fallat",
+    "@migrationFailureCopyFailed": {
+        "description": "Failure shown when copying to the new source failed"
+    },
+    "migrationFailureRemovalFailed": "S'ha copiat a la font nova, però no s'ha pogut eliminar l'antiga",
+    "@migrationFailureRemovalFailed": {
+        "description": "Failure shown when copying succeeded but removing the old source failed"
+    },
+    "migrationNeedsReview": "Comproveu aquesta coincidència",
+    "moveSeriesToTop": "Mou la sèrie al principi",
+    "@moveSeriesToTop": {
+        "description": "Move all queued chapters of a series to the top"
+    },
+    "moveSeriesToBottom": "Mou la sèrie al final",
+    "@moveSeriesToBottom": {
+        "description": "Move all queued chapters of a series to the bottom"
+    },
+    "keepOnThisDevice": "Mantén en aquest dispositiu",
+    "@keepOnThisDevice": {
+        "description": "Heading for a series' offline keep rules"
+    },
+    "cancelDownloadsTitle": "{count, plural, =1{Voleu cancel·lar 1 baixada?} other{Voleu cancel·lar {count} baixades?}}",
+    "@cancelDownloadsTitle": {
+        "description": "Confirmation title before cancelling selected downloads",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cancelDownloadsMessage": "Els capítols seleccionats s'eliminaran de la cua de baixades.",
+    "@cancelDownloadsMessage": {
+        "description": "Confirmation message before cancelling selected downloads"
+    },
+    "cancelDownloads": "Cancel·la les baixades",
+    "@cancelDownloads": {
+        "description": "Confirm cancelling selected downloads"
+    },
+    "offlineChapterRead": "Llegeix",
+    "@offlineChapterRead": {
+        "description": "Open a downloaded chapter in the reader"
+    },
+    "hideSource": "Amaga la font",
+    "@hideSource": {
+        "description": "Menu item to hide a source from the Browse list"
+    },
+    "hiddenSources": "Fonts amagades",
+    "@hiddenSources": {
+        "description": "Row in the Browse filter panel opening the hidden sources screen"
+    },
+    "sourceHidden": "S'ha amagat {source}",
+    "@sourceHidden": {
+        "description": "Toast after hiding a source, with an Undo action",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "clearSelection": "Esborra la selecció",
+    "@clearSelection": {
+        "description": "Tooltip for the clear-selection button in the desktop source catalogue selection bar"
+    },
+    "historyChapterCompleted": "Completat",
+    "@historyChapterCompleted": {
+        "description": "Label on a History entry whose chapter is finished"
+    },
+    "searchSourceHint": "Cerca a {source}...",
+    "@searchSourceHint": {
+        "description": "Placeholder in the desktop source catalogue search box",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "searchResults": "Resultats de la cerca",
+    "@searchResults": {
+        "description": "Label for the Search results view in the desktop source catalogue switch"
+    },
+    "pinned": "Fixades",
+    "@pinned": {
+        "description": "Heading for pinned sources in the desktop source switcher menu"
+    },
+    "recent": "Recents",
+    "@recent": {
+        "description": "Heading for recently opened sources in the desktop source switcher menu"
+    },
+    "browseAllSources": "Totes les fonts",
+    "@browseAllSources": {
+        "description": "Menu item returning to the Browse sources list from the desktop source switcher"
+    },
+    "searchOtherSources": "Cerca en altres fonts",
+    "@searchOtherSources": {
+        "description": "Menu item opening Global search with a catalogue entry's title"
+    },
+    "open": "Obre",
+    "@open": {
+        "description": "Menu item opening the selected entry"
+    },
+    "splitTallImages": "Divideix les imatges altes"
 }
