@@ -172,6 +172,11 @@ class NavigationShellScreen extends HookConsumerWidget {
         container.read(webBuildReloadRequiredProvider.notifier).check();
       }
 
+      Future.microtask(() async {
+        await ref.read(startupWebRevisionProvider.future);
+        if (!context.mounted || !ref.read(serverHostedWebProvider)) return;
+        await checkServerUpdateAlerts(context: context, ref: ref);
+      });
       checkInstalledBuild();
       final removeListeners = listenForWebUpdate(checkInstalledBuild);
       return () {
