@@ -628,4 +628,110 @@ void main() {
     expect(find.text('Tsumiru'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('source toolbar replacing its loading toolbar shows on first open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    _mockWindowManager();
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final rootKey = GlobalKey<NavigatorState>();
+    final loaded = ValueNotifier(false);
+    addTearDown(loaded.dispose);
+    final buttonKey = GlobalKey();
+    final router = GoRouter(
+      navigatorKey: rootKey,
+      initialLocation: '/source',
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => Scaffold(
+            body: Column(
+              children: [
+                const DesktopTopBar(),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+          routes: [
+            GoRoute(
+              path: '/source',
+              builder: (context, state) => TopBarSlot(
+                minWidth: 500,
+                content: const Text('Search sources...'),
+                child: const SizedBox.expand(),
+              ),
+              routes: [
+                GoRoute(
+                  path: ':sourceId',
+                  parentNavigatorKey: rootKey,
+                  builder: (context, state) => Scaffold(
+                    body: Column(
+                      children: [
+                        const DesktopTopBar(),
+                        Expanded(
+                          child: ValueListenableBuilder(
+                            valueListenable: loaded,
+                            builder: (context, isLoaded, _) => isLoaded
+                                ? TopBarSlot(
+                                    minWidth: 500,
+                                    content: LayoutBuilder(
+                                      builder: (context, constraints) => Row(
+                                        children: [
+                                          const BackButton(),
+                                          SizedBox(
+                                            key: buttonKey,
+                                            child: const Text('Asura Scans'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    child: const SizedBox.expand(),
+                                  )
+                                : titleTopBarSlot(
+                                    topBar: true,
+                                    leading: const BackButton(),
+                                    title: const Text('Source'),
+                                    child: const SizedBox.expand(),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [..._overrides(prefs)],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    router.push<void>('/source/1');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    loaded.value = true;
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(DesktopTopBar),
+        matching: find.text('Asura Scans'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
