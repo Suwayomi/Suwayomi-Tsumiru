@@ -46,6 +46,7 @@ modules:
         url: https://github.com/flutter/flutter.git
         tag: 3.47.7
         dest: flutter
+      # Flathub builds do not have internet access so we have to build sqlite from source
       - type: archive
         url: https://sqlite.org/2026/sqlite-amalgamation-3540100.zip
         sha256: 0a9c8e34352dad46006aa82836d5383bff9dc6bc9ce5a60553c05aa30e6ad1f9
