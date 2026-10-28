@@ -66,6 +66,9 @@
   <url type="help">https://tsumiru.app/docs/guides/getting-started</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.6.2" date="2026-10-27">
+      <url type="details">https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v1.6.2</url>
+    </release>
     <release version="1.6.1" date="2026-10-27">
       <url type="details">https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v1.6.1</url>
     </release>
