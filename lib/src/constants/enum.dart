@@ -521,6 +521,19 @@ enum LibraryGridStyle {
   };
 }
 
+enum ChapterListMode {
+  list(Icons.view_list_rounded),
+  grid(Icons.grid_view_rounded);
+
+  const ChapterListMode(this.icon);
+  final IconData icon;
+
+  String toLocale(BuildContext context) => switch (this) {
+    ChapterListMode.list => context.l10n.displayModeList,
+    ChapterListMode.grid => context.l10n.displayModeGrid,
+  };
+}
+
 enum MangaStatus {
   unknown("UNKNOWN", FluentIcons.prohibited_24_regular),
   ongoing("ONGOING", FluentIcons.clock_24_regular),

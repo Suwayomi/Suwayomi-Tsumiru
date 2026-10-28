@@ -36,6 +36,7 @@ const _readerMetaKeys = {
   'flutter_readerPadding',
   'flutter_readerOrientation',
   'flutter_readerTapInvert',
+  'flutter_chapterListMode',
 };
 
 abstract class MigrationRepository {

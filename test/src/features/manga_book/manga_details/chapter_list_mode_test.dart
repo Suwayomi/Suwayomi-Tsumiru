@@ -5,14 +5,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 
 void main() {
-  for (final stored in ['grid', 'list', 1, '1']) {
-    test('ignores retired chapter view preference $stored', () {
-      final meta = MangaMeta.fromJson({'flutter_chapterListMode': stored});
-      expect(meta, MangaMeta());
-      expect(meta.toJson(), isNot(contains('flutter_chapterListMode')));
+  for (final stored in ChapterListMode.values) {
+    test('parses chapter view preference $stored', () {
+      final meta = MangaMeta.fromJson({'flutter_chapterListMode': stored.name});
+      expect(meta.chapterListMode, stored);
+      expect(meta.toJson()['flutter_chapterListMode'], stored.name);
     });
   }
 }
