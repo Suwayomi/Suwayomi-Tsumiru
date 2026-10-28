@@ -715,7 +715,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     final isMacOS = layout.isMacOS;
     final native = layout.native;
     final entry = layout.entry;
-    // A hidden bar must not inflate the active page's toolbar: its GlobalKeys mount once.
+    // Only the visible bar may mount the toolbar's GlobalKeys.
     final visible = _isBarVisible();
     final theme = Theme.of(context);
     if (!merged) {

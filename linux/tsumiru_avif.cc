@@ -121,7 +121,7 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
       if (image->irot.angle > 3) {
         break;
       }
-      // GdkPixbufRotation uses the same anti-clockwise convention as irot.
+      // AVIF rotation angles are counterclockwise quarter turns.
       static const GdkPixbufRotation kRotations[] = {
           GDK_PIXBUF_ROTATE_NONE,
           GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE,

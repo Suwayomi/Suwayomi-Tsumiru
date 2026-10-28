@@ -66,7 +66,7 @@ Future<void> _transcodeAvif(io.File file) async {
   }
 }
 
-/// null means this Android version has no decoder.
+// null means AVIF is unsupported on this Android version.
 Future<bool?> _transcodeAndroidAvif(String path) async {
   final supported = await (_androidSupportsAvifDecode ??=
       _loadAndroidSupportsAvifDecode());
@@ -155,7 +155,7 @@ mixin _AvifTranscodingCacheManager on CacheManager {
   }
 }
 
-/// Durable app-support cover cache, separate from reader pages and immune to OS temp cleanup.
+// Keep covers outside the OS-managed temporary cache.
 CacheManager createCoverCacheManager({String? serverOrigin}) =>
     _CoverCacheManager(
       Config(

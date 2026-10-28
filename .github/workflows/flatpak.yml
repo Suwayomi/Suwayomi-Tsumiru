@@ -56,7 +56,7 @@ jobs:
       - name: Build Linux bundle
         env:
           APP_ID: ${{ matrix.app-id }}
-          TSUMIRU_BUNDLE_AVIF_DEPS: "0" # use the runtime libavif.so.16, never a bundled copy.
+          TSUMIRU_BUNDLE_AVIF_DEPS: "0" # Supplied by the Flatpak runtime.
         run: |
           if [ "$APP_ID" = "app.tsumiru.Tsumiru" ]; then
             export TSUMIRU_APPLICATION_ID="$APP_ID"

@@ -62,7 +62,6 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
 pkg_check_modules(AVIF REQUIRED IMPORTED_TARGET libavif)
 pkg_check_modules(GDKPIXBUF REQUIRED IMPORTED_TARGET gdk-pixbuf-2.0)
-# Absolute libavif path roots the install-time dependency scan below.
 find_library(TSUMIRU_AVIF_LIBRARY NAMES avif HINTS ${AVIF_LIBRARY_DIRS})
 if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0" AND NOT TSUMIRU_AVIF_LIBRARY)
   message(FATAL_ERROR "libavif not found; cannot bundle the AVIF runtime closure")
@@ -89,19 +88,17 @@ apply_standard_settings(${BINARY_NAME})
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
 
-# tsumiru_avif: app-owned AVIF-to-PNG shim loaded by the Dart worker.
 add_library(tsumiru_avif SHARED
   "tsumiru_avif.cc"
   "tsumiru_avif.h"
 )
 apply_standard_settings(tsumiru_avif)
 target_link_libraries(tsumiru_avif PRIVATE PkgConfig::AVIF PkgConfig::GDKPIXBUF)
-# The shim resolves bundled siblings from its own directory ($ORIGIN).
+# DT_RPATH makes $ORIGIN apply to transitive codec dependencies.
 set_target_properties(tsumiru_avif PROPERTIES
   INSTALL_RPATH "$ORIGIN"
   BUILD_WITH_INSTALL_RPATH TRUE
 )
-# DT_RPATH lets libavif resolve its bundled codec dependencies.
 target_link_options(tsumiru_avif PRIVATE "-Wl,--disable-new-dtags")
 
 # Run the Flutter tool portions of the build. This must not be removed.

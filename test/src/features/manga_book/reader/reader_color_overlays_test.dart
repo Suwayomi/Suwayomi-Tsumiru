@@ -194,7 +194,7 @@ void main() {
   ) async {
     final calls = _recordScreenBrightnessCalls();
 
-    // The UI theme says Android; only the OS capability may decide routing.
+    // Theme overrides must not select native brightness.
     await _pumpOverlays(
       tester,
       platform: TargetPlatform.linux,
