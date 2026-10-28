@@ -15,6 +15,7 @@ dependencies:
   cached_network_image: ^3.2.2
   cached_network_image_platform_interface: ^4.0.0
   connectivity_plus: ^7.0.0
+  connectivity_plus_linux_portal: ^0.0.4
   wakelock_plus: ^1.7.0
   # Accent folding for library title sort — Dart and intl ship no collator.
   diacritic: ^0.1.6
