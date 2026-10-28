@@ -68,6 +68,7 @@ void main() {
           diff: row.diff,
           admin: row.admin,
           web: row.web,
+          sameOrigin: false,
           hasCredentials: true,
         );
         expect(result.followUp, row.follow, reason: '$row');
@@ -75,4 +76,25 @@ void main() {
       }
     },
   );
+  test('hosted web hands Basic and Simple sign-in to the browser', () {
+    for (final mode in [AuthType.basic, AuthType.simpleLogin]) {
+      SignInDecision decide({required bool sameOrigin}) =>
+          decideSignInTransition(
+            accounts: true,
+            currentMode: AuthType.none,
+            finalMode: mode,
+            diff: const SignInDiff(),
+            admin: true,
+            web: true,
+            sameOrigin: sameOrigin,
+            hasCredentials: true,
+          );
+
+      expect(decide(sameOrigin: true).followUp, SignInFollowUp.reloadBrowser);
+      expect(
+        decide(sameOrigin: false).refusal,
+        SignInRefusal.unsupportedWebMode,
+      );
+    }
+  });
 }

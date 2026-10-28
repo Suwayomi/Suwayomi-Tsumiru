@@ -2,6 +2,7 @@ import '../../../../../../../constants/enum.dart';
 
 enum SignInFollowUp {
   keepSession,
+  reloadBrowser,
   none,
   basic,
   simple,
@@ -50,6 +51,7 @@ SignInDecision decideSignInTransition({
   required SignInDiff diff,
   required bool admin,
   required bool web,
+  required bool sameOrigin,
   required bool hasCredentials,
 }) {
   if (accounts && !admin && diff.credentials) {
@@ -57,6 +59,7 @@ SignInDecision decideSignInTransition({
   }
   final entering = currentMode != finalMode;
   if (web &&
+      !sameOrigin &&
       (finalMode == AuthType.basic || finalMode == AuthType.simpleLogin)) {
     if (entering) {
       return const SignInDecision.refuse(SignInRefusal.unsupportedWebMode);
@@ -81,6 +84,12 @@ SignInDecision decideSignInTransition({
       entering &&
       diff.credentials) {
     return const SignInDecision.refuse(SignInRefusal.separateSaves);
+  }
+  if (web &&
+      sameOrigin &&
+      (finalMode == AuthType.basic || finalMode == AuthType.simpleLogin) &&
+      (entering || diff.credentials)) {
+    return const SignInDecision.follow(SignInFollowUp.reloadBrowser);
   }
   if (finalMode == AuthType.uiLogin && diff.audience) {
     return const SignInDecision.follow(SignInFollowUp.reauthenticate);

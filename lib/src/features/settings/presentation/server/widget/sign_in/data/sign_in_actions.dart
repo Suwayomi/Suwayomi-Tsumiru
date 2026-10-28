@@ -8,6 +8,8 @@ import '../../../../../../../constants/enum.dart';
 import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../../routes/router_config.dart';
+import '../../../../../../../utils/platform/web_auth_mode.dart';
+import '../../../../../../about/data/web_update_browser.dart';
 import '../../../../../../account/data/account_permission.dart';
 import '../../../../../../account/data/account_providers.dart';
 import '../../../../../../auth/data/auth_coordinator.dart';
@@ -129,6 +131,7 @@ class SignInActions {
   }) async {
     // The default Server tab can unmount this widget during the handover.
     final container = ProviderScope.containerOf(ref.context, listen: false);
+    final sameOrigin = container.read(webSameOriginProvider);
     final access = container.read(settledAccountAccessProvider);
     final permissions = AccountPermissionGuard(() => access);
     permissions.require(Enum$UserPermission.MANAGE_SETTINGS);
@@ -161,6 +164,7 @@ class SignInActions {
       if (diff.accessExpiry) 'jwtTokenExpiry': proposed.accessExpiry,
       if (diff.refreshExpiry) 'jwtRefreshExpiry': proposed.refreshExpiry,
     });
+    var reloadBrowser = false;
     var effectiveUsername = before.username;
     UiLoginTokens? tokens;
     String? cookie;
@@ -239,6 +243,10 @@ class SignInActions {
             return signInValues(data);
           },
           authenticate: (follow, effective) async {
+            if (follow == SignInFollowUp.reloadBrowser) {
+              reloadBrowser = true;
+              return;
+            }
             final candidate = await stage(
               effective,
               retry: follow == SignInFollowUp.retryAdmin,
@@ -265,6 +273,7 @@ class SignInActions {
             }
           },
           commit: (mode) async {
+            if (reloadBrowser) mode = AuthType.none;
             container.read(authTypeKeyProvider.notifier).update(mode);
             if (mode != AuthType.uiLogin) await store.clearUiLoginTokens();
             if (mode != AuthType.simpleLogin) {
@@ -288,12 +297,14 @@ class SignInActions {
             diff: effective.difference(before),
             admin: admin,
             web: web,
+            sameOrigin: sameOrigin,
             hasCredentials:
                 effective.username.trim().isNotEmpty &&
                 effective.password.trim().isNotEmpty,
           ),
         );
       });
+      if (reloadBrowser) reloadWebBuild();
     } finally {
       container.invalidate(signInSettingsProvider);
     }
