@@ -41,23 +41,23 @@
   <screenshots>
     <screenshot type="default">
       <caption>Your whole library at a glance</caption>
-      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/f46e508e9a886abc9648c118e5e921faca06e0e3/flatpak/screenshots/01-library.png</image>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/de5945a718cedbeb31db71debe070ad7a93d750d/flatpak/screenshots/01-library.png</image>
     </screenshot>
     <screenshot>
       <caption>Series details with chapters saved on your device</caption>
-      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/f46e508e9a886abc9648c118e5e921faca06e0e3/flatpak/screenshots/02-series.png</image>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/de5945a718cedbeb31db71debe070ad7a93d750d/flatpak/screenshots/02-series.png</image>
     </screenshot>
     <screenshot>
       <caption>New chapters from across your library</caption>
-      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/f46e508e9a886abc9648c118e5e921faca06e0e3/flatpak/screenshots/03-updates.png</image>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/de5945a718cedbeb31db71debe070ad7a93d750d/flatpak/screenshots/03-updates.png</image>
     </screenshot>
     <screenshot>
       <caption>Chapters saved for offline reading</caption>
-      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/f46e508e9a886abc9648c118e5e921faca06e0e3/flatpak/screenshots/04-downloads.png</image>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/de5945a718cedbeb31db71debe070ad7a93d750d/flatpak/screenshots/04-downloads.png</image>
     </screenshot>
     <screenshot>
       <caption>Pick a theme on first launch</caption>
-      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/f46e508e9a886abc9648c118e5e921faca06e0e3/flatpak/screenshots/05-onboarding.png</image>
+      <image type="source" width="1452" height="1032">https://raw.githubusercontent.com/Suwayomi/Suwayomi-Tsumiru/de5945a718cedbeb31db71debe070ad7a93d750d/flatpak/screenshots/05-onboarding.png</image>
     </screenshot>
   </screenshots>
   <launchable type="desktop-id">io.github.aaronbamblett.tsumiru.desktop</launchable>
@@ -65,6 +65,10 @@
   <url type="bugtracker">https://github.com/Suwayomi/Suwayomi-Tsumiru/issues</url>
   <url type="help">https://tsumiru.app/docs/guides/getting-started</url>
   <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#959bfc</color>
+    <color type="primary" scheme_preference="dark">#46459d</color>
+  </branding>
   <releases>
     <release version="1.6.2" date="2026-10-27">
       <url type="details">https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v1.6.2</url>
