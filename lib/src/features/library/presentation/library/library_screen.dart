@@ -186,6 +186,19 @@ Widget _desktopLibraryHeader({
   ),
 );
 
+/// Empty and error states still need the desktop bar; random entry needs a library to pick from.
+Widget _emptyLibraryTopBarSlot(WidgetRef ref, {required Widget child}) {
+  final trailing = <Widget>[
+    SyncYomiSyncButton(onSynced: () => _refreshLibraryAfterSync(ref)),
+    UpdateStatusPopupMenu(getCategory: () => null, showDuplicatesButton: true),
+  ];
+  return TopBarSlot(
+    content: DesktopLibraryToolbar(trailing: trailing),
+    minWidth: libraryTopBarSlotMinWidth(trailing.length),
+    child: child,
+  );
+}
+
 Widget _organizerButton() => Builder(
   builder: (context) => IconButton(
     onPressed: () {
@@ -283,11 +296,14 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
       offlineEscapeHatch: true,
       (data) {
         if (data.isBlank) {
-          return Emoticons(
-            title: context.l10n.noVisibleCategories,
-            button: TextButton(
-              onPressed: () => const EditCategoriesRoute().push(context),
-              child: Text(context.l10n.categories),
+          return _emptyLibraryTopBarSlot(
+            ref,
+            child: Emoticons(
+              title: context.l10n.noVisibleCategories,
+              button: TextButton(
+                onPressed: () => const EditCategoriesRoute().push(context),
+                child: Text(context.l10n.categories),
+              ),
             ),
           );
         } else {
@@ -455,9 +471,12 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.invalidate(categoryControllerProvider);
       },
-      wrapper: (body) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.library)),
-        body: _libraryBody(ref, body),
+      wrapper: (body) => _emptyLibraryTopBarSlot(
+        ref,
+        child: Scaffold(
+          appBar: AppBar(title: Text(context.l10n.library)),
+          body: _libraryBody(ref, body),
+        ),
       ),
     );
   }
@@ -489,13 +508,16 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
       offlineEscapeHatch: true,
       (data) {
         if (data.isBlank) {
-          return Scaffold(
-            appBar: AppBar(title: Text(context.l10n.library)),
-            body: Emoticons(
-              title: context.l10n.noVisibleCategories,
-              button: TextButton(
-                onPressed: () => const EditCategoriesRoute().push(context),
-                child: Text(context.l10n.categories),
+          return _emptyLibraryTopBarSlot(
+            ref,
+            child: Scaffold(
+              appBar: AppBar(title: Text(context.l10n.library)),
+              body: Emoticons(
+                title: context.l10n.noVisibleCategories,
+                button: TextButton(
+                  onPressed: () => const EditCategoriesRoute().push(context),
+                  child: Text(context.l10n.categories),
+                ),
               ),
             ),
           );
@@ -682,9 +704,12 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         ref.read(serverUnreachableProvider.notifier).set(false);
         ref.invalidate(categoryControllerProvider);
       },
-      wrapper: (body) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.library)),
-        body: _libraryBody(ref, body),
+      wrapper: (body) => _emptyLibraryTopBarSlot(
+        ref,
+        child: Scaffold(
+          appBar: AppBar(title: Text(context.l10n.library)),
+          body: _libraryBody(ref, body),
+        ),
       ),
     );
   }
@@ -737,13 +762,16 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
       offlineEscapeHatch: true,
       (tabs) {
         if (tabs.isEmpty) {
-          return Scaffold(
-            appBar: AppBar(title: Text(context.l10n.library)),
-            body: Emoticons(
-              title: context.l10n.noVisibleCategories,
-              button: TextButton(
-                onPressed: () => const EditCategoriesRoute().push(context),
-                child: Text(context.l10n.categories),
+          return _emptyLibraryTopBarSlot(
+            ref,
+            child: Scaffold(
+              appBar: AppBar(title: Text(context.l10n.library)),
+              body: Emoticons(
+                title: context.l10n.noVisibleCategories,
+                button: TextButton(
+                  onPressed: () => const EditCategoriesRoute().push(context),
+                  child: Text(context.l10n.categories),
+                ),
               ),
             ),
           );
@@ -926,9 +954,12 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
       },
       // Keep current tabs and their endDrawer visible while the new grouping loads.
       skipLoadingOnReload: true,
-      wrapper: (body) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.library)),
-        body: _libraryBody(ref, body, grouped: true),
+      wrapper: (body) => _emptyLibraryTopBarSlot(
+        ref,
+        child: Scaffold(
+          appBar: AppBar(title: Text(context.l10n.library)),
+          body: _libraryBody(ref, body, grouped: true),
+        ),
       ),
     );
   }
@@ -973,13 +1004,16 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
       offlineEscapeHatch: true,
       (tabs) {
         if (tabs.isEmpty) {
-          return Scaffold(
-            appBar: AppBar(title: Text(context.l10n.library)),
-            body: Emoticons(
-              title: context.l10n.noVisibleCategories,
-              button: TextButton(
-                onPressed: () => const EditCategoriesRoute().push(context),
-                child: Text(context.l10n.categories),
+          return _emptyLibraryTopBarSlot(
+            ref,
+            child: Scaffold(
+              appBar: AppBar(title: Text(context.l10n.library)),
+              body: Emoticons(
+                title: context.l10n.noVisibleCategories,
+                button: TextButton(
+                  onPressed: () => const EditCategoriesRoute().push(context),
+                  child: Text(context.l10n.categories),
+                ),
               ),
             ),
           );
@@ -1157,9 +1191,12 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
       },
       // Keep current tabs and their endDrawer visible while the new grouping loads.
       skipLoadingOnReload: true,
-      wrapper: (body) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.library)),
-        body: _libraryBody(ref, body, grouped: true),
+      wrapper: (body) => _emptyLibraryTopBarSlot(
+        ref,
+        child: Scaffold(
+          appBar: AppBar(title: Text(context.l10n.library)),
+          body: _libraryBody(ref, body, grouped: true),
+        ),
       ),
     );
   }

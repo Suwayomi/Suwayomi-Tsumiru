@@ -61,13 +61,16 @@ Fragment$MangaDto _manga(int id, String title) => Fragment$MangaDto(
   ),
 );
 
-/// Pumps the real [LibraryScreen] with two empty categories. Phone widths
-/// take the legacy app bar; desktop widths take the toolbar + tab strip.
+/// Pumps the real [LibraryScreen] with two empty categories by default. Phone
+/// widths take the legacy app bar; desktop widths take the toolbar + tab strip.
 Future<ProviderContainer> _pumpLibrary(
   WidgetTester tester, {
   required Size surface,
   bool withManga = false,
+  List<Fragment$CategoryDto>? categories,
 }) async {
+  final visibleCategories =
+      categories ?? [_category(1, 'One'), _category(2, 'Two')];
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
@@ -84,10 +87,10 @@ Future<ProviderContainer> _pumpLibrary(
       syncYomiSettingsProvider.overrideWithValue(const AsyncData(null)),
       settledDefaultCategoryIdProvider.overrideWithValue(1),
       nonZeroCategoryListProvider.overrideWithValue(
-        AsyncData([_category(1, 'One'), _category(2, 'Two')]),
+        AsyncData(visibleCategories),
       ),
       visibleCategoryListProvider.overrideWithValue(
-        AsyncData([_category(1, 'One'), _category(2, 'Two')]),
+        AsyncData(visibleCategories),
       ),
       categoryMangaListProvider.overrideWith(
         (ref, categoryId) async => <Fragment$MangaDto>[],
@@ -181,6 +184,20 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(DesktopLibraryToolbar), findsNothing);
       expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
+    });
+
+    testWidgets('desktop keeps the top bar search with no visible categories', (
+      tester,
+    ) async {
+      await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+        categories: const [],
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('No visible categories'), findsOneWidget);
+      expect(find.text('Search title or author...'), findsOneWidget);
     });
   });
 }
