@@ -13,6 +13,7 @@ import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_recovery_target.dart';
 import 'package:tsumiru/src/features/auth/data/auth_state.dart';
+import 'package:tsumiru/src/features/onboarding/data/onboarding_complete.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
@@ -23,6 +24,7 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({
       DBKeys.authType.name: AuthType.uiLogin.index,
+      DBKeys.onboardingComplete.name: true,
     });
     final client = GraphQLClient(
       cache: GraphQLCache(),
@@ -78,5 +80,26 @@ void main() {
         .read(authModeReconcilerProvider)
         .reconcile(authFailure: true);
     expect(container.read(authRecoveryTargetProvider), AuthType.uiLogin);
+  });
+
+  test('auth failure before setup finishes stays silent', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      DBKeys.authType.name: AuthType.uiLogin.index,
+    });
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(
+          await SharedPreferences.getInstance(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    expect(container.read(onboardingCompleteProvider), isFalse);
+    await container
+        .read(authModeReconcilerProvider)
+        .reconcile(authFailure: true);
+    expect(container.read(needsReauthProvider), isFalse);
+    expect(container.read(authRecoveryTargetProvider), isNull);
   });
 }

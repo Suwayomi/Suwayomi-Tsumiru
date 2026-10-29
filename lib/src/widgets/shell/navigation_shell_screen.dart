@@ -237,9 +237,10 @@ class NavigationShellScreen extends HookConsumerWidget {
 
     final Widget scaffold;
     if (context.windowSizeClass >= WindowSizeClass.medium) {
-      scaffold = Scaffold(
+      scaffold = Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
         // Without a bottom bar, protect rail/content from system navigation controls and cutouts.
-        body: SafeArea(
+        child: SafeArea(
           child: Column(
             children: [
               if (showsMergedTopBar(context)) const DesktopTopBar(),
@@ -252,16 +253,19 @@ class NavigationShellScreen extends HookConsumerWidget {
                       selectedIndex: child.currentIndex,
                       onDestinationSelected: switchTo,
                     ),
+                    // Root Scaffold for banners and snackbars: right of the rail, below the top bar.
                     Expanded(
-                      child: Column(
-                        children: [
-                          const UpdateProgressBanner(),
-                          AccountStorageRecoveryBanner(
-                            insetTop: !updateBannerVisible,
-                          ),
-                          Expanded(child: content),
-                          const IncognitoBanner(),
-                        ],
+                      child: Scaffold(
+                        body: Column(
+                          children: [
+                            const UpdateProgressBanner(),
+                            AccountStorageRecoveryBanner(
+                              insetTop: !updateBannerVisible,
+                            ),
+                            Expanded(child: content),
+                            const IncognitoBanner(),
+                          ],
+                        ),
                       ),
                     ),
                   ],

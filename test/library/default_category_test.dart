@@ -8,10 +8,12 @@ import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
+import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 class CategoryLink extends Link {
   final cursors = <Object?>[];
@@ -100,9 +102,58 @@ void main() {
       expect(link.cursors, isEmpty);
     });
   }
+
+  test('unknown default keeps the empty Default category', () async {
+    final container = ProviderContainer(
+      overrides: [
+        defaultCategoryIdProvider.overrideWith(
+          (ref) => Future<int?>.error(StateError('session expired')),
+        ),
+        viewOfflineNowProvider.overrideWithValue(false),
+        serverUnreachableProvider.overrideWithValue(false),
+        categoryControllerProvider.overrideWith(_Categories.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    await expectLater(
+      container.read(defaultCategoryIdProvider.future),
+      throwsA(isA<StateError>()),
+    );
+    await container.read(categoryControllerProvider.future);
+    expect(
+      container
+          .read(nonZeroCategoryListProvider)
+          .value
+          ?.map((category) => category.id),
+      [1, 2],
+    );
+  });
 }
 
 class _EmptyCategories extends CategoryController {
   @override
   Future<Never> build() async => throw UnimplementedError();
 }
+
+class _Categories extends CategoryController {
+  @override
+  Future<List<Fragment$CategoryDto>?> build() async => [
+    _category(1, 'Default', defaultCategory: true),
+    _category(2, 'Empty'),
+  ];
+}
+
+Fragment$CategoryDto _category(
+  int id,
+  String name, {
+  bool defaultCategory = false,
+}) => Fragment$CategoryDto(
+  defaultCategory: defaultCategory,
+  id: id,
+  includeInDownload: Enum$IncludeOrExclude.UNSET,
+  includeInUpdate: Enum$IncludeOrExclude.UNSET,
+  name: name,
+  order: id,
+  mangas: Fragment$CategoryDto$mangas(totalCount: 0),
+  meta: const [],
+);

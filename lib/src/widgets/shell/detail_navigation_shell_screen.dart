@@ -56,8 +56,9 @@ class DetailNavigationShellScreen extends ConsumerWidget {
       }
     }
 
-    return Scaffold(
-      body: SafeArea(
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(
         child: Column(
           children: [
             if (showsMergedTopBar(context)) const DesktopTopBar(),
@@ -70,7 +71,7 @@ class DetailNavigationShellScreen extends ConsumerWidget {
                     selectedIndex: selectedIndex,
                     onDestinationSelected: goToBranch,
                   ),
-                  Expanded(child: child),
+                  Expanded(child: Scaffold(body: child)),
                 ],
               ),
             ),

@@ -56,6 +56,9 @@ Navigator keys: `rootNavigatorKey`, `_quickOpenNavigatorKey` (also `$parentNavig
 
 Navigation is always typed: `const FooRoute(...).go(context)` / `.push(context)` — no string-based navigation.
 
+In wide layouts the navigation and detail shells wrap only the content column in
+`Scaffold`. Banners and snackbars render there, right of the rail and below the top bar.
+
 ## Screen-size split
 
 - **Phone** (< 600): `SmallScreenNavigationBar` (M3 bottom bar), 5 items (History omitted — lives under More).
