@@ -32,6 +32,10 @@
 	<string>$(SPARKLE_FEED_URL)</string>
 	<key>SUPublicEDKey</key>
 	<string>$(SPARKLE_PUBLIC_KEY)</string>
+	<key>SURequireSignedFeed</key>
+	<string>$(SPARKLE_REQUIRE_SIGNED_FEED)</string>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<string>$(SPARKLE_VERIFY_UPDATE_BEFORE_EXTRACTION)</string>
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
 	<key>CFBundleLocalizations</key>

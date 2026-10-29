@@ -7,6 +7,7 @@ import binascii
 import email.utils
 import os
 import re
+import subprocess
 import sys
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -149,6 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--download-url", required=True, help="exact tagged asset URL of the archive")
     gen.add_argument("--pubdate", default=None, help="RFC 2822 date (default: archive mtime in UTC)")
     gen.add_argument("--output", type=Path, required=True, help="appcast path, e.g. dist/appcast.xml")
+    gen.add_argument("--sign-update", type=Path, required=True, help="Sparkle sign_update tool; private key is read from stdin")
 
     meta = sub.add_parser(
         "validate-metadata",
@@ -180,6 +182,12 @@ def main(argv: list[str] | None = None) -> int:
             pubdate=args.pubdate,
         )
         write_output(args.output, content)
+        signed = subprocess.run(
+            [str(args.sign_update), "--ed-key-file", "-", "-p", str(args.output)],
+            input=sys.stdin.read(), capture_output=True, text=True, timeout=120,
+        )
+        if signed.returncode != 0:
+            raise ValueError("sign_update failed to sign the appcast")
     except ValueError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2

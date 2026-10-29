@@ -68,6 +68,9 @@ def render_xcconfig(feed_url: str, public_key: str) -> str:
         lines.append("// Sparkle updates disabled: no feed URL or public key.")
     lines.append(f"SPARKLE_FEED_URL = {escape_xcconfig_value(feed_url)}")
     lines.append(f"SPARKLE_PUBLIC_KEY = {escape_xcconfig_value(public_key)}")
+    enabled = "YES" if feed_url and public_key else "NO"
+    lines.append(f"SPARKLE_REQUIRE_SIGNED_FEED = {enabled}")
+    lines.append(f"SPARKLE_VERIFY_UPDATE_BEFORE_EXTRACTION = {enabled}")
     return "\n".join(lines) + "\n"
 
 

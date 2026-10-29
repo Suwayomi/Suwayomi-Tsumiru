@@ -15,4 +15,6 @@ PRODUCT_COPYRIGHT = Copyright © 2022 com.suwayomi. All rights reserved.
 
 SPARKLE_FEED_URL =
 SPARKLE_PUBLIC_KEY =
+SPARKLE_REQUIRE_SIGNED_FEED = NO
+SPARKLE_VERIFY_UPDATE_BEFORE_EXTRACTION = NO
 #include? "../../Flutter/ephemeral/Sparkle.xcconfig"

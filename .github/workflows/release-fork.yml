@@ -365,12 +365,14 @@ jobs:
             echo "Prerelease: signature verified; skipping stable appcast."
             exit 0
           fi
-          python3 .github/scripts/macos_appcast.py generate \
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | python3 .github/scripts/macos_appcast.py generate \
             --version "$short_ver" --build "$build_num" --tag "${{ github.ref_name }}" \
             --repo "${{ github.repository }}" --zip "$ZIP" --signature "$sig" \
             --min-os "$min_os" \
             --download-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$(basename "$ZIP")" \
-            --output dist/appcast.xml
+            --output dist/appcast.xml --sign-update "$SIGN_UPDATE"
+          xcrun swift .github/scripts/sparkle_verify_signature.swift \
+            --public-key "$embedded_key" --feed dist/appcast.xml
           cat dist/appcast.xml
 
       - name: Package iOS (unsigned IPA)

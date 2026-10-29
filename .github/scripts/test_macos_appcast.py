@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import configure_macos_sparkle as configure
+import macos_appcast
 TEST_KEY = base64.b64encode(b"k" * 32).decode()
 
 
@@ -107,6 +108,31 @@ class SparkleVerifyHelperTest(unittest.TestCase):
         rejected = self._verify(
             public_key=self.PROBE_PUBLIC_KEY, path=target, signature=signature,
         )
+        self.assertEqual(rejected.returncode, 1)
+
+    def test_signed_feed_rejects_edits(self):
+        sign_update = self._find_sign_update()
+        if sign_update is None:
+            self.skipTest("sign_update not available (runs after pod install)")
+        archive = _write(self.root / "update.zip", self.PROBE_BYTES)
+        target = self.root / "appcast.xml"
+        generated = subprocess.run(
+            [sys.executable, str(Path(macos_appcast.__file__)), "generate",
+             "--version", "1.0.0", "--build", "1", "--tag", "v1.0.0",
+             "--zip", str(archive), "--signature", self.PROBE_SIGNATURE,
+             "--min-os", "12.0", "--download-url", "https://example.com/update.zip",
+             "--output", str(target), "--sign-update", str(sign_update)],
+            input=self.RFC_SEED_B64, capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(generated.returncode, 0, generated.stderr)
+        command = [self.verifier, "--public-key", self.PROBE_PUBLIC_KEY,
+                   "--feed", str(target)]
+        accepted = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        target.write_bytes(target.read_bytes().replace(
+            b"https://example.com/update.zip", b"https://attacker.io/update.zip",
+        ))
+        rejected = subprocess.run(command, capture_output=True, text=True, timeout=120)
         self.assertEqual(rejected.returncode, 1)
 
 
