@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/utils/avif/avif_file_io.dart';
+import 'package:tsumiru/src/utils/avif/avif_header.dart';
 
 List<int> _ftypAvif() => [
   0,
@@ -37,6 +38,27 @@ void main() {
         ..writeAsBytesSync(original);
       expect(await transcodeAvifFileToPng(file), isFalse);
       expect(file.readAsBytesSync(), original);
+      expect(
+        tempDir.listSync().whereType<File>().where(
+          (entry) => entry.path.endsWith('.tmp'),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('encoded AVIF above the size cap is left in place', () async {
+      final file = File('${tempDir.path}/huge.avif');
+      final handle = file.openSync(mode: FileMode.write);
+      handle
+        ..setPositionSync(avifMaxEncodedBytes)
+        ..writeByteSync(0)
+        ..setPositionSync(0)
+        ..writeFromSync(_ftypAvif())
+        ..closeSync();
+      final length = file.lengthSync();
+      expect(length, avifMaxEncodedBytes + 1);
+      expect(await transcodeAvifFileToPng(file), isFalse);
+      expect(file.lengthSync(), length);
       expect(
         tempDir.listSync().whereType<File>().where(
           (entry) => entry.path.endsWith('.tmp'),

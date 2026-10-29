@@ -16,6 +16,7 @@ Future<bool> transcodeAvifFileToPng(File file) async {
   final before = await _statOrNull(file);
   if (before == null) return true;
   if (!await isAvifFile(file)) return true;
+  if (before.size > avifMaxEncodedBytes) return false;
   final original = await file.readAsBytes();
   final converted = await normalizeAvifBytes(original);
   if (identical(converted, original) || !_isPng(converted)) return false;

@@ -60,7 +60,7 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 # System-level dependencies.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
-pkg_check_modules(AVIF REQUIRED IMPORTED_TARGET libavif)
+pkg_check_modules(AVIF REQUIRED IMPORTED_TARGET libavif>=1.0.0)
 pkg_check_modules(GDKPIXBUF REQUIRED IMPORTED_TARGET gdk-pixbuf-2.0)
 find_library(TSUMIRU_AVIF_LIBRARY NAMES avif HINTS ${AVIF_LIBRARY_DIRS})
 if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0" AND NOT TSUMIRU_AVIF_LIBRARY)

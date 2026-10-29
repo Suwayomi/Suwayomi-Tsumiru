@@ -11,6 +11,8 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
+import 'avif_header.dart';
+
 typedef _ToPngNative =
     ffi.Int32 Function(
       ffi.Pointer<ffi.Uint8>,
@@ -59,7 +61,7 @@ final class AvifNative {
   final _FreeDart _free;
 
   Uint8List? decode(Uint8List bytes) {
-    if (bytes.isEmpty) return null;
+    if (bytes.isEmpty || bytes.length > avifMaxEncodedBytes) return null;
     final input = calloc<ffi.Uint8>(bytes.length);
     final output = calloc<ffi.Pointer<ffi.Uint8>>();
     final outputLength = calloc<ffi.IntPtr>();

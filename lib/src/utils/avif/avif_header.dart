@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 const avifHeaderProbeBytes = 256;
+const avifMaxEncodedBytes = 50 * 1024 * 1024;
 
 bool isAvifHeader(List<int> bytes) {
   if (bytes.length < 12 ||
