@@ -48,6 +48,17 @@ A release is **maintainer-initiated as a draft, then auto-published once every p
 
 **`flatpak.yml`** (self-hosted Flatpak repo → GitHub Pages) — three sequential jobs: build a Linux bundle for each app ID, package + GPG-sign in the `freedesktop:25.08` flatter container, deploy to Pages at `flatpak.tsumiru.app` (the app repo's own Pages behind Cloudflare, so update checks are countable; the old `suwayomi.github.io/Suwayomi-Tsumiru` URLs 301 there, so existing remotes keep working uncounted-then-counted through the redirect; the docs site lives at `tsumiru.app`, served from `tsumiru-app/tsumiru-app.github.io` behind Cloudflare). Needs secrets `FLATPAK_GPG_PRIVATE_KEY` + `FLATPAK_GPG_KEY_ID`. Both `app.tsumiru.Tsumiru` (new Flatpak installs) and `io.github.aaronbamblett.tsumiru` (existing Flatpak installs) are published forever to the same repo and branch with the same GPG key, with release entries and flatpakrefs for both. Linux builds default to the legacy ID, preserving AppImage/deb data paths; only the new-ID Flatpak bundle sets `TSUMIRU_APPLICATION_ID=app.tsumiru.Tsumiru`, and no data, settings or logins are migrated.
 
+## macOS renderer workaround
+
+The macOS Runner sets `FLTEnableImpeller=false` in `Info.plist` to use Flutter's
+fallback renderer. Flutter 3.47.7 can return a cached back buffer with the wrong
+size during window resizing, causing a null texture dereference in
+`impeller::Canvas::SetupRenderPass`. The upstream fix is tracked in
+[Flutter PR #192522](https://github.com/flutter/flutter/pull/192522) and
+[issue #185394](https://github.com/flutter/flutter/issues/185394). Remove the
+override after the pinned Flutter version includes the fix and repeated window
+resizing passes on macOS. Other platforms retain their renderer defaults.
+
 ## CI quality gates
 
 **`pr-checks.yml`** runs on every PR to `main`: `flutter pub get → flutter gen-l10n → build_runner build → flutter analyze → flutter test`. Analyze runs with `--no-fatal-warnings --no-fatal-infos`, so only real errors (or a failing test) block the merge — the repo's inherited warnings/infos are reported but don't gate. This is the safety net that keeps a broken build from merging.
