@@ -7,6 +7,7 @@ import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../account/data/account_providers.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
+import '../../onboarding/data/onboarding_complete.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../settings/presentation/server/widget/sign_in/graphql/__generated__/sign_in.graphql.dart';
 import 'auth_credentials_store.dart';
@@ -33,7 +34,9 @@ class AuthModeReconciler {
   Future<void> reconcile({bool authFailure = false}) async {
     if (!authFailure ||
         _reading ||
-        ref.read(authRecoveryTargetProvider) != null) {
+        ref.read(authRecoveryTargetProvider) != null ||
+        // No session exists before setup finishes, so there is nothing to recover.
+        ref.read(onboardingCompleteProvider) != true) {
       return;
     }
     final store = ref.read(authCredentialsStoreProvider.notifier);
