@@ -22,6 +22,7 @@ import 'src/constants/brand_icons.dart';
 import 'src/constants/enum.dart';
 import 'src/constants/inter_license.dart';
 import 'src/constants/timeout_constants.dart';
+import 'src/features/about/data/macos_app_updater.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
 import 'src/features/account/data/account_bootstrap.dart';
 import 'src/features/account/data/account_session_startup.dart';
@@ -124,7 +125,22 @@ Future<void> _startApp() async {
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
-  final container = _createSessionContainer(packageInfo, sharedPreferences);
+  // One app-lifetime updater: the native Sparkle controller is a process-wide
+  // singleton, so every session container shares this instance instead of
+  // constructing a fresh (unavailable) one per restart.
+  final macOSUpdater = MacOSAppUpdater();
+  final container = _createSessionContainer(
+    packageInfo,
+    sharedPreferences,
+    macOSUpdater: macOSUpdater,
+  );
+
+  // Start the macOS updater before any update check; failures keep GitHub fallback.
+  try {
+    await macOSUpdater.initialize();
+  } catch (e, st) {
+    debugPrint('macOS updater init failed: $e\n$st');
+  }
 
   final secure = container.read(secureStorageProvider);
 
@@ -276,6 +292,7 @@ Future<void> _startApp() async {
       packageInfo,
       sharedPreferences,
       coverCache: previous.read(coverCacheManagerProvider),
+      macOSUpdater: previous.read(macOSAppUpdaterProvider),
     );
     OfflineStorage? transferred;
     AccountSessionStartup? nextStartup;
@@ -374,6 +391,7 @@ ProviderContainer _createSessionContainer(
   PackageInfo packageInfo,
   SharedPreferences preferences, {
   CacheManager? coverCache,
+  required MacOSAppUpdater macOSUpdater,
 }) => ProviderContainer(
   observers: [ProviderFailureLogger()],
   retry: (retryCount, error) => isConnectionError(error)
@@ -384,10 +402,25 @@ ProviderContainer _createSessionContainer(
     sharedPreferencesProvider.overrideWithValue(preferences),
     if (coverCache != null)
       coverCacheManagerProvider.overrideWithValue(coverCache),
+    macOSAppUpdaterProvider.overrideWithValue(macOSUpdater),
     authSessionTransitionProvider.overrideWith(
       (ref) => ref.read(accountSessionStorageProvider),
     ),
   ],
+);
+
+/// The production session factory, exposed for the restart regression test.
+@visibleForTesting
+ProviderContainer createSessionContainerForTest({
+  required PackageInfo packageInfo,
+  required SharedPreferences preferences,
+  CacheManager? coverCache,
+  required MacOSAppUpdater macOSUpdater,
+}) => _createSessionContainer(
+  packageInfo,
+  preferences,
+  coverCache: coverCache,
+  macOSUpdater: macOSUpdater,
 );
 
 void _logBoot(String stage) {

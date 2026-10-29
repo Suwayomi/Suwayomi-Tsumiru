@@ -144,6 +144,30 @@ jobs:
             lib/src/features/manga_book/data/recommendations/providers/myanimelist_provider.dart
           rm lib/src/features/manga_book/data/recommendations/providers/myanimelist_provider.dart.bak
 
+      # Bake the Sparkle feed URL and public key into Info.plist; a partial
+      # pair fails the build instead of shipping a half-configured updater.
+      - name: Configure macOS Sparkle updates
+        if: matrix.target == 'macos'
+        shell: bash
+        env:
+          SPARKLE_PUBLIC_KEY: ${{ vars.MACOS_SPARKLE_PUBLIC_KEY }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.MACOS_SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -n "$SPARKLE_PUBLIC_KEY" ] && [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "::error::MACOS_SPARKLE_PUBLIC_KEY is set without MACOS_SPARKLE_PRIVATE_KEY; refusing a configured-but-unsigned update."
+            exit 1
+          fi
+          if [ -z "$SPARKLE_PUBLIC_KEY" ] && [ -n "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "::error::MACOS_SPARKLE_PRIVATE_KEY is set without MACOS_SPARKLE_PUBLIC_KEY."
+            exit 1
+          fi
+          args=()
+          if [ -n "$SPARKLE_PUBLIC_KEY" ]; then
+            args+=(--feed-url "https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest/download/appcast.xml")
+            args+=(--public-key "$SPARKLE_PUBLIC_KEY")
+          fi
+          python3 .github/scripts/configure_macos_sparkle.py "${args[@]}"
+
       # ---- builds ----
       - name: Build Android
         if: matrix.target == 'android'
@@ -260,6 +284,132 @@ jobs:
             fi
           done < <(find "$APP/Contents/Frameworks" -type f -print0)
           ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/${pkg_name}-${{ github.ref_name }}-macos-universal.zip"
+
+      # After the build: flutter build runs pod install, providing the pinned
+      # sign_update the live round-trip test needs. The test -x guard fails
+      # instead of letting that test silently skip.
+      - name: Test macOS release scripts
+        if: matrix.target == 'macos'
+        shell: bash
+        run: |
+          test -x macos/Pods/Sparkle/bin/sign_update
+          python3 .github/scripts/test_macos_appcast.py
+
+      # Every macOS build (tags and dry runs): no keys means no-op (updater
+      # disabled, no network or signing work); with keys it always validates
+      # metadata, signs and verifies, so a bad key secret fails here instead
+      # of on release day. Only stable tags publish appcast.xml. Prerelease
+      # drafts keep the same tag shape and are flagged on the draft: they
+      # sign and verify but skip the stable feed.
+      # With keys configured, the draft release must already exist: the
+      # prerelease lookup below fails the release rather than guessing.
+      - name: Sign macOS update and generate appcast
+        if: matrix.target == 'macos'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPARKLE_PUBLIC_KEY: ${{ vars.MACOS_SPARKLE_PUBLIC_KEY }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.MACOS_SPARKLE_PRIVATE_KEY }}
+          SPARKLE_VERSION: 2.10.1
+          SPARKLE_SHA256: 1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_PUBLIC_KEY:-}" ] && [ -z "${SPARKLE_PRIVATE_KEY:-}" ]; then
+            echo "No Sparkle keys configured; skipping appcast (updater disabled)."
+            exit 0
+          fi
+          if [ -z "${SPARKLE_PUBLIC_KEY:-}" ] || [ -z "${SPARKLE_PRIVATE_KEY:-}" ]; then
+            echo "::error::Sparkle public key and private key must be set together."
+            exit 1
+          fi
+          ZIP="dist/${pkg_name}-${{ github.ref_name }}-macos-universal.zip"
+          APP="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -1)"
+          if [ ! -f "$ZIP" ]; then
+            echo "::error::macOS archive missing: $ZIP"
+            exit 1
+          fi
+          if [ -z "$APP" ] || [ ! -d "$APP" ]; then
+            echo "::error::macOS app bundle missing under build/macos/Build/Products/Release."
+            exit 1
+          fi
+          # Validate the shipped artifact, not separately supplied values.
+          INFO="$APP/Contents/Info.plist"
+          feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$INFO")"
+          embedded_key="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$INFO")"
+          short_ver="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO")"
+          build_num="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO")"
+          min_os="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$INFO")"
+          expected_feed="https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest/download/appcast.xml"
+          if [ "$feed_url" != "$expected_feed" ]; then
+            echo "::error::Built SUFeedURL ($feed_url) does not match $expected_feed."
+            exit 1
+          fi
+          # Tags validate against the real tag; dry runs self-check the
+          # version shape with v<shortversion> before any early exit.
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            meta_tag="${{ github.ref_name }}"
+          else
+            meta_tag="v$short_ver"
+          fi
+          python3 .github/scripts/macos_appcast.py validate-metadata \
+            --version "$short_ver" --build "$build_num" --tag "$meta_tag" \
+            --min-os "$min_os"
+          # Prefer the pod's sign_update; else fetch the pinned archive (checksum-verified).
+          if [ -x "macos/Pods/Sparkle/bin/sign_update" ]; then
+            SIGN_UPDATE="macos/Pods/Sparkle/bin/sign_update"
+          else
+            echo "Pod tools missing; fetching official Sparkle $SPARKLE_VERSION archive."
+            ARCHIVE="$RUNNER_TEMP/Sparkle-$SPARKLE_VERSION.tar.xz"
+            curl -sSL --fail --max-time 240 \
+              "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz" \
+              -o "$ARCHIVE"
+            actual="$(shasum -a 256 "$ARCHIVE" | cut -d' ' -f1)"
+            if [ "$actual" != "$SPARKLE_SHA256" ]; then
+              echo "::error::Sparkle archive checksum mismatch."
+              exit 1
+            fi
+            TOOLS_DIR="$(mktemp -d "$RUNNER_TEMP/sparkle-tools.XXXXXX")"
+            tar -xf "$ARCHIVE" -C "$TOOLS_DIR"
+            SIGN_UPDATE="$TOOLS_DIR/bin/sign_update"
+            chmod +x "$SIGN_UPDATE"
+          fi
+          # The seed travels on stdin only, never as an argument or in logs.
+          sig="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - -p "$ZIP")"
+          if [ -z "$sig" ]; then
+            echo "::error::sign_update produced no signature."
+            exit 1
+          fi
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | "$SIGN_UPDATE" --verify --ed-key-file - "$ZIP" "$sig"
+          # Fail the release if the signing secret doesn't match the key
+          # embedded in the app.
+          xcrun swift .github/scripts/sparkle_verify_signature.swift \
+            --public-key "$embedded_key" --zip "$ZIP" --signature "$sig"
+          if [[ "${{ github.ref }}" != refs/tags/* ]]; then
+            echo "Dry run: signature verified; skipping appcast (tags only)."
+            exit 0
+          fi
+          if ! prerelease="$(gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" --json isPrerelease -q .isPrerelease)"; then
+            echo "::error::Could not read prerelease status of ${{ github.ref_name }}; the draft must exist before tagging."
+            exit 1
+          fi
+          case "$prerelease" in
+            true|false) ;;
+            *)
+              echo "::error::Unexpected prerelease value ($prerelease); failing closed."
+              exit 1
+              ;;
+          esac
+          if [ "$prerelease" = "true" ]; then
+            echo "Prerelease: signature verified; skipping stable appcast."
+            exit 0
+          fi
+          python3 .github/scripts/macos_appcast.py generate \
+            --version "$short_ver" --build "$build_num" --tag "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" --zip "$ZIP" --signature "$sig" \
+            --min-os "$min_os" \
+            --download-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$(basename "$ZIP")" \
+            --output dist/appcast.xml
+          cat dist/appcast.xml
 
       - name: Package iOS (unsigned IPA)
         if: matrix.target == 'ios'

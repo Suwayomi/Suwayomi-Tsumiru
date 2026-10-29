@@ -31,6 +31,7 @@ import '../presentation/about/controllers/about_controller.dart';
 import 'graphql/__generated__/about_webui.graphql.dart';
 import 'graphql/__generated__/query.graphql.dart';
 import 'hosted_web_update.dart';
+import 'macos_app_updater.dart';
 import 'web_update_browser.dart';
 
 part 'about_repository.g.dart';
@@ -39,10 +40,12 @@ class AboutRepository {
   final GraphQLClient client;
   final PackageInfo packageInfo;
   final Future<bool> Function()? isServerHosted;
+  final bool Function()? isNativeUpdaterAvailable;
   AboutRepository({
     required this.client,
     required this.packageInfo,
     this.isServerHosted,
+    this.isNativeUpdaterAvailable,
   });
 
   Future<AboutDto?> getAbout() =>
@@ -67,6 +70,9 @@ class AboutRepository {
 
   Future<AsyncValue<Version?>> checkUpdate() async {
     if (isGooglePlayBuild) return const AsyncData(null);
+    if (isNativeUpdaterAvailable?.call() ?? false) {
+      return const AsyncData(null);
+    }
     if (await isServerHosted?.call() ?? false) return const AsyncData(null);
     final gitResponse = await AsyncValue.guard<Map<String, dynamic>?>(
       () async => json.decode(
@@ -101,6 +107,8 @@ AboutRepository aboutRepository(Ref ref) => AboutRepository(
     await ref.read(startupWebRevisionProvider.future);
     return ref.read(serverHostedWebProvider);
   },
+  isNativeUpdaterAvailable: () =>
+      ref.read(macOSAppUpdaterProvider).isAvailable,
 );
 
 /// Empty until the user opts to skip a release version.
