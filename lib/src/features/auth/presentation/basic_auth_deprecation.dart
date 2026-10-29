@@ -7,8 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
-import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
@@ -36,30 +36,17 @@ Future<void> maybeShowBasicAuthDeprecation({
   required WidgetRef ref,
 }) async {
   if (!context.mounted) return;
+  if (ref.read(authTypeKeyProvider) != AuthType.basic) return;
   if (Navigator.of(context, rootNavigator: true).canPop()) return;
-  try {
-    final address = ref.read(currentServerAddressProvider);
-    final uri = Uri.tryParse(address);
-    if (uri == null || uri.host.isEmpty) return;
-    final endpoint = uri
-        .replace(userInfo: '', query: '', fragment: '')
-        .toString();
-    final store = ref.read(basicAuthDeprecationStoreProvider);
-    if (!store.isDue(endpoint, DateTime.now())) return;
-    final client = ref.read(graphQlClientProvider);
-    final mode = await queryServerAuthMode(client);
-    if (!context.mounted || mode != Enum$AuthMode.BASIC_AUTH) return;
-    if (ref.read(currentServerAddressProvider) != address ||
-        !identical(ref.read(graphQlClientProvider), client)) {
-      return;
-    }
-    if (Navigator.of(context, rootNavigator: true).canPop()) return;
-    final route = ModalRoute.of(context);
-    if (route != null && !route.isCurrent) return;
-    final closed = basicAuthDeprecationDialog(context: context);
-    try {
-      await store.markShown(endpoint, DateTime.now());
-    } catch (_) {}
-    await closed;
-  } catch (_) {}
+  final address = ref.read(currentServerAddressProvider);
+  final uri = Uri.tryParse(address);
+  if (uri == null || uri.host.isEmpty) return;
+  final endpoint = uri
+      .replace(userInfo: '', query: '', fragment: '')
+      .toString();
+  final notices = ref.read(basicAuthDeprecationLastShownProvider.notifier);
+  if (!notices.isDue(endpoint, DateTime.now())) return;
+  final shown = basicAuthDeprecationDialog(context: context);
+  notices.markShown(endpoint, DateTime.now());
+  await shown;
 }

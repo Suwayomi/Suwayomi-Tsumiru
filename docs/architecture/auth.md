@@ -82,8 +82,8 @@ cookie; an unexpected response or a connection failure can also cause it.
 
 ## Basic Auth deprecation reminder
 
-At startup, the authenticated `ServerSignInStatus` probe bypasses the cache.
-`BASIC_AUTH` shows a Close-only dialog if seven days have passed since the last notice.
+At startup, the stored sign-in type gates the reminder: only `basic` proceeds.
+It shows a Close-only dialog if seven days have passed since the last notice.
 SharedPreferences stores timestamps by server address without credentials, query or fragment.
 The notice follows the release dialog and runs on Play and hosted web too, with no opt-out.
 

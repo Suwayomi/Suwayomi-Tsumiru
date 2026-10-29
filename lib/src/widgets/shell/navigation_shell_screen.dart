@@ -46,8 +46,8 @@ class NavigationShellScreen extends HookConsumerWidget {
     final AsyncValue<Version?> versionResult = await updateCallback();
     toast?.close();
     if (!context.mounted) return;
-    await versionResult.whenOrNull<Future<void>>(
-      data: (version) async {
+    versionResult.whenOrNull(
+      data: (version) {
         if (version == null) return;
         final dismissed = ref.read(dismissedUpdateVersionProvider);
         if (dismissed != null && dismissed.isNotEmpty) {
@@ -59,7 +59,7 @@ class NavigationShellScreen extends HookConsumerWidget {
           }
           if (skipped != null && version.compareTo(skipped) <= 0) return;
         }
-        await appUpdateDialog(
+        appUpdateDialog(
           title: title ?? kAppName,
           newRelease: "v${version.canonicalizedVersion}",
           context: context,
@@ -128,10 +128,11 @@ class NavigationShellScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final serverHosted = ref.watch(serverHostedWebProvider);
     useEffect(() {
-      Future.microtask(() async {
-        await ref.read(startupWebRevisionProvider.future);
-        if (!context.mounted) return;
-        if (!ref.read(serverHostedWebProvider) && !isGooglePlayBuild) {
+      if (!serverHosted) {
+        if (isGooglePlayBuild) return null;
+        Future.microtask(() async {
+          await ref.read(startupWebRevisionProvider.future);
+          if (!context.mounted || ref.read(serverHostedWebProvider)) return;
           await checkForUpdate(
             title: ref.read(packageInfoProvider).appName,
             context: context,
@@ -141,14 +142,9 @@ class NavigationShellScreen extends HookConsumerWidget {
           );
           if (!context.mounted) return;
           await checkServerUpdateAlerts(context: context, ref: ref);
-        }
-        if (!context.mounted) return;
-        await maybeShowBasicAuthDeprecation(context: context, ref: ref);
-      });
-      return null;
-    }, const []);
-    useEffect(() {
-      if (!serverHosted) return null;
+        });
+        return null;
+      }
 
       // Widget subscriptions pause when About or Settings covers this shell.
       final container = ProviderScope.containerOf(context, listen: false);
@@ -184,6 +180,14 @@ class NavigationShellScreen extends HookConsumerWidget {
         if (messenger.mounted) banner?.close();
       };
     }, [serverHosted]);
+    useEffect(() {
+      Future.microtask(() {
+        if (context.mounted) {
+          maybeShowBasicAuthDeprecation(context: context, ref: ref);
+        }
+      });
+      return null;
+    }, const []);
 
     int getAdjustedIndex(int index) {
       if (context.windowSizeClass >= WindowSizeClass.medium) {

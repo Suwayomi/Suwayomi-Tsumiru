@@ -6,68 +6,43 @@
 
 import 'dart:convert';
 
-import 'package:graphql/client.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
-import '../../../global_providers/global_providers.dart';
-import '../../../graphql/__generated__/schema.graphql.dart';
-import '../../../utils/extensions/custom_extensions.dart';
-import '../../settings/presentation/server/widget/sign_in/graphql/__generated__/sign_in.graphql.dart';
+import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 
-class BasicAuthDeprecationStore {
-  BasicAuthDeprecationStore(this._prefs);
+part 'basic_auth_deprecation.g.dart';
 
-  final SharedPreferences _prefs;
-
-  Map<String, int> _readAll() {
-    final raw = _prefs.getString(DBKeys.basicAuthDeprecationLastShown.name);
-    if (raw == null || raw.isEmpty) return {};
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return {};
-      return {
-        for (final entry in decoded.entries)
-          if (entry.value is int) entry.key.toString(): entry.value as int,
-      };
-    } catch (_) {
-      return {};
-    }
-  }
+@riverpod
+class BasicAuthDeprecationLastShown extends _$BasicAuthDeprecationLastShown
+    with SharedPreferenceClientMixin<String> {
+  @override
+  String? build() => initialize(DBKeys.basicAuthDeprecationLastShown);
 
   bool isDue(String endpointKey, DateTime now) {
-    final last = _readAll()[endpointKey];
+    final last = _lastShownByEndpoint(state)[endpointKey];
     if (last == null) return true;
-    final elapsed = now.toUtc().millisecondsSinceEpoch - last;
-    return elapsed >= const Duration(days: 7).inMilliseconds;
+    return now.toUtc().millisecondsSinceEpoch - last >=
+        const Duration(days: 7).inMilliseconds;
   }
 
-  Future<void> markShown(String endpointKey, DateTime now) async {
-    final all = _readAll();
+  void markShown(String endpointKey, DateTime now) {
+    final all = _lastShownByEndpoint(state);
     all[endpointKey] = now.toUtc().millisecondsSinceEpoch;
-    await _prefs.setString(
-      DBKeys.basicAuthDeprecationLastShown.name,
-      jsonEncode(all),
-    );
+    update(jsonEncode(all));
   }
 }
 
-final basicAuthDeprecationStoreProvider = Provider<BasicAuthDeprecationStore>((
-  ref,
-) {
-  return BasicAuthDeprecationStore(ref.watch(sharedPreferencesProvider));
-});
-
-Future<Enum$AuthMode?> queryServerAuthMode(GraphQLClient client) async {
+Map<String, int> _lastShownByEndpoint(String? raw) {
+  if (raw == null || raw.isEmpty) return {};
   try {
-    final settings = await client
-        .query$ServerSignInStatus(
-          Options$Query$ServerSignInStatus(fetchPolicy: FetchPolicy.noCache),
-        )
-        .getData((data) => data.settings);
-    return settings?.authMode;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return {};
+    return {
+      for (final entry in decoded.entries)
+        if (entry.value is int) entry.key.toString(): entry.value as int,
+    };
   } catch (_) {
-    return null;
+    return {};
   }
 }
