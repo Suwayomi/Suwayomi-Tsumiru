@@ -4410,6 +4410,8 @@
   "trackerOAuthSaveFailed": "Couldn’t save the sign-in request. Try again.",
   "trackerOAuthBrowserFallback": "Couldn’t open the browser. The sign-in link was copied to the clipboard.",
   "serverSignIn": "Sign-in",
+  "basicAuthDeprecationTitle": "Basic Auth is deprecated",
+  "basicAuthDeprecationBody": "Please switch to another authentication method in your server’s Sign-in settings.",
   "serverAuthMode": "Authentication mode",
   "serverAuthNone": "None",
   "serverAuthBasic": "Basic authentication",

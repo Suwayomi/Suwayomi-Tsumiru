@@ -18,6 +18,7 @@ import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
 import '../../features/account/data/account_providers.dart';
+import '../../features/auth/presentation/basic_auth_deprecation.dart';
 import '../../features/offline/data/account_storage_recovery_state.dart';
 import '../../features/offline/presentation/account_storage_recovery_banner.dart';
 import '../../graphql/__generated__/schema.graphql.dart';
@@ -179,6 +180,14 @@ class NavigationShellScreen extends HookConsumerWidget {
         if (messenger.mounted) banner?.close();
       };
     }, [serverHosted]);
+    useEffect(() {
+      Future.microtask(() {
+        if (context.mounted) {
+          maybeShowBasicAuthDeprecation(context: context, ref: ref);
+        }
+      });
+      return null;
+    }, const []);
 
     int getAdjustedIndex(int index) {
       if (context.windowSizeClass >= WindowSizeClass.medium) {
