@@ -237,15 +237,13 @@ class NavigationShellScreen extends HookConsumerWidget {
 
     final Widget scaffold;
     if (context.windowSizeClass >= WindowSizeClass.medium) {
-      final topAppBar = desktopShellAppBar(context, ref);
-      scaffold = Scaffold(
-        appBar: topAppBar,
+      scaffold = Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
         // Without a bottom bar, protect rail/content from system navigation controls and cutouts.
-        body: SafeArea(
+        child: SafeArea(
           child: Column(
             children: [
-              if (topAppBar == null && showsMergedTopBar(context))
-                const DesktopTopBar(),
+              if (showsMergedTopBar(context)) const DesktopTopBar(),
               // Move the keyed body across breakpoints without remounting scroll, focus or drafts.
               Expanded(
                 key: const ValueKey('shellBody'),
@@ -255,16 +253,19 @@ class NavigationShellScreen extends HookConsumerWidget {
                       selectedIndex: child.currentIndex,
                       onDestinationSelected: switchTo,
                     ),
+                    // Root Scaffold for banners and snackbars: right of the rail, below the top bar.
                     Expanded(
-                      child: Column(
-                        children: [
-                          const UpdateProgressBanner(),
-                          AccountStorageRecoveryBanner(
-                            insetTop: !updateBannerVisible,
-                          ),
-                          Expanded(child: content),
-                          const IncognitoBanner(),
-                        ],
+                      child: Scaffold(
+                        body: Column(
+                          children: [
+                            const UpdateProgressBanner(),
+                            AccountStorageRecoveryBanner(
+                              insetTop: !updateBannerVisible,
+                            ),
+                            Expanded(child: content),
+                            const IncognitoBanner(),
+                          ],
+                        ),
                       ),
                     ),
                   ],

@@ -56,14 +56,12 @@ class DetailNavigationShellScreen extends ConsumerWidget {
       }
     }
 
-    final topAppBar = desktopShellAppBar(context, ref);
-    return Scaffold(
-      appBar: topAppBar,
-      body: SafeArea(
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(
         child: Column(
           children: [
-            if (topAppBar == null && showsMergedTopBar(context))
-              const DesktopTopBar(),
+            if (showsMergedTopBar(context)) const DesktopTopBar(),
             // Move the keyed body across breakpoints without remounting scroll, focus or drafts.
             Expanded(
               key: const ValueKey('shellBody'),
@@ -73,7 +71,8 @@ class DetailNavigationShellScreen extends ConsumerWidget {
                     selectedIndex: selectedIndex,
                     onDestinationSelected: goToBranch,
                   ),
-                  Expanded(child: child),
+                  // Root Scaffold for banners and snackbars: right of the rail, below the top bar.
+                  Expanded(child: Scaffold(body: child)),
                 ],
               ),
             ),
