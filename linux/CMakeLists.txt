@@ -1,5 +1,5 @@
 # Project-level configuration.
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
@@ -60,6 +60,14 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 # System-level dependencies.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+pkg_check_modules(AVIF REQUIRED IMPORTED_TARGET libavif>=1.0.0)
+pkg_check_modules(GDKPIXBUF REQUIRED IMPORTED_TARGET gdk-pixbuf-2.0)
+pkg_check_modules(LIBPNG REQUIRED IMPORTED_TARGET libpng)
+find_library(TSUMIRU_AVIF_LIBRARY NAMES avif HINTS ${AVIF_LIBRARY_DIRS})
+if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0" AND NOT TSUMIRU_AVIF_LIBRARY)
+  message(FATAL_ERROR "libavif not found; cannot bundle the AVIF runtime closure")
+endif()
+get_filename_component(TSUMIRU_AVIF_LIB_DIR "${TSUMIRU_AVIF_LIBRARY}" DIRECTORY)
 
 add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
 
@@ -80,6 +88,19 @@ apply_standard_settings(${BINARY_NAME})
 # Add dependency libraries. Add any application-specific dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
+
+add_library(tsumiru_avif SHARED
+  "tsumiru_avif.cc"
+  "tsumiru_avif.h"
+)
+apply_standard_settings(tsumiru_avif)
+target_link_libraries(tsumiru_avif PRIVATE PkgConfig::AVIF PkgConfig::GDKPIXBUF PkgConfig::LIBPNG)
+# DT_RPATH makes $ORIGIN apply to transitive codec dependencies.
+set_target_properties(tsumiru_avif PROPERTIES
+  INSTALL_RPATH "$ORIGIN"
+  BUILD_WITH_INSTALL_RPATH TRUE
+)
+target_link_options(tsumiru_avif PRIVATE "-Wl,--disable-new-dtags")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
@@ -128,6 +149,50 @@ foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endforeach(bundled_library)
+
+install(TARGETS tsumiru_avif
+  LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
+if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
+  install(CODE "set(TSUMIRU_AVIF_LIBRARY \"${TSUMIRU_AVIF_LIBRARY}\")" COMPONENT Runtime)
+  install(CODE "set(TSUMIRU_PNG_LIBRARIES \"${LIBPNG_LINK_LIBRARIES}\")" COMPONENT Runtime)
+  install(CODE "set(TSUMIRU_AVIF_LIB_DIR \"${TSUMIRU_AVIF_LIB_DIR}\")" COMPONENT Runtime)
+  install(CODE "set(TSUMIRU_AVIF_DEST \"\$ENV{DESTDIR}${INSTALL_BUNDLE_LIB_DIR}\")" COMPONENT Runtime)
+  install(CODE "set(CMAKE_OBJDUMP \"${CMAKE_OBJDUMP}\")" COMPONENT Runtime)
+  install(CODE [=[
+    file(GET_RUNTIME_DEPENDENCIES
+      RESOLVED_DEPENDENCIES_VAR _avif_resolved
+      UNRESOLVED_DEPENDENCIES_VAR _avif_unresolved
+      CONFLICTING_DEPENDENCIES_PREFIX _avif_conflict
+      LIBRARIES "${TSUMIRU_AVIF_LIBRARY}" ${TSUMIRU_PNG_LIBRARIES}
+      DIRECTORIES "${TSUMIRU_AVIF_LIB_DIR}")
+    if(_avif_unresolved)
+      message(FATAL_ERROR "Unresolved libavif runtime dependencies: ${_avif_unresolved}")
+    endif()
+    if(_avif_conflict_FILENAMES)
+      message(FATAL_ERROR "Conflicting libavif runtime dependencies: ${_avif_conflict_FILENAMES}")
+    endif()
+    set(_avif_all "${TSUMIRU_AVIF_LIBRARY}" ${TSUMIRU_PNG_LIBRARIES})
+    list(APPEND _avif_all ${_avif_resolved})
+    foreach(_dep IN LISTS _avif_all)
+      get_filename_component(_name "${_dep}" NAME)
+      if(NOT _dep STREQUAL TSUMIRU_AVIF_LIBRARY)
+        if(_name MATCHES "^(ld-linux|libc\\.so|libm\\.so|libpthread\\.so|libdl\\.so|librt\\.so|libresolv\\.so|libgcc_s\\.so|libstdc\\+\\+\\.so)")
+          continue()
+        endif()
+      endif()
+      execute_process(COMMAND "${CMAKE_OBJDUMP}" -p "${_dep}"
+        OUTPUT_VARIABLE _headers RESULT_VARIABLE _objdump_result)
+      if(NOT _objdump_result EQUAL 0 OR NOT _headers MATCHES "[ \t]SONAME[ \t]+([^ \r\n]+)")
+        message(FATAL_ERROR "Cannot determine runtime SONAME: ${_dep}")
+      endif()
+      set(_soname "${CMAKE_MATCH_1}")
+      get_filename_component(_real_dep "${_dep}" REALPATH)
+      file(INSTALL "${_real_dep}" DESTINATION "${TSUMIRU_AVIF_DEST}" RENAME "${_soname}")
+    endforeach()
+  ]=] COMPONENT Runtime)
+endif()
 
 # Copy native assets (Dart code-assets) into the bundle. sqlite3 3.x ships its
 # own libsqlite3.so this way; without this step the .so is built but never

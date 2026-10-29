@@ -715,6 +715,8 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     final isMacOS = layout.isMacOS;
     final native = layout.native;
     final entry = layout.entry;
+    // Only the visible bar may mount the toolbar's GlobalKeys.
+    final visible = _isBarVisible();
     final theme = Theme.of(context);
     if (!merged) {
       return Column(
@@ -724,7 +726,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
           Container(
             height: kDesktopTopBarHeight,
             color: theme.colorScheme.surface,
-            child: _slotContent(context, entry, location),
+            child: _slotContent(context, entry, location, visible: visible),
           ),
         ],
       );
@@ -743,7 +745,9 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
             children: [
               _BrandBlock(width: brandWidth, isMacOS: isMacOS),
               const SizedBox(width: kDesktopTopBarGap),
-              Expanded(child: _slotContent(context, entry, location)),
+              Expanded(
+                child: _slotContent(context, entry, location, visible: visible),
+              ),
               if (!isMacOS && native) ...[
                 const SizedBox(width: kDesktopTopBarGap),
                 Center(
@@ -760,9 +764,10 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   Widget _slotContent(
     BuildContext context,
     TopBarSlotEntry? entry,
-    String location,
-  ) {
-    if (entry == null) return const SizedBox.shrink();
+    String location, {
+    required bool visible,
+  }) {
+    if (entry == null || !visible) return const SizedBox.shrink();
     // A stable GlobalKey preserves toolbar focus and State when resize changes its ancestors.
     final key = '$location#${entry.slotKey}';
     return AnimatedSwitcher(

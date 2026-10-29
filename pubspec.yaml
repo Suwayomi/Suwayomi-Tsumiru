@@ -18,6 +18,7 @@ dependencies:
   wakelock_plus: ^1.7.0
   diacritic: ^0.1.6
   drift: ^2.32.0
+  ffi: ^2.2.0
   file: ^7.0.0
   file_picker: ^13.1.0
   flex_color_picker: 3.8.0

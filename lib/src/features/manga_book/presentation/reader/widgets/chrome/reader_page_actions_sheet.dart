@@ -17,6 +17,7 @@ import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../../../utils/avif/avif_codec.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
@@ -305,8 +306,12 @@ Future<void> _cleanStaleSpreadTemps(Directory tempDir) async {
 }
 
 void _combineSpreadImagesSync(List<String> paths) {
-  final first = img.decodeImage(File(paths[0]).readAsBytesSync());
-  final second = img.decodeImage(File(paths[1]).readAsBytesSync());
+  final first = img.decodeImage(
+    normalizeAvifBytesSync(File(paths[0]).readAsBytesSync()),
+  );
+  final second = img.decodeImage(
+    normalizeAvifBytesSync(File(paths[1]).readAsBytesSync()),
+  );
   if (first == null || second == null) {
     throw const FormatException('Could not decode spread image');
   }

@@ -20,6 +20,7 @@ modules:
       env:
         PUB_CACHE: /run/build/Tsumiru/.pub-cache
         TSUMIRU_APPLICATION_ID: app.tsumiru.Tsumiru
+        TSUMIRU_BUNDLE_AVIF_DEPS: "0"
       arch:
         x86_64:
           env:

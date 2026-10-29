@@ -15,6 +15,7 @@ All manga/chapter/library data is fetched via the Suwayomi GraphQL API (`/api/gr
 | `lib/src/constants/db_keys.dart` | `DBKeys` — every SharedPreferences key + default |
 | `lib/src/utils/mixin/shared_preferences_client_mixin.dart` | `SharedPreferenceClientMixin<T>` / `SharedPreferenceEnumClientMixin<T>` |
 | `lib/src/widgets/server_image.dart` | `ServerImage` — `CachedNetworkImage` with per-auth-type header/token injection |
+| `lib/src/utils/avif/` | AVIF detection and the Linux AVIF→PNG bridge (`libtsumiru_avif.so`) |
 | `lib/src/utils/extensions/cache_manager_extensions.dart` | Uses `serverImageRequest` for imperative `CacheManager.getSingleFile` |
 | `lib/src/features/<f>/data/<name>_repository.dart` (+ `graphql/*.graphql`) | Per-feature repositories + operations |
 
@@ -59,6 +60,13 @@ features/<f>/domain/<type>/graphql/fragment.graphql  # fragments near their doma
 - `serverImageRequest` supplies the same fetch URL, key, and headers to raw reads, page prefetch, and reader share/gallery actions. `getServerFile` delegates to it. Covers and crop rendering use the same account-key helper; cache directories and manager instances stay shared.
 
 - Web server images use `ImageRenderMethodForWeb.HttpGet` to decode downloaded bytes. The HTML-image path can turn cached covers and source icons black after navigation on Flutter 3.47 ([upstream issue](https://github.com/flutter/flutter/issues/191800)).
+
+## AVIF images
+
+- Flutter's Linux engine has no AVIF decoder. `lib/src/utils/avif/` detects AVIF from the ftyp box (`avif`/`avis` major or compatible brands) and converts to lossless PNG through the bundled `libtsumiru_avif.so`; the C ABI is declared in `linux/tsumiru_avif.h`.
+- The cover and reader-page cache managers replace an AVIF cache file in place with an atomic rename before bytes reach `CachedNetworkImage` or the engine decoder. Cache keys, directories, headers and expiry are unchanged. A failed conversion leaves the original file untouched and is retried when the file's identity changes.
+- Local and offline AVIF files are converted in memory only; the user's originals are never rewritten. The reader normalizes a page once before cropping, so the cropped result and the uncropped decode fallback both get decodable bytes. Tall-page strips, spread actions and `tallPageIntrinsicSize` share the same detector and decoder.
+- Conversions started from the UI isolate run in a background isolate with at most two at a time. Code that already runs inside a background isolate (strips, spread) converts inline. Non-Linux platforms, non-AVIF bytes, a missing shim and malformed input pass through unchanged, so the image fails as an ordinary decode error.
 
 ## Gotchas
 

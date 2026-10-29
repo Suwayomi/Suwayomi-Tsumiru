@@ -16,25 +16,26 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_filter_prefs/reader_filter_prefs.dart';
 import '../../controller/reader_preview_channel.dart';
 
-/// Negative values dim with black at abs(value)/100; positive values change window brightness.
 double brightnessOverlayAlpha(int value) =>
     value < 0 ? (value.abs() / 100).clamp(0.0, 1.0) : 0.0;
 
-/// Positive values map to window brightness 0..1; zero/negative reset to system brightness.
 double? applicationBrightnessFor(int value) =>
     value > 0 ? (value / 100).clamp(0.0, 1.0) : null;
 
-/// screen_brightness ships only Android/iOS/macOS/Windows; elsewhere no-op.
-bool get _screenBrightnessSupported =>
-    !kIsWeb &&
-    (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows);
+double pageBrightnessFactor(int value) => (1 + value / 100).clamp(0.0, 2.0);
+
+List<double> brightnessColorMatrix(int value) {
+  final factor = pageBrightnessFactor(value);
+  return [
+    factor, 0, 0, 0, 0, //
+    0, factor, 0, 0, 0, //
+    0, 0, factor, 0, 0, //
+    0, 0, 0, 1, 0,
+  ];
+}
 
 /// Null resets window brightness; missing-plugin and permission errors are non-fatal.
 Future<void> _applyScreenBrightness(double? target) async {
-  if (!_screenBrightnessSupported) return;
   try {
     if (target != null) {
       await ScreenBrightness.instance.setApplicationScreenBrightness(target);
@@ -45,7 +46,6 @@ Future<void> _applyScreenBrightness(double? target) async {
 }
 
 Future<void> _resetScreenBrightness() async {
-  if (!_screenBrightnessSupported) return;
   try {
     await ScreenBrightness.instance.resetApplicationScreenBrightness();
   } catch (_) {}
@@ -111,8 +111,13 @@ class ReaderColorOverlays extends HookConsumerWidget {
     final blend = ref.watch(colorFilterBlendModeKeyProvider) ??
         DBKeys.colorFilterBlendMode.initial as ColorFilterBlendMode;
 
-    // Listen to brightness drafts without rebuilding; reset when disabled or nonpositive.
+    final useNativeBrightness = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    final brightnessOnPage = brightnessOn && !useNativeBrightness;
+
     useEffect(() {
+      if (!useNativeBrightness) return null;
       void sync() {
         final value =
             brightnessOn ? (readerBrightnessPreview.value ?? brightness) : 0;
@@ -122,32 +127,57 @@ class ReaderColorOverlays extends HookConsumerWidget {
       sync();
       readerBrightnessPreview.addListener(sync);
       return () => readerBrightnessPreview.removeListener(sync);
-    }, [brightnessOn, brightness]);
+    }, [brightnessOn, brightness, useNativeBrightness]);
 
     // Reader teardown → drop the override so it never leaks app-wide.
-    useEffect(() => _resetScreenBrightness, const []);
+    useEffect(
+      () => useNativeBrightness ? () => _resetScreenBrightness() : null,
+      [useNativeBrightness],
+    );
 
-    if (!grayscale && !inverted && !brightnessOn && !colorFilterOn) {
+    final filtersOn = grayscale || inverted;
+
+    if (!filtersOn && !brightnessOn && !colorFilterOn) {
       return const SizedBox.shrink();
     }
 
-    // Paint order: matrix on the viewer layer, brightness dim on top,
-    // then the blended color rect.
     return IgnorePointer(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (grayscale || inverted)
+          if (brightnessOnPage) _PageBrightnessOverlay(committed: brightness),
+          if (filtersOn)
             _BackdropOverlay(
               filter: ColorFilter.matrix(
                 grayscaleInvertMatrix(grayscale: grayscale, inverted: inverted),
               ),
             ),
-          if (brightnessOn) _BrightnessOverlay(committed: brightness),
+          if (brightnessOn && useNativeBrightness)
+            _BrightnessOverlay(committed: brightness),
           if (colorFilterOn)
             _ColorFilterOverlay(committed: color, blend: blend),
         ],
       ),
+    );
+  }
+}
+
+class _PageBrightnessOverlay extends StatelessWidget {
+  const _PageBrightnessOverlay({required this.committed});
+
+  final int committed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int?>(
+      valueListenable: readerBrightnessPreview,
+      builder: (context, draft, _) {
+        final value = draft ?? committed;
+        if (value == 0) return const SizedBox.shrink();
+        return _BackdropOverlay(
+          filter: ColorFilter.matrix(brightnessColorMatrix(value)),
+        );
+      },
     );
   }
 }
