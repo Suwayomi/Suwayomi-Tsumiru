@@ -11,7 +11,6 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
-/// C ABI declared in `linux/tsumiru_avif.h`.
 typedef _ToPngNative =
     ffi.Int32 Function(
       ffi.Pointer<ffi.Uint8>,

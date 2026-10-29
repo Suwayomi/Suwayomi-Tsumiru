@@ -20,7 +20,6 @@ modules:
       env:
         PUB_CACHE: /run/build/Tsumiru/.pub-cache
         TSUMIRU_APPLICATION_ID: app.tsumiru.Tsumiru
-        TSUMIRU_BUNDLE_AVIF_DEPS: "0" # use the freedesktop runtime libavif.so.16, never a bundled copy.
       arch:
         x86_64:
           env:

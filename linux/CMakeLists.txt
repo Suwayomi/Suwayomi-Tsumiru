@@ -153,7 +153,6 @@ install(TARGETS tsumiru_avif
   LIBRARY DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
-# Flatpak supplies these libraries; other bundles need the codec dependencies.
 if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
   install(CODE "set(TSUMIRU_AVIF_LIBRARY \"${TSUMIRU_AVIF_LIBRARY}\")" COMPONENT Runtime)
   install(CODE "set(TSUMIRU_AVIF_LIB_DIR \"${TSUMIRU_AVIF_LIB_DIR}\")" COMPONENT Runtime)

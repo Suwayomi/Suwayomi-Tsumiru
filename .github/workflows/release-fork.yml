@@ -109,6 +109,8 @@ jobs:
             clang cmake ninja-build pkg-config \
             libgtk-3-dev libx11-dev libblkid-dev liblzma-dev \
             libsecret-1-dev libjsoncpp-dev libavif-dev
+          # libsecret + jsoncpp are required by flutter_secure_storage_linux
+          # (used by the simple_login / ui_login credential store).
 
       - name: Enable desktop targets
         if: matrix.target == 'linux' || matrix.target == 'macos' || matrix.target == 'windows'

@@ -162,7 +162,6 @@ class ReaderColorOverlays extends HookConsumerWidget {
   }
 }
 
-// Separate passes preserve the CSS brightness clamp.
 class _PageBrightnessOverlay extends StatelessWidget {
   const _PageBrightnessOverlay({required this.committed});
 

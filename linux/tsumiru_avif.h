@@ -14,7 +14,6 @@
 extern "C" {
 #endif
 
-// AVIF bytes to PNG buffer: 0 on success; free with tsumiru_avif_free() (NULL-safe).
 int tsumiru_avif_to_png(const uint8_t * input, size_t input_length, uint8_t ** output, size_t * output_length);
 
 void tsumiru_avif_free(uint8_t * output);

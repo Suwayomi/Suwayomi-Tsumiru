@@ -61,7 +61,6 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
     return kDecodeFailed;
   }
   decoder->maxThreads = kMaxThreads;
-  // Enforced inside Parse/NextImage, before any pixel allocation.
   decoder->imageSizeLimit = kMaxPixels;
   decoder->imageDimensionLimit = kMaxDimension;
 
@@ -121,7 +120,6 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
       if (image->irot.angle > 3) {
         break;
       }
-      // AVIF rotation angles are counterclockwise quarter turns.
       static const GdkPixbufRotation kRotations[] = {
           GDK_PIXBUF_ROTATE_NONE,
           GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE,
@@ -138,7 +136,6 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
         pixbuf = rotated;
       }
     }
-    // imir axis 0 mirrors top/bottom, axis 1 mirrors left/right.
     if ((image->transformFlags & AVIF_TRANSFORM_IMIR) != 0) {
       if (image->imir.axis > 1) {
         break;

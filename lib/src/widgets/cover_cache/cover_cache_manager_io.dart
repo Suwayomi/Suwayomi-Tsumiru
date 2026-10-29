@@ -46,38 +46,33 @@ Future<void> _transcodeAvif(io.File file) async {
     return;
   }
   try {
-    final bool? converted;
-    if (io.Platform.isAndroid) {
-      if (!await isAvifFile(file)) {
+    if (!io.Platform.isAndroid) {
+      if (await transcodeAvifFileToPng(file)) {
         _failedFileTranscodes.remove(path);
-        return;
+      } else {
+        _failedFileTranscodes[path] = stat;
       }
-      converted = await _transcodeAndroidAvif(path);
-    } else {
-      converted = await transcodeAvifFileToPng(file);
+      return;
     }
+    if (!await isAvifFile(file)) {
+      _failedFileTranscodes.remove(path);
+      return;
+    }
+    final supported = await (_androidSupportsAvifDecode ??=
+        _loadAndroidSupportsAvifDecode());
+    if (!supported) return;
+    final converted = await _transcoderChannel.invokeMethod<bool>(
+      'transcodeFileToJpeg',
+      {'path': path},
+    );
     if (converted == true) {
       _failedFileTranscodes.remove(path);
-    } else if (converted == false) {
+    } else {
       _failedFileTranscodes[path] = stat;
     }
   } catch (_) {
     _failedFileTranscodes[path] = stat;
   }
-}
-
-// null means AVIF is unsupported on this Android version.
-Future<bool?> _transcodeAndroidAvif(String path) async {
-  final supported = await (_androidSupportsAvifDecode ??=
-      _loadAndroidSupportsAvifDecode());
-  if (!supported) {
-    return null;
-  }
-  final transcoded = await _transcoderChannel.invokeMethod<bool>(
-    'transcodeFileToJpeg',
-    {'path': path},
-  );
-  return transcoded == true;
 }
 
 Future<void> _transcodeAvifIfNeeded(io.File file) {
@@ -104,9 +99,10 @@ Future<FileInfo> _transcodeAvifInfo(FileInfo info) async {
 
 CacheManager createServerPageCacheManager() {
   if (!io.Platform.isLinux) return DefaultCacheManager();
-  return _serverPageCacheManager ??= _ServerPageCacheManager(
-    Config(DefaultCacheManager.key),
-  );
+  final manager = _serverPageCacheManager;
+  if (manager != null) return manager;
+  final config = Config(DefaultCacheManager.key);
+  return _serverPageCacheManager = _ServerPageCacheManager(config);
 }
 
 CacheManager? _serverPageCacheManager;
@@ -155,7 +151,6 @@ mixin _AvifTranscodingCacheManager on CacheManager {
   }
 }
 
-// Keep covers outside the OS-managed temporary cache.
 CacheManager createCoverCacheManager({String? serverOrigin}) =>
     _CoverCacheManager(
       Config(
@@ -170,7 +165,6 @@ class _CoverCacheManager extends CacheManager
     with _AvifTranscodingCacheManager {
   _CoverCacheManager(super.config);
 
-  /// Covers stay cached until explicit eviction.
   @override
   Stream<FileResponse> getFileStream(
     String url, {

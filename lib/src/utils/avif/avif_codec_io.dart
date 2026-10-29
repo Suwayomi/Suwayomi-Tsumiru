@@ -20,7 +20,6 @@ Future<Uint8List> normalizeAvifBytes(Uint8List bytes) async {
   return await _decodeOffThread(bytes) ?? bytes;
 }
 
-/// Called only from a worker isolate.
 Uint8List normalizeAvifBytesSync(Uint8List bytes) {
   if (!avifNormalizationSupported || !isAvifHeader(bytes)) return bytes;
   return AvifNative.instance?.decode(bytes) ?? bytes;
@@ -37,5 +36,4 @@ Future<Uint8List?> _decodeOffThread(Uint8List bytes) async {
 
 Uint8List? _decodeAvif(Uint8List bytes) => AvifNative.instance?.decode(bytes);
 
-/// Bound native decode memory during page prefetch.
 final _decodeQueue = Queue(parallel: 2);

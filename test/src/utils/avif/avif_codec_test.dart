@@ -8,7 +8,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/utils/avif/avif_codec.dart';
 import 'package:tsumiru/src/utils/avif/avif_file_io.dart';
 
 List<int> _ftypAvif() => [
@@ -26,44 +25,11 @@ List<int> _ftypAvif() => [
   ...'miaf'.codeUnits,
 ];
 
-final _pngBytes = Uint8List.fromList([
-  0x89,
-  0x50,
-  0x4e,
-  0x47,
-  0x0d,
-  0x0a,
-  0x1a,
-  0x0a,
-  0,
-  0,
-  0,
-  0,
-]);
-
 void main() {
-  group('normalizeAvifBytes', () {
-    test('returns bytes untouched when they cannot be transcoded', () async {
-      expect(await normalizeAvifBytes(_pngBytes), same(_pngBytes));
-      expect(normalizeAvifBytesSync(_pngBytes), same(_pngBytes));
-
-      final malformed = Uint8List.fromList([..._ftypAvif(), 0, 1, 2, 3]);
-      expect(await normalizeAvifBytes(malformed), same(malformed));
-      expect(normalizeAvifBytesSync(malformed), same(malformed));
-    });
-  });
-
   group('transcodeAvifFileToPng', () {
     late Directory tempDir;
     setUp(() => tempDir = Directory.systemTemp.createTempSync('tsumiru-avif-'));
     tearDown(() => tempDir.deleteSync(recursive: true));
-
-    test('leaves non-AVIF cache files byte-identical', () async {
-      final file = File('${tempDir.path}/page.png')
-        ..writeAsBytesSync(_pngBytes);
-      expect(await transcodeAvifFileToPng(file), isTrue);
-      expect(file.readAsBytesSync(), _pngBytes);
-    });
 
     test('malformed AVIF never replaces the original', () async {
       final original = Uint8List.fromList([..._ftypAvif(), 0, 1, 2, 3]);

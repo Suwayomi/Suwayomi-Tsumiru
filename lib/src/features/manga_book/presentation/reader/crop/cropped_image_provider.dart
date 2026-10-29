@@ -82,20 +82,16 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   }
 
   Future<Uint8List> _fetchBytes() async {
-    final Uint8List bytes;
     if (localPath != null) {
-      bytes = await File(localPath!).readAsBytes();
-    } else {
-      final file = await (cacheManager ?? createServerPageCacheManager())
-          .getSingleFile(
-            fetchUrl,
-            key: cacheKey,
-            headers: headers ?? const <String, String>{},
-          );
-      bytes = await file.readAsBytes();
+      return normalizeAvifBytes(await File(localPath!).readAsBytes());
     }
-    // Keep the uncropped fallback on the same normalized bytes.
-    return normalizeAvifBytes(bytes);
+    final manager = cacheManager ?? createServerPageCacheManager();
+    final file = await manager.getSingleFile(
+      fetchUrl,
+      key: cacheKey,
+      headers: headers ?? const <String, String>{},
+    );
+    return normalizeAvifBytes(await file.readAsBytes());
   }
 
   Future<ui.Image> _decodeRgba(CroppedImageData data) async {
