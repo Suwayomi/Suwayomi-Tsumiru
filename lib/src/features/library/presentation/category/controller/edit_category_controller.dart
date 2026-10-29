@@ -175,9 +175,12 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
   final offline =
       ref.watch(viewOfflineNowProvider) || ref.watch(serverUnreachableProvider);
   if (offline) return categoryList;
-  final defaultId = ref.watch(settledDefaultCategoryIdProvider);
+  final defaultLookup = ref.watch(defaultCategoryIdProvider);
   // Unknown default (session expired) would filter out the empty Default category.
-  if (defaultId == null) return categoryList;
+  if (!defaultLookup.isLoading && defaultLookup.value == null) {
+    return categoryList;
+  }
+  final defaultId = defaultLookup.value;
   return categoryList.copyWithData(
     (_) => categoryList.value
         ?.where(

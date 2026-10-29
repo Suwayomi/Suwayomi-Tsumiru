@@ -71,7 +71,6 @@ class DetailNavigationShellScreen extends ConsumerWidget {
                     selectedIndex: selectedIndex,
                     onDestinationSelected: goToBranch,
                   ),
-                  // Root Scaffold for banners and snackbars: right of the rail, below the top bar.
                   Expanded(child: Scaffold(body: child)),
                 ],
               ),
