@@ -13,7 +13,6 @@ PRODUCT_BUNDLE_IDENTIFIER = io.github.aaronbamblett.tsumiru
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2022 com.suwayomi. All rights reserved.
 
-// Sparkle updates: empty disables; ignored ephemeral/Sparkle.xcconfig overrides.
 SPARKLE_FEED_URL =
 SPARKLE_PUBLIC_KEY =
 #include? "../../Flutter/ephemeral/Sparkle.xcconfig"

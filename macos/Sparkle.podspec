@@ -1,4 +1,3 @@
-# Pin the official 2.10.1 archive directly.
 Pod::Spec.new do |s|
   s.name = 'Sparkle'
   s.version = '2.10.1'

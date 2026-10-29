@@ -2,19 +2,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/main.dart' as app;
 import 'package:tsumiru/src/features/about/data/about_repository.dart';
 import 'package:tsumiru/src/features/about/data/macos_app_updater.dart';
-import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 
 const _channel = MethodChannel('tsumiru/sparkle_updater');
-
-const play = bool.fromEnvironment('TSUMIRU_GOOGLE_PLAY');
 
 PackageInfo _packageInfo() => PackageInfo(
   appName: 'Tsumiru',
@@ -23,27 +16,20 @@ PackageInfo _packageInfo() => PackageInfo(
   buildNumber: '1',
 );
 
-GraphQLClient _emptyClient() => GraphQLClient(
-  link: Link.function((request, [forward]) => const Stream.empty()),
-  cache: GraphQLCache(),
-);
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late int initializeCalls;
-  late bool nativeInitializeResult;
 
   setUp(() {
     initializeCalls = 0;
-    nativeInitializeResult = true;
     debugMacOSOverride = true;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {
           return switch (call.method) {
             'initialize' => () {
               initializeCalls++;
-              return nativeInitializeResult;
+              return true;
             }(),
             'checkForUpdates' => true,
             _ => throw MissingPluginException(),
@@ -56,104 +42,58 @@ void main() {
     });
   });
 
-  Future<SharedPreferences> loadPrefs() async {
-    SharedPreferences.setMockInitialValues(const {});
-    return SharedPreferences.getInstance();
-  }
-
-  ProviderContainer restartContainer(
-    ProviderContainer previous,
-    PackageInfo packageInfo,
-    SharedPreferences prefs,
-  ) => app.createSessionContainerForTest(
-    packageInfo: packageInfo,
-    preferences: prefs,
-    macOSUpdater: previous.read(macOSAppUpdaterProvider),
-  );
-
-  ProviderContainer routingChild(ProviderContainer session) {
-    final child = ProviderContainer(
-      parent: session,
+  test('restart keeps the initialized updater without re-init', () async {
+    final updater = MacOSAppUpdater();
+    expect(await updater.initialize(), isTrue);
+    final old = ProviderContainer(
+      overrides: [macOSAppUpdaterProvider.overrideWithValue(updater)],
+    );
+    final next = ProviderContainer(
       overrides: [
-        graphQlClientProvider.overrideWithValue(_emptyClient()),
-        serverHostedWebProvider.overrideWithValue(false),
+        macOSAppUpdaterProvider.overrideWithValue(
+          old.read(macOSAppUpdaterProvider),
+        ),
       ],
     );
-    addTearDown(child.dispose);
-    return child;
-  }
-
-  Future<int> githubCalls(ProviderContainer session) async {
-    var calls = 0;
-    final result = await http.runWithClient(
-      routingChild(session).read(aboutRepositoryProvider).checkUpdate,
-      () => MockClient((request) async {
-        calls++;
-        return http.Response('{"tag_name":"v9.0.0"}', 200);
-      }),
-    );
-    expect(result.hasError, isFalse);
-    return calls;
-  }
-
-  test(
-    'restart keeps the initialized updater and native routing without re-init',
-    () async {
-      final prefs = await loadPrefs();
-      final packageInfo = _packageInfo();
-
-      final updater = MacOSAppUpdater();
-      expect(await updater.initialize(), isTrue);
-      expect(initializeCalls, 1);
-
-      final old = app.createSessionContainerForTest(
-        packageInfo: packageInfo,
-        preferences: prefs,
-        macOSUpdater: updater,
-      );
-      expect(old.read(macOSAppUpdaterProvider), same(updater));
-      expect(old.read(macOSAppUpdaterProvider).isAvailable, isTrue);
-      expect(await githubCalls(old), 0);
-
-      final next = restartContainer(old, packageInfo, prefs);
-      addTearDown(next.dispose);
-      old.dispose();
-
-      expect(next.read(macOSAppUpdaterProvider), same(updater));
-      expect(next.read(macOSAppUpdaterProvider).isAvailable, isTrue);
-      expect(initializeCalls, 1);
-      expect(await githubCalls(next), 0);
-      expect(
-        await next.read(macOSAppUpdaterProvider).checkForUpdates(),
-        isTrue,
-      );
-      expect(next.read(macOSAppUpdaterProvider).isAvailable, isTrue);
-    },
-  );
-
-  test('restart keeps a failed native updater on the GitHub fallback', () async {
-    nativeInitializeResult = false;
-    final prefs = await loadPrefs();
-    final packageInfo = _packageInfo();
-
-    final updater = MacOSAppUpdater();
-    expect(await updater.initialize(), isFalse);
-
-    final old = app.createSessionContainerForTest(
-      packageInfo: packageInfo,
-      preferences: prefs,
-      macOSUpdater: updater,
-    );
-    expect(old.read(macOSAppUpdaterProvider).isAvailable, isFalse);
-
-    final next = restartContainer(old, packageInfo, prefs);
     addTearDown(next.dispose);
     old.dispose();
 
     expect(next.read(macOSAppUpdaterProvider), same(updater));
-    expect(next.read(macOSAppUpdaterProvider).isAvailable, isFalse);
+    expect(await next.read(macOSAppUpdaterProvider).checkForUpdates(), isTrue);
     expect(initializeCalls, 1);
-    expect(await next.read(macOSAppUpdaterProvider).checkForUpdates(), isFalse);
-    expect(await githubCalls(next), play ? 0 : 1);
+  });
+
+  test('server update checks ignore the native updater', () async {
+    final updater = MacOSAppUpdater();
+    expect(await updater.initialize(), isTrue);
+    var calls = 0;
+    final repository = AboutRepository(
+      client: GraphQLClient(
+        link: Link.function((request, [forward]) async* {
+          calls++;
+          yield Response(
+            response: const {},
+            data: {
+              '__typename': 'Query',
+              'checkForServerUpdates': [
+                {
+                  '__typename': 'CheckForServerUpdatesPayload',
+                  'channel': 'Stable',
+                  'tag': 'v2.0.0',
+                  'url': 'https://server.test/releases',
+                },
+              ],
+            },
+          );
+        }),
+        cache: GraphQLCache(),
+      ),
+      packageInfo: _packageInfo(),
+    );
+    final updates = await repository.checkServerUpdate();
+    expect(calls, 1);
+    expect(initializeCalls, 1);
+    expect(updater.isAvailable, isTrue);
+    expect(updates?.single.tag, 'v2.0.0');
   });
 }

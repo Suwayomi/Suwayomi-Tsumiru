@@ -125,7 +125,6 @@ Future<void> _startApp() async {
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
-  // One app-lifetime updater shared by every session container.
   final macOSUpdater = MacOSAppUpdater();
   final container = _createSessionContainer(
     packageInfo,
@@ -404,19 +403,6 @@ ProviderContainer _createSessionContainer(
       (ref) => ref.read(accountSessionStorageProvider),
     ),
   ],
-);
-
-@visibleForTesting
-ProviderContainer createSessionContainerForTest({
-  required PackageInfo packageInfo,
-  required SharedPreferences preferences,
-  CacheManager? coverCache,
-  required MacOSAppUpdater macOSUpdater,
-}) => _createSessionContainer(
-  packageInfo,
-  preferences,
-  coverCache: coverCache,
-  macOSUpdater: macOSUpdater,
 );
 
 void _logBoot(String stage) {

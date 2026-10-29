@@ -13,7 +13,6 @@ import 'package:pub_semver/pub_semver.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/app_distribution.dart';
 import '../../features/about/data/about_repository.dart';
-import '../../features/about/data/macos_app_updater.dart';
 import '../../features/about/data/server_update_alerts_repository.dart';
 import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
@@ -133,16 +132,14 @@ class NavigationShellScreen extends HookConsumerWidget {
         Future.microtask(() async {
           await ref.read(startupWebRevisionProvider.future);
           if (!context.mounted || ref.read(serverHostedWebProvider)) return;
-          if (!ref.read(macOSAppUpdaterProvider).isAvailable) {
-            await checkForUpdate(
-              title: ref.read(packageInfoProvider).appName,
-              context: context,
-              ref: ref,
-              updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
-              toast: ref.read(toastProvider),
-            );
-            if (!context.mounted) return;
-          }
+          await checkForUpdate(
+            title: ref.read(packageInfoProvider).appName,
+            context: context,
+            ref: ref,
+            updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
+            toast: ref.read(toastProvider),
+          );
+          if (!context.mounted) return;
           await checkServerUpdateAlerts(context: context, ref: ref);
         });
         return null;

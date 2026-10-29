@@ -103,8 +103,6 @@ Values are `//`-escaped for xcconfig and expand back exactly.
 
 Tagged macOS builds sign the universal ZIP with the pod's `sign_update` (seed via stdin), verify the signature with the CryptoKit helper (`.github/scripts/sparkle_verify_signature.swift`) against the key embedded in the built app, and generate `dist/appcast.xml` (`.github/scripts/macos_appcast.py`) from the shipped `Info.plist` version, build and minimum OS. The stable feed is `https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest/download/appcast.xml`. Prereleases use the same tag shape, flagged on the draft: they sign and verify but skip the stable appcast. With keys configured the draft release must exist before the tag is pushed, so the prerelease flag can be read. Weekly dry runs validate, sign and verify when keys are configured; only stable tags publish the feed.
 
-macOS plugins build through Swift Package Manager; CocoaPods holds only `FlutterMacOS` and the local `Sparkle` pod, so the tracked `macos/Podfile.lock` lists just those two.
-
 ```bash
 python3 .github/scripts/test_macos_appcast.py
 flutter test test/src/features/about/

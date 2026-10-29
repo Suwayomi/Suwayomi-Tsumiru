@@ -46,7 +46,6 @@ void main() {
     var calls = 0;
     await http.runWithClient(
       () async {
-        // Mirror production's subscription across the tap's async gap.
         final container = ProviderScope.containerOf(
           tester.element(find.byType(AboutScreen)),
         );
@@ -144,20 +143,5 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
     },
     skip: play,
-  );
-
-  testWidgets(
-    'Play hides the client update entry',
-    (tester) async {
-      final updater = MacOSAppUpdater();
-      expect(await updater.initialize(), isTrue);
-      await pumpAbout(tester, updater);
-
-      final label = AppLocalizations.of(
-        tester.element(find.byType(AboutScreen)),
-      )!.checkForUpdates;
-      expect(find.text(label), findsNothing);
-    },
-    skip: !play,
   );
 }

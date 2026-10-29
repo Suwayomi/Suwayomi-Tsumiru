@@ -239,12 +239,12 @@ class AboutScreen extends HookConsumerWidget {
                                   }
                                   if (!context.mounted) return;
                                   await checkForUpdate(
-                                    title: packageInfo.appName,
-                                    context: context,
-                                    updateCallback: ref
-                                        .read(aboutRepositoryProvider)
-                                        .checkUpdate,
-                                    toast: toast,
+                                  title: packageInfo.appName,
+                                  context: context,
+                                  updateCallback: ref
+                                      .read(aboutRepositoryProvider)
+                                      .checkUpdate,
+                                  toast: toast,
                                   );
                                 },
                         ),

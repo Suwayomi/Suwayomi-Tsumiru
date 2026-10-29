@@ -33,7 +33,6 @@ class MacOSAppUpdater {
     return _available;
   }
 
-  /// True when handled natively, even while busy; false falls back to GitHub.
   Future<bool> checkForUpdates() async {
     if (!_available) return false;
     try {
