@@ -90,6 +90,21 @@ void main() {
     expect(basic.outcome, ResolveOutcome.basicGated);
     expect(basic.detectedAuthType, AuthType.basic);
 
+    // Preview servers: 404 + Basic challenge → AuthType.basic.
+    final previewBasicClient = MockClient.streaming(
+      (_, _) async => http.StreamedResponse(
+        const Stream<List<int>>.empty(),
+        404,
+        headers: {'www-authenticate': 'Basic realm="suwayomi"'},
+      ),
+    );
+    final previewBasic = await resolveServer(
+      'http://h:4567',
+      client: previewBasicClient,
+    );
+    expect(previewBasic.outcome, ResolveOutcome.basicGated);
+    expect(previewBasic.detectedAuthType, AuthType.basic);
+
     // simple_login: Unauthorized probe + root 303 to /login.html.
     final simple = await resolveServer(
       'http://h:4567',

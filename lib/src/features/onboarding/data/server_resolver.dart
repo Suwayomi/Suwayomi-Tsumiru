@@ -315,7 +315,7 @@ AuthType? detectAuthType({
   int? rootStatus,
   String? rootLocation,
 }) {
-  if (probeStatus == 401 &&
+  if ((probeStatus == 401 || probeStatus == 404) &&
       (wwwAuthenticate?.toLowerCase().startsWith('basic') ?? false)) {
     return AuthType.basic;
   }
@@ -387,7 +387,8 @@ Future<ProbeResult> probeServer(
     return ProbeResult.notReached(baseUrl);
   }
 
-  if (aboutResp.statusCode == 401 &&
+  // Preview servers answer 404 with a Basic challenge instead of 401.
+  if ((aboutResp.statusCode == 401 || aboutResp.statusCode == 404) &&
       (aboutResp.headers['www-authenticate']?.toLowerCase().contains('basic') ??
           false)) {
     return ProbeResult(
