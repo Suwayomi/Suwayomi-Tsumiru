@@ -56,6 +56,10 @@ Navigator keys: `rootNavigatorKey`, `_quickOpenNavigatorKey` (also `$parentNavig
 
 Navigation is always typed: `const FooRoute(...).go(context)` / `.push(context)` — no string-based navigation.
 
+On macOS, navigation and detail shells place the existing desktop top bar in
+`Scaffold.appBar`. Material banners then appear below the title controls, including
+when the toolbar needs two rows. Other platforms retain the top bar in the body.
+
 ## Screen-size split
 
 - **Phone** (< 600): `SmallScreenNavigationBar` (M3 bottom bar), 5 items (History omitted — lives under More).

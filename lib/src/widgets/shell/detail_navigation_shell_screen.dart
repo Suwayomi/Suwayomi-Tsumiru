@@ -56,11 +56,14 @@ class DetailNavigationShellScreen extends ConsumerWidget {
       }
     }
 
+    final topAppBar = desktopShellAppBar(context, ref);
     return Scaffold(
+      appBar: topAppBar,
       body: SafeArea(
         child: Column(
           children: [
-            if (showsMergedTopBar(context)) const DesktopTopBar(),
+            if (topAppBar == null && showsMergedTopBar(context))
+              const DesktopTopBar(),
             // Move the keyed body across breakpoints without remounting scroll, focus or drafts.
             Expanded(
               key: const ValueKey('shellBody'),

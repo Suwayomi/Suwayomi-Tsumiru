@@ -127,6 +127,17 @@ bool desktopTopBarShowsMergedRow(BuildContext context, WidgetRef ref) =>
       _resolveSlotKey(context, ref.watch(topBarSlotRegistryProvider)),
     ).merged;
 
+PreferredSizeWidget? desktopShellAppBar(BuildContext context, WidgetRef ref) {
+  if (!isMacOSRuntime || !showsMergedTopBar(context)) return null;
+  final merged = desktopTopBarShowsMergedRow(context, ref);
+  return PreferredSize(
+    preferredSize: Size.fromHeight(
+      kDesktopTopBarHeight + (merged ? 0 : kDesktopTitleBarHeight),
+    ),
+    child: const SafeArea(bottom: false, child: DesktopTopBar()),
+  );
+}
+
 _TopBarLayout _topBarLayout(
   BuildContext context,
   WidgetRef ref,
