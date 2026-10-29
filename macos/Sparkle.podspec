@@ -1,4 +1,4 @@
-# Trunk has no 2.10.x release, so pin the official 2.10.1 archive directly.
+# Pin the official 2.10.1 archive directly.
 Pod::Spec.new do |s|
   s.name = 'Sparkle'
   s.version = '2.10.1'

@@ -28,8 +28,7 @@ final class TsumiruSparkleUpdater {
     return true
   }
 
-  // A running controller owns the request even while busy checking or
-  // downloading; only a missing controller falls back to GitHub.
+  // A live controller owns the check even while busy.
   func checkForUpdates() -> Bool {
     guard let updater = controller?.updater else {
       return false
@@ -56,7 +55,7 @@ final class TsumiruSparkleUpdater {
     return true
   }
 
-  // Defensive: a real App Store target must drop the updater instead.
+  // App Store targets must drop the updater instead.
   private static func hasMacAppStoreReceipt() -> Bool {
     guard let receiptURL = Bundle.main.appStoreReceiptURL else {
       return false

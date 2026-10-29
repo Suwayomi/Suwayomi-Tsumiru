@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the single-item macOS Sparkle appcast for a tagged release.
-
-Signature verification lives in sparkle_verify_signature.swift (CryptoKit);
-this module does XML only. Standard library only.
-"""
+"""Generate the single-item macOS Sparkle appcast for a tagged release."""
 
 import argparse
 import base64
@@ -23,8 +19,6 @@ ENCLOSURE_OS = "macos"
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 BUILD_RE = re.compile(r"^[0-9]+$")
 MIN_OS_RE = re.compile(r"^\d+(?:\.\d+){0,2}$")
-# Stable tags only; prereleases reuse the same tag shape and are flagged
-# on the release draft instead.
 TAG_RE = re.compile(r"^v(\d+\.\d+\.\d+)$")
 
 
@@ -83,7 +77,6 @@ def generate_appcast(
     download_url: str,
     pubdate: str | None = None,
 ) -> bytes:
-    """Build the deterministic appcast XML for one release."""
     validate_release(version, build, tag, min_os)
     validate_https_url(download_url, "download URL")
     validate_signature(signature)

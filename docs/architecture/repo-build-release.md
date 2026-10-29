@@ -85,14 +85,32 @@ flutter build apk --debug  # local Android APK
 
 ## macOS Sparkle updates
 
-macOS in-app updates use Sparkle 2.10.1's standard UI with its default consent and scheduling. The framework comes from a local podspec (`macos/Sparkle.podspec`) pinning the official distribution archive by URL and SHA256, keeping App Sandbox enabled. The native controller starts only when the built `Info.plist` carries a valid HTTPS `SUFeedURL` and a base64 32-byte `SUPublicEDKey`; otherwise the app behaves exactly as before, with the GitHub update flow.
+macOS in-app updates use Sparkle 2.10.1's standard UI. The framework comes from a local podspec (`macos/Sparkle.podspec`) pinning the official distribution archive by URL and SHA256, with App Sandbox kept enabled. The native controller starts only when the built `Info.plist` carries an HTTPS `SUFeedURL` and a base64 32-byte `SUPublicEDKey`; otherwise the GitHub update flow runs unchanged.
 
-- **Activation (CI):** set repo variable `MACOS_SPARKLE_PUBLIC_KEY` (base64 public key) and secret `MACOS_SPARKLE_PRIVATE_KEY` (base64 seed) together, or neither. `release-fork.yml` runs `.github/scripts/configure_macos_sparkle.py` before the macOS build, which writes the ignored `macos/Flutter/ephemeral/Sparkle.xcconfig`; a partial pair fails the build rather than shipping a half-configured updater. Local builds enable the same way: `python3 .github/scripts/configure_macos_sparkle.py --feed-url <https url> --public-key <base64>` (omit both to disable). Values are `//`-escaped for xcconfig and expand back exactly.
-- **Release signing:** tagged macOS builds sign the universal ZIP with the pod's `sign_update` (seed via stdin, never logged), verify the signature with the CryptoKit helper (`.github/scripts/sparkle_verify_signature.swift`) against the key embedded in the built app, and generate `dist/appcast.xml` (`.github/scripts/macos_appcast.py`) from the shipped `Info.plist` version, build number and minimum OS. The stable feed is `https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest/download/appcast.xml`. Prerelease drafts keep the same tag shape and are flagged on the draft: they still sign and verify, but skip the stable appcast. Tagged builds first compare the built `SUFeedURL` against the expected feed URL with a shell equality check and validate version, build and minimum OS via `macos_appcast.py validate-metadata`; weekly dry runs validate, sign and verify too when keys are configured, so a bad key secret fails before release day — only stable tags publish the feed.
-- **Draft requirement:** with Sparkle keys configured, the draft release must exist before the tag is pushed. The macOS job reads the draft's prerelease flag and fails the release if the lookup cannot determine it, rather than guessing.
-- **Toolchain (Flutter 3.47.7):** macOS plugins build through Swift Package Manager (`FlutterGeneratedPluginSwiftPackage` in `project.pbxproj`); CocoaPods remains only for `FlutterMacOS` and the local `Sparkle` pod, so the tracked `macos/Podfile.lock` holds just those two and must stay byte-identical to `macos/Pods/Manifest.lock`. The `Runner.xcscheme` toolchain upgrade is accepted with the stale product name corrected to the actual `Tsumiru.app`.
-- **Checks:** `python3 .github/scripts/test_macos_appcast.py` (config/appcast units plus macOS-only CryptoKit verification tests against a real `sign_update` fixture) and `flutter test test/src/features/about/` (native/GitHub routing, busy and failure behavior). A macOS release build compile-checks the Swift controller.
-- **Not yet done:** Apple Developer signing/notarization is a separate future step (no enrollment yet), and an actual update installation has not been exercised end-to-end. When that future Developer ID step happens, nested Sparkle helper bundles must be signed inside-out with the same team before notarization. Future Mac App Store builds must exclude the Sparkle dependency and its entitlements entirely and rely on App Store updates.
+Activation is a variable/secret pair, set together or neither: repo variable `MACOS_SPARKLE_PUBLIC_KEY` (base64 public key) and secret `MACOS_SPARKLE_PRIVATE_KEY` (base64 seed). `release-fork.yml` runs `.github/scripts/configure_macos_sparkle.py` before the macOS build, writing the ignored `macos/Flutter/ephemeral/Sparkle.xcconfig`; a partial pair fails the build. Local builds use the same script:
+
+```bash
+python3 .github/scripts/configure_macos_sparkle.py --feed-url https://example.com/appcast.xml --public-key "$MACOS_SPARKLE_PUBLIC_KEY"
+```
+
+`$MACOS_SPARKLE_PUBLIC_KEY` holds the base64 public key. To disable, pass explicit empty values (overrides `MACOS_SPARKLE_*` env vars):
+
+```bash
+python3 .github/scripts/configure_macos_sparkle.py --feed-url '' --public-key ''
+```
+
+Values are `//`-escaped for xcconfig and expand back exactly.
+
+Tagged macOS builds sign the universal ZIP with the pod's `sign_update` (seed via stdin), verify the signature with the CryptoKit helper (`.github/scripts/sparkle_verify_signature.swift`) against the key embedded in the built app, and generate `dist/appcast.xml` (`.github/scripts/macos_appcast.py`) from the shipped `Info.plist` version, build and minimum OS. The stable feed is `https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest/download/appcast.xml`. Prereleases use the same tag shape, flagged on the draft: they sign and verify but skip the stable appcast. With keys configured the draft release must exist before the tag is pushed, so the prerelease flag can be read. Weekly dry runs validate, sign and verify when keys are configured; only stable tags publish the feed.
+
+macOS plugins build through Swift Package Manager; CocoaPods holds only `FlutterMacOS` and the local `Sparkle` pod, so the tracked `macos/Podfile.lock` lists just those two.
+
+```bash
+python3 .github/scripts/test_macos_appcast.py
+flutter test test/src/features/about/
+```
+
+A macOS release build compile-checks the Swift controller. Apple Developer signing and notarization are still future work (nested Sparkle helpers must be signed inside-out with the same team first), and an actual install has not been tested end-to-end. Mac App Store builds must exclude Sparkle and its entitlements entirely.
 
 ## Google Play distribution mode
 

@@ -230,7 +230,6 @@ class AboutScreen extends HookConsumerWidget {
                           onTap: serverHosted
                               ? () => const ServerSettingsRoute().push(context)
                               : () async {
-                                  // Native Sparkle UI first; GitHub runs when unavailable.
                                   final nativeUpdater = ref.read(
                                     macOSAppUpdaterProvider,
                                   );

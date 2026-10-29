@@ -46,9 +46,7 @@ void main() {
     var calls = 0;
     await http.runWithClient(
       () async {
-        // Production always watches aboutProvider while About is open, which
-        // subscribes the repository; hold the same subscription across the
-        // tap's async gap since aboutProvider is stubbed out here.
+        // Mirror production's subscription across the tap's async gap.
         final container = ProviderScope.containerOf(
           tester.element(find.byType(AboutScreen)),
         );
@@ -133,7 +131,7 @@ void main() {
   );
 
   testWidgets(
-    'native false demotes and falls through to GitHub on the same tap',
+    'native false falls through to GitHub on the same tap',
     (tester) async {
       nativeCheckResult = false;
       final updater = MacOSAppUpdater();

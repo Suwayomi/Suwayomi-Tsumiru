@@ -145,7 +145,6 @@ void main() {
   });
 
   test('busy native updater stays available across repeated checks', () async {
-    // Native true even while busy must not demote or open the GitHub flow.
     debugMacOSOverride = true;
     await mockNative(initialize: true, check: true);
     final updater = MacOSAppUpdater();
@@ -155,7 +154,7 @@ void main() {
     expect(updater.isAvailable, isTrue);
   });
 
-  test('missing native controller demotes the updater for fallback', () async {
+  test('missing native controller falls back to GitHub', () async {
     debugMacOSOverride = true;
     await mockNative(initialize: true, check: false);
     final updater = MacOSAppUpdater();
@@ -164,7 +163,7 @@ void main() {
     expect(updater.isAvailable, isFalse);
   });
 
-  test('failed native check demotes the updater for fallback', () async {
+  test('failed native check falls back to GitHub', () async {
     debugMacOSOverride = true;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {

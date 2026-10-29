@@ -61,8 +61,6 @@ void main() {
     return SharedPreferences.getInstance();
   }
 
-  /// Mirrors `restartSession`: the next container takes the updater from the
-  /// previous one through the production session factory.
   ProviderContainer restartContainer(
     ProviderContainer previous,
     PackageInfo packageInfo,
@@ -73,8 +71,6 @@ void main() {
     macOSUpdater: previous.read(macOSAppUpdaterProvider),
   );
 
-  /// Reads update routing through a child container so the session factory
-  /// itself stays exactly as production builds it.
   ProviderContainer routingChild(ProviderContainer session) {
     final child = ProviderContainer(
       parent: session,
@@ -106,7 +102,6 @@ void main() {
       final prefs = await loadPrefs();
       final packageInfo = _packageInfo();
 
-      // _startApp: one app-lifetime updater, initialized once.
       final updater = MacOSAppUpdater();
       expect(await updater.initialize(), isTrue);
       expect(initializeCalls, 1);
@@ -124,7 +119,6 @@ void main() {
       addTearDown(next.dispose);
       old.dispose();
 
-      // Same instance survives disposal; native init is not repeated.
       expect(next.read(macOSAppUpdaterProvider), same(updater));
       expect(next.read(macOSAppUpdaterProvider).isAvailable, isTrue);
       expect(initializeCalls, 1);
@@ -159,9 +153,7 @@ void main() {
     expect(next.read(macOSAppUpdaterProvider), same(updater));
     expect(next.read(macOSAppUpdaterProvider).isAvailable, isFalse);
     expect(initializeCalls, 1);
-    // Unavailable: manual checks never touch the native channel.
     expect(await next.read(macOSAppUpdaterProvider).checkForUpdates(), isFalse);
-    // The repository falls through to GitHub on the restarted container.
     expect(await githubCalls(next), play ? 0 : 1);
   });
 }

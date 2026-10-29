@@ -125,9 +125,7 @@ Future<void> _startApp() async {
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
-  // One app-lifetime updater: the native Sparkle controller is a process-wide
-  // singleton, so every session container shares this instance instead of
-  // constructing a fresh (unavailable) one per restart.
+  // One app-lifetime updater shared by every session container.
   final macOSUpdater = MacOSAppUpdater();
   final container = _createSessionContainer(
     packageInfo,
@@ -135,7 +133,6 @@ Future<void> _startApp() async {
     macOSUpdater: macOSUpdater,
   );
 
-  // Start the macOS updater before any update check; failures keep GitHub fallback.
   try {
     await macOSUpdater.initialize();
   } catch (e, st) {
@@ -409,7 +406,6 @@ ProviderContainer _createSessionContainer(
   ],
 );
 
-/// The production session factory, exposed for the restart regression test.
 @visibleForTesting
 ProviderContainer createSessionContainerForTest({
   required PackageInfo packageInfo,

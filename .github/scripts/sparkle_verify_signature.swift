@@ -1,5 +1,3 @@
-// Verifies a Sparkle update archive with CryptoKit (no custom crypto).
-// Usage: sparkle_verify_signature.swift --public-key <base64> --zip <path> --signature <base64>
 // Exit 0: valid, 1: invalid signature, 2: usage or input error.
 import CryptoKit
 import Foundation

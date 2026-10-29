@@ -133,7 +133,6 @@ class NavigationShellScreen extends HookConsumerWidget {
         Future.microtask(() async {
           await ref.read(startupWebRevisionProvider.future);
           if (!context.mounted || ref.read(serverHostedWebProvider)) return;
-          // Sparkle runs its own scheduled checks; server alerts still apply.
           if (!ref.read(macOSAppUpdaterProvider).isAvailable) {
             await checkForUpdate(
               title: ref.read(packageInfoProvider).appName,

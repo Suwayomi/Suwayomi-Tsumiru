@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Write macos/Flutter/ephemeral/Sparkle.xcconfig for the macOS build.
-
-Neither feed URL nor public key disables updates; a partial pair fails.
-Inputs: --feed-url / MACOS_SPARKLE_FEED_URL, --public-key /
-MACOS_SPARKLE_PUBLIC_KEY (explicit argument, even empty, wins over env).
-The Ed25519 seed is never an input here (release signing only, in CI).
-"""
+"""Write macos/Flutter/ephemeral/Sparkle.xcconfig for the macOS build."""
 
 import argparse
 import base64
@@ -31,9 +25,7 @@ def default_output() -> Path:
 
 
 def escape_xcconfig_value(raw: str) -> str:
-    # In xcconfig `//` starts a comment even inside values. Expanding every
-    # `/` with an empty variable keeps any run of slashes comment-free, and
-    # Xcode expands it back to the exact original value.
+    # `//` starts a comment even in values; `/$()` keeps slashes and expands back exactly.
     return raw.replace("/", "/$()")
 
 

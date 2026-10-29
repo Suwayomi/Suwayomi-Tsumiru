@@ -107,7 +107,6 @@ class GenerateTest(unittest.TestCase):
             {"build": "abc"},
             {"tag": "9.9.9"},
             {"tag": "v9.9.8"},
-            # Prereleases reuse the same tag shape; suffixed tags never ship.
             {"tag": "v9.9.9-rc1"},
             {"min_os": "twelve"},
             {"min_os": "12.0.1.2"},
@@ -174,7 +173,6 @@ class ConfigureTest(unittest.TestCase):
             "https:/$()/$()github.com/$()Suwayomi/$()Suwayomi-Tsumiru"
             "/$()releases/$()latest/$()download/$()appcast.xml",
         )
-        # Xcode expands the empty variable back, so the value round-trips.
         self.assertEqual(
             configure.escape_xcconfig_value(TEST_FEED).replace("/$()", "/"),
             TEST_FEED,
@@ -272,7 +270,6 @@ class ConfigureTest(unittest.TestCase):
         # Raw `//` would truncate the value as an xcconfig comment.
         self.assertNotIn("//", values["key"])
         self.assertNotIn("//", values["feed"])
-        # Simulates Xcode expanding the empty variable: exact round-trip.
         self.assertEqual(values["key"].replace("/$()", "/"), key)
         self.assertEqual(values["feed"].replace("/$()", "/"), TEST_FEED)
 
@@ -312,8 +309,7 @@ class ConfigureTest(unittest.TestCase):
 @unittest.skipUnless(sys.platform == "darwin", "CryptoKit verification needs macOS")
 class SparkleVerifyHelperTest(unittest.TestCase):
     HELPER = Path(__file__).resolve().parent / "sparkle_verify_signature.swift"
-    # Fixture signed by Sparkle 2.10.1 sign_update over PROBE_BYTES with the
-    # RFC 8032 section 7.1 test seed (public, NOT production credentials).
+    # sign_update fixture over PROBE_BYTES with the RFC 8032 7.1 test seed (public, not production).
     PROBE_BYTES = b"sparkle interop probe v1"
     PROBE_PUBLIC_KEY = "11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo="
     PROBE_SIGNATURE = (

@@ -9,10 +9,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/platform/platform_runtime.dart';
 
-/// macOS in-app updates through the native Sparkle controller.
-///
-/// Import-safe everywhere (`kIsWeb` guard precedes `dart:io`). Off macOS
-/// [initialize] reports unavailable and the GitHub flow runs unchanged.
 class MacOSAppUpdater {
   MacOSAppUpdater({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel('tsumiru/sparkle_updater');
@@ -20,10 +16,8 @@ class MacOSAppUpdater {
   final MethodChannel _channel;
   bool _available = false;
 
-  /// True once [initialize] has confirmed a configured native updater.
   bool get isAvailable => _available;
 
-  /// Starts the native updater. Never throws: failures keep GitHub fallback.
   Future<bool> initialize() async {
     if (!isMacOSRuntime) {
       _available = false;
@@ -39,8 +33,7 @@ class MacOSAppUpdater {
     return _available;
   }
 
-  /// Opens Sparkle's update UI. True even while busy (already handled);
-  /// false demotes to the GitHub fallback.
+  /// True when handled natively, even while busy; false falls back to GitHub.
   Future<bool> checkForUpdates() async {
     if (!_available) return false;
     try {
