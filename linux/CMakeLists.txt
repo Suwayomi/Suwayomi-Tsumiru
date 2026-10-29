@@ -62,6 +62,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
 pkg_check_modules(AVIF REQUIRED IMPORTED_TARGET libavif>=1.0.0)
 pkg_check_modules(GDKPIXBUF REQUIRED IMPORTED_TARGET gdk-pixbuf-2.0)
+pkg_check_modules(LIBPNG REQUIRED IMPORTED_TARGET libpng)
 find_library(TSUMIRU_AVIF_LIBRARY NAMES avif HINTS ${AVIF_LIBRARY_DIRS})
 if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0" AND NOT TSUMIRU_AVIF_LIBRARY)
   message(FATAL_ERROR "libavif not found; cannot bundle the AVIF runtime closure")
@@ -93,7 +94,7 @@ add_library(tsumiru_avif SHARED
   "tsumiru_avif.h"
 )
 apply_standard_settings(tsumiru_avif)
-target_link_libraries(tsumiru_avif PRIVATE PkgConfig::AVIF PkgConfig::GDKPIXBUF)
+target_link_libraries(tsumiru_avif PRIVATE PkgConfig::AVIF PkgConfig::GDKPIXBUF PkgConfig::LIBPNG)
 # DT_RPATH makes $ORIGIN apply to transitive codec dependencies.
 set_target_properties(tsumiru_avif PROPERTIES
   INSTALL_RPATH "$ORIGIN"
@@ -155,6 +156,7 @@ install(TARGETS tsumiru_avif
 
 if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
   install(CODE "set(TSUMIRU_AVIF_LIBRARY \"${TSUMIRU_AVIF_LIBRARY}\")" COMPONENT Runtime)
+  install(CODE "set(TSUMIRU_PNG_LIBRARIES \"${LIBPNG_LINK_LIBRARIES}\")" COMPONENT Runtime)
   install(CODE "set(TSUMIRU_AVIF_LIB_DIR \"${TSUMIRU_AVIF_LIB_DIR}\")" COMPONENT Runtime)
   install(CODE "set(TSUMIRU_AVIF_DEST \"\$ENV{DESTDIR}${INSTALL_BUNDLE_LIB_DIR}\")" COMPONENT Runtime)
   install(CODE "set(CMAKE_OBJDUMP \"${CMAKE_OBJDUMP}\")" COMPONENT Runtime)
@@ -163,7 +165,7 @@ if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
       RESOLVED_DEPENDENCIES_VAR _avif_resolved
       UNRESOLVED_DEPENDENCIES_VAR _avif_unresolved
       CONFLICTING_DEPENDENCIES_PREFIX _avif_conflict
-      LIBRARIES "${TSUMIRU_AVIF_LIBRARY}"
+      LIBRARIES "${TSUMIRU_AVIF_LIBRARY}" ${TSUMIRU_PNG_LIBRARIES}
       DIRECTORIES "${TSUMIRU_AVIF_LIB_DIR}")
     if(_avif_unresolved)
       message(FATAL_ERROR "Unresolved libavif runtime dependencies: ${_avif_unresolved}")
@@ -171,7 +173,7 @@ if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
     if(_avif_conflict_FILENAMES)
       message(FATAL_ERROR "Conflicting libavif runtime dependencies: ${_avif_conflict_FILENAMES}")
     endif()
-    set(_avif_all "${TSUMIRU_AVIF_LIBRARY}")
+    set(_avif_all "${TSUMIRU_AVIF_LIBRARY}" ${TSUMIRU_PNG_LIBRARIES})
     list(APPEND _avif_all ${_avif_resolved})
     foreach(_dep IN LISTS _avif_all)
       get_filename_component(_name "${_dep}" NAME)
@@ -180,7 +182,14 @@ if(NOT "$ENV{TSUMIRU_BUNDLE_AVIF_DEPS}" STREQUAL "0")
           continue()
         endif()
       endif()
-      file(INSTALL "${_dep}" DESTINATION "${TSUMIRU_AVIF_DEST}" FOLLOW_SYMLINK_CHAIN)
+      execute_process(COMMAND "${CMAKE_OBJDUMP}" -p "${_dep}"
+        OUTPUT_VARIABLE _headers RESULT_VARIABLE _objdump_result)
+      if(NOT _objdump_result EQUAL 0 OR NOT _headers MATCHES "[ \t]SONAME[ \t]+([^ \r\n]+)")
+        message(FATAL_ERROR "Cannot determine runtime SONAME: ${_dep}")
+      endif()
+      set(_soname "${CMAKE_MATCH_1}")
+      get_filename_component(_real_dep "${_dep}" REALPATH)
+      file(INSTALL "${_real_dep}" DESTINATION "${TSUMIRU_AVIF_DEST}" RENAME "${_soname}")
     endforeach()
   ]=] COMPONENT Runtime)
 endif()

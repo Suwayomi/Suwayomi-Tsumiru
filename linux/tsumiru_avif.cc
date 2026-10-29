@@ -9,8 +9,10 @@
 #include <avif/avif.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib.h>
+#include <png.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 
 namespace {
@@ -24,6 +26,68 @@ enum : int {
   kDecodeFailed = 2,
   kEncodeFailed = 3,
 };
+
+struct PngBuffer {
+  uint8_t * data;
+  size_t size;
+  size_t capacity;
+};
+
+void WritePng(png_structp png, png_bytep data, png_size_t length) {
+  auto * buffer = static_cast<PngBuffer *>(png_get_io_ptr(png));
+  if (length > SIZE_MAX - buffer->size) {
+    png_error(png, "PNG output too large");
+  }
+  const size_t size = buffer->size + length;
+  if (size > buffer->capacity) {
+    const size_t capacity = size <= SIZE_MAX / 2 ? size * 2 : size;
+    auto * resized = static_cast<uint8_t *>(realloc(buffer->data, capacity));
+    if (resized == nullptr) {
+      png_error(png, "PNG allocation failed");
+    }
+    buffer->data = resized;
+    buffer->capacity = capacity;
+  }
+  memcpy(buffer->data + buffer->size, data, length);
+  buffer->size = size;
+}
+
+bool EncodePng(GdkPixbuf * pixbuf, uint8_t ** output, size_t * output_length) {
+  png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+  if (png == nullptr) {
+    return false;
+  }
+  png_infop info = png_create_info_struct(png);
+  auto * buffer = static_cast<PngBuffer *>(calloc(1, sizeof(PngBuffer)));
+  if (info == nullptr || buffer == nullptr) {
+    png_destroy_write_struct(&png, &info);
+    free(buffer);
+    return false;
+  }
+  // Keep mutable buffer state on the heap so it survives libpng's longjmp.
+  if (setjmp(png_jmpbuf(png))) {
+    png_destroy_write_struct(&png, &info);
+    free(buffer->data);
+    free(buffer);
+    return false;
+  }
+  png_set_write_fn(png, buffer, WritePng, nullptr);
+  png_set_IHDR(png, info, gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf), 8,
+               gdk_pixbuf_get_has_alpha(pixbuf) ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB,
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+  png_write_info(png, info);
+  const uint8_t * pixels = gdk_pixbuf_get_pixels(pixbuf);
+  const int stride = gdk_pixbuf_get_rowstride(pixbuf);
+  for (int y = 0; y < gdk_pixbuf_get_height(pixbuf); ++y) {
+    png_write_row(png, pixels + static_cast<size_t>(y) * stride);
+  }
+  png_write_end(png, info);
+  png_destroy_write_struct(&png, &info);
+  *output = buffer->data;
+  *output_length = buffer->size;
+  free(buffer);
+  return true;
+}
 
 bool ApplyCleanAperture(const avifImage * image, GdkPixbuf ** pixbuf) {
   avifCropRect rect;
@@ -149,20 +213,10 @@ int DecodeToPng(const uint8_t * input, size_t input_length, uint8_t ** output,
       pixbuf = flipped;
     }
 
-    gchar * png_data = nullptr;
-    gsize png_size = 0;
-    GError * error = nullptr;
-    if (gdk_pixbuf_save_to_buffer(pixbuf, &png_data, &png_size, "png", &error, nullptr) == FALSE ||
-        png_data == nullptr || png_size == 0) {
-      if (error != nullptr) {
-        g_error_free(error);
-      }
-      g_free(png_data);
+    if (!EncodePng(pixbuf, output, output_length)) {
       result = kEncodeFailed;
       break;
     }
-    *output = reinterpret_cast<uint8_t *>(png_data);
-    *output_length = static_cast<size_t>(png_size);
     result = 0;
   } while (false);
 
@@ -198,5 +252,5 @@ int tsumiru_avif_to_png(const uint8_t * input, size_t input_length, uint8_t ** o
 }
 
 void tsumiru_avif_free(uint8_t * output) {
-  g_free(output);
+  free(output);
 }
