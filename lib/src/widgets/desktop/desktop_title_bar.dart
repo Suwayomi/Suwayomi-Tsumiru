@@ -4,17 +4,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../constants/app_constants.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../tsumiru_logo.dart';
+
+part 'desktop_window_button.dart';
 
 const double kDesktopTitleBarHeight = 40;
 
 const double kBrandLogoSize = 28;
 const double kBrandGap = 8;
+const double _linuxWindowButtonsWidth = 3 * 28 + 2 * 6 + 8;
+
+bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
 TextStyle? brandNameStyle(BuildContext context) {
   final theme = Theme.of(context);
@@ -60,10 +67,34 @@ class DesktopTitleBar extends StatelessWidget {
             const Positioned.fill(
               child: DragToMoveArea(child: SizedBox.expand()),
             ),
-          // IgnorePointer lets the brand remain inside the drag region.
-          const Positioned.fill(
+          // IgnorePointer keeps the brand inside the full-width drag region.
+          Positioned.fill(
+            right: _isLinux && native && !isMacOSRuntime
+                ? _linuxWindowButtonsWidth : 0,
             child: IgnorePointer(
-              child: Center(child: DesktopBrandTitle()),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final text = TextPainter(
+                    text: TextSpan(
+                      text: kAppName,
+                      style: brandNameStyle(context),
+                    ),
+                    textDirection: Directionality.of(context),
+                    textScaler: MediaQuery.textScalerOf(context),
+                  )..layout();
+                  final fits = !_isLinux ||
+                      constraints.maxWidth >= kBrandLogoSize + kBrandGap + text.width;
+                  text.dispose();
+                  return Center(
+                    child: fits
+                        ? const DesktopBrandTitle()
+                        : const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: TsumiruLogo(size: kBrandLogoSize),
+                          ),
+                  );
+                },
+              ),
             ),
           ),
           if (native && !isMacOSRuntime)
@@ -110,6 +141,29 @@ class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLinux) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: [
+            _BreezeButton(glyph: 0, onPressed: () => windowManager.minimize()),
+            _BreezeButton(
+              glyph: _maximized ? 2 : 1,
+              onPressed: () => _maximized
+                  ? windowManager.unmaximize()
+                  : windowManager.maximize(),
+            ),
+            _BreezeButton(
+              glyph: 3,
+              label: AppLocalizations.of(context)?.close,
+              onPressed: () => windowManager.close(),
+            ),
+          ],
+        ),
+      );
+    }
     final b = widget.brightness;
     return Row(
       // Shrink-wrap so Align can position the controls on the right.
