@@ -206,8 +206,9 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           TSUMIRU_BUNDLE_AVIF_DEPS: "1"
         run: |
-          # Official appimagetool (fastforge shells out to it).
-          sudo wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          # Official appimagetool, pinned (fastforge shells out to it).
+          sudo wget -q https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  /usr/local/bin/appimagetool" | sha256sum -c -
           sudo chmod +x /usr/local/bin/appimagetool
           # fastforge's AppImage maker may call `locate` for include resolution.
           sudo apt-get install -y --no-install-recommends plocate zsync && sudo updatedb || true
