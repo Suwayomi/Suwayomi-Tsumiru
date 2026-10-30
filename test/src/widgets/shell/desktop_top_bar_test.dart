@@ -437,7 +437,7 @@ void main() {
     );
 
     // The brand row's logo collapses and expands the sidebar.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_contract_24_regular));
     await tester.pumpAndSettle();
     expect(find.byType(TsumiruLogo), findsOneWidget);
     await tester.tap(find.byType(TsumiruLogo));
@@ -483,13 +483,13 @@ void main() {
     expect(find.byType(WindowCaptionButton), findsNothing);
     expect(find.byType(TsumiruLogo), findsOneWidget);
     expect(find.text('Tsumiru'), findsOneWidget);
-    expect(find.byIcon(FluentIcons.chevron_left_24_regular), findsOneWidget);
+    expect(find.byIcon(FluentIcons.panel_left_contract_24_regular), findsOneWidget);
     final webBar = tester.getRect(find.byType(DesktopTopBar));
     final webSidebar = tester.getRect(find.byType(DesktopSidebar));
     expect(webSidebar.top, webBar.bottom);
 
     // Collapse: logo-only block; expand again by tapping the logo.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_contract_24_regular));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byType(DesktopSidebar)).width,
@@ -588,7 +588,7 @@ void main() {
       findsNothing,
     );
     expect(
-      find.descendant(of: bar, matching: find.byIcon(FluentIcons.chevron_left_24_regular)),
+      find.descendant(of: bar, matching: find.byIcon(FluentIcons.panel_left_contract_24_regular)),
       findsNothing,
     );
     expect(
@@ -600,7 +600,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: sidebar, matching: find.byIcon(FluentIcons.chevron_left_24_regular)),
+      find.descendant(of: sidebar, matching: find.byIcon(FluentIcons.panel_left_contract_24_regular)),
       findsOneWidget,
     );
     expect(find.byType(DesktopBrandRow), findsOneWidget);

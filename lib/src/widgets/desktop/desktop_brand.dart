@@ -42,7 +42,7 @@ class DesktopBrandRow extends StatelessWidget {
             child: Text(kAppName, style: brandNameStyle(context)),
           ),
           IconButton(
-            icon: const Icon(FluentIcons.chevron_left_24_regular),
+            icon: const Icon(FluentIcons.panel_left_contract_24_regular),
             tooltip: context.l10n.collapseSidebar,
             onPressed: onCollapse,
           ),
