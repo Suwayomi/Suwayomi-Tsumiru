@@ -3,7 +3,7 @@ description: A manga reader client for Suwayomi Server.
 
 publish_to: "none"
 # Build number continues from 0.6.4+28 so Android upgrades stay monotonic.
-version: 1.6.2+5003
+version: 1.6.3+5004
 
 environment:
   sdk: ">=3.9.0 <4.0.0"
