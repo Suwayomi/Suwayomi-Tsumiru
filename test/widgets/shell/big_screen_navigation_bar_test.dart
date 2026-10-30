@@ -105,8 +105,7 @@ void main() {
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     expect(
       find.byIcon(FluentIcons.panel_left_24_regular),
-      findsNothing,
-      reason: 'collapsed bar shows the logo, not a chevron',
+      findsOneWidget,
     );
     expect(
       find.byIcon(FluentIcons.chevron_right_24_regular),
@@ -115,8 +114,7 @@ void main() {
     );
     expect(
       find.byType(TsumiruLogo),
-      findsOneWidget,
-      reason: 'collapsed bar keeps the logo (tap to expand)',
+      findsNothing,
     );
     expect(
       tester.takeException(),
@@ -124,8 +122,7 @@ void main() {
       reason: 'the narrow collapsed sidebar must not overflow',
     );
 
-    // Expand again by tapping the bar logo.
-    await tester.tap(find.byType(TsumiruLogo));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
 
@@ -152,7 +149,7 @@ void main() {
     );
     expect(container.read(sidebarExpandedProvider), isTrue);
     expect(narrowPrefs.getBool('sidebarExpanded'), isNot(isFalse));
-    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsNothing);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsOneWidget);
     expect(find.byIcon(FluentIcons.chevron_right_24_regular), findsNothing);
     expect(tester.takeException(), isNull);
 

@@ -59,10 +59,8 @@ class DesktopBrandExpandButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    icon: const TsumiruLogo(size: kBrandLogoSize),
+    icon: const Icon(FluentIcons.panel_left_24_regular),
     tooltip: context.l10n.expandSidebar,
     onPressed: onExpand,
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(),
   );
 }
