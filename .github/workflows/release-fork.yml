@@ -243,6 +243,8 @@ jobs:
           # fastforge embeds no update info, so repack for delta updates.
           mv "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage" ./fastforge-input.AppImage
           ./fastforge-input.AppImage --appimage-extract > /dev/null
+          chmod -R a+rX squashfs-root
+          chmod a+rx squashfs-root/AppRun
           appimagetool -u "gh-releases-zsync|Suwayomi|Suwayomi-Tsumiru|latest|tsumiru-*-linux-x86_64.AppImage.zsync" \
             squashfs-root "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage"
           mv ./"${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage.zsync" dist/

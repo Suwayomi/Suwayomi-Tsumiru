@@ -35,6 +35,12 @@ require_line() {
   grep -Fxq -- "$expected" <<< "$output" || fail "$apk: expected $expected"
 }
 
+require_signer_certificate() {
+  local output=$1 expected=$2 prefix='(Signer #1|V[0-9.]+ Signer:) certificate SHA-256 digest: '
+  [[ $(grep -Ec "^$prefix" <<< "$output") == 1 ]] || fail "$apk: expected exactly one signer certificate"
+  grep -Eq "^$prefix$expected$" <<< "$output" || fail "$apk: expected signer certificate SHA-256 digest: $expected"
+}
+
 verify_apk() {
   local apk=$1 old_output new_output lineage_output
   if ! old_output=$("$APKSIGNER" verify --max-sdk-version 27 --print-certs -v "$apk" 2>&1); then
@@ -43,7 +49,7 @@ verify_apk() {
   fi
   printf '%s\n' "$old_output"
   require_line "$old_output" 'Number of signers: 1'
-  require_line "$old_output" "Signer #1 certificate SHA-256 digest: $OLD_CERT_SHA256"
+  require_signer_certificate "$old_output" "$OLD_CERT_SHA256"
   require_line "$old_output" 'Verified using v2 scheme (APK Signature Scheme v2): true'
 
   if ! new_output=$("$APKSIGNER" verify --min-sdk-version 28 --print-certs -v "$apk" 2>&1); then
@@ -52,7 +58,7 @@ verify_apk() {
   fi
   printf '%s\n' "$new_output"
   require_line "$new_output" 'Number of signers: 1'
-  require_line "$new_output" "Signer #1 certificate SHA-256 digest: $NEW_CERT_SHA256"
+  require_signer_certificate "$new_output" "$NEW_CERT_SHA256"
   require_line "$new_output" 'Verified using v3 scheme (APK Signature Scheme v3): true'
   for output in "$old_output" "$new_output"; do
     require_line "$output" 'Verified using v1 scheme (JAR signing): false'
