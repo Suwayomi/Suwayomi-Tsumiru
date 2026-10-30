@@ -1,0 +1,91 @@
+name: Flathub check
+
+on:
+  pull_request:
+    paths:
+      - pubspec.yaml
+      - pubspec.lock
+      - linux/**
+      - flatpak/**
+      - .github/workflows/flathub-check.yml
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest:
+    name: Regenerate Flathub manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install regeneration dependencies
+        run: |
+          opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=25)
+          sudo apt-get "${opts[@]}" update
+          sudo apt-get "${opts[@]}" install -y --no-install-recommends \
+            python3-venv git patch curl unzip xz-utils zip \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev libx11-dev libblkid-dev liblzma-dev \
+            libsecret-1-dev libjsoncpp-dev libavif-dev
+      - name: Regenerate manifest
+        env:
+          SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          FLATHUB_WORK: ${{ runner.temp }}/flathub
+        run: |
+          mkdir -p "$FLATHUB_WORK"
+          git clone --branch 0.15.0 --depth 1 https://github.com/TheAppgineer/flatpak-flutter.git "$FLATHUB_WORK/.flatpak-flutter"
+          python3 -m venv "$FLATHUB_WORK/.venv"
+          "$FLATHUB_WORK/.venv/bin/pip" install -r "$FLATHUB_WORK/.flatpak-flutter/requirements.txt"
+          mkdir -p "$FLATHUB_WORK/work"
+          cp -R flatpak/flathub/patches flatpak/flathub/foreign.json flatpak/flathub/flatpak-flutter.yml "$FLATHUB_WORK/work/"
+          sed -i "s/^        commit: .*/        commit: $SOURCE_COMMIT/" "$FLATHUB_WORK/work/flatpak-flutter.yml"
+          cd "$FLATHUB_WORK/work"
+          ../.venv/bin/python ../.flatpak-flutter/flatpak-flutter.py flatpak-flutter.yml
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flathub-manifest
+          path: |
+            ${{ runner.temp }}/flathub/work/*.yml
+            ${{ runner.temp }}/flathub/work/generated/
+            ${{ runner.temp }}/flathub/work/patches/
+          if-no-files-found: error
+
+  build:
+    name: Build and lint Flathub package
+    needs: manifest
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: flathub-manifest
+          path: manifest
+      - name: Lint manifest
+        run: flatpak-builder-lint manifest manifest/app.tsumiru.Tsumiru.yml
+      - uses: actions/cache@v5
+        with:
+          path: .flatpak-builder
+          key: flathub-26.08-x86_64-${{ hashFiles('manifest/**') }}
+          restore-keys: |
+            flathub-26.08-x86_64-
+      - name: Fetch build dependencies and sources
+        run: |
+          flatpak-builder --install-deps-from=flathub --install-deps-only --assumeyes --arch=x86_64 build manifest/app.tsumiru.Tsumiru.yml
+          flatpak-builder --download-only --arch=x86_64 build manifest/app.tsumiru.Tsumiru.yml
+      - name: Build offline
+        run: |
+          flatpak-builder --disable-download --sandbox --force-clean --disable-rofiles-fuse --rebuild-on-sdk-change --arch=x86_64 --repo=repo build manifest/app.tsumiru.Tsumiru.yml
+      - name: Lint repository
+        run: flatpak-builder-lint repo repo

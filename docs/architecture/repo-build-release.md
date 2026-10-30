@@ -61,6 +61,8 @@ resizing passes on macOS. Other platforms retain their renderer defaults.
 
 ## CI quality gates
 
+**`flathub-check.yml`** regenerates the Flathub manifest for the tested commit, builds offline in the Freedesktop 26.08 sandbox, lints the manifest and repository, and uploads `flathub-manifest` on relevant PRs, release tags and manual runs.
+
 **`pr-checks.yml`** runs on every PR to `main`: `flutter pub get → flutter gen-l10n → build_runner build → flutter analyze → flutter test`. Analyze runs with `--no-fatal-warnings --no-fatal-infos`, so only real errors (or a failing test) block the merge — the repo's inherited warnings/infos are reported but don't gate. This is the safety net that keeps a broken build from merging.
 
 ## Automated dependency updates (Renovate)
