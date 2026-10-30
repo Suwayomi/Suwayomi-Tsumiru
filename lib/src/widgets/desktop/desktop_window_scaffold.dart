@@ -6,8 +6,10 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../routes/router_config.dart';
 import '../../utils/platform/platform_runtime.dart';
 import 'desktop_title_bar.dart';
 import 'desktop_top_bar.dart';
@@ -24,14 +26,33 @@ class DesktopWindowScaffold extends ConsumerWidget {
     final mergedBarVisible = ref.watch(mergedTopBarRegistryProvider) > 0;
     // Keep Router mounted: re-parsing route info loses non-JSON extras on resize.
     final showTitleBar = !(showsMergedTopBar(context) && mergedBarVisible);
+    final routes = ref.watch(routerConfigProvider);
     final content = Column(
       children: [
-        showTitleBar ? const DesktopTitleBar() : const SizedBox.shrink(),
+        if (showTitleBar)
+          ListenableBuilder(
+            listenable: routes.routerDelegate,
+            builder: (context, _) =>
+                DesktopTitleBar(hideBrand: _isOnboarding(routes)),
+          )
+        else
+          const SizedBox.shrink(),
         Expanded(child: child),
       ],
     );
     return !kIsWeb && defaultTargetPlatform == TargetPlatform.linux
         ? LinuxWindowFrame(child: content)
         : content;
+  }
+}
+
+bool _isOnboarding(GoRouter routes) {
+  try {
+    final configuration = routes.routerDelegate.currentConfiguration;
+    if (configuration.isEmpty) return false;
+    return configuration.matches.last.matchedLocation ==
+        const OnboardingRoute().location;
+  } catch (_) {
+    return false;
   }
 }

@@ -11,7 +11,6 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../constants/app_constants.dart';
 import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../constants/gen/assets.gen.dart';
@@ -79,8 +78,6 @@ class OnboardingScreen extends HookConsumerWidget {
       if (context.mounted) step.value = next;
     }
 
-    final isLast = step.value == _stepCount - 1;
-
     void finish() {
       preferences.setInt('onboarding.step', 0);
       ref.read(onboardingCompleteProvider.notifier).update(true);
@@ -110,69 +107,13 @@ class OnboardingScreen extends HookConsumerWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 620),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const _BrandHeader(),
-                        if (step.value < _stepCount - 1)
-                          Positioned(
-                            right: 4,
-                            child: TextButton(
-                              onPressed: activity.value == null ? finish : null,
-                              child: Text(context.l10n.onboardingSkip),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _StepDots(count: _stepCount, active: step.value),
-                    Expanded(
-                      child: _StepSwitcher(
-                        child: SingleChildScrollView(
-                          key: ValueKey(step.value),
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                          child: switch (step.value) {
-                            0 => const _ThemeStep(),
-                            1 => _ServerStep(
-                              nextRequest: nextRequest.value,
-                              onActivityChanged: (value) {
-                                if (context.mounted && step.value == 1) {
-                                  activity.value = value;
-                                }
-                              },
-                              onVerifiedChanged: (v) =>
-                                  serverVerified.value = v,
-                              onSignedIn: () {
-                                activity.value = null;
-                                serverVerified.value = true;
-                                step.value = 2;
-                              },
-                            ),
-                            _ => const _FinishStep(),
-                          },
-                        ),
-                      ),
-                    ),
-                    _NavBar(
-                      activity: step.value == 1 ? activity.value : null,
-                      showBack: step.value > 0,
-                      isLast: isLast,
-                      onBack: () => moveTo(step.value - 1),
-                      onNext: () {
-                        if (step.value == 1) {
-                          nextRequest.value++;
-                        } else if (isLast) {
-                          finish();
-                        } else {
-                          moveTo(step.value + 1);
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                child: _OnboardingBody(
+                  stepState: step,
+                  activityState: activity,
+                  verifiedState: serverVerified,
+                  requestState: nextRequest,
+                  move: moveTo,
+                  skip: finish),
               ),
             ),
           ),
@@ -186,28 +127,6 @@ AssetGenImage _brandLogo(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
     ? Assets.icons.logoOnLight
     : Assets.icons.darkIcon;
-
-class _BrandHeader extends StatelessWidget {
-  const _BrandHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Image.asset(_brandLogo(context).path, height: 26),
-        const SizedBox(width: 8),
-        Text(
-          kAppName,
-          style: context.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _StepSwitcher extends StatelessWidget {
   const _StepSwitcher({required this.child});
@@ -332,6 +251,137 @@ class _NavBar extends StatelessWidget {
                 )
               : next,
         ],
+      ),
+    );
+  }
+}
+
+class _OnboardingBody extends StatelessWidget {
+  const _OnboardingBody({
+    required this.stepState,
+    required this.activityState,
+    required this.verifiedState,
+    required this.requestState,
+    required this.move,
+    required this.skip,
+  });
+
+  final ValueNotifier<int> stepState;
+  final ValueNotifier<String?> activityState;
+  final ValueNotifier<bool> verifiedState;
+  final ValueNotifier<int> requestState;
+  final Future<void> Function(int next) move;
+  final VoidCallback skip;
+
+  Widget _dotsRow(BuildContext context, int step, bool desktop) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        _StepDots(count: OnboardingScreen._stepCount, active: step),
+        if (step < OnboardingScreen._stepCount - 1)
+          Positioned(
+            right: 4,
+            child: TextButton(
+              onPressed: activityState.value == null ? skip : null,
+              style: desktop
+                  ? TextButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 16),
+                    )
+                  : null,
+              child: Text(context.l10n.onboardingSkip),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _stepBody(BuildContext context, int step) {
+    return switch (step) {
+      0 => const _ThemeStep(),
+      1 => _ServerStep(
+        nextRequest: requestState.value,
+        onActivityChanged: (value) {
+          if (context.mounted && stepState.value == 1) {
+            activityState.value = value;
+          }
+        },
+        onVerifiedChanged: (v) => verifiedState.value = v,
+        onSignedIn: () {
+          activityState.value = null;
+          verifiedState.value = true;
+          stepState.value = 2;
+        },
+      ),
+      _ => const _FinishStep(),
+    };
+  }
+
+  Widget _navBar(int step, String? activity, bool isLast) {
+    return _NavBar(
+      activity: step == 1 ? activity : null,
+      showBack: step > 0,
+      isLast: isLast,
+      onBack: () => move(stepState.value - 1),
+      onNext: () {
+        if (step == 1) {
+          requestState.value++;
+        } else if (isLast) {
+          skip();
+        } else {
+          move(step + 1);
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final step = stepState.value;
+    final activity = activityState.value;
+    final isLast = step == OnboardingScreen._stepCount - 1;
+    if (!context.usesDesktopShell) {
+      return Column(
+        children: [
+          const SizedBox(height: 12),
+          _dotsRow(context, step, false),
+          Expanded(
+            child: _StepSwitcher(
+              child: SingleChildScrollView(
+                key: ValueKey(step),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                child: _stepBody(context, step),
+              ),
+            ),
+          ),
+          _navBar(step, activity, isLast),
+        ],
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _dotsRow(context, step, true),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _StepSwitcher(
+                    child: KeyedSubtree(
+                      key: ValueKey(step),
+                      child: _stepBody(context, step),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                _navBar(step, activity, isLast),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

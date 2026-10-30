@@ -56,7 +56,10 @@ class DesktopBrandTitle extends StatelessWidget {
 
 /// Native draggable strip: Windows/Linux get controls; macOS retains traffic lights.
 class DesktopTitleBar extends StatelessWidget {
-  const DesktopTitleBar({super.key});
+  const DesktopTitleBar({super.key, this.hideBrand = false});
+
+  /// Hides the brand mark on routes that show their own hero logo.
+  final bool hideBrand;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +89,7 @@ class DesktopTitleBar extends StatelessWidget {
               child: DragToMoveArea(child: SizedBox.expand()),
             ),
           // IgnorePointer lets the brand remain inside the drag region.
-          Positioned.fill(
+          if (hideBrand) const SizedBox.shrink() else Positioned.fill(
             right: _isLinux && native && !isMacOSRuntime
                 ? _linuxWindowButtonsWidth : 0,
             child: IgnorePointer(
