@@ -19,7 +19,7 @@ const double kDesktopTitleBarHeight = 40;
 
 const double kBrandLogoSize = 28;
 const double kBrandGap = 8;
-const double _linuxWindowButtonsWidth = 3 * 28 + 2 * 6 + 8;
+const double _linuxWindowButtonsWidth = 3 * 34 + 2 * 3 + 6;
 
 bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
@@ -143,20 +143,23 @@ class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
   Widget build(BuildContext context) {
     if (_isLinux) {
       return Padding(
-        padding: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.only(right: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          spacing: 6,
+          spacing: 3,
           children: [
-            _BreezeButton(glyph: 0, onPressed: () => windowManager.minimize()),
-            _BreezeButton(
-              glyph: _maximized ? 2 : 1,
+            _AdwaitaButton(
+              glyph: _WindowGlyph.minimize,
+              onPressed: () => windowManager.minimize(),
+            ),
+            _AdwaitaButton(
+              glyph: _maximized ? _WindowGlyph.restore : _WindowGlyph.maximize,
               onPressed: () => _maximized
                   ? windowManager.unmaximize()
                   : windowManager.maximize(),
             ),
-            _BreezeButton(
-              glyph: 3,
+            _AdwaitaButton(
+              glyph: _WindowGlyph.close,
               label: AppLocalizations.of(context)?.close,
               onPressed: () => windowManager.close(),
             ),

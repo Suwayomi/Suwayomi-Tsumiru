@@ -6,17 +6,19 @@
 
 part of 'desktop_title_bar.dart';
 
-class _BreezeButton extends StatefulWidget {
-  const _BreezeButton({required this.glyph, required this.onPressed, this.label});
-  final int glyph;
+enum _WindowGlyph { minimize, maximize, restore, close }
+
+class _AdwaitaButton extends StatefulWidget {
+  const _AdwaitaButton({required this.glyph, required this.onPressed, this.label});
+  final _WindowGlyph glyph;
   final VoidCallback onPressed;
   final String? label;
 
   @override
-  State<_BreezeButton> createState() => _BreezeButtonState();
+  State<_AdwaitaButton> createState() => _AdwaitaButtonState();
 }
 
-class _BreezeButtonState extends State<_BreezeButton> {
+class _AdwaitaButtonState extends State<_AdwaitaButton> {
   bool _hovered = false;
   bool _pressed = false;
   bool _focused = false;
@@ -24,12 +26,11 @@ class _BreezeButtonState extends State<_BreezeButton> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final active = _hovered || _pressed || _focused;
-    final close = widget.glyph == 3;
-    final opacity = !active ? 0.0 : (close ? 1.0 : (_pressed ? 0.28 : 0.18));
-    final background = close && _pressed
-        ? Color.alphaBlend(scheme.onError.withValues(alpha: 0.15), scheme.error)
-        : (close ? scheme.error : scheme.onSurface);
+    final opacity = _pressed ? 0.30 : (_hovered || _focused ? 0.15 : 0.10);
+    final icon = CustomPaint(
+      size: const Size.square(16),
+      painter: _AdwaitaGlyph(widget.glyph, scheme.onSurface),
+    );
     final button = Semantics(
       label: widget.label,
       child: InkWell(
@@ -41,15 +42,19 @@ class _BreezeButtonState extends State<_BreezeButton> {
           scheme.onSurface.withValues(alpha: 0),
         ),
         child: SizedBox.square(
-          dimension: 28,
+          dimension: 34,
           child: Center(
-            child: CustomPaint(
-              size: const Size.square(18),
-              painter: _BreezeGlyph(
-                widget.glyph,
-                active && close ? scheme.onError : scheme.onSurface,
-                background.withValues(alpha: opacity),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: const Cubic(0.25, 0.46, 0.45, 0.94),
+              width: 24,
+              height: 24,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: scheme.onSurface.withValues(alpha: opacity),
+                shape: BoxShape.circle,
               ),
+              child: icon,
             ),
           ),
         ),
@@ -59,40 +64,41 @@ class _BreezeButtonState extends State<_BreezeButton> {
   }
 }
 
-class _BreezeGlyph extends CustomPainter {
-  const _BreezeGlyph(this.glyph, this.foreground, this.background);
-  final int glyph;
+class _AdwaitaGlyph extends CustomPainter {
+  const _AdwaitaGlyph(this.glyph, this.foreground);
+  final _WindowGlyph glyph;
   final Color foreground;
-  final Color background;
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawCircle(size.center(Offset.zero), 9, Paint()..color = background);
-    final points = switch (glyph) {
-      0 => const [Offset(5, 7), Offset(9, 11), Offset(13, 7)],
-      1 => const [Offset(5, 11), Offset(9, 7), Offset(13, 11)],
-      2 => const [Offset(9, 4), Offset(14, 9), Offset(9, 14), Offset(4, 9)],
-      _ => const [Offset(5, 5), Offset(13, 13)],
-    };
-    final path = Path()..addPolygon(points, glyph == 2);
-    if (glyph == 3) {
-      path.moveTo(13, 5);
-      path.lineTo(5, 13);
+    final path = Path();
+    switch (glyph) {
+      case _WindowGlyph.minimize:
+        path.moveTo(4, 11);
+        path.lineTo(12, 11);
+      case _WindowGlyph.maximize:
+        path.addRect(const Rect.fromLTWH(3.5, 3.5, 9, 9));
+      case _WindowGlyph.restore:
+        path.addRect(const Rect.fromLTWH(5.5, 2.5, 7, 7));
+        path.addRect(const Rect.fromLTWH(2.5, 5.5, 7, 7));
+      case _WindowGlyph.close:
+        path.moveTo(4, 4);
+        path.lineTo(12, 12);
+        path.moveTo(12, 4);
+        path.lineTo(4, 12);
     }
     canvas.drawPath(
       path,
       Paint()
         ..color = foreground
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.square
+        ..strokeJoin = StrokeJoin.miter,
     );
   }
 
   @override
-  bool shouldRepaint(_BreezeGlyph old) =>
-      glyph != old.glyph ||
-      foreground != old.foreground ||
-      background != old.background;
+  bool shouldRepaint(_AdwaitaGlyph old) =>
+      glyph != old.glyph || foreground != old.foreground;
 }
