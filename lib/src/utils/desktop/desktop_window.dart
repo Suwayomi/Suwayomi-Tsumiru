@@ -15,8 +15,10 @@ import 'window_geometry.dart';
 import 'window_geometry_listener.dart';
 import 'window_geometry_store.dart';
 
-// Minimum desktop-shell size; mirrored in linux/my_application.cc where window_manager's minimum is lost.
-const kMinWindowSize = Size(600, 600);
+// Linux minimum is mirrored in linux/my_application.cc where window_manager's minimum is lost.
+final kMinWindowSize = isDesktopPlatform && Platform.isLinux
+    ? const Size(360, 360)
+    : const Size(600, 600);
 const kDefaultWindowSize = Size(1280, 900);
 
 /// Restore and prepare the hidden desktop window; no-op on web/mobile.
