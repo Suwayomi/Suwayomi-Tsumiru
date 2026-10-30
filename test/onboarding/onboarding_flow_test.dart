@@ -31,6 +31,17 @@ http.Client _openServerClient() => MockClient.streaming((request, body) async {
   );
 });
 
+Future<void> _tap(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets(
     'wizard advances theme→server, validates an empty URL, Back returns',
@@ -53,15 +64,13 @@ void main() {
       expect(find.text('Welcome to Tsumiru'), findsOneWidget);
       expect(find.text('Next'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
-      expect(find.byType(Image), findsNWidgets(2));
+      expect(find.byType(Image), findsNWidgets(1));
 
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await _tap(tester, find.text('Next'));
       expect(find.text('Connect your server'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
 
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await _tap(tester, find.text('Next'));
       expect(find.text("You're all set"), findsNothing);
       expect(
         find.text("Enter your server's address, or tap Search my network."),
@@ -69,8 +78,7 @@ void main() {
       );
       expect(find.text('Connect your server'), findsOneWidget);
 
-      await tester.tap(find.text('Back'));
-      await tester.pumpAndSettle();
+      await _tap(tester, find.text('Back'));
       expect(find.text('Welcome to Tsumiru'), findsOneWidget);
     },
   );
@@ -96,22 +104,26 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Next'));
     expect(find.text('Connect your server'), findsOneWidget);
 
     final urlField = find.byWidgetPredicate(
       (w) => w is TextField && w.decoration?.labelText == 'Server URL',
     );
     expect(urlField, findsOneWidget);
+    await tester.scrollUntilVisible(
+      urlField,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.enterText(
       urlField,
       'http://127.0.0.1:8092http://192.168.2.5:4569',
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Test connection'));
-    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Test connection'));
 
     expect(find.text('Invalid Server URL'), findsOneWidget);
     expect(find.text('Checking connection…'), findsNothing);
@@ -124,8 +136,7 @@ void main() {
 
     await tester.enterText(urlField, '');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Test connection'));
-    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Test connection'));
     expect(
       find.text("Enter your server's address, or tap Search my network."),
       findsOneWidget,
@@ -137,15 +148,13 @@ void main() {
       'http://127.0.0.1:8092http://192.168.2.5:4569',
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Next'));
     expect(find.text('Invalid Server URL'), findsOneWidget);
     expect(sp.getBool('onboarding.advanceAfterProbe'), isNot(true));
 
     await tester.enterText(urlField, 'http://192.168.2.4:4568');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Test connection'));
-    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Test connection'));
     expect(find.textContaining('Connected'), findsOneWidget);
     expect(find.text('Connect your server'), findsOneWidget);
     expect(find.text("You're all set"), findsNothing);

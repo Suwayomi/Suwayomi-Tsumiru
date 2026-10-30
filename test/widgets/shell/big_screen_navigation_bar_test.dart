@@ -95,18 +95,17 @@ void main() {
     // Default: expanded (labels beside icons), collapse chevron in the bar.
     expect(find.byType(DesktopSidebar), findsOneWidget);
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
-    expect(find.byIcon(FluentIcons.chevron_left_24_regular), findsOneWidget);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // Collapse from the bar.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
 
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     expect(
-      find.byIcon(FluentIcons.chevron_left_24_regular),
-      findsNothing,
-      reason: 'collapsed bar shows the logo, not a chevron',
+      find.byIcon(FluentIcons.panel_left_24_regular),
+      findsOneWidget,
     );
     expect(
       find.byIcon(FluentIcons.chevron_right_24_regular),
@@ -115,8 +114,7 @@ void main() {
     );
     expect(
       find.byType(TsumiruLogo),
-      findsOneWidget,
-      reason: 'collapsed bar keeps the logo (tap to expand)',
+      findsNothing,
     );
     expect(
       tester.takeException(),
@@ -124,20 +122,19 @@ void main() {
       reason: 'the narrow collapsed sidebar must not overflow',
     );
 
-    // Expand again by tapping the bar logo.
-    await tester.tap(find.byType(TsumiruLogo));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
 
     // Collapsed state persists across a rebuild.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     await _pump(tester, prefs);
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
 
     // 900x900 auto-collapses the sidebar and keeps the preference: the saved
-    // preference is expanded (the default), but below 1200 px the sidebar
+    // preference is expanded (the default), but below 1000 px the sidebar
     // still shows collapsed without touching the stored value.
     await tester.pumpWidget(const SizedBox.shrink());
     SharedPreferences.setMockInitialValues(const {});
@@ -152,7 +149,7 @@ void main() {
     );
     expect(container.read(sidebarExpandedProvider), isTrue);
     expect(narrowPrefs.getBool('sidebarExpanded'), isNot(isFalse));
-    expect(find.byIcon(FluentIcons.chevron_left_24_regular), findsNothing);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsOneWidget);
     expect(find.byIcon(FluentIcons.chevron_right_24_regular), findsNothing);
     expect(tester.takeException(), isNull);
 
@@ -191,7 +188,7 @@ void main() {
     );
 
     // Collapsed: icon-only row keeps the explicit label.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(find.text(l10n.library), findsNothing);
     expect(libraryRow(), findsOneWidget);

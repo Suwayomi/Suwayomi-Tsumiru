@@ -69,6 +69,14 @@
     <color type="primary" scheme_preference="light">#959bfc</color>
     <color type="primary" scheme_preference="dark">#46459d</color>
   </branding>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
   <releases>
     <release version="1.6.3" date="2026-10-29">
       <url type="details">https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v1.6.3</url>

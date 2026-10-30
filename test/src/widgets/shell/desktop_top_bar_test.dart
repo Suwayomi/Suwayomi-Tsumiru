@@ -436,11 +436,10 @@ void main() {
       tester.getRect(find.byType(DesktopTopBar)),
     );
 
-    // The brand row's logo collapses and expands the sidebar.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
-    expect(find.byType(TsumiruLogo), findsOneWidget);
-    await tester.tap(find.byType(TsumiruLogo));
+    expect(find.byType(TsumiruLogo), findsNothing);
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byType(DesktopSidebar)).width,
@@ -457,16 +456,16 @@ void main() {
       tester.getSize(find.byType(DesktopSidebar)).width,
       DesktopSidebar.collapsedWidth,
     );
-    final logo = find.descendant(
+    final expandButton = find.descendant(
       of: find.byType(DesktopTopBar),
-      matching: find.byType(TsumiruLogo),
+      matching: find.byType(DesktopBrandExpandButton),
     );
-    expect(logo, findsOneWidget);
+    expect(expandButton, findsOneWidget);
     final collapsedBar = tester.getRect(find.byType(DesktopTopBar));
-    final logoRect = tester.getRect(logo);
-    expect(logoRect.left, greaterThanOrEqualTo(collapsedBar.left));
+    final buttonRect = tester.getRect(expandButton);
+    expect(buttonRect.left, greaterThanOrEqualTo(collapsedBar.left));
     expect(
-      logoRect.right,
+      buttonRect.right,
       lessThanOrEqualTo(collapsedBar.left + DesktopSidebar.collapsedWidth),
     );
     expect(tester.takeException(), isNull);
@@ -483,20 +482,19 @@ void main() {
     expect(find.byType(WindowCaptionButton), findsNothing);
     expect(find.byType(TsumiruLogo), findsOneWidget);
     expect(find.text('Tsumiru'), findsOneWidget);
-    expect(find.byIcon(FluentIcons.chevron_left_24_regular), findsOneWidget);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsOneWidget);
     final webBar = tester.getRect(find.byType(DesktopTopBar));
     final webSidebar = tester.getRect(find.byType(DesktopSidebar));
     expect(webSidebar.top, webBar.bottom);
 
-    // Collapse: logo-only block; expand again by tapping the logo.
-    await tester.tap(find.byIcon(FluentIcons.chevron_left_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byType(DesktopSidebar)).width,
       DesktopSidebar.collapsedWidth,
     );
     expect(find.text('Tsumiru'), findsNothing);
-    await tester.tap(find.byType(TsumiruLogo));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byType(DesktopSidebar)).width,
@@ -588,7 +586,7 @@ void main() {
       findsNothing,
     );
     expect(
-      find.descendant(of: bar, matching: find.byIcon(FluentIcons.chevron_left_24_regular)),
+      find.descendant(of: bar, matching: find.byIcon(FluentIcons.panel_left_24_regular)),
       findsNothing,
     );
     expect(
@@ -600,14 +598,12 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: sidebar, matching: find.byIcon(FluentIcons.chevron_left_24_regular)),
+      find.descendant(of: sidebar, matching: find.byIcon(FluentIcons.panel_left_24_regular)),
       findsOneWidget,
     );
     expect(find.byType(DesktopBrandRow), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    // Collapsed, the logo alone is the sidebar's first item; tapping it
-    // expands.
     await tester.pumpWidget(const SizedBox.shrink());
     SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
     prefs = await SharedPreferences.getInstance();
@@ -616,7 +612,7 @@ void main() {
     final button = find.byType(DesktopBrandExpandButton);
     expect(button, findsOneWidget);
     expect(
-      find.descendant(of: collapsedSidebar, matching: find.byType(TsumiruLogo)),
+      find.descendant(of: collapsedSidebar, matching: find.byIcon(FluentIcons.panel_left_24_regular)),
       findsOneWidget,
     );
     expect(find.byIcon(FluentIcons.chevron_right_24_regular), findsNothing);

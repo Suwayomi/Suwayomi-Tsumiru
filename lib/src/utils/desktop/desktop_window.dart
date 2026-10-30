@@ -6,6 +6,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
@@ -15,8 +16,10 @@ import 'window_geometry.dart';
 import 'window_geometry_listener.dart';
 import 'window_geometry_store.dart';
 
-// Minimum desktop-shell size; mirrored in linux/my_application.cc where window_manager's minimum is lost.
-const kMinWindowSize = Size(600, 600);
+// Linux minimum is mirrored in linux/my_application.cc where window_manager's minimum is lost.
+final kMinWindowSize = isDesktopPlatform && Platform.isLinux
+    ? const Size(360, 360)
+    : const Size(600, 600);
 const kDefaultWindowSize = Size(1280, 900);
 
 /// Restore and prepare the hidden desktop window; no-op on web/mobile.
@@ -32,11 +35,25 @@ Future<void> initDesktopWindow(SharedPreferences prefs) async {
     min: kMinWindowSize,
   );
 
+  var composited = false;
+  if (Platform.isLinux) {
+    try {
+      final state = await const MethodChannel('tsumiru/linux_window_frame')
+          .invokeMapMethod<Object?, Object?>('getState');
+      composited = state?['composited'] == true;
+    } on PlatformException {
+      // Keep the plain window if the native frame state is unavailable.
+    } on MissingPluginException {
+      // Keep the plain window if the native frame channel is unavailable.
+    }
+  }
+
   final options = WindowOptions(
     size: restoreSize,
     minimumSize: kMinWindowSize,
     center: saved.size == null,
-    titleBarStyle: TitleBarStyle.hidden,
+    // Linux's empty GTK titlebar keeps CSD enabled without a native title strip.
+    titleBarStyle: composited ? TitleBarStyle.normal : TitleBarStyle.hidden,
     // macOS: keep the native traffic lights floating over our surface.
     windowButtonVisibility: Platform.isMacOS,
   );

@@ -1,9 +1,6 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
-#ifdef GDK_WINDOWING_X11
-#include <gdk/gdkx.h>
-#endif
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -14,48 +11,118 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+static FlValue* window_frame_state(GtkWidget* window) {
+  const bool composited =
+      GPOINTER_TO_INT(g_object_get_data(G_OBJECT(window), "tsumiru-composited"));
+  GdkWindow* gdk_window = gtk_widget_get_window(window);
+  const GdkWindowState state = gdk_window != nullptr
+      ? gdk_window_get_state(gdk_window) : static_cast<GdkWindowState>(0);
+  const bool edge_to_edge =
+      state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN);
+  const bool tiled = state & (GDK_WINDOW_STATE_TILED |
+                             GDK_WINDOW_STATE_TOP_TILED |
+                             GDK_WINDOW_STATE_RIGHT_TILED |
+                             GDK_WINDOW_STATE_BOTTOM_TILED |
+                             GDK_WINDOW_STATE_LEFT_TILED);
+  GtkStyleContext* context = gtk_widget_get_style_context(window);
+  if (!composited || gdk_window == nullptr || edge_to_edge || tiled) {
+    gtk_style_context_add_class(context, "tsumiru-square");
+  } else {
+    gtk_style_context_remove_class(context, "tsumiru-square");
+  }
+  FlValue* result = fl_value_new_map();
+  fl_value_set_string_take(result, "rounded",
+                          fl_value_new_bool(composited && gdk_window != nullptr &&
+                                            !edge_to_edge && !tiled));
+  fl_value_set_string_take(result, "outlined",
+                          fl_value_new_bool(composited && gdk_window != nullptr &&
+                                            !edge_to_edge));
+  fl_value_set_string_take(result, "composited",
+                          fl_value_new_bool(composited));
+  return result;
+}
+
+static gboolean window_state_changed(GtkWidget* window,
+                                     GdkEventWindowState*,
+                                     gpointer user_data) {
+  g_autoptr(FlValue) state = window_frame_state(window);
+  fl_method_channel_invoke_method(FL_METHOD_CHANNEL(user_data), "stateChanged",
+                                 state, nullptr, nullptr, nullptr);
+  return FALSE;
+}
+
+static void window_frame_method_call(FlMethodChannel*,
+                                    FlMethodCall* method_call,
+                                    gpointer user_data) {
+  if (g_strcmp0(fl_method_call_get_name(method_call), "getState") == 0) {
+    g_autoptr(FlValue) state = window_frame_state(GTK_WIDGET(user_data));
+    fl_method_call_respond_success(method_call, state, nullptr);
+  } else {
+    fl_method_call_respond_not_implemented(method_call, nullptr);
+  }
+}
+
+static void configure_composited_window(GtkWindow* window, GdkScreen* screen) {
+  // An invisible custom titlebar retains GTK's CSD resize handles and shadow.
+  gtk_window_set_titlebar(window, gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
+  gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(window)),
+                             "tsumiru-window");
+  // The 15px radius pairs with linux_window_frame.dart:_linuxWindowCornerRadius.
+  g_autoptr(GtkCssProvider) css = gtk_css_provider_new();
+  gtk_css_provider_load_from_data(css, R"(
+    window.tsumiru-window {
+      background-color: transparent;
+      background-image: none;
+      border: none;
+      border-radius: 15px;
+      box-shadow: none;
+    }
+    window.tsumiru-window decoration {
+      background-color: transparent;
+      background-image: none;
+      border: none;
+      border-radius: 15px;
+      outline: none;
+      box-shadow: 0 0 14px 5px rgba(0,0,0,.15),
+                  0 0 5px 2px rgba(0,0,0,.10),
+                  0 0 0 1px rgba(0,0,0,.05);
+    }
+    window.tsumiru-window.tsumiru-square,
+    window.tsumiru-window.tsumiru-square decoration {
+      border-radius: 0;
+      box-shadow: none;
+      outline: none;
+    }
+  )", -1, nullptr);
+  gtk_style_context_add_provider_for_screen(
+      screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  // Use a header bar when running in GNOME as this is the common style used
-  // by applications and is the setup most users will be using (e.g. Ubuntu
-  // desktop).
-  // If running on X and not using GNOME then just use a traditional title bar
-  // in case the window manager does more exotic layout, e.g. tiling.
-  // If running on Wayland assume the header bar will work (may need changing
-  // if future cases occur).
-  gboolean use_header_bar = TRUE;
-#ifdef GDK_WINDOWING_X11
+  gtk_window_set_title(window, "Tsumiru");
   GdkScreen* screen = gtk_window_get_screen(window);
-  if (GDK_IS_X11_SCREEN(screen)) {
-    const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
-    if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
-      use_header_bar = FALSE;
-    }
-  }
-#endif
-  if (use_header_bar) {
-    GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
-    gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Tsumiru");
-    gtk_header_bar_set_show_close_button(header_bar, TRUE);
-    gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
+  GdkVisual* visual = gdk_screen_get_rgba_visual(screen);
+  const bool composited = gdk_screen_is_composited(screen) && visual != nullptr;
+  g_object_set_data(G_OBJECT(window), "tsumiru-composited",
+                    GINT_TO_POINTER(composited));
+  if (composited) {
+    gtk_widget_set_visual(GTK_WIDGET(window), visual);
+    configure_composited_window(window, screen);
   } else {
-    gtk_window_set_title(window, "Tsumiru");
+    gtk_window_set_decorated(window, FALSE);
   }
 
   gtk_window_set_default_size(window, 1280, 900);
-  // Minimum window size: window_manager's setMinimumSize is lost on Linux,
-  // so enforce the floor here. Mirrors kMinWindowSize in
-  // lib/src/utils/desktop/desktop_window.dart: the smallest size the
-  // desktop two-row layout fits.
+  // Preserve desktop_window.dart's Linux minimum when window_manager loses it.
   {
     GdkGeometry hints = {0};
-    hints.min_width = 600;
-    hints.min_height = 600;
+    hints.min_width = 360;
+    hints.min_height = 360;
     gtk_window_set_geometry_hints(window, NULL, &hints, GDK_HINT_MIN_SIZE);
   }
   gtk_widget_show(GTK_WIDGET(window));
@@ -64,10 +131,25 @@ static void my_application_activate(GApplication* application) {
   fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
+  if (composited) {
+    const GdkRGBA transparent_background = {0, 0, 0, 0};
+    fl_view_set_background_color(view, &transparent_background);
+  }
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  FlMethodChannel* frame_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+      "tsumiru/linux_window_frame", FL_METHOD_CODEC(codec));
+  g_object_set_data_full(G_OBJECT(window), "tsumiru-frame-channel",
+                        frame_channel, g_object_unref);
+  fl_method_channel_set_method_call_handler(
+      frame_channel, window_frame_method_call, window, nullptr);
+  g_signal_connect(window, "window-state-event",
+                   G_CALLBACK(window_state_changed), frame_channel);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

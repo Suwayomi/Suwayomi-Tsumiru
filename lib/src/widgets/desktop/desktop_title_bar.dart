@@ -4,17 +4,29 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../constants/app_constants.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../tsumiru_logo.dart';
+
+part 'desktop_window_button.dart';
 
 const double kDesktopTitleBarHeight = 40;
 
 const double kBrandLogoSize = 28;
 const double kBrandGap = 8;
+const double _linuxWindowButtonHitSize = 34;
+const double _linuxWindowButtonCircleSize = 24;
+const double _linuxWindowButtonGap = 3;
+const double _linuxWindowButtonEndPadding = 6;
+const double _linuxWindowButtonsWidth = 3 * _linuxWindowButtonHitSize +
+    2 * _linuxWindowButtonGap + _linuxWindowButtonEndPadding;
+
+bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
 TextStyle? brandNameStyle(BuildContext context) {
   final theme = Theme.of(context);
@@ -44,13 +56,29 @@ class DesktopBrandTitle extends StatelessWidget {
 
 /// Native draggable strip: Windows/Linux get controls; macOS retains traffic lights.
 class DesktopTitleBar extends StatelessWidget {
-  const DesktopTitleBar({super.key});
+  const DesktopTitleBar({super.key, this.hideBrand = false});
+
+  /// Hides the brand mark on routes that show their own hero logo.
+  final bool hideBrand;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final native = isDesktopPlatform;
+    final brand = _isLinux
+        ? const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: DesktopBrandTitle(),
+                ),
+              ),
+            ],
+          )
+        : const Center(child: DesktopBrandTitle());
     return Container(
       height: kDesktopTitleBarHeight,
       color: scheme.surface,
@@ -61,9 +89,11 @@ class DesktopTitleBar extends StatelessWidget {
               child: DragToMoveArea(child: SizedBox.expand()),
             ),
           // IgnorePointer lets the brand remain inside the drag region.
-          const Positioned.fill(
+          if (hideBrand) const SizedBox.shrink() else Positioned.fill(
+            right: _isLinux && native && !isMacOSRuntime
+                ? _linuxWindowButtonsWidth : 0,
             child: IgnorePointer(
-              child: Center(child: DesktopBrandTitle()),
+              child: brand,
             ),
           ),
           if (native && !isMacOSRuntime)
@@ -110,6 +140,32 @@ class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLinux) {
+      return Padding(
+        padding: const EdgeInsets.only(right: _linuxWindowButtonEndPadding),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: _linuxWindowButtonGap,
+          children: [
+            _AdwaitaButton(
+              glyph: _WindowGlyph.minimize,
+              onPressed: () => windowManager.minimize(),
+            ),
+            _AdwaitaButton(
+              glyph: _maximized ? _WindowGlyph.restore : _WindowGlyph.maximize,
+              onPressed: () => _maximized
+                  ? windowManager.unmaximize()
+                  : windowManager.maximize(),
+            ),
+            _AdwaitaButton(
+              glyph: _WindowGlyph.close,
+              label: AppLocalizations.of(context)?.close,
+              onPressed: () => windowManager.close(),
+            ),
+          ],
+        ),
+      );
+    }
     final b = widget.brightness;
     return Row(
       // Shrink-wrap so Align can position the controls on the right.
