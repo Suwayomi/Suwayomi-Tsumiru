@@ -38,7 +38,8 @@ Future<void> initDesktopWindow(SharedPreferences prefs) async {
     size: restoreSize,
     minimumSize: kMinWindowSize,
     center: saved.size == null,
-    titleBarStyle: TitleBarStyle.hidden,
+    // Linux's empty GTK titlebar keeps CSD enabled without a native title strip.
+    titleBarStyle: Platform.isLinux ? TitleBarStyle.normal : TitleBarStyle.hidden,
     // macOS: keep the native traffic lights floating over our surface.
     windowButtonVisibility: Platform.isMacOS,
   );
