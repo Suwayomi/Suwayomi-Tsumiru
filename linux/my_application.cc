@@ -12,8 +12,11 @@ struct _MyApplication {
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
 static FlValue* window_frame_state(GtkWidget* window) {
-  const GdkWindowState state =
-      gdk_window_get_state(gtk_widget_get_window(window));
+  const bool composited =
+      GPOINTER_TO_INT(g_object_get_data(G_OBJECT(window), "tsumiru-composited"));
+  GdkWindow* gdk_window = gtk_widget_get_window(window);
+  const GdkWindowState state = gdk_window != nullptr
+      ? gdk_window_get_state(gdk_window) : static_cast<GdkWindowState>(0);
   const bool edge_to_edge =
       state & (GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN);
   const bool tiled = state & (GDK_WINDOW_STATE_TILED |
@@ -22,16 +25,20 @@ static FlValue* window_frame_state(GtkWidget* window) {
                              GDK_WINDOW_STATE_BOTTOM_TILED |
                              GDK_WINDOW_STATE_LEFT_TILED);
   GtkStyleContext* context = gtk_widget_get_style_context(window);
-  if (edge_to_edge || tiled) {
+  if (!composited || gdk_window == nullptr || edge_to_edge || tiled) {
     gtk_style_context_add_class(context, "tsumiru-square");
   } else {
     gtk_style_context_remove_class(context, "tsumiru-square");
   }
   FlValue* result = fl_value_new_map();
   fl_value_set_string_take(result, "rounded",
-                          fl_value_new_bool(!edge_to_edge && !tiled));
+                          fl_value_new_bool(composited && gdk_window != nullptr &&
+                                            !edge_to_edge && !tiled));
   fl_value_set_string_take(result, "outlined",
-                          fl_value_new_bool(!edge_to_edge));
+                          fl_value_new_bool(composited && gdk_window != nullptr &&
+                                            !edge_to_edge));
+  fl_value_set_string_take(result, "composited",
+                          fl_value_new_bool(composited));
   return result;
 }
 
@@ -55,22 +62,12 @@ static void window_frame_method_call(FlMethodChannel*,
   }
 }
 
-// Implements GApplication::activate.
-static void my_application_activate(GApplication* application) {
-  MyApplication* self = MY_APPLICATION(application);
-  GtkWindow* window =
-      GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
-
-  gtk_window_set_title(window, "Tsumiru");
-  GdkScreen* screen = gtk_window_get_screen(window);
-  GdkVisual* visual = gdk_screen_get_rgba_visual(screen);
-  if (visual != nullptr) {
-    gtk_widget_set_visual(GTK_WIDGET(window), visual);
-  }
+static void configure_composited_window(GtkWindow* window, GdkScreen* screen) {
   // An invisible custom titlebar retains GTK's CSD resize handles and shadow.
   gtk_window_set_titlebar(window, gtk_box_new(GTK_ORIENTATION_VERTICAL, 0));
   gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(window)),
                              "tsumiru-window");
+  // The 15px radius pairs with linux_window_frame.dart:_linuxWindowCornerRadius.
   g_autoptr(GtkCssProvider) css = gtk_css_provider_new();
   gtk_css_provider_load_from_data(css, R"(
     window.tsumiru-window {
@@ -99,11 +96,29 @@ static void my_application_activate(GApplication* application) {
   )", -1, nullptr);
   gtk_style_context_add_provider_for_screen(
       screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+}
+
+// Implements GApplication::activate.
+static void my_application_activate(GApplication* application) {
+  MyApplication* self = MY_APPLICATION(application);
+  GtkWindow* window =
+      GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+
+  gtk_window_set_title(window, "Tsumiru");
+  GdkScreen* screen = gtk_window_get_screen(window);
+  GdkVisual* visual = gdk_screen_get_rgba_visual(screen);
+  const bool composited = gdk_screen_is_composited(screen) && visual != nullptr;
+  g_object_set_data(G_OBJECT(window), "tsumiru-composited",
+                    GINT_TO_POINTER(composited));
+  if (composited) {
+    gtk_widget_set_visual(GTK_WIDGET(window), visual);
+    configure_composited_window(window, screen);
+  } else {
+    gtk_window_set_decorated(window, FALSE);
+  }
 
   gtk_window_set_default_size(window, 1280, 900);
-  // Minimum window size: window_manager's setMinimumSize is lost on Linux,
-  // so enforce the floor here. Mirrors the Linux kMinWindowSize in
-  // lib/src/utils/desktop/desktop_window.dart.
+  // Preserve desktop_window.dart's Linux minimum when window_manager loses it.
   {
     GdkGeometry hints = {0};
     hints.min_width = 360;
@@ -116,8 +131,10 @@ static void my_application_activate(GApplication* application) {
   fl_dart_project_set_dart_entrypoint_arguments(project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
-  const GdkRGBA transparent = {0, 0, 0, 0};
-  fl_view_set_background_color(view, &transparent);
+  if (composited) {
+    const GdkRGBA transparent_background = {0, 0, 0, 0};
+    fl_view_set_background_color(view, &transparent_background);
+  }
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 

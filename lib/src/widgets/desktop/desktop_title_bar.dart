@@ -19,7 +19,12 @@ const double kDesktopTitleBarHeight = 40;
 
 const double kBrandLogoSize = 28;
 const double kBrandGap = 8;
-const double _linuxWindowButtonsWidth = 3 * 34 + 2 * 3 + 6;
+const double _linuxWindowButtonHitSize = 34;
+const double _linuxWindowButtonCircleSize = 24;
+const double _linuxWindowButtonGap = 3;
+const double _linuxWindowButtonEndPadding = 6;
+const double _linuxWindowButtonsWidth = 3 * _linuxWindowButtonHitSize +
+    2 * _linuxWindowButtonGap + _linuxWindowButtonEndPadding;
 
 bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
@@ -58,6 +63,19 @@ class DesktopTitleBar extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final native = isDesktopPlatform;
+    final brand = _isLinux
+        ? const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: DesktopBrandTitle(),
+                ),
+              ),
+            ],
+          )
+        : const Center(child: DesktopBrandTitle());
     return Container(
       height: kDesktopTitleBarHeight,
       color: scheme.surface,
@@ -67,34 +85,12 @@ class DesktopTitleBar extends StatelessWidget {
             const Positioned.fill(
               child: DragToMoveArea(child: SizedBox.expand()),
             ),
-          // IgnorePointer keeps the brand inside the full-width drag region.
+          // IgnorePointer lets the brand remain inside the drag region.
           Positioned.fill(
             right: _isLinux && native && !isMacOSRuntime
                 ? _linuxWindowButtonsWidth : 0,
             child: IgnorePointer(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final text = TextPainter(
-                    text: TextSpan(
-                      text: kAppName,
-                      style: brandNameStyle(context),
-                    ),
-                    textDirection: Directionality.of(context),
-                    textScaler: MediaQuery.textScalerOf(context),
-                  )..layout();
-                  final fits = !_isLinux ||
-                      constraints.maxWidth >= kBrandLogoSize + kBrandGap + text.width;
-                  text.dispose();
-                  return Center(
-                    child: fits
-                        ? const DesktopBrandTitle()
-                        : const FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: TsumiruLogo(size: kBrandLogoSize),
-                          ),
-                  );
-                },
-              ),
+              child: brand,
             ),
           ),
           if (native && !isMacOSRuntime)
@@ -143,10 +139,10 @@ class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
   Widget build(BuildContext context) {
     if (_isLinux) {
       return Padding(
-        padding: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.only(right: _linuxWindowButtonEndPadding),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          spacing: 3,
+          spacing: _linuxWindowButtonGap,
           children: [
             _AdwaitaButton(
               glyph: _WindowGlyph.minimize,

@@ -42,13 +42,13 @@ class _AdwaitaButtonState extends State<_AdwaitaButton> {
           scheme.onSurface.withValues(alpha: 0),
         ),
         child: SizedBox.square(
-          dimension: 34,
+          dimension: _linuxWindowButtonHitSize,
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: const Cubic(0.25, 0.46, 0.45, 0.94),
-              width: 24,
-              height: 24,
+              width: _linuxWindowButtonCircleSize,
+              height: _linuxWindowButtonCircleSize,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: scheme.onSurface.withValues(alpha: opacity),

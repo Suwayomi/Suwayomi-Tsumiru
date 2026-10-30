@@ -1,5 +1,13 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+const double _linuxWindowCornerRadius = 15;
 
 class LinuxWindowFrame extends StatefulWidget {
   const LinuxWindowFrame({super.key, required this.child});
@@ -26,7 +34,7 @@ class _LinuxWindowFrameState extends State<LinuxWindowFrame> {
     });
     _channel.invokeMapMethod<Object?, Object?>('getState').then((state) {
       if (state != null) _updateState(state);
-    });
+    }).catchError((Object _) {});
   }
 
   void _updateState(Map<Object?, Object?> state) {
@@ -46,7 +54,7 @@ class _LinuxWindowFrameState extends State<LinuxWindowFrame> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final radius = _rounded ? BorderRadius.circular(15) : BorderRadius.zero;
+    final radius = _rounded ? BorderRadius.circular(_linuxWindowCornerRadius) : BorderRadius.zero;
     return ClipRRect(
       borderRadius: radius,
       child: DecoratedBox(
