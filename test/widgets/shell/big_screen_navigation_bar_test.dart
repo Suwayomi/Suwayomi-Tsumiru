@@ -95,16 +95,16 @@ void main() {
     // Default: expanded (labels beside icons), collapse chevron in the bar.
     expect(find.byType(DesktopSidebar), findsOneWidget);
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
-    expect(find.byIcon(FluentIcons.panel_left_contract_24_regular), findsOneWidget);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     // Collapse from the bar.
-    await tester.tap(find.byIcon(FluentIcons.panel_left_contract_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
 
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     expect(
-      find.byIcon(FluentIcons.panel_left_contract_24_regular),
+      find.byIcon(FluentIcons.panel_left_24_regular),
       findsNothing,
       reason: 'collapsed bar shows the logo, not a chevron',
     );
@@ -130,7 +130,7 @@ void main() {
     expect(_sidebarWidth(tester), DesktopSidebar.expandedWidth);
 
     // Collapsed state persists across a rebuild.
-    await tester.tap(find.byIcon(FluentIcons.panel_left_contract_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
     await _pump(tester, prefs);
@@ -152,7 +152,7 @@ void main() {
     );
     expect(container.read(sidebarExpandedProvider), isTrue);
     expect(narrowPrefs.getBool('sidebarExpanded'), isNot(isFalse));
-    expect(find.byIcon(FluentIcons.panel_left_contract_24_regular), findsNothing);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsNothing);
     expect(find.byIcon(FluentIcons.chevron_right_24_regular), findsNothing);
     expect(tester.takeException(), isNull);
 
@@ -191,7 +191,7 @@ void main() {
     );
 
     // Collapsed: icon-only row keeps the explicit label.
-    await tester.tap(find.byIcon(FluentIcons.panel_left_contract_24_regular));
+    await tester.tap(find.byIcon(FluentIcons.panel_left_24_regular));
     await tester.pumpAndSettle();
     expect(find.text(l10n.library), findsNothing);
     expect(libraryRow(), findsOneWidget);
