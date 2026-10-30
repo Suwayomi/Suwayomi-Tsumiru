@@ -26,10 +26,17 @@ class _AdwaitaButtonState extends State<_AdwaitaButton> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final opacity = _pressed ? 0.30 : (_hovered || _focused ? 0.15 : 0.10);
-    final icon = CustomPaint(
-      size: const Size.square(16),
-      painter: _AdwaitaGlyph(widget.glyph, scheme.onSurface),
+    final opacity = _pressed ? 0.30 : (_hovered || _focused ? 0.20 : 0.10);
+    final destructive = widget.glyph == _WindowGlyph.close &&
+        (_hovered || _focused || _pressed);
+    final foreground = destructive ? scheme.onError : scheme.onSurface;
+    final icon = TweenAnimationBuilder<Color?>(
+      tween: ColorTween(begin: foreground, end: foreground),
+      duration: const Duration(milliseconds: 200),
+      curve: const Cubic(0.25, 0.46, 0.45, 0.94),
+      builder: (context, color, child) => CustomPaint(size: const Size.square(16),
+        painter: _AdwaitaGlyph(widget.glyph, color!),
+      ),
     );
     final button = Semantics(
       label: widget.label,
@@ -51,7 +58,9 @@ class _AdwaitaButtonState extends State<_AdwaitaButton> {
               height: _linuxWindowButtonCircleSize,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: scheme.onSurface.withValues(alpha: opacity),
+                color: destructive
+                    ? scheme.error
+                    : scheme.onSurface.withValues(alpha: opacity),
                 shape: BoxShape.circle,
               ),
               child: icon,
