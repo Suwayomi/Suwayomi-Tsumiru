@@ -30,7 +30,7 @@ class _BreezeButtonState extends State<_BreezeButton> {
     final background = close && _pressed
         ? Color.alphaBlend(scheme.onError.withValues(alpha: 0.15), scheme.error)
         : (close ? scheme.error : scheme.onSurface);
-    return Semantics(
+    final button = Semantics(
       label: widget.label,
       child: InkWell(
         onTap: widget.onPressed,
@@ -55,6 +55,7 @@ class _BreezeButtonState extends State<_BreezeButton> {
         ),
       ),
     );
+    return Material(type: MaterialType.transparency, child: button);
   }
 }
 
