@@ -25,7 +25,7 @@ import 'nav_badges.dart';
 import 'nav_motion_icon.dart';
 import 'sidebar_expanded.dart';
 
-const double _sidebarExpandedMinWidth = 1008;
+const double _sidebarExpandedMinWidth = 1000;
 
 /// Below the expansion threshold, collapse without changing the saved preference.
 bool sidebarIsExpanded(BuildContext context, bool preference) =>
