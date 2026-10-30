@@ -15,9 +15,8 @@
 #   2. git tag v0.7.2 <sha> && git push origin v0.7.2   # triggers this build
 # The draft (with its notes) is filled in by the builds, then auto-published.
 #
-# Android is signed with the repo's debug keystore (stored as secrets) so CI
-# builds keep the same signature as locally-built debug APKs — installs upgrade
-# cleanly instead of being rejected for a signature mismatch.
+# Android uses the old signing key for Android 7–8 and the new key with
+# proof-of-rotation lineage for Android 9+ so existing installs can upgrade.
 #
 # iOS is built UNSIGNED (no Apple Developer account needed). The resulting
 # .ipa is not installable directly — users re-sign it themselves via AltStore /
@@ -152,6 +151,32 @@ jobs:
           # Same versionCode for every APK, so any APK installs over any older one.
           flutter build apk --release --split-per-abi -P force-version-code-ignoring-abi=true
 
+      - name: Rotate Android signing key
+        if: matrix.target == 'android'
+        env:
+          OLD_KEYSTORE: ${{ github.workspace }}/android/app/release-keystore.jks
+          OLD_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          OLD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          OLD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          NEW_KEYSTORE_BASE64: ${{ secrets.NEW_KEYSTORE_BASE64 }}
+          NEW_KEYSTORE: ${{ runner.temp }}/new-keystore.p12
+          NEW_KEYSTORE_PASSWORD: ${{ secrets.NEW_KEYSTORE_PASSWORD }}
+          NEW_KEY_ALIAS: ${{ secrets.NEW_KEY_ALIAS }}
+          NEW_KEY_PASSWORD: ${{ secrets.NEW_KEY_PASSWORD }}
+          SIGNING_LINEAGE_BASE64: ${{ secrets.SIGNING_LINEAGE_BASE64 }}
+          SIGNING_LINEAGE: ${{ runner.temp }}/signing.lineage
+          OLD_CERT_SHA256: 587e0570cce5eb153ecff7eb9a2cd54c9fd85ce72471fb0b99fa8c49e0c77a82
+          NEW_CERT_SHA256: d5f1244fdf0cf9181b7f063d908469857024221d8d31d8064850890c0814e61e
+        run: |
+          umask 077
+          printf '%s' "$NEW_KEYSTORE_BASE64" | base64 --decode > "$NEW_KEYSTORE"
+          printf '%s' "$SIGNING_LINEAGE_BASE64" | base64 --decode > "$SIGNING_LINEAGE"
+          .github/scripts/sign-android-apks.sh \
+            build/app/outputs/flutter-apk/app-release.apk \
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
+
       - name: Build ${{ matrix.target }}
         # Linux is built by fastforge in the AppImage step below (and by the Flatpak workflow).
         # iOS needs --no-codesign, handled in its own step below.
@@ -181,8 +206,9 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           TSUMIRU_BUNDLE_AVIF_DEPS: "1"
         run: |
-          # Official appimagetool (fastforge shells out to it).
-          sudo wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          # Official appimagetool, pinned (fastforge shells out to it).
+          sudo wget -q https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  /usr/local/bin/appimagetool" | sha256sum -c -
           sudo chmod +x /usr/local/bin/appimagetool
           # fastforge's AppImage maker may call `locate` for include resolution.
           sudo apt-get install -y --no-install-recommends plocate zsync && sudo updatedb || true
@@ -218,6 +244,8 @@ jobs:
           # fastforge embeds no update info, so repack for delta updates.
           mv "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage" ./fastforge-input.AppImage
           ./fastforge-input.AppImage --appimage-extract > /dev/null
+          chmod -R a+rX squashfs-root
+          chmod a+rx squashfs-root/AppRun
           appimagetool -u "gh-releases-zsync|Suwayomi|Suwayomi-Tsumiru|latest|tsumiru-*-linux-x86_64.AppImage.zsync" \
             squashfs-root "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage"
           mv ./"${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage.zsync" dist/
