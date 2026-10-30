@@ -137,7 +137,7 @@ void main() {
     expect(_sidebarWidth(tester), DesktopSidebar.collapsedWidth);
 
     // 900x900 auto-collapses the sidebar and keeps the preference: the saved
-    // preference is expanded (the default), but below 1200 px the sidebar
+    // preference is expanded (the default), but below 1008 px the sidebar
     // still shows collapsed without touching the stored value.
     await tester.pumpWidget(const SizedBox.shrink());
     SharedPreferences.setMockInitialValues(const {});

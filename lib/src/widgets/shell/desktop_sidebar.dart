@@ -25,9 +25,11 @@ import 'nav_badges.dart';
 import 'nav_motion_icon.dart';
 import 'sidebar_expanded.dart';
 
-/// Below large, collapse without changing the saved preference.
+const double _sidebarExpandedMinWidth = 1008;
+
+/// Below the expansion threshold, collapse without changing the saved preference.
 bool sidebarIsExpanded(BuildContext context, bool preference) =>
-    preference && context.windowSizeClass >= WindowSizeClass.large;
+    preference && MediaQuery.sizeOf(context).width >= _sidebarExpandedMinWidth;
 
 /// Native macOS moves the brand row below its traffic lights; other platforms keep it in the top bar.
 class DesktopSidebar extends ConsumerWidget {
