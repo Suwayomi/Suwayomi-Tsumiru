@@ -63,9 +63,7 @@ class _LinuxWindowFrameState extends State<LinuxWindowFrame> {
           borderRadius: radius,
           border: _outlined
               ? Border.all(
-                  color: theme.brightness == Brightness.dark
-                      ? Colors.white.withValues(alpha: .07)
-                      : theme.colorScheme.onSurface.withValues(alpha: .07),
+                  color: theme.colorScheme.onSurface.withValues(alpha: .07),
                 )
               : null,
         ),
