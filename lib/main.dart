@@ -22,6 +22,7 @@ import 'src/constants/brand_icons.dart';
 import 'src/constants/enum.dart';
 import 'src/constants/inter_license.dart';
 import 'src/constants/timeout_constants.dart';
+import 'src/features/about/data/macos_app_updater.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
 import 'src/features/account/data/account_bootstrap.dart';
 import 'src/features/account/data/account_session_startup.dart';
@@ -124,7 +125,18 @@ Future<void> _startApp() async {
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
-  final container = _createSessionContainer(packageInfo, sharedPreferences);
+  final macOSUpdater = MacOSAppUpdater();
+  final container = _createSessionContainer(
+    packageInfo,
+    sharedPreferences,
+    macOSUpdater: macOSUpdater,
+  );
+
+  try {
+    await macOSUpdater.initialize();
+  } catch (e, st) {
+    debugPrint('macOS updater init failed: $e\n$st');
+  }
 
   final secure = container.read(secureStorageProvider);
 
@@ -276,6 +288,7 @@ Future<void> _startApp() async {
       packageInfo,
       sharedPreferences,
       coverCache: previous.read(coverCacheManagerProvider),
+      macOSUpdater: previous.read(macOSAppUpdaterProvider),
     );
     OfflineStorage? transferred;
     AccountSessionStartup? nextStartup;
@@ -374,6 +387,7 @@ ProviderContainer _createSessionContainer(
   PackageInfo packageInfo,
   SharedPreferences preferences, {
   CacheManager? coverCache,
+  required MacOSAppUpdater macOSUpdater,
 }) => ProviderContainer(
   observers: [ProviderFailureLogger()],
   retry: (retryCount, error) => isConnectionError(error)
@@ -384,6 +398,7 @@ ProviderContainer _createSessionContainer(
     sharedPreferencesProvider.overrideWithValue(preferences),
     if (coverCache != null)
       coverCacheManagerProvider.overrideWithValue(coverCache),
+    macOSAppUpdaterProvider.overrideWithValue(macOSUpdater),
     authSessionTransitionProvider.overrideWith(
       (ref) => ref.read(accountSessionStorageProvider),
     ),

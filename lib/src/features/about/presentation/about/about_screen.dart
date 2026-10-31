@@ -26,6 +26,7 @@ import '../../../../widgets/web_selection_area.dart';
 import '../../../settings/presentation/settings/settings_pane_scope.dart';
 import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/about_repository.dart';
+import '../../data/macos_app_updater.dart';
 import '../../domain/about/about_dto.dart';
 import '../../domain/server_update/server_update.dart';
 import 'controllers/about_controller.dart';
@@ -228,14 +229,24 @@ class AboutScreen extends HookConsumerWidget {
                           ),
                           onTap: serverHosted
                               ? () => const ServerSettingsRoute().push(context)
-                              : () => checkForUpdate(
+                              : () async {
+                                  final nativeUpdater = ref.read(
+                                    macOSAppUpdaterProvider,
+                                  );
+                                  if (nativeUpdater.isAvailable &&
+                                      await nativeUpdater.checkForUpdates()) {
+                                    return;
+                                  }
+                                  if (!context.mounted) return;
+                                  await checkForUpdate(
                                   title: packageInfo.appName,
                                   context: context,
                                   updateCallback: ref
                                       .read(aboutRepositoryProvider)
                                       .checkUpdate,
                                   toast: toast,
-                                ),
+                                  );
+                                },
                         ),
                       ListTile(
                         title: Text(context.l10n.privacyPolicy),
