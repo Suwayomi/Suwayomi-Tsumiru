@@ -550,7 +550,7 @@
     "notificationChapterSingleAndMore": "Kapitel {number} und {count} mehr",
     "notificationChaptersMultiple": "Kapitel {numbers}",
     "smartUpdateExpected": "Ca. {predicted} bis zur Veröffentlichung neuer Kapitel, wird ca. alle {interval} überprüft.",
-    "removeExtensionStoreBody": "Möchtest du das Erweiterungsdepot \"{name}\" ({url}) entfernen?",
+    "removeExtensionStoreBody": "\"{name}\" entfernen?\n{url}",
     "page": "Seite: {number}",
     "trackRemoveAlsoOnRemote": "Auch aus {trackerName} entfernen",
     "libraryLastUpdated": "Bibliothek zuletzt aktualisiert: {time}",
@@ -906,7 +906,7 @@
     "serverUnreachableAction": "Verbindungseinstellungen",
     "clearCrashLog": "Debug-Protokoll leeren",
     "copyCrashLog": "Debug-Protokoll kopieren",
-    "copyCrashLogSubtitle": "Für Fehlerberichte: Kopiert die letzten Fehler und Lesediagnosen",
+    "copyCrashLogSubtitle": "Kopiert die letzten Fehler und Lesediagnosen für Fehlerberichte",
     "crashLogCleared": "Debug-Protokoll geleert",
     "crashLogCopied": "Debug-Protokoll in die Zwischenablage kopiert",
     "noCrashLog": "Kein Debug-Protokoll gefunden",
@@ -938,15 +938,15 @@
     "reinstalling": "Wird neu installiert",
     "readProgressBar": "Lesefortschrittsbalken",
     "updatesGroupingLabel": "Kapitelgruppierung",
-    "updatesGroupingHint": "Aufeinanderfolgende Kapitel derselben Serie zu einem aufklappbaren Eintrag zusammenfassen.",
+    "updatesGroupingHint": "Kapitel derselben Serie an einem Tag zu einem aufklappbaren Eintrag zusammenfassen.",
     "updatesGroupingModeCollapsed": "Eingeklappt",
     "updatesGroupingModeExpanded": "Ausgeklappt",
     "updatesGroupingShowMore": "+{count} weitere",
     "updatingLibraryProgress": "Bibliothek wird aktualisiert ({percent}% · {checked}/{total})",
     "validating": "Wird überprüft",
-    "versionAvailable": "Version {version} für {app} verfügbar!",
+    "versionAvailable": "Version {version} für {app} verfügbar",
     "webUI": "Im Browser öffnen",
-    "webView": "Webansicht",
+    "webView": "WebView",
     "searchHistory": "Verlauf durchsuchen…",
     "noHistoryFound": "Kein Leseverlauf gefunden",
     "noSearchResults": "Keine Suchergebnisse",
@@ -982,13 +982,13 @@
     "offlineOnDevice": "Auf dem Gerät",
     "offlineSheetTitle": "Offline lesen",
     "viewOffline": "Offline ansehen",
-    "offlineSheetSubtitle": "Kapitel auf diesem Gerät speichern und beim Lesen automatisch nachladen. Getrennt von Server-Downloads über das Wolkensymbol oben.",
-    "offlineRemoveSeries": "Alle entfernen (diese Serie)",
+    "offlineSheetSubtitle": "Kapitel auf diesem Gerät speichern und beim Lesen automatisch nachladen.",
+    "offlineRemoveSeries": "Downloads entfernen",
     "offlineDownloadingToast": "Wird auf dieses Gerät heruntergeladen…",
     "manageDownloadsNothingYet": "Noch nichts heruntergeladen",
     "offlineManualOnly": "Nur manuell",
     "manageDownloadsChangeRule": "Regel ändern",
-    "manageDownloadsStopKeep": "Automatik beenden, Dateien behalten",
+    "manageDownloadsStopKeep": "Automatik beenden",
     "manageDownloadsStopDelete": "Automatik beenden und Dateien löschen",
     "manageDownloadsKeepFilesConfirm": "Das automatische Behalten für {count} Serien beenden, aber die bereits heruntergeladenen Kapitel auf diesem Gerät behalten?",
     "manageDownloadsDeleteConfirm": "Das automatische Behalten für {count} Serien beenden und ihre heruntergeladenen Kapitel von diesem Gerät löschen? Die Kopien auf dem Server bleiben erhalten.",
@@ -1052,7 +1052,7 @@
     "hotkeyReaderLastPage": "Letzte Seite",
     "extensionStoresDescription": "Erweiterungsdepots hinzufügen, aus denen dein Server Erweiterungen installiert",
     "recommendsInOverflow": "Empfehlungen im Menü",
-    "recommendsInOverflowSubtitle": "Empfehlungen ins Menü verschieben, statt sie als Reihe auf der Manga-Seite anzuzeigen",
+    "recommendsInOverflowSubtitle": "Empfehlungen im ⋮ Menü anzeigen, statt sie als Reihe auf der Manga-Seite anzuzeigen",
     "preferredScanlationGroups": "Bevorzugte Gruppen",
     "preferredGroupsHint": "Ausgewählte Gruppen werden in dieser Reihenfolge bevorzugt. Für Kapitel, die sie nicht anbieten, werden andere Gruppen verwendet.",
     "noGroupPreference": "Keine Präferenz",
@@ -1477,5 +1477,572 @@
     },
     "migrationNeedsReview": "Diesen Treffer prüfen",
     "privacyPolicy": "Datenschutzerklärung",
-    "network": "Netzwerk"
+    "network": "Netzwerk",
+    "splitTallImages": "Hohe Bilder teilen",
+    "notificationsSectionNewChapters": "Neue Kapitel",
+    "@notificationsSectionNewChapters": {
+        "description": "Section header for new-chapter notification settings"
+    },
+    "notificationsSectionOther": "Andere",
+    "@notificationsSectionOther": {
+        "description": "Section header for the remaining notification kinds"
+    },
+    "select": "Auswählen",
+    "selectAll": "Alle auswählen",
+    "serverUpdateAvailable": "Server-Update verfügbar",
+    "serverUpdatedTo": "Server aktualisiert auf {version}",
+    "@serverUpdatedTo": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "offlineViewBannerTitle": "Offline-Ansicht",
+    "@offlineViewBannerTitle": {
+        "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
+    },
+    "offlineViewGoOnline": "Online gehen",
+    "@offlineViewGoOnline": {
+        "description": "Banner button that leaves the offline view and loads from the server again"
+    },
+    "cleartextAddressWarning": "Diese Adresse verwendet unverschlüsseltes http:// über das Internet: Deine Anmelde- und Sitzungsreise werden in Klartext übertragen, von jedem auf dem Weg lesbar. Verwende https://, beispielsweise durch einen Reverse Proxy.",
+    "@cleartextAddressWarning": {
+        "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
+    },
+    "serverUsers": "Nutzer",
+    "@serverUsers": {
+        "description": "Server hub entry that opens user management"
+    },
+    "settingsGroupApp": "App",
+    "settingsGroupSuwayomi": "Suwayomi",
+    "@settingsGroupSuwayomi": {
+        "description": "Group header for Suwayomi server settings"
+    },
+    "stillRequestedByAnotherAccount": "Noch von einem anderen Konto angefordert",
+    "@stillRequestedByAnotherAccount": {
+        "description": "Toast after cancelling a download that remains queued because another account requested it"
+    },
+    "systemTrayIconDescription": "Dieses Icon wird auf dem System angezeigt, welches den Server betreibt",
+    "upcomingViewMonth": "Monat",
+    "upcomingViewWeek": "Woche",
+    "upcomingShowPastReleases": "Vergangene Veröffentlichungen anzeigen",
+    "upcomingCalendarOptions": "Kalenderoptionen",
+    "phoneSearchLibraryFor": "Durchsuche Bibliothek nach \"{query}\"",
+    "@phoneSearchLibraryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Library filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchHistoryFor": "Suchverlauf für \"{query}\"",
+    "@phoneSearchHistoryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the History filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchSourcesFor": "Durchsuche Quellen nach \"{query}\"",
+    "@phoneSearchSourcesFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Sources filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchNoResults": "Keine Ergebnisse",
+    "@phoneSearchNoResults": {
+        "description": "Phone search: trailing label on the dimmed page row when nothing on the page matches"
+    },
+    "updateAll": "Alle aktualisieren",
+    "kcefWebView": "WebView",
+    "kcefWebViewDescription": "Aktiviere WebView via CEF (Chromium)",
+    "timeouts": "Zeitlimits",
+    "offlineBackgroundSection": "Hintergrund",
+    "@offlineBackgroundSection": {
+        "description": "Section header for background download settings"
+    },
+    "keepOfflineNextUnreadShort": "{count} ungelesen",
+    "@keepOfflineNextUnreadShort": {
+        "description": "Short keep-offline status on the series page button",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "keepOfflineAllUnreadShort": "Alle ungelesen",
+    "@keepOfflineAllUnreadShort": {
+        "description": "Short keep-offline status on the series page button"
+    },
+    "keepOfflineAllShort": "Alle Kapitel",
+    "@keepOfflineAllShort": {
+        "description": "Short keep-offline status on the series page button"
+    },
+    "markAsRead": "Als gelesen markieren",
+    "settingsSectionBehavior": "Verhalten",
+    "@settingsSectionBehavior": {
+        "description": "Section header for library behaviour settings"
+    },
+    "chapterSwipeToLeft": "Aktion, wenn du am Kapitel nach Links streichst",
+    "chapterSwipeToRight": "Aktion, wenn du am Kapitel nach Rechts streichst",
+    "chapterSwipeDisabled": "Deaktiviert",
+    "chapterSwipeBookmarkChapter": "Lesezeichen hinzufügen",
+    "markAsUnread": "Als ungelesen markieren",
+    "markPreviousAsRead": "Vorherige als gelesen markieren",
+    "markedAsRead": "{count, plural, =1{1 Kapitel als gelesen markiert} other{{count} Kapitel als gelesen markiert}}",
+    "@markedAsRead": {
+        "description": "Toast after bulk mark-read, with an Undo action",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "markedAsUnread": "{count, plural, =1{1 Kapitel als ungelesen markiert} other{{count} Kapitel als ungelesen markiert}}",
+    "@markedAsUnread": {
+        "description": "Toast after bulk mark-unread, with an Undo action",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "moveSeriesToTop": "Serie nach oben verschieben",
+    "@moveSeriesToTop": {
+        "description": "Move all queued chapters of a series to the top"
+    },
+    "moveSeriesToBottom": "Serie nach unten verschieben",
+    "@moveSeriesToBottom": {
+        "description": "Move all queued chapters of a series to the bottom"
+    },
+    "keepOnThisDevice": "Auf diesem Gerät behalten",
+    "@keepOnThisDevice": {
+        "description": "Heading for a series' offline keep rules"
+    },
+    "cancelDownloadsTitle": "{count, plural, =1{1 Download abbrechen?} other{{count} Downloads abbrechen?}}",
+    "@cancelDownloadsTitle": {
+        "description": "Confirmation title before cancelling selected downloads",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cancelDownloadsMessage": "Die gewählten Kapitel werden von der Download-Schlange entfernt.",
+    "@cancelDownloadsMessage": {
+        "description": "Confirmation message before cancelling selected downloads"
+    },
+    "cancelDownloads": "Downloads abbrechen",
+    "@cancelDownloads": {
+        "description": "Confirm cancelling selected downloads"
+    },
+    "offlineChapterRead": "Lesen",
+    "@offlineChapterRead": {
+        "description": "Open a downloaded chapter in the reader"
+    },
+    "searchSourcesHint": "Quellen durchsuchen...",
+    "@searchSourcesHint": {
+        "description": "Placeholder in the desktop Browse search box on the Sources and Migrate tabs"
+    },
+    "searchExtensionsHint": "Erweiterungen durchsuchen...",
+    "@searchExtensionsHint": {
+        "description": "Placeholder in the desktop Browse search box on the Extensions tab"
+    },
+    "hideSource": "Quelle verstecken",
+    "@hideSource": {
+        "description": "Menu item to hide a source from the Browse list"
+    },
+    "hiddenSources": "Versteckte Quellen",
+    "@hiddenSources": {
+        "description": "Row in the Browse filter panel opening the hidden sources screen"
+    },
+    "sourceHidden": "{source} versteckt",
+    "@sourceHidden": {
+        "description": "Toast after hiding a source, with an Undo action",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "clearSelection": "Auswahl aufheben",
+    "@clearSelection": {
+        "description": "Tooltip for the clear-selection button in the desktop source catalogue selection bar"
+    },
+    "historyChapterCompleted": "Abgeschlossen",
+    "@historyChapterCompleted": {
+        "description": "Label on a History entry whose chapter is finished"
+    },
+    "searchSourceHint": "Durchsuche {source}...",
+    "@searchSourceHint": {
+        "description": "Placeholder in the desktop source catalogue search box",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "searchResults": "Suchresultate",
+    "@searchResults": {
+        "description": "Label for the Search results view in the desktop source catalogue switch"
+    },
+    "pinned": "Angepinnt",
+    "@pinned": {
+        "description": "Heading for pinned sources in the desktop source switcher menu"
+    },
+    "recent": "Letzte",
+    "@recent": {
+        "description": "Heading for recently opened sources in the desktop source switcher menu"
+    },
+    "browseAllSources": "Alle Quellen",
+    "@browseAllSources": {
+        "description": "Menu item returning to the Browse sources list from the desktop source switcher"
+    },
+    "searchOtherSources": "Andere Quellen durchsuchen",
+    "@searchOtherSources": {
+        "description": "Menu item opening Global search with a catalogue entry's title"
+    },
+    "open": "Öffnen",
+    "@open": {
+        "description": "Menu item opening the selected entry"
+    },
+    "searchTipsPlainWords": "Worte können Titel, Autor, Genres und Tags entsprechen.",
+    "@searchTipsPlainWords": {
+        "description": "First paragraph of the search tips dialog"
+    },
+    "searchTipsField": "Du kannst einen Feldnamen und Doppelpunkt eingeben, z.B. {example}, um ein einzelnes Feld zu durchsuchen. Vorschläge werden beim tippen angezeigt.",
+    "@searchTipsField": {
+        "description": "Second paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "searchTipsExclude": "Mit Minus kannst du exkludieren: {example}",
+    "@searchTipsExclude": {
+        "description": "Third paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "share": "Teilen",
+    "@share": {
+        "description": "Series page: share the series source link via the system share sheet"
+    },
+    "bulkDownloadPresetDescription": "{preset} für alle ausgewählten Serien. Bereits heruntergeladene Kapitel werden übersprungen.",
+    "@bulkDownloadPresetDescription": {
+        "description": "Confirmation for applying a chapter download preset to selected library series",
+        "placeholders": {
+            "preset": {
+                "type": "String"
+            }
+        }
+    },
+    "sync": "Sync",
+    "syncyomi": "SyncYomi",
+    "@syncyomi": {
+        "description": "Settings entry and screen title for the SyncYomi library sync server"
+    },
+    "syncyomiSubtitle": "Synchronisiere deine Bibliothek und Lesefortschritt über einen SyncYomi-Server",
+    "syncYomiEnabled": "Sync mit SyncYomi",
+    "syncYomiHost": "Host",
+    "@syncYomiHost": {
+        "description": "Base URL of the SyncYomi server, e.g. the origin only, without /api/sync"
+    },
+    "syncYomiHostHint": "https://syncyomi.example.com",
+    "syncYomiHostInvalid": "Gib eine URL an, beginnend mit http:// oder https://",
+    "syncYomiApiKey": "API-Schlüssel",
+    "syncYomiSet": "Gesetzt",
+    "syncYomiNotSet": "Nicht gesetzt",
+    "syncYomiSyncInterval": "Sync-Intervall",
+    "syncYomiEvery30Minutes": "Alle 30 Minuten",
+    "syncYomiEveryHour": "Jede Stunde",
+    "syncYomiEvery3Hours": "Alle 3 Stunden",
+    "syncYomiEvery6Hours": "Alle 6 Stunden",
+    "syncYomiEvery12Hours": "Alle 12 Stunden",
+    "syncYomiDaily": "Täglich",
+    "syncYomiWeekly": "Wöchentlich",
+    "syncYomiEveryNHours": "{count, plural, =1{Jede Stunde} other{Alle {count} Stunden}}",
+    "@syncYomiEveryNHours": {
+        "description": "Interval wording for a server-set interval the picker does not offer",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncYomiEveryNMinutes": "{count, plural, =1{Jede Minute} other{Alle {count} Minuten}}",
+    "@syncYomiEveryNMinutes": {
+        "description": "Interval wording for a server-set interval under an hour",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "syncYomiSyncData": "Daten zu Synchronisieren",
+    "@syncYomiSyncData": {
+        "description": "Which kinds of data a SyncYomi sync carries"
+    },
+    "syncYomiSyncDataNone": "Nichts ausgewählt",
+    "syncYomiSyncDataInclude": "Einschließen: {list}",
+    "@syncYomiSyncDataInclude": {
+        "description": "Summary of the data kinds a sync includes, comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiSyncDataManga": "Bibliothek Einträge",
+    "syncYomiSyncDataChapters": "Kapitel",
+    "syncYomiSyncDataCategories": "Kategorien",
+    "syncYomiSyncDataHistory": "Verlauf",
+    "syncYomiSyncDataTracking": "Tracking",
+    "syncYomiSyncNow": "Jetzt synchronisieren",
+    "syncYomiNeverSynced": "Noch nicht synchronisiert",
+    "syncYomiLastSynced": "Zuletzt synchronisiert {time}",
+    "@syncYomiLastSynced": {
+        "description": "Status line after a successful sync; time is a localised date and time",
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiLastSyncFailed": "Letzter Sync schlug fehl: {error}",
+    "@syncYomiLastSyncFailed": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiUnknownError": "Unbekannter Fehler",
+    "syncYomiSyncing": "Synchronisiere…",
+    "@syncYomiSyncing": {
+        "description": "Status line and tooltip while a step the app does not know is running"
+    },
+    "syncYomiSyncingStep": "Synchronisiere: {step}",
+    "@syncYomiSyncingStep": {
+        "placeholders": {
+            "step": {
+                "type": "String"
+            }
+        }
+    },
+    "syncYomiStepStarting": "Startet",
+    "syncYomiStepCreatingBackup": "Backup wird erstellt",
+    "syncYomiStepDownloading": "Daten werden heruntergeladen",
+    "syncYomiStepMerging": "Daten werden zusammengeführt",
+    "syncYomiStepUploading": "Daten werden hochgeladen",
+    "syncYomiStepRestoring": "Daten werden wiederhergestellt",
+    "syncYomiSyncStarted": "Sync wird gestartet",
+    "syncYomiAlreadyRunning": "Ein Vorgang läuft bereits",
+    "syncYomiDisabled": "Aktiviere zuerst Sync mit SyncYomi",
+    "syncYomiUnsupported": "Dieser Server unterstützt SyncYomi nicht. Aktualisiere Suwayomi zuerst, um es zu nutzen.",
+    "@syncYomiUnsupported": {
+        "description": "Message on the SyncYomi settings screen when the server has no SyncYomi settings"
+    },
+    "koreaderSync": "KOReader Sync",
+    "koreaderSyncSubtitle": "Synchronisiere Lesefortschritt mit KOReader",
+    "koreaderSyncStatus": "Sync Status",
+    "koreaderSyncStatusDisconnected": "Nicht verbunden",
+    "koreaderSyncConnectedAs": "Verbunden als {username} zu {serverAddress}",
+    "@koreaderSyncConnectedAs": {
+        "description": "KOReader Sync connection status subtitle",
+        "placeholders": {
+            "username": {
+                "type": "String"
+            },
+            "serverAddress": {
+                "type": "String"
+            }
+        }
+    },
+    "koreaderSyncConnectTitle": "Mit KOReader Sync Server verbinden",
+    "koreaderSyncDisconnectTitle": "Verbindung zu KOReader Sync Server trennen",
+    "koreaderSyncConnect": "Verbinden",
+    "koreaderSyncDisconnect": "Verbindung trennen",
+    "koreaderSyncUsername": "Benutzername",
+    "koreaderSyncConnectFailed": "Fehler beim Verbinden zum KOReader Sync Server.",
+    "koreaderSyncDisconnectFailed": "Fehler beim Trennen der Verbindung zum KOReader Sync Server.",
+    "koreaderSyncUnknownError": "Unbekannter Fehler",
+    "koreaderSyncStrategyForward": "Synchronisieren zu neuerem Zustand",
+    "koreaderSyncStrategyBackward": "Synchronisieren zu älterem Zustand",
+    "koreaderSyncStrategyPrompt": "Nachfragen",
+    "koreaderSyncStrategyKeepLocal": "Lokale Änderungen behalten",
+    "koreaderSyncStrategyKeepRemote": "Entferne Änderungen behalten",
+    "koreaderSyncStrategyDisabled": "Deaktiviert",
+    "koreaderSyncChecksumMethod": "Dokumentabgleichsmethode",
+    "koreaderSyncChecksumBinary": "Binär",
+    "koreaderSyncChecksumFilename": "Dateiname",
+    "koreaderSyncPercentageTolerance": "Prozentuelle Toleranz",
+    "koreaderSyncPercentageToleranceDescription": "Synchronisierung wird nicht stattfinden, wenn die Differenz in Fortschritt diese Toleranz nicht überschreitet.",
+    "koreaderSyncPercentageToleranceInvalid": "Gib eine Zahl zwischen 0 und 1 ein.",
+    "koreaderSyncShowPassword": "Passwort anzeigen",
+    "koreaderSyncHidePassword": "Passwort verstecken",
+    "koreaderSyncUnsupported": "Dieser Server unterstützt KOReader Sync nicht. Aktualisiere Suwayomi zuerst, um es zu nutzen.",
+    "webInterface": "Weboberfläche",
+    "webInterfaceUnsupported": "Dieser Server unterstützt Weboberflächeneinstellungen nicht.",
+    "unsupportedPreference": "Diese Einstellung wird nicht von der App unterstützt.",
+    "webInterfaceInterface": "Oberfläche",
+    "webInterfaceOpenWith": "Öffnen mit",
+    "webInterfaceBrowser": "Browser",
+    "webInterfaceElectron": "Electron",
+    "webInterfaceLaunchDescription": "Wo die WebUI gestartet werden soll beim Start des Servers",
+    "initialOpenInBrowserEnabled": "Öffne die WebUI beim Start des Servers",
+    "electronPath": "Electron Pfad",
+    "electronPathDescription": "Der Pfad zur Electron-Installation am Server",
+    "electronPathDefault": "Standard",
+    "images": "Bilder",
+    "imageProcessingClearCache": "Zwischenspeicher leeren",
+    "imageProcessingClearedCache": "Zwischenspeicher geleert",
+    "imageProcessingCouldNotClearCache": "Zwischenspeicher konnte nicht geleert werden",
+    "imageDownloadProcessing": "Konvertiere heruntergeladene Bilder",
+    "imageServeProcessing": "Konvertiere angezeigte Bilder",
+    "imageProcessingMimeType": "Bildtyp",
+    "imageProcessingTargetMode": "Aktion",
+    "imageProcessingMimeTypeTarget": "Konvertiere zu",
+    "imageProcessingCompressionLevel": "Qualität",
+    "imageProcessingCallTimeout": "Aufruf Timeout",
+    "imageProcessingConnectTimeout": "Verbindungstimeout",
+    "imageProcessingSearchParameters": "Suchparameter",
+    "imageProcessingSearchParametersCount": "Suchparameter ({count})",
+    "@imageProcessingSearchParametersCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "imageProcessingHeaders": "Header",
+    "imageProcessingHeadersCount": "Header ({count})",
+    "@imageProcessingHeadersCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "imageProcessingName": "Name",
+    "imageProcessingValue": "Wert",
+    "imageProcessingSecond": "Sekunde",
+    "imageProcessingInvalidInput": "Ungültige Eingabe",
+    "imageProcessingFailedToSave": "Das Speichern der Änderungen ist fehlgeschlagen",
+    "imageProcessingDisabled": "Deaktiviert",
+    "imageProcessingImage": "Bild",
+    "imageProcessingUrl": "URL",
+    "imageProcessingImageDescription": "Konvertiere Bilder zu verschiedenen Formaten",
+    "imageProcessingUrlDescription": "Konvertiere Bilder zu verschiedenen Formaten",
+    "database": "Datenbank",
+    "databaseType": "Typ",
+    "databaseTypeH2": "H2",
+    "databaseTypePostgresql": "PostgreSQL",
+    "databaseUrl": "Datenbank URL",
+    "databaseUrlHint": "postgresql://localhost:5432/suwayomi",
+    "databaseUsername": "Benutzername",
+    "databasePassword": "Passwort",
+    "hikariConnectionPool": "Datenbank-Verbindungen wiederverwenden",
+    "hikariConnectionPoolDescription": "Schneller, kann allerdings Lesefehler verursachen bei manchen Einrichtungen.",
+    "logs": "Zugriffsprotokolle",
+    "logFileCleanup": "Protokolldatei aufräumen",
+    "maxLogFileSize": "Maximale Protokolldateigröße",
+    "maxLogFolderSize": "Maximale Größe aller Protokolldateien",
+    "logSizeExamples": "Beispiele für mögliche Werte: 1 (Bytes), 1KB (Kilobytes), 1MB (Megabytes), 1GB (Gigabytes)",
+    "webInterfaceWebUI": "WebUI",
+    "webInterfaceWebUIDescription": "Nutze WebUI als Standard",
+    "webInterfaceVUI": "VUI",
+    "webInterfaceVUIDescription": "Ein mit svelte erstelltes Web Frontend mit Fokus auf die Vorschau",
+    "webInterfaceTsumiru": "Tsumiru",
+    "webInterfaceTsumiruDescription": "Ein Web-Frontend, gebaut mit Flutter, mit Apps für jede Plattform",
+    "webInterfaceCustom": "Benutzerdefiniert",
+    "webInterfaceCustomDescription": "Nutze eine benutzerdefinierte WebUI. Ersetze den Inhalt des \"webUI\"-Verzeichnis im Datenverzeichnis am Server mit deinen WebUI Dateien.",
+    "webInterfaceUnknown": "Unbekannte Oberfläche",
+    "webInterfaceChannel": "Update Kanal",
+    "webInterfaceBundled": "Inkludiert",
+    "webInterfaceBundledDescription": "Nutze die Version, welche mit dem Server-Release mitgeliefert wurde",
+    "webInterfaceStable": "Stabil",
+    "webInterfaceStableDescription": "Nutze die neueste freigegebene Version.",
+    "webInterfacePreview": "Vorschau",
+    "webInterfacePreviewDescription": "Erlaubt das Nutzen der neuesten Features; hilf us dabei, die nächste stabile Version zu testen.",
+    "webInterfaceBundledOnly": "\"Inkludiert\" funktioniert nur mit der Standard WebUI. Für andere Oberlfächen, nutze \"Stabil\" oder \"Vorschau\".",
+    "webInterfaceAutomaticUpdates": "Automatische Aktualisierung",
+    "webInterfaceOff": "Aus",
+    "webInterfaceHours": "{hours, plural, =1{Jede Stunde} other{Alle {hours} Stunden}}",
+    "@webInterfaceHours": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "webInterfaceInstalledVersion": "Installierte Version",
+    "webInterfaceCheckUpdate": "Nach Update suchen",
+    "webInterfaceInstallUpdate": "Installieren",
+    "webInterfaceUpdateAvailable": "Update verfügbar: {tag}",
+    "@webInterfaceUpdateAvailable": {
+        "placeholders": {
+            "tag": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceInstallSwitch": "Installiere, um den Server auf {name} umzustellen",
+    "@webInterfaceInstallSwitch": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceUpToDate": "Aktuell",
+    "webInterfaceInstalling": "Installiere Update: {progress}%",
+    "@webInterfaceInstalling": {
+        "placeholders": {
+            "progress": {
+                "type": "int"
+            }
+        }
+    },
+    "webInterfaceInstalled": "Update für Weboberfläche installiert.",
+    "webInterfaceUpdateFailed": "Der Server konnte das Update für die Weboberfläche nicht installieren. Prüfe die Serverprotokolle und versuche es erneut.",
+    "webInterfaceError": "Weboberfläche: {error}",
+    "@webInterfaceError": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "webInterfaceCustomUpdates": "Benutzerdefinierte Oberlächen müssen manuell im \"webUI\"-Verzeichnis am Server installiert werden.",
+    "updatedByYourServer": "Vom Server aktualisiert",
+    "serverInstalledNewTsumiru": "Eine neue Version von Tsumiru wurde auf deinem Server installiert",
+    "reloadWebBuild": "Neu laden",
+    "couldntReachSource": "Konnte {source} nicht erreichen",
+    "@couldntReachSource": {
+        "description": "Inline error in a global search source row",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "editCover": "Cover bearbeiten",
+    "@editCover": {
+        "description": "Title of the custom cover picker"
+    },
+    "coverUpdated": "Cover aktualisiert",
+    "@coverUpdated": {
+        "description": "Confirmation after saving a custom cover"
+    },
+    "coverUpdateFailed": "Cover konnte nicht aktualisiert werden",
+    "@coverUpdateFailed": {
+        "description": "Error after saving a custom cover fails"
+    },
+    "customCoversTsumiruOnly": "Benutzerdefinierte Cover werden nur in Tsumiru-Apps angezeigt.",
+    "@customCoversTsumiruOnly": {
+        "description": "Note under the cover picker search field"
+    }
 }
