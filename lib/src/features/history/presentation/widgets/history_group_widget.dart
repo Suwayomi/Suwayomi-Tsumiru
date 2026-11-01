@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../domain/history_group.dart';
 import '../../domain/history_item.dart';
 import 'history_item_tile.dart';
@@ -15,9 +16,11 @@ class HistoryGroupWidget extends StatelessWidget {
   const HistoryGroupWidget({
     super.key,
     required this.group,
+    this.first = false,
   });
 
   final HistoryGroup group;
+  final bool first;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +33,7 @@ class HistoryGroupWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             horizontal: 8,
             vertical: 12,
-          ),
+          ).onDesktopPageLine(context, top: first),
           child: Row(
             children: [
               Text(

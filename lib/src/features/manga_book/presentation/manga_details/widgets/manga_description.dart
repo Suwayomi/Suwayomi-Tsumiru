@@ -21,6 +21,7 @@ import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
 import '../../../../../widgets/server_image.dart';
@@ -218,7 +219,7 @@ class MangaDescription extends HookConsumerWidget {
       children: [
         if (manga.description.isNotBlank || notes.isNotBlank)
           Padding(
-            padding: KEdgeInsets.a16.size,
+            padding: KEdgeInsets.a16.size.onDesktopPageLine(context),
             child: MangaDescriptionBody(
               description: manga.description ?? '',
               notes: notes,
@@ -245,7 +246,12 @@ class MangaDescription extends HookConsumerWidget {
           ),
         if (expanded)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              0,
+              16,
+              12,
+            ).onDesktopPageLine(context),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -268,7 +274,12 @@ class MangaDescription extends HookConsumerWidget {
           )
         else
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              0,
+              16,
+              12,
+            ).onDesktopPageLine(context),
             child: CollapsedSeriesTags(
               tags: manga.genre.where((e) => e.isNotBlank).toList(),
               leading: AddUserTagChip(mangaId: manga.id),
@@ -380,30 +391,39 @@ class MangaDescription extends HookConsumerWidget {
                   onLibraryPressed: toggleLibrary,
                 )
               else
-              Padding(
-                // Clear only the status-bar inset so the hero can extend behind the transparent app bar.
-                padding: EdgeInsets.only(
-                  top: MediaQuery.paddingOf(context).top + 8,
+                Padding(
+                  // Clear the phone status bar while desktop content starts on the shared page line.
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.paddingOf(context).top + 8,
+                  ).onDesktopPageLine(context, top: true),
+                  child: DesktopBoxBleed(
+                    start: kListTilePadding + kMangaCoverCardInset / 2,
+                    top: kListTilePadding + kMangaCoverCardInset / 2,
+                    child: MangaCoverDescriptiveListTile(
+                      manga: manga,
+                      showBadges: false,
+                      onCoverPressed: () => openCoverViewer(context, manga),
+                      onTitleClicked: (query) =>
+                          openGlobalSearch(context, query: query),
+                      belowStatus: soonWidget,
+                      titleMaxLines: null,
+                    ),
+                  ),
                 ),
-                child: MangaCoverDescriptiveListTile(
-                  manga: manga,
-                  showBadges: false,
-                  onCoverPressed: () => openCoverViewer(context, manga),
-                  onTitleClicked: (query) =>
-                      openGlobalSearch(context, query: query),
-                  belowStatus: soonWidget,
-                  titleMaxLines: null,
-                ),
-              ),
             ],
           ),
         Builder(
           builder: (context) {
             final offlineEnabled = ref.watch(offlineEnabledProvider);
             return Padding(
-              padding: twoColumn
-                  ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
-                  : const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              padding:
+                  (twoColumn
+                          ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
+                          : const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 8,
+                            ))
+                      .onDesktopPageLine(context),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

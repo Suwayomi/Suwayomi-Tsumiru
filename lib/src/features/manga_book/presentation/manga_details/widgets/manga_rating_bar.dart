@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../controller/manga_details_controller.dart';
 
 class MangaRatingBar extends HookConsumerWidget {
@@ -91,7 +92,10 @@ class MangaRatingBar extends HookConsumerWidget {
       child: compact
           ? row
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ).onDesktopPageLine(context),
               child: row,
             ),
     );

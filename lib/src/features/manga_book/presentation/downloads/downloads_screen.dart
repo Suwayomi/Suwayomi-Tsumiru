@@ -60,7 +60,8 @@ bool _downloadsToolbarIsCompact(
       (showToggle
           ? _downloadsFilledButtonChrome + textWidth(toggleLabel)
           : 0.0);
-  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
+  return constraints.maxWidth - neededBesidesSearch <
+      kTopBarSearchPreferredWidth;
 }
 
 class DownloadsScreen extends HookConsumerWidget {
@@ -113,7 +114,6 @@ class DownloadsScreen extends HookConsumerWidget {
       ],
     );
     final viewSwitch = DesktopViewSwitchBar(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
       labels: [
         context.l10n.downloadsServerTab,
         context.l10n.downloadsOnDeviceTab,
@@ -314,6 +314,7 @@ class DownloadsScreen extends HookConsumerWidget {
                 return desktopSearchSlotContent(
                   search: search,
                   actions: buildActions(compact: compact),
+                  spacedActionCount: compact ? 0 : actions.length,
                 );
               },
             ),

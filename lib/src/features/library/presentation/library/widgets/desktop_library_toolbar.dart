@@ -68,9 +68,15 @@ class _DesktopToolbarBoxState extends State<DesktopToolbarBox> {
   }
 }
 
-/// Keeps search mounted as Sort/Filter switch to icons when the labelled layout cannot fit.
+/// Keeps search mounted as library controls collapse at narrow widths.
 class DesktopLibraryToolbar extends HookConsumerWidget {
-  const DesktopLibraryToolbar({super.key, this.trailing = const []});
+  const DesktopLibraryToolbar({
+    super.key,
+    required this.onOpenOrganizer,
+    this.trailing = const [],
+  });
+
+  final VoidCallback onOpenOrganizer;
 
   final List<Widget> trailing;
 
@@ -106,6 +112,23 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
             constraints,
             trailingCount: trailing.length,
           );
+          final organizer =
+              constraints.hasBoundedWidth &&
+              constraints.maxWidth < libraryTopBarSlotMinWidth(trailing.length);
+          final trailingCapacity = organizer
+              ? ((constraints.maxWidth -
+                                kTopBarSearchMinWidth -
+                                2 * kDesktopToolbarSlotHPadding -
+                                kDesktopTopBarGap) /
+                            kDesktopToolbarIconButtonExtent)
+                        .floor() -
+                    1
+              : trailing.length;
+          final visibleTrailing = trailingCapacity >= trailing.length
+              ? trailing
+              : trailingCapacity <= 0
+              ? const <Widget>[]
+              : [...trailing.take(trailingCapacity - 1), trailing.last];
           final searchField = DesktopSearchField(
             query: ref.watch(libraryQueryProvider) ?? '',
             onChanged: (val) =>
@@ -165,33 +188,26 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
             ),
           );
           // Keep search in the same Expanded slot across modes to preserve focus, selection and dropdown.
-          final row = desktopToolbarRow(
+          return desktopToolbarRow(
             search: searchField,
+            spacedActionCount: organizer ? 0 : 3,
             actions: [
-              _DesktopSortControl(compact: compact),
-              if (compact)
-                Tooltip(message: context.l10n.filter, child: filterBox)
-              else
-                filterBox,
-              displayBox,
-              for (final item in trailing)
+              if (organizer)
+                LibraryOrganizerButton(onPressed: onOpenOrganizer)
+              else ...[
+                _DesktopSortControl(compact: compact),
+                if (compact)
+                  Tooltip(message: context.l10n.filter, child: filterBox)
+                else
+                  filterBox,
+                displayBox,
+              ],
+              for (final item in visibleTrailing)
                 IconTheme.merge(
                   data: const IconThemeData(size: 20),
                   child: item,
                 ),
             ],
-          );
-          if (!compact || !constraints.hasBoundedWidth) {
-            return row;
-          }
-          // Retain the same row and zero-width search state inside a scroller when fixed controls cannot fit.
-          final minWidth = _compactFixedWidth(trailing.length);
-          if (constraints.maxWidth >= minWidth) {
-            return row;
-          }
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(width: minWidth, child: row),
           );
         },
       ),
@@ -209,8 +225,6 @@ const _iconOnlyBoxWidth = 12.0 + 12.0 + 20.0;
 const _sortCompactWidth = 40.0 + 1.0 + 40.0;
 // Content-width boxes need 2 px for borders; the full Sort width already includes them.
 const kToolbarBoxBorderWidth = 2.0;
-// Trailing actions reserve the default 48 px IconButton/PopupMenuButton width.
-const _trailingButtonWidth = 48.0;
 
 double measureToolbarLabelWidth(BuildContext context, String value) {
   final painter = TextPainter(
@@ -226,14 +240,13 @@ double measureToolbarLabelWidth(BuildContext context, String value) {
   return width;
 }
 
-/// Fixed controls' minimum width; below it the zero-width search stays mounted while the row scrolls.
 double _compactFixedWidth(int trailingCount) =>
     2 * kDesktopToolbarSlotHPadding +
-    (3 + trailingCount) * kDesktopTopBarGap +
+    (3 + (trailingCount > 0 ? 1 : 0)) * kDesktopTopBarGap +
     (_sortCompactWidth + kToolbarBoxBorderWidth) +
     (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
     (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-    trailingCount * _trailingButtonWidth;
+    trailingCount * kDesktopToolbarIconButtonExtent;
 
 /// Minimum compact toolbar width including a usable search field.
 double libraryTopBarSlotMinWidth(int trailingCount) =>
@@ -242,11 +255,11 @@ double libraryTopBarSlotMinWidth(int trailingCount) =>
 // Compact controls first so the search retains its preferred width.
 double updatesTopBarSlotMinWidth() {
   return 2 * kDesktopToolbarSlotHPadding +
-      6 * kDesktopTopBarGap +
+      5 * kDesktopTopBarGap +
       2 * (_iconOnlyBoxWidth + kToolbarBoxBorderWidth) +
       (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
       (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-      2 * _trailingButtonWidth +
+      2 * kDesktopToolbarIconButtonExtent +
       kTopBarSearchMinWidth;
 }
 
@@ -264,15 +277,16 @@ bool updatesToolbarIsCompact(
   const labelledChrome = 12.0 + 12.0 + 20.0 + 8.0;
   final neededBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
-      6 * kDesktopTopBarGap +
+      5 * kDesktopTopBarGap +
       (labelledChrome + textWidth(updateLabel) + kToolbarBoxBorderWidth) +
       (labelledChrome + textWidth(upcomingLabel) + kToolbarBoxBorderWidth) +
       (kToolbarFilterFullChrome +
               textWidth(filterLabel) +
               kToolbarBoxBorderWidth) +
       (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-      2 * _trailingButtonWidth;
-  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
+      2 * kDesktopToolbarIconButtonExtent;
+  return constraints.maxWidth - neededBesidesSearch <
+      kTopBarSearchPreferredWidth;
 }
 
 bool _toolbarIsCompact(
@@ -282,7 +296,7 @@ bool _toolbarIsCompact(
 }) {
   if (!constraints.hasBoundedWidth) return false;
   final labelWidth = measureToolbarLabelWidth(context, context.l10n.filter);
-  final gaps = (3 + trailingCount) * kDesktopTopBarGap;
+  final gaps = (3 + (trailingCount > 0 ? 1 : 0)) * kDesktopTopBarGap;
   final neededBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
       gaps +
@@ -292,8 +306,9 @@ bool _toolbarIsCompact(
       kToolbarBoxBorderWidth +
       kToolbarDisplayBoxWidth +
       kToolbarBoxBorderWidth +
-      trailingCount * _trailingButtonWidth;
-  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
+      trailingCount * kDesktopToolbarIconButtonExtent;
+  return constraints.maxWidth - neededBesidesSearch <
+      kTopBarSearchPreferredWidth;
 }
 
 // Random re-rolls on selection and ignores direction; compact mode must preserve those controls.

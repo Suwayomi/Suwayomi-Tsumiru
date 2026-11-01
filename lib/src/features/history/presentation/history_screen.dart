@@ -13,6 +13,7 @@ import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
@@ -29,14 +30,6 @@ import 'history_controller.dart';
 import 'widgets/history_filter.dart';
 import 'widgets/history_filter_panel.dart';
 import 'widgets/history_group_widget.dart';
-
-Widget _historyColumn(Widget child) => Align(
-  alignment: Alignment.topCenter,
-  child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 1040),
-    child: SizedBox(width: double.infinity, child: child),
-  ),
-);
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
@@ -198,18 +191,19 @@ class HistoryScreen extends HookConsumerWidget {
                 }
 
                 final notifier = ref.read(readingHistoryProvider.notifier);
-                return RefreshIndicator(
+                final list = RefreshIndicator(
                   onRefresh: notifier.refresh,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(8)
+                        .onDesktopPageLine(context, top: true),
                     itemCount: historyGroups.length,
-                    itemBuilder: (context, index) {
-                      final group = historyGroups[index];
-                      final tile = HistoryGroupWidget(group: group);
-                      return desktop ? _historyColumn(tile) : tile;
-                    },
+                    itemBuilder: (context, index) => HistoryGroupWidget(
+                      group: historyGroups[index],
+                      first: index == 0,
+                    ),
                   ),
                 );
+                return desktop ? DesktopCentredColumn(child: list) : list;
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => HistoryErrorState(
@@ -228,11 +222,14 @@ class HistoryScreen extends HookConsumerWidget {
               leading: backButton,
               search: search,
               actions: actions,
+              spacedActionCount: 1,
             ),
-            minWidth: searchTopBarSlotMinWidth(
-              actions.length,
-              backButton != null ? 48.0 : 0.0,
-            ),
+            minWidth:
+                searchTopBarSlotMinWidth(
+                  actions.length - 1,
+                  backButton != null ? kDesktopToolbarIconButtonExtent : 0.0,
+                ) +
+                filterTopBarActionWidth(context, l10n.filter),
             child: scaffold,
           )
         : scaffold;

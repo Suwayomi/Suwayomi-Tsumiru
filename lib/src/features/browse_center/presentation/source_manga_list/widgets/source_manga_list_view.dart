@@ -15,6 +15,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
@@ -38,7 +39,7 @@ class SourceMangaListView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PagingListener(
+    final view = PagingListener(
       controller: controller,
       builder: (context, state, fetchNextPage) => PagedListView(
         state: state.copyWith(
@@ -59,6 +60,9 @@ class SourceMangaListView extends ConsumerWidget {
               const CenterTsumiruShimmerIndicator(),
           newPageProgressIndicatorBuilder: (context) => Row(
             children: [
+              // Matches the list tiles' inset that the desktop bleed clips.
+              if (isOnDesktopPage(context))
+                const SizedBox(width: kListTilePadding),
               SizedBox(
                 height: 80,
                 width: 80,
@@ -120,5 +124,6 @@ class SourceMangaListView extends ConsumerWidget {
         ),
       ),
     );
+    return DesktopBoxBleed(start: kListTilePadding, child: view);
   }
 }

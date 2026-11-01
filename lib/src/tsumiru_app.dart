@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'constants/app_constants.dart';
+import 'constants/app_sizes.dart';
 import 'constants/app_theme.dart';
 import 'features/auth/presentation/reauth_banner.dart';
 import 'features/notifications/controller/notifications_controller.dart';
@@ -32,6 +33,7 @@ import 'utils/launch_url_in_web.dart';
 import 'utils/misc/toast/toast.dart';
 import 'utils/motion/reduce_motion.dart';
 import 'utils/theme/app_theme_builder.dart';
+import 'widgets/desktop/desktop_page_frame.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
 import 'widgets/web_page_title.dart';
 
@@ -278,7 +280,17 @@ class AppScrollBehavior extends MaterialScrollBehavior {
     if (context.windowSizeClass == WindowSizeClass.compact) {
       return super.buildScrollbar(context, child, details);
     }
-    return Scrollbar(controller: details.controller, child: child);
+    return Scrollbar(
+      controller: details.controller,
+      child: desktopScrollReservesGutter(context)
+          ? Padding(
+              padding: const EdgeInsetsDirectional.only(
+                end: kDesktopScrollbarGutter,
+              ),
+              child: child,
+            )
+          : child,
+    );
   }
 
   @override

@@ -8,6 +8,7 @@ import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/compact_switch.dart';
+import '../../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/confirm_action.dart';
@@ -298,7 +299,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
+        const DesktopPageLeadingGap(16),
         if (canManage && settings.isLoading && !settings.hasValue)
           const ListTile(title: LinearProgressIndicator()),
         if (canManage && settings.hasValue && data == null)

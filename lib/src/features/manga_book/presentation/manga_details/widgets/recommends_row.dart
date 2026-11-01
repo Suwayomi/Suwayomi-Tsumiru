@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/cover_row_section.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../../offline/data/server_reachability.dart';
 import '../../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
@@ -83,7 +84,13 @@ class RecommendsRow extends HookConsumerWidget {
         const Divider(height: 0),
         LayoutBuilder(
           builder: (context, constraints) {
-            final inner = constraints.maxWidth - 38;
+            final padding = const EdgeInsets.fromLTRB(
+              19,
+              4,
+              19,
+              16,
+            ).onDesktopPageLine(context);
+            final inner = constraints.maxWidth - padding.horizontal;
             final whole = (inner / 106 - .5).floor().clamp(1, 100);
             final width = (inner - whole * 10) / (whole + .5);
             return CoverRowSection(
@@ -92,7 +99,8 @@ class RecommendsRow extends HookConsumerWidget {
                 mangaId: mangaId,
                 mangaTitle: mangaTitle,
               ).push(context),
-              padding: const EdgeInsets.fromLTRB(19, 4, 19, 16),
+              padding: padding,
+              itemMargin: 0,
               height: width * 1.5 + 42,
               itemCount: list?.length,
               separatorBuilder: (_, _) => const SizedBox(width: 10),

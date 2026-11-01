@@ -13,6 +13,7 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../../widgets/web_route_link.dart';
@@ -226,7 +227,7 @@ class _HeadTile extends HookConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
-                ),
+                ).onDesktopPageLine(context),
                 child: Row(
                   children: [
                     if (desktop && canTapSelect)
@@ -249,8 +250,9 @@ class _HeadTile extends HookConsumerWidget {
                                   toggleSelect(chapter);
                                   return;
                                 }
-                                await MangaRoute(mangaId: manga.id)
-                                    .push(context);
+                                await MangaRoute(
+                                  mangaId: manga.id,
+                                ).push(context);
                                 if (!context.mounted) return;
                                 await refreshManga();
                               },
@@ -349,8 +351,9 @@ class _HeadTile extends HookConsumerWidget {
                       SizedBox(
                         width: 84,
                         child: Text(
-                          int.tryParse(chapter.fetchedAt)
-                              .toShortTimeFromSeconds(context),
+                          int.tryParse(
+                            chapter.fetchedAt,
+                          ).toShortTimeFromSeconds(context),
                           textAlign: TextAlign.right,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -479,7 +482,7 @@ class _TailTile extends HookConsumerWidget {
                   right: 16,
                   top: 6,
                   bottom: 6,
-                ),
+                ).onDesktopPageLine(context),
                 child: Row(
                   children: [
                     if (desktop && canTapSelect)

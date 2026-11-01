@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/extensions/custom_extensions.dart';
+import 'desktop_page_frame.dart';
 
 class DesktopViewSwitchBar extends StatelessWidget {
   const DesktopViewSwitchBar({
@@ -25,7 +26,9 @@ class DesktopViewSwitchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding,
+      padding: padding
+          .resolve(Directionality.of(context))
+          .onDesktopPageLine(context, top: true),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: context.colorScheme.outlineVariant),

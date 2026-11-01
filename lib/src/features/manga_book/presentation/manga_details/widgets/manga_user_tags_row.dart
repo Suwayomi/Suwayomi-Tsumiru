@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../controller/manga_details_controller.dart';
 import 'tag_actions_menu.dart';
@@ -86,7 +87,12 @@ class MangaUserTagsRow extends ConsumerWidget {
     if (tags.isEmpty) return const SizedBox.shrink();
     final notifier = ref.read(mangaUserTagsProvider(mangaId: mangaId).notifier);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        4,
+        16,
+        4,
+      ).onDesktopPageLine(context),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,

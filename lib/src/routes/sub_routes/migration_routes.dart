@@ -1,6 +1,6 @@
 part of '../router_config.dart';
 
-class MigrationGlobalSearchRoute extends GoRouteData
+class MigrationGlobalSearchRoute extends DetailShellRouteData
     with $MigrationGlobalSearchRoute {
   const MigrationGlobalSearchRoute({this.$extra});
 
@@ -14,7 +14,7 @@ class MigrationGlobalSearchRoute extends GoRouteData
   }
 }
 
-class MigrationSourcePickerRoute extends GoRouteData
+class MigrationSourcePickerRoute extends DetailShellRouteData
     with $MigrationSourcePickerRoute {
   const MigrationSourcePickerRoute();
 
@@ -23,7 +23,7 @@ class MigrationSourcePickerRoute extends GoRouteData
       const MigrationSourcePickerScreen();
 }
 
-class MigrationSourceMangaRoute extends GoRouteData
+class MigrationSourceMangaRoute extends DetailShellRouteData
     with $MigrationSourceMangaRoute {
   const MigrationSourceMangaRoute({this.$extra});
 
@@ -37,7 +37,7 @@ class MigrationSourceMangaRoute extends GoRouteData
   }
 }
 
-class MigrationBulkConfigRoute extends GoRouteData
+class MigrationBulkConfigRoute extends DetailShellRouteData
     with $MigrationBulkConfigRoute {
   const MigrationBulkConfigRoute({this.$extra});
 
@@ -53,7 +53,8 @@ class MigrationBulkConfigRoute extends GoRouteData
   }
 }
 
-class MigrationBulkRunRoute extends GoRouteData with $MigrationBulkRunRoute {
+class MigrationBulkRunRoute extends DetailShellRouteData
+    with $MigrationBulkRunRoute {
   const MigrationBulkRunRoute({this.$extra});
 
   final MigrationBulkRunData? $extra;

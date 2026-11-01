@@ -9,6 +9,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../browse_center/domain/source/source_model.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -90,7 +91,12 @@ class SeriesHeader extends ConsumerWidget {
     final libraryWidth = _pillWidth(context, libraryLabel, gradient: false);
     final controlsWidth = resumeWidth + libraryWidth + (next != null ? 10 : 0);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        16,
+      ).onDesktopPageLine(context, top: true),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final infoWidth = constraints.maxWidth - coverWidth - 18;

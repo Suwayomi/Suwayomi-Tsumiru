@@ -18,6 +18,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -51,17 +52,30 @@ import 'widgets/updates_row_actions.dart';
 
 const _kUpdatesCardSubtitleExtent = 22.0;
 
+/// Compact on desktop pages so the first heading's text sits on the page line.
+Widget _dateHeading(BuildContext context, String label, {required bool first}) {
+  final desktop = isOnDesktopPage(context);
+  return ListTile(
+    contentPadding: desktop
+        ? const EdgeInsetsDirectional.fromSTEB(
+            16,
+            16,
+            24,
+            8,
+          ).onDesktopPageLine(context, top: first)
+        : null,
+    minTileHeight: desktop ? 0 : null,
+    minVerticalPadding: desktop ? 0 : null,
+    title: Text(label),
+  );
+}
 
-Widget _updatesColumn(Widget child) => Align(
-  alignment: Alignment.topCenter,
-  child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 1040),
-    child: SizedBox(width: double.infinity, child: child),
-  ),
-);
 
 Widget _lastUpdatedLine(BuildContext context, String lastUpdated) => Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 8,
+  ).onDesktopPageLine(context, top: true),
   child: Text(
     context.l10n.libraryLastUpdated(int.parse(lastUpdated).toTimeAgo(context)),
     style: context.textTheme.bodyMedium?.copyWith(
@@ -84,6 +98,7 @@ class _UpdatesPagedList extends StatefulWidget {
     required this.screenContext,
     required this.resetList,
     required this.refetchChapter,
+    required this.lastUpdatedAboveList,
   });
 
   final ServerPagingController<ChapterWithMangaDto> controller;
@@ -97,6 +112,8 @@ class _UpdatesPagedList extends StatefulWidget {
   final BuildContext screenContext;
   final VoidCallback resetList;
   final Future<ChapterDto?> Function(int chapterId) refetchChapter;
+
+  final bool lastUpdatedAboveList;
 
   @override
   State<_UpdatesPagedList> createState() => _UpdatesPagedListState();
@@ -224,7 +241,12 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         widget.displayMode == UpdatesDisplayMode.grid) {
       final section = grouping.sections[flatIndex];
       if (section == null) return const SizedBox.shrink();
-      return _buildDaySection(context, items, section);
+      return _buildDaySection(
+        context,
+        items,
+        section,
+        first: flatIndex == 0 && !widget.lastUpdatedAboveList,
+      );
     }
 
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
@@ -296,19 +318,21 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   Widget _buildDaySection(
     BuildContext context,
     List<ChapterWithMangaDto> items,
-    UpdatesDaySection section,
-  ) {
+    UpdatesDaySection section, {
+    required bool first,
+  }) {
     final fetchedAt = int.tryParse(items[section.headerFlatIndex].fetchedAt);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (fetchedAt != null)
-          ListTile(title: Text(fetchedAt.toDaysAgoFromSeconds(context))),
-        Padding(
-          padding: context.usesDesktopShell
-              ? const EdgeInsets.only(right: kDesktopScrollbarGutter)
-              : EdgeInsets.zero,
+          _dateHeading(
+            context,
+            fetchedAt.toDaysAgoFromSeconds(context),
+            first: first,
+          ),
+        DesktopBoxBleed.coverGrid(
           child: GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -347,18 +371,18 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     Widget tile,
     Set<int> headerIndices,
   ) {
-    final desktop = context.usesDesktopShell;
-    Widget wrap(Widget child) => desktop ? _updatesColumn(child) : child;
-    if (!headerIndices.contains(flatIndex)) return wrap(tile);
+    if (!headerIndices.contains(flatIndex)) return tile;
     final currentDate = int.tryParse(items[flatIndex].fetchedAt);
-    return wrap(
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(title: Text(currentDate.toDaysAgoFromSeconds(context))),
-          tile,
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _dateHeading(
+          context,
+          currentDate.toDaysAgoFromSeconds(context),
+          first: flatIndex == 0 && !widget.lastUpdatedAboveList,
+        ),
+        tile,
+      ],
     );
   }
 
@@ -556,7 +580,6 @@ class UpdatesScreen extends HookConsumerWidget {
     }, [filter]);
     final selecting = selectedChapters.value.isNotEmpty;
     final desktop = context.usesDesktopShell;
-    final desktopGrid = desktop && displayMode == UpdatesDisplayMode.grid;
     final topBar = showsMergedTopBar(context);
     final pageScope = useMemoized(FocusScopeNode.new);
     useEffect(() => pageScope.dispose, [pageScope]);
@@ -785,6 +808,10 @@ class UpdatesScreen extends HookConsumerWidget {
             },
           )
         : null;
+    final showLastUpdated =
+        lastUpdated != null &&
+        !(desktop && selecting) &&
+        (int.tryParse(lastUpdated) ?? 0) > 0;
     final scaffold = Scaffold(
       floatingActionButton: selecting || desktop
           ? null
@@ -818,21 +845,15 @@ class UpdatesScreen extends HookConsumerWidget {
           : null,
       body: Column(
         children: [
-          if (selectionHeader != null) _updatesColumn(selectionHeader),
+          ?selectionHeader,
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => resetList(),
               child: CustomScrollView(
                 slivers: [
-                  if (lastUpdated != null &&
-                      !(desktop && selecting) &&
-                      (int.tryParse(lastUpdated) ?? 0) > 0)
+                  if (showLastUpdated)
                     SliverToBoxAdapter(
-                      child: desktop && !desktopGrid
-                          ? _updatesColumn(
-                              _lastUpdatedLine(context, lastUpdated),
-                            )
-                          : _lastUpdatedLine(context, lastUpdated),
+                      child: _lastUpdatedLine(context, lastUpdated),
                     ),
                   _UpdatesPagedList(
                     controller: controller,
@@ -846,6 +867,7 @@ class UpdatesScreen extends HookConsumerWidget {
                     screenContext: screenContext,
                     resetList: resetList,
                     refetchChapter: (id) => refetchChapter(ref, id),
+                    lastUpdatedAboveList: showLastUpdated,
                   ),
                 ],
               ),
@@ -895,6 +917,7 @@ class UpdatesScreen extends HookConsumerWidget {
           return desktopToolbarRow(
             search: search,
             actions: desktopActions(compact),
+            spacedActionCount: 4,
           );
         },
       ),

@@ -15,6 +15,7 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
@@ -263,12 +264,15 @@ class LibraryMangaSliver extends ConsumerWidget {
       DisplayMode.comfortableGrid => grid(titleBelow: true),
       DisplayMode.coverOnly => grid(showTitle: false),
     };
-    // Reserve scrollbar clearance inside the desktop sliver so covers stay left of the thumb.
-    if (!context.usesDesktopShell) return sliver;
-    return SliverPadding(
-      padding: const EdgeInsets.only(right: kDesktopScrollbarGutter),
-      sliver: sliver,
-    );
+    final rowBleed = switch (displayMode) {
+      DisplayMode.list || null => kListTilePadding,
+      DisplayMode.descriptiveList =>
+        kListTilePadding + kMangaCoverCardInset / 2,
+      _ => null,
+    };
+    return rowBleed == null
+        ? DesktopSliverBleed.coverGrid(sliver: sliver)
+        : DesktopSliverBleed(start: rowBleed, sliver: sliver);
   }
 }
 

@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -35,8 +36,10 @@ class SmallScreenMangaDetails extends ConsumerWidget {
     required this.onDescriptionRefresh,
     required this.onMigrate,
     required this.onListRefresh,
+    required this.showResumeFab,
   });
   final int mangaId;
+  final bool showResumeFab;
   final MangaDto manga;
   final AsyncValueSetter<bool> onRefresh;
   final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
@@ -52,125 +55,136 @@ class SmallScreenMangaDetails extends ConsumerWidget {
         chapterEntries?.whereType<MangaChapterEntry>().length ?? 0;
     return RefreshIndicator(
       onRefresh: () => onRefresh(true),
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: SingleChildScrollView(
-              child: MangaDescription(
-                manga: manga,
-                onMigrate: onMigrate,
-                refresh: () => onDescriptionRefresh(false),
-                removeMangaFromLibrary: () => removeMangaFromLibraryAndPurge(
-                  ProviderScope.containerOf(context, listen: false),
-                  mangaId,
+      child: DesktopFullBleedScroll(
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: SingleChildScrollView(
+                child: MangaDescription(
+                  manga: manga,
+                  onMigrate: onMigrate,
+                  refresh: () => onDescriptionRefresh(false),
+                  removeMangaFromLibrary: () => removeMangaFromLibraryAndPurge(
+                    ProviderScope.containerOf(context, listen: false),
+                    mangaId,
+                  ),
+                  addMangaToLibrary: () =>
+                      addMangaToLibraryWithCategory(ref, context, manga),
                 ),
-                addMangaToLibrary: () =>
-                    addMangaToLibraryWithCategory(ref, context, manga),
               ),
             ),
-          ),
-          if (manga.title.isNotBlank)
+            if (manga.title.isNotBlank)
+              SliverToBoxAdapter(
+                child: RecommendsRow(mangaId: mangaId, mangaTitle: manga.title),
+              ),
             SliverToBoxAdapter(
-              child: RecommendsRow(mangaId: mangaId, mangaTitle: manga.title),
+              child: ListTile(
+                contentPadding: const EdgeInsetsDirectional.only(
+                  start: 16,
+                  end: 24,
+                ).onDesktopPageLine(context),
+                title: Text(context.l10n.noOfChapters(chapterCount)),
+                trailing: ChapterListModeToggle(mangaId: mangaId),
+              ),
             ),
-          SliverToBoxAdapter(
-            child: ListTile(
-              title: Text(context.l10n.noOfChapters(chapterCount)),
-              trailing: ChapterListModeToggle(mangaId: mangaId),
-            ),
-          ),
-          chapterList.showUiWhenData(
-            context,
-            (data) {
-              if (data.isNotBlank) {
-                void toggleSelect(ChapterDto val) {
-                  if ((val.id).isNull) return;
-                  selectedChapters.value = selectedChapters.value.toggleKey(
-                    val.id,
-                    val,
-                  );
-                }
+            chapterList.showUiWhenData(
+              context,
+              (data) {
+                if (data.isNotBlank) {
+                  void toggleSelect(ChapterDto val) {
+                    if ((val.id).isNull) return;
+                    selectedChapters.value = selectedChapters.value.toggleKey(
+                      val.id,
+                      val,
+                    );
+                  }
 
-                if (listMode == ChapterListMode.grid) {
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    sliver: SliverGrid.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 64,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                          ),
-                      itemCount: chapterEntries!.length,
-                      itemBuilder: (context, index) {
+                  if (listMode == ChapterListMode.grid) {
+                    return SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ).onDesktopPageLine(context),
+                      sliver: SliverGrid.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 64,
+                              mainAxisSpacing: 8,
+                              crossAxisSpacing: 8,
+                            ),
+                        itemCount: chapterEntries!.length,
+                        itemBuilder: (context, index) {
+                          final entry = chapterEntries[index];
+                          return switch (entry) {
+                            MangaChapterEntry() => ChapterGridTile(
+                              key: ValueKey('${entry.chapter.id}'),
+                              manga: manga,
+                              chapter: entry.chapter,
+                              isSelected: selectedChapters.value.containsKey(
+                                entry.chapter.id,
+                              ),
+                              canTapSelect: selectedChapters.value.isNotEmpty,
+                              toggleSelect: toggleSelect,
+                            ),
+                            MissingChaptersEntry() => MissingChaptersGridTile(
+                              key: ValueKey('missing-${entry.id}'),
+                              count: entry.count,
+                            ),
+                          };
+                        },
+                      ),
+                    );
+                  }
+                  return DesktopSliverGutterClearance(
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
                         final entry = chapterEntries[index];
                         return switch (entry) {
-                          MangaChapterEntry() => ChapterGridTile(
+                          MangaChapterEntry() => ChapterListTile(
                             key: ValueKey('${entry.chapter.id}'),
                             manga: manga,
                             chapter: entry.chapter,
+                            updateData: () => onRefresh(false),
                             isSelected: selectedChapters.value.containsKey(
                               entry.chapter.id,
                             ),
                             canTapSelect: selectedChapters.value.isNotEmpty,
+                            selectionMode: selectedChapters.value.isNotEmpty,
                             toggleSelect: toggleSelect,
                           ),
-                          MissingChaptersEntry() => MissingChaptersGridTile(
+                          MissingChaptersEntry() => MissingChaptersListTile(
                             key: ValueKey('missing-${entry.id}'),
                             count: entry.count,
                           ),
                         };
-                      },
+                      }, childCount: chapterEntries!.length),
+                    ),
+                  );
+                } else {
+                  return SliverToBoxAdapter(
+                    child: Emoticons(
+                      title: context.l10n.noChaptersFound,
+                      button: TextButton(
+                        onPressed: () => onDescriptionRefresh(true),
+                        child: Text(context.l10n.refresh),
+                      ),
                     ),
                   );
                 }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final entry = chapterEntries[index];
-                    return switch (entry) {
-                      MangaChapterEntry() => ChapterListTile(
-                        key: ValueKey('${entry.chapter.id}'),
-                        manga: manga,
-                        chapter: entry.chapter,
-                        updateData: () => onRefresh(false),
-                        isSelected: selectedChapters.value.containsKey(
-                          entry.chapter.id,
-                        ),
-                        canTapSelect: selectedChapters.value.isNotEmpty,
-                        selectionMode: selectedChapters.value.isNotEmpty,
-                        toggleSelect: toggleSelect,
-                      ),
-                      MissingChaptersEntry() => MissingChaptersListTile(
-                        key: ValueKey('missing-${entry.id}'),
-                        count: entry.count,
-                      ),
-                    };
-                  }, childCount: chapterEntries!.length),
-                );
-              } else {
-                return SliverToBoxAdapter(
-                  child: Emoticons(
-                    title: context.l10n.noChaptersFound,
-                    button: TextButton(
-                      onPressed: () => onDescriptionRefresh(true),
-                      child: Text(context.l10n.refresh),
-                    ),
-                  ),
-                );
-              }
-            },
-            refresh: () => onRefresh(false),
-            wrapper: (child) => SliverToBoxAdapter(
-              child: SizedBox(height: context.height * .5, child: child),
+              },
+              refresh: () => onRefresh(false),
+              wrapper: (child) => SliverToBoxAdapter(
+                child: SizedBox(height: context.height * .5, child: child),
+              ),
             ),
-          ),
-          // Reserve space for the last chapter to clear the floating Resume button.
-          const SliverToBoxAdapter(child: SizedBox(height: 96)),
-        ],
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: !context.usesDesktopShell || showResumeFab ? 96 : 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

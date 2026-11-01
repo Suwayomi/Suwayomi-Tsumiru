@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 
 class SettingsGroupRow extends StatelessWidget {
   const SettingsGroupRow({
@@ -49,7 +50,8 @@ class SettingsGroupCard extends StatelessWidget {
       rows.add(children[i]);
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12)
+          .onDesktopPageLine(context),
       child: Card(
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
@@ -74,7 +76,12 @@ class SettingsGroupHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(28, first ? 8 : 24, 16, 8),
+      padding: EdgeInsets.fromLTRB(
+        28,
+        first ? 8 : 24,
+        16,
+        8,
+      ).onDesktopPageLine(context, top: first),
       child: Text(
         label,
         style: TextStyle(

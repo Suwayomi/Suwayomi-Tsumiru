@@ -56,12 +56,13 @@ bool _sourceCatalogueIsCompact(
   final labelWidth = measureToolbarLabelWidth(context, filterLabel);
   final neededBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
-      (1 + actionCount) * kDesktopTopBarGap +
+      (3 + (actionCount > 2 ? 1 : 0)) * kDesktopTopBarGap +
       leadingWidth +
       (kToolbarFilterFullChrome + labelWidth + kToolbarBoxBorderWidth) +
       (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-      (actionCount - 2) * 48.0;
-  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
+      (actionCount - 2) * kDesktopToolbarIconButtonExtent;
+  return constraints.maxWidth - neededBesidesSearch <
+      kTopBarSearchPreferredWidth;
 }
 
 // Shrink the switcher first so the search retains its preferred width.
@@ -72,13 +73,13 @@ double _sourceSwitcherNameWidth(
 }) {
   final fixedBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
-      (1 + actionCount) * kDesktopTopBarGap +
+      (3 + (actionCount > 2 ? 1 : 0)) * kDesktopTopBarGap +
       backWidth +
       _sourceSwitcherBaseWidth +
       (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
       (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-      (actionCount - 2) * 48.0;
-  return (maxWidth - fixedBesidesSearch - kDesktopSearchMaxWidth)
+      (actionCount - 2) * kDesktopToolbarIconButtonExtent;
+  return (maxWidth - fixedBesidesSearch - kTopBarSearchPreferredWidth)
       .clamp(_sourceSwitcherNameMinWidth, _sourceSwitcherNameMaxWidth)
       .toDouble();
 }
@@ -575,7 +576,9 @@ class SourceMangaListScreen extends HookConsumerWidget {
             ),
           );
           final backButton = detailNavigationBackButton(context);
-          final backWidth = backButton != null ? 48.0 : 0.0;
+          final backWidth = backButton != null
+              ? kDesktopToolbarIconButtonExtent
+              : 0.0;
           final iconCount =
               ((data?.homeUrl.isNotBlank ?? false) ? 1 : 0) +
               ((data?.isConfigurable).ifNull() ? 1 : 0);
@@ -604,19 +607,28 @@ class SourceMangaListScreen extends HookConsumerWidget {
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ?backButton,
+                      if (backButton != null)
+                        SizedBox.square(
+                          dimension: kDesktopToolbarIconButtonExtent,
+                          child: backButton,
+                        ),
                       switcherButton(nameMaxWidth: nameWidth),
                     ],
                   ),
                   search: catalogueSearchBox(),
                   actions: desktopActions(compact: compact),
+                  spacedActionCount: 2,
                 );
               },
             ),
-            minWidth: searchTopBarSlotMinWidth(
-              slotActionCount,
-              leadingWidth,
-            ),
+            minWidth:
+                kTopBarSearchMinWidth +
+                2 * kDesktopToolbarSlotHPadding +
+                leadingWidth +
+                (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
+                (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
+                iconCount * kDesktopToolbarIconButtonExtent +
+                (3 + (iconCount > 0 ? 1 : 0)) * kDesktopTopBarGap,
             child: desktopScaffold,
           );
         }

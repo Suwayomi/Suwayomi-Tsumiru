@@ -7,8 +7,10 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 
+import '../constants/app_sizes.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
+import 'desktop/desktop_page_frame.dart';
 
 /// Supply items or a caller-owned child; arrows/fade appear only on overflow.
 class CoverRowSection extends StatefulWidget {
@@ -24,6 +26,7 @@ class CoverRowSection extends StatefulWidget {
     this.separatorBuilder,
     this.child,
     this.background,
+    this.itemMargin = kMangaCoverCardInset / 2,
   });
 
   final String? title;
@@ -36,6 +39,9 @@ class CoverRowSection extends StatefulWidget {
   final IndexedWidgetBuilder? separatorBuilder;
   final Widget? child;
   final Color? background;
+
+  /// Transparent margin around each item; the first item's visible edge sits on the page line.
+  final double itemMargin;
 
   @override
   State<CoverRowSection> createState() => _CoverRowSectionState();
@@ -159,7 +165,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
     final showArrows = _canBack || _canForward;
     if (context.windowSizeClass >= WindowSizeClass.medium) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8).onDesktopPageLine(context),
         child: Row(
           children: [
             Expanded(child: heading),
@@ -262,6 +268,9 @@ class _CoverRowSectionState extends State<CoverRowSection> {
     if (widget.height != null && widget.itemCount != null) {
       body = SizedBox(height: widget.height, child: body);
     }
+    if (widget.itemCount != null) {
+      body = DesktopBoxBleed(start: widget.itemMargin, child: body);
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +282,9 @@ class _CoverRowSectionState extends State<CoverRowSection> {
           _headerlessArrows(context),
         Padding(
           key: const ValueKey('cover-row-body'),
-          padding: widget.padding,
+          padding: widget.padding
+              .resolve(Directionality.of(context))
+              .onDesktopPageLine(context),
           child: body,
         ),
       ],

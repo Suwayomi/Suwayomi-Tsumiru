@@ -200,6 +200,8 @@ class MangaCoverFixedCountGridDelegate extends SliverGridDelegate {
 /// Desktop scrollbar clearance: 10 px at maximum thumb width plus 4 px gap.
 const kDesktopScrollbarGutter = 14.0;
 
+const kDesktopPageInset = 16.0;
+
 SliverGridDelegate mangaCoverGridDelegate(
   double? size, {
   bool titleBelow = false,

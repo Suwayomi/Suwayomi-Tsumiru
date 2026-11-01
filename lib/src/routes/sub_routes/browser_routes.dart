@@ -93,7 +93,7 @@ class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
       detailNavigationPage(context, state, _screen);
 }
 
-class SourceFilterRoute extends GoRouteData with $SourceFilterRoute {
+class SourceFilterRoute extends DetailShellRouteData with $SourceFilterRoute {
   const SourceFilterRoute();
 
   @override

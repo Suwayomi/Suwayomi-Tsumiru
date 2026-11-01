@@ -76,7 +76,10 @@ class MoreScreen extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SettingsGroupHeading(label: context.l10n.accountTitle),
+          SettingsGroupHeading(
+            label: context.l10n.accountTitle,
+            first: context.usesDesktopShell,
+          ),
           SettingsGroupCard(
             children: [
               if (showAccount)
@@ -137,7 +140,7 @@ class MoreScreen extends ConsumerWidget {
       body: WebSelectionArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: settingsPageConstraints(context),
             child: ListView(
               children: [
                 if (!context.usesDesktopShell) ...[

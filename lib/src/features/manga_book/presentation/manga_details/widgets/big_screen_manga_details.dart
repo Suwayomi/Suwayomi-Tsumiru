@@ -15,6 +15,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../../offline/presentation/offline_settings_format.dart';
@@ -184,28 +185,30 @@ class BigScreenMangaDetails extends HookConsumerWidget {
         children: [
           Expanded(
             flex: wide ? 50 : (desktop ? 55 : 1),
-            child: SeriesInfoColumn(
-              key: ValueKey(mangaId),
-              expansion: expansion,
-              builder: (expansion) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MangaDescription(
-                    expansion: expansion,
-                    manga: manga,
-                    onMigrate: onMigrate,
-                    removeMangaFromLibrary: (() =>
-                        removeMangaFromLibraryAndPurge(
-                          ProviderScope.containerOf(context, listen: false),
-                          mangaId,
-                        )),
-                    addMangaToLibrary: (() =>
-                        addMangaToLibraryWithCategory(ref, context, manga)),
-                    refresh: () => onDescriptionRefresh(false),
-                  ),
-                  if (manga.title.isNotBlank)
-                    RecommendsRow(mangaId: mangaId, mangaTitle: manga.title),
-                ],
+            child: DesktopFullBleedScroll(
+              child: SeriesInfoColumn(
+                key: ValueKey(mangaId),
+                expansion: expansion,
+                builder: (expansion) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MangaDescription(
+                      expansion: expansion,
+                      manga: manga,
+                      onMigrate: onMigrate,
+                      removeMangaFromLibrary: (() =>
+                          removeMangaFromLibraryAndPurge(
+                            ProviderScope.containerOf(context, listen: false),
+                            mangaId,
+                          )),
+                      addMangaToLibrary: (() =>
+                          addMangaToLibraryWithCategory(ref, context, manga)),
+                      refresh: () => onDescriptionRefresh(false),
+                    ),
+                    if (manga.title.isNotBlank)
+                      RecommendsRow(mangaId: mangaId, mangaTitle: manga.title),
+                  ],
+                ),
               ),
             ),
           ),
@@ -300,7 +303,12 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                       child: listMode == ChapterListMode.grid
                           ? GridView.builder(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                8,
+                                16,
+                                context.usesDesktopShell ? 16 : 80,
+                              ).onDesktopPageLine(context),
                               gridDelegate:
                                   const SliverGridDelegateWithMaxCrossAxisExtent(
                                     maxCrossAxisExtent: 64,
@@ -483,7 +491,12 @@ class _ChapterHeader extends StatelessWidget {
             ),
           );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        14,
+        8,
+        10,
+      ).onDesktopPageLine(context, top: true),
       child: Row(
         children: [
           Expanded(
