@@ -128,7 +128,7 @@
     "@browse": {
         "description": "Screen title, Navigation Bar text and Button text of both Browse screen and Browse Settings Screen"
     },
-    "buildTime": "Build time",
+    "buildTime": "Erstellungszeit",
     "@buildTime": {
         "description": "Text title to show build time of Server in About Screen"
     },
@@ -173,15 +173,15 @@
     "pageLayoutSinglePage": "Einfache Seite",
     "readerForThisSeries": "Für diese Serie",
     "readerGroupActions": "Aktionen",
-    "showTapZonesOverlay": "Tippzonen-Overlay anzeigen",
+    "showTapZonesOverlay": "Zeige Klickzonen Overlay",
     "showTapZonesOverlaySubtitle": "Kurz anzeigen, wenn der Leser geöffnet wird",
     "readerGroupDisplay": "Anzeige",
     "readerGroupPagerViewer": "Seiten",
     "readerGroupReading": "Beim Lesen",
     "readerSectionReadingMode": "Lesemodus",
     "readerSectionRotation": "Ausrichtung",
-    "readerSectionTapInvert": "Tippzonen umkehren",
-    "readerSectionTapZones": "Tippzonen",
+    "readerSectionTapInvert": "Klickzonen invertieren",
+    "readerSectionTapZones": "Klickzonen",
     "rotateWidePagesToFit": "Breite Seiten drehen, damit sie passen",
     "splitWidePages": "Breite Seiten aufteilen",
     "alwaysShowChapterTransition": "Kapitelübergang immer anzeigen",
@@ -212,7 +212,7 @@
     "categoryNumberOfItems": "Anzahl der Elemente anzeigen",
     "categoryTabs": "Kategorienreiter anzeigen",
     "showHiddenCategories": "Versteckte Kategorien anzeigen",
-    "smallerTapZones": "Kleinere Tippzonen",
+    "smallerTapZones": "Kleinere Klickzonen",
     "autoScroll": "Auto-Scrolling",
     "continueReadingButton": "Weiterlesen-Button",
     "languageBadge": "Sprache",
@@ -360,11 +360,11 @@
     "readerModeSingleHorizontalLTR": "Seiten (links nach rechts)",
     "readerModeSingleHorizontalRTL": "Seiten (rechts nach links)",
     "readerModeSingleVertical": "Seiten (vertikal)",
-    "readerNavigationLayout": "Tippzonen",
+    "readerNavigationLayout": "Klickzonen",
     "readerNavigationLayoutDefault": "Standard",
     "readerNavigationLayoutDisabled": "Deaktiviert",
     "readerNavigationLayoutEdge": "Rand",
-    "readerNavigationLayoutInvert": "Tippzonen umkehren",
+    "readerNavigationLayoutInvert": "Klickzonen invertieren",
     "readerNavigationLayoutKindlish": "Kindle-Stil",
     "readerNavigationLayoutLShaped": "L-förmig",
     "readerNavigationLayoutRightAndLeft": "Rechts und Links",
@@ -416,8 +416,8 @@
     "remove": "Entfernen",
     "reset": "Zurücksetzen",
     "restore": "Wiederherstellen",
-    "restoreBackupTitle": "Datensicherung wiederherstellen",
-    "restoring": "Datensicherung wird wiederhergestellt",
+    "restoreBackupTitle": "Backup wiederherstellen",
+    "restoring": "Backup wird wiederhergestellt",
     "resume": "Fortfahren",
     "retry": "Erneut versuchen",
     "retryAll": "Alle wiederholen",
@@ -449,7 +449,7 @@
     "unread": "Ungelesen",
     "update": "Aktualisieren",
     "updateCompleted": "Update abgeschlossen",
-    "updates": "Neues",
+    "updates": "Aktualisierungen",
     "updatesGroupingModeDisabled": "Deaktiviert",
     "updating": "Aktualisiere",
     "withUnreadChapter": "Mit ungelesenen Kapitel(n)",
@@ -532,7 +532,7 @@
     "extensionInstalled": "Erweiterung installiert",
     "installingExtension": "Erweiterung wird installiert",
     "whatsNew": "Was ist neu",
-    "updatingLibrary": "Bibliothek wird aktualisiert",
+    "updatingLibrary": "Bibliothek wird aktualisiert…",
     "withCompletedStatus": "Mit Status \"Abgeschlossen\"",
     "scrollAmountTiny": "Winzig",
     "scrollAmountSmall": "Klein",
@@ -577,7 +577,7 @@
     "searchingForUpdates": "Suche nach Aktualisierung",
     "offlineStorageUsage": "Speichernutzung",
     "updateProgressManualMarkRead": "Fortschritt aktualisieren, wenn als gelesen markiert wird",
-    "downloadNextChaptersN": "{n, plural, one{Nächstes Kapitel} other{Nächste {n} Kapitel}}",
+    "downloadNextChaptersN": "Nächste {n} Kapitel",
     "noOfChapters": "{count} Kapitel",
     "accountPermissionDenied": "Dein Konto hat keine Berechtigung für diese Aktion.",
     "migrationIdentityUnavailable": "Verbinde dich mit deinem Server und melde dich vor der Migration an.",
@@ -724,7 +724,7 @@
     "hideCategory": "Kategorie ausblenden",
     "showCategory": "Kategorie anzeigen",
     "libraryPersistentSearchBar": "Suchleiste dauerhaft anzeigen",
-    "libraryPersistentSearchBarSubtitle": "Die Suchleiste immer unter der App-Leiste anzeigen. Beim Scrollen bleibt sie oben sichtbar.",
+    "libraryPersistentSearchBarSubtitle": "Die Suchleiste immer unter der App-Leiste anzeigen anstelle eines Suchsymbols",
     "emptyCategory": "Der Kategoriename darf nicht leer sein",
     "enterProp": "{prop} eingeben",
     "errorBackupCreate": "Konnte Sicherung nicht erstellen",
@@ -768,7 +768,7 @@
     "minimumRating": "Mindestbewertung",
     "missingExtension": "Fehlende Erweiterungen",
     "nChapters": "{n, plural, =0{Keine} =1{1 Kapitel} other{{n} Kapitel}}",
-    "nDays": "{count, select, 01{01 Tag} other{{count} Tage}}",
+    "nDays": "{count, select, 01{1 Tag} other{{count} Tage}}",
     "inNDays": "{days, plural, =1{In 1 Tag} other{In {days} Tagen}}",
     "nHours": "{n, plural, =1{1 Stunde} other{{n} Stunden}}",
     "nameCountDisplay": "{name}: {count}",
@@ -864,7 +864,7 @@
     "notificationDownloadsPausedBackground": "Android hat die Hintergrunddownloads pausiert. Öffne Tsumiru, um es erneut zu versuchen.",
     "notificationDownloadsPausedService": "Downloads konnten nicht gestartet werden. Tippe unter Downloads auf „Erneut versuchen“.",
     "notificationDownloadsPausedNoServer": "Keine Verbindung. Die Downloads werden fortgesetzt, sobald sie wieder verfügbar ist.",
-    "notificationDownloadsPausedWifi": "Warten auf WLAN.",
+    "notificationDownloadsPausedWifi": "Warte auf WLAN.",
     "notificationAppUpdateBody": "Tsumiru {version} ist verfügbar",
     "notificationExtensionUpdateBody": "Für {count} Erweiterungen sind Aktualisierungen verfügbar",
     "notificationIncognitoBody": "Verlauf und Lesefortschritt werden zurzeit nicht aktualisiert",
@@ -2044,5 +2044,168 @@
     "customCoversTsumiruOnly": "Benutzerdefinierte Cover werden nur in Tsumiru-Apps angezeigt.",
     "@customCoversTsumiruOnly": {
         "description": "Note under the cover picker search field"
-    }
+    },
+    "thumbnailUrl": "Thumbnail-URL",
+    "@thumbnailUrl": {
+        "description": "Label of the pasted image link field in the cover picker"
+    },
+    "paste": "Einfügen",
+    "@paste": {
+        "description": "Tooltip for the paste button in the cover picker"
+    },
+    "recommendationsLoadFailed": "Konnte Empfehlungen nicht von {provider} laden. Versuche es später erneut.",
+    "@recommendationsLoadFailed": {
+        "placeholders": {
+            "provider": {
+                "type": "String"
+            }
+        }
+    },
+    "recommendationsServiceUnavailable": "{provider} ist temporär nicht verfügbar. Versuche es später erneut.",
+    "@recommendationsServiceUnavailable": {
+        "placeholders": {
+            "provider": {
+                "type": "String"
+            }
+        }
+    },
+    "suggestionsFetching": "Empfehlungen werden geladen…",
+    "suggestionsEmpty": "Keine Empfehlungen für diesen Titel gefunden.",
+    "suggestionsLoadFailed": "Konnte Empfehlungen nicht laden. Versuche es später erneut.",
+    "trackerOAuthLinkInvalid": "Dieser Anmelde-Link ist nicht mehr valide. Starte den Tracker-Anmeldevorgang erneut.",
+    "trackerOAuthSaveFailed": "Konnte Anmeldeanfrage nicht speichern. Versuche es erneut.",
+    "trackerOAuthBrowserFallback": "Konnte Browser nicht öffnen. Der Anmeldelink wurde in die Zwischenablage kopiert.",
+    "serverSignIn": "Anmeldung",
+    "basicAuthDeprecationTitle": "Basic Auth ist abgekündigt",
+    "basicAuthDeprecationBody": "Bitte wechsle auf eine andere Authentifizierungsmethode in den Anmelde-Einstellungen deines Servers.",
+    "serverAuthMode": "Authentifizierungsmethode",
+    "serverAuthNone": "Keine",
+    "serverAuthBasic": "Basic Authentification",
+    "serverAuthSimple": "Einfacher Login",
+    "serverAuthUi": "UI Login",
+    "serverAuthUsername": "Benutzername",
+    "serverAuthPassword": "Passwort",
+    "serverAdminUsername": "Administrator Benutzername",
+    "serverAdminPassword": "Administrator Passwort",
+    "serverJwtAudience": "JWT Audienz Claim",
+    "serverAccessExpiry": "Zugrifftoken Ablaufzeit",
+    "serverRefreshExpiry": "Angemeldet bleiben für",
+    "serverSignInConfirmTitle": "Anmeldeeinstellungen ändern?",
+    "serverSignInConfirmBody": "Dies ändert, wie sich jeder an diesem Server anmeldet.",
+    "serverSignInChange": "Ändern",
+    "serverSignInCredentialsRequired": "Gib zuerst einen Benutzernamen und ein Passwort ein.",
+    "serverSignInAdminOnly": "Nur der Administrator kann diese Zugangsdaten ändern.",
+    "serverSignInWebMode": "Diese Anmeldemethode kann im Browser nicht gewählt werden.",
+    "serverSignInWebCredentials": "Diese Zugangsdaten können nicht vom Browser aus geändert werden.",
+    "serverSignInSeparateSaves": "Speichere die Zugangsdaten bevor du zu UI Login wechselst.",
+    "serverSignInUsernameTaken": "Ein anderes Konto nutzt diesen Benutzernamen bereits.",
+    "serverSignInManageUsers": "Die Berechtigung \"Benutzer verwalten\" wird benötigt, um den Administrator-Benutzernamen zu ändern.",
+    "serverSignInUnknown": "Konnte die Anmeldeeinstellungen des Servers nicht verifizieren.",
+    "serverSignInMinutes": "{count, plural, =1{1 Minute} other{{count} Minuten}}",
+    "@serverSignInMinutes": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "serverSignInDays": "{count, plural, =1{1 Tag} other{{count} Tage}}",
+    "@serverSignInDays": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "databaseSchema": "Schema",
+    "hikariMaxPoolSize": "Maximale Anzahl Verbindungen",
+    "includeUserSettings": "Benutzereinstellungen",
+    "removeMangaFromCategories": "Manga-Kategorien vergessen",
+    "ignoreFilters": "Ignoriere Filter bei der Suche",
+    "fuzzySearch": "Unscharfe Suche",
+    "cleanupDatabase": "Datenbank aufräumen",
+    "cleanupDatabaseConfirm": "Entferne Einträge, welche nicht in der Bibliothek sind, von allen Kategorien?",
+    "downloadAhead": "Im Voraus downloaden",
+    "autoDownloadWhileReading": "Automatischer Download während des Lesens",
+    "downloadAheadLimit": "Anzahl an ungelesenen Kapiteln die heruntergeladen werden sollen",
+    "hideLibraryEntries": "Verstecke Einträge, welche bereits in deiner Bibliothek sind",
+    "retryErroredPages": "Fehlgeschlagene Seiten erneut laden",
+    "openChapterInWebView": "In WebView öffnen",
+    "shareChapterLink": "Kapitel-Link teilen",
+    "pushKoReaderProgress": "Fortschritt zu KOReader senden",
+    "pullKoReaderProgress": "Fortschritt von KOReader holen",
+    "koSyncLocationPrompt": "Synchronisiere zu Seite {page} von Gerät '{device}'?",
+    "@koSyncLocationPrompt": {
+        "placeholders": {
+            "page": {
+                "type": "int"
+            },
+            "device": {
+                "type": "String"
+            }
+        }
+    },
+    "duplicateChapters": "Doppelte Kapitel",
+    "openRandomEntry": "Zufälligen Eintrag öffnen",
+    "savedSearches": "Gespeicherte Suchen",
+    "saveSearch": "Suche speichern",
+    "saveCurrentSearch": "Aktuelle Suche speichern",
+    "deleteSearch": "Suche löschen",
+    "openHomepage": "In WebView öffnen",
+    "extensionInfo": "Erweiterungsinformationen",
+    "extensionLibrary": "Bibltiotek",
+    "extensionStore": "Depot",
+    "extensionVersion": "Version",
+    "extensionLanguage": "Sprache",
+    "confirmDatabaseTitle": "Datenbankeinstellungen ändern",
+    "confirmDatabaseMessage": "Wenn du diese Einstellungen änderst, könnte die Server-Verbindung getrennt werden, oder der Server seine Datenbank wechseln.",
+    "confirmNetworkTitle": "Server-Netzwerk ändern",
+    "confirmNetworkMessage": "Wenn du diese Einstellung änderst, könne der Server nicht mehr erreichbar werden.",
+    "confirmImageCacheMessage": "Dies leert die zwischengespeicherten Bilder am Server und auf diesem Gerät.",
+    "confirmWebViewCacheMessage": "Dies leert die WebView Cookies und Zwischenspeicher, und kann dich aus deinen Quellen ausloggen.",
+    "confirmUninstallMessage": "Dies entfernt die Erweiterung und dessen Quellen vom Server.",
+    "confirmKoPushMessage": "Dies ersetzt den KOReader Fortschritt des Kapitels mit deinem aktuellen Fortschritt.",
+    "confirmKoPullMessage": "Dies ersetzt den lokalen Fortschritt des Kapitels (auch am Server) mit dem KOReader Fortschritt.",
+    "confirmSeriesReadMessage": "Dies ersetzt den Lesefortschritt für jedes Kapitel in der gewählten Serie.",
+    "confirmClearQueueTitle": "Download-Schlange leeren",
+    "confirmClearQueueMessage": "Dies entfernt alle Kapitel von der Download-Schlange am Server.",
+    "confirmDeleteNoteTitle": "Notiz entfernen",
+    "confirmDeleteNoteMessage": "Wenn du eine leere Notiz speicherst, wird die existierende Notiz gelöscht.",
+    "confirmOverwriteSearchTitle": "Gespeicherte Suche überschreiben",
+    "confirmOverwriteSearchMessage": "Dies ersetzt die Abfrage und Filter, die unter diesem Namen gespeichert sind.",
+    "confirmOverwriteAction": "Überschreiben",
+    "confirmDeleteBothDownloadsMessage": "Dies löscht das heruntergeladene Kapitel vom Server und diesem Gerät, inklusive passenden Kopien für Scanlators.",
+    "confirmDeleteDeviceMessage": "Dies entfernt das heruntergeladene Kapitel von diesem Gerät.",
+    "confirmDeleteSeriesDeviceMessage": "Dies stoppt das Offline-Behalten der Serie und löscht alle Downloads auf diesem Gerät.",
+    "confirmServerOriginTitle": "Server-Adresse ändern",
+    "confirmServerOriginMessage": "Wenn du das Schema, den Hostnamen oder Port änderst, werden die auf dem Gerät gespeicherten Zugangsdaten entfernt. Du musst dich dann erneut anmelden.",
+    "confirmNoSignInTitle": "Keine Anmeldung verwenden",
+    "confirmNoSignInMessage": "Dies entfernt die auf dem Gerät gespeicherten Zugangsdaten. Du musst sie neu eingeben, falls der Server die Anmeldung verlangt.",
+    "clearSignInCredentials": "Zugangsdaten entfernen",
+    "confirmKeepRuleTitle": "Offline-Behalten Regel ändern",
+    "confirmKeepRuleMessage": "Diese Änderung löscht Kapitel, welche bereits auf diesem Gerät heruntergeladen wurden.",
+    "confirmDuplicateMigrationMessage": "Migriere von {source} zu {target}? Dies kopiert Serien-Daten zum Ziel und entfernt das Original aus deiner Bibliothek.",
+    "@confirmDuplicateMigrationMessage": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            },
+            "target": {
+                "type": "String"
+            }
+        }
+    },
+    "confirmSyncYomiMessage": "SyncYomi wird deine lokalen und entfernten Bibliotheksdaten vereinigen, dann das gemeinsame Backup hochladen und am Server wiederherstellen. Fortfahren?",
+    "accountAdminCheckFailed": "Konnte keine anderen Administratoren verifizieren. Versuche es erneut, bevor du Zugriff entfernst.",
+    "accountAdminCheckLoading": "Prüfe nach anderen Administratoren, bevor der Zugriff entfernt wird…",
+    "accountLastManagerRequired": "Mindestens ein Konto muss die Berechtigung \"Benutzer verwalten\" behalten.",
+    "confirmRemoveOwnAdminTitle": "Eigenen Administrator-Zugriff entfernen?",
+    "confirmRemoveOwnAdminMessage": "Du wirst den Zugriff auf alle Einstellungen verlieren, welche von der entfernen Rolle oder Berechtigung kontrolliert werden.",
+    "confirmTrackerLogoutMessage": "Dies meldet alle am Server von diesem Tracker ab.",
+    "confirmWebInterfaceChangeTitle": "Weboberfläche ändern?",
+    "confirmWebInterfaceChangeMessage": "Dies ändert die Weboberfläche des Servers für alle.",
+    "removeCustomCovers": "Entferne Benutzerdefinierte Cover",
+    "removeCustomCoversTitle": "Entferne Benutzerdefinierte Cover?",
+    "removeCustomCoversBody": "Jede Serie wird auf die Server-Cover bei allen Tsumiru-Apps zurückgesetzt.",
+    "customCoversRemoved": "Benutzerdefinierte Cover entfernt"
 }
