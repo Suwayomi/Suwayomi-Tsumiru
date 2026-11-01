@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/app_sizes.dart';
+import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/browse/browse_screen.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import 'package:tsumiru/src/features/history/data/graphql/__generated__/query.graphql.dart';
@@ -133,8 +134,10 @@ void main() {
     );
     final categories = [_category(1, 'One'), _category(2, 'Two')];
 
-    Future<void> pump(Widget page) async {
-      SharedPreferences.setMockInitialValues(const {});
+    Future<void> pump(Widget page, {bool persistentSearch = false}) async {
+      SharedPreferences.setMockInitialValues({
+        DBKeys.libraryPersistentSearchBar.name: persistentSearch,
+      });
       final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
         ProviderScope(
@@ -228,6 +231,25 @@ void main() {
       'Library grid',
       cover,
       top: kCategoryTabStripHeight + DesktopPageHeader.gap,
+    );
+
+    await pump(const LibraryScreen(categoryId: 1), persistentSearch: true);
+    expect(tester.takeException(), isNull);
+    expectOnLine(
+      'Library persistent search grid',
+      cover,
+      top: kCategoryTabStripHeight + DesktopPageHeader.gap,
+    );
+    final coverRight = find.byType(MangaCoverGridTile).evaluate().map(
+      (element) => tester.getRect(find.descendant(
+        of: find.byWidget(element.widget),
+        matching: find.byType(Material),
+      ).first).right,
+    ).reduce(max);
+    expect(
+      tester.view.physicalSize.width - coverRight,
+      kDesktopScrollbarGutter + kMangaCoverCardInset / 2,
+      reason: 'Library persistent search covers clear the scrollbar thumb',
     );
 
     await pump(const HistoryScreen());

@@ -78,6 +78,13 @@ bool desktopScrollReservesGutter(BuildContext context) {
       context.getInheritedWidgetOfExactType<DesktopFullBleedScroll>() != null) {
     return false;
   }
+  final nested = context.findAncestorStateOfType<NestedScrollViewState>();
+  final scrollable = context.widget;
+  if (nested != null &&
+      scrollable is Scrollable &&
+      scrollable.controller == nested.outerController) {
+    return false;
+  }
   var reservesGutter = true;
   context.visitAncestorElements((element) {
     final widget = element.widget;
@@ -86,7 +93,8 @@ bool desktopScrollReservesGutter(BuildContext context) {
         widget is Card ||
         widget is EditableText ||
         (widget is Scrollable &&
-            axisDirectionToAxis(widget.axisDirection) == Axis.vertical)) {
+            axisDirectionToAxis(widget.axisDirection) == Axis.vertical &&
+            (nested == null || widget.controller != nested.outerController))) {
       reservesGutter = false;
       return false;
     }
