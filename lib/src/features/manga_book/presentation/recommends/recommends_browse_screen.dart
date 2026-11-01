@@ -61,8 +61,8 @@ class RecommendsBrowseScreen extends ConsumerWidget {
             ? Emoticons(title: context.l10n.noResultFound)
             : GridView.builder(
                 padding: KEdgeInsets.a8.size,
-                gridDelegate: const MangaCoverGridDelegate(
-                  minCrossAxisExtent: 120,
+                gridDelegate: const MangaCoverGridDelegate.maxExtent(
+                  maxCrossAxisExtent: 120,
                   titleExtent: kRecommendsTitleExtent,
                   coverInset: 0,
                   mainAxisSpacing: 8,

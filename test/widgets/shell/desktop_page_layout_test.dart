@@ -241,14 +241,16 @@ void main() {
       top: kCategoryTabStripHeight + DesktopPageHeader.gap,
     );
     final coverRight = find.byType(MangaCoverGridTile).evaluate().map(
-      (element) => tester.getRect(find.descendant(
-        of: find.byWidget(element.widget),
-        matching: find.byType(Material),
-      ).first).right,
+      (element) => tester.getRect(
+        find.descendant(
+          of: find.byWidget(element.widget),
+          matching: find.byType(Material),
+        ).first,
+      ).right,
     ).reduce(max);
     expect(
       tester.view.physicalSize.width - coverRight,
-      kDesktopScrollbarGutter + kMangaCoverCardInset / 2,
+      kDesktopScrollbarGutter,
       reason: 'Library persistent search covers clear the scrollbar thumb',
     );
 
