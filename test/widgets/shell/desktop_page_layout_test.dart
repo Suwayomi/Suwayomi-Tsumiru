@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -253,6 +254,30 @@ void main() {
       kDesktopScrollbarGutter,
       reason: 'Library persistent search covers clear the scrollbar thumb',
     );
+
+    void expectSelectedCategory(String name) {
+      final label = tester.widget<RichText>(find.text(name, findRichText: true));
+      final span = label.text.getSpanForPosition(const TextPosition(offset: 0))!;
+      expect(span.style!.fontWeight, FontWeight.w600);
+    }
+
+    expectSelectedCategory('One');
+    final swipeStart =
+        tester.getCenter(find.byType(CategoryTabStrip)) + const Offset(250, 200);
+    await tester.dragFrom(
+      swipeStart,
+      const Offset(-600, 0),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pumpAndSettle();
+    expectSelectedCategory('One');
+    await tester.dragFrom(
+      swipeStart,
+      const Offset(-600, 0),
+      kind: PointerDeviceKind.touch,
+    );
+    await tester.pumpAndSettle();
+    expectSelectedCategory('Two');
 
     await pump(const HistoryScreen());
     expect(tester.takeException(), isNull);

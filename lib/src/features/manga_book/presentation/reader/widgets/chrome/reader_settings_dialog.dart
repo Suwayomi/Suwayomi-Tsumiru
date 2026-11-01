@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../widgets/touch_tab_pager.dart';
 import '../../controller/reader_preview_channel.dart';
 import '../../controller/reader_settings_model.dart';
 import 'tabs/custom_filter_tab.dart';
@@ -166,7 +167,7 @@ class ReaderSettingsDialog extends HookConsumerWidget {
               ],
             ),
             Expanded(
-              child: TabBarView(
+              child: TouchTabPager(
                 controller: tabController,
                 children: [
                   ReadingModeTab(

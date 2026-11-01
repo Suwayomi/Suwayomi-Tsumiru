@@ -24,6 +24,7 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
+import '../../../../widgets/touch_tab_pager.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
@@ -115,10 +116,10 @@ Widget _groupedBody({
                   behavior: ScrollConfiguration.of(
                     context,
                   ).copyWith(scrollbars: false),
-                  child: TabBarView(children: tabs),
+                  child: TouchTabPager(children: tabs),
                 );
               }
-              return TabBarView(
+              return TouchTabPager(
                 children: [for (final tab in tabs) _TabScrollHost(child: tab)],
               );
             },

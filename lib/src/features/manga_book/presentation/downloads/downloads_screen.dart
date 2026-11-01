@@ -17,6 +17,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/desktop/desktop_view_switch.dart';
 import '../../../../widgets/popup_widgets/confirm_action.dart';
+import '../../../../widgets/touch_tab_pager.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../offline/data/offline_download_providers.dart';
@@ -273,7 +274,7 @@ class DownloadsScreen extends HookConsumerWidget {
               children: [
                 if (desktop) viewSwitch else tabBar,
                 Expanded(
-                  child: TabBarView(
+                  child: TouchTabPager(
                     controller: tabController,
                     children: [
                       _ServerDownloads(
@@ -286,7 +287,7 @@ class DownloadsScreen extends HookConsumerWidget {
                 ),
               ],
             )
-          : TabBarView(
+          : TouchTabPager(
               controller: tabController,
               children: [
                 _ServerDownloads(

@@ -13,6 +13,7 @@ import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../../widgets/touch_tab_pager.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
@@ -67,7 +68,7 @@ class DownloadsSettingsScreen extends StatelessWidget {
                   children: [
                     tabBar,
                     const Expanded(
-                      child: TabBarView(
+                      child: TouchTabPager(
                         children: [
                           _ServerDownloadsTab(),
                           _OnDeviceDownloadsTab(),
@@ -76,7 +77,7 @@ class DownloadsSettingsScreen extends StatelessWidget {
                     ),
                   ],
                 )
-              : const TabBarView(
+              : const TouchTabPager(
                   children: [_ServerDownloadsTab(), _OnDeviceDownloadsTab()],
                 ),
         ),
