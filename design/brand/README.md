@@ -11,6 +11,11 @@ The approved SVGs are the source of truth:
 
 The PNGs in this folder are generated; edit the SVGs instead.
 
+Generated files include `tsumiru-mark-transparent.png`, `tsumiru-icon-fullbleed.png`,
+`tsumiru-org-avatar.png` and `tsumiru-social-card.png`.
+The social card layout and SVG text are defined in `tool/render_brand.py` and use
+the installed Adwaita Sans font, fitted to the original card's text bounds.
+
 Rendering needs `rsvg-convert` (librsvg). Regenerate raster sources, then platform icons and splash assets:
 
 ```sh
@@ -21,4 +26,3 @@ fvm dart run flutter_native_splash:create
 
 Shadow layers store luminance as greyscale remapped into [0.88, 1.00], with the
 brightest shadow pixel at 255, retaining alpha for the widget's theme tint. Foreground layers retain the SVG colours.
-`tsumiru-social-card.png` is maintained separately.
