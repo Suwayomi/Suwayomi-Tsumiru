@@ -6,6 +6,7 @@
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,6 +19,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../widgets/desktop/desktop_exact_extent_list.dart';
 import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
@@ -66,7 +68,11 @@ Widget _dateHeading(BuildContext context, String label, {required bool first}) {
         : null,
     minTileHeight: desktop ? 0 : null,
     minVerticalPadding: desktop ? 0 : null,
-    title: Text(label),
+    title: Text(
+      label,
+      maxLines: desktop ? 1 : null,
+      overflow: desktop ? TextOverflow.ellipsis : null,
+    ),
   );
 }
 
@@ -120,6 +126,22 @@ class _UpdatesPagedList extends StatefulWidget {
 }
 
 class _UpdatesPagedListState extends State<_UpdatesPagedList> {
+  final Map<(int, int?), bool> _desktopExpanded = {};
+
+  @override
+  void didUpdateWidget(covariant _UpdatesPagedList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.groupingMode != widget.groupingMode) {
+      _desktopExpanded.clear();
+    }
+  }
+
+  (int, int?) _groupKey(UpdatesGroupedEntry group) => (
+    group.mangaId,
+    int.tryParse(group.head.fetchedAt) == null ? null :
+        DateTime.fromMillisecondsSinceEpoch(int.parse(group.head.fetchedAt) * 1000)
+            .startOfDay.millisecondsSinceEpoch,
+  );
   // Cache by pages identity, not items (a fresh flattened list), to group once per page set rather than per row.
   List<List<ChapterWithMangaDto>>? _memoPages;
   List<ChapterWithMangaDto>? _memoItems;
@@ -237,18 +259,6 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     final grouping = _groupingFor(state.pages);
     final items = grouping.items;
 
-    if (context.usesDesktopShell &&
-        widget.displayMode == UpdatesDisplayMode.grid) {
-      final section = grouping.sections[flatIndex];
-      if (section == null) return const SizedBox.shrink();
-      return _buildDaySection(
-        context,
-        items,
-        section,
-        first: flatIndex == 0 && !widget.lastUpdatedAboveList,
-      );
-    }
-
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
 
     if (isGrouped) {
@@ -282,6 +292,7 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       orderedChapters: items,
       desktop: context.usesDesktopShell,
     );
+    if (context.usesDesktopShell) return tile;
     return _wrapWithDateHeader(
       context,
       items,
@@ -294,9 +305,15 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   Widget _buildGroupTile(
     BuildContext context,
     UpdatesGroupedEntry group,
-    List<ChapterWithMangaDto> items,
-  ) {
+    List<ChapterWithMangaDto> items, {
+    bool? desktopExpanded,
+    VoidCallback? onDesktopToggleExpand,
+    int? desktopTailIndex,
+  }) {
     return ChapterMangaGroupedTile(
+      desktopExpanded: desktopExpanded,
+      onDesktopToggleExpand: onDesktopToggleExpand,
+      desktopTailIndex: desktopTailIndex,
       head: group.head,
       tail: group.tail,
       updatePairFor: (chapter) =>
@@ -315,54 +332,23 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     );
   }
 
-  Widget _buildDaySection(
+  Widget _buildGridCard(
     BuildContext context,
+    UpdatesGroupedEntry group,
     List<ChapterWithMangaDto> items,
-    UpdatesDaySection section, {
-    required bool first,
-  }) {
-    final fetchedAt = int.tryParse(items[section.headerFlatIndex].fetchedAt);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (fetchedAt != null)
-          _dateHeading(
-            context,
-            fetchedAt.toDaysAgoFromSeconds(context),
-            first: first,
-          ),
-        DesktopBoxBleed.coverGrid(
-          child: GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: mangaCoverUniformGridDelegate(
-              widget.gridWidth,
-              widget.fixedColumns,
-              titleBelow: true,
-              extraTitleExtent: _kUpdatesCardSubtitleExtent,
-            ),
-            children: [
-              for (final group in section.groups)
-                UpdatesGridCard(
-                  group: group,
-                  refreshManga: () => _refreshManga(group.head.mangaId),
-                  refreshRowActions: (mangaIds) =>
-                      _refreshMangas(mangaIds, freshWins: true),
-                  isSelectedFor: (chapter) =>
-                      widget.selectedChapters.value.containsKey(chapter.id),
-                  canTapSelect: widget.selectedChapters.value.isNotEmpty,
-                  toggleSelect: (val) => _toggleSelect(val),
-                  selectedChapters: widget.selectedChapters,
-                  selectionAnchor: widget.selectionAnchor,
-                  orderedChapters: items,
-                ),
-            ],
-          ),
-        ),
-      ],
+  ) => UpdatesGridCard(
+      group: group,
+      refreshManga: () => _refreshManga(group.head.mangaId),
+      refreshRowActions: (mangaIds) =>
+          _refreshMangas(mangaIds, freshWins: true),
+      isSelectedFor: (chapter) =>
+          widget.selectedChapters.value.containsKey(chapter.id),
+      canTapSelect: widget.selectedChapters.value.isNotEmpty,
+      toggleSelect: (val) => _toggleSelect(val),
+      selectedChapters: widget.selectedChapters,
+      selectionAnchor: widget.selectionAnchor,
+      orderedChapters: items,
     );
-  }
 
   Widget _wrapWithDateHeader(
     BuildContext context,
@@ -424,11 +410,6 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
           WidgetBuilder? indicatorBuilder,
         ) {
           final grouping = _groupingFor(state.pages);
-          final indices = widget.displayMode == UpdatesDisplayMode.grid
-              ? grouping.sections.keys
-              : widget.groupingMode != UpdatesGroupingMode.disabled
-              ? grouping.headIndex.keys
-              : Iterable<int>.generate(itemCount);
           final footer = SliverLayoutBuilder(
             builder: (context, constraints) {
               if (constraints.remainingCacheExtent > 0 &&
@@ -446,15 +427,132 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
               );
             },
           );
-          // Exact box extents avoid estimating across groups, headers and hidden rows.
-          return SliverMainAxisGroup(
-            slivers: [
-              ...indices.map((index) => SliverToBoxAdapter(
-                key: ValueKey(grouping.items[index].id),
-                child: _buildItem(context, state, index),
-              )),
-              footer,
-            ],
+          Object? listingConfiguration;
+          Widget? listing;
+          return SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final configuration = (
+                constraints.crossAxisExtent,
+                Theme.of(context),
+                MediaQuery.textScalerOf(context),
+                Directionality.of(context),
+                DefaultTextStyle.of(context).style,
+              );
+              if (listingConfiguration == configuration) return listing!;
+              listingConfiguration = configuration;
+              final extents = <double>[];
+              final builders = <WidgetBuilder>[];
+              void add(double extent, WidgetBuilder builder) {
+                extents.add(extent);
+                builders.add(builder);
+              }
+              void addHeading(int flatIndex) {
+                final first = flatIndex == 0 && !widget.lastUpdatedAboveList;
+                final label = int.tryParse(grouping.items[flatIndex].fetchedAt)
+                    .toDaysAgoFromSeconds(context);
+                final padding = const EdgeInsetsDirectional.fromSTEB(16, 16, 24, 8)
+                    .onDesktopPageLine(context, top: first)
+                    .resolve(Directionality.of(context));
+                final style = ListTileTheme.of(context).titleTextStyle ??
+                    context.theme.listTileTheme.titleTextStyle ?? context.textTheme.bodyLarge;
+                add(padding.vertical + desktopTextHeight(
+                  context, label, style,
+                  width: constraints.crossAxisExtent - padding.horizontal,
+                ), (context) => _dateHeading(context, label, first: first));
+              }
+              if (widget.displayMode == UpdatesDisplayMode.grid) {
+                final gridDelegate = mangaCoverUniformGridDelegate(
+                  widget.gridWidth, widget.fixedColumns,
+                  titleBelow: true,
+                  extraTitleExtent: _kUpdatesCardSubtitleExtent,
+                );
+                final bleed = isOnDesktopPage(context) ? kMangaCoverCardInset / 2 : 0.0;
+                final layout = gridDelegate.getLayout(constraints.copyWith(
+                  crossAxisExtent: constraints.crossAxisExtent + bleed * 2,
+                )) as SliverGridRegularTileLayout;
+                for (final section in grouping.sections.values) {
+                  if (int.tryParse(grouping.items[section.headerFlatIndex].fetchedAt) != null) {
+                    addHeading(section.headerFlatIndex);
+                  }
+                  for (var start = 0; start < section.groups.length;
+                      start += layout.crossAxisCount) {
+                    final rowStart = start;
+                    final count = (section.groups.length - start)
+                        .clamp(0, layout.crossAxisCount);
+                    final first = start == 0;
+                    final gap = start + count < section.groups.length
+                        ? layout.mainAxisStride - layout.childMainAxisExtent : 0.0;
+                    add(layout.childMainAxisExtent + gap - (first ? bleed : 0),
+                      (context) => DesktopBoxBleed.coverGrid(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: first ? 0 : bleed, bottom: gap),
+                          child: GridView.builder(
+                            padding: EdgeInsets.zero,
+                            primary: false,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: gridDelegate,
+                            itemCount: count,
+                            itemBuilder: (context, index) => _buildGridCard(
+                              context, section.groups[rowStart + index], grouping.items,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                }
+              } else {
+                final grouped = widget.groupingMode != UpdatesGroupingMode.disabled;
+                final indices = grouped ? grouping.headIndex.keys
+                    : Iterable<int>.generate(itemCount);
+                for (final flatIndex in indices) {
+                  if (grouping.headerIndices.contains(flatIndex)) addHeading(flatIndex);
+                  if (!grouped) {
+                    add(desktopUpdatesRowExtent(
+                      context, grouping.items[flatIndex], constraints.crossAxisExtent,
+                      selecting: widget.selectedChapters.value.isNotEmpty,
+                    ), (context) => _buildItem(context, state, flatIndex));
+                    continue;
+                  }
+                  final group = grouping.groups[grouping.headIndex[flatIndex]!];
+                  final key = _groupKey(group);
+                  final expanded = _desktopExpanded[key] ??
+                      (widget.groupingMode == UpdatesGroupingMode.expanded);
+                  add(desktopUpdatesRowExtent(
+                    context, group.head, constraints.crossAxisExtent,
+                    selecting: widget.selectedChapters.value.isNotEmpty,
+                    tailCount: group.tail.length,
+                  ), (context) => _buildGroupTile(
+                    context, group, grouping.items,
+                    desktopExpanded: expanded,
+                    onDesktopToggleExpand: group.tail.isEmpty ? null : () => setState(() {
+                      _desktopExpanded[key] = !expanded;
+                    }),
+                  ));
+                  if (expanded) {
+                    for (var t = 0; t < group.tail.length; t++) {
+                      final tailIndex = t;
+                      add(desktopUpdatesRowExtent(
+                        context, group.tail[t], constraints.crossAxisExtent,
+                        selecting: widget.selectedChapters.value.isNotEmpty, tail: true,
+                      ), (context) => _buildGroupTile(
+                        context, group, grouping.items, desktopTailIndex: tailIndex,
+                      ));
+                    }
+                  }
+                }
+              }
+              return listing = SliverMainAxisGroup(
+                slivers: [
+                  DesktopExactExtentList(
+                    extents: extents,
+                    itemBuilder: (context, index) => builders[index](context),
+                  ),
+                  footer,
+                ],
+              );
+            },
           );
         }
         return PagedLayoutBuilder<int, ChapterWithMangaDto>(

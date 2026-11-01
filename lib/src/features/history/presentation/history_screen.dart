@@ -13,6 +13,7 @@ import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_exact_extent_list.dart';
 import '../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/emoticons.dart';
@@ -30,6 +31,7 @@ import 'history_controller.dart';
 import 'widgets/history_filter.dart';
 import 'widgets/history_filter_panel.dart';
 import 'widgets/history_group_widget.dart';
+import 'widgets/history_item_tile.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
@@ -191,6 +193,8 @@ class HistoryScreen extends HookConsumerWidget {
                 }
 
                 final notifier = ref.read(readingHistoryProvider.notifier);
+                Object? listingConfiguration;
+                Widget? listing;
                 final list = RefreshIndicator(
                   onRefresh: notifier.refresh,
                   child: desktop
@@ -199,31 +203,80 @@ class HistoryScreen extends HookConsumerWidget {
                             SliverPadding(
                               padding: const EdgeInsets.all(8)
                                   .onDesktopPageLine(context, top: true),
-                              sliver: SliverMainAxisGroup(
-                                slivers: [
-                                  for (var index = 0;
-                                      index < historyGroups.length;
-                                      index++)
-                                    SliverToBoxAdapter(
-                                      child: HistoryGroupWidget(
-                                        group: historyGroups[index],
-                                        first: index == 0,
+                              sliver: SliverLayoutBuilder(
+                                builder: (context, constraints) {
+                                  final configuration = (
+                                    constraints.crossAxisExtent,
+                                    Theme.of(context),
+                                    MediaQuery.textScalerOf(context),
+                                    Directionality.of(context),
+                                    DefaultTextStyle.of(context).style,
+                                  );
+                                  if (listingConfiguration == configuration) {
+                                    return listing!;
+                                  }
+                                  listingConfiguration = configuration;
+                                  final rows = <(int, int)>[];
+                                  final extents = <double>[];
+                                  for (var g = 0; g < historyGroups.length; g++) {
+                                    final group = historyGroups[g];
+                                    if (group.isEmpty) continue;
+                                    final padding = const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 12,
+                                    ).onDesktopPageLine(context, top: g == 0);
+                                    final titleHeight = desktopTextHeight(
+                                      context, group.getLocalizedTitle(context),
+                                      context.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                    ),
-                                ],
+                                    );
+                                    final badgeHeight = 4 + desktopTextHeight(
+                                      context, '${group.itemCount}',
+                                      context.textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    );
+                                    rows.add((g, -1));
+                                    extents.add(padding.vertical +
+                                        (titleHeight > badgeHeight ? titleHeight : badgeHeight));
+                                    for (var i = 0; i < group.items.length; i++) {
+                                      rows.add((g, i));
+                                      extents.add(desktopHistoryItemExtent(
+                                        context, group.items[i], constraints.crossAxisExtent,
+                                      ));
+                                    }
+                                    rows.add((g, -2));
+                                    extents.add(16);
+                                  }
+                                  return listing = DesktopExactExtentList(
+                                    extents: extents,
+                                    itemBuilder: (context, index) {
+                                      final (g, i) = rows[index];
+                                      if (i == -2) {
+                                        return const SizedBox(height: 16);
+                                      }
+                                      if (i == -1) {
+                                        return HistoryGroupHeader(
+                                          group: historyGroups[g], first: g == 0,
+                                        );
+                                      }
+                                      return HistoryItemTile(item: historyGroups[g].items[i]);
+                                    },
+                                  );
+                                },
                               ),
                             ),
                           ],
                         )
                       : ListView.builder(
-                    padding: const EdgeInsets.all(8)
-                        .onDesktopPageLine(context, top: true),
-                    itemCount: historyGroups.length,
-                    itemBuilder: (context, index) => HistoryGroupWidget(
-                      group: historyGroups[index],
-                      first: index == 0,
-                    ),
-                  ),
+                          padding: const EdgeInsets.all(8)
+                              .onDesktopPageLine(context, top: true),
+                          itemCount: historyGroups.length,
+                          itemBuilder: (context, index) => HistoryGroupWidget(
+                            group: historyGroups[index],
+                            first: index == 0,
+                          ),
+                        ),
                 );
                 return desktop ? DesktopCentredColumn(child: list) : list;
               },
