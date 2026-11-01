@@ -36,6 +36,10 @@ class GeneralScreen extends ConsumerWidget {
       });
     }
 
+    const portraitTile = SettingsHighlightTarget(
+      id: 'lockToPortrait',
+      child: ForcePortraitTile(),
+    );
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.general);
     final scaffold = Scaffold(
@@ -52,10 +56,10 @@ class GeneralScreen extends ConsumerWidget {
                 const DesktopPageLeadingGap(16),
                 SettingsGroupCard(
                   children: [
-                    SettingsHighlightTarget(
-                      id: 'lockToPortrait',
-                      child: ForcePortraitTile(),
-                    ),
+                    if (canForcePortrait(
+                      MediaQuery.sizeOf(context).shortestSide,
+                    ))
+                      portraitTile,
                     const SettingsHighlightTarget(
                       id: 'persistentSearchBar',
                       child: PersistentSearchBarTile(),
