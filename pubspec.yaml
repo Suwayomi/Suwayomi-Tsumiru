@@ -135,7 +135,8 @@ flutter_native_splash:
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  adaptive_icon_background: "#02061D"
+  adaptive_icon_background: "assets/icons/launcher/tsumiru_icon_bg.png"
+  adaptive_icon_foreground_inset: 0
   adaptive_icon_foreground: "assets/icons/launcher/tsumiru_icon_fg.png"
   ios: true
   remove_alpha_ios: true

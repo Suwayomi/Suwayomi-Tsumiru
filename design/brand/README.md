@@ -1,13 +1,24 @@
 # Tsumiru brand assets
 
-Canonical source-of-truth for the Tsumiru mark. Theme: **Indigo Night**
-(indigo `#7c7bff` → cyan `#33d6ff`, navy `#02061d` / `#0b0d1a`, cream stroke).
+The approved SVGs are the source of truth:
 
-| File | Background | Use |
-|---|---|---|
-| `tsumiru-mark-transparent.png` | **transparent (alpha)** | Website hero & navbar logo, README, favicon, marketing — anywhere the mark overlays a surface. Looks best on dark surfaces (the outer glow blooms into a dark surround). |
-| `tsumiru-icon-fullbleed.png` | navy `#02061d`, full-bleed | Android/iOS/desktop **launcher icon** source, where the OS supplies the masked tile. Wired in `pubspec.yaml` via `flutter_launcher_icons`. Do NOT bake a rounded square — the OS masks it. |
+| File | Use |
+|---|---|
+| `tsumiru-mark.svg` | Transparent cream mark for dark surfaces, splash, logo layers and the Android notification icon. |
+| `tsumiru-mark-on-light.svg` | Transparent ink mark for light surfaces and logo layers. |
+| `tsumiru-icon.svg` | Round icon for desktop, Flatpak and the organisation avatar. |
+| `tsumiru-icon-fullbleed.svg` | Full-bleed icon for iOS, web and Android legacy; gradient background and mark for Android adaptive icons. |
 
-Generated with Codex `$imagegen` (gpt-image-2). The transparent version was derived
-by extracting the navy backdrop from the full-bleed mark, which softens the outer glow
-slightly — fine on the dark site. For a crisp-on-light variant, regenerate transparent-native.
+The PNGs in this folder are generated; edit the SVGs instead.
+
+Rendering needs `rsvg-convert` (librsvg). Regenerate raster sources, then platform icons and splash assets:
+
+```sh
+uv run tool/render_brand.py
+fvm dart run flutter_launcher_icons
+fvm dart run flutter_native_splash:create
+```
+
+Shadow layers store luminance as greyscale remapped into [0.88, 1.00], with the
+brightest shadow pixel at 255, retaining alpha for the widget's theme tint. Foreground layers retain the SVG colours.
+`tsumiru-social-card.png` is maintained separately.
