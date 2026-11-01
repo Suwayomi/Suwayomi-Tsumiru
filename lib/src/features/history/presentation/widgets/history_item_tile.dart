@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +15,6 @@ import 'package:intl/intl.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
-import '../../../../widgets/desktop/desktop_exact_extent_list.dart';
 import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/web_route_link.dart';
@@ -102,38 +100,6 @@ Future<void> navigateToNextHistoryChapterAfterLoading(
       }
     }),
   ]);
-}
-
-double desktopHistoryItemExtent(
-  BuildContext context,
-  HistoryItemDto item,
-  double width,
-) {
-  final padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8)
-      .onDesktopPageLine(context);
-  final textWidth = width - padding.horizontal - 48 - 12 - 8 - 56 - 64;
-  final title = desktopTextHeight(
-    context,
-    item.manga.title,
-    context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-    width: textWidth,
-    maxLines: 2,
-  );
-  final chapter = desktopTextHeight(
-    context, item.name, context.textTheme.bodyMedium, width: textWidth,
-  );
-  final progress = isHistoryChapterCompleted(item)
-      ? desktopTextHeight(
-          context, context.l10n.historyChapterCompleted,
-          context.textTheme.labelSmall, width: textWidth,
-        )
-      : item.user.lastPageRead > 0 && item.pageCount > 0
-      ? math.max(3.0, desktopTextHeight(
-          context, context.l10n.pageOfTotal(item.user.lastPageRead, item.pageCount),
-          context.textTheme.labelSmall, width: textWidth - 128,
-        ))
-      : 0.0;
-  return padding.vertical + math.max(68, title + 4 + chapter + 4 + progress);
 }
 
 class HistoryItemTile extends StatelessWidget {
@@ -376,8 +342,6 @@ class _ProgressLine extends StatelessWidget {
     if (completed) {
       return Text(
         context.l10n.historyChapterCompleted,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         style: context.theme.textTheme.labelSmall?.copyWith(
           color: scheme.secondary,
         ),

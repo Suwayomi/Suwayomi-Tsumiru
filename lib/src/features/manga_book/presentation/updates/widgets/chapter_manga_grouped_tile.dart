@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:math' as math;
-
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -15,7 +13,6 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
-import '../../../../../widgets/desktop/desktop_exact_extent_list.dart';
 import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/server_image.dart';
@@ -26,48 +23,6 @@ import '../../../widgets/download_status_icon.dart';
 import '../../manga_details/widgets/chapter_context_menu.dart';
 import '../controller/updates_grouping_controller.dart';
 import 'updates_row_actions.dart';
-
-double desktopUpdatesRowExtent(
-  BuildContext context,
-  ChapterWithMangaDto chapter,
-  double width, {
-  required bool selecting,
-  int tailCount = 0,
-  bool tail = false,
-}) {
-  final padding = (tail
-      ? const EdgeInsets.fromLTRB(16, 6, 16, 6)
-      : const EdgeInsets.symmetric(horizontal: 16, vertical: 8))
-      .onDesktopPageLine(context);
-  final hasCover = chapter.manga.displayCoverUrl.isNotEmpty;
-  final bookmark = chapter.user.isBookmarked ? 24.0 : 0.0;
-  final textWidth = width - padding.horizontal -
-      (selecting ? 48 : 0) - (tail ? 68 : (hasCover ? 56 : 0) + 12) -
-      8 - (tail ? 0 : 84) - (selecting ? 0 : 64) - 48;
-  if (tail) {
-    return padding.vertical + math.max(48, desktopTextHeight(
-      context, chapter.name, const TextStyle(fontSize: 13),
-      width: textWidth - bookmark,
-    ));
-  }
-  final title = desktopTextHeight(
-    context, chapter.manga.title, null,
-    width: textWidth - bookmark, maxLines: 2,
-  );
-  final titleHeight = bookmark > 0 ? math.max(20.0, title) : title;
-  final chapterHeight = desktopTextHeight(
-    context, chapter.name, null, width: textWidth,
-  );
-  final labelHeight = tailCount > 0
-      ? 2 + math.max(14, desktopTextHeight(
-          context, context.l10n.updatesGroupingShowMore(tailCount),
-          context.textTheme.labelSmall, width: textWidth - 16,
-        ))
-      : 0.0;
-  return padding.vertical + math.max(
-    hasCover ? 80 : 48, titleHeight + 4 + chapterHeight + labelHeight,
-  );
-}
 
 /// An empty [tail] behaves like ChapterMangaListTile.
 class ChapterMangaGroupedTile extends HookConsumerWidget {
@@ -85,9 +40,6 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
     required this.orderedChapters,
     required this.canTapSelect,
     required this.desktop,
-    this.desktopExpanded,
-    this.onDesktopToggleExpand,
-    this.desktopTailIndex,
   });
 
   final ChapterWithMangaDto head;
@@ -108,47 +60,9 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
   final List<ChapterDto> orderedChapters;
   final bool canTapSelect;
   final bool desktop;
-  final bool? desktopExpanded;
-  final VoidCallback? onDesktopToggleExpand;
-  final int? desktopTailIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (desktopTailIndex != null) {
-      final chapter = tail[desktopTailIndex!];
-      return _TailTile(
-        chapter: chapter,
-        updatePair: updatePairFor(chapter),
-        refreshManga: refreshManga,
-        refreshRowActions: refreshRowActions,
-        isSelected: isSelectedFor(chapter),
-        canTapSelect: canTapSelect,
-        toggleSelect: toggleSelect,
-        selectedChapters: selectedChapters,
-        selectionAnchor: selectionAnchor,
-        orderedChapters: orderedChapters,
-        desktop: desktop,
-      );
-    }
-    if (desktopExpanded != null) {
-      return _HeadTile(
-        chapter: head,
-        isGroup: tail.isNotEmpty,
-        tailCount: tail.length,
-        isExpanded: desktopExpanded!,
-        onToggleExpand: onDesktopToggleExpand,
-        updatePair: updatePairFor(head),
-        refreshManga: refreshManga,
-        refreshRowActions: refreshRowActions,
-        isSelected: isSelectedFor(head),
-        canTapSelect: canTapSelect,
-        toggleSelect: toggleSelect,
-        selectedChapters: selectedChapters,
-        selectionAnchor: selectionAnchor,
-        orderedChapters: orderedChapters,
-        desktop: desktop,
-      );
-    }
     final groupingMode =
         ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.collapsed;
 

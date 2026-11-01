@@ -19,7 +19,6 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
-import '../../../../widgets/desktop/desktop_exact_extent_list.dart';
 import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
@@ -68,11 +67,7 @@ Widget _dateHeading(BuildContext context, String label, {required bool first}) {
         : null,
     minTileHeight: desktop ? 0 : null,
     minVerticalPadding: desktop ? 0 : null,
-    title: Text(
-      label,
-      maxLines: desktop ? 1 : null,
-      overflow: desktop ? TextOverflow.ellipsis : null,
-    ),
+    title: Text(label),
   );
 }
 
@@ -126,22 +121,6 @@ class _UpdatesPagedList extends StatefulWidget {
 }
 
 class _UpdatesPagedListState extends State<_UpdatesPagedList> {
-  final Map<(int, int?), bool> _desktopExpanded = {};
-
-  @override
-  void didUpdateWidget(covariant _UpdatesPagedList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.groupingMode != widget.groupingMode) {
-      _desktopExpanded.clear();
-    }
-  }
-
-  (int, int?) _groupKey(UpdatesGroupedEntry group) => (
-    group.mangaId,
-    int.tryParse(group.head.fetchedAt) == null ? null :
-        DateTime.fromMillisecondsSinceEpoch(int.parse(group.head.fetchedAt) * 1000)
-            .startOfDay.millisecondsSinceEpoch,
-  );
   // Cache by pages identity, not items (a fresh flattened list), to group once per page set rather than per row.
   List<List<ChapterWithMangaDto>>? _memoPages;
   List<ChapterWithMangaDto>? _memoItems;
@@ -305,15 +284,9 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   Widget _buildGroupTile(
     BuildContext context,
     UpdatesGroupedEntry group,
-    List<ChapterWithMangaDto> items, {
-    bool? desktopExpanded,
-    VoidCallback? onDesktopToggleExpand,
-    int? desktopTailIndex,
-  }) {
+    List<ChapterWithMangaDto> items,
+  ) {
     return ChapterMangaGroupedTile(
-      desktopExpanded: desktopExpanded,
-      onDesktopToggleExpand: onDesktopToggleExpand,
-      desktopTailIndex: desktopTailIndex,
       head: group.head,
       tail: group.tail,
       updatePairFor: (chapter) =>
@@ -427,65 +400,61 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
               );
             },
           );
-          Object? listingConfiguration;
-          Widget? listing;
           return SliverLayoutBuilder(
             builder: (context, constraints) {
-              final configuration = (
-                constraints.crossAxisExtent,
-                Theme.of(context),
-                MediaQuery.textScalerOf(context),
-                Directionality.of(context),
-                DefaultTextStyle.of(context).style,
-              );
-              if (listingConfiguration == configuration) return listing!;
-              listingConfiguration = configuration;
-              final extents = <double>[];
               final builders = <WidgetBuilder>[];
-              void add(double extent, WidgetBuilder builder) {
-                extents.add(extent);
-                builders.add(builder);
-              }
               void addHeading(int flatIndex) {
                 final first = flatIndex == 0 && !widget.lastUpdatedAboveList;
                 final label = int.tryParse(grouping.items[flatIndex].fetchedAt)
                     .toDaysAgoFromSeconds(context);
-                final padding = const EdgeInsetsDirectional.fromSTEB(16, 16, 24, 8)
-                    .onDesktopPageLine(context, top: first)
-                    .resolve(Directionality.of(context));
-                final style = ListTileTheme.of(context).titleTextStyle ??
-                    context.theme.listTileTheme.titleTextStyle ?? context.textTheme.bodyLarge;
-                add(padding.vertical + desktopTextHeight(
-                  context, label, style,
-                  width: constraints.crossAxisExtent - padding.horizontal,
-                ), (context) => _dateHeading(context, label, first: first));
+                builders.add(
+                  (context) => _dateHeading(context, label, first: first),
+                );
               }
+
               if (widget.displayMode == UpdatesDisplayMode.grid) {
                 final gridDelegate = mangaCoverUniformGridDelegate(
-                  widget.gridWidth, widget.fixedColumns,
+                  widget.gridWidth,
+                  widget.fixedColumns,
                   titleBelow: true,
                   extraTitleExtent: _kUpdatesCardSubtitleExtent,
                 );
-                final bleed = isOnDesktopPage(context) ? kMangaCoverCardInset / 2 : 0.0;
-                final layout = gridDelegate.getLayout(constraints.copyWith(
-                  crossAxisExtent: constraints.crossAxisExtent + bleed * 2,
-                )) as SliverGridRegularTileLayout;
+                final bleed = isOnDesktopPage(context)
+                    ? kMangaCoverCardInset / 2
+                    : 0.0;
+                final layout = gridDelegate.getLayout(
+                  constraints.copyWith(
+                    crossAxisExtent: constraints.crossAxisExtent + bleed * 2,
+                  ),
+                ) as SliverGridRegularTileLayout;
                 for (final section in grouping.sections.values) {
-                  if (int.tryParse(grouping.items[section.headerFlatIndex].fetchedAt) != null) {
+                  if (int.tryParse(
+                        grouping.items[section.headerFlatIndex].fetchedAt,
+                      ) !=
+                      null) {
                     addHeading(section.headerFlatIndex);
                   }
-                  for (var start = 0; start < section.groups.length;
-                      start += layout.crossAxisCount) {
+                  for (
+                    var start = 0;
+                    start < section.groups.length;
+                    start += layout.crossAxisCount
+                  ) {
                     final rowStart = start;
-                    final count = (section.groups.length - start)
-                        .clamp(0, layout.crossAxisCount);
+                    final count = (section.groups.length - start).clamp(
+                      0,
+                      layout.crossAxisCount,
+                    );
                     final first = start == 0;
                     final gap = start + count < section.groups.length
-                        ? layout.mainAxisStride - layout.childMainAxisExtent : 0.0;
-                    add(layout.childMainAxisExtent + gap - (first ? bleed : 0),
+                        ? layout.mainAxisStride - layout.childMainAxisExtent
+                        : 0.0;
+                    builders.add(
                       (context) => DesktopBoxBleed.coverGrid(
                         child: Padding(
-                          padding: EdgeInsets.only(top: first ? 0 : bleed, bottom: gap),
+                          padding: EdgeInsets.only(
+                            top: first ? 0 : bleed,
+                            bottom: gap,
+                          ),
                           child: GridView.builder(
                             padding: EdgeInsets.zero,
                             primary: false,
@@ -494,7 +463,9 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
                             gridDelegate: gridDelegate,
                             itemCount: count,
                             itemBuilder: (context, index) => _buildGridCard(
-                              context, section.groups[rowStart + index], grouping.items,
+                              context,
+                              section.groups[rowStart + index],
+                              grouping.items,
                             ),
                           ),
                         ),
@@ -503,50 +474,32 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
                   }
                 }
               } else {
-                final grouped = widget.groupingMode != UpdatesGroupingMode.disabled;
-                final indices = grouped ? grouping.headIndex.keys
+                final grouped =
+                    widget.groupingMode != UpdatesGroupingMode.disabled;
+                final indices = grouped
+                    ? grouping.headIndex.keys
                     : Iterable<int>.generate(itemCount);
                 for (final flatIndex in indices) {
-                  if (grouping.headerIndices.contains(flatIndex)) addHeading(flatIndex);
-                  if (!grouped) {
-                    add(desktopUpdatesRowExtent(
-                      context, grouping.items[flatIndex], constraints.crossAxisExtent,
-                      selecting: widget.selectedChapters.value.isNotEmpty,
-                    ), (context) => _buildItem(context, state, flatIndex));
-                    continue;
+                  if (grouping.headerIndices.contains(flatIndex)) {
+                    addHeading(flatIndex);
                   }
-                  final group = grouping.groups[grouping.headIndex[flatIndex]!];
-                  final key = _groupKey(group);
-                  final expanded = _desktopExpanded[key] ??
-                      (widget.groupingMode == UpdatesGroupingMode.expanded);
-                  add(desktopUpdatesRowExtent(
-                    context, group.head, constraints.crossAxisExtent,
-                    selecting: widget.selectedChapters.value.isNotEmpty,
-                    tailCount: group.tail.length,
-                  ), (context) => _buildGroupTile(
-                    context, group, grouping.items,
-                    desktopExpanded: expanded,
-                    onDesktopToggleExpand: group.tail.isEmpty ? null : () => setState(() {
-                      _desktopExpanded[key] = !expanded;
-                    }),
-                  ));
-                  if (expanded) {
-                    for (var t = 0; t < group.tail.length; t++) {
-                      final tailIndex = t;
-                      add(desktopUpdatesRowExtent(
-                        context, group.tail[t], constraints.crossAxisExtent,
-                        selecting: widget.selectedChapters.value.isNotEmpty, tail: true,
-                      ), (context) => _buildGroupTile(
-                        context, group, grouping.items, desktopTailIndex: tailIndex,
-                      ));
-                    }
+                  if (grouped) {
+                    final group = grouping.groups[grouping.headIndex[flatIndex]!];
+                    builders.add(
+                      (context) =>
+                          _buildGroupTile(context, group, grouping.items),
+                    );
+                  } else {
+                    builders.add(
+                      (context) => _buildItem(context, state, flatIndex),
+                    );
                   }
                 }
               }
-              return listing = SliverMainAxisGroup(
+              return SliverMainAxisGroup(
                 slivers: [
-                  DesktopExactExtentList(
-                    extents: extents,
+                  SliverList.builder(
+                    itemCount: builders.length,
                     itemBuilder: (context, index) => builders[index](context),
                   ),
                   footer,
