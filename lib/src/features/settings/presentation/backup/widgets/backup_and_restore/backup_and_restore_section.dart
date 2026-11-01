@@ -9,6 +9,7 @@ import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/file_picker_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../../../search/settings_search_registry.dart';
 import '../../../../widgets/settings_group_card/settings_group_card.dart';
@@ -157,7 +158,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
+        const DesktopPageLeadingGap(16),
         SettingsGroupCard(
           children: [
             SettingsHighlightTarget(

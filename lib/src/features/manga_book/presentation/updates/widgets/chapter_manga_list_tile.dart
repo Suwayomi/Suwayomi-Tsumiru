@@ -14,6 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -114,7 +115,7 @@ class ChapterMangaListTile extends HookConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
-                ),
+                ).onDesktopPageLine(context),
                 child: Row(
                   children: [
                     if (desktop && canTapSelect)

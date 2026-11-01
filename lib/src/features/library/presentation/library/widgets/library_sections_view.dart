@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/shell/update_banner_state.dart';
 import '../../../../manga_book/data/updates/updates_repository.dart';
 import '../../../../offline/data/server_reachability.dart';
@@ -203,7 +204,8 @@ class _SectionHeaderDelegate extends SliverPersistentHeaderDelegate {
       height: _height,
       color: background,
       alignment: AlignmentDirectional.centerStart,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8)
+          .onDesktopPageLine(context),
       child: Text(
         title,
         overflow: TextOverflow.ellipsis,

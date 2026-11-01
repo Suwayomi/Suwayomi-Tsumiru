@@ -31,6 +31,7 @@ import '../presentation/backup/widgets/backup_flags/backup_flags_dialog.dart';
 import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../presentation/downloads/data/downloads_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
+import '../presentation/general/widgets/force_portrait_tile.dart';
 import '../presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
@@ -69,7 +70,7 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
     breadcrumb: (l) => l.general,
     open: (c) =>
         const GeneralSettingsRoute(highlight: 'lockToPortrait').push(c),
-    visible: (_, _) => true,
+    visible: (_, c) => canForcePortrait(MediaQuery.sizeOf(c).shortestSide),
   ),
   SettingsSearchEntry(
     id: 'persistentSearchBar',

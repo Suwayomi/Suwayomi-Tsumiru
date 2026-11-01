@@ -19,6 +19,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../../offline/presentation/offline_save_button.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -384,7 +385,7 @@ class ChapterListTile extends HookConsumerWidget {
                             onChanged: (_) => toggleSelect(chapter),
                           )
                         else
-                          const SizedBox(width: 13),
+                          SizedBox(width: desktopPageLineStart(context, 13)),
                         Expanded(
                           child: Text(
                             title,

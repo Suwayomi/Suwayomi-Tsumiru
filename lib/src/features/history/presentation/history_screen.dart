@@ -13,6 +13,7 @@ import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
@@ -29,14 +30,7 @@ import 'history_controller.dart';
 import 'widgets/history_filter.dart';
 import 'widgets/history_filter_panel.dart';
 import 'widgets/history_group_widget.dart';
-
-Widget _historyColumn(Widget child) => Align(
-  alignment: Alignment.topCenter,
-  child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 1040),
-    child: SizedBox(width: double.infinity, child: child),
-  ),
-);
+import 'widgets/history_item_tile.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
@@ -198,18 +192,56 @@ class HistoryScreen extends HookConsumerWidget {
                 }
 
                 final notifier = ref.read(readingHistoryProvider.notifier);
-                return RefreshIndicator(
+                final rows = <(int, int)>[];
+                if (desktop) {
+                  for (var g = 0; g < historyGroups.length; g++) {
+                    final group = historyGroups[g];
+                    if (group.isEmpty) continue;
+                    rows.add((g, -1));
+                    for (var i = 0; i < group.items.length; i++) {
+                      rows.add((g, i));
+                    }
+                    rows.add((g, -2));
+                  }
+                }
+                final list = RefreshIndicator(
                   onRefresh: notifier.refresh,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: historyGroups.length,
-                    itemBuilder: (context, index) {
-                      final group = historyGroups[index];
-                      final tile = HistoryGroupWidget(group: group);
-                      return desktop ? _historyColumn(tile) : tile;
-                    },
-                  ),
+                  child: desktop
+                      ? CustomScrollView(
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.all(8)
+                                  .onDesktopPageLine(context, top: true),
+                              sliver: SliverList.builder(
+                                itemCount: rows.length,
+                                itemBuilder: (context, index) {
+                                  final (g, i) = rows[index];
+                                  if (i == -2) {
+                                    return const SizedBox(height: 16);
+                                  }
+                                  if (i == -1) {
+                                    return HistoryGroupHeader(
+                                      group: historyGroups[g],
+                                      first: g == 0,
+                                    );
+                                  }
+                                  return HistoryItemTile(
+                                    item: historyGroups[g].items[i],
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(8),
+                          itemCount: historyGroups.length,
+                          itemBuilder: (context, index) => HistoryGroupWidget(
+                            group: historyGroups[index],
+                          ),
+                        ),
                 );
+                return desktop ? DesktopCentredColumn(child: list) : list;
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => HistoryErrorState(
@@ -228,6 +260,7 @@ class HistoryScreen extends HookConsumerWidget {
               leading: backButton,
               search: search,
               actions: actions,
+              spacedActionCount: 1,
             ),
             minWidth: searchTopBarSlotMinWidth(
               actions.length,

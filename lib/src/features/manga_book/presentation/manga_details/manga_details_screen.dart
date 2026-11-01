@@ -22,6 +22,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../utils/theme/brand.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -77,6 +78,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
     final selecting = selectedChapters.value.isNotEmpty;
     final offline = ref.watch(serverUnreachableProvider);
     final twoColumn = context.windowSizeClass >= WindowSizeClass.expanded;
+    final showResumeFab =
+        !twoColumn && firstUnreadChapter != null && !selecting;
 
     // Focus the page scope during selection so Esc clears selection before global Back.
     final pageScope = useMemoized(FocusScopeNode.new);
@@ -249,7 +252,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
     useEffect(() => refreshLibraryAfterExit, const []);
 
     final topBar = showsMergedTopBar(context);
-    return PopScope(
+    final page = PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) refreshLibraryAfterExit();
       },
@@ -475,10 +478,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       ),
                     ),
               endDrawerEnableOpenDragGesture: false,
-              floatingActionButton:
-                  !twoColumn &&
-                      firstUnreadChapter != null &&
-                      selectedChapters.value.isEmpty
+              floatingActionButton: showResumeFab
                   ? BrandFab(
                       label: Text(
                         data?.user.lastReadChapter?.hasReadingProgress == true
@@ -527,6 +527,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                         selectedChapters: selectedChapters,
                                       )
                                     : SmallScreenMangaDetails(
+                                        showResumeFab: showResumeFab,
                                         chapterList: chapterListEntries,
                                         manga: data,
                                         mangaId: mangaId,
@@ -609,6 +610,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
           );
         },
       ),
+    );
+    return DesktopPageLayoutScope(
+      layout: DesktopPageLayout.fullBleed,
+      child: page,
     );
   }
 }

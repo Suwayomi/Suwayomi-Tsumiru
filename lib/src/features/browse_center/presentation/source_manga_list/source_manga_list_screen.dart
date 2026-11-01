@@ -41,7 +41,7 @@ import 'widgets/source_switcher_menu.dart';
 import 'widgets/source_type_selectable_chip.dart';
 
 const double _sourceSwitcherNameMaxWidth = 220;
-const double _sourceSwitcherNameMinWidth = 120;
+const double _sourceSearchMinWidth = 100;
 const _sourceSwitcherBaseWidth = 16.0 + 28.0 + 8.0 + 4.0 + 20.0;
 
 // Compact controls first so the search retains its preferred width.
@@ -56,15 +56,15 @@ bool _sourceCatalogueIsCompact(
   final labelWidth = measureToolbarLabelWidth(context, filterLabel);
   final neededBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
-      (1 + actionCount) * kDesktopTopBarGap +
+      (3 + (actionCount > 2 ? 1 : 0)) * kDesktopTopBarGap +
       leadingWidth +
       (kToolbarFilterFullChrome + labelWidth + kToolbarBoxBorderWidth) +
       (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-      (actionCount - 2) * 48.0;
-  return constraints.maxWidth - neededBesidesSearch < kDesktopSearchMaxWidth;
+      (actionCount - 2) * kDesktopToolbarIconButtonExtent;
+  return constraints.maxWidth - neededBesidesSearch <
+      kTopBarSearchPreferredWidth;
 }
 
-// Shrink the switcher first so the search retains its preferred width.
 double _sourceSwitcherNameWidth(
   double maxWidth, {
   required double backWidth,
@@ -72,14 +72,14 @@ double _sourceSwitcherNameWidth(
 }) {
   final fixedBesidesSearch =
       2 * kDesktopToolbarSlotHPadding +
-      (1 + actionCount) * kDesktopTopBarGap +
+      (3 + (actionCount > 2 ? 1 : 0)) * kDesktopTopBarGap +
       backWidth +
       _sourceSwitcherBaseWidth +
       (kToolbarFilterCompactWidth + kToolbarBoxBorderWidth) +
       (kToolbarDisplayBoxWidth + kToolbarBoxBorderWidth) +
-      (actionCount - 2) * 48.0;
-  return (maxWidth - fixedBesidesSearch - kDesktopSearchMaxWidth)
-      .clamp(_sourceSwitcherNameMinWidth, _sourceSwitcherNameMaxWidth)
+      (actionCount - 2) * kDesktopToolbarIconButtonExtent;
+  return (maxWidth - fixedBesidesSearch - _sourceSearchMinWidth)
+      .clamp(0, _sourceSwitcherNameMaxWidth)
       .toDouble();
 }
 
@@ -390,7 +390,10 @@ class SourceMangaListScreen extends HookConsumerWidget {
               currentSourceId: sourceId,
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: nameMaxWidth == 0 ? 6 : 8,
+                vertical: 6,
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -401,25 +404,27 @@ class SourceMangaListScreen extends HookConsumerWidget {
                       size: const Size.square(28),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Tooltip(
-                      message: data?.displayName ?? context.l10n.source,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: nameMaxWidth,
-                        ),
-                        child: Text(
-                          data?.displayName ?? context.l10n.source,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.theme.textTheme.titleMedium,
+                  if (nameMaxWidth > 0) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Tooltip(
+                        message: data?.displayName ?? context.l10n.source,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: nameMaxWidth,
+                          ),
+                          child: Text(
+                            data?.displayName ?? context.l10n.source,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.theme.textTheme.titleMedium,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(FluentIcons.chevron_down_24_regular, size: 20),
+                    const SizedBox(width: 4),
+                    const Icon(FluentIcons.chevron_down_24_regular, size: 20),
+                  ],
                 ],
               ),
             ),
@@ -446,7 +451,10 @@ class SourceMangaListScreen extends HookConsumerWidget {
             ),
           );
 
-          List<Widget> desktopActions({bool compact = false}) {
+          List<Widget> desktopActions({
+            bool compact = false,
+            bool iconOnly = false,
+          }) {
             final scheme = context.theme.colorScheme;
             final hasFilters = filterList != null;
             final displayMode =
@@ -459,16 +467,19 @@ class SourceMangaListScreen extends HookConsumerWidget {
                 focusNode: filterFocus,
                 onTap: hasFilters ? openFilterPanel : null,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 12, right: 6),
+                  padding: iconOnly
+                      ? const EdgeInsets.all(9)
+                      : const EdgeInsets.only(left: 12, right: 6),
                   child: Row(
                     spacing: 8,
                     children: [
                       const Icon(FluentIcons.filter_24_regular, size: 20),
                       if (!compact) Text(context.l10n.filter),
-                      const Icon(
-                        FluentIcons.caret_down_24_filled,
-                        size: 20,
-                      ),
+                      if (!iconOnly)
+                        const Icon(
+                          FluentIcons.caret_down_24_filled,
+                          size: 20,
+                        ),
                     ],
                   ),
                 ),
@@ -492,15 +503,18 @@ class SourceMangaListScreen extends HookConsumerWidget {
                     focusNode: displayFocus,
                     onTap: openDisplayPanel,
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 10, right: 6),
+                      padding: iconOnly
+                          ? const EdgeInsets.all(9)
+                          : const EdgeInsets.only(left: 10, right: 6),
                       child: Row(
                         spacing: 2,
                         children: [
                           Icon(displayMode?.icon, size: 20),
-                          const Icon(
-                            FluentIcons.caret_down_24_filled,
-                            size: 20,
-                          ),
+                          if (!iconOnly)
+                            const Icon(
+                              FluentIcons.caret_down_24_filled,
+                              size: 20,
+                            ),
                         ],
                       ),
                     ),
@@ -575,7 +589,9 @@ class SourceMangaListScreen extends HookConsumerWidget {
             ),
           );
           final backButton = detailNavigationBackButton(context);
-          final backWidth = backButton != null ? 48.0 : 0.0;
+          final backWidth = backButton != null
+              ? kDesktopToolbarIconButtonExtent
+              : 0.0;
           final iconCount =
               ((data?.homeUrl.isNotBlank ?? false) ? 1 : 0) +
               ((data?.isConfigurable).ifNull() ? 1 : 0);
@@ -604,12 +620,23 @@ class SourceMangaListScreen extends HookConsumerWidget {
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ?backButton,
-                      switcherButton(nameMaxWidth: nameWidth),
+                      if (backButton != null)
+                        SizedBox.square(
+                          dimension: kDesktopToolbarIconButtonExtent,
+                          child: backButton,
+                        ),
+                      Tooltip(
+                        message: data?.displayName ?? context.l10n.source,
+                        child: switcherButton(nameMaxWidth: nameWidth),
+                      ),
                     ],
                   ),
                   search: catalogueSearchBox(),
-                  actions: desktopActions(compact: compact),
+                  actions: desktopActions(
+                    compact: compact,
+                    iconOnly: nameWidth == 0,
+                  ),
+                  spacedActionCount: 2,
                 );
               },
             ),

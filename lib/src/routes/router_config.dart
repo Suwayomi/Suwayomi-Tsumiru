@@ -72,6 +72,7 @@ import '../features/settings/presentation/sync/sync_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
+import '../widgets/desktop/desktop_page_frame.dart';
 import '../widgets/shell/detail_navigation_shell_screen.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
 
@@ -476,7 +477,7 @@ class DetailNavigationShellRoute extends ShellRouteData {
 
   @override
   Widget builder(context, state, navigator) =>
-      DetailNavigationShellScreen(child: navigator);
+      DetailNavigationShellScreen(framed: false, child: navigator);
 
   @override
   Page<void> pageBuilder(context, state, navigator) =>

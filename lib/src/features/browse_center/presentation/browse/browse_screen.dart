@@ -14,6 +14,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/desktop/desktop_view_switch.dart';
+import '../../../../widgets/touch_tab_pager.dart';
 import '../../../migration/controller/bulk_migration_providers.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
@@ -144,18 +145,22 @@ class BrowseScreen extends HookConsumerWidget {
               children: [
                 tabBar,
                 Expanded(
-                  child: TabBarView(
+                  child: TouchTabPager(
                     controller: tabController,
                     children: children,
                   ),
                 ),
               ],
             )
-          : TabBarView(controller: tabController, children: children),
+          : TouchTabPager(controller: tabController, children: children),
     );
     return topBar
         ? TopBarSlot(
-            content: desktopSearchSlotContent(search: search, actions: actions),
+            content: desktopSearchSlotContent(
+              search: search,
+              actions: actions,
+              spacedActionCount: tabController.index != 2 ? 1 : 0,
+            ),
             minWidth: searchTopBarSlotMinWidth(actions.length),
             child: scaffold,
           )

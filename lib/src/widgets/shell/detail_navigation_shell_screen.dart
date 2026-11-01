@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
+import '../desktop/desktop_page_frame.dart';
 import '../desktop/desktop_top_bar.dart';
 import 'big_screen_navigation_bar.dart';
 
@@ -25,8 +26,14 @@ Widget? detailNavigationBackButton(BuildContext context) {
 }
 
 class DetailNavigationShellScreen extends ConsumerWidget {
-  const DetailNavigationShellScreen({super.key, required this.child});
+  const DetailNavigationShellScreen({
+    super.key,
+    this.framed = true,
+    required this.child,
+  });
 
+  /// False when [child] is a navigator whose pages bring their own frames.
+  final bool framed;
   final Widget child;
 
   @override
@@ -71,7 +78,11 @@ class DetailNavigationShellScreen extends ConsumerWidget {
                     selectedIndex: selectedIndex,
                     onDestinationSelected: goToBranch,
                   ),
-                  Expanded(child: Scaffold(body: child)),
+                  Expanded(
+                    child: Scaffold(
+                      body: framed ? DesktopPageFrame(child: child) : child,
+                    ),
+                  ),
                 ],
               ),
             ),

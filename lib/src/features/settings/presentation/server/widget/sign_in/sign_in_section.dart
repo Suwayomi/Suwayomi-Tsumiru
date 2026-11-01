@@ -7,6 +7,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/platform/web_auth_mode.dart';
+import '../../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
@@ -220,7 +221,7 @@ class _SignInSectionState extends ConsumerState<SignInSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
+        const DesktopPageLeadingGap(16),
         SettingsGroupCard(
           children: [
             target(

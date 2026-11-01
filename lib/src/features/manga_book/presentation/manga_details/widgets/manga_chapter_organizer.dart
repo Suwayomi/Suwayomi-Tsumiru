@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/touch_tab_pager.dart';
 import 'manga_chapter_display.dart';
 import 'manga_chapter_filter.dart';
 import 'manga_chapter_sort.dart';
@@ -33,7 +34,7 @@ class MangaChapterOrganizer extends StatelessWidget {
             Tab(text: context.l10n.display),
           ],
         ),
-        body: TabBarView(
+        body: TouchTabPager(
           children: [
             MangaChapterFilter(mangaId: mangaId),
             MangaChapterSort(mangaId: mangaId),

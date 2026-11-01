@@ -13,6 +13,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../constants/enum.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
@@ -122,7 +123,7 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
           children: [
             if (desktop)
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12).onDesktopPageLine(context),
                 child: Row(
                   children: [
                     Expanded(
@@ -278,6 +279,10 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                   itemBuilder: (context, i) {
                     final g = groups[i];
                     return ListTile(
+                      contentPadding: const EdgeInsetsDirectional.only(
+                        start: 16,
+                        end: 24,
+                      ).onDesktopPageLine(context),
                       selected: desktop && selected?.sourceId == g.sourceId,
                       selectedTileColor: context.colorScheme.primaryContainer,
                       leading: ClipRRect(

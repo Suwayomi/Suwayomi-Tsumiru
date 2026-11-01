@@ -15,6 +15,7 @@ import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/selection_action_bar.dart';
 import '../../../widgets/server_image.dart';
@@ -86,6 +87,7 @@ class OfflineFilesView extends HookConsumerWidget {
       return null;
     }, [selecting]);
     final desktop = context.usesDesktopShell;
+    final hasPending = ref.watch(offlineHasPendingProvider).value ?? false;
     final activeSeriesId = useState<int?>(null);
     final activeSeries = series.isEmpty
         ? null
@@ -204,7 +206,7 @@ class OfflineFilesView extends HookConsumerWidget {
               ),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 88),
+                padding: EdgeInsets.only(bottom: hasPending ? 88 : 16),
                 itemCount: series.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0) {
@@ -214,7 +216,12 @@ class OfflineFilesView extends HookConsumerWidget {
                         const DownloadStallBanner(),
                         if (desktop && !selecting)
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                            padding: const EdgeInsets.fromLTRB(
+                              8,
+                              16,
+                              8,
+                              8,
+                            ).onDesktopPageLine(context),
                             child: Row(
                               children: [
                                 Text(
@@ -266,8 +273,7 @@ class OfflineFilesView extends HookConsumerWidget {
                           : s.manga.id == activeSeries?.manga.id,
                       selecting: selecting,
                       ruleLabel: _ruleLabel(context, s.manga),
-                      filesLine:
-                          '${context.l10n.nChapters(s.downloaded)} · ${formatBytes(s.bytes)}',
+                      filesLine: filesLine,
                       onTap: selecting
                           ? () => toggle(s.manga.id)
                           : () => activeSeriesId.value = s.manga.id,
@@ -360,7 +366,8 @@ class OfflineFilesView extends HookConsumerWidget {
                 SizedBox(
                   width: (constraints.maxWidth * 0.4).clamp(0, 400),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8)
+                        .onDesktopPageLine(context),
                     child: content,
                   ),
                 ),
@@ -817,7 +824,10 @@ class _OfflineDesktopRow extends HookWidget {
           onTap: onTap,
           onLongPress: onSelect,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 8,
+            ).onDesktopPageLine(context),
             child: Row(
               children: [
                 if (selecting)

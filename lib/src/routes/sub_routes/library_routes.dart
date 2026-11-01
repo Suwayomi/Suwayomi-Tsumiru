@@ -12,7 +12,8 @@ class LibraryRoute extends GoRouteData with $LibraryRoute {
   Widget build(context, state) => LibraryScreen(categoryId: categoryId);
 }
 
-class LibraryDuplicatesRoute extends GoRouteData with $LibraryDuplicatesRoute {
+class LibraryDuplicatesRoute extends DetailShellRouteData
+    with $LibraryDuplicatesRoute {
   const LibraryDuplicatesRoute();
   @override
   Widget build(context, state) => const LibraryDuplicatesScreen();

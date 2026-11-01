@@ -12,7 +12,17 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
+import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
+import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/manga_book/widgets/update_status_popup_menu.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
+import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
@@ -23,8 +33,11 @@ import 'package:tsumiru/src/widgets/desktop/desktop_window_scaffold.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 import 'package:tsumiru/src/widgets/shell/detail_navigation_shell_screen.dart';
+import 'package:tsumiru/src/widgets/shell/sidebar_expanded.dart';
 import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
 import 'package:window_manager/window_manager.dart';
+
+import '../../../helpers/unreachable_server_stubs.dart';
 
 void _mockWindowManager() {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -90,9 +103,8 @@ Future<void> _pumpFrame(
 
 Future<void> pumpRoute(
   WidgetTester tester,
-  Size size, {
-  double slotMinWidth = 500,
-}) async {
+  Size size,
+) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -119,7 +131,7 @@ Future<void> pumpRoute(
                     ),
                     Expanded(
                       child: TopBarSlot(
-                        minWidth: slotMinWidth,
+                        minWidth: 500,
                         content: const SizedBox(
                           height: 40,
                           child: Center(child: Text('Toolbar')),
@@ -151,7 +163,112 @@ Future<void> pumpRoute(
   await tester.pump(const Duration(milliseconds: 200));
 }
 
+Finder _fieldTextField() => find.descendant(
+  of: find.byType(DesktopSearchField),
+  matching: find.byType(TextField),
+);
+
 void main() {
+  testWidgets(
+    'library search survives sidebar and organizer button breakpoints',
+    (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      debugDesktopPlatformOverride = true;
+      addTearDown(() => debugDesktopPlatformOverride = null);
+      _mockWindowManager();
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          libraryMangaListProvider.overrideWith(
+            (ref) async => const <Fragment$MangaDto>[],
+          ),
+          visibleCategoryListProvider.overrideWithValue(
+            const AsyncData(<Fragment$CategoryDto>[]),
+          ),
+          loggedInTrackersProvider.overrideWith((ref) async => []),
+          failedUpdateCountProvider.overrideWith((ref) async => 0),
+          ...unreachableServerStubs,
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => Column(
+                  children: [
+                    if (showsMergedTopBar(context)) const DesktopTopBar(),
+                    Expanded(
+                      child: TopBarSlot(
+                        minWidth: libraryTopBarSlotMinWidth(3),
+                        content: DesktopLibraryToolbar(
+                          onOpenOrganizer: () {},
+                          trailing: [
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(Icons.shuffle),
+                            ),
+                            IconButton(
+                              onPressed: () {},
+                              icon: const Icon(Icons.sync),
+                            ),
+                            const UpdateStatusPopupMenu(
+                              showDuplicatesButton: true,
+                            ),
+                          ],
+                        ),
+                        child: const Center(child: Text('page')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(_fieldTextField());
+      await tester.pumpAndSettle();
+      await tester.enterText(_fieldTextField(), 'abc');
+      await tester.pumpAndSettle();
+      expect(container.read(libraryQueryProvider), 'abc');
+      expect(
+        tester.widget<TextField>(_fieldTextField()).focusNode?.hasFocus,
+        isTrue,
+      );
+
+      container.read(sidebarExpandedProvider.notifier).update(false);
+      await tester.pumpAndSettle();
+      final toolbar = find.byType(DesktopLibraryToolbar);
+      final organizerBoundary =
+          1400 - tester.getSize(toolbar).width + libraryTopBarSlotMinWidth(3);
+      for (final (width, showsOrganizer) in [
+        (organizerBoundary - 1, true),
+        (organizerBoundary, false),
+      ]) {
+        tester.view.physicalSize = Size(width, 900);
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
+        expect(
+          find.widgetWithIcon(IconButton, FluentIcons.filter_24_regular),
+          showsOrganizer ? findsOneWidget : findsNothing,
+        );
+        final field = tester.widget<TextField>(_fieldTextField());
+        expect(field.controller?.text, equals('abc'));
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('catalogue keeps its toolbar after push then go', (tester) async {
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
@@ -414,7 +531,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('merged bar, two-row fallback and macOS rail', (tester) async {
+  testWidgets('merged bar at narrow widths and macOS rail', (tester) async {
     addTearDown(() {
       debugDesktopPlatformOverride = null;
       debugAndroidOverride = null;
@@ -527,24 +644,18 @@ void main() {
     expect(find.byType(DesktopTitleBar), findsNothing);
     expect(tester.takeException(), isNull);
 
-    // Below the breakpoint the title bar and toolbar stack; the sidebar
-    // starts under the toolbar row, auto-collapsed.
     SharedPreferences.setMockInitialValues(const {});
     prefs = await SharedPreferences.getInstance();
     await pumpRoute(tester, const Size(600, 900));
-    final titleBar = find.byType(DesktopTitleBar);
-    expect(titleBar, findsOneWidget);
-    expect(
-      tester.getTopLeft(find.text('Toolbar')).dy,
-      greaterThan(tester.getRect(titleBar).bottom - 1),
-    );
-    final stackedBar = tester.getRect(find.byType(DesktopTopBar));
-    final stackedSidebar = tester.getRect(find.byType(DesktopSidebar));
-    expect(stackedSidebar.top, stackedBar.bottom);
-    expect(stackedSidebar.width, DesktopSidebar.collapsedWidth);
+    expect(find.byType(DesktopTitleBar), findsNothing);
+    final narrowBar = tester.getRect(find.byType(DesktopTopBar));
+    final narrowSidebar = tester.getRect(find.byType(DesktopSidebar));
+    expect(narrowBar.height, kDesktopTopBarHeight);
+    expect(narrowSidebar.top, narrowBar.bottom);
+    expect(narrowSidebar.width, DesktopSidebar.collapsedWidth);
+    expect(find.byType(DesktopBrandExpandButton), findsNothing);
     expect(tester.takeException(), isNull);
 
-    // Above the breakpoint the bar merges into one row.
     await tester.pumpWidget(const SizedBox.shrink());
     await pumpRoute(tester, const Size(1400, 900));
     expect(find.byType(DesktopTitleBar), findsNothing);
@@ -555,20 +666,19 @@ void main() {
     expect(mergedBar.contains(toolbar.bottomCenter), isTrue);
     expect(tester.takeException(), isNull);
 
-    // macOS falls back with no window buttons, and keeps its 80 px rail.
     await tester.pumpWidget(const SizedBox.shrink());
     debugMacOSOverride = true;
-    await pumpRoute(tester, const Size(700, 900), slotMinWidth: 700);
-    final macTitleBar = find.byType(DesktopTitleBar);
-    expect(macTitleBar, findsOneWidget);
-    expect(
-      find.descendant(of: macTitleBar, matching: find.byType(TsumiruLogo)),
-      findsOneWidget,
-    );
+    await pumpRoute(tester, const Size(700, 900));
+    expect(find.byType(DesktopTitleBar), findsNothing);
     expect(find.byType(WindowCaptionButton), findsNothing);
+    expect(find.byType(DesktopBrandExpandButton), findsNothing);
     expect(
-      tester.getTopLeft(find.text('Toolbar')).dy,
-      greaterThan(tester.getRect(macTitleBar).bottom - 1),
+      tester.getSize(find.byType(DesktopTopBar)).height,
+      kDesktopTopBarHeight,
+    );
+    expect(
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.macCollapsedWidth,
     );
     expect(tester.takeException(), isNull);
 

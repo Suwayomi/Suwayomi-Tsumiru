@@ -11,6 +11,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/compact_switch.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../settings/search/settings_search_registry.dart';
@@ -57,7 +58,7 @@ class TrackingSettingsScreen extends ConsumerWidget {
               child: ListView(
                 padding: settingsPagePadding(context),
                 children: [
-                  const SizedBox(height: 16),
+                  const DesktopPageLeadingGap(16),
                   SettingsGroupCard(
                     children: [
                       SettingsHighlightTarget(

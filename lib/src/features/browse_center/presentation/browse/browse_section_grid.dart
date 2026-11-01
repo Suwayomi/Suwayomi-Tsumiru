@@ -4,16 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
-
-const browseCardGridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
-  crossAxisCount: 3,
-  mainAxisSpacing: 12,
-  crossAxisSpacing: 12,
-  mainAxisExtent: 84,
-);
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 
 class BrowseSectionHeading extends StatelessWidget {
   const BrowseSectionHeading({
@@ -37,7 +33,7 @@ class BrowseSectionHeading extends StatelessWidget {
       right: 4,
       top: topPadding,
       bottom: 8,
-    );
+    ).onDesktopPageLine(context);
     if (count == null && trailing == null) {
       return Padding(padding: padding, child: titleText);
     }
@@ -68,14 +64,34 @@ class BrowseCardGrid extends StatelessWidget {
     super.key,
     required this.itemCount,
     required this.itemBuilder,
+    this.mainAxisExtent = 84,
   });
+
+  const BrowseCardGrid.source({
+    super.key,
+    required this.itemCount,
+    required this.itemBuilder,
+  }) : mainAxisExtent = 104;
 
   final int itemCount;
   final NullableIndexedWidgetBuilder itemBuilder;
+  final double mainAxisExtent;
 
   @override
-  Widget build(BuildContext context) => SliverGrid(
-    gridDelegate: browseCardGridDelegate,
-    delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
+  Widget build(BuildContext context) => SliverLayoutBuilder(
+    builder: (context, constraints) => SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: ((constraints.crossAxisExtent + 12) / (240 + 12))
+            .floor()
+            .clamp(1, 3),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: mainAxisExtent * browseCardTextScale(context),
+      ),
+      delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
+    ),
   );
 }
+
+double browseCardTextScale(BuildContext context) =>
+    math.max(1, MediaQuery.textScalerOf(context).scale(12) / 12);

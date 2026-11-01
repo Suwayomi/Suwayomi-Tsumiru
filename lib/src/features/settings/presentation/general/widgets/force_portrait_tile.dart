@@ -24,20 +24,21 @@ class ForcePortrait extends _$ForcePortrait
   bool? build() => initialize(DBKeys.forcePortrait);
 }
 
+bool canForcePortrait(double shortestSide) =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) &&
+    shortestSide > 0 &&
+    shortestSide < 600;
+
 /// Applies portrait lock on phones only; other platforms retain all orientations.
 void applyForcePortrait(bool forcePortrait) {
   final views = WidgetsBinding.instance.platformDispatcher.views;
   final shortestSide = views.isEmpty
       ? 0.0
       : (views.first.physicalSize / views.first.devicePixelRatio).shortestSide;
-  final isPhone =
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS) &&
-      shortestSide > 0 &&
-      shortestSide < 600;
   SystemChrome.setPreferredOrientations(
-    forcePortrait && isPhone
+    forcePortrait && canForcePortrait(shortestSide)
         ? const [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]
         : DeviceOrientation.values,
   );

@@ -6,6 +6,7 @@
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,6 +19,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -51,17 +53,29 @@ import 'widgets/updates_row_actions.dart';
 
 const _kUpdatesCardSubtitleExtent = 22.0;
 
+Widget _dateHeading(BuildContext context, String label, {bool first = false}) {
+  final desktop = isOnDesktopPage(context);
+  return ListTile(
+    contentPadding: desktop
+        ? const EdgeInsetsDirectional.fromSTEB(
+            16,
+            16,
+            24,
+            8,
+          ).onDesktopPageLine(context, top: first)
+        : null,
+    minTileHeight: desktop ? 0 : null,
+    minVerticalPadding: desktop ? 0 : null,
+    title: Text(label),
+  );
+}
 
-Widget _updatesColumn(Widget child) => Align(
-  alignment: Alignment.topCenter,
-  child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 1040),
-    child: SizedBox(width: double.infinity, child: child),
-  ),
-);
 
 Widget _lastUpdatedLine(BuildContext context, String lastUpdated) => Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 8,
+  ).onDesktopPageLine(context, top: true),
   child: Text(
     context.l10n.libraryLastUpdated(int.parse(lastUpdated).toTimeAgo(context)),
     style: context.textTheme.bodyMedium?.copyWith(
@@ -84,6 +98,7 @@ class _UpdatesPagedList extends StatefulWidget {
     required this.screenContext,
     required this.resetList,
     required this.refetchChapter,
+    required this.lastUpdatedAboveList,
   });
 
   final ServerPagingController<ChapterWithMangaDto> controller;
@@ -97,6 +112,8 @@ class _UpdatesPagedList extends StatefulWidget {
   final BuildContext screenContext;
   final VoidCallback resetList;
   final Future<ChapterDto?> Function(int chapterId) refetchChapter;
+
+  final bool lastUpdatedAboveList;
 
   @override
   State<_UpdatesPagedList> createState() => _UpdatesPagedListState();
@@ -220,13 +237,6 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     final grouping = _groupingFor(state.pages);
     final items = grouping.items;
 
-    if (context.usesDesktopShell &&
-        widget.displayMode == UpdatesDisplayMode.grid) {
-      final section = grouping.sections[flatIndex];
-      if (section == null) return const SizedBox.shrink();
-      return _buildDaySection(context, items, section);
-    }
-
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
 
     if (isGrouped) {
@@ -260,6 +270,7 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       orderedChapters: items,
       desktop: context.usesDesktopShell,
     );
+    if (context.usesDesktopShell) return tile;
     return _wrapWithDateHeader(
       context,
       items,
@@ -293,52 +304,23 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     );
   }
 
-  Widget _buildDaySection(
+  Widget _buildGridCard(
     BuildContext context,
+    UpdatesGroupedEntry group,
     List<ChapterWithMangaDto> items,
-    UpdatesDaySection section,
-  ) {
-    final fetchedAt = int.tryParse(items[section.headerFlatIndex].fetchedAt);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (fetchedAt != null)
-          ListTile(title: Text(fetchedAt.toDaysAgoFromSeconds(context))),
-        Padding(
-          padding: context.usesDesktopShell
-              ? const EdgeInsets.only(right: kDesktopScrollbarGutter)
-              : EdgeInsets.zero,
-          child: GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: mangaCoverUniformGridDelegate(
-              widget.gridWidth,
-              widget.fixedColumns,
-              titleBelow: true,
-              extraTitleExtent: _kUpdatesCardSubtitleExtent,
-            ),
-            children: [
-              for (final group in section.groups)
-                UpdatesGridCard(
-                  group: group,
-                  refreshManga: () => _refreshManga(group.head.mangaId),
-                  refreshRowActions: (mangaIds) =>
-                      _refreshMangas(mangaIds, freshWins: true),
-                  isSelectedFor: (chapter) =>
-                      widget.selectedChapters.value.containsKey(chapter.id),
-                  canTapSelect: widget.selectedChapters.value.isNotEmpty,
-                  toggleSelect: (val) => _toggleSelect(val),
-                  selectedChapters: widget.selectedChapters,
-                  selectionAnchor: widget.selectionAnchor,
-                  orderedChapters: items,
-                ),
-            ],
-          ),
-        ),
-      ],
+  ) => UpdatesGridCard(
+      group: group,
+      refreshManga: () => _refreshManga(group.head.mangaId),
+      refreshRowActions: (mangaIds) =>
+          _refreshMangas(mangaIds, freshWins: true),
+      isSelectedFor: (chapter) =>
+          widget.selectedChapters.value.containsKey(chapter.id),
+      canTapSelect: widget.selectedChapters.value.isNotEmpty,
+      toggleSelect: (val) => _toggleSelect(val),
+      selectedChapters: widget.selectedChapters,
+      selectionAnchor: widget.selectionAnchor,
+      orderedChapters: items,
     );
-  }
 
   Widget _wrapWithDateHeader(
     BuildContext context,
@@ -347,18 +329,17 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     Widget tile,
     Set<int> headerIndices,
   ) {
-    final desktop = context.usesDesktopShell;
-    Widget wrap(Widget child) => desktop ? _updatesColumn(child) : child;
-    if (!headerIndices.contains(flatIndex)) return wrap(tile);
+    if (!headerIndices.contains(flatIndex)) return tile;
     final currentDate = int.tryParse(items[flatIndex].fetchedAt);
-    return wrap(
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(title: Text(currentDate.toDaysAgoFromSeconds(context))),
-          tile,
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _dateHeading(
+          context,
+          currentDate.toDaysAgoFromSeconds(context),
+        ),
+        tile,
+      ],
     );
   }
 
@@ -366,10 +347,8 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   Widget build(BuildContext context) {
     return PagingListener(
       controller: widget.controller,
-      builder: (context, state, fetchNextPage) => PagedSliverList(
-        state: state,
-        fetchNextPage: fetchNextPage,
-        builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
+      builder: (context, state, fetchNextPage) {
+        final delegate = PagedChildBuilderDelegate<ChapterWithMangaDto>(
           firstPageProgressIndicatorBuilder: (context) =>
               const CenterTsumiruShimmerIndicator(),
           firstPageErrorIndicatorBuilder: (context) => Emoticons(
@@ -387,8 +366,156 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
             ),
           ),
           itemBuilder: (context, _, index) => _buildItem(context, state, index),
-        ),
-      ),
+        );
+        if (!context.usesDesktopShell) {
+          return PagedSliverList(
+            state: state,
+            fetchNextPage: fetchNextPage,
+            builderDelegate: delegate,
+          );
+        }
+        Widget desktopListing(
+          BuildContext context,
+          IndexedWidgetBuilder _,
+          int itemCount,
+          WidgetBuilder? indicatorBuilder,
+        ) {
+          final grouping = _groupingFor(state.pages);
+          final footer = SliverLayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.remainingCacheExtent > 0 &&
+                  state.hasNextPage &&
+                  !state.isLoading &&
+                  state.error == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && widget.controller.value == state) {
+                    fetchNextPage();
+                  }
+                });
+              }
+              return SliverToBoxAdapter(
+                child: indicatorBuilder?.call(context),
+              );
+            },
+          );
+          return SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final builders = <WidgetBuilder>[];
+              void addHeading(int flatIndex) {
+                final first = flatIndex == 0 && !widget.lastUpdatedAboveList;
+                final label = int.tryParse(grouping.items[flatIndex].fetchedAt)
+                    .toDaysAgoFromSeconds(context);
+                builders.add(
+                  (context) => _dateHeading(context, label, first: first),
+                );
+              }
+
+              if (widget.displayMode == UpdatesDisplayMode.grid) {
+                final gridDelegate = mangaCoverUniformGridDelegate(
+                  widget.gridWidth,
+                  widget.fixedColumns,
+                  titleBelow: true,
+                  extraTitleExtent: _kUpdatesCardSubtitleExtent,
+                );
+                final bleed = isOnDesktopPage(context)
+                    ? kMangaCoverCardInset / 2
+                    : 0.0;
+                final layout = gridDelegate.getLayout(
+                  constraints.copyWith(
+                    crossAxisExtent: constraints.crossAxisExtent + bleed * 2,
+                  ),
+                ) as SliverGridRegularTileLayout;
+                for (final section in grouping.sections.values) {
+                  if (int.tryParse(
+                        grouping.items[section.headerFlatIndex].fetchedAt,
+                      ) !=
+                      null) {
+                    addHeading(section.headerFlatIndex);
+                  }
+                  for (
+                    var start = 0;
+                    start < section.groups.length;
+                    start += layout.crossAxisCount
+                  ) {
+                    final rowStart = start;
+                    final count = (section.groups.length - start).clamp(
+                      0,
+                      layout.crossAxisCount,
+                    );
+                    final first = start == 0;
+                    final gap = start + count < section.groups.length
+                        ? layout.mainAxisStride - layout.childMainAxisExtent
+                        : 0.0;
+                    builders.add(
+                      (context) => DesktopBoxBleed.coverGrid(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            top: first ? 0 : bleed,
+                            bottom: gap,
+                          ),
+                          child: GridView.builder(
+                            padding: EdgeInsets.zero,
+                            primary: false,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: gridDelegate,
+                            itemCount: count,
+                            itemBuilder: (context, index) => _buildGridCard(
+                              context,
+                              section.groups[rowStart + index],
+                              grouping.items,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                }
+              } else {
+                final grouped =
+                    widget.groupingMode != UpdatesGroupingMode.disabled;
+                final indices = grouped
+                    ? grouping.headIndex.keys
+                    : Iterable<int>.generate(itemCount);
+                for (final flatIndex in indices) {
+                  if (grouping.headerIndices.contains(flatIndex)) {
+                    addHeading(flatIndex);
+                  }
+                  if (grouped) {
+                    final group = grouping.groups[grouping.headIndex[flatIndex]!];
+                    builders.add(
+                      (context) =>
+                          _buildGroupTile(context, group, grouping.items),
+                    );
+                  } else {
+                    builders.add(
+                      (context) => _buildItem(context, state, flatIndex),
+                    );
+                  }
+                }
+              }
+              return SliverMainAxisGroup(
+                slivers: [
+                  SliverList.builder(
+                    itemCount: builders.length,
+                    itemBuilder: (context, index) => builders[index](context),
+                  ),
+                  footer,
+                ],
+              );
+            },
+          );
+        }
+        return PagedLayoutBuilder<int, ChapterWithMangaDto>(
+          state: state,
+          fetchNextPage: fetchNextPage,
+          builderDelegate: delegate,
+          layoutProtocol: PagedLayoutProtocol.sliver,
+          completedListingBuilder: desktopListing,
+          loadingListingBuilder: desktopListing,
+          errorListingBuilder: desktopListing,
+        );
+      },
     );
   }
 }
@@ -453,7 +580,7 @@ class UpdatesScreen extends HookConsumerWidget {
         ref.watch(updatesDisplayModeProvider) ?? UpdatesDisplayMode.grid;
     final gridWidth =
         ref.watch(gridMinWidthProvider) ??
-        DBKeys.gridMangaCoverWidth.initial as double;
+        DBKeys.gridMangaCoverMinWidth.initial as double;
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final fixedColumns =
@@ -556,7 +683,6 @@ class UpdatesScreen extends HookConsumerWidget {
     }, [filter]);
     final selecting = selectedChapters.value.isNotEmpty;
     final desktop = context.usesDesktopShell;
-    final desktopGrid = desktop && displayMode == UpdatesDisplayMode.grid;
     final topBar = showsMergedTopBar(context);
     final pageScope = useMemoized(FocusScopeNode.new);
     useEffect(() => pageScope.dispose, [pageScope]);
@@ -611,19 +737,22 @@ class UpdatesScreen extends HookConsumerWidget {
           child: const UpdatesFilterPanel(),
         ),
         child: Padding(
-          padding: const EdgeInsets.only(left: 12, right: 6),
+          padding: compact
+              ? const EdgeInsets.all(9)
+              : const EdgeInsets.only(left: 12, right: 6),
           child: Row(
             spacing: 8,
             children: [
               const Icon(FluentIcons.filter_24_regular, size: 20),
               if (!compact) Text(context.l10n.filter),
-              const Icon(FluentIcons.caret_down_24_filled, size: 20),
+              if (!compact)
+                const Icon(FluentIcons.caret_down_24_filled, size: 20),
             ],
           ),
         ),
       ),
     );
-    final displayBox = DesktopToolbarBox(
+    DesktopToolbarBox buildDisplayBox(bool compact) => DesktopToolbarBox(
       key: displayButtonKey,
       child: Tooltip(
         message: context.l10n.display,
@@ -636,13 +765,16 @@ class UpdatesScreen extends HookConsumerWidget {
             panelWidth: 400,
             child: const UpdatesDisplayPanel(),
           ),
-          child: const Padding(
-            padding: EdgeInsets.only(left: 10, right: 6),
+          child: Padding(
+            padding: compact
+                ? const EdgeInsets.all(9)
+                : const EdgeInsets.only(left: 10, right: 6),
             child: Row(
               spacing: 2,
               children: [
-                Icon(FluentIcons.grid_24_regular, size: 20),
-                Icon(FluentIcons.caret_down_24_filled, size: 20),
+                const Icon(FluentIcons.grid_24_regular, size: 20),
+                if (!compact)
+                  const Icon(FluentIcons.caret_down_24_filled, size: 20),
               ],
             ),
           ),
@@ -719,7 +851,7 @@ class UpdatesScreen extends HookConsumerWidget {
         Tooltip(message: context.l10n.filter, child: buildFilterBox(true))
       else
         buildFilterBox(false),
-      displayBox,
+      buildDisplayBox(compact),
       IconTheme.merge(
         data: const IconThemeData(size: 20),
         child: SyncYomiSyncButton(onSynced: resetList),
@@ -785,6 +917,10 @@ class UpdatesScreen extends HookConsumerWidget {
             },
           )
         : null;
+    final showLastUpdated =
+        lastUpdated != null &&
+        !(desktop && selecting) &&
+        (int.tryParse(lastUpdated) ?? 0) > 0;
     final scaffold = Scaffold(
       floatingActionButton: selecting || desktop
           ? null
@@ -818,21 +954,15 @@ class UpdatesScreen extends HookConsumerWidget {
           : null,
       body: Column(
         children: [
-          if (selectionHeader != null) _updatesColumn(selectionHeader),
+          ?selectionHeader,
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async => resetList(),
               child: CustomScrollView(
                 slivers: [
-                  if (lastUpdated != null &&
-                      !(desktop && selecting) &&
-                      (int.tryParse(lastUpdated) ?? 0) > 0)
+                  if (showLastUpdated)
                     SliverToBoxAdapter(
-                      child: desktop && !desktopGrid
-                          ? _updatesColumn(
-                              _lastUpdatedLine(context, lastUpdated),
-                            )
-                          : _lastUpdatedLine(context, lastUpdated),
+                      child: _lastUpdatedLine(context, lastUpdated),
                     ),
                   _UpdatesPagedList(
                     controller: controller,
@@ -846,6 +976,7 @@ class UpdatesScreen extends HookConsumerWidget {
                     screenContext: screenContext,
                     resetList: resetList,
                     refetchChapter: (id) => refetchChapter(ref, id),
+                    lastUpdatedAboveList: showLastUpdated,
                   ),
                 ],
               ),
@@ -895,6 +1026,8 @@ class UpdatesScreen extends HookConsumerWidget {
           return desktopToolbarRow(
             search: search,
             actions: desktopActions(compact),
+            spacedActionCount: 4,
+            gap: compact ? 4 : kDesktopTopBarGap,
           );
         },
       ),

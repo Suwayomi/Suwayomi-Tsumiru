@@ -88,7 +88,9 @@ home for all visual settings:
 | `IsTrueBlackTile` (Pure black / AMOLED) | `isTrueBlackProvider` | `isTrueBlack` | `false` (mode ≠ Light) |
 | `ThemeSelector` (curated picker) | `appThemeKeyProvider` | `appTheme` | `AppTheme.indigoNight` |
 | Custom colour tile | `customThemeColorProvider` | `customThemeColor` | `0xFF7C7BFF` (only when theme == custom) |
-| `GridCoverWidthSlider` | `gridMinWidthProvider` | `gridMangaCoverWidth` | `192.0` |
+| `GridCoverWidthSlider` | `gridMinWidthProvider` | `gridMangaCoverMinWidth` | `128.0` |
+
+See [Library](library.md) for automatic cover sizing and preference migration.
 
 `ThemeSelector` previews each card at the brightness currently in use, so light
 mode does not show a wall of dark cards. Give it a `title` and the header row

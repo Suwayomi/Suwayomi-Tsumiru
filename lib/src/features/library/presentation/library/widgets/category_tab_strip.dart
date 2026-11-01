@@ -12,6 +12,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../domain/category/category_model.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_grouping.dart';
@@ -19,8 +20,9 @@ import '../controller/library_grouping.dart';
 /// A null count hides the count.
 typedef StripTab = ({String name, int? count});
 
-const double _kStripHeight = 44;
+const double kCategoryTabStripHeight = 44;
 const double _kTabHPadding = 12;
+const _kTabPadding = EdgeInsets.symmetric(horizontal: _kTabHPadding);
 const double _kTabGap = 2;
 const double _kUnderlineHeight = 3;
 const double _kMoreFontSize = 13;
@@ -32,7 +34,7 @@ class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
   final List<StripTab> tabs;
 
   @override
-  Size get preferredSize => const Size.fromHeight(_kStripHeight);
+  Size get preferredSize => const Size.fromHeight(kCategoryTabStripHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +69,8 @@ class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
           ).copyWith(fontSize: _kMoreFontSize),
         );
         return Container(
-          height: _kStripHeight,
-          padding: const EdgeInsets.symmetric(horizontal: _kTabHPadding),
+          height: kCategoryTabStripHeight,
+          padding: _kTabPadding.onDesktopPageLine(context),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
           ),
@@ -78,6 +80,7 @@ class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
               for (final i in layout.visible)
                 _StripTabButton(
                   tab: tabs[i],
+                  first: i == layout.visible.first,
                   selected: i == selected,
                   textWidth: layout.textWidths[i],
                   onTap: () => controller.animateTo(i),
@@ -260,12 +263,14 @@ _computeLayout({
 class _StripTabButton extends StatelessWidget {
   const _StripTabButton({
     required this.tab,
+    required this.first,
     required this.selected,
     required this.textWidth,
     required this.onTap,
   });
 
   final StripTab tab;
+  final bool first;
   final bool selected;
   final double textWidth;
   final VoidCallback onTap;
@@ -276,7 +281,7 @@ class _StripTabButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _kTabHPadding),
+        padding: first ? _kTabPadding.onDesktopPageLine(context) : _kTabPadding,
         child: Stack(
           alignment: Alignment.center,
           children: [

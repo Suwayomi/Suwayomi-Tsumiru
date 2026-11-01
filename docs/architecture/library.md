@@ -131,7 +131,12 @@ per-tracker filter map, category include/exclude lists, tag include/exclude list
 `localBadge` (`false`), `sourceBadge` (`false`),
 `showContinueReadingButton` (`false`), `categoryTabs` (`true`),
 `showHiddenCategories` (`false`), `categoryNumberOfItems` (`false`),
-`libraryGroupType` (0 = BY_DEFAULT), `gridMangaCoverWidth` (192.0).
+`libraryGroupType` (0 = BY_DEFAULT), `gridMangaCoverMinWidth` (128.0 minimum).
+Automatic columns follow Mihon's rule:
+`max(1, floor((width + spacing) / (minimum + spacing)))`.
+A one-time migration converts the old `gridMangaCoverWidth` value × 2/3,
+clamps it to 100–999, and removes the old key after saving; an existing new key
+is preserved.
 Search query is session-only (no persistence).
 
 ## Duplicate detection

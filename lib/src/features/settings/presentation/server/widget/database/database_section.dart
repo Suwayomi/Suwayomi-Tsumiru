@@ -6,6 +6,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/popup_widgets/confirm_action.dart';
@@ -61,7 +62,7 @@ class DatabaseSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
+        const DesktopPageLeadingGap(16),
         SettingsGroupCard(
           children: [
             SettingsHighlightTarget(

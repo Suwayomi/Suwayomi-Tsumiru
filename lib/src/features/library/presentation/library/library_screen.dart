@@ -19,10 +19,12 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
+import '../../../../widgets/touch_tab_pager.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
@@ -80,6 +82,20 @@ List<LibrarySection> _groupSections(List<GroupedTab> tabs) => [
 bool _useTabs(LibraryGroupStyle style, bool showAllCategories) =>
     style == LibraryGroupStyle.tabs || !showAllCategories;
 
+Widget _organizerButton() => Builder(
+  builder: (context) => LibraryOrganizerButton(
+    onPressed: () => _openLibraryOrganizer(context),
+  ),
+);
+
+Widget _libraryPageLayout(Widget? tabStrip, Widget child) =>
+    DesktopPageLayoutScope(
+      layout: tabStrip == null
+          ? DesktopPageLayout.standard
+          : DesktopPageLayout.header,
+      child: child,
+    );
+
 bool _showTabBar(LibraryGroupStyle style, bool categoryTabsOn) =>
     style == LibraryGroupStyle.tabs && categoryTabsOn;
 
@@ -94,10 +110,7 @@ Widget _groupedBody({
   required List<Widget> Function() tabViews,
 }) => Builder(
   builder: (context) => Padding(
-    // Desktop slivers reserve a scrollbar gutter on the right.
-    padding: context.usesDesktopShell
-        ? const EdgeInsets.only(left: 8)
-        : KEdgeInsets.h8.size,
+    padding: context.usesDesktopShell ? EdgeInsets.zero : KEdgeInsets.h8.size,
     child: useTabs
         ? Builder(
             builder: (context) {
@@ -108,10 +121,10 @@ Widget _groupedBody({
                   behavior: ScrollConfiguration.of(
                     context,
                   ).copyWith(scrollbars: false),
-                  child: TabBarView(children: tabs),
+                  child: TouchTabPager(children: tabs),
                 );
               }
-              return TabBarView(
+              return TouchTabPager(
                 children: [for (final tab in tabs) _TabScrollHost(child: tab)],
               );
             },
@@ -172,15 +185,35 @@ void _refreshLibraryAfterSync(WidgetRef ref) {
   ref.invalidate(categoryControllerProvider);
 }
 
+void _openLibraryOrganizer(BuildContext context) {
+  if (!context.mounted) return;
+  if (context.windowSizeClass >= WindowSizeClass.medium) {
+    Scaffold.of(context).openEndDrawer();
+  } else {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(borderRadius: KBorderRadius.rT16.radius),
+      clipBehavior: Clip.hardEdge,
+      builder: (_) => const LibraryMangaOrganizer(),
+      sheetAnimationStyle: context.motionStyle,
+    );
+  }
+}
+
 /// Build under DefaultTabController so the toolbar and strip share the body's tab index.
 Widget _desktopLibraryHeader({
+  required VoidCallback onOpenOrganizer,
   required List<Widget> trailing,
   Widget? tabStrip,
 }) => Builder(
   builder: (context) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      DesktopLibraryToolbar(trailing: trailing),
+      DesktopLibraryToolbar(
+        onOpenOrganizer: onOpenOrganizer,
+        trailing: trailing,
+      ),
       ?tabStrip,
     ],
   ),
@@ -192,35 +225,30 @@ Widget _emptyLibraryTopBarSlot(WidgetRef ref, {required Widget child}) {
     SyncYomiSyncButton(onSynced: () => _refreshLibraryAfterSync(ref)),
     UpdateStatusPopupMenu(getCategory: () => null, showDuplicatesButton: true),
   ];
-  return TopBarSlot(
-    content: DesktopLibraryToolbar(trailing: trailing),
-    minWidth: libraryTopBarSlotMinWidth(trailing.length),
-    child: child,
+  return Builder(
+    builder: (context) {
+      if (!context.usesDesktopShell) return child;
+      return Scaffold(
+        endDrawerEnableOpenDragGesture: false,
+        endDrawer: const Drawer(
+          width: kDrawerWidth,
+          shape: RoundedRectangleBorder(),
+          child: LibraryMangaOrganizer(),
+        ),
+        body: Builder(
+          builder: (context) => TopBarSlot(
+            content: DesktopLibraryToolbar(
+              onOpenOrganizer: () => _openLibraryOrganizer(context),
+              trailing: trailing,
+            ),
+            minWidth: libraryTopBarSlotMinWidth(trailing.length),
+            child: child,
+          ),
+        ),
+      );
+    },
   );
 }
-
-Widget _organizerButton() => Builder(
-  builder: (context) => IconButton(
-    onPressed: () {
-      if (context.windowSizeClass >= WindowSizeClass.medium) {
-        Scaffold.of(context).openEndDrawer();
-      } else {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          shape: RoundedRectangleBorder(
-            borderRadius: KBorderRadius.rT16.radius,
-          ),
-          clipBehavior: Clip.hardEdge,
-          // The organizer sizes itself to the active tab, capped at 72% of screen height.
-          builder: (_) => const LibraryMangaOrganizer(),
-          sheetAnimationStyle: context.motionStyle,
-        );
-      }
-    },
-    icon: const Icon(FluentIcons.filter_24_regular),
-  ),
-);
 
 /// Recheck after builds as refresh can change header extent without a scroll event.
 /// Missing or zero-height search bars are not hidden; this avoids two visible fields.
@@ -395,13 +423,11 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                             ],
                     ),
               endDrawerEnableOpenDragGesture: false,
-              endDrawer: desktop
-                  ? null
-                  : const Drawer(
-                      width: kDrawerWidth,
-                      shape: RoundedRectangleBorder(),
-                      child: LibraryMangaOrganizer(),
-                    ),
+              endDrawer: const Drawer(
+                width: kDrawerWidth,
+                shape: RoundedRectangleBorder(),
+                child: LibraryMangaOrganizer(),
+              ),
               body: Builder(
                 builder: (bodyContext) {
                   // Capture this controller: shell-bar content lives outside its DefaultTabController.
@@ -421,10 +447,15 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                   ];
                   final tabStrip =
                       showTabBar && data.length.isGreaterThan(1)
-                          ? DefaultCategoryTabStrip(categories: data)
+                          ? DesktopPageHeader(
+                              child: DefaultCategoryTabStrip(categories: data),
+                            )
                           : null;
-                  return TopBarSlot(
-                    content: DesktopLibraryToolbar(trailing: trailing),
+                  final slot = TopBarSlot(
+                    content: DesktopLibraryToolbar(
+                      onOpenOrganizer: () => _openLibraryOrganizer(bodyContext),
+                      trailing: trailing,
+                    ),
                     minWidth: libraryTopBarSlotMinWidth(trailing.length),
                     child: _libraryBody(
                     ref,
@@ -432,6 +463,8 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                         ? tabStrip
                         : desktop
                         ? _desktopLibraryHeader(
+                            onOpenOrganizer: () =>
+                                _openLibraryOrganizer(bodyContext),
                             trailing: trailing,
                             tabStrip: tabStrip,
                           )
@@ -460,6 +493,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                     ),
                   ),
                 );
+                  return _libraryPageLayout(tabStrip, slot);
               },
             ),
             ),
@@ -474,7 +508,9 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
       wrapper: (body) => _emptyLibraryTopBarSlot(
         ref,
         child: Scaffold(
-          appBar: AppBar(title: Text(context.l10n.library)),
+          appBar: showsMergedTopBar(context)
+              ? null
+              : AppBar(title: Text(context.l10n.library)),
           body: _libraryBody(ref, body),
         ),
       ),
@@ -511,7 +547,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
           return _emptyLibraryTopBarSlot(
             ref,
             child: Scaffold(
-              appBar: AppBar(title: Text(context.l10n.library)),
+              appBar: showsMergedTopBar(context)
+                  ? null
+                  : AppBar(title: Text(context.l10n.library)),
               body: Emoticons(
                 title: context.l10n.noVisibleCategories,
                 button: TextButton(
@@ -550,13 +588,11 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
           initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
           child: Scaffold(
             endDrawerEnableOpenDragGesture: false,
-            endDrawer: desktop
-                ? null
-                : const Drawer(
-                    width: kDrawerWidth,
-                    shape: RoundedRectangleBorder(),
-                    child: LibraryMangaOrganizer(),
-                  ),
+            endDrawer: const Drawer(
+              width: kDrawerWidth,
+              shape: RoundedRectangleBorder(),
+              child: LibraryMangaOrganizer(),
+            ),
             body: Builder(
               builder: (bodyContext) {
                 // Capture this controller: shell-bar content lives outside its DefaultTabController.
@@ -574,10 +610,15 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                   ),
                 ];
                 final tabStrip = showTabs
-                    ? DefaultCategoryTabStrip(categories: data)
+                    ? DesktopPageHeader(
+                        child: DefaultCategoryTabStrip(categories: data),
+                      )
                     : null;
-                return TopBarSlot(
-                  content: DesktopLibraryToolbar(trailing: trailing),
+                final slot = TopBarSlot(
+                  content: DesktopLibraryToolbar(
+                    onOpenOrganizer: () => _openLibraryOrganizer(bodyContext),
+                    trailing: trailing,
+                  ),
                   minWidth: libraryTopBarSlotMinWidth(trailing.length),
                   child: NestedScrollView(
                     controller: scrollController,
@@ -588,7 +629,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                           SliverPersistentHeader(
                             pinned: true,
                             delegate: _SliverFixedHeaderDelegate(
-                              height: 44,
+                              height:
+                                  kCategoryTabStripHeight +
+                                  DesktopPageHeader.gap,
                               child: tabStrip,
                             ),
                           ),
@@ -601,6 +644,8 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                             delegate: _SliverFixedHeaderDelegate(
                               height: showTabs ? 64 + 44 : 64,
                         child: _desktopLibraryHeader(
+                          onOpenOrganizer: () =>
+                              _openLibraryOrganizer(bodyContext),
                           trailing: trailing,
                           tabStrip: tabStrip,
                         ),
@@ -694,6 +739,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
               ),
             ),
           );
+                return _libraryPageLayout(tabStrip, slot);
         },
       ),
     ),
@@ -707,7 +753,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
       wrapper: (body) => _emptyLibraryTopBarSlot(
         ref,
         child: Scaffold(
-          appBar: AppBar(title: Text(context.l10n.library)),
+          appBar: showsMergedTopBar(context)
+              ? null
+              : AppBar(title: Text(context.l10n.library)),
           body: _libraryBody(ref, body),
         ),
       ),
@@ -765,7 +813,9 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
           return _emptyLibraryTopBarSlot(
             ref,
             child: Scaffold(
-              appBar: AppBar(title: Text(context.l10n.library)),
+              appBar: showsMergedTopBar(context)
+                  ? null
+                  : AppBar(title: Text(context.l10n.library)),
               body: Emoticons(
                 title: context.l10n.noVisibleCategories,
                 button: TextButton(
@@ -881,13 +931,11 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                           ],
                   ),
             endDrawerEnableOpenDragGesture: false,
-            endDrawer: desktop
-                ? null
-                : const Drawer(
-                    width: kDrawerWidth,
-                    shape: RoundedRectangleBorder(),
-                    child: LibraryMangaOrganizer(),
-                  ),
+            endDrawer: const Drawer(
+              width: kDrawerWidth,
+              shape: RoundedRectangleBorder(),
+              child: LibraryMangaOrganizer(),
+            ),
             body: Builder(
               builder: (bodyContext) {
                 final trailing = <Widget>[
@@ -903,10 +951,15 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                   ),
                 ];
                 final tabStrip = showTabBar && tabs.length > 1
-                    ? GroupedCategoryTabStrip(groupedTabs: tabs)
+                    ? DesktopPageHeader(
+                        child: GroupedCategoryTabStrip(groupedTabs: tabs),
+                      )
                     : null;
-                return TopBarSlot(
-                  content: DesktopLibraryToolbar(trailing: trailing),
+                final slot = TopBarSlot(
+                  content: DesktopLibraryToolbar(
+                    onOpenOrganizer: () => _openLibraryOrganizer(bodyContext),
+                    trailing: trailing,
+                  ),
                   minWidth: libraryTopBarSlotMinWidth(trailing.length),
                   child: _libraryBody(
                     ref,
@@ -915,6 +968,8 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                         ? tabStrip
                         : desktop
                         ? _desktopLibraryHeader(
+                            onOpenOrganizer: () =>
+                                _openLibraryOrganizer(bodyContext),
                             trailing: trailing,
                             tabStrip: tabStrip,
                           )
@@ -942,6 +997,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
               ),
             ),
           );
+                return _libraryPageLayout(tabStrip, slot);
         },
       ),
     ),
@@ -957,7 +1013,9 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
       wrapper: (body) => _emptyLibraryTopBarSlot(
         ref,
         child: Scaffold(
-          appBar: AppBar(title: Text(context.l10n.library)),
+          appBar: showsMergedTopBar(context)
+              ? null
+              : AppBar(title: Text(context.l10n.library)),
           body: _libraryBody(ref, body, grouped: true),
         ),
       ),
@@ -1007,7 +1065,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
           return _emptyLibraryTopBarSlot(
             ref,
             child: Scaffold(
-              appBar: AppBar(title: Text(context.l10n.library)),
+              appBar: showsMergedTopBar(context)
+                  ? null
+                  : AppBar(title: Text(context.l10n.library)),
               body: Emoticons(
                 title: context.l10n.noVisibleCategories,
                 button: TextButton(
@@ -1027,13 +1087,11 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
               : kTabScrollDuration,
           child: Scaffold(
             endDrawerEnableOpenDragGesture: false,
-            endDrawer: desktop
-                ? null
-                : const Drawer(
-                    width: kDrawerWidth,
-                    shape: RoundedRectangleBorder(),
-                    child: LibraryMangaOrganizer(),
-                  ),
+            endDrawer: const Drawer(
+              width: kDrawerWidth,
+              shape: RoundedRectangleBorder(),
+              child: LibraryMangaOrganizer(),
+            ),
             body: Builder(
               builder: (bodyContext) {
                 final trailing = <Widget>[
@@ -1043,10 +1101,15 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                   ),
                 ];
                 final tabStrip = showTabBar && tabs.length > 1
-                    ? GroupedCategoryTabStrip(groupedTabs: tabs)
+                    ? DesktopPageHeader(
+                        child: GroupedCategoryTabStrip(groupedTabs: tabs),
+                      )
                     : null;
-                return TopBarSlot(
-                  content: DesktopLibraryToolbar(trailing: trailing),
+                final slot = TopBarSlot(
+                  content: DesktopLibraryToolbar(
+                    onOpenOrganizer: () => _openLibraryOrganizer(bodyContext),
+                    trailing: trailing,
+                  ),
                   minWidth: libraryTopBarSlotMinWidth(trailing.length),
                   child: NestedScrollView(
                     controller: scrollController,
@@ -1057,7 +1120,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                           SliverPersistentHeader(
                             pinned: true,
                             delegate: _SliverFixedHeaderDelegate(
-                              height: 44,
+                              height:
+                                  kCategoryTabStripHeight +
+                                  DesktopPageHeader.gap,
                               child: tabStrip,
                             ),
                           ),
@@ -1072,6 +1137,8 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                                   ? 64 + 44
                                   : 64,
                         child: _desktopLibraryHeader(
+                          onOpenOrganizer: () =>
+                              _openLibraryOrganizer(bodyContext),
                           trailing: trailing,
                           tabStrip: tabStrip,
                         ),
@@ -1092,7 +1159,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                           )
                         : null,
                     actions: [
-                      _organizerButton(),
+                            _organizerButton(),
                             Consumer(
                               builder: (context, ref, _) =>
                                   PopupMenuButton<void>(
@@ -1179,6 +1246,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
               ),
             ),
           );
+                return _libraryPageLayout(tabStrip, slot);
         },
       ),
     ),
@@ -1194,7 +1262,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
       wrapper: (body) => _emptyLibraryTopBarSlot(
         ref,
         child: Scaffold(
-          appBar: AppBar(title: Text(context.l10n.library)),
+          appBar: showsMergedTopBar(context)
+              ? null
+              : AppBar(title: Text(context.l10n.library)),
           body: _libraryBody(ref, body, grouped: true),
         ),
       ),
@@ -1277,7 +1347,8 @@ class _PagedSection extends ConsumerWidget {
           width: double.infinity,
           color: context.theme.colorScheme.surface,
           alignment: AlignmentDirectional.centerStart,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8)
+              .onDesktopPageLine(context),
           child: Text(
             title,
             overflow: TextOverflow.ellipsis,

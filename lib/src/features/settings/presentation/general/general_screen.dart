@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
@@ -35,6 +36,10 @@ class GeneralScreen extends ConsumerWidget {
       });
     }
 
+    const portraitTile = SettingsHighlightTarget(
+      id: 'lockToPortrait',
+      child: ForcePortraitTile(),
+    );
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.general);
     final scaffold = Scaffold(
@@ -48,13 +53,13 @@ class GeneralScreen extends ConsumerWidget {
             child: ListView(
               padding: settingsPagePadding(context),
               children: [
-                const SizedBox(height: 16),
+                const DesktopPageLeadingGap(16),
                 SettingsGroupCard(
                   children: [
-                    SettingsHighlightTarget(
-                      id: 'lockToPortrait',
-                      child: ForcePortraitTile(),
-                    ),
+                    if (canForcePortrait(
+                      MediaQuery.sizeOf(context).shortestSide,
+                    ))
+                      portraitTile,
                     const SettingsHighlightTarget(
                       id: 'persistentSearchBar',
                       child: PersistentSearchBarTile(),

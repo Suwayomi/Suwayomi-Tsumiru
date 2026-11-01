@@ -8,6 +8,7 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/app_sizes.dart';
 import '../../../../constants/db_keys.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -116,11 +117,14 @@ class _ProviderSection extends ConsumerWidget {
         mangaId: mangaId,
         providerName: provider.key,
       ).push(context),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: context.usesDesktopShell
+          ? EdgeInsets.zero
+          : const EdgeInsets.symmetric(horizontal: 16),
       height: 200,
       itemCount: itemCount,
       itemBuilder: itemBuilder,
       separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemMargin: 0,
       child: child,
     );
     return Column(
@@ -142,18 +146,26 @@ class _ProviderSection extends ConsumerWidget {
               ? section(child: _SectionMessage(context.l10n.noResultFound))
               : context.usesDesktopShell
               ? section(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 12,
-                    children: [
-                      for (final rec in list)
-                        RecommendationCard(
-                          rec: rec,
-                          width:
-                              ref.watch(gridMinWidthProvider) ??
-                              DBKeys.gridMangaCoverWidth.initial,
-                        ),
-                    ],
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    gridDelegate: MangaCoverGridDelegate(
+                      minCrossAxisExtent:
+                          ref.watch(gridMinWidthProvider) ??
+                          DBKeys.gridMangaCoverMinWidth.initial as double,
+                      titleExtent: kRecommendsTitleExtent,
+                      coverInset: 0,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 8,
+                    ),
+                    itemCount: list.length,
+                    itemBuilder: (context, i) => LayoutBuilder(
+                      builder: (context, constraints) => RecommendationCard(
+                        rec: list[i],
+                        width: constraints.maxWidth,
+                      ),
+                    ),
                   ),
                 )
               : section(

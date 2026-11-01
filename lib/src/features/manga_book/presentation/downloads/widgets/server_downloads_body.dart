@@ -9,6 +9,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/fluent_expansion_tile.dart';
 import '../../../../../widgets/popup_widgets/confirm_action.dart';
@@ -236,7 +237,8 @@ class ServerDownloadsBody extends HookConsumerWidget {
         children: [
           for (final group in groups.entries) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 8)
+                  .onDesktopPageLine(context),
               child: Row(
                 children: [
                   Text(
@@ -310,78 +312,73 @@ class ServerDownloadsBody extends HookConsumerWidget {
               .getValueOnNullOrNegative();
           Future<void> onRefresh() => ref.refresh(downloadStatusProvider.future);
           if (desktop) {
-            return Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1040),
-                child: RefreshIndicator(
-                  onRefresh: onRefresh,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (!canDownload)
-                          ListTile(
-                            subtitle: Text(
-                              context.l10n.accountPermissionDenied,
-                            ),
-                          ),
-                        if (selecting)
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(children: [...leading, ...actions]),
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  context.l10n.downloadsQueue,
-                                  style: context.textTheme.titleMedium,
+            return DesktopCentredColumn(
+              child: RefreshIndicator(
+                onRefresh: onRefresh,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(0, 8, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (!canDownload)
+                        ListTile(
+                          subtitle: Text(context.l10n.accountPermissionDenied),
+                        ),
+                      if (selecting)
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(children: [...leading, ...actions]),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ).onDesktopPageLine(context),
+                          child: Row(
+                            children: [
+                              Text(
+                                context.l10n.downloadsQueue,
+                                style: context.textTheme.titleMedium,
+                              ),
+                              const SizedBox(width: 8),
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: context
+                                      .theme
+                                      .colorScheme
+                                      .secondaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                const SizedBox(width: 8),
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: context
-                                        .theme
-                                        .colorScheme
-                                        .secondaryContainer,
-                                    borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 1,
                                   ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 1,
-                                    ),
-                                    child: Text(
-                                      '$downloadsCount',
-                                      style: context.textTheme.labelSmall,
-                                    ),
+                                  child: Text(
+                                    '$downloadsCount',
+                                    style: context.textTheme.labelSmall,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        if (manageAll) const OnlyMyDownloadsTile(),
-                        desktopGroups(grouped ? mineIds : visibleIds),
-                        if (grouped)
-                          FluentExpansionTile(
-                            initiallyExpanded: foreignExpanded.value,
-                            onExpansionChanged: (expanded) =>
-                                foreignExpanded.value = expanded,
-                            title: Text(
-                              '${context.l10n.notInYourLibrary} (${foreignIds.length})',
-                            ),
-                            children: [desktopGroups(foreignIds)],
+                        ),
+                      if (manageAll) const OnlyMyDownloadsTile(),
+                      desktopGroups(grouped ? mineIds : visibleIds),
+                      if (grouped)
+                        FluentExpansionTile(
+                          initiallyExpanded: foreignExpanded.value,
+                          onExpansionChanged: (expanded) =>
+                              foreignExpanded.value = expanded,
+                          title: Text(
+                            '${context.l10n.notInYourLibrary} '
+                            '(${foreignIds.length})',
                           ),
-                      ],
-                    ),
+                          children: [desktopGroups(foreignIds)],
+                        ),
+                    ],
                   ),
                 ),
               ),

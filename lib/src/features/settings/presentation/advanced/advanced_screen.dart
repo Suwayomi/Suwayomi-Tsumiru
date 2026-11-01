@@ -11,6 +11,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/cover_cache/cover_cache.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../history/presentation/history_controller.dart';
@@ -42,7 +43,7 @@ class AdvancedScreen extends ConsumerWidget {
             child: ListView(
               padding: settingsPagePadding(context),
               children: [
-                const SizedBox(height: 16),
+                const DesktopPageLeadingGap(16),
                 SettingsGroupCard(
                   children: [
                     SettingsHighlightTarget(

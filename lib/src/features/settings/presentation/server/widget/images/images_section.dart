@@ -7,6 +7,7 @@ import '../../../../../../routes/router_config.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/cover_cache/cover_cache.dart';
+import '../../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
@@ -43,7 +44,7 @@ class ImagesSection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
+        const DesktopPageLeadingGap(16),
         if (showProcessingCard)
           SettingsGroupCard(
             children: [

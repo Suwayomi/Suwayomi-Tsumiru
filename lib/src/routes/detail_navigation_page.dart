@@ -33,8 +33,26 @@ Page<void> detailNavigationShellPage(
   return _detailNavigationPage(
     context,
     state,
-    DetailNavigationShellScreen(child: navigator),
+    DetailNavigationShellScreen(framed: false, child: navigator),
   );
+}
+
+/// Each detail-shell page carries its own frame to keep its layout mid-transition.
+abstract class DetailShellRouteData extends GoRouteData {
+  const DetailShellRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      MaterialPage<void>(
+        key: state.pageKey,
+        name: state.name ?? state.path,
+        arguments: <String, String>{
+          ...state.pathParameters,
+          ...state.uri.queryParameters,
+        },
+        restorationId: state.pageKey.value,
+        child: DesktopPageFrame(child: build(context, state)),
+      );
 }
 
 Page<void> _detailNavigationPage(

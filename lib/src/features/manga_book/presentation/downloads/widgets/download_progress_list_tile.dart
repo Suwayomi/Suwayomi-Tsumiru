@@ -15,6 +15,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
@@ -247,7 +248,10 @@ class DownloadProgressListTile extends HookConsumerWidget {
                     mangaId: downloadUpdate.manga.id,
                   ).push(context),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ).onDesktopPageLine(context),
                 child: Row(
                   children: [
                     if (selecting)

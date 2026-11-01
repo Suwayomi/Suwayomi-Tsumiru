@@ -77,7 +77,7 @@ class SourceScreen extends HookConsumerWidget {
         return RefreshIndicator(
           onRefresh: refresh,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.only(bottom: 16),
             child: CustomScrollView(
               slivers: [
                 if (pinned.isNotEmpty) ...[
@@ -87,7 +87,7 @@ class SourceScreen extends HookConsumerWidget {
                       topPadding: 16,
                     ),
                   ),
-                  BrowseCardGrid(
+                  BrowseCardGrid.source(
                     itemCount: pinned.length,
                     itemBuilder: (context, index) =>
                         SourceCard(source: pinned[index]),
@@ -100,7 +100,7 @@ class SourceScreen extends HookConsumerWidget {
                       topPadding: pinned.isEmpty ? 16 : 24,
                     ),
                   ),
-                  BrowseCardGrid(
+                  BrowseCardGrid.source(
                     itemCount: lastUsed!.length,
                     itemBuilder: (context, index) =>
                         SourceCard(source: lastUsed[index]),
@@ -113,7 +113,7 @@ class SourceScreen extends HookConsumerWidget {
                       topPadding: pinned.isEmpty && lastUsed.isBlank ? 16 : 24,
                     ),
                   ),
-                  BrowseCardGrid(
+                  BrowseCardGrid.source(
                     itemCount: allSource!.length,
                     itemBuilder: (context, index) =>
                         SourceCard(source: allSource[index]),
@@ -127,7 +127,7 @@ class SourceScreen extends HookConsumerWidget {
                         topPadding: 24,
                       ),
                     ),
-                    BrowseCardGrid(
+                    BrowseCardGrid.source(
                       itemCount: sourceMap[k]!.length,
                       itemBuilder: (context, index) =>
                           SourceCard(source: sourceMap[k]![index]),
@@ -141,7 +141,7 @@ class SourceScreen extends HookConsumerWidget {
                       topPadding: 24,
                     ),
                   ),
-                  BrowseCardGrid(
+                  BrowseCardGrid.source(
                     itemCount: localSource!.length,
                     itemBuilder: (context, index) =>
                         SourceCard(source: localSource[index]),

@@ -149,7 +149,7 @@ void main() {
     );
     expect(container.read(sidebarExpandedProvider), isTrue);
     expect(narrowPrefs.getBool('sidebarExpanded'), isNot(isFalse));
-    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsOneWidget);
+    expect(find.byIcon(FluentIcons.panel_left_24_regular), findsNothing);
     expect(find.byIcon(FluentIcons.chevron_right_24_regular), findsNothing);
     expect(tester.takeException(), isNull);
 

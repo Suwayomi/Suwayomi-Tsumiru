@@ -14,6 +14,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
@@ -47,7 +48,7 @@ class SourceMangaGridView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PagingListener(
+    final view = PagingListener(
       controller: controller,
       builder: (context, state, fetchNextPage) => PagedGridView(
         state: state.copyWith(
@@ -114,5 +115,6 @@ class SourceMangaGridView extends ConsumerWidget {
         gridDelegate: mangaCoverGridDelegate(ref.watch(gridMinWidthProvider)),
       ),
     );
+    return DesktopBoxBleed(start: kMangaCoverCardInset / 2, child: view);
   }
 }

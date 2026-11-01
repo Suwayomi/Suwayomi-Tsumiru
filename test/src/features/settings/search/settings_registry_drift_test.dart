@@ -303,11 +303,14 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
       }
 
+      // Lock to portrait exists only on phone-sized screens.
+      tester.view.physicalSize = const Size(400, 10000);
       await pumpAndCheck(
         await _container(),
         const GeneralScreen(),
         generalSettingsSearchEntries,
       );
+      tester.view.physicalSize = const Size(800, 10000);
 
       await pumpAndCheck(
         await _container(

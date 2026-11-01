@@ -65,6 +65,22 @@ In wide layouts the navigation and detail shells wrap only the content column in
 - **Tablet** (≥ 600, `context.isTablet`): `BigScreenNavigationBar` (`NavigationRail`), 6 items incl. History.
 - **Desktop** (≥ 1200, `context.isDesktop`): rail is **extended** (256px) with logo + title in `leading`.
 
+## Desktop page frame
+
+`lib/src/widgets/desktop/desktop_page_frame.dart` supplies the shared page frame.
+`DesktopPageLayout.standard` adds a 16 px start (left in LTR) and top inset;
+`header` keeps the start inset and lets `DesktopPageHeader` add the 16 px gap
+below the header; `fullBleed` adds neither inset. Page-line helpers align content
+within these variants.
+
+Page scroll views reserve a global 14 px scrollbar gutter (10 px thumb plus
+4 px clearance). Full-bleed scroll views keep edge-to-edge backgrounds and apply
+the clearance to their content instead.
+
+`desktop_top_bar.dart` keeps search and actions on one row. Search has a shared
+200 px minimum and 320 px preferred width; icon actions form a group of 40 px
+buttons, with 10 px gaps between the search and action groups.
+
 ## Gotchas
 
 - **History index offset on phone.** The stateful shell always has 6 branches (0–5); phone shows 5 (History hidden). `NavigationShellScreen` has `getAdjustedIndex`/`getReverseAdjustedIndex` that ±1 for indices ≥ 2 on phone. Changing the nav item count must update these or the wrong branch is selected.

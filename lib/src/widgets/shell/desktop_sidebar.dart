@@ -20,16 +20,18 @@ import '../../utils/platform/platform_runtime.dart';
 import '../../utils/theme/brand.dart';
 import '../compact_switch.dart';
 import '../desktop/desktop_brand.dart';
-import '../desktop/desktop_top_bar.dart';
 import 'nav_badges.dart';
 import 'nav_motion_icon.dart';
 import 'sidebar_expanded.dart';
 
 const double _sidebarExpandedMinWidth = 1000;
 
+bool sidebarCanExpand(BuildContext context) =>
+    MediaQuery.sizeOf(context).width >= _sidebarExpandedMinWidth;
+
 /// Below the expansion threshold, collapse without changing the saved preference.
 bool sidebarIsExpanded(BuildContext context, bool preference) =>
-    preference && MediaQuery.sizeOf(context).width >= _sidebarExpandedMinWidth;
+    preference && sidebarCanExpand(context);
 
 /// Native macOS moves the brand row below its traffic lights; other platforms keep it in the top bar.
 class DesktopSidebar extends ConsumerWidget {
@@ -72,8 +74,6 @@ class DesktopSidebar extends ConsumerWidget {
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
     final expanded = sidebarIsExpanded(context, preference);
     final isMacOS = isDesktopPlatform && isMacOSRuntime;
-    // Two-row mode already has a title-bar logo; only the merged macOS bar needs a sidebar brand.
-    final showBrandRow = isMacOS && desktopTopBarShowsMergedRow(context, ref);
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
     void collapse() => ref.read(sidebarExpandedProvider.notifier).update(false);
 
@@ -246,7 +246,7 @@ class DesktopSidebar extends ConsumerWidget {
               ? constraints.maxHeight
               : null;
           final brandRows = [
-            if (showBrandRow) ...[
+            if (isMacOS) ...[
               if (showExpanded)
                 DesktopBrandRow(
                   onCollapse: collapse,
@@ -257,7 +257,9 @@ class DesktopSidebar extends ConsumerWidget {
                 SizedBox(
                   height: _rowHeight,
                   child: Center(
-                    child: DesktopBrandExpandButton(onExpand: expand),
+                    child: sidebarCanExpand(context)
+                        ? DesktopBrandExpandButton(onExpand: expand)
+                        : const SizedBox.shrink(),
                   ),
                 ),
               const SizedBox(height: 8),

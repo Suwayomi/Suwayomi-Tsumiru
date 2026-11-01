@@ -16,16 +16,19 @@ import '../../utils/platform/platform_runtime.dart';
 import '../shell/desktop_sidebar.dart';
 import '../shell/sidebar_expanded.dart';
 import 'desktop_brand.dart';
+import 'desktop_page_frame.dart';
 import 'desktop_title_bar.dart';
 
 const double kDesktopTopBarHeight = 64;
 
 const double kDesktopTopBarGap = 10;
 
-/// Three window_manager caption buttons at its 46 px minimum each.
-const double kWindowButtonsWidth = 3 * 46;
+// Compact desktop IconButtons use the 48 px touch target minus 8 px density.
+const double kDesktopToolbarIconButtonExtent = 40;
 
 const double kTopBarSearchMinWidth = 200;
+
+const double kTopBarSearchPreferredWidth = 320;
 
 /// Shared desktop-shell gate for merged bars, slots and page AppBar suppression.
 bool showsMergedTopBar(BuildContext context) =>
@@ -119,71 +122,10 @@ String _resolveSlotKey(
   return _activeLeafLocation(context);
 }
 
-/// Shared one-row decision; macOS needs its sidebar brand only alongside the merged row.
-bool desktopTopBarShowsMergedRow(BuildContext context, WidgetRef ref) =>
-    _topBarLayout(
-      context,
-      ref,
-      _resolveSlotKey(context, ref.watch(topBarSlotRegistryProvider)),
-    ).merged;
-
-_TopBarLayout _topBarLayout(
-  BuildContext context,
-  WidgetRef ref,
-  String location,
-) {
-  final width = MediaQuery.sizeOf(context).width;
-  final native = isDesktopPlatform;
-  final isMacOS = native && isMacOSRuntime;
-  final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
-  final brandWidth = DesktopSidebar.widthFor(
-    expanded: sidebarIsExpanded(context, preference),
-    isMacOS: isMacOS,
-  );
-  final stacked = ref.watch(topBarSlotRegistryProvider)[location];
-  final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
-  final merged =
-      entry == null ||
-      width >=
-          topBarBreakpoint(
-            brandWidth: brandWidth,
-            slotMinWidth: entry.minWidth,
-            isMacOS: isMacOS || !native,
-          );
-  return (
-    merged: merged,
-    brandWidth: brandWidth,
-    isMacOS: isMacOS,
-    native: native,
-    entry: entry,
-  );
-}
-
-typedef _TopBarLayout = ({
-  bool merged,
-  double brandWidth,
-  bool isMacOS,
-  bool native,
-  TopBarSlotEntry? entry,
-});
-
-/// Merge breakpoint derived from brand, minimum toolbar, caption buttons and gaps.
-double topBarBreakpoint({
-  required double brandWidth,
-  required double slotMinWidth,
-  required bool isMacOS,
-}) =>
-    brandWidth +
-    kDesktopTopBarGap +
-    slotMinWidth +
-    kDesktopTopBarGap +
-    (isMacOS ? 0 : kWindowButtonsWidth + kDesktopTopBarGap);
-
 double titleTopBarSlotMinWidth(int actionCount) =>
     48.0 + kDesktopTopBarGap + 120.0 + actionCount * 48.0;
 
 double searchTopBarSlotMinWidth(int actionCount, [double leadingWidth = 0]) =>
-    // Match desktopToolbarRow: side padding plus one gap between each child.
     kTopBarSearchMinWidth +
     2 * kDesktopToolbarSlotHPadding +
     leadingWidth +
@@ -192,7 +134,7 @@ double searchTopBarSlotMinWidth(int actionCount, [double leadingWidth = 0]) =>
 
 BoxConstraints settingsPageConstraints(
   BuildContext context, {
-  double maxWidth = 720,
+  double maxWidth = kDesktopSettingsMaxWidth,
 }) => BoxConstraints(
   maxWidth: SettingsPaneScope.maybeOf(context) == null
       ? maxWidth
@@ -279,10 +221,12 @@ Widget desktopToolbarRow({
   required Widget search,
   required List<Widget> actions,
   Widget? leading,
+  int spacedActionCount = 0,
+  double gap = kDesktopTopBarGap,
 }) => Padding(
   padding: const EdgeInsets.symmetric(horizontal: kDesktopToolbarSlotHPadding),
   child: Row(
-    spacing: kDesktopTopBarGap,
+    spacing: gap,
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       ?leading,
@@ -290,21 +234,56 @@ Widget desktopToolbarRow({
         child: Align(
           alignment: Alignment.centerLeft,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kDesktopSearchMaxWidth),
-            child: search,
+            constraints: const BoxConstraints(
+              maxWidth: kTopBarSearchPreferredWidth,
+            ),
+            child: _desktopToolbarIconTheme(search),
           ),
         ),
       ),
-      ...actions,
+      ...actions.take(spacedActionCount),
+      if (actions.length > spacedActionCount)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final action in actions.skip(spacedActionCount))
+              _desktopToolbarIconButton(action),
+          ],
+        ),
     ],
   ),
+);
+
+Widget _desktopToolbarIconButton(Widget child) => ConstrainedBox(
+  constraints: const BoxConstraints(
+    maxWidth: kDesktopToolbarIconButtonExtent,
+    maxHeight: kDesktopToolbarIconButtonExtent,
+  ),
+  child: _desktopToolbarIconTheme(child),
+);
+
+Widget _desktopToolbarIconTheme(Widget child) => IconButtonTheme(
+  data: IconButtonThemeData(
+    style: IconButton.styleFrom(
+      fixedSize: const Size.square(kDesktopToolbarIconButtonExtent),
+      visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+  ),
+  child: child,
 );
 
 Widget desktopSearchSlotContent({
   Widget? leading,
   required Widget search,
   required List<Widget> actions,
-}) => desktopToolbarRow(leading: leading, search: search, actions: actions);
+  int spacedActionCount = 0,
+}) => desktopToolbarRow(
+  leading: leading == null ? null : _desktopToolbarIconButton(leading),
+  search: search,
+  actions: actions,
+  spacedActionCount: spacedActionCount,
+);
 
 /// Supply the page's back button: this toolbar sits outside its Navigator.
 class DesktopTitleSlot extends StatelessWidget {
@@ -320,12 +299,14 @@ class DesktopTitleSlot extends StatelessWidget {
   final List<Widget> actions;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      leading ?? const SizedBox.shrink(),
-      Expanded(child: title),
-      ...actions,
-    ],
+  Widget build(BuildContext context) => _desktopToolbarIconTheme(
+    Row(
+      children: [
+        if (leading != null) _desktopToolbarIconButton(leading!),
+        Expanded(child: title),
+        ...actions,
+      ],
+    ),
   );
 }
 
@@ -626,7 +607,6 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   }
 }
 
-/// Merge brand, toolbar and native controls when they fit; otherwise use two rows.
 class DesktopTopBar extends ConsumerStatefulWidget {
   const DesktopTopBar({super.key});
 
@@ -638,9 +618,6 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   late MergedTopBarRegistry _registry;
   bool _scheduled = false;
   bool _shown = false;
-
-  /// Preserve toolbar State while moving it between one-row and two-row ancestors.
-  final Map<String, GlobalKey> _slotContentKeys = {};
 
   /// Track displayed routes: a shell can remain mounted offstage beneath the reader.
   bool _isBarVisible() {
@@ -709,28 +686,17 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   }
 
   Widget _buildBar(BuildContext context, WidgetRef ref, String location) {
-    final layout = _topBarLayout(context, ref, location);
-    final merged = layout.merged;
-    final brandWidth = layout.brandWidth;
-    final isMacOS = layout.isMacOS;
-    final native = layout.native;
-    final entry = layout.entry;
-    // Only the visible bar may mount the toolbar's GlobalKeys.
+    final native = isDesktopPlatform;
+    final isMacOS = native && isMacOSRuntime;
+    final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
+    final brandWidth = DesktopSidebar.widthFor(
+      expanded: sidebarIsExpanded(context, preference),
+      isMacOS: isMacOS,
+    );
+    final stacked = ref.watch(topBarSlotRegistryProvider)[location];
+    final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
     final visible = _isBarVisible();
     final theme = Theme.of(context);
-    if (!merged) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const DesktopTitleBar(),
-          Container(
-            height: kDesktopTopBarHeight,
-            color: theme.colorScheme.surface,
-            child: _slotContent(context, entry, location, visible: visible),
-          ),
-        ],
-      );
-    }
     return Container(
       height: kDesktopTopBarHeight,
       color: theme.colorScheme.surface,
@@ -768,7 +734,6 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     required bool visible,
   }) {
     if (entry == null || !visible) return const SizedBox.shrink();
-    // A stable GlobalKey preserves toolbar focus and State when resize changes its ancestors.
     final key = '$location#${entry.slotKey}';
     return AnimatedSwitcher(
       duration: context.reduceMotion
@@ -780,10 +745,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
         maxWidth: entry.minWidth,
         child: Container(
           alignment: Alignment.center,
-          child: KeyedSubtree(
-            key: _slotContentKeys.putIfAbsent(key, GlobalKey.new),
-            child: entry.content,
-          ),
+          child: entry.content,
         ),
       ),
     );
@@ -822,7 +784,11 @@ class _BrandBlock extends ConsumerWidget {
               ? const SizedBox.expand()
               : showExpanded
               ? DesktopBrandRow(onCollapse: toggle)
-              : Center(child: DesktopBrandExpandButton(onExpand: toggle)),
+              : Center(
+                  child: sidebarCanExpand(context)
+                      ? DesktopBrandExpandButton(onExpand: toggle)
+                      : const SizedBox.shrink(),
+                ),
         );
       },
     );

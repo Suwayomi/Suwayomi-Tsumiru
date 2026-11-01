@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/web_route_link.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
@@ -185,7 +186,7 @@ class _DesktopTile extends HookConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
-                ),
+                ).onDesktopPageLine(context),
                 child: Row(
                   children: [
                     ClipRRect(

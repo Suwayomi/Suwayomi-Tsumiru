@@ -25,6 +25,7 @@ import '../../graphql/__generated__/schema.graphql.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
+import '../desktop/desktop_page_frame.dart';
 import '../desktop/desktop_top_bar.dart';
 import 'big_screen_navigation_bar.dart';
 import 'incognito_banner.dart';
@@ -262,7 +263,12 @@ class NavigationShellScreen extends HookConsumerWidget {
                             AccountStorageRecoveryBanner(
                               insetTop: !updateBannerVisible,
                             ),
-                            Expanded(child: content),
+                            Expanded(
+                              child: DesktopPageFrame(
+                                wrapsNavigator: true,
+                                child: content,
+                              ),
+                            ),
                             const IncognitoBanner(),
                           ],
                         ),

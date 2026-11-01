@@ -1,6 +1,6 @@
 part of '../router_config.dart';
 
-class MangaRoute extends GoRouteData with $MangaRoute {
+class MangaRoute extends DetailShellRouteData with $MangaRoute {
   const MangaRoute({required this.mangaId, this.categoryId});
   final int mangaId;
   final int? categoryId;
@@ -10,7 +10,7 @@ class MangaRoute extends GoRouteData with $MangaRoute {
       MangaDetailsScreen(mangaId: mangaId, categoryId: categoryId);
 }
 
-class RecommendsRoute extends GoRouteData with $RecommendsRoute {
+class RecommendsRoute extends DetailShellRouteData with $RecommendsRoute {
   const RecommendsRoute({required this.mangaId, this.mangaTitle});
   final int mangaId;
   final String? mangaTitle;
@@ -20,7 +20,8 @@ class RecommendsRoute extends GoRouteData with $RecommendsRoute {
       RecommendsScreen(mangaId: mangaId, mangaTitle: mangaTitle);
 }
 
-class RecommendsBrowseRoute extends GoRouteData with $RecommendsBrowseRoute {
+class RecommendsBrowseRoute extends DetailShellRouteData
+    with $RecommendsBrowseRoute {
   const RecommendsBrowseRoute({
     required this.mangaId,
     required this.providerName,
@@ -33,7 +34,7 @@ class RecommendsBrowseRoute extends GoRouteData with $RecommendsBrowseRoute {
       RecommendsBrowseScreen(mangaId: mangaId, providerName: providerName);
 }
 
-class LibraryUpdateErrorsRoute extends GoRouteData
+class LibraryUpdateErrorsRoute extends DetailShellRouteData
     with $LibraryUpdateErrorsRoute {
   const LibraryUpdateErrorsRoute();
   @override
@@ -125,7 +126,7 @@ class _ReaderRouteTransition extends ConsumerWidget {
   }
 }
 
-class GlobalSearchRoute extends GoRouteData with $GlobalSearchRoute {
+class GlobalSearchRoute extends DetailShellRouteData with $GlobalSearchRoute {
   const GlobalSearchRoute({this.query, this.fromSuggestion = false});
   final String? query;
   final bool fromSuggestion;
@@ -138,7 +139,7 @@ class GlobalSearchRoute extends GoRouteData with $GlobalSearchRoute {
   );
 }
 
-class GlobalSearchSourceRoute extends GoRouteData
+class GlobalSearchSourceRoute extends DetailShellRouteData
     with $GlobalSearchSourceRoute {
   const GlobalSearchSourceRoute({required this.sourceId, this.query});
   final String sourceId;

@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/extensions/custom_extensions.dart';
+import 'desktop_page_frame.dart';
 
 class DesktopViewSwitchBar extends StatelessWidget {
   const DesktopViewSwitchBar({
@@ -14,18 +15,17 @@ class DesktopViewSwitchBar extends StatelessWidget {
     required this.labels,
     required this.selectedIndex,
     required this.onChanged,
-    this.padding = const EdgeInsets.fromLTRB(24, 12, 12, 12),
   });
 
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
-  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding,
+      padding: const EdgeInsets.fromLTRB(24, 12, 12, 12)
+          .onDesktopPageLine(context, top: true),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: context.colorScheme.outlineVariant),
