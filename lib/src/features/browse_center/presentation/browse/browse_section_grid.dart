@@ -78,14 +78,18 @@ class BrowseCardGrid extends StatelessWidget {
   final double mainAxisExtent;
 
   @override
-  Widget build(BuildContext context) => SliverGrid(
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      mainAxisExtent: mainAxisExtent * browseCardTextScale(context),
+  Widget build(BuildContext context) => SliverLayoutBuilder(
+    builder: (context, constraints) => SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: ((constraints.crossAxisExtent + 12) / (240 + 12))
+            .floor()
+            .clamp(1, 3),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: mainAxisExtent * browseCardTextScale(context),
+      ),
+      delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
     ),
-    delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
   );
 }
 
