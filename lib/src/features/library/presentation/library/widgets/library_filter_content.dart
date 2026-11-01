@@ -424,7 +424,7 @@ class LibraryCategoryFilter extends ConsumerWidget {
     final exclude =
         (ref.watch(libraryFilterCategoriesExcludeProvider) ?? const <String>[])
             .toSet();
-    final categories = ref.watch(visibleCategoryListProvider).value ?? const [];
+    final categories = ref.watch(categoryControllerProvider).value ?? const [];
     String nameFor(String id) =>
         categories
             .where((c) => c.id.toString() == id)
@@ -751,7 +751,7 @@ class CategoryFilterDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoriesAsync = ref.watch(visibleCategoryListProvider);
+    final categoriesAsync = ref.watch(categoryControllerProvider);
     final includeSet =
         (ref.watch(libraryFilterCategoriesIncludeProvider) ?? const <String>[])
             .toSet();

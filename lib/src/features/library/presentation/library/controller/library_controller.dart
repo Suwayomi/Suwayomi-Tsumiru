@@ -13,6 +13,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../features/offline/data/offline_download_providers.dart';
+import '../../../../../features/offline/data/server_reachability.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
@@ -26,6 +27,7 @@ import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
 import '../../../domain/library_search_query.dart';
 import '../../../domain/track_status.dart';
+import '../../category/controller/edit_category_controller.dart';
 import 'library_grouping.dart';
 import 'library_manga_list.dart';
 
@@ -471,18 +473,65 @@ class LibraryFilterCategories extends _$LibraryFilterCategories
   bool? build() => initialize(DBKeys.filterCategories);
 }
 
+List<String>? _validCategoryFilter(
+  Ref ref,
+  AsyncValue<List<CategoryDto>?> categories,
+  List<String>? selected,
+  DBKeys key,
+) {
+  if (selected == null ||
+      categories.isLoading ||
+      categories.hasError ||
+      categories.value == null ||
+      ref.read(viewOfflineNowProvider) ||
+      ref.read(serverUnreachableProvider)) {
+    return selected;
+  }
+  final ids = categories.value!.map((category) => category.id.toString()).toSet();
+  final valid = selected.where(ids.contains).toList();
+  if (valid.length == selected.length) return selected;
+  ref.read(sharedPreferencesProvider).setStringList(key.name, valid);
+  return valid;
+}
+
 @riverpod
 class LibraryFilterCategoriesInclude extends _$LibraryFilterCategoriesInclude
     with SharedPreferenceClientMixin<List<String>> {
   @override
-  List<String>? build() => initialize(DBKeys.filterCategoriesInclude);
+  List<String>? build() {
+    final saved = initialize(DBKeys.filterCategoriesInclude);
+    ref.listen(categoryControllerProvider, (_, next) {
+      update(_validCategoryFilter(
+        ref, next, state, DBKeys.filterCategoriesInclude,
+      ));
+    });
+    return _validCategoryFilter(
+      ref,
+      ref.read(categoryControllerProvider),
+      saved,
+      DBKeys.filterCategoriesInclude,
+    );
+  }
 }
 
 @riverpod
 class LibraryFilterCategoriesExclude extends _$LibraryFilterCategoriesExclude
     with SharedPreferenceClientMixin<List<String>> {
   @override
-  List<String>? build() => initialize(DBKeys.filterCategoriesExclude);
+  List<String>? build() {
+    final saved = initialize(DBKeys.filterCategoriesExclude);
+    ref.listen(categoryControllerProvider, (_, next) {
+      update(_validCategoryFilter(
+        ref, next, state, DBKeys.filterCategoriesExclude,
+      ));
+    });
+    return _validCategoryFilter(
+      ref,
+      ref.read(categoryControllerProvider),
+      saved,
+      DBKeys.filterCategoriesExclude,
+    );
+  }
 }
 
 @riverpod
