@@ -390,10 +390,8 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   Widget build(BuildContext context) {
     return PagingListener(
       controller: widget.controller,
-      builder: (context, state, fetchNextPage) => PagedSliverList(
-        state: state,
-        fetchNextPage: fetchNextPage,
-        builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
+      builder: (context, state, fetchNextPage) {
+        final delegate = PagedChildBuilderDelegate<ChapterWithMangaDto>(
           firstPageProgressIndicatorBuilder: (context) =>
               const CenterTsumiruShimmerIndicator(),
           firstPageErrorIndicatorBuilder: (context) => Emoticons(
@@ -411,8 +409,64 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
             ),
           ),
           itemBuilder: (context, _, index) => _buildItem(context, state, index),
-        ),
-      ),
+        );
+        if (!context.usesDesktopShell) {
+          return PagedSliverList(
+            state: state,
+            fetchNextPage: fetchNextPage,
+            builderDelegate: delegate,
+          );
+        }
+        Widget desktopListing(
+          BuildContext context,
+          IndexedWidgetBuilder _,
+          int itemCount,
+          WidgetBuilder? indicatorBuilder,
+        ) {
+          final grouping = _groupingFor(state.pages);
+          final indices = widget.displayMode == UpdatesDisplayMode.grid
+              ? grouping.sections.keys
+              : widget.groupingMode != UpdatesGroupingMode.disabled
+              ? grouping.headIndex.keys
+              : Iterable<int>.generate(itemCount);
+          final footer = SliverLayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.remainingCacheExtent > 0 &&
+                  state.hasNextPage &&
+                  !state.isLoading &&
+                  state.error == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && widget.controller.value == state) {
+                    fetchNextPage();
+                  }
+                });
+              }
+              return SliverToBoxAdapter(
+                child: indicatorBuilder?.call(context),
+              );
+            },
+          );
+          // Exact box extents avoid estimating across groups, headers and hidden rows.
+          return SliverMainAxisGroup(
+            slivers: [
+              ...indices.map((index) => SliverToBoxAdapter(
+                key: ValueKey(grouping.items[index].id),
+                child: _buildItem(context, state, index),
+              )),
+              footer,
+            ],
+          );
+        }
+        return PagedLayoutBuilder<int, ChapterWithMangaDto>(
+          state: state,
+          fetchNextPage: fetchNextPage,
+          builderDelegate: delegate,
+          layoutProtocol: PagedLayoutProtocol.sliver,
+          completedListingBuilder: desktopListing,
+          loadingListingBuilder: desktopListing,
+          errorListingBuilder: desktopListing,
+        );
+      },
     );
   }
 }

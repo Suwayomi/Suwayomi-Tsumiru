@@ -193,7 +193,29 @@ class HistoryScreen extends HookConsumerWidget {
                 final notifier = ref.read(readingHistoryProvider.notifier);
                 final list = RefreshIndicator(
                   onRefresh: notifier.refresh,
-                  child: ListView.builder(
+                  child: desktop
+                      ? CustomScrollView(
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.all(8)
+                                  .onDesktopPageLine(context, top: true),
+                              sliver: SliverMainAxisGroup(
+                                slivers: [
+                                  for (var index = 0;
+                                      index < historyGroups.length;
+                                      index++)
+                                    SliverToBoxAdapter(
+                                      child: HistoryGroupWidget(
+                                        group: historyGroups[index],
+                                        first: index == 0,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
                     padding: const EdgeInsets.all(8)
                         .onDesktopPageLine(context, top: true),
                     itemCount: historyGroups.length,
