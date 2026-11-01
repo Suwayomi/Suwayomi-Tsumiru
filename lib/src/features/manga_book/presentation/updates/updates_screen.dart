@@ -739,19 +739,22 @@ class UpdatesScreen extends HookConsumerWidget {
           child: const UpdatesFilterPanel(),
         ),
         child: Padding(
-          padding: const EdgeInsets.only(left: 12, right: 6),
+          padding: compact
+              ? const EdgeInsets.all(9)
+              : const EdgeInsets.only(left: 12, right: 6),
           child: Row(
             spacing: 8,
             children: [
               const Icon(FluentIcons.filter_24_regular, size: 20),
               if (!compact) Text(context.l10n.filter),
-              const Icon(FluentIcons.caret_down_24_filled, size: 20),
+              if (!compact)
+                const Icon(FluentIcons.caret_down_24_filled, size: 20),
             ],
           ),
         ),
       ),
     );
-    final displayBox = DesktopToolbarBox(
+    DesktopToolbarBox buildDisplayBox(bool compact) => DesktopToolbarBox(
       key: displayButtonKey,
       child: Tooltip(
         message: context.l10n.display,
@@ -764,13 +767,16 @@ class UpdatesScreen extends HookConsumerWidget {
             panelWidth: 400,
             child: const UpdatesDisplayPanel(),
           ),
-          child: const Padding(
-            padding: EdgeInsets.only(left: 10, right: 6),
+          child: Padding(
+            padding: compact
+                ? const EdgeInsets.all(9)
+                : const EdgeInsets.only(left: 10, right: 6),
             child: Row(
               spacing: 2,
               children: [
-                Icon(FluentIcons.grid_24_regular, size: 20),
-                Icon(FluentIcons.caret_down_24_filled, size: 20),
+                const Icon(FluentIcons.grid_24_regular, size: 20),
+                if (!compact)
+                  const Icon(FluentIcons.caret_down_24_filled, size: 20),
               ],
             ),
           ),
@@ -847,7 +853,7 @@ class UpdatesScreen extends HookConsumerWidget {
         Tooltip(message: context.l10n.filter, child: buildFilterBox(true))
       else
         buildFilterBox(false),
-      displayBox,
+      buildDisplayBox(compact),
       IconTheme.merge(
         data: const IconThemeData(size: 20),
         child: SyncYomiSyncButton(onSynced: resetList),
@@ -1023,6 +1029,7 @@ class UpdatesScreen extends HookConsumerWidget {
             search: search,
             actions: desktopActions(compact),
             spacedActionCount: 4,
+            gap: compact ? 4 : kDesktopTopBarGap,
           );
         },
       ),

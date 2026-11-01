@@ -262,10 +262,11 @@ Widget desktopToolbarRow({
   required List<Widget> actions,
   Widget? leading,
   int spacedActionCount = 0,
+  double gap = kDesktopTopBarGap,
 }) => Padding(
   padding: const EdgeInsets.symmetric(horizontal: kDesktopToolbarSlotHPadding),
   child: Row(
-    spacing: kDesktopTopBarGap,
+    spacing: gap,
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       ?leading,
@@ -276,7 +277,7 @@ Widget desktopToolbarRow({
             constraints: const BoxConstraints(
               maxWidth: kTopBarSearchPreferredWidth,
             ),
-            child: search,
+            child: _desktopToolbarIconTheme(search),
           ),
         ),
       ),
