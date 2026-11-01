@@ -13,12 +13,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
+import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/library_filter_content.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
@@ -98,6 +100,9 @@ Future<ProviderContainer> _createContainer({
       failedUpdateCountProvider.overrideWithValue(const AsyncData(0)),
       syncYomiSettingsProvider.overrideWithValue(const AsyncData(null)),
       settledDefaultCategoryIdProvider.overrideWithValue(1),
+      categoryControllerProvider.overrideWith(
+        () => _FilterCategories(() => [_category(1, 'One'), _category(2, 'Two')]),
+      ),
       nonZeroCategoryListProvider.overrideWithValue(
         AsyncData([_category(1, 'One'), _category(2, 'Two')]),
       ),
@@ -199,7 +204,66 @@ Future<void> _openFilterPanel(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+class _FilterCategories extends CategoryController {
+  _FilterCategories(this.categories);
+
+  final List<CategoryDto> Function() categories;
+
+  @override
+  Future<List<CategoryDto>?> build() async => categories();
+}
+
 void main() {
+  testWidgets('hidden categories stay editable and deleted selections are removed', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'filterCategories': true,
+      'filterCategoriesInclude': <String>['99'],
+      'filterCategoriesExclude': <String>['2', '99'],
+    });
+    final prefs = await SharedPreferences.getInstance();
+    var categories = [
+      _category(1, 'One'),
+      _category(2, 'Hidden').copyWith(meta: [
+        Fragment$CategoryDto$meta(key: kCategoryHiddenMetaKey, value: 'true'),
+      ]),
+    ];
+    final container = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      categoryControllerProvider.overrideWith(() => _FilterCategories(() => categories)),
+    ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: LibraryCategoryFilter()),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('−Hidden'), findsOneWidget);
+    expect(prefs.getStringList('filterCategoriesInclude'), isEmpty);
+    expect(prefs.getStringList('filterCategoriesExclude'), ['2']);
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hidden'), findsOneWidget);
+    await tester.tap(find.text('Hidden'));
+    await tester.pumpAndSettle();
+    expect(container.read(libraryFilterCategoriesExcludeProvider), isEmpty);
+    await tester.tap(find.text('Hidden'));
+    await tester.pumpAndSettle();
+    expect(container.read(libraryFilterCategoriesIncludeProvider), ['2']);
+    categories = [_category(1, 'One')];
+    container.invalidate(categoryControllerProvider);
+    await tester.pumpAndSettle();
+    expect(container.read(libraryFilterCategoriesIncludeProvider), isEmpty);
+    expect(prefs.getStringList('filterCategoriesInclude'), isEmpty);
+    expect(find.text('Hidden'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   group('Library filter panel (desktop 1400x980)', () {
     testWidgets('Yes/No segments write true/false on two filters', (
       tester,
