@@ -10,6 +10,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../constants/db_keys.dart';
+import '../../../constants/enum.dart';
+import '../../offline/data/offline_server_identity.dart';
 import 'secure_credentials_provider.dart';
 
 /// Legacy unused password key, retained only for upgrade cleanup.
@@ -73,6 +75,8 @@ class CredentialSnapshot {
   final FlutterSecureStorage _storage;
   final Map<String, String?> _values = {};
   Future<void>? _loading;
+  ({String address, String username, String key})? _unreadAccount;
+  bool _signInPrepared = false;
   Future<void> _persistTail = Future<void>.value();
 
   String? operator [](String key) => _values[key];
@@ -90,15 +94,48 @@ class CredentialSnapshot {
       if (deleted.every((ok) => ok)) {
         await _clearCredentialInvalidation(prefs);
       }
-    } else {
-      // Legacy-password cleanup is best effort and must not affect the invalidation marker.
-      unawaited(deleteSecure(_storage, kLegacyPasswordSecureKey));
     }
     for (final key in [...kCredentialKeys, ...kEndpointKeys]) {
       if (key == kLegacyPasswordSecureKey) continue;
       if (invalidated && kCredentialKeys.contains(key)) continue;
       _values[key] = await readSecureOrAbsent(_storage, key);
     }
+    if (!invalidated && keychainRefusedThisRun) {
+      final key = switch (prefs.getInt(DBKeys.authType.name)) {
+        final type when type == AuthType.basic.index => kBasicCredentialsKey,
+        final type when type == AuthType.simpleLogin.index =>
+          kSimpleLoginCookieSecureKey,
+        final type when type == AuthType.uiLogin.index => kUiRefreshTokenSecureKey,
+        _ => null,
+      };
+      if (key != null) {
+        _unreadAccount = (
+          address: serverAddress(
+            baseUrl: prefs.getString(DBKeys.serverUrl.name),
+            port:
+                prefs.getInt(DBKeys.serverPort.name) ??
+                DBKeys.serverPort.initial as int,
+            addPort: prefs.getBool(DBKeys.serverPortToggle.name) ?? true,
+          ),
+          username: prefs.getString(DBKeys.authUsername.name) ?? '',
+          key: key,
+        );
+      }
+    }
+    if (!invalidated && !keychainRefusedThisRun) {
+      unawaited(deleteSecure(_storage, kLegacyPasswordSecureKey));
+    }
+  }
+
+  void prepareSignIn(String? address, String? username, String credentialKey) {
+    if (address != _unreadAccount?.address ||
+        username == null ||
+        username.isEmpty ||
+        username.toLowerCase() != _unreadAccount?.username.toLowerCase() ||
+        credentialKey != _unreadAccount?.key) {
+      _unreadAccount = null;
+    }
+    _signInPrepared = true;
   }
 
   /// Updates memory, persists the complete account set, and marks partial failures as invalid.
@@ -110,6 +147,20 @@ class CredentialSnapshot {
     SharedPreferences prefs, {
     bool invalidateOnFailure = true,
   }) {
+    if ([
+      kSimpleLoginCookieSecureKey,
+      kUiRefreshTokenSecureKey,
+      kBasicCredentialsKey,
+    ].any(
+      (key) =>
+          changes.containsKey(key) &&
+          (changes[key] != null || key == _unreadAccount?.key),
+    )) {
+      if (!_signInPrepared || !changes.containsKey(_unreadAccount?.key)) {
+        _unreadAccount = null;
+      }
+      _signInPrepared = false;
+    }
     _values.addAll(changes);
     final target = Map<String, String?>.from(_values);
     final result = _persistTail.then(
@@ -141,6 +192,14 @@ class CredentialSnapshot {
         if (!saved) complete = false;
       }
       return complete;
+    }
+    if (_unreadAccount != null) {
+      if (!credentialsInvalidated(prefs) &&
+          target[_unreadAccount?.key] != null) {
+        markCredentialPersistenceFailed();
+        return false;
+      }
+      _unreadAccount = null;
     }
     var complete = true;
     for (final key in kCredentialKeys) {

@@ -45,7 +45,9 @@ void resetCredentialWriteFailure() => _writeFailed = false;
 void markCredentialPersistenceFailed() => _writeFailed = true;
 
 String _describe(Object error) =>
-    error is PlatformException ? error.code : error.runtimeType.toString();
+    error is PlatformException
+    ? '${error.code} (details: ${error.details})'
+    : error.runtimeType.toString();
 
 /// Refused reads return null and suppress later reads for this launch to avoid repeated prompts.
 Future<String?> readSecureOrAbsent(
