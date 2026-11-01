@@ -27,6 +27,14 @@ void main() {
     expect(prefs.getDouble('gridMangaCoverMinWidth'), 128.0);
     expect(prefs.containsKey('gridMangaCoverWidth'), isFalse);
 
+    SharedPreferences.setMockInitialValues({'gridMangaCoverWidth': 300.0});
+    final phonePrefs = await SharedPreferences.getInstance();
+    await migrateGridCoverPreference(phonePrefs, windowWidth: 390);
+    final width = phonePrefs.getDouble('gridMangaCoverMinWidth')!;
+    expect(width, closeTo(154.8, 0.001));
+    expect(((390 + 2) / (width + 2)).floor(), 2);
+    expect(phonePrefs.containsKey('gridMangaCoverWidth'), isFalse);
+
     await prefs.setDouble('gridMangaCoverMinWidth', 150.0);
     await migrateGridCoverPreference(prefs);
     expect(prefs.getDouble('gridMangaCoverMinWidth'), 150.0);

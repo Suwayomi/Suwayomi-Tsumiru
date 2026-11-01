@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:app_links/app_links.dart';
 import 'package:connectivity_plus_linux_portal/connectivity_plus_linux_portal.dart';
@@ -218,7 +219,13 @@ Future<void> _startApp() async {
   }
 
   try {
-    await migrateGridCoverPreference(sharedPreferences);
+    final view = PlatformDispatcher.instance.views.firstOrNull;
+    await migrateGridCoverPreference(
+      sharedPreferences,
+      windowWidth: view == null
+          ? 0
+          : view.physicalSize.width / view.devicePixelRatio,
+    );
   } catch (e, st) {
     debugPrint('grid cover preference migration failed: $e\n$st');
   }
