@@ -5,6 +5,7 @@
 
 import copy
 import io
+import math
 from pathlib import Path
 import shutil
 import subprocess
@@ -22,9 +23,9 @@ def svg(name):
     return ET.parse(BRAND / name).getroot()
 
 
-def render(art, size):
+def render(art, size, height=None):
     result = subprocess.run(
-        ["rsvg-convert", "--width", str(size), "--height", str(size)],
+        ["rsvg-convert", "--width", str(size), "--height", str(height or size)],
         input=ET.tostring(art), capture_output=True, check=True,
     )
     return Image.open(io.BytesIO(result.stdout)).convert("RGBA")
@@ -60,9 +61,47 @@ def greyscale_shade(image):
     return Image.merge("RGBA", (shade, shade, shade, alpha))
 
 
+def social_card():
+    card = Image.new("RGBA", (1280, 640))
+    pixels = card.load()
+    for y in range(640):
+        for x in range(1280):
+            if y >= 632:
+                amount = (y - 632) / 7
+                start, end = (124, 123, 255), (51, 214, 255)
+            else:
+                amount = min(1, math.hypot(x - 640, y - 320) / 640)
+                start, end = (26, 29, 74), (10, 12, 24)
+            pixels[x, y] = tuple(int(a + (b - a) * amount)
+                                 for a, b in zip(start, end)) + (255,)
+
+    art = fitted(svg("tsumiru-mark.svg"), (193, 210, 247, 227))
+    art.set("viewBox", "0 0 1280 640")
+    for value, box, size, weight, colour in [
+        ("Tsumiru", (563, 246, 406, 81), 110, "700", "#eef0fb"),
+        ("Your Suwayomi library, everywhere", (567, 367, 568, 33),
+         36, "400", "#9aa0c4"),
+    ]:
+        text = ET.Element(NS + "text", {
+            "x": "0", "y": "128", "font-family": "Adwaita Sans",
+            "font-size": str(size), "font-weight": weight, "fill": colour,
+        })
+        text.text = value
+        probe = ET.Element(NS + "svg", {"viewBox": "0 0 1280 640"})
+        probe.append(copy.deepcopy(text))
+        left, top, right, bottom = render(probe, 1280, 640).getchannel("A").getbbox()
+        x, y, width, height = box
+        sx, sy = width / (right - left), height / (bottom - top)
+        text.set("transform", f"translate({x - left * sx} {y - top * sy}) scale({sx} {sy})")
+        art.append(text)
+    card.alpha_composite(render(art, 1280, 640))
+    save("design/brand/tsumiru-social-card.png", card)
+
+
 def main():
     if shutil.which("rsvg-convert") is None:
         raise SystemExit("rsvg-convert is required; install librsvg to render brand assets.")
+    social_card()
     mark = fitted(svg("tsumiru-mark.svg"), (192, 216, 694, 638))
     light = fitted(svg("tsumiru-mark-on-light.svg"), (192, 216, 696, 640))
     round_icon = svg("tsumiru-icon.svg")
