@@ -1227,14 +1227,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
-    final background =
+    final spinnerColor =
         (ref.read(readerBackgroundColorKeyProvider) ??
                 DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor)
-            .color(context);
-    final spinnerColor =
-        ThemeData.estimateBrightnessForColor(background) == Brightness.dark
-        ? Colors.white
-        : Colors.black;
+            .onColor(context);
 
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
