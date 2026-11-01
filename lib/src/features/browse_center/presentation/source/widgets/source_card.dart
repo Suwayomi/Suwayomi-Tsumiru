@@ -18,6 +18,7 @@ import '../../../../../widgets/web_route_link.dart';
 import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart'
     show menuAnchorForPoint, menuAnchorForRect;
 import '../../../domain/source/source_model.dart';
+import '../../browse/browse_section_grid.dart';
 import '../controller/source_controller.dart';
 import 'source_context_menu.dart';
 
@@ -28,8 +29,6 @@ class SourceCard extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hovered = useState(false);
-    final menuOpen = useState(false);
     final moreKey = useMemoized(GlobalKey.new);
 
     void openPopular() {
@@ -40,19 +39,12 @@ class SourceCard extends HookConsumerWidget {
       ).go(context);
     }
 
-    Future<void> openMenu(RelativeRect position) async {
-      menuOpen.value = true;
-      try {
-        await showSourceContextMenu(
-          context: context,
-          ref: ref,
-          position: position,
-          source: source,
-        );
-      } finally {
-        menuOpen.value = false;
-      }
-    }
+    Future<void> openMenu(RelativeRect position) => showSourceContextMenu(
+      context: context,
+      ref: ref,
+      position: position,
+      source: source,
+    );
 
     void openMenuAt(Offset point) =>
         openMenu(menuAnchorForPoint(context, point));
@@ -69,16 +61,18 @@ class SourceCard extends HookConsumerWidget {
       sourceId: source.id,
       sourceType: SourceType.POPULAR,
     ).location;
+    const iconSize = 48.0;
+    const iconGap = 12.0;
     final leadingBlock = Row(
       children: [
         ClipRRect(
           borderRadius: KBorderRadius.r8.radius,
           child: ServerImage(
             imageUrl: source.iconUrl,
-            size: const Size.square(48),
+            size: const Size.square(iconSize),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: iconGap),
         Expanded(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -112,33 +106,53 @@ class SourceCard extends HookConsumerWidget {
       ).go(context);
     }
 
-    final trailingActions = [
-      if (source.supportsLatest.ifNull())
-        TextButton(onPressed: openLatest, child: Text(context.l10n.latest)),
-      _CardPinButton(source: source),
-      if (hovered.value || menuOpen.value)
-        IconButton(
-          key: moreKey,
-          tooltip: context.l10n.more,
-          icon: const Icon(FluentIcons.more_vertical_24_regular),
-          onPressed: openButtonMenu,
-        ),
-    ];
+    final moreButton = IconButton(
+      key: moreKey,
+      tooltip: context.l10n.more,
+      icon: const Icon(FluentIcons.more_vertical_24_regular),
+      onPressed: openButtonMenu,
+    );
+    final actionRow = SizedBox(
+      height: 40 * browseCardTextScale(context),
+      child: Row(
+        children: [
+          const SizedBox(width: iconSize + iconGap),
+          if (source.supportsLatest.ifNull())
+            TextButton(
+              onPressed: openLatest,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: AlignmentDirectional.centerStart,
+              ),
+              child: Text(context.l10n.latest),
+            ),
+          const Spacer(),
+          _CardPinButton(source: source),
+        ],
+      ),
+    );
     // The Latest button cannot sit inside the row link: the anchor would cover it.
     final webRow = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: WebRouteLink(
-              location: popularLocation,
-              builder: (context, openInNewTab) => InkWell(
-                onTap: () => WebRouteLink.handleTap(openInNewTab, openPopular),
-                child: leadingBlock,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: WebRouteLink(
+                  location: popularLocation,
+                  builder: (context, openInNewTab) => InkWell(
+                    onTap: () =>
+                        WebRouteLink.handleTap(openInNewTab, openPopular),
+                    child: leadingBlock,
+                  ),
+                ),
               ),
-            ),
+              moreButton,
+            ],
           ),
-          ...trailingActions,
+          actionRow,
         ],
       ),
     );
@@ -148,10 +162,16 @@ class SourceCard extends HookConsumerWidget {
         onTap: () => WebRouteLink.handleTap(openInNewTab, openPopular),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(child: leadingBlock),
-              ...trailingActions,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: leadingBlock),
+                  moreButton,
+                ],
+              ),
+              actionRow,
             ],
           ),
         ),
@@ -159,14 +179,10 @@ class SourceCard extends HookConsumerWidget {
     );
     return GestureDetector(
       onSecondaryTapDown: (details) => openMenuAt(details.globalPosition),
-      child: MouseRegion(
-        onEnter: (_) => hovered.value = true,
-        onExit: (_) => hovered.value = false,
-        child: Card(
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          child: kIsWeb ? webRow : nativeRow,
-        ),
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: kIsWeb ? webRow : nativeRow,
       ),
     );
   }
