@@ -4506,5 +4506,7 @@
     "@open": {
         "description": "Menu item opening the selected entry"
     },
-    "splitTallImages": "Divideix les imatges altes"
+    "splitTallImages": "Divideix les imatges altes",
+    "basicAuthDeprecationTitle": "L'autenticació bàsica està obsoleta",
+    "basicAuthDeprecationBody": "Canvieu a un altre mètode d'autenticació a la secció «Inici de sessió» de la configuració del servidor."
 }

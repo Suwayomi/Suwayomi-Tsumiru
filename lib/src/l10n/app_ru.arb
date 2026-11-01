@@ -3851,5 +3851,7 @@
     "@open": {
         "description": "Menu item opening the selected entry"
     },
-    "splitTallImages": "Разделять высокие изображения"
+    "splitTallImages": "Разделять высокие изображения",
+    "basicAuthDeprecationTitle": "Basic Auth устарел",
+    "basicAuthDeprecationBody": "Пожалуйста, переключитесь на другой метод аутентификации в настройках входа на вашем сервере."
 }
