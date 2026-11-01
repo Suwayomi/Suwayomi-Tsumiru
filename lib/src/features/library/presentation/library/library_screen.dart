@@ -444,11 +444,12 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                       showDuplicatesButton: true,
                     ),
                   ];
-                  final tabStrip = showTabBar && data.length.isGreaterThan(1)
-                      ? DesktopPageHeader(
-                          child: DefaultCategoryTabStrip(categories: data),
-                        )
-                      : null;
+                  final tabStrip =
+                      showTabBar && data.length.isGreaterThan(1)
+                          ? DesktopPageHeader(
+                              child: DefaultCategoryTabStrip(categories: data),
+                            )
+                          : null;
                   final slot = TopBarSlot(
                     content: DesktopLibraryToolbar(
                       onOpenOrganizer: () => _openLibraryOrganizer(bodyContext),
@@ -456,31 +457,31 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                     ),
                     minWidth: libraryTopBarSlotMinWidth(trailing.length),
                     child: _libraryBody(
-                      ref,
-                      header: topBar
-                          ? tabStrip
-                          : desktop
-                          ? _desktopLibraryHeader(
+                    ref,
+                    header: topBar
+                        ? tabStrip
+                        : desktop
+                        ? _desktopLibraryHeader(
                               onOpenOrganizer: () =>
                                   _openLibraryOrganizer(bodyContext),
-                              trailing: trailing,
-                              tabStrip: tabStrip,
-                            )
-                          : null,
-                      _groupedBody(
-                        useTabs: useTabs,
-                        sections: _categorySections(data),
-                        byCategory: true,
-                        showCounts: showCounts,
-                        tabViews: () => data.map((e) {
-                          final id = e.id.getValueOnNullOrNegative();
-                          final content = CategoryMangaList(
+                            trailing: trailing,
+                            tabStrip: tabStrip,
+                          )
+                        : null,
+                _groupedBody(
+                  useTabs: useTabs,
+                  sections: _categorySections(data),
+                  byCategory: true,
+                  showCounts: showCounts,
+                  tabViews: () => data.map((e) {
+                    final id = e.id.getValueOnNullOrNegative();
+                    final content = CategoryMangaList(
+                      key: ValueKey(id),
+                      categoryId: id,
+                    );
+                    return showInlineHeaders
+                        ? _PagedSection(
                             key: ValueKey(id),
-                            categoryId: id,
-                          );
-                          return showInlineHeaders
-                              ? _PagedSection(
-                                  key: ValueKey(id),
                             section: (id: id, name: e.name),
                             byCategory: true,
                             showCount: showCounts,
@@ -640,51 +641,50 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                             pinned: true,
                             delegate: _SliverFixedHeaderDelegate(
                               height: showTabs ? 64 + 44 : 64,
-                              child: _desktopLibraryHeader(
+                        child: _desktopLibraryHeader(
                                 onOpenOrganizer: () =>
                                     _openLibraryOrganizer(bodyContext),
-                                trailing: trailing,
-                                tabStrip: tabStrip,
-                              ),
-                            ),
-                          ),
-                        ];
-                      }
-                      return [
-                        SliverAppBar(
-                          pinned: true,
-                          floating: false,
-                          title: phone || !isSearchBarHidden
-                              ? _LibraryTitle(sections: _categorySections(data))
-                              : const _LibrarySearchBar(inAppBar: true),
-                          bottom: phone
-                              ? const PhoneSearchBoxBottom(
-                                  origin: PhoneSearchOrigin.library,
-                                )
-                              : null,
-                          actions: [
+                          trailing: trailing,
+                          tabStrip: tabStrip,
+                        ),
+                      ),
+                    ),
+                  ];
+                }
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    title: phone || !isSearchBarHidden
+                        ? _LibraryTitle(sections: _categorySections(data))
+                        : const _LibrarySearchBar(inAppBar: true),
+                    bottom: phone
+                        ? const PhoneSearchBoxBottom(
+                            origin: PhoneSearchOrigin.library,
+                          )
+                        : null,
+                    actions: [
                             Builder(
                               builder: (context) => LibraryOrganizerButton(
                                 onPressed: () => _openLibraryOrganizer(context),
                               ),
                             ),
-                            SyncYomiSyncButton(
-                              onSynced: () => _refreshLibraryAfterSync(ref),
-                            ),
-                            Builder(
-                              builder: (context) {
-                                return UpdateStatusPopupMenu(
-                                  // Section headers have no current tab, so update the whole library.
-                                  getCategory: () => useTabs && data.isNotBlank
-                                      ? data[DefaultTabController.of(context)
-                                            .index]
-                                      : null,
-                                  showDuplicatesButton: true,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
+                      SyncYomiSyncButton(
+                        onSynced: () => _refreshLibraryAfterSync(ref),
+                      ),
+                      Builder(
+                        builder: (context) {
+                          return UpdateStatusPopupMenu(
+                            // Section headers have no current tab, so update the whole library.
+                            getCategory: () => useTabs && data.isNotBlank
+                                ? data[DefaultTabController.of(context).index]
+                                : null,
+                            showDuplicatesButton: true,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                   if (!phone)
                     SliverToBoxAdapter(
                       child: KeyedSubtree(
@@ -740,12 +740,12 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                 ),
               ),
             ),
-                );
+          );
                 return _libraryPageLayout(tabStrip, slot);
-              },
-            ),
-          ),
-        );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);
@@ -1002,12 +1002,12 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                 }).toList(),
               ),
             ),
-                );
+          );
                 return _libraryPageLayout(tabStrip, slot);
-              },
-            ),
-          ),
-        );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);
@@ -1141,29 +1141,29 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                               height: showTabBar && tabs.length > 1
                                   ? 64 + 44
                                   : 64,
-                              child: _desktopLibraryHeader(
+                        child: _desktopLibraryHeader(
                                 onOpenOrganizer: () =>
                                     _openLibraryOrganizer(bodyContext),
-                                trailing: trailing,
-                                tabStrip: tabStrip,
-                              ),
-                            ),
-                          ),
-                        ];
-                      }
-                      return [
-                        SliverAppBar(
-                          pinned: true,
-                          floating: false,
-                          title: phone || !isSearchBarHidden
-                              ? _LibraryTitle(sections: _groupSections(tabs))
-                              : const _LibrarySearchBar(inAppBar: true),
-                          bottom: phone
-                              ? const PhoneSearchBoxBottom(
-                                  origin: PhoneSearchOrigin.library,
-                                )
-                              : null,
-                          actions: [
+                          trailing: trailing,
+                          tabStrip: tabStrip,
+                        ),
+                      ),
+                    ),
+                  ];
+                }
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    title: phone || !isSearchBarHidden
+                        ? _LibraryTitle(sections: _groupSections(tabs))
+                        : const _LibrarySearchBar(inAppBar: true),
+                    bottom: phone
+                        ? const PhoneSearchBoxBottom(
+                            origin: PhoneSearchOrigin.library,
+                          )
+                        : null,
+                    actions: [
                             Builder(
                               builder: (context) => LibraryOrganizerButton(
                                 onPressed: () => _openLibraryOrganizer(context),
@@ -1254,12 +1254,12 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                 ),
               ),
             ),
-                );
+          );
                 return _libraryPageLayout(tabStrip, slot);
-              },
-            ),
-          ),
-        );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);

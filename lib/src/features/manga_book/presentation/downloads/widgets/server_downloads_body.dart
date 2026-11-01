@@ -237,12 +237,7 @@ class ServerDownloadsBody extends HookConsumerWidget {
         children: [
           for (final group in groups.entries) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                8,
-                16,
-                8,
-                8,
-              ).onDesktopPageLine(context),
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 8).onDesktopPageLine(context),
               child: Row(
                 children: [
                   Text(

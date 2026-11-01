@@ -152,33 +152,35 @@ class ExtensionScreen extends HookConsumerWidget {
                 extensions: installed,
                 desktop: desktop,
               ),
-          if (all.isNotBlank)
-            ...extensionSet(
-              key: const ValueKey("all"),
-              title: languageMap["all"]?.displayName ?? "",
-              extensions: all,
-              desktop: desktop,
-            ),
-          for (final k in extensionMap.keys)
-            if (extensionMap[k].isNotBlank)
+            if (all.isNotBlank)
               ...extensionSet(
-                key: ValueKey(k),
-                title: languageMap[k]?.displayName ?? k,
-                extensions: extensionMap[k],
+                key: const ValueKey("all"),
+                title: languageMap["all"]?.displayName ?? "",
+                extensions: all,
                 desktop: desktop,
               ),
-        ],
-      );
-      return RefreshIndicator(
-        onRefresh: refresh,
-        child: desktop
-            ? Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: scrollView,
-              )
-            : scrollView,
-      );
-    }, refresh: refresh);
+            for (final k in extensionMap.keys)
+              if (extensionMap[k].isNotBlank)
+                ...extensionSet(
+                  key: ValueKey(k),
+                  title: languageMap[k]?.displayName ?? k,
+                  extensions: extensionMap[k],
+                  desktop: desktop,
+                ),
+          ],
+        );
+        return RefreshIndicator(
+          onRefresh: refresh,
+          child: desktop
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: scrollView,
+                )
+              : scrollView,
+        );
+      },
+      refresh: refresh,
+    );
 
     return Column(
       children: [

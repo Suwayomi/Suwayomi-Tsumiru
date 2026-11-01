@@ -188,20 +188,24 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
 
   @override
   SliverGridLayout getLayout(SliverConstraints constraints) => _coverTileLayout(
-    constraints,
-    crossAxisCount: maxCrossAxisExtent == null
-        ? _automaticCoverColumns(
-            constraints.crossAxisExtent,
-            minCrossAxisExtent,
-            crossAxisSpacing,
-          )
-        : max(1, (constraints.crossAxisExtent /
-            (maxCrossAxisExtent! + crossAxisSpacing)).ceil()),
-    crossAxisSpacing: crossAxisSpacing,
-    mainAxisSpacing: mainAxisSpacing,
-    titleExtent: titleExtent,
-    coverInset: coverInset,
-  );
+        constraints,
+        crossAxisCount: maxCrossAxisExtent == null
+            ? _automaticCoverColumns(
+                constraints.crossAxisExtent,
+                minCrossAxisExtent,
+                crossAxisSpacing,
+              )
+            : max(
+                1,
+                (constraints.crossAxisExtent /
+                        (maxCrossAxisExtent! + crossAxisSpacing))
+                    .ceil(),
+              ),
+        crossAxisSpacing: crossAxisSpacing,
+        mainAxisSpacing: mainAxisSpacing,
+        titleExtent: titleExtent,
+        coverInset: coverInset,
+      );
 
   @override
   bool shouldRelayout(MangaCoverGridDelegate oldDelegate) =>
@@ -253,12 +257,13 @@ SliverGridDelegate mangaCoverGridDelegate(
   double? size, {
   bool titleBelow = false,
   double extraTitleExtent = 0.0,
-}) => MangaCoverGridDelegate(
-  minCrossAxisExtent: size ?? DBKeys.gridMangaCoverMinWidth.initial,
-  crossAxisSpacing: 2.0,
-  mainAxisSpacing: 2.0,
-  titleExtent: (titleBelow ? kGridTitleExtent : 0.0) + extraTitleExtent,
-);
+}) =>
+    MangaCoverGridDelegate(
+      minCrossAxisExtent: size ?? DBKeys.gridMangaCoverMinWidth.initial,
+      crossAxisSpacing: 2.0,
+      mainAxisSpacing: 2.0,
+      titleExtent: (titleBelow ? kGridTitleExtent : 0.0) + extraTitleExtent,
+    );
 
 SliverGridDelegate mangaCoverUniformGridDelegate(
   double? gridWidth,

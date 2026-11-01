@@ -377,22 +377,22 @@ class ChapterListTile extends HookConsumerWidget {
                         ),
                       ),
                       child: Row(
-                        children: [
-                          if (selectionMode)
-                            Checkbox(
-                              value: isSelected,
-                              visualDensity: VisualDensity.compact,
-                              onChanged: (_) => toggleSelect(chapter),
-                            )
-                          else
-                            SizedBox(width: desktopPageLineStart(context, 13)),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: read ? readColor : null,
-                              ),
+                      children: [
+                        if (selectionMode)
+                          Checkbox(
+                            value: isSelected,
+                            visualDensity: VisualDensity.compact,
+                            onChanged: (_) => toggleSelect(chapter),
+                          )
+                        else
+                          SizedBox(width: desktopPageLineStart(context, 13)),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: read ? readColor : null,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

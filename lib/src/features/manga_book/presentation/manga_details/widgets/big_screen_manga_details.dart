@@ -491,12 +491,7 @@ class _ChapterHeader extends StatelessWidget {
             ),
           );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        14,
-        8,
-        10,
-      ).onDesktopPageLine(context, top: true),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 10).onDesktopPageLine(context, top: true),
       child: Row(
         children: [
           Expanded(

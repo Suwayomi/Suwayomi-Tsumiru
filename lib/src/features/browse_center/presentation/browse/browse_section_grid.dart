@@ -13,11 +13,11 @@ import '../../../../widgets/desktop/desktop_page_frame.dart';
 
 SliverGridDelegate browseCardGridDelegate(double extent) =>
     SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      mainAxisExtent: extent,
-    );
+  crossAxisCount: 3,
+  mainAxisSpacing: 12,
+  crossAxisSpacing: 12,
+  mainAxisExtent: extent,
+);
 
 class BrowseSectionHeading extends StatelessWidget {
   const BrowseSectionHeading({
