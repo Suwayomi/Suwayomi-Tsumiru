@@ -163,9 +163,18 @@ class _CoverRowSectionState extends State<CoverRowSection> {
   Widget _header(BuildContext context) {
     final heading = _heading(context);
     final showArrows = _canBack || _canForward;
+    final alignWithChild =
+        context.usesDesktopShell &&
+        widget.itemCount == null &&
+        widget.padding == EdgeInsets.zero;
     if (context.windowSizeClass >= WindowSizeClass.medium) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8).onDesktopPageLine(context),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          10,
+          alignWithChild ? 0 : 16,
+          8,
+        ).onDesktopPageLine(context),
         child: Row(
           children: [
             Expanded(child: heading),
@@ -176,8 +185,8 @@ class _CoverRowSectionState extends State<CoverRowSection> {
               ),
             // Reserve space to align See all across sections.
             SizedBox(
-              width: _arrowAreaWidth,
-              child: showArrows
+              width: alignWithChild ? 0 : _arrowAreaWidth,
+              child: showArrows && !alignWithChild
                   ? Row(
                       children: [
                         const SizedBox(width: 10),

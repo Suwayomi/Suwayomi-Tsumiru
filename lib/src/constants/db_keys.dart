@@ -97,7 +97,7 @@ enum DBKeys {
   libraryDisplayMode(DisplayMode.grid),
   sourceDisplayMode(DisplayMode.grid),
   globalSearchSourceFilter(GlobalSearchSourceFilter.pinned),
-  gridMangaCoverWidth(192.0),
+  gridMangaCoverMinWidth(128.0),
   readerOverlay(false),
   readerFeedbackToasts(true),
   volumeTap(false),
@@ -159,7 +159,7 @@ enum DBKeys {
   basicAuthDeprecationLastShown('{}'),
   updateProgressAfterReading(true),
   updateProgressManualMarkRead(true),
-  // 0 selects automatic columns using gridMangaCoverWidth.
+  // 0 selects automatic columns using gridMangaCoverMinWidth.
   libraryPortraitColumns(0),
   libraryLandscapeColumns(0),
   // Hides only the tab bar; pages remain swipeable.

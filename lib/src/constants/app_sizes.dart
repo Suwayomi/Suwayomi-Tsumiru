@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'db_keys.dart';
 
@@ -125,16 +126,47 @@ SliverGridRegularTileLayout _coverTileLayout(
   );
 }
 
+int _automaticCoverColumns(
+  double width,
+  double minCrossAxisExtent,
+  double crossAxisSpacing,
+) => max(
+  1,
+  ((width + crossAxisSpacing) / (minCrossAxisExtent + crossAxisSpacing))
+      .floor(),
+);
+
+class MangaCoverSimpleGridDelegate extends SliverSimpleGridDelegate {
+  const MangaCoverSimpleGridDelegate({required this.minCrossAxisExtent})
+    : assert(minCrossAxisExtent > 0);
+
+  final double minCrossAxisExtent;
+
+  @override
+  int getCrossAxisCount(
+    SliverConstraints constraints,
+    double crossAxisSpacing,
+  ) => _automaticCoverColumns(
+    constraints.crossAxisExtent,
+    minCrossAxisExtent,
+    crossAxisSpacing,
+  );
+
+  @override
+  bool shouldRelayout(MangaCoverSimpleGridDelegate oldDelegate) =>
+      oldDelegate.minCrossAxisExtent != minCrossAxisExtent;
+}
+
 class MangaCoverGridDelegate extends SliverGridDelegate {
   const MangaCoverGridDelegate({
-    required this.maxCrossAxisExtent,
+    required this.minCrossAxisExtent,
     this.mainAxisSpacing = 0.0,
     this.crossAxisSpacing = 0.0,
     this.titleExtent = 0.0,
     this.coverInset = kMangaCoverCardInset,
-  }) : assert(maxCrossAxisExtent > 0);
+  }) : assert(minCrossAxisExtent > 0);
 
-  final double maxCrossAxisExtent;
+  final double minCrossAxisExtent;
   final double mainAxisSpacing;
   final double crossAxisSpacing;
   final double titleExtent;
@@ -144,22 +176,21 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
 
   @override
   SliverGridLayout getLayout(SliverConstraints constraints) => _coverTileLayout(
-        constraints,
-        crossAxisCount: max(
-          1,
-          (constraints.crossAxisExtent /
-                  (maxCrossAxisExtent + crossAxisSpacing))
-              .ceil(),
-        ),
-        crossAxisSpacing: crossAxisSpacing,
-        mainAxisSpacing: mainAxisSpacing,
-        titleExtent: titleExtent,
-        coverInset: coverInset,
-      );
+    constraints,
+    crossAxisCount: _automaticCoverColumns(
+      constraints.crossAxisExtent,
+      minCrossAxisExtent,
+      crossAxisSpacing,
+    ),
+    crossAxisSpacing: crossAxisSpacing,
+    mainAxisSpacing: mainAxisSpacing,
+    titleExtent: titleExtent,
+    coverInset: coverInset,
+  );
 
   @override
   bool shouldRelayout(MangaCoverGridDelegate oldDelegate) =>
-      oldDelegate.maxCrossAxisExtent != maxCrossAxisExtent ||
+      oldDelegate.minCrossAxisExtent != minCrossAxisExtent ||
       oldDelegate.mainAxisSpacing != mainAxisSpacing ||
       oldDelegate.crossAxisSpacing != crossAxisSpacing ||
       oldDelegate.titleExtent != titleExtent ||
@@ -206,13 +237,12 @@ SliverGridDelegate mangaCoverGridDelegate(
   double? size, {
   bool titleBelow = false,
   double extraTitleExtent = 0.0,
-}) =>
-    MangaCoverGridDelegate(
-      maxCrossAxisExtent: size ?? DBKeys.gridMangaCoverWidth.initial,
-      crossAxisSpacing: 2.0,
-      mainAxisSpacing: 2.0,
-      titleExtent: (titleBelow ? kGridTitleExtent : 0.0) + extraTitleExtent,
-    );
+}) => MangaCoverGridDelegate(
+  minCrossAxisExtent: size ?? DBKeys.gridMangaCoverMinWidth.initial,
+  crossAxisSpacing: 2.0,
+  mainAxisSpacing: 2.0,
+  titleExtent: (titleBelow ? kGridTitleExtent : 0.0) + extraTitleExtent,
+);
 
 SliverGridDelegate mangaCoverUniformGridDelegate(
   double? gridWidth,

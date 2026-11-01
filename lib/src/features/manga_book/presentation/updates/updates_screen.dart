@@ -477,7 +477,7 @@ class UpdatesScreen extends HookConsumerWidget {
         ref.watch(updatesDisplayModeProvider) ?? UpdatesDisplayMode.grid;
     final gridWidth =
         ref.watch(gridMinWidthProvider) ??
-        DBKeys.gridMangaCoverWidth.initial as double;
+        DBKeys.gridMangaCoverMinWidth.initial as double;
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final fixedColumns =

@@ -62,7 +62,7 @@ class RecommendsBrowseScreen extends ConsumerWidget {
             : GridView.builder(
                 padding: KEdgeInsets.a8.size,
                 gridDelegate: const MangaCoverGridDelegate(
-                  maxCrossAxisExtent: 120,
+                  minCrossAxisExtent: 120,
                   titleExtent: kRecommendsTitleExtent,
                   coverInset: 0,
                   mainAxisSpacing: 8,

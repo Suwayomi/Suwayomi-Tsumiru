@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/library/data/badge_preference_migration.dart';
+import 'package:tsumiru/src/features/settings/data/grid_cover_preference_migration.dart';
 
 Future<SharedPreferences> _migrated(Map<String, Object> initial) async {
   SharedPreferences.setMockInitialValues(initial);
@@ -18,6 +19,18 @@ Future<SharedPreferences> _migrated(Map<String, Object> initial) async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('saved cover size carries over once to the minimum width', () async {
+    SharedPreferences.setMockInitialValues({'gridMangaCoverWidth': 192.0});
+    final prefs = await SharedPreferences.getInstance();
+    await migrateGridCoverPreference(prefs);
+    expect(prefs.getDouble('gridMangaCoverMinWidth'), 128.0);
+    expect(prefs.containsKey('gridMangaCoverWidth'), isFalse);
+
+    await prefs.setDouble('gridMangaCoverMinWidth', 150.0);
+    await migrateGridCoverPreference(prefs);
+    expect(prefs.getDouble('gridMangaCoverMinWidth'), 150.0);
+  });
 
   group('unreadBadge → unreadBadgeMode', () {
     test('off stays off, as Hidden', () async {

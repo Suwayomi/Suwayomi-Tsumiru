@@ -88,7 +88,7 @@ class LibraryMangaSliver extends ConsumerWidget {
         DBKeys.listScale.initial as double;
     final gridWidth =
         ref.watch(gridMinWidthProvider) ??
-        DBKeys.gridMangaCoverWidth.initial as double;
+        DBKeys.gridMangaCoverMinWidth.initial as double;
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
     final fixedCols =
@@ -128,8 +128,8 @@ class LibraryMangaSliver extends ConsumerWidget {
         ? SliverSimpleGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: fixedCols,
           )
-        : SliverSimpleGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: gridWidth,
+        : MangaCoverSimpleGridDelegate(
+            minCrossAxisExtent: gridWidth,
           );
 
     // Precompute indices to preserve child state without O(n²) reorder lookups.
