@@ -11,14 +11,6 @@ import 'package:flutter/material.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/desktop/desktop_page_frame.dart';
 
-SliverGridDelegate browseCardGridDelegate(double extent) =>
-    SliverGridDelegateWithFixedCrossAxisCount(
-  crossAxisCount: 3,
-  mainAxisSpacing: 12,
-  crossAxisSpacing: 12,
-  mainAxisExtent: extent,
-);
-
 class BrowseSectionHeading extends StatelessWidget {
   const BrowseSectionHeading({
     super.key,
@@ -87,8 +79,11 @@ class BrowseCardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SliverGrid(
-    gridDelegate: browseCardGridDelegate(
-      mainAxisExtent * browseCardTextScale(context),
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 3,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      mainAxisExtent: mainAxisExtent * browseCardTextScale(context),
     ),
     delegate: SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
   );

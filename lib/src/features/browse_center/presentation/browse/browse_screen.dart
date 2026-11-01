@@ -161,10 +161,7 @@ class BrowseScreen extends HookConsumerWidget {
               actions: actions,
               spacedActionCount: tabController.index != 2 ? 1 : 0,
             ),
-            minWidth: tabController.index == 2
-                ? searchTopBarSlotMinWidth(0)
-                : searchTopBarSlotMinWidth(actions.length - 1) +
-                      filterTopBarActionWidth(context, context.l10n.filter),
+            minWidth: searchTopBarSlotMinWidth(actions.length),
             child: scaffold,
           )
         : scaffold;

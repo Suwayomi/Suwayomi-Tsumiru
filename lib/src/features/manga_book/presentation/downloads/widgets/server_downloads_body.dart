@@ -237,7 +237,8 @@ class ServerDownloadsBody extends HookConsumerWidget {
         children: [
           for (final group in groups.entries) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 8, 8).onDesktopPageLine(context),
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 8)
+                  .onDesktopPageLine(context),
               child: Row(
                 children: [
                   Text(
@@ -372,7 +373,8 @@ class ServerDownloadsBody extends HookConsumerWidget {
                           onExpansionChanged: (expanded) =>
                               foreignExpanded.value = expanded,
                           title: Text(
-                            '${context.l10n.notInYourLibrary} (${foreignIds.length})',
+                            '${context.l10n.notInYourLibrary} '
+                            '(${foreignIds.length})',
                           ),
                           children: [desktopGroups(foreignIds)],
                         ),

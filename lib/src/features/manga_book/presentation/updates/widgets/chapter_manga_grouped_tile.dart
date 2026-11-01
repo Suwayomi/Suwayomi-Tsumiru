@@ -250,9 +250,8 @@ class _HeadTile extends HookConsumerWidget {
                                   toggleSelect(chapter);
                                   return;
                                 }
-                                await MangaRoute(
-                                  mangaId: manga.id,
-                                ).push(context);
+                                await MangaRoute(mangaId: manga.id)
+                                    .push(context);
                                 if (!context.mounted) return;
                                 await refreshManga();
                               },
@@ -351,9 +350,8 @@ class _HeadTile extends HookConsumerWidget {
                       SizedBox(
                         width: 84,
                         child: Text(
-                          int.tryParse(
-                            chapter.fetchedAt,
-                          ).toShortTimeFromSeconds(context),
+                          int.tryParse(chapter.fetchedAt)
+                              .toShortTimeFromSeconds(context),
                           textAlign: TextAlign.right,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

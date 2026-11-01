@@ -234,12 +234,10 @@ class HistoryScreen extends HookConsumerWidget {
                           ],
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(8)
-                              .onDesktopPageLine(context, top: true),
+                          padding: const EdgeInsets.all(8),
                           itemCount: historyGroups.length,
                           itemBuilder: (context, index) => HistoryGroupWidget(
                             group: historyGroups[index],
-                            first: index == 0,
                           ),
                         ),
                 );
@@ -264,12 +262,10 @@ class HistoryScreen extends HookConsumerWidget {
               actions: actions,
               spacedActionCount: 1,
             ),
-            minWidth:
-                searchTopBarSlotMinWidth(
-                  actions.length - 1,
-                  backButton != null ? kDesktopToolbarIconButtonExtent : 0.0,
-                ) +
-                filterTopBarActionWidth(context, l10n.filter),
+            minWidth: searchTopBarSlotMinWidth(
+              actions.length,
+              backButton != null ? 48.0 : 0.0,
+            ),
             child: scaffold,
           )
         : scaffold;

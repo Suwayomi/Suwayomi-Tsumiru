@@ -15,19 +15,16 @@ class DesktopViewSwitchBar extends StatelessWidget {
     required this.labels,
     required this.selectedIndex,
     required this.onChanged,
-    this.padding = const EdgeInsets.fromLTRB(24, 12, 12, 12),
   });
 
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
-  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding
-          .resolve(Directionality.of(context))
+      padding: const EdgeInsets.fromLTRB(24, 12, 12, 12)
           .onDesktopPageLine(context, top: true),
       decoration: BoxDecoration(
         border: Border(

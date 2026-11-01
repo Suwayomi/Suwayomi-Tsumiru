@@ -74,7 +74,6 @@ class DesktopSidebar extends ConsumerWidget {
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
     final expanded = sidebarIsExpanded(context, preference);
     final isMacOS = isDesktopPlatform && isMacOSRuntime;
-    final showBrandRow = isMacOS;
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
     void collapse() => ref.read(sidebarExpandedProvider.notifier).update(false);
 
@@ -247,7 +246,7 @@ class DesktopSidebar extends ConsumerWidget {
               ? constraints.maxHeight
               : null;
           final brandRows = [
-            if (showBrandRow) ...[
+            if (isMacOS) ...[
               if (showExpanded)
                 DesktopBrandRow(
                   onCollapse: collapse,

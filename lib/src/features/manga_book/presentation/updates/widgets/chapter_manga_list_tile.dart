@@ -139,9 +139,8 @@ class ChapterMangaListTile extends HookConsumerWidget {
                                   toggleSelect(chapterWithMangaDto);
                                   return;
                                 }
-                                await MangaRoute(
-                                  mangaId: manga.id,
-                                ).push(context);
+                                await MangaRoute(mangaId: manga.id)
+                                    .push(context);
                                 if (!context.mounted) return;
                                 await refreshManga();
                               },
@@ -202,9 +201,8 @@ class ChapterMangaListTile extends HookConsumerWidget {
                       SizedBox(
                         width: 84,
                         child: Text(
-                          int.tryParse(
-                            chapterWithMangaDto.fetchedAt,
-                          ).toShortTimeFromSeconds(context),
+                          int.tryParse(chapterWithMangaDto.fetchedAt)
+                              .toShortTimeFromSeconds(context),
                           textAlign: TextAlign.right,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

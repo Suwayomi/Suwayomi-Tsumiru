@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../features/settings/presentation/settings/settings_pane_scope.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
@@ -123,54 +122,15 @@ String _resolveSlotKey(
   return _activeLeafLocation(context);
 }
 
-_TopBarLayout _topBarLayout(
-  BuildContext context,
-  WidgetRef ref,
-  String location,
-) {
-  final native = isDesktopPlatform;
-  final isMacOS = native && isMacOSRuntime;
-  final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
-  final brandWidth = DesktopSidebar.widthFor(
-    expanded: sidebarIsExpanded(context, preference),
-    isMacOS: isMacOS,
-  );
-  final stacked = ref.watch(topBarSlotRegistryProvider)[location];
-  final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
-  return (
-    brandWidth: brandWidth,
-    isMacOS: isMacOS,
-    native: native,
-    entry: entry,
-  );
-}
-
-typedef _TopBarLayout = ({
-  double brandWidth,
-  bool isMacOS,
-  bool native,
-  TopBarSlotEntry? entry,
-});
-
 double titleTopBarSlotMinWidth(int actionCount) =>
-    kDesktopToolbarIconButtonExtent +
-    kDesktopTopBarGap +
-    120.0 +
-    actionCount * kDesktopToolbarIconButtonExtent;
+    48.0 + kDesktopTopBarGap + 120.0 + actionCount * 48.0;
 
 double searchTopBarSlotMinWidth(int actionCount, [double leadingWidth = 0]) =>
     kTopBarSearchMinWidth +
     2 * kDesktopToolbarSlotHPadding +
     leadingWidth +
-    actionCount * kDesktopToolbarIconButtonExtent +
-    ((actionCount > 0 ? 1 : 0) + (leadingWidth > 0 ? 1 : 0)) *
-        kDesktopTopBarGap;
-
-double filterTopBarActionWidth(BuildContext context, String label) =>
-    kToolbarFilterFullChrome +
-    measureToolbarLabelWidth(context, label) +
-    kToolbarBoxBorderWidth +
-    kDesktopTopBarGap;
+    actionCount * 48.0 +
+    (actionCount + (leadingWidth > 0 ? 1 : 0)) * kDesktopTopBarGap;
 
 BoxConstraints settingsPageConstraints(
   BuildContext context, {
@@ -659,8 +619,6 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   bool _scheduled = false;
   bool _shown = false;
 
-  final Map<String, GlobalKey> _slotContentKeys = {};
-
   /// Track displayed routes: a shell can remain mounted offstage beneath the reader.
   bool _isBarVisible() {
     final route = ModalRoute.of(context);
@@ -728,12 +686,15 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   }
 
   Widget _buildBar(BuildContext context, WidgetRef ref, String location) {
-    final layout = _topBarLayout(context, ref, location);
-    final brandWidth = layout.brandWidth;
-    final isMacOS = layout.isMacOS;
-    final native = layout.native;
-    final entry = layout.entry;
-    // Only the visible bar may mount the toolbar's GlobalKeys.
+    final native = isDesktopPlatform;
+    final isMacOS = native && isMacOSRuntime;
+    final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
+    final brandWidth = DesktopSidebar.widthFor(
+      expanded: sidebarIsExpanded(context, preference),
+      isMacOS: isMacOS,
+    );
+    final stacked = ref.watch(topBarSlotRegistryProvider)[location];
+    final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
     final visible = _isBarVisible();
     final theme = Theme.of(context);
     return Container(
@@ -773,7 +734,6 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     required bool visible,
   }) {
     if (entry == null || !visible) return const SizedBox.shrink();
-    // A stable GlobalKey preserves toolbar focus and State when resize changes its ancestors.
     final key = '$location#${entry.slotKey}';
     return AnimatedSwitcher(
       duration: context.reduceMotion
@@ -785,10 +745,7 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
         maxWidth: entry.minWidth,
         child: Container(
           alignment: Alignment.center,
-          child: KeyedSubtree(
-            key: _slotContentKeys.putIfAbsent(key, GlobalKey.new),
-            child: entry.content,
-          ),
+          child: entry.content,
         ),
       ),
     );

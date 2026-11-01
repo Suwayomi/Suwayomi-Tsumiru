@@ -246,7 +246,8 @@ class MangaDescription extends HookConsumerWidget {
           ),
         if (expanded)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12).onDesktopPageLine(context),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12)
+                .onDesktopPageLine(context),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -269,7 +270,8 @@ class MangaDescription extends HookConsumerWidget {
           )
         else
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12).onDesktopPageLine(context),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12)
+                .onDesktopPageLine(context),
             child: CollapsedSeriesTags(
               tags: manga.genre.where((e) => e.isNotBlank).toList(),
               leading: AddUserTagChip(mangaId: manga.id),
@@ -381,10 +383,10 @@ class MangaDescription extends HookConsumerWidget {
                   onLibraryPressed: toggleLibrary,
                 )
               else
-              Padding(
-                  // Clear the phone status bar while desktop content starts on the shared page line.
-                padding: EdgeInsets.only(
-                  top: MediaQuery.paddingOf(context).top + 8,
+                Padding(
+                  // Clear only the status-bar inset so the hero can extend behind the transparent app bar.
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.paddingOf(context).top + 8,
                   ).onDesktopPageLine(context, top: true),
                   child: DesktopBoxBleed(
                     start: kListTilePadding + kMangaCoverCardInset / 2,

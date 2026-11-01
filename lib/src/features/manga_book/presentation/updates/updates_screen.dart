@@ -53,8 +53,7 @@ import 'widgets/updates_row_actions.dart';
 
 const _kUpdatesCardSubtitleExtent = 22.0;
 
-/// Compact on desktop pages so the first heading's text sits on the page line.
-Widget _dateHeading(BuildContext context, String label, {required bool first}) {
+Widget _dateHeading(BuildContext context, String label, {bool first = false}) {
   final desktop = isOnDesktopPage(context);
   return ListTile(
     contentPadding: desktop
@@ -338,7 +337,6 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         _dateHeading(
           context,
           currentDate.toDaysAgoFromSeconds(context),
-          first: flatIndex == 0 && !widget.lastUpdatedAboveList,
         ),
         tile,
       ],

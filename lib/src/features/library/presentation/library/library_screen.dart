@@ -82,7 +82,12 @@ List<LibrarySection> _groupSections(List<GroupedTab> tabs) => [
 bool _useTabs(LibraryGroupStyle style, bool showAllCategories) =>
     style == LibraryGroupStyle.tabs || !showAllCategories;
 
-/// Category tabs sit directly under the desktop top bar.
+Widget _organizerButton() => Builder(
+  builder: (context) => LibraryOrganizerButton(
+    onPressed: () => _openLibraryOrganizer(context),
+  ),
+);
+
 Widget _libraryPageLayout(Widget? tabStrip, Widget child) =>
     DesktopPageLayoutScope(
       layout: tabStrip == null
@@ -397,12 +402,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                   onPressed: () => searchToggled.value = true,
                                   icon: const Icon(FluentIcons.search_24_regular),
                                 ),
-                              Builder(
-                                builder: (context) => LibraryOrganizerButton(
-                                  onPressed: () =>
-                                      _openLibraryOrganizer(context),
-                                ),
-                              ),
+                              _organizerButton(),
                               SyncYomiSyncButton(
                                 onSynced: () => _refreshLibraryAfterSync(ref),
                               ),
@@ -463,8 +463,8 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                         ? tabStrip
                         : desktop
                         ? _desktopLibraryHeader(
-                              onOpenOrganizer: () =>
-                                  _openLibraryOrganizer(bodyContext),
+                            onOpenOrganizer: () =>
+                                _openLibraryOrganizer(bodyContext),
                             trailing: trailing,
                             tabStrip: tabStrip,
                           )
@@ -630,7 +630,8 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                             pinned: true,
                             delegate: _SliverFixedHeaderDelegate(
                               height:
-                                  kCategoryTabStripHeight + DesktopPageHeader.gap,
+                                  kCategoryTabStripHeight +
+                                  DesktopPageHeader.gap,
                               child: tabStrip,
                             ),
                           ),
@@ -643,8 +644,8 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                             delegate: _SliverFixedHeaderDelegate(
                               height: showTabs ? 64 + 44 : 64,
                         child: _desktopLibraryHeader(
-                                onOpenOrganizer: () =>
-                                    _openLibraryOrganizer(bodyContext),
+                          onOpenOrganizer: () =>
+                              _openLibraryOrganizer(bodyContext),
                           trailing: trailing,
                           tabStrip: tabStrip,
                         ),
@@ -665,11 +666,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                           )
                         : null,
                     actions: [
-                            Builder(
-                              builder: (context) => LibraryOrganizerButton(
-                                onPressed: () => _openLibraryOrganizer(context),
-                              ),
-                            ),
+                      _organizerButton(),
                       SyncYomiSyncButton(
                         onSynced: () => _refreshLibraryAfterSync(ref),
                       ),
@@ -904,11 +901,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                                   ),
                               icon: const Icon(FluentIcons.arrow_swap_24_regular),
                             ),
-                            Builder(
-                              builder: (context) => LibraryOrganizerButton(
-                                onPressed: () => _openLibraryOrganizer(context),
-                              ),
-                            ),
+                            _organizerButton(),
                             Consumer(
                               builder: (context, ref, _) =>
                                   PopupMenuButton<void>(
@@ -1128,7 +1121,8 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                             pinned: true,
                             delegate: _SliverFixedHeaderDelegate(
                               height:
-                                  kCategoryTabStripHeight + DesktopPageHeader.gap,
+                                  kCategoryTabStripHeight +
+                                  DesktopPageHeader.gap,
                               child: tabStrip,
                             ),
                           ),
@@ -1143,8 +1137,8 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                                   ? 64 + 44
                                   : 64,
                         child: _desktopLibraryHeader(
-                                onOpenOrganizer: () =>
-                                    _openLibraryOrganizer(bodyContext),
+                          onOpenOrganizer: () =>
+                              _openLibraryOrganizer(bodyContext),
                           trailing: trailing,
                           tabStrip: tabStrip,
                         ),
@@ -1165,11 +1159,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                           )
                         : null,
                     actions: [
-                            Builder(
-                              builder: (context) => LibraryOrganizerButton(
-                                onPressed: () => _openLibraryOrganizer(context),
-                              ),
-                            ),
+                            _organizerButton(),
                             Consumer(
                               builder: (context, ref, _) =>
                                   PopupMenuButton<void>(

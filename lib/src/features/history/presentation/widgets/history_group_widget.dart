@@ -16,11 +16,9 @@ class HistoryGroupWidget extends StatelessWidget {
   const HistoryGroupWidget({
     super.key,
     required this.group,
-    this.first = false,
   });
 
   final HistoryGroup group;
-  final bool first;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +27,7 @@ class HistoryGroupWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        HistoryGroupHeader(group: group, first: first),
+        HistoryGroupHeader(group: group),
         ...group.items.map((HistoryItemDto item) => HistoryItemTile(
               item: item,
             )),

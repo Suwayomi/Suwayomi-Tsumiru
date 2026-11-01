@@ -32,7 +32,6 @@ const kDesktopListMaxWidth = 1040.0;
 
 const kDesktopSettingsMaxWidth = 720.0;
 
-/// Insets the desktop page area by the visible page's [DesktopPageLayout].
 class DesktopPageFrame extends StatelessWidget {
   const DesktopPageFrame({
     super.key,
@@ -129,7 +128,6 @@ class _DesktopPageFrameBox extends SingleChildRenderObjectWidget {
   }
 }
 
-/// Declares the layout of the page it wraps while that page is visible.
 class DesktopPageLayoutScope extends StatefulWidget {
   const DesktopPageLayoutScope({
     super.key,
@@ -204,7 +202,6 @@ DesktopPageLayout? _pageLayout(BuildContext context) =>
 double _pageLine(BuildContext context) =>
     _pageLayout(context) == DesktopPageLayout.fullBleed ? kDesktopPageInset : 0;
 
-/// Content of a full-bleed scroll view stays clear of the scrollbar itself.
 double _endClearance(BuildContext context, double end) =>
     context.getInheritedWidgetOfExactType<DesktopFullBleedScroll>() == null
     ? end
@@ -214,7 +211,6 @@ double desktopPageLineStart(BuildContext context, double inset) =>
     isOnDesktopPage(context) ? _pageLine(context) : inset;
 
 extension DesktopPageLine on EdgeInsets {
-  /// On desktop pages, puts a block's start (and with [top], its top) on the page line.
   EdgeInsets onDesktopPageLine(BuildContext context, {bool top = false}) {
     if (!isOnDesktopPage(context)) return this;
     final line = _pageLine(context);

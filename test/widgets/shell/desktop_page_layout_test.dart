@@ -6,7 +6,6 @@
 
 import 'dart:math';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +13,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/app_sizes.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
-import 'package:tsumiru/src/features/browse_center/presentation/browse/browse_screen.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import 'package:tsumiru/src/features/history/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/history/domain/history_item.dart';
@@ -32,7 +30,6 @@ import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/downloads/downloads_screen.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
-import 'package:tsumiru/src/features/settings/presentation/more/more_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/settings/settings_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
@@ -214,7 +211,6 @@ void main() {
       );
     }
 
-    tester.view.physicalSize = const Size(1000, 700);
     await pump(const LibraryScreen(categoryId: 1));
     expect(tester.takeException(), isNull);
     final tabLabel = find.text('One', findRichText: true);
@@ -255,30 +251,6 @@ void main() {
       reason: 'Library persistent search covers clear the scrollbar thumb',
     );
 
-    void expectSelectedCategory(String name) {
-      final label = tester.widget<RichText>(find.text(name, findRichText: true));
-      final span = label.text.getSpanForPosition(const TextPosition(offset: 0))!;
-      expect(span.style!.fontWeight, FontWeight.w600);
-    }
-
-    expectSelectedCategory('One');
-    final swipeStart =
-        tester.getCenter(find.byType(CategoryTabStrip)) + const Offset(250, 200);
-    await tester.dragFrom(
-      swipeStart,
-      const Offset(-600, 0),
-      kind: PointerDeviceKind.mouse,
-    );
-    await tester.pumpAndSettle();
-    expectSelectedCategory('One');
-    await tester.dragFrom(
-      swipeStart,
-      const Offset(-600, 0),
-      kind: PointerDeviceKind.touch,
-    );
-    await tester.pumpAndSettle();
-    expectSelectedCategory('Two');
-
     await pump(const HistoryScreen());
     expect(tester.takeException(), isNull);
     expectOnLine(
@@ -297,16 +269,6 @@ void main() {
       reason: 'History thumbnail',
     );
 
-    await pump(
-      BrowseScreen(
-        currentIndex: 0,
-        onDestinationSelected: (_) {},
-        children: const [SizedBox(), SizedBox(), SizedBox()],
-      ),
-    );
-    expect(tester.takeException(), isNull);
-    expectOnLine('Browse', find.byType(DesktopViewSwitch));
-
     await pump(const DownloadsScreen());
     expect(tester.takeException(), isNull);
     expectOnLine('Downloads', find.byType(DesktopViewSwitch));
@@ -314,14 +276,6 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(tester.takeException(), isNull);
     expectOnLine('Downloads on device', find.byType(DesktopViewSwitch));
-
-    await pump(const MoreScreen());
-    expect(tester.takeException(), isNull);
-    expectOnLine(
-      'More',
-      find.text('Account'),
-      centredWidth: kDesktopSettingsMaxWidth,
-    );
 
     await pump(const SettingsScreen());
     expect(tester.takeException(), isNull);

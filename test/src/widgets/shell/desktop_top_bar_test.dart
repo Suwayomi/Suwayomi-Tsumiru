@@ -17,7 +17,6 @@ import 'package:tsumiru/src/features/library/presentation/category/controller/ed
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
-import 'package:tsumiru/src/features/library/presentation/library/widgets/library_manga_organizer.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/widgets/update_status_popup_menu.dart';
@@ -104,9 +103,8 @@ Future<void> _pumpFrame(
 
 Future<void> pumpRoute(
   WidgetTester tester,
-  Size size, {
-  double slotMinWidth = 500,
-}) async {
+  Size size,
+) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -133,7 +131,7 @@ Future<void> pumpRoute(
                     ),
                     Expanded(
                       child: TopBarSlot(
-                        minWidth: slotMinWidth,
+                        minWidth: 500,
                         content: const SizedBox(
                           height: 40,
                           child: Center(child: Text('Toolbar')),
@@ -239,8 +237,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(DesktopTitleBar), findsNothing);
-
       await tester.tap(_fieldTextField());
       await tester.pumpAndSettle();
       await tester.enterText(_fieldTextField(), 'abc');
@@ -256,29 +252,20 @@ void main() {
       final toolbar = find.byType(DesktopLibraryToolbar);
       final organizerBoundary =
           1400 - tester.getSize(toolbar).width + libraryTopBarSlotMinWidth(3);
-      for (final (width, expanded, canExpand, showsOrganizer) in [
-        (999.0, false, false, false),
-        (1000.0, false, true, false),
-        (1000.0, true, false, false),
-        (organizerBoundary - 1, false, false, true),
-        (organizerBoundary, false, false, false),
+      for (final (width, showsOrganizer) in [
+        (organizerBoundary - 1, true),
+        (organizerBoundary, false),
       ]) {
-        container.read(sidebarExpandedProvider.notifier).update(expanded);
         tester.view.physicalSize = Size(width, 900);
         await tester.pumpAndSettle(const Duration(milliseconds: 200));
         expect(
-          find.byType(DesktopBrandExpandButton),
-          canExpand ? findsOneWidget : findsNothing,
-        );
-        expect(
-          find.byType(LibraryOrganizerButton),
+          find.widgetWithIcon(IconButton, FluentIcons.filter_24_regular),
           showsOrganizer ? findsOneWidget : findsNothing,
         );
         final field = tester.widget<TextField>(_fieldTextField());
         expect(field.controller?.text, equals('abc'));
         expect(tester.takeException(), isNull);
       }
-      expect(tester.takeException(), isNull);
     },
   );
 
@@ -681,7 +668,7 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     debugMacOSOverride = true;
-    await pumpRoute(tester, const Size(700, 900), slotMinWidth: 700);
+    await pumpRoute(tester, const Size(700, 900));
     expect(find.byType(DesktopTitleBar), findsNothing);
     expect(find.byType(WindowCaptionButton), findsNothing);
     expect(find.byType(DesktopBrandExpandButton), findsNothing);
