@@ -22,6 +22,7 @@ import '../../../utils/platform/web_auth_mode.dart';
 import '../../account/data/account_notice.dart';
 import '../../account/data/account_session_repository.dart';
 import '../../account/domain/account_binding.dart';
+import '../../offline/data/offline_server_identity.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../onboarding/data/server_resolver.dart'
     show authProbeAuthorized, authProbeExplicitlyRejects, basicAuthConfirms;
@@ -30,6 +31,7 @@ import '../../settings/presentation/server/widget/credential_popup/credentials_p
 import 'auth_credentials_store.dart';
 import 'auth_state.dart';
 import 'basic_credentials_rejected.dart';
+import 'credential_snapshot.dart';
 import 'custom_headers_store.dart';
 import 'graphql/__generated__/auth.graphql.dart';
 import 'jwt_utils.dart';
@@ -379,6 +381,11 @@ class AuthCoordinator extends _$AuthCoordinator {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     await store.withIdentityChange(() async {
       final epoch = store.serverEpoch;
+      final address = serverAddress(
+        baseUrl: serverBaseUrl,
+        port: null,
+        addPort: false,
+      );
       final client = http.Client();
       final bool authorized;
       try {
@@ -392,6 +399,7 @@ class AuthCoordinator extends _$AuthCoordinator {
         client.close();
       }
       if (!authorized) throw const BasicCredentialsRejected();
+      await store.prepareSignIn(address, username, kBasicCredentialsKey);
       await ref
           .read(credentialsProvider.notifier)
           .set(
@@ -411,11 +419,17 @@ class AuthCoordinator extends _$AuthCoordinator {
     // Capture the epoch before verification so a switch cannot persist credentials for another host.
     await store.withIdentityChange(() async {
       final epoch = store.serverEpoch;
+      final address = serverAddress(
+        baseUrl: serverBaseUrl,
+        port: null,
+        addPort: false,
+      );
       final cookie = await verifySimpleCredentials(
         serverBaseUrl: serverBaseUrl,
         username: username,
         password: password,
       );
+      await store.prepareSignIn(address, username, kSimpleLoginCookieSecureKey);
       await store.saveSimpleLoginCookie(cookie, forEpoch: epoch);
       ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);

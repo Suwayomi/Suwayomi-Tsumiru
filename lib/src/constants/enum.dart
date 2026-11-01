@@ -234,6 +234,11 @@ enum ReaderBackgroundColor {
           ? const Color(0xFF202125)
           : Colors.white,
   };
+
+  Color onColor(BuildContext context) =>
+      ThemeData.estimateBrightnessForColor(color(context)) == Brightness.dark
+      ? Colors.white
+      : Colors.black;
 }
 
 /// whiteBlack flashes white first, then black.

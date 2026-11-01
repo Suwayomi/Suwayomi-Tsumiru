@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
@@ -81,6 +83,7 @@ class _DeniedStorage implements FlutterSecureStorage {
 class _FlakyStorage implements FlutterSecureStorage {
   _FlakyStorage(this.store) : failDeletes = false;
   final Map<String, String> store;
+  bool failReads = false;
   bool failWrites = false;
   bool failDeletes;
 
@@ -93,7 +96,15 @@ class _FlakyStorage implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async => store[key];
+  }) async {
+    if (failReads) {
+      throw PlatformException(
+        code: 'Unexpected security result code',
+        details: -128,
+      );
+    }
+    return store[key];
+  }
 
   @override
   Future<void> write({
@@ -153,6 +164,24 @@ ProviderContainer _container(FlutterSecureStorage storage) {
 bool _invalidated() =>
     _prefs.getBool(DBKeys.authCredentialsInvalidated.name) ?? false;
 
+Future<void> _storeAccount(String username, AuthType type) async {
+  await _prefs.setString(DBKeys.serverUrl.name, 'https://example.org');
+  await _prefs.setBool(DBKeys.serverPortToggle.name, false);
+  await _prefs.setString(DBKeys.authUsername.name, username);
+  await _prefs.setInt(DBKeys.authType.name, type.index);
+}
+
+Future<void> _expectSignedOutAfterRestart(Map<String, String> backing) async {
+  debugResetKeychainRefusal();
+  final restarted = _container(_FlakyStorage(backing));
+  final state = await restarted.read(authCredentialsStoreProvider.future);
+  expect(state.uiAccessToken, isNull);
+  expect(state.uiRefreshToken, isNull);
+  expect(await restarted.read(credentialsProvider.future), isNull);
+  expect(backing, isEmpty);
+  expect(_invalidated(), isFalse);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -184,6 +213,7 @@ void main() {
       expect(auth.simpleLoginCookie, isNull);
       expect(basic, isNull);
       expect(headers, isEmpty);
+      expect(_invalidated(), isFalse);
 
       c.invalidate(credentialsProvider);
       await c.read(credentialsProvider.future);
@@ -192,13 +222,24 @@ void main() {
   );
 
   test(
-    'a refused replacement signs out next launch instead of restoring the old account',
-    () async {
+    'failed account switches still remove saved tokens next launch',
+    () => Future.forEach([
+      ('bob', AuthType.uiLogin),
+      ('alice', AuthType.basic),
+    ], (account) async {
+      final (username, storedAuthType) = account;
+      debugResetKeychainRefusal();
+      await _storeAccount('alice', storedAuthType);
       final backing = <String, String>{
         'auth.ui.accessToken': 'old-access',
         'auth.ui.refreshToken': 'old-refresh',
+        if (storedAuthType == AuthType.basic)
+          'auth.basic.credentials': 'old-basic',
       };
-      final storage = _FlakyStorage(backing)..failWrites = true;
+      final storage = _FlakyStorage(backing)
+        ..failReads = true
+        ..failWrites = true
+        ..failDeletes = true;
       final first = _container(storage);
       await first.read(authCredentialsStoreProvider.future);
 
@@ -207,22 +248,72 @@ void main() {
           .saveUiLoginTokens(
             accessToken: 'new-access',
             refreshToken: 'new-refresh',
+            binding: AccountBinding(
+              address: 'https://example.org:443',
+              username: username,
+              catalogId: 'catalog',
+            ),
           );
 
-      // The write was refused: the old account is still in storage.
       expect(backing['auth.ui.accessToken'], 'old-access');
       expect(_invalidated(), isTrue);
 
-      // Next launch, keychain working again. The unknown-on-disk state must
-      // not be handed to the user as the previous account.
+      await _expectSignedOutAfterRestart(backing);
+    }),
+  );
+
+  test(
+    'same-account sign-in after refusal preserves the saved tokens',
+    () async {
+      await _storeAccount('Alice', AuthType.uiLogin);
+      const binding = AccountBinding(
+        address: 'https://example.org:443',
+        username: 'alice',
+        catalogId: 'catalog',
+      );
+      final backing = <String, String>{
+        'auth.ui.accessToken': 'old-access',
+        'auth.ui.refreshToken': 'old-refresh',
+        'auth.ui.accountBinding': binding.encode(
+          accessToken: 'old-access',
+          refreshToken: 'old-refresh',
+        ),
+      };
+      final storage = _FlakyStorage(backing)
+        ..failReads = true
+        ..failWrites = true;
+      final first = _container(storage);
+      await first.read(authCredentialsStoreProvider.future);
+
+      final store = first.read(authCredentialsStoreProvider.notifier);
+      await store.saveUiLoginTokens(
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+        binding: binding,
+      );
       debugResetKeychainRefusal();
       final restarted = _container(_FlakyStorage(backing));
-      final state = await restarted.read(authCredentialsStoreProvider.future);
-      expect(state.uiAccessToken, isNull);
-      expect(state.uiRefreshToken, isNull);
-      expect(backing, isEmpty);
-      expect(_invalidated(), isFalse);
+      final restored = await restarted.read(authCredentialsStoreProvider.future);
+      expect(restored.uiAccessToken, 'old-access');
+      expect(restored.uiRefreshToken, 'old-refresh');
+      expect(restored.accountBinding?.username, 'alice');
     },
   );
+
+  test('failed sign-out after refusal removes saved tokens next launch', () async {
+    final backing = <String, String>{
+      'auth.ui.accessToken': 'old-access',
+      'auth.ui.refreshToken': 'old-refresh',
+    };
+    final storage = _FlakyStorage(backing)
+      ..failReads = true
+      ..failDeletes = true;
+    final first = _container(storage);
+    await first.read(authCredentialsStoreProvider.future);
+    await first.read(authCredentialsStoreProvider.notifier).clearUiLoginTokens();
+    expect(_invalidated(), isTrue);
+
+    await _expectSignedOutAfterRestart(backing);
+  });
 
 }

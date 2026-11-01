@@ -143,6 +143,14 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   Future<bool> _persist(Map<String, String?> changes) =>
       _vault.update(changes, ref.read(sharedPreferencesProvider));
 
+  Future<void> prepareSignIn(
+    String address,
+    String username,
+    String credentialKey,
+  ) => _mutate(() async {
+    _vault.prepareSignIn(address, username, credentialKey);
+  });
+
   AuthCredentialsState get _current =>
       state.value ?? const AuthCredentialsState.empty();
 
@@ -412,6 +420,11 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     AccountBinding? binding,
   ) async {
     if (forEpoch != _serverEpoch) return;
+    _vault.prepareSignIn(
+      binding?.address,
+      binding?.username,
+      kUiRefreshTokenSecureKey,
+    );
     await _persist({
       kUiAccessTokenSecureKey: accessToken,
       kUiRefreshTokenSecureKey: refreshToken,

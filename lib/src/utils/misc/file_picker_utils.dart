@@ -12,9 +12,11 @@ abstract class FilePickerUtils {
     BuildContext? context,
     List<String>? extensions,
   }) async {
+    // Android has no MIME type for .tachibk backups.
+    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     final file = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: extensions,
+      type: isAndroid ? FileType.any : FileType.custom,
+      allowedExtensions: isAndroid ? null : extensions,
     );
     if (context != null && context.mounted) {
       // Web has no file paths, so the bytes have to come back with the pick.

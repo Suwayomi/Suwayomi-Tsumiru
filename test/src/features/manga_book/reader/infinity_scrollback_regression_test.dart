@@ -198,7 +198,9 @@ Future<void> _pumpReaderOnChapter2(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 /// An upward scroll gesture (drag the content downward) on the reader body.
@@ -208,9 +210,9 @@ Future<void> _dragUp(WidgetTester tester) async {
     const Offset(0, 300),
     const Duration(milliseconds: 120),
   );
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(seconds: 1));
   await tester.pump(const Duration(milliseconds: 100));
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(seconds: 1));
 }
 
 void main() {
@@ -243,7 +245,7 @@ void main() {
       // No downward movement first — the deadlock precondition.
       await _dragUp(tester);
       await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(
         prevFetches,
@@ -258,7 +260,7 @@ void main() {
       // mid-flight (never completing), this drag would fetch again.
       await _dragUp(tester);
       await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       expect(
         prevFetches,
         1,

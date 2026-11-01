@@ -9,25 +9,33 @@ import 'package:flutter/widgets.dart';
 
 /// Reports changed layout size after the frame so webtoon pages can reserve their measured extent.
 class MeasureSize extends SingleChildRenderObjectWidget {
-  const MeasureSize({super.key, required this.onChange, required Widget child})
-      : super(child: child);
+  const MeasureSize({
+    super.key,
+    this.onChange,
+    this.onResize,
+    required Widget child,
+  }) : super(child: child);
 
-  final ValueChanged<Size> onChange;
+  final ValueChanged<Size>? onChange;
+  final VoidCallback? onResize;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _MeasureSizeRenderObject(onChange);
+      _MeasureSizeRenderObject(onChange, onResize);
 
   @override
   void updateRenderObject(BuildContext context, RenderObject renderObject) {
-    (renderObject as _MeasureSizeRenderObject).onChange = onChange;
+    (renderObject as _MeasureSizeRenderObject)
+      ..onChange = onChange
+      ..onResize = onResize;
   }
 }
 
 class _MeasureSizeRenderObject extends RenderProxyBox {
-  _MeasureSizeRenderObject(this.onChange);
+  _MeasureSizeRenderObject(this.onChange, this.onResize);
 
-  ValueChanged<Size> onChange;
+  ValueChanged<Size>? onChange;
+  VoidCallback? onResize;
   Size? _oldSize;
 
   @override
@@ -35,8 +43,11 @@ class _MeasureSizeRenderObject extends RenderProxyBox {
     super.performLayout();
     final newSize = child?.size ?? Size.zero;
     if (_oldSize == newSize) return;
+    if (_oldSize != null) onResize?.call();
     _oldSize = newSize;
     // Defer out of the layout phase — onChange mutates a cache the list reads.
-    WidgetsBinding.instance.addPostFrameCallback((_) => onChange(newSize));
+    if (onChange != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => onChange?.call(newSize));
+    }
   }
 }

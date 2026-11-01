@@ -15,15 +15,19 @@ Future<int?> _probeTextureLimit() async {
     const String.fromEnvironment('TSUMIRU_TEXTURE_LIMIT'),
   );
   if (override != null && override > 0) return override;
-  final bytes = img.encodePng(img.Image(width: 1, height: 32768));
-  final codec = await ui.instantiateImageCodec(bytes);
+  ui.Codec? codec;
   try {
+    // Skia scales a 1px-wide probe to zero width.
+    final bytes = img.encodePng(img.Image(width: 64, height: 32768));
+    codec = await ui.instantiateImageCodec(bytes);
     final frame = await codec.getNextFrame();
     final height = frame.image.height;
     frame.image.dispose();
     return height < 32768 ? height : null;
+  } catch (_) {
+    return null;
   } finally {
-    codec.dispose();
+    codec?.dispose();
   }
 }
 

@@ -151,6 +151,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     // Keep measured page extents across item disposal so re-entry placeholders cannot shift the viewport.
     final pageHeights = useRef<Map<String, double>>(<String, double>{});
+    final resizeCorrectionScheduled = useRef(false);
     // Bumped each time a new ordered prefetch sweep starts, so a stale sweep
     // (from before a seek / chapter load) cancels itself.
     final prefetchGen = useRef<int>(0);
@@ -655,6 +656,38 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       itemScrollController.jumpTo(index: index, alignment: alignment);
       // Reseed decode order after a seek so newly visible strips do not resize on landing.
       prefetchPagesFrom(index);
+    }
+
+    void preservePositionOnResize(int resizedIndex) {
+      if (resizeCorrectionScheduled.value || !itemScrollController.isAttached) {
+        return;
+      }
+      final positions = positionsListener.itemPositions.value.where(
+        (p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1,
+      );
+      if (positions.isEmpty) return;
+      final first = positions.reduce((a, b) => a.index < b.index ? a : b);
+      if (resizedIndex > first.index) return;
+      final loaded = loadedRef.value;
+      final position = scrollOffsetController.position;
+      final depth =
+          math.max(0.0, -first.itemLeadingEdge) * position.viewportDimension;
+      resizeCorrectionScheduled.value = true;
+      // Reuse the list's center anchor before resized pages can move the visible page.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        resizeCorrectionScheduled.value = false;
+        if (!context.mounted ||
+            loadedRef.value != loaded ||
+            !itemScrollController.isAttached) {
+          return;
+        }
+        markScrollAdjusting();
+        jumpToIndex(
+          index: first.index,
+          alignment: math.max(0.0, first.itemLeadingEdge),
+        );
+        if (depth > 0) scrollOffsetController.position.jumpTo(depth);
+      });
     }
 
     // Clear stale extents and re-anchor after scale/width changes; skip the initial sweep.
@@ -1194,6 +1227,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
+    final spinnerColor =
+        (ref.read(readerBackgroundColorKeyProvider) ??
+                DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor)
+            .onColor(context);
+
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
       final fallbackMainAxisExtent = isHorizontal
@@ -1223,6 +1261,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               width: double.infinity,
               child: child,
             );
+      Widget loadingPlaceholder([double? progress]) {
+        return placeholderBox(
+          child: Center(
+            child: CircularProgressIndicator(
+              value: progress,
+              color: spinnerColor,
+            ),
+          ),
+        );
+      }
       Widget page = ServerImage(
         showReloadButton: true,
         fit: fit,
@@ -1240,11 +1288,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                   .clamp(1, 1 << 20)
             : null,
         imageUrl: loc.imageUrl,
-        progressIndicatorBuilder: (_, _, progress) => placeholderBox(
-          child: Center(
-            child: CircularProgressIndicator(value: progress.progress),
-          ),
-        ),
+        progressIndicatorBuilder: (_, _, progress) =>
+            loadingPlaceholder(progress.progress),
         imageBuilder: (context, imageProvider) {
           final image = Image(
             image: imageProvider,
@@ -1267,7 +1312,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             // Reserve offline page extent until decode; file:// bypasses the network progress placeholder.
             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
               if (frame == null && !wasSynchronouslyLoaded) {
-                return placeholderBox();
+                return loadingPlaceholder();
               }
               // Measure decoded images only so re-entry reserves real extent rather than placeholder size.
               return MeasureSize(
@@ -1293,7 +1338,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           crossAxisExtent: crossAxisExtent,
           horizontal: isHorizontal,
           naturalSize: pagesAtNaturalSize,
-          placeholder: placeholderBox(),
+          placeholder: loadingPlaceholder(),
           onSize: (size) {
             final extent = isHorizontal ? size.width : size.height;
             if (extent > 0) pageHeights.value[loc.imageUrl] = extent;
@@ -1301,6 +1346,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           fallback: page,
         );
       }
+      page = MeasureSize(
+        key: ValueKey(loc.imageUrl),
+        onResize: () => preservePositionOnResize(index),
+        child: page,
+      );
       if (index != total - 1) return page;
       final endOfStrip = buildEndOfStrip(context);
       return Flex(

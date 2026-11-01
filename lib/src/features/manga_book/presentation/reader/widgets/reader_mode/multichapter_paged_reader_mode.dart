@@ -149,6 +149,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     // Per-chapter wide (landscape) pages, discovered as images resolve. Keyed by
     // chapterId so two chapters can each have a wide page 0.
     final widePages = useState<Map<int, Set<int>>>(const {});
+    final pendingWidePages = useRef<Map<int, Set<int>>?>(null);
 
     final currentVisibleChapter = useState<ChapterDto>(chapter);
     final initialChapterPageIndex = readerInitialPageIndex(
@@ -506,13 +507,18 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
     // Commit idle swaps in a microtask to avoid setState during viewport build/re-anchor.
     void commitPendingIfAny() {
-      if (pending.value == null) return;
+      if (!controller.isIdle ||
+          (pending.value == null && pendingWidePages.value == null)) {
+        return;
+      }
       Future.microtask(() {
-        if (!context.mounted) return;
+        if (!context.mounted || !controller.isIdle) return;
         final p = pending.value;
-        if (p == null) return;
         pending.value = null;
-        loadedChapters.value = p;
+        if (p != null) loadedChapters.value = p;
+        final wide = pendingWidePages.value;
+        pendingWidePages.value = null;
+        if (wide != null) widePages.value = wide;
       });
     }
 
@@ -671,12 +677,14 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       if (current.contains(raw)) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
-        final now = widePages.value[chapterId] ?? const <int>{};
+        final staged = pendingWidePages.value ?? widePages.value;
+        final now = staged[chapterId] ?? const <int>{};
         if (now.contains(raw)) return;
-        widePages.value = {
-          ...widePages.value,
+        pendingWidePages.value = {
+          ...staged,
           chapterId: {...now, raw},
         };
+        commitPendingIfAny();
       });
     }
 

@@ -139,6 +139,18 @@ class PagedDisplayWindow {
     return -1;
   }
 
+  int chapterUnitToDisplay(int chapterId, PageUnit unit) {
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item is SpreadDisplay &&
+          item.chapterId == chapterId &&
+          (item.entry.first == unit || item.entry.second == unit)) {
+        return i;
+      }
+    }
+    return chapterRawToDisplay(chapterId, unit.raw);
+  }
+
   int firstDisplayOf(int chapterId) {
     for (var i = 0; i < items.length; i++) {
       final item = items[i];

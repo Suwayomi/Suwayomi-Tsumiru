@@ -145,5 +145,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(progress.last, (5, 0));
     expect(tester.takeException(), isNull);
+
+    PagedDisplayWindow splitWindow({bool earlierWide = false}) =>
+        buildPagedDisplayWindow(
+          chapters: [
+            WindowChapter(
+              chapterId: 5,
+              chapterName: 'Chapter 5',
+              mapping: buildSpreadMapping(
+                pageCount: 4,
+                doublePages: false,
+                splitWide: true,
+                splitInvert: false,
+                isWide: (raw) => raw == 1 || (earlierWide && raw == 0),
+              ),
+              pages: List.filled(4, page.uri.toString()),
+            ),
+          ],
+          forceTransition: false,
+        );
+
+    await pump(splitWindow());
+    controller.jumpToRaw(1);
+    controller.next();
+    await tester.pumpAndSettle();
+    await pump(splitWindow(earlierWide: true));
+    controller.next();
+    await tester.pumpAndSettle();
+    expect(progress.last, (5, 2));
+    expect(tester.takeException(), isNull);
   });
 }

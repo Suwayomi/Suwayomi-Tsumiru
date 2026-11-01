@@ -79,6 +79,8 @@ class PagedReaderController {
 
   bool get isAtLast => _state?.isAtLastDisplay ?? false;
 
+  bool get isIdle => _state?._isIdle ?? true;
+
   /// Test-only displacement by [progress] of one page turn.
   @visibleForTesting
   void debugStrand(double progress) => _state?._debugStrand(progress);
@@ -345,9 +347,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         : null;
     var target = -1;
     if (item is SpreadDisplay) {
-      target = widget.window.chapterRawToDisplay(
+      target = widget.window.chapterUnitToDisplay(
         item.chapterId,
-        item.entry.first.raw,
+        item.entry.first,
       );
     } else if (item is TransitionDisplay) {
       // A transition is content too: rebuilding spread mappings (e.g. when a
@@ -432,7 +434,15 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     return index.clamp(0, widget.window.length - 1).toInt();
   }
 
-  void _notifyIdle() => widget.onIdle?.call();
+  bool get _isIdle =>
+      _pointers.isEmpty &&
+      !_pageAnimation.isAnimating &&
+      !_commitPending &&
+      _dragOffset == 0;
+
+  void _notifyIdle() {
+    if (_isIdle) widget.onIdle?.call();
+  }
 
   void _emitRawPage() {
     if (widget.window.isEmpty) {
@@ -722,6 +732,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _pinchStartFocal = null;
     _velocityPointer = null;
     _velocityTracker = null;
+    _notifyIdle();
   }
 
   void _startLongPressTimer(Offset position) {

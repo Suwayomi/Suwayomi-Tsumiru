@@ -241,6 +241,15 @@ void main() {
           const Offset(-400, 0),
           const Duration(milliseconds: 80),
         );
+        if (i == 0) {
+          final viewport = tester.widget<PagedReaderViewport>(
+            find.byType(PagedReaderViewport),
+          );
+          viewport.onPageWide(1, 0, true);
+          await tester.pump();
+          await tester.pumpAndSettle();
+          expect(find.text('2 / 3'), findsOneWidget);
+        }
         await tester.pumpAndSettle();
         // Let the async chapter load + idle-gated commit settle.
         await tester.pump(const Duration(milliseconds: 50));

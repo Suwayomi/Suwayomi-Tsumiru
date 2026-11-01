@@ -178,7 +178,9 @@ Future<void> _pumpReaderOnChapter2(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 void main() {
