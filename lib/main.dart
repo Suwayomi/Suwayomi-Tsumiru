@@ -49,10 +49,14 @@ import 'src/features/offline/data/offline_server_identity_repository.dart';
 import 'src/features/onboarding/data/onboarding_complete.dart';
 import 'src/features/settings/data/grid_cover_preference_migration.dart';
 import 'src/features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
+import 'src/features/settings/presentation/server/widget/client/server_url_tile/hosted_base_uri.dart';
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
-import 'src/features/tracking/data/native_tracker_oauth.dart';
+import 'src/features/tracking/data/tracker_oauth.dart';
+import 'src/features/tracking/data/tracker_oauth_browser_stub.dart'
+    if (dart.library.js_interop)
+        'src/features/tracking/data/tracker_oauth_browser_web.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/routes/router_config.dart';
 import 'src/tsumiru_app.dart';
@@ -453,16 +457,13 @@ void _onFatalError(Object error, StackTrace stack) {
 }
 
 void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
-  final appLinks = AppLinks();
-
   Future<void> handleUri(Uri uri) async {
-    if (uri.scheme != 'tsumiru' || uri.host != 'tracker-oauth') return;
     final container = currentContainer();
     final current = container.read(authCredentialsStoreProvider.notifier).captureSession();
     if (!current()) return;
     try {
       final toast = container.read(toastProvider);
-      final outcome = await container.read(nativeTrackerOAuthProvider).handleCallback(uri);
+      final outcome = await container.read(trackerOAuthProvider).handleCallback(uri);
       if (!current()) return;
       final context = rootNavigatorKey.currentContext;
       if (context == null || !context.mounted) return;
@@ -476,6 +477,29 @@ void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
     }
   }
 
+  if (kIsWeb) {
+    final uri = Uri.base;
+    final base = Uri.parse(readHostedBaseUri());
+    final redirect = Uri.parse(
+      currentContainer().read(trackerOAuthProvider).redirect,
+    );
+    if (uri.path == redirect.path && uri.hasQuery) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await handleUri(uri);
+        } finally {
+          clearTrackerOAuthUrl(base.toString());
+          final context = rootNavigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            const TrackingSettingsRoute().go(context);
+          }
+        }
+      });
+    }
+    return;
+  }
+
+  final appLinks = AppLinks();
   appLinks
       .getInitialLink()
       .then((uri) {
