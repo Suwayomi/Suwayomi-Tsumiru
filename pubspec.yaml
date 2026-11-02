@@ -71,7 +71,7 @@ dependencies:
   share_plus: ^13.3.0
   gal: ^2.3.2
   image: ^4.8.0
-  window_manager: ^0.5.2
+  window_manager: ^0.6.0
   flutter_local_notifications: ^22.1.0
   workmanager: ^0.10.9
   battery_plus: ^7.1.1
