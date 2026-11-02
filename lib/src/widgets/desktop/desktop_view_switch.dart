@@ -7,17 +7,20 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/extensions/custom_extensions.dart';
+import '../count_pill.dart';
 import 'desktop_page_frame.dart';
 
 class DesktopViewSwitchBar extends StatelessWidget {
   const DesktopViewSwitchBar({
     super.key,
     required this.labels,
+    this.counts,
     required this.selectedIndex,
     required this.onChanged,
-  });
+  }) : assert(counts == null || counts.length == labels.length);
 
   final List<String> labels;
+  final List<int>? counts;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
 
@@ -34,6 +37,7 @@ class DesktopViewSwitchBar extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: DesktopViewSwitch(
         labels: labels,
+        counts: counts,
         selectedIndex: selectedIndex,
         onChanged: onChanged,
       ),
@@ -45,11 +49,13 @@ class DesktopViewSwitch extends StatelessWidget {
   const DesktopViewSwitch({
     super.key,
     required this.labels,
+    this.counts,
     required this.selectedIndex,
     required this.onChanged,
-  });
+  }) : assert(counts == null || counts.length == labels.length);
 
   final List<String> labels;
+  final List<int>? counts;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
 
@@ -83,10 +89,23 @@ class DesktopViewSwitch extends StatelessWidget {
                       horizontal: 20,
                       vertical: 8,
                     ),
-                    child: Text(
-                      labels[i],
+                    child: DefaultTextStyle.merge(
                       style: context.textTheme.labelLarge?.copyWith(
                         color: selectedIndex == i ? cs.primary : cs.onSurface,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            labels[i],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if ((counts?[i] ?? 0) > 0) ...[
+                            const SizedBox(width: 4),
+                            CountPill(count: counts![i]),
+                          ],
+                        ],
                       ),
                     ),
                   ),

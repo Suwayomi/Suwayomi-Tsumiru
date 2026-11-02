@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/count_pill.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/desktop/desktop_view_switch.dart';
 import '../../../../widgets/touch_tab_pager.dart';
@@ -20,6 +21,7 @@ import '../../../quick_open/presentation/unified_search/desktop_search_field.dar
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../extension/controller/extension_controller.dart';
+import '../extension/controller/extension_update_badge.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
 import '../source/controller/source_controller.dart' hide SourceLanguageFilter;
@@ -116,11 +118,11 @@ class BrowseScreen extends HookConsumerWidget {
           )
         : TabBar(
             dividerColor: Colors.transparent,
-            isScrollable: context.windowSizeClass >= WindowSizeClass.medium,
+            isScrollable: true,
             controller: tabController,
             tabs: [
               Tab(text: context.l10n.sources),
-              Tab(text: context.l10n.extensions),
+              const Tab(child: _ExtensionsTabLabel()),
               Tab(text: context.l10n.migrate),
             ],
           );
@@ -168,7 +170,31 @@ class BrowseScreen extends HookConsumerWidget {
   }
 }
 
-class _BrowseDesktopSwitchBar extends StatelessWidget
+class _ExtensionsTabLabel extends ConsumerWidget {
+  const _ExtensionsTabLabel();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          context.l10n.extensions,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (count > 0) ...[
+          const SizedBox(width: 4),
+          CountPill(count: count),
+        ],
+      ],
+    );
+  }
+}
+
+class _BrowseDesktopSwitchBar extends ConsumerWidget
     implements PreferredSizeWidget {
   const _BrowseDesktopSwitchBar({
     required this.controller,
@@ -182,11 +208,14 @@ class _BrowseDesktopSwitchBar extends StatelessWidget
   Size get preferredSize => const Size.fromHeight(68);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
+
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) => DesktopViewSwitchBar(
         labels: tabs,
+        counts: [0, count, 0],
         selectedIndex: controller.index,
         onChanged: controller.animateTo,
       ),
