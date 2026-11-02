@@ -54,19 +54,21 @@ class _LinuxWindowFrameState extends State<LinuxWindowFrame> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final radius = _rounded ? BorderRadius.circular(_linuxWindowCornerRadius) : BorderRadius.zero;
-    return ClipRRect(
-      borderRadius: radius,
-      child: DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: _outlined
-              ? Border.all(
-                  color: theme.colorScheme.onSurface.withValues(alpha: .07),
-                )
-              : null,
-        ),
+    final borderRadius = _rounded ? BorderRadius.circular(_linuxWindowCornerRadius) : BorderRadius.zero;
+    final outlineColor = theme.colorScheme.onSurface.withValues(alpha: .07);
+    final border = Border.all(
+      color: _rounded
+          ? _outlined
+              ? Color.alphaBlend(outlineColor, theme.colorScheme.surface)
+              : theme.colorScheme.surface
+          : outlineColor,
+      width: _rounded ? 2 : 1,
+      strokeAlign: _rounded ? BorderSide.strokeAlignCenter : BorderSide.strokeAlignInside,
+    );
+    return Container(
+      foregroundDecoration: BoxDecoration(borderRadius: borderRadius, border: _rounded || _outlined ? border : null),
+      child: ClipRRect(
+        borderRadius: borderRadius,
         child: ColoredBox(
           color: theme.colorScheme.surface,
           child: widget.child,
