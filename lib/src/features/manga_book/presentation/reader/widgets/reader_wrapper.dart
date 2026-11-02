@@ -1116,18 +1116,6 @@ class ReaderView extends HookConsumerWidget {
       );
     }
 
-    void handleLongPressCancel() {
-      // Flag-first + canPop so this and the sheet's own dismissal can't
-      // double-pop (which trips the scope assertion) or pop the reader itself.
-      if (pageActionsOpen.value &&
-          context.mounted &&
-          ModalRoute.of(context)?.isCurrent == false &&
-          Navigator.of(context).canPop()) {
-        pageActionsOpen.value = false;
-        unawaited(Navigator.of(context).maybePop());
-      }
-    }
-
     final resolvedNavigationLayout = effectiveNavigationLayout(
       ref,
       mode: resolvedReaderMode,
@@ -1172,7 +1160,6 @@ class ReaderView extends HookConsumerWidget {
         callbacks: ReaderInputCallbacks(
           onTap: toggleVisibility,
           onLongPressStart: readWithLongTap ? handleLongPressStart : null,
-          onLongPressCancel: readWithLongTap ? handleLongPressCancel : null,
           onNext: onNext,
           onPrevious: onPrevious,
           onNextBoundary: onNextBoundary,
