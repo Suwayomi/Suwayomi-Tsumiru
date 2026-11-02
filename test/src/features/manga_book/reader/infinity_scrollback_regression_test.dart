@@ -57,11 +57,14 @@ class _FakeTrackerRepository extends TrackerRepository {
 }
 
 class _QuietRepo extends Fake implements MangaBookRepository {
+  final putChapterCalls = <({int chapterId, ChapterChange patch})>[];
   @override
   Future<void> putChapter({
     required int chapterId,
     required ChapterChange patch,
-  }) async {}
+  }) async {
+    putChapterCalls.add((chapterId: chapterId, patch: patch));
+  }
 }
 
 /// Whether the cold-open pair test has "resolved" its chapter list yet.
@@ -145,6 +148,7 @@ Future<void> _pumpReaderOnChapter2(
   WidgetTester tester, {
   required FutureOr<ChapterPagesDto?> Function() prevPages,
   bool coldOpenPair = false,
+  _QuietRepo? repo,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -160,7 +164,7 @@ Future<void> _pumpReaderOnChapter2(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        mangaBookRepositoryProvider.overrideWithValue(_QuietRepo()),
+        mangaBookRepositoryProvider.overrideWithValue(repo ?? _QuietRepo()),
         mangaWithIdProvider(
           mangaId: 1,
         ).overrideWith(() => _FakeMangaWithId(_webtoonManga())),
@@ -225,6 +229,41 @@ void main() {
     MultiChapterContinuousReaderMode.edgeAttemptCooldown = const Duration(
       seconds: 4,
     );
+  });
+
+  testWidgets('prepending a previous chapter records no progress for it', (
+    tester,
+  ) async {
+    final repo = _QuietRepo();
+    var prevFetches = 0;
+    await _pumpReaderOnChapter2(
+      tester,
+      repo: repo,
+      prevPages: () async {
+        prevFetches++;
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        return _pages(1, 3);
+      },
+    );
+
+    await tester.timedDrag(
+      find.byType(Scrollable).first,
+      const Offset(0, 300),
+      const Duration(milliseconds: 120),
+    );
+    for (var i = 0; i < 200; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    expect(prevFetches, 1);
+    expect(
+      repo.putChapterCalls
+          .where((c) => c.chapterId == 1)
+          .map((c) => (c.patch.lastPageRead, c.patch.isRead)),
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(

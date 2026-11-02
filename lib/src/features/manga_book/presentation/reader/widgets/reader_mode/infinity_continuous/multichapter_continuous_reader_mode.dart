@@ -158,6 +158,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // Suppress neighbour loads while programmatic jumps settle so transient positions cannot shift indices.
     final isAdjustingScroll = useRef<bool>(false);
     final adjustIdleTimer = useRef<Timer?>(null);
+    final positionListener = useRef<VoidCallback?>(null);
 
     final currentVisibleChapter = useState<ChapterDto>(chapter);
     final initialChapterPageIndex = readerInitialPageIndex(
@@ -274,6 +275,14 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         .read(readerProgressQueuesProvider)
         .putIfAbsent(id, ReaderProgressQueue.new);
 
+    bool shouldWriteProgress(_LoadedChapter lc, int rel) {
+      if (lc.chapter.user.isRead.ifNull()) return false;
+      final pageCount = lc.pages.pages.length;
+      final completed = pageCount > 0 && rel >= pageCount - 1;
+      return completed ||
+          rel > lc.chapter.user.lastPageRead.getValueOnNullOrNegative();
+    }
+
     Future<void> writeVisibleProgress(
       int chapterId,
       int rel,
@@ -289,16 +298,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (chapterId != currentVisibleChapter.value.id) return;
       if (completedChapterIds.value.contains(chapterId)) return;
       final lc = loadedById(chapterId);
-      if (lc == null) return;
-      if (lc.chapter.user.isRead.ifNull()) return;
+      if (lc == null || !shouldWriteProgress(lc, rel)) return;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
-      // Don't write a lower page than what's already saved (at-open snapshot),
-      // unless we're completing the chapter.
-      if (!completed &&
-          lc.chapter.user.lastPageRead.getValueOnNullOrNegative() >= rel) {
-        return;
-      }
       final progressResult = await recordReadingProgress(
         ref,
         mangaId: manga.id,
@@ -377,8 +379,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-    // Skip the restore emit so opening on the last page does not complete the chapter.
-    final initialProgressConsumed = useRef<bool>(false);
+    // Skip restored progress after page 0 so reopening the last page cannot complete it.
+    final initialProgressConsumed = useRef<bool>(initialChapterPageIndex == 0);
     useEffect(() {
       if (!initialProgressConsumed.value) {
         initialProgressConsumed.value = true;
@@ -412,7 +414,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         if (incognitoForFlush || offlineDbForFlush == null) return;
         // A teardown racing completion must preserve the completed state rather than write unread.
         final lc = loadedById(p.chapterId);
-        final pageCount = lc?.pages.pages.length ?? 0;
+        if (lc == null || !shouldWriteProgress(lc, p.rel)) return;
+        final pageCount = lc.pages.pages.length;
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
         final chapterIds = isCompletion
             ? expandIdsForDuplicates(allChaptersForFlush.value, [p.chapterId])
@@ -647,7 +650,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       adjustIdleTimer.value?.cancel();
       adjustIdleTimer.value = Timer(
         const Duration(milliseconds: 350),
-        () => isAdjustingScroll.value = false,
+        () {
+          isAdjustingScroll.value = false;
+          positionListener.value?.call();
+        },
       );
     }
 
@@ -869,6 +875,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     useEffect(() {
       void listener() {
+        // Ignore jump-settling positions and clear the direction sample before resuming edge handling.
+        if (isAdjustingScroll.value) {
+          lastTop.value = null;
+          return;
+        }
+
         final loaded = loadedRef.value;
         final total = InfinityContinuousUtils.getTotalPages(loaded);
         if (total <= 0) return;
@@ -918,12 +930,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             break;
           }
           cumulative += count;
-        }
-
-        // Ignore jump-settling positions and clear the direction sample before resuming edge handling.
-        if (isAdjustingScroll.value) {
-          lastTop.value = null;
-          return;
         }
 
         // Load neighbours only toward the scroll direction, using a visibility floor to ignore grazed page edges.
@@ -1002,8 +1008,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
       }
 
+      positionListener.value = listener;
       positionsListener.itemPositions.addListener(listener);
-      return () => positionsListener.itemPositions.removeListener(listener);
+      return () {
+        positionListener.value = null;
+        positionsListener.itemPositions.removeListener(listener);
+      };
     }, const []);
 
 
