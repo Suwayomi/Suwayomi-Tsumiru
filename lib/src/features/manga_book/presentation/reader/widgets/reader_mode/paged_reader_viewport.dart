@@ -241,6 +241,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   bool _longPressActive = false;
   Timer? _longPressTimer;
   Timer? _singleTapTimer;
+  TapAction? _pendingTapAction;
+  int? _pendingDisplayIndex;
   DateTime? _lastTapAt;
   Offset? _lastTapPosition;
   double? _pinchStartDistance;
@@ -321,6 +323,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (!identical(oldWidget.window, widget.window)) {
       _reanchor(oldWidget.window);
       _clearPendingTap();
+      _pendingDisplayIndex = null;
     }
     _syncZoomBounds();
   }
@@ -815,41 +818,74 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _singleTapTimer = null;
     _lastTapAt = null;
     _lastTapPosition = null;
+    _pendingTapAction = null;
   }
 
   void _handleTap(Offset position) {
-    // Without double-tap zoom, act immediately rather than delaying navigation.
     if (!widget.doubleTapToZoom || widget.disableZoomIn) {
       _handleSingleTap(position);
       return;
     }
 
+    final callbacks = ReaderInputScope.maybeOf(context);
+    if (callbacks == null) return;
+
     final now = widget.clock();
     final previousTapAt = _lastTapAt;
     final previousTapPosition = _lastTapPosition;
+    final previousAction = _pendingTapAction;
     _clearPendingTap();
 
-    if (previousTapAt != null &&
-        now.difference(previousTapAt) <= _doubleTapWindow &&
+    final isDoubleTap =
+        previousTapAt != null &&
         previousTapPosition != null &&
-        (previousTapPosition - position).distance <= _tapSlop * 2) {
-      _handleDoubleTap(position);
+        now.difference(previousTapAt) <= _doubleTapWindow &&
+        (previousTapPosition - position).distance <= _tapSlop * 2;
+
+    if (isDoubleTap) {
+      _revertImmediateTurn(previousAction);
+      _handleDoubleTap(previousTapPosition);
       return;
     }
 
-    // Too far apart to pair: fire the stranded tap now. Must happen before
-    // arming this one, since acting on it can change the page and clear state.
-    if (previousTapAt != null && previousTapPosition != null) {
+    // A menu tap is still waiting. A page tap already happened.
+    if (previousAction == TapAction.menu && previousTapPosition != null) {
       _handleSingleTap(previousTapPosition);
+    }
+
+    final indexBeforeTap = _displayIndex;
+    final action = _tapActionFor(position, _viewportSize, callbacks);
+    if (action == TapAction.previous || action == TapAction.next) {
+      _handleSingleTap(position);
     }
 
     _lastTapAt = now;
     _lastTapPosition = position;
+    _pendingTapAction = action;
+    _pendingDisplayIndex = indexBeforeTap;
     _singleTapTimer = Timer(_tapDelay, () {
       _clearPendingTap();
-      if (!mounted) return;
+      if (!mounted || action != TapAction.menu) return;
       _handleSingleTap(position);
     });
+  }
+
+  void _revertImmediateTurn(TapAction? action) {
+    if (action != TapAction.next && action != TapAction.previous) return;
+
+    final saved = _pendingDisplayIndex;
+    final inFlight = _pageAnimation.isAnimating || _commitPending;
+    _abandonMotion('double-tap');
+    if (inFlight) {
+      if (_dragOffset != 0) setState(() => _dragOffset = 0);
+      return;
+    }
+    if (saved == null || saved == _displayIndex) return;
+    setState(() {
+      _displayIndex = saved;
+      _dragOffset = 0;
+    });
+    _emitRawPage();
   }
 
   void _handleDoubleTap(Offset position) {
