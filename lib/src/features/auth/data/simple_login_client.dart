@@ -6,6 +6,7 @@
 
 import 'package:http/http.dart' as http;
 
+import '../../../utils/network/cookie_headers.dart';
 import '../../onboarding/data/server_resolver.dart' show authProbeAuthorized;
 
 import 'simple_login_session_client_io.dart'
@@ -57,17 +58,38 @@ class SimpleLoginClient {
     required String password,
     Map<String, String>? extraHeaders,
   }) async {
-    final request = http.Request('POST', Uri.parse('$serverBaseUrl/login.html'))
-      ..bodyFields = {'user': username, 'pass': password}
+    final headers = <String, String>{
+      for (final entry in (extraHeaders ?? <String, String>{}).entries)
+        if (entry.key.toLowerCase() != 'authorization' &&
+            entry.key.toLowerCase() != 'cookie')
+          entry.key: entry.value,
+    };
+    final loginUri = Uri.parse('$serverBaseUrl/login.html');
+    final page = await http.Response.fromStream(
+      await _http.send(http.Request('GET', loginUri)
+        ..headers.addAll(headers)
+        ..followRedirects = _browserSession),
+    ).timeout(timeout);
+    final csrfToken = page.statusCode == 200
+        ? RegExp(r'name="csrf-token"\s+value="([^"]*)"')
+              .firstMatch(page.body)
+              ?.group(1)
+        : null;
+    final request = http.Request('POST', loginUri)
+      ..bodyFields = {
+        'user': username,
+        'pass': password,
+        'csrf-token': ?csrfToken,
+      }
       ..headers['Content-Type'] =
           'application/x-www-form-urlencoded; charset=utf-8'
+      ..headers.addAll(headers)
       // Native must stop at the redirect to read Set-Cookie; browser fetch must follow it.
       ..followRedirects = _browserSession;
-    if (extraHeaders != null && extraHeaders.isNotEmpty) {
-      for (final entry in extraHeaders.entries) {
-        final lower = entry.key.toLowerCase();
-        if (lower == 'authorization' || lower == 'cookie') continue;
-        request.headers[entry.key] = entry.value;
+    if (!_browserSession && csrfToken != null) {
+      final setCookie = page.headers['set-cookie'];
+      if (setCookie != null) {
+        request.headers['Cookie'] = cookieHeaderFromSetCookie(setCookie);
       }
     }
     final response = await http.Response.fromStream(
@@ -107,7 +129,7 @@ class SimpleLoginClient {
         '303 response had no Set-Cookie header',
       );
     }
-    final cookie = setCookie.split(';').first.trim();
+    final cookie = cookieHeaderFromSetCookie(setCookie);
     if (!await authProbeAuthorized(
       serverBaseUrl,
       client: _http,

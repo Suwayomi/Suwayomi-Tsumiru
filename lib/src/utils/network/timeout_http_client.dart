@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../features/onboarding/data/server_resolver.dart' show kAuthProbeQuery;
 import '../crash/diagnostics.dart';
+import 'cookie_headers.dart';
 
 import 'fast_connect_client_stub.dart'
     if (dart.library.io) 'fast_connect_client_io.dart';
@@ -45,6 +47,35 @@ class TimeoutHttpClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request is http.MultipartRequest &&
+        request.url.path.endsWith('/api/graphql') &&
+        (request.headers['authorization']?.startsWith('Basic ') ?? false)) {
+      final probe = http.Request('POST', request.url)
+        ..followRedirects = false
+        ..headers.addAll({
+          for (final entry in request.headers.entries)
+            if (!['cookie', 'content-type', 'content-length']
+                .contains(entry.key.toLowerCase()))
+              entry.key: entry.value,
+        })
+        ..headers['Content-Type'] = 'application/json'
+        ..body = jsonEncode({'query': kAuthProbeQuery});
+      _checkSession();
+      final response = await _inner.send(probe).timeout(timeout);
+      await response.stream.drain<void>().timeout(timeout);
+      _checkSession();
+      if (response.statusCode != 200) {
+        throw http.ClientException('Upload authentication probe failed');
+      }
+      final cookies = cookieHeaderFromSetCookie(
+        response.headers['set-cookie'] ?? '',
+      );
+      if (cookies.split('; ').any(
+        (cookie) => cookie.startsWith('suwayomi-basic-csrf='),
+      )) {
+        request.headers['Cookie'] = cookies;
+      }
+    }
     int attempt = 0;
     http.BaseRequest current = request;
     var usedFailover = false;

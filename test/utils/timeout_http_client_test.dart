@@ -81,6 +81,50 @@ void main() {
       );
     });
 
+    test('Basic uploads prime fresh cookies and remain compatible with stable', () async {
+      var generation = 0;
+      var sends = 0;
+      final client = TimeoutHttpClient(
+        const Duration(seconds: 5),
+        inner: MockClient.streaming((request, body) async {
+          sends++;
+          final payload = utf8.decode(await body.toBytes());
+          expect(request.headers['Authorization'], 'Basic dTpw');
+          expect(request.headers['X-Proxy-Key'], 'proxy');
+          if (request.headers['content-type'] == 'application/json') {
+            generation++;
+            expect(jsonDecode(payload)['query'],
+                'query { downloadStatus { __typename } }');
+            expect(request.headers['Cookie'], isNull);
+            return http.StreamedResponse(const Stream.empty(), 200, headers: {
+              if (generation < 3)
+                'set-cookie': 'JSESSIONID=session$generation; Path=/; '
+                    'Expires=Wed, 01 Jan 2030 00:00:00 GMT; HttpOnly, '
+                    'suwayomi-basic-csrf=token$generation; Path=/; HttpOnly',
+            });
+          }
+          expect(request.headers['Cookie'], generation < 3
+              ? 'JSESSIONID=session$generation; suwayomi-basic-csrf=token$generation'
+              : isNull);
+          expect(payload, contains('file-data'));
+          return http.StreamedResponse(const Stream.empty(), 200);
+        }),
+      );
+      for (var upload = 0; upload < 3; upload++) {
+        final request = http.MultipartRequest(
+          'POST', Uri.parse('http://x/base/api/graphql'),
+        )
+          ..headers.addAll({
+            'Authorization': 'Basic dTpw',
+            'X-Proxy-Key': 'proxy',
+          })
+          ..files.add(http.MultipartFile.fromString('file', 'file-data'));
+        expect((await client.send(request)).statusCode, 200);
+      }
+      expect(sends, 6);
+      expect(generation, 3);
+    });
+
     test('a session switch cancels pending retries', () async {
       // A late failure from an old session cannot resolve a new endpoint.
       var current = true;
