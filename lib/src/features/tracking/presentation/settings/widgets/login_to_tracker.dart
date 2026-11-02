@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -15,9 +14,8 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../settings/presentation/settings/settings_pane_scope.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
-import '../../../data/native_tracker_oauth.dart';
+import '../../../data/tracker_oauth.dart';
 import '../../../data/tracker_repository.dart';
-import '../../../domain/tracker_oauth_helpers.dart';
 import '../../login/tracker_credentials_sheet.dart';
 
 /// OAuth completes asynchronously through the callback listener; credentials invalidate trackers on success.
@@ -29,46 +27,36 @@ Future<void> loginToTracker(WidgetRef ref, Fragment$TrackerDto tracker) async {
   final repo = ref.read(trackerRepositoryProvider);
 
   if (tracker.authUrl != null) {
-    if (kIsWeb) {
-      final builtUrl = buildTrackerAuthUrl(
-        authUrl: tracker.authUrl!,
-        trackerId: tracker.id,
-        trackerName: tracker.name,
-        redirectUrl: Uri.base.resolve('/tracker-oauth').toString(),
-      );
-      await launchUrlInWeb(context, builtUrl, toast);
-    } else {
-      final outcome = await ref
-          .read(nativeTrackerOAuthProvider)
-          .begin(
-            authUrl: tracker.authUrl!,
-            trackerId: tracker.id,
-            trackerName: tracker.name,
-            launch: (url) async {
-              if (!context.mounted) {
-                throw StateError('Tracker sign-in cancelled');
-              }
-              await launchUrlInWeb(
-                context,
-                url,
-                toast,
-                context.l10n.trackerOAuthBrowserFallback,
-              );
-            },
-          );
-      if (!context.mounted ||
-          outcome == TrackerOAuthBeginOutcome.started ||
-          outcome == TrackerOAuthBeginOutcome.superseded) {
-        return;
-      }
-      toast?.showError(switch (outcome) {
-        TrackerOAuthBeginOutcome.saveFailed =>
-          context.l10n.trackerOAuthSaveFailed,
-        TrackerOAuthBeginOutcome.invalidSession =>
-          context.l10n.trackerOAuthLinkInvalid,
-        _ => context.l10n.errorSomethingWentWrong,
-      });
+    final outcome = await ref
+        .read(trackerOAuthProvider)
+        .begin(
+          authUrl: tracker.authUrl!,
+          trackerId: tracker.id,
+          trackerName: tracker.name,
+          launch: (url) async {
+            if (!context.mounted) {
+              throw StateError('Tracker sign-in cancelled');
+            }
+            await launchUrlInWeb(
+              context,
+              url,
+              toast,
+              context.l10n.trackerOAuthBrowserFallback,
+            );
+          },
+        );
+    if (!context.mounted ||
+        outcome == TrackerOAuthBeginOutcome.started ||
+        outcome == TrackerOAuthBeginOutcome.superseded) {
+      return;
     }
+    toast?.showError(switch (outcome) {
+      TrackerOAuthBeginOutcome.saveFailed =>
+        context.l10n.trackerOAuthSaveFailed,
+      TrackerOAuthBeginOutcome.invalidSession =>
+        context.l10n.trackerOAuthLinkInvalid,
+      _ => context.l10n.errorSomethingWentWrong,
+    });
   } else {
     final pane = SettingsPaneScope.maybeOf(context);
     Widget credentials(BuildContext ctx) => TrackerCredentialsSheet(

@@ -6,22 +6,81 @@
 
 import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 
-/// Status 0 is untracked and omitted by the server; unknown statuses use Other (99).
-const Map<int, ({String label, int order})> kTrackStatusInfo = {
-  1: (label: 'Reading', order: 1),
-  2: (label: 'Completed', order: 2),
-  3: (label: 'On hold', order: 3),
-  4: (label: 'Dropped', order: 4),
-  5: (label: 'Plan to read', order: 5),
-  6: (label: 'Re-reading', order: 6),
+enum TrackStatus {
+  reading('Reading'),
+  repeating('Rereading'),
+  planToRead('Plan to read'),
+  paused('On hold'),
+  completed('Completed'),
+  dropped('Dropped'),
+  other('Other');
+
+  const TrackStatus(this.label);
+
+  final String label;
+}
+
+const int _myAnimeListTrackerId = 1;
+const int _aniListTrackerId = 2;
+const int _kitsuTrackerId = 3;
+const int _shikimoriTrackerId = 4;
+const int _bangumiTrackerId = 5;
+const int _mangaUpdatesTrackerId = 7;
+const int _mangaBakaTrackerId = 11;
+
+TrackStatus parseTrackerStatus(int trackerId, int status) => switch (trackerId) {
+  _myAnimeListTrackerId => switch (status) {
+    1 => TrackStatus.reading,
+    2 => TrackStatus.completed,
+    3 => TrackStatus.paused,
+    4 => TrackStatus.dropped,
+    6 => TrackStatus.planToRead,
+    7 => TrackStatus.repeating,
+    _ => TrackStatus.other,
+  },
+  _aniListTrackerId || _shikimoriTrackerId => switch (status) {
+    1 => TrackStatus.reading,
+    2 => TrackStatus.completed,
+    3 => TrackStatus.paused,
+    4 => TrackStatus.dropped,
+    5 => TrackStatus.planToRead,
+    6 => TrackStatus.repeating,
+    _ => TrackStatus.other,
+  },
+  _mangaBakaTrackerId => switch (status) {
+    1 => TrackStatus.reading,
+    2 => TrackStatus.completed,
+    3 => TrackStatus.paused,
+    4 => TrackStatus.dropped,
+    5 || 7 => TrackStatus.planToRead,
+    6 => TrackStatus.repeating,
+    _ => TrackStatus.other,
+  },
+  _kitsuTrackerId => switch (status) {
+    1 => TrackStatus.reading,
+    2 => TrackStatus.completed,
+    3 => TrackStatus.paused,
+    4 => TrackStatus.dropped,
+    5 => TrackStatus.planToRead,
+    _ => TrackStatus.other,
+  },
+  _bangumiTrackerId => switch (status) {
+    2 => TrackStatus.completed,
+    4 => TrackStatus.paused,
+    5 => TrackStatus.dropped,
+    1 => TrackStatus.planToRead,
+    _ => TrackStatus.reading,
+  },
+  _mangaUpdatesTrackerId => switch (status) {
+    0 => TrackStatus.reading,
+    2 => TrackStatus.completed,
+    4 => TrackStatus.paused,
+    3 => TrackStatus.dropped,
+    1 => TrackStatus.planToRead,
+    _ => TrackStatus.other,
+  },
+  _ => TrackStatus.other,
 };
-
-/// Unknown values use "Other".
-String trackStatusLabel(int status) =>
-    kTrackStatusInfo[status]?.label ?? 'Other';
-
-/// Unknown values sort last (99).
-int trackStatusOrder(int status) => kTrackStatusInfo[status]?.order ?? 99;
 
 
 /// Converts to a 0–10 scale; nonpositive [scaleMax] returns 0.

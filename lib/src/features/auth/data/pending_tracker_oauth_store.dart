@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'pending_tracker_oauth_store_stub.dart'
     if (dart.library.io) 'pending_tracker_oauth_store_io.dart'
+    if (dart.library.js_interop) 'pending_tracker_oauth_store_web.dart'
     as platform;
 
 abstract interface class PendingTrackerOAuthStore {

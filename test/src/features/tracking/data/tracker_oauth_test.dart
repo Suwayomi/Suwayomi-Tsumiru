@@ -12,7 +12,7 @@ import 'package:tsumiru/src/features/auth/data/credential_snapshot.dart';
 import 'package:tsumiru/src/features/auth/data/pending_tracker_oauth_store.dart';
 import 'package:tsumiru/src/features/auth/data/pending_tracker_oauth_store_io.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
-import 'package:tsumiru/src/features/tracking/data/native_tracker_oauth.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_oauth.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
@@ -28,11 +28,15 @@ class _Repository extends TrackerRepository {
         ),
       );
   final calls = <int>[];
+  final callbacks = <String>[];
   @override
   Future<void> loginOAuth({
     required int trackerId,
     required String callbackUrl,
-  }) async => calls.add(trackerId);
+  }) async {
+    calls.add(trackerId);
+    callbacks.add(callbackUrl);
+  }
 }
 
 void main() {
@@ -83,12 +87,14 @@ void main() {
     return value;
   }
 
-  NativeTrackerOAuth guard(
+  TrackerOAuth guard(
     ProviderContainer container, {
     bool actualOrigin = false,
+    String redirect = nativeTrackerOAuthRedirect,
   }) {
-    final actual = container.read(nativeTrackerOAuthProvider);
-    return NativeTrackerOAuth(
+    final actual = container.read(trackerOAuthProvider);
+    return TrackerOAuth(
+      redirect: redirect,
       pending: actual.pending,
       captureSession: actual.captureSession,
       readOrigin: actualOrigin ? actual.readOrigin : (_) async => origin,
@@ -98,7 +104,7 @@ void main() {
     );
   }
 
-  Future<TrackerOAuthBeginOutcome> begin(NativeTrackerOAuth handler) =>
+  Future<TrackerOAuthBeginOutcome> begin(TrackerOAuth handler) =>
       handler.begin(
         authUrl: 'https://tracker.test/authorize?client_id=public',
         trackerId: 1,
@@ -167,6 +173,35 @@ void main() {
       expect(repository.calls, [1]);
     },
   );
+  test('web callback keeps the hosted subpath', () async {
+    const redirect = 'https://host/sub/tracker-oauth';
+    final handler = guard(await container(), redirect: redirect);
+    expect(await begin(handler), TrackerOAuthBeginOutcome.started);
+    expect(state(), containsPair('redirectUrl', redirect));
+    final uri = Uri.parse(redirect).replace(
+      queryParameters: {
+        'code': 'example-code',
+        'state': jsonEncode(state()),
+      },
+    );
+    expect(await handler.handleCallback(uri), TrackerOAuthOutcome.succeeded);
+    expect(repository.calls, [1]);
+    expect(repository.callbacks, [uri.toString()]);
+  });
+  test('web callback ignores a missing hosted subpath', () async {
+    final handler = guard(
+      await container(),
+      redirect: 'https://host/sub/tracker-oauth',
+    );
+    await begin(handler);
+    final uri = Uri.https('host', '/tracker-oauth', {
+      'code': 'example-code',
+      'state': jsonEncode(state()),
+    });
+    expect(await handler.handleCallback(uri), TrackerOAuthOutcome.ignored);
+    expect(repository.calls, isEmpty);
+    expect(await pending.read(), isNotNull);
+  });
   for (final change in [
     {'nonce': 'wrong'},
     {'trackerId': 2},

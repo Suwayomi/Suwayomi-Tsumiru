@@ -30,8 +30,7 @@ typedef MangaProxy = ({
   String status,
   List<int> categoryIds,
 
-  /// All bound tracker statuses; empty when untracked.
-  List<int> trackStatuses,
+  List<({int trackerId, int status})> trackStatuses,
 
   /// Source genres and custom tags in their original casing.
   List<String> tags,
@@ -46,7 +45,9 @@ MangaProxy mangaToProxy(MangaDto m) => (
   sourceLang: m.source?.lang ?? '',
   status: m.status.name,
   categoryIds: m.categories.nodes.map((c) => c.id).toList(),
-  trackStatuses: m.trackRecords.nodes.map((n) => n.status).toList(),
+  trackStatuses: m.trackRecords.nodes
+      .map((n) => (trackerId: n.trackerId, status: n.status))
+      .toList(),
   // Use the same tag definition as the filter and tag: search.
   tags: [...m.genre, ...(m.metaData.userTags ?? const <String>[])],
 );
@@ -272,15 +273,15 @@ List<GroupedTab> _groupByLanguage(List<MangaProxy> all) {
 }
 
 List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
-  // Fan out across track statuses; untracked manga belong to Other (99).
-  final Map<int, List<int>> buckets = {};
+  final Map<TrackStatus, List<int>> buckets = {};
 
   for (final m in all) {
     if (m.trackStatuses.isEmpty) {
-      buckets.putIfAbsent(99, () => []).add(m.id);
+      buckets.putIfAbsent(TrackStatus.other, () => []).add(m.id);
     } else {
-      // Multiple trackers with the same status must not duplicate a manga in that bucket.
-      final distinctStatuses = m.trackStatuses.toSet();
+      final distinctStatuses = m.trackStatuses
+          .map((track) => parseTrackerStatus(track.trackerId, track.status))
+          .toSet();
       for (final st in distinctStatuses) {
         buckets.putIfAbsent(st, () => []).add(m.id);
       }
@@ -289,11 +290,13 @@ List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
 
   final sorted = buckets.entries.toList()
     ..sort(
-      (a, b) => trackStatusOrder(a.key).compareTo(trackStatusOrder(b.key)),
+      (a, b) => a.key.index.compareTo(b.key.index),
     );
 
   return sorted
-      .map((e) => (id: e.key, name: trackStatusLabel(e.key), mangaIds: e.value))
+      .map(
+        (e) => (id: e.key.index + 1, name: e.key.label, mangaIds: e.value),
+      )
       .toList();
 }
 

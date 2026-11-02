@@ -11,7 +11,7 @@ import 'package:tsumiru/src/features/auth/data/credential_snapshot.dart';
 import 'package:tsumiru/src/features/auth/data/pending_tracker_oauth_store.dart';
 import 'package:tsumiru/src/features/auth/data/pending_tracker_oauth_store_io.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
-import 'package:tsumiru/src/features/tracking/data/native_tracker_oauth.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_oauth.dart';
 import 'package:tsumiru/src/features/tracking/domain/tracker_oauth_origin.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
@@ -86,7 +86,7 @@ void main() {
     path =
         '${(await Directory.systemTemp.createTemp('oauth-engine-test-')).path}/pending.sqlite';
   });
-  Future<({ProviderContainer container, NativeTrackerOAuth handler})>
+  Future<({ProviderContainer container, TrackerOAuth handler})>
   engine() async {
     final storage = _EngineStorage(backing);
     final container = ProviderContainer(
@@ -102,7 +102,7 @@ void main() {
     addTearDown(container.dispose);
     await container.read(authCredentialsStoreProvider.future);
     final auth = container.read(authCredentialsStoreProvider.notifier);
-    final handler = NativeTrackerOAuth(
+    final handler = TrackerOAuth(
       pending: container.read(pendingTrackerOAuthStoreProvider),
       captureSession: auth.captureSession,
       readOrigin: (current) async {
@@ -122,7 +122,7 @@ void main() {
     return (container: container, handler: handler);
   }
 
-  Future<void> begin(NativeTrackerOAuth handler) async {
+  Future<void> begin(TrackerOAuth handler) async {
     expect(
       await handler.begin(
         authUrl: 'https://tracker.test/auth?client_id=public',

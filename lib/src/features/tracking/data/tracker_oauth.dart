@@ -7,12 +7,14 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/pending_tracker_oauth_store.dart';
+import '../../settings/presentation/server/widget/client/server_url_tile/hosted_base_uri.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../domain/tracker_oauth_helpers.dart';
@@ -84,8 +86,9 @@ class _Pending {
   }
 }
 
-class NativeTrackerOAuth {
-  NativeTrackerOAuth({
+class TrackerOAuth {
+  TrackerOAuth({
+    this.redirect = nativeTrackerOAuthRedirect,
     required this.pending,
     required this.captureSession,
     required this.readOrigin,
@@ -94,6 +97,7 @@ class NativeTrackerOAuth {
     DateTime Function()? now,
   }) : now = now ?? DateTime.now;
 
+  final String redirect;
   final PendingTrackerOAuthStore pending;
   final bool Function() Function() captureSession;
   final Future<String?> Function(bool Function() current) readOrigin;
@@ -127,7 +131,7 @@ class NativeTrackerOAuth {
       final request = _Pending(
         nonce: nonce,
         trackerId: trackerId,
-        redirect: nativeTrackerOAuthRedirect,
+        redirect: redirect,
         issuedAt: issuedAt,
         expiresAt: issuedAt + _lifetime.inMilliseconds,
         origin: origin,
@@ -151,7 +155,7 @@ class NativeTrackerOAuth {
         authUrl: authUrl,
         trackerId: trackerId,
         trackerName: trackerName,
-        redirectUrl: nativeTrackerOAuthRedirect,
+        redirectUrl: redirect,
         nonce: nonce,
       );
       await launch(url);
@@ -167,14 +171,10 @@ class NativeTrackerOAuth {
   }
 
   Future<TrackerOAuthOutcome> handleCallback(Uri uri) async {
-    if (uri.scheme != 'tsumiru' || uri.host != 'tracker-oauth') {
+    if (uri.userInfo.isNotEmpty ||
+        uri.hasFragment ||
+        uri.replace(query: '') != Uri.parse(redirect).replace(query: '')) {
       return TrackerOAuthOutcome.ignored;
-    }
-    if (uri.path.isNotEmpty ||
-        uri.userInfo.isNotEmpty ||
-        uri.hasPort ||
-        uri.hasFragment) {
-      return TrackerOAuthOutcome.rejected;
     }
     final current = captureSession();
     if (!current()) return TrackerOAuthOutcome.rejected;
@@ -194,8 +194,8 @@ class NativeTrackerOAuth {
       if (request == null ||
           state['nonce'] != request.nonce ||
           state['trackerId'] != request.trackerId ||
-          state['redirectUrl'] != nativeTrackerOAuthRedirect ||
-          request.redirect != nativeTrackerOAuthRedirect ||
+          state['redirectUrl'] != redirect ||
+          request.redirect != redirect ||
           request.origin != origin ||
           request.issuedAt > time ||
           request.expiresAt <= time ||
@@ -216,11 +216,14 @@ class NativeTrackerOAuth {
   }
 }
 
-final nativeTrackerOAuthProvider = Provider<NativeTrackerOAuth>((ref) {
+final trackerOAuthProvider = Provider<TrackerOAuth>((ref) {
   final pending = ref.watch(pendingTrackerOAuthStoreProvider);
   final credentials = ref.watch(authCredentialsStoreProvider.notifier);
   final repository = ref.watch(trackerRepositoryProvider);
-  return NativeTrackerOAuth(
+  return TrackerOAuth(
+    redirect: kIsWeb
+        ? Uri.parse(readHostedBaseUri()).resolve('tracker-oauth').toString()
+        : nativeTrackerOAuthRedirect,
     pending: pending,
     captureSession: credentials.captureSession,
     readOrigin: (current) async {
