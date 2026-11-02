@@ -241,6 +241,14 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         .read(readerProgressQueuesProvider)
         .putIfAbsent(id, ReaderProgressQueue.new);
 
+    bool shouldWriteProgress(_LoadedChapter lc, int rel) {
+      if (lc.chapter.user.isRead.ifNull()) return false;
+      final pageCount = lc.pages.pages.length;
+      final completed = pageCount > 0 && rel >= pageCount - 1;
+      return completed ||
+          rel > lc.chapter.user.lastPageRead.getValueOnNullOrNegative();
+    }
+
     Future<void> writeVisibleProgress(
       int chapterId,
       int rel,
@@ -254,14 +262,9 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       if (chapterId != currentVisibleChapter.value.id) return;
       if (completedChapterIds.value.contains(chapterId)) return;
       final lc = loadedById(chapterId);
-      if (lc == null) return;
-      if (lc.chapter.user.isRead.ifNull()) return;
+      if (lc == null || !shouldWriteProgress(lc, rel)) return;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
-      if (!completed &&
-          lc.chapter.user.lastPageRead.getValueOnNullOrNegative() >= rel) {
-        return;
-      }
       final progressResult = await recordReadingProgress(
         ref,
         mangaId: manga.id,
@@ -338,8 +341,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       }
     }
 
-    // Skip the restore emit so opening at the last page cannot complete the chapter.
-    final initialProgressConsumed = useRef<bool>(false);
+    // Skip restored progress after page 0 so reopening the last page cannot complete it.
+    final initialProgressConsumed = useRef<bool>(initialChapterPageIndex == 0);
     useEffect(() {
       if (!initialProgressConsumed.value) {
         initialProgressConsumed.value = true;
@@ -373,7 +376,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         if (completedChapterIds.value.contains(p.chapterId)) return;
         if (incognitoForFlush) return;
         final lc = loadedById(p.chapterId);
-        final pageCount = lc?.pages.pages.length ?? 0;
+        if (lc == null || !shouldWriteProgress(lc, p.rel)) return;
+        final pageCount = lc.pages.pages.length;
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
         // Fire-and-forget so leaving mid-chapter still saves the spot. A
         // completion carries the same conservative release expansion as the

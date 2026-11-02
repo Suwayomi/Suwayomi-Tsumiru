@@ -83,7 +83,9 @@ List<String> _localPages(int count, String tag) {
   ];
 }
 
-MangaDto _manga() => Fragment$MangaDto(
+MangaDto _manga({
+  ReaderMode mode = ReaderMode.singleHorizontalLTR,
+}) => Fragment$MangaDto(
   id: 1,
   title: 'Test Manga',
   chapters: Fragment$MangaDto$chapters(totalCount: 2),
@@ -92,7 +94,7 @@ MangaDto _manga() => Fragment$MangaDto(
   meta: [
     Fragment$MangaDto$meta(
       key: MangaMetaKeys.readerMode.key,
-      value: ReaderMode.singleHorizontalLTR.name,
+      value: mode.name,
     ),
   ],
   sourceId: '1',
@@ -114,6 +116,8 @@ ChapterDto _chapter({
   required int id,
   required int sourceOrder,
   required int pageCount,
+  int lastPageRead = 0,
+  bool isRead = false,
 }) => Fragment$ChapterDto(
   chapterNumber: sourceOrder.toDouble(),
   fetchedAt: '0',
@@ -128,8 +132,8 @@ ChapterDto _chapter({
   user: Fragment$ChapterDto$user(
     isBookmarked: false,
     isDownloaded: false,
-    isRead: false,
-    lastPageRead: 0,
+    isRead: isRead,
+    lastPageRead: lastPageRead,
     lastReadAt: '0',
   ),
 );
@@ -283,7 +287,13 @@ void main() {
     });
   }
 
-  Future<_RecordingRepo> pumpSingleChapter(WidgetTester tester) async {
+  Future<_RecordingRepo> pumpSingleChapter(
+    WidgetTester tester, {
+    ReaderMode mode = ReaderMode.singleHorizontalLTR,
+    int pageCount = 3,
+    int lastPageRead = 0,
+    bool isRead = false,
+  }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -293,7 +303,13 @@ void main() {
     });
     final prefs = await SharedPreferences.getInstance();
     final repo = _RecordingRepo();
-    final ch1 = _chapter(id: 1, sourceOrder: 1, pageCount: 3);
+    final ch1 = _chapter(
+      id: 1,
+      sourceOrder: 1,
+      pageCount: pageCount,
+      lastPageRead: lastPageRead,
+      isRead: isRead,
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -302,11 +318,11 @@ void main() {
           mangaBookRepositoryProvider.overrideWithValue(repo),
           mangaWithIdProvider(
             mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          ).overrideWith(() => _FakeMangaWithId(_manga(mode: mode))),
           chapterProvider(chapterId: 1).overrideWithBuild((ref, _) => ch1),
           chapterPagesProvider(
             chapterId: 1,
-          ).overrideWith((ref) => _pages(1, 3)),
+          ).overrideWith((ref) => _pages(1, pageCount)),
           getNextAndPreviousChaptersProvider(
             mangaId: 1,
             chapterId: 1,
@@ -323,9 +339,72 @@ void main() {
         ),
       ),
     );
+    if (mode == ReaderMode.webtoon) {
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      return repo;
+    }
     await tester.pumpAndSettle();
     return repo;
   }
+
+  testWidgets('a fresh one-page chapter is recorded as read on open', (
+    tester,
+  ) async {
+    for (final mode in [ReaderMode.singleHorizontalLTR, ReaderMode.webtoon]) {
+      final repo = await pumpSingleChapter(tester, mode: mode, pageCount: 1);
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(
+        repo.putChapterCalls.any(
+          (c) =>
+              c.chapterId == 1 &&
+              c.patch.lastPageRead == 0 &&
+              c.patch.isRead == true,
+        ),
+        isTrue,
+        reason: mode.name,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+  });
+
+  testWidgets('resuming on the last page does not complete on open', (
+    tester,
+  ) async {
+    for (final mode in [ReaderMode.singleHorizontalLTR, ReaderMode.webtoon]) {
+      final repo = await pumpSingleChapter(tester, mode: mode, lastPageRead: 2);
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(
+        repo.putChapterCalls.where((c) => c.patch.isRead == true),
+        isEmpty,
+        reason: mode.name,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+  });
+
+  testWidgets('closing a read chapter preserves its saved page', (tester) async {
+    final repo = await pumpSingleChapter(
+      tester,
+      pageCount: 5,
+      lastPageRead: 4,
+      isRead: true,
+    );
+    expect(find.text('1 / 5'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+      repo.putChapterCalls.where((c) => c.chapterId == 1),
+      isEmpty,
+    );
+  });
 
   testWidgets('saves the visible page after the debounce and on exit', (
     tester,
