@@ -402,10 +402,12 @@ class _ServerTabs extends ConsumerWidget {
         (tab) => tab.location == const ServerImagesRoute().location,
       );
     }
+    if (index < 0 && path == const ServerSettingsRoute().location) index = 0;
+    if (index < 0) return const SizedBox.shrink();
     return DefaultTabController(
       key: ValueKey('$path:${tabs.length}'),
       length: tabs.length,
-      initialIndex: index < 0 ? 0 : index,
+      initialIndex: index,
       child: TabBar(
         isScrollable: true,
         tabAlignment: TabAlignment.start,
