@@ -4524,13 +4524,55 @@
   "updateChangelog": "Changelog",
   "couldNotUpdateTsumiru": "Could not update Tsumiru",
   "serverVersionAvailable": "Server version {version} ({channel}) available for download",
-  "@serverVersionAvailable": {"placeholders": {"version": {"type": "String"}, "channel": {"type": "String"}}},
+  "@serverVersionAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
   "serverVersionUpdated": "Server was updated to version {version} ({channel})",
-  "@serverVersionUpdated": {"placeholders": {"version": {"type": "String"}, "channel": {"type": "String"}}},
+  "@serverVersionUpdated": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
   "tsumiruVersionAvailable": "Tsumiru version {version} ({channel}) available for download",
-  "@tsumiruVersionAvailable": {"placeholders": {"version": {"type": "String"}, "channel": {"type": "String"}}},
+  "@tsumiruVersionAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
   "tsumiruVersionUpdated": "Tsumiru was updated to version {version} ({channel})",
-  "@tsumiruVersionUpdated": {"placeholders": {"version": {"type": "String"}, "channel": {"type": "String"}}},
+  "@tsumiruVersionUpdated": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
   "tsumiruUpdating": "{progress}% | Updating…",
-  "@tsumiruUpdating": {"placeholders": {"progress": {"type": "String"}}}
+  "@tsumiruUpdating": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  }
 }

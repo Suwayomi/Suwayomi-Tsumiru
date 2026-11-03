@@ -8,7 +8,9 @@ import 'graphql/__generated__/web_interface.graphql.dart';
 import 'web_interface_repository.dart';
 
 class WebInterfaceInstaller {
-  WebInterfaceInstaller(this.repository, this.client, {
+  WebInterfaceInstaller(
+    this.repository,
+    this.client, {
     required this.onStatus,
     required this.onError,
   });
@@ -30,7 +32,9 @@ class WebInterfaceInstaller {
 
   void _accept(Fragment$WebInterfaceUpdateStatusDto? status) {
     if (!_active) return;
-    if (status == null) throw StateError('Missing web interface install response');
+    if (status == null) {
+      throw StateError('Missing web interface install response');
+    }
     if (status.state == Enum$UpdateState.FINISHED ||
         status.state == Enum$UpdateState.ERROR) {
       dispose();
@@ -58,24 +62,31 @@ class WebInterfaceInstaller {
     _accept(await repository.install());
     if (!_active) return;
     try {
-      _subscription = client.subscribe$WebInterfaceUpdateStatusChange(
-        Options$Subscription$WebInterfaceUpdateStatusChange(),
-      ).getData((data) => data.webUIUpdateStatusChange).listen((status) {
-        if (!_active) return;
-        _socketLive = true;
-        _timer?.cancel();
-        try {
-          _accept(status);
-        } catch (error) {
-          onError(error);
-        }
-      }, onError: (_) {
-        _socketLive = false;
-        _schedule();
-      }, onDone: () {
-        _socketLive = false;
-        _schedule();
-      });
+      _subscription = client
+          .subscribe$WebInterfaceUpdateStatusChange(
+            Options$Subscription$WebInterfaceUpdateStatusChange(),
+          )
+          .getData((data) => data.webUIUpdateStatusChange)
+          .listen(
+            (status) {
+              if (!_active) return;
+              _socketLive = true;
+              _timer?.cancel();
+              try {
+                _accept(status);
+              } catch (error) {
+                onError(error);
+              }
+            },
+            onError: (_) {
+              _socketLive = false;
+              _schedule();
+            },
+            onDone: () {
+              _socketLive = false;
+              _schedule();
+            },
+          );
     } catch (_) {
       _socketLive = false;
     }

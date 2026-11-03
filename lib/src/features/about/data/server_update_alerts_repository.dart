@@ -105,14 +105,6 @@ decideServerUpdateAlerts({
 
 const updateCheckInterval = Duration(hours: 1);
 
-bool shouldShowUpdate({
-  required String version,
-  required String? ignoredVersion,
-  required int closedTimestamp,
-  required int now,
-}) => version != ignoredVersion &&
-    now - closedTimestamp >= updateCheckInterval.inMilliseconds;
-
 class UpdateReminderStore {
   const UpdateReminderStore(this.preferences, this.key);
 
@@ -129,12 +121,9 @@ class UpdateReminderStore {
       (preferences.getInt(_key('closeTimestamp')) ?? 0) +
       updateCheckInterval.inMilliseconds;
 
-  bool show(String version) => shouldShowUpdate(
-    version: version,
-    ignoredVersion: preferences.getString(_key('ignoreUpdate')),
-    closedTimestamp: preferences.getInt(_key('closeTimestamp')) ?? 0,
-    now: DateTime.now().millisecondsSinceEpoch,
-  );
+  bool show(String version) =>
+      version != preferences.getString(_key('ignoreUpdate')) &&
+      DateTime.now().millisecondsSinceEpoch >= reminderEnds;
 
   Future<void> checked() => preferences.setInt(
     _key('lastUpdateCheck'), DateTime.now().millisecondsSinceEpoch,

@@ -118,6 +118,13 @@ class LastSeenServerVersion extends _$LastSeenServerVersion
   String? build() => initialize(DBKeys.lastSeenServerVersion);
 }
 
+@riverpod
+class LastSeenWebUIVersion extends _$LastSeenWebUIVersion
+    with SharedPreferenceClientMixin<String> {
+  @override
+  String? build() => initialize(DBKeys.webUIVersion);
+}
+
 final startupWebRevisionProvider = FutureProvider<String?>(
   (ref) => kIsWeb ? readServedRevision() : null,
 );

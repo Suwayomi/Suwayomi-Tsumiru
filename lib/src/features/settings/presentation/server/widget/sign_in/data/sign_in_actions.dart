@@ -273,6 +273,7 @@ class SignInActions {
             }
           },
           commit: (mode) async {
+            // The browser sends Basic/Simple credentials itself after the reload.
             if (reloadBrowser) mode = AuthType.none;
             container.read(authTypeKeyProvider.notifier).update(mode);
             if (mode != AuthType.uiLogin) await store.clearUiLoginTokens();

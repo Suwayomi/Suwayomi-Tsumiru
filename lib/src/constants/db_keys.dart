@@ -156,6 +156,7 @@ enum DBKeys {
   forcePortrait(false),
   dismissedUpdateVersion(''),
   lastSeenServerVersion(''),
+  webUIVersion(null),
   basicAuthDeprecationLastShown('{}'),
   updateProgressAfterReading(true),
   updateProgressManualMarkRead(true),

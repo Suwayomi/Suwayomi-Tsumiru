@@ -15,7 +15,6 @@ import '../../../../../widgets/compact_switch.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../../settings/presentation/server/data/web_interface_repository.dart';
 import '../../../data/about_repository.dart';
-import '../../../data/hosted_web_update.dart';
 import '../../../data/server_update_alerts_repository.dart';
 
 class ServerUpdateAlertTiles extends ConsumerWidget {
@@ -83,17 +82,18 @@ class ServerUpdateAlertTiles extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (isTsumiruFlavor(ref.watch(webInterfaceSettingsProvider).value?.webUIFlavor.name))
-              CompactSwitchListTile(
-                controlAffinity: ListTileControlAffinity.trailing,
-                title: Text(context.l10n.informAboutAvailableUpdate),
-                value: data.webUIInformAvailableUpdate,
-                onChanged: (value) => save(
-                  () => repository.write(
-                    'webUIInformAvailableUpdate', value, data.metas,
+              if (ref.watch(webInterfaceSettingsProvider).value?.webUIFlavor ==
+                  Enum$WebUIFlavor.TSUMIRU)
+                CompactSwitchListTile(
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  title: Text(context.l10n.informAboutAvailableUpdate),
+                  value: data.webUIInformAvailableUpdate,
+                  onChanged: (value) => save(
+                    () => repository.write(
+                      'webUIInformAvailableUpdate', value, data.metas,
+                    ),
                   ),
                 ),
-              ),
             ],
           ],
         );

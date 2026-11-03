@@ -1,4 +1,5 @@
 import '../../../../../../../constants/enum.dart';
+import '../../../../../../../utils/platform/web_auth_mode.dart';
 
 enum SignInFollowUp {
   keepSession,
@@ -87,7 +88,7 @@ SignInDecision decideSignInTransition({
   }
   if (web &&
       sameOrigin &&
-      (finalMode == AuthType.basic || finalMode == AuthType.simpleLogin) &&
+      isWebUnsupportedAuthMode(finalMode) &&
       (entering || diff.credentials)) {
     return const SignInDecision.follow(SignInFollowUp.reloadBrowser);
   }

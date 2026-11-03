@@ -45,7 +45,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
     super.dispose();
   }
 
-  void _failed(Object error) {
+  void _failed() {
     if (!mounted) return;
     _installer?.dispose();
     setState(() => _installing = false);
@@ -61,7 +61,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
       onStatus: (status) {
         if (!mounted) return;
         if (status.state == Enum$UpdateState.ERROR) {
-          _failed(StateError('Web interface update failed'));
+          _failed();
         } else if (status.state == Enum$UpdateState.FINISHED) {
           ref.invalidate(installedWebInterfaceProvider);
           widget.onInstalled?.call();
@@ -70,84 +70,81 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
           setState(() => _progress = status.progress);
         }
       },
-      onError: _failed,
+      onError: (_) => _failed(),
     );
     try {
       await _installer!.install();
-    } catch (error) {
-      _failed(error);
+    } catch (_) {
+      _failed();
     }
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_installing,
-    child: AlertDialog(
-      title: Text(context.l10n.updateAvailableTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.info),
-          if (_installing)
-            LinearProgressIndicator(value: _progress.clamp(0, 100) / 100),
-        ],
-      ),
-      actions: [
-        if (widget.changelogUrl != null)
-          TextButton(
-            onPressed: () => launchUrlInWeb(
-              context,
-              widget.changelogUrl!,
-              ref.read(toastProvider),
-            ),
-            child: Text(context.l10n.updateChangelog),
-          ),
-        PopupMenuButton<bool>(
-          key: _closeMenu,
-          enabled: !_installing,
-          onSelected: (ignore) async {
-            if (ignore) {
-              await widget.onIgnore();
-            } else {
-              await widget.onRemindLater();
-            }
-            if (context.mounted) Navigator.pop(context);
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: false,
-              child: Text(context.l10n.updateRemindLater),
-            ),
-            PopupMenuItem(value: true, child: Text(context.l10n.updateIgnore)),
-          ],
-          child: TextButton(
-            onPressed: _installing
-                ? null
-                : () => _closeMenu.currentState?.showButtonMenu(),
-            child: Text(context.l10n.close),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _installing
-              ? null
-              : widget.downloadUrl != null
-              ? () => launchUrlInWeb(
-                  context,
-                  widget.downloadUrl!,
-                  ref.read(toastProvider),
-                )
-              : _install,
-          child: Text(
-            _installing
-                ? context.l10n.tsumiruUpdating(_progress.toStringAsFixed(0))
-                : widget.downloadUrl != null
-                ? context.l10n.download
-                : context.l10n.update,
-          ),
-        ),
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(context.l10n.updateAvailableTitle),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.info),
+        if (_installing)
+          LinearProgressIndicator(value: _progress.clamp(0, 100) / 100),
       ],
     ),
+    actions: [
+      if (widget.changelogUrl != null)
+        TextButton(
+          onPressed: () => launchUrlInWeb(
+            context,
+            widget.changelogUrl!,
+            ref.read(toastProvider),
+          ),
+          child: Text(context.l10n.updateChangelog),
+        ),
+      PopupMenuButton<bool>(
+        key: _closeMenu,
+        enabled: !_installing,
+        onSelected: (ignore) async {
+          if (ignore) {
+            await widget.onIgnore();
+          } else {
+            await widget.onRemindLater();
+          }
+          if (context.mounted) Navigator.pop(context);
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: false,
+            child: Text(context.l10n.updateRemindLater),
+          ),
+          PopupMenuItem(value: true, child: Text(context.l10n.updateIgnore)),
+        ],
+        child: TextButton(
+          onPressed: _installing
+              ? null
+              : () => _closeMenu.currentState?.showButtonMenu(),
+          child: Text(context.l10n.close),
+        ),
+      ),
+      ElevatedButton(
+        onPressed: _installing
+            ? null
+            : widget.downloadUrl != null
+            ? () => launchUrlInWeb(
+                context,
+                widget.downloadUrl!,
+                ref.read(toastProvider),
+              )
+            : _install,
+        child: Text(
+          _installing
+              ? context.l10n.tsumiruUpdating(_progress.toStringAsFixed(0))
+              : widget.downloadUrl != null
+              ? context.l10n.download
+              : context.l10n.update,
+        ),
+      ),
+    ],
   );
 }
 
@@ -171,7 +168,8 @@ class UpdatedVersionDialog extends ConsumerWidget {
     content: Text(info),
     actions: [
       TextButton(
-        onPressed: () => launchUrlInWeb(context, changelog, ref.read(toastProvider)),
+        onPressed: () =>
+            launchUrlInWeb(context, changelog, ref.read(toastProvider)),
         child: Text(context.l10n.updateChangelog),
       ),
       ElevatedButton(
