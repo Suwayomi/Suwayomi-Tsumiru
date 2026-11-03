@@ -39,7 +39,29 @@ static FlValue* window_frame_state(GtkWidget* window) {
                                             !edge_to_edge));
   fl_value_set_string_take(result, "composited",
                           fl_value_new_bool(composited));
+  GtkSettings* settings =
+      gtk_settings_get_for_screen(gtk_widget_get_screen(window));
+  gchar* decoration_layout = nullptr;
+  g_object_get(settings, "gtk-decoration-layout", &decoration_layout,
+               nullptr);
+  fl_value_set_string_take(result, "decorationLayout",
+                           fl_value_new_string(decoration_layout != nullptr
+                                                   ? decoration_layout
+                                                   : ""));
+  g_free(decoration_layout);
   return result;
+}
+
+static void decoration_layout_changed(GtkSettings*,
+                                      GParamSpec*,
+                                      gpointer user_data) {
+  GtkWidget* window = GTK_WIDGET(user_data);
+  gpointer channel =
+      g_object_get_data(G_OBJECT(window), "tsumiru-frame-channel");
+  if (channel == nullptr) return;
+  g_autoptr(FlValue) state = window_frame_state(window);
+  fl_method_channel_invoke_method(FL_METHOD_CHANNEL(channel), "stateChanged",
+                                 state, nullptr, nullptr, nullptr);
 }
 
 static gboolean window_state_changed(GtkWidget* window,
@@ -150,6 +172,10 @@ static void my_application_activate(GApplication* application) {
       frame_channel, window_frame_method_call, window, nullptr);
   g_signal_connect(window, "window-state-event",
                    G_CALLBACK(window_state_changed), frame_channel);
+  GtkSettings* settings = gtk_settings_get_for_screen(screen);
+  g_signal_connect_object(settings, "notify::gtk-decoration-layout",
+                          G_CALLBACK(decoration_layout_changed), window,
+                          (GConnectFlags)0);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

@@ -4,12 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../constants/app_constants.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../utils/desktop/linux_button_layout.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../tsumiru_logo.dart';
 
@@ -23,10 +23,11 @@ const double _linuxWindowButtonHitSize = 34;
 const double _linuxWindowButtonCircleSize = 24;
 const double _linuxWindowButtonGap = 3;
 const double _linuxWindowButtonEndPadding = 6;
-const double _linuxWindowButtonsWidth = 3 * _linuxWindowButtonHitSize +
-    2 * _linuxWindowButtonGap + _linuxWindowButtonEndPadding;
-
-bool get _isLinux => !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+double linuxWindowButtonsWidth(int count) => count == 0
+    ? 0
+    : count * _linuxWindowButtonHitSize +
+          (count - 1) * _linuxWindowButtonGap +
+          _linuxWindowButtonEndPadding;
 
 TextStyle? brandNameStyle(BuildContext context) {
   final theme = Theme.of(context);
@@ -66,7 +67,7 @@ class DesktopTitleBar extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final native = isDesktopPlatform;
-    final brand = _isLinux
+    final brand = isLinuxRuntime
         ? const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -79,37 +80,68 @@ class DesktopTitleBar extends StatelessWidget {
             ],
           )
         : const Center(child: DesktopBrandTitle());
-    return Container(
-      height: kDesktopTitleBarHeight,
-      color: scheme.surface,
-      child: Stack(
-        children: [
-          if (native)
-            const Positioned.fill(
-              child: DragToMoveArea(child: SizedBox.expand()),
+    final linuxButtons = isLinuxRuntime && native;
+    return ValueListenableBuilder<LinuxButtonLayout>(
+      valueListenable: linuxButtonLayoutNotifier,
+      builder: (context, layout, _) => Container(
+        height: kDesktopTitleBarHeight,
+        color: scheme.surface,
+        child: Stack(
+          children: [
+            if (native)
+              const Positioned.fill(
+                child: DragToMoveArea(child: SizedBox.expand()),
+              ),
+            // IgnorePointer lets the brand remain inside the drag region.
+            if (hideBrand) const SizedBox.shrink() else Positioned.fill(
+              left: linuxButtons
+                  ? linuxWindowButtonsWidth(layout.leading.length)
+                  : 0,
+              right: linuxButtons
+                  ? linuxWindowButtonsWidth(layout.trailing.length)
+                  : 0,
+              child: IgnorePointer(
+                child: brand,
+              ),
             ),
-          // IgnorePointer lets the brand remain inside the drag region.
-          if (hideBrand) const SizedBox.shrink() else Positioned.fill(
-            right: _isLinux && native && !isMacOSRuntime
-                ? _linuxWindowButtonsWidth : 0,
-            child: IgnorePointer(
-              child: brand,
-            ),
-          ),
-          if (native && !isMacOSRuntime)
-            Align(
-              alignment: Alignment.centerRight,
-              child: DesktopWindowButtons(brightness: theme.brightness),
-            ),
-        ],
+            if (linuxButtons && layout.leading.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: DesktopWindowButtons(
+                  brightness: theme.brightness,
+                  linuxButtons: layout.leading,
+                  leading: true,
+                ),
+              ),
+            if (native &&
+                !isMacOSRuntime &&
+                (!linuxButtons || layout.trailing.isNotEmpty))
+              Align(
+                alignment: Alignment.centerRight,
+                child: DesktopWindowButtons(
+                  brightness: theme.brightness,
+                  linuxButtons: linuxButtons ? layout.trailing : null,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class DesktopWindowButtons extends StatefulWidget {
-  const DesktopWindowButtons({super.key, required this.brightness});
+  const DesktopWindowButtons({
+    super.key,
+    required this.brightness,
+    this.linuxButtons,
+    this.leading = false,
+  });
   final Brightness brightness;
+
+  final List<LinuxWindowButton>? linuxButtons;
+
+  final bool leading;
   @override
   State<DesktopWindowButtons> createState() => _DesktopWindowButtonsState();
 }
@@ -138,30 +170,42 @@ class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
   @override
   void onWindowUnmaximize() => setState(() => _maximized = false);
 
+  Widget _linuxButton(BuildContext context, LinuxWindowButton button) {
+    switch (button) {
+      case LinuxWindowButton.minimize:
+        return _AdwaitaButton(
+          glyph: _WindowGlyph.minimize,
+          onPressed: () => windowManager.minimize(),
+        );
+      case LinuxWindowButton.maximize:
+        return _AdwaitaButton(
+          glyph: _maximized ? _WindowGlyph.restore : _WindowGlyph.maximize,
+          onPressed: () => _maximized
+              ? windowManager.unmaximize()
+              : windowManager.maximize(),
+        );
+      case LinuxWindowButton.close:
+        return _AdwaitaButton(
+          glyph: _WindowGlyph.close,
+          label: AppLocalizations.of(context)?.close,
+          onPressed: () => windowManager.close(),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLinux) {
+    final linuxButtons = widget.linuxButtons;
+    if (linuxButtons != null) {
       return Padding(
-        padding: const EdgeInsets.only(right: _linuxWindowButtonEndPadding),
+        padding: widget.leading
+            ? const EdgeInsets.only(left: _linuxWindowButtonEndPadding)
+            : const EdgeInsets.only(right: _linuxWindowButtonEndPadding),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: _linuxWindowButtonGap,
           children: [
-            _AdwaitaButton(
-              glyph: _WindowGlyph.minimize,
-              onPressed: () => windowManager.minimize(),
-            ),
-            _AdwaitaButton(
-              glyph: _maximized ? _WindowGlyph.restore : _WindowGlyph.maximize,
-              onPressed: () => _maximized
-                  ? windowManager.unmaximize()
-                  : windowManager.maximize(),
-            ),
-            _AdwaitaButton(
-              glyph: _WindowGlyph.close,
-              label: AppLocalizations.of(context)?.close,
-              onPressed: () => windowManager.close(),
-            ),
+            for (final button in linuxButtons) _linuxButton(context, button),
           ],
         ),
       );

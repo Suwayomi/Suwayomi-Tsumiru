@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../platform/platform_runtime.dart';
+import 'linux_button_layout.dart';
 import 'window_geometry.dart';
 import 'window_geometry_listener.dart';
 import 'window_geometry_store.dart';
@@ -41,6 +42,8 @@ Future<void> initDesktopWindow(SharedPreferences prefs) async {
       final state = await const MethodChannel('tsumiru/linux_window_frame')
           .invokeMapMethod<Object?, Object?>('getState');
       composited = state?['composited'] == true;
+      linuxButtonLayoutNotifier.value =
+          parseLinuxButtonLayout(state?['decorationLayout']);
     } on PlatformException {
       // Keep the plain window if the native frame state is unavailable.
     } on MissingPluginException {

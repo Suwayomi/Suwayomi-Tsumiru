@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:math' show max;
+
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,12 +16,14 @@ import '../../features/browse_center/presentation/extension/controller/extension
 import '../../features/offline/data/offline_nav_status.dart';
 import '../../features/settings/presentation/incognito/incognito_mode.dart';
 import '../../routes/router_config.dart';
+import '../../utils/desktop/linux_button_layout.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
 import '../../utils/theme/brand.dart';
 import '../compact_switch.dart';
 import '../desktop/desktop_brand.dart';
+import '../desktop/desktop_title_bar.dart';
 import 'nav_badges.dart';
 import 'nav_motion_icon.dart';
 import 'sidebar_expanded.dart';
@@ -56,9 +60,15 @@ class DesktopSidebar extends ConsumerWidget {
   static const double _collapsedRowGap = 6;
 
   /// expanded is the effective state; isMacOS defaults to the test-overridable check.
-  static double widthFor({required bool expanded, bool? isMacOS}) {
+  static double widthFor({
+    required bool expanded,
+    bool? isMacOS,
+    double leadingWidth = 0,
+  }) {
     if (expanded) return expandedWidth;
-    return (isMacOS ?? isMacOSRuntime) ? macCollapsedWidth : collapsedWidth;
+    final base =
+        (isMacOS ?? isMacOSRuntime) ? macCollapsedWidth : collapsedWidth;
+    return max(base, leadingWidth);
   }
 
   @override
@@ -231,93 +241,101 @@ class DesktopSidebar extends ConsumerWidget {
     }
 
     // Scroll destinations separately so the footer remains visible in short windows.
-    return LayoutBuilder(
-      builder: (context, constraints) => TweenAnimationBuilder<double>(
-        tween: Tween<double>(
-          begin: widthFor(expanded: expanded, isMacOS: isMacOS),
-          end: widthFor(expanded: expanded, isMacOS: isMacOS),
-        ),
-        duration: context.reduceMotion
-            ? Duration.zero
-            : const Duration(milliseconds: 200),
-        builder: (context, width, _) {
-          final showExpanded = width > (expandedWidth + collapsedWidth) / 2;
-          final maxHeight = constraints.hasBoundedHeight
-              ? constraints.maxHeight
-              : null;
-          final brandRows = [
-            if (isMacOS) ...[
-              if (showExpanded)
-                DesktopBrandRow(
-                  onCollapse: collapse,
-                  height: _rowHeight,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                )
-              else
-                SizedBox(
-                  height: _rowHeight,
-                  child: Center(
-                    child: sidebarCanExpand(context)
-                        ? DesktopBrandExpandButton(onExpand: expand)
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-              const SizedBox(height: 8),
-            ],
-          ];
-          final destinationRows = [
-            for (var i = 0; i < navList.length; i++) row(i, showExpanded),
-          ];
-          final footDivider = Padding(
-            padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
-            child: Divider(height: 1, thickness: 1, color: cs.outlineVariant),
-          );
-          return SizedBox(
-            width: width,
-            height: maxHeight,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(right: BorderSide(color: cs.outlineVariant)),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: maxHeight == null
-                  ? SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ...brandRows,
-                          ...destinationRows,
-                          if (showFoot) ...[
-                            footDivider,
-                            incognitoRow(showExpanded),
-                            settingsRow(showExpanded),
-                          ],
-                        ],
-                      ),
+    return ValueListenableBuilder<LinuxButtonLayout>(
+      valueListenable: linuxButtonLayoutNotifier,
+      builder: (context, layout, _) {
+        final brandInSidebar = isMacOS || layout.leading.isNotEmpty;
+        final sidebarWidth = widthFor(
+          expanded: expanded,
+          isMacOS: isMacOS,
+          leadingWidth: linuxWindowButtonsWidth(layout.leading.length),
+        );
+        return LayoutBuilder(
+          builder: (context, constraints) => TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: sidebarWidth, end: sidebarWidth),
+            duration: context.reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 200),
+            builder: (context, width, _) {
+              final showExpanded = width > (expandedWidth + collapsedWidth) / 2;
+              final maxHeight = constraints.hasBoundedHeight
+                  ? constraints.maxHeight
+                  : null;
+              final brandRows = [
+                if (brandInSidebar) ...[
+                  if (showExpanded)
+                    DesktopBrandRow(
+                      onCollapse: collapse,
+                      height: _rowHeight,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ...brandRows,
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: destinationRows,
-                            ),
-                          ),
-                        ),
-                        if (showFoot) ...[
-                          footDivider,
-                          incognitoRow(showExpanded),
-                          settingsRow(showExpanded),
-                        ],
-                      ],
+                  else
+                    SizedBox(
+                      height: _rowHeight,
+                      child: Center(
+                        child: sidebarCanExpand(context)
+                            ? DesktopBrandExpandButton(onExpand: expand)
+                            : const SizedBox.shrink(),
+                      ),
                     ),
-            ),
-          );
-        },
-      ),
+                  const SizedBox(height: 8),
+                ],
+              ];
+              final destinationRows = [
+                for (var i = 0; i < navList.length; i++) row(i, showExpanded),
+              ];
+              final footDivider = Padding(
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+                child: Divider(height: 1, thickness: 1, color: cs.outlineVariant),
+              );
+              return SizedBox(
+                width: width,
+                height: maxHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(right: BorderSide(color: cs.outlineVariant)),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: maxHeight == null
+                      ? SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ...brandRows,
+                              ...destinationRows,
+                              if (showFoot) ...[
+                                footDivider,
+                                incognitoRow(showExpanded),
+                                settingsRow(showExpanded),
+                              ],
+                            ],
+                          ),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ...brandRows,
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: destinationRows,
+                                ),
+                              ),
+                            ),
+                            if (showFoot) ...[
+                              footDivider,
+                              incognitoRow(showExpanded),
+                              settingsRow(showExpanded),
+                            ],
+                          ],
+                        ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

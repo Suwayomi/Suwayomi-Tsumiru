@@ -30,5 +30,12 @@ bool? debugMacOSOverride;
 bool get isMacOSRuntime =>
     debugMacOSOverride ?? (!kIsWeb && Platform.isMacOS);
 
+/// Test override for Linux layout; null uses the real platform.
+@visibleForTesting
+bool? debugLinuxOverride;
+
+bool get isLinuxRuntime =>
+    debugLinuxOverride ?? (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux);
+
 bool get isAndroidRuntime =>
     debugAndroidOverride ?? (!kIsWeb && Platform.isAndroid);

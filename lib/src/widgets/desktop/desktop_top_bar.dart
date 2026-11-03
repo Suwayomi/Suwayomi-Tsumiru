@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../features/settings/presentation/settings/settings_pane_scope.dart';
+import '../../utils/desktop/linux_button_layout.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/motion/reduce_motion.dart';
 import '../../utils/platform/platform_runtime.dart';
@@ -689,41 +690,67 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     final native = isDesktopPlatform;
     final isMacOS = native && isMacOSRuntime;
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
-    final brandWidth = DesktopSidebar.widthFor(
-      expanded: sidebarIsExpanded(context, preference),
-      isMacOS: isMacOS,
-    );
+    final expanded = sidebarIsExpanded(context, preference);
     final stacked = ref.watch(topBarSlotRegistryProvider)[location];
     final entry = (stacked == null || stacked.isEmpty) ? null : stacked.last;
     final visible = _isBarVisible();
     final theme = Theme.of(context);
-    return Container(
-      height: kDesktopTopBarHeight,
-      color: theme.colorScheme.surface,
-      child: Stack(
-        children: [
-          if (native)
-            const Positioned.fill(
-              child: DragToMoveArea(child: SizedBox.expand()),
-            ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final linuxButtons = isLinuxRuntime && native;
+    return ValueListenableBuilder<LinuxButtonLayout>(
+      valueListenable: linuxButtonLayoutNotifier,
+      builder: (context, layout, _) {
+        final linuxLeading =
+            linuxButtons ? layout.leading : const <LinuxWindowButton>[];
+        // macOS traffic lights and Linux leading buttons free the brand block.
+        final brandInSidebar = isMacOS || linuxLeading.isNotEmpty;
+        final brandWidth = DesktopSidebar.widthFor(
+          expanded: expanded,
+          isMacOS: isMacOS,
+          leadingWidth: linuxWindowButtonsWidth(linuxLeading.length),
+        );
+        return Container(
+          height: kDesktopTopBarHeight,
+          color: theme.colorScheme.surface,
+          child: Stack(
             children: [
-              _BrandBlock(width: brandWidth, isMacOS: isMacOS),
-              const SizedBox(width: kDesktopTopBarGap),
-              Expanded(
-                child: _slotContent(context, entry, location, visible: visible),
-              ),
-              if (!isMacOS && native) ...[
-                const SizedBox(width: kDesktopTopBarGap),
-                Center(
-                  child: DesktopWindowButtons(brightness: theme.brightness),
+              if (native)
+                const Positioned.fill(
+                  child: DragToMoveArea(child: SizedBox.expand()),
                 ),
-              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _BrandBlock(
+                    width: brandWidth,
+                    brandInSidebar: brandInSidebar,
+                    linuxLeading: linuxLeading,
+                  ),
+                  const SizedBox(width: kDesktopTopBarGap),
+                  Expanded(
+                    child: _slotContent(
+                      context,
+                      entry,
+                      location,
+                      visible: visible,
+                    ),
+                  ),
+                  if (!isMacOS &&
+                      native &&
+                      (!linuxButtons || layout.trailing.isNotEmpty)) ...[
+                    const SizedBox(width: kDesktopTopBarGap),
+                    Center(
+                      child: DesktopWindowButtons(
+                        brightness: theme.brightness,
+                        linuxButtons: linuxButtons ? layout.trailing : null,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -752,12 +779,17 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   }
 }
 
-/// Match the animated sidebar width; macOS leaves this block free for traffic lights.
+/// Match the animated sidebar width; free when the brand lives in the sidebar.
 class _BrandBlock extends ConsumerWidget {
-  const _BrandBlock({required this.width, required this.isMacOS});
+  const _BrandBlock({
+    required this.width,
+    required this.brandInSidebar,
+    this.linuxLeading = const [],
+  });
 
   final double width;
-  final bool isMacOS;
+  final bool brandInSidebar;
+  final List<LinuxWindowButton> linuxLeading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -780,8 +812,17 @@ class _BrandBlock extends ConsumerWidget {
         return SizedBox(
           width: animatedWidth,
           height: kDesktopTopBarHeight,
-          child: isMacOS
-              ? const SizedBox.expand()
+          child: brandInSidebar
+              ? linuxLeading.isEmpty
+                    ? const SizedBox.expand()
+                    : Align(
+                        alignment: Alignment.centerLeft,
+                        child: DesktopWindowButtons(
+                          brightness: Theme.of(context).brightness,
+                          linuxButtons: linuxLeading,
+                          leading: true,
+                        ),
+                      )
               : showExpanded
               ? DesktopBrandRow(onCollapse: toggle)
               : Center(
