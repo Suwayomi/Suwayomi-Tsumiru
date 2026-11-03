@@ -1,6 +1,6 @@
 [Flatpak Repo]
 Title=Suwayomi-Tsumiru
-Description=Read manga from a Suwayomi server
+Description=Read your manga and webtoons
 Url=https://flatpak.tsumiru.app
 Homepage=https://tsumiru.app
 Icon=https://raw.githubusercontent.com/flatpak/flatpak/main/flatpak.png
