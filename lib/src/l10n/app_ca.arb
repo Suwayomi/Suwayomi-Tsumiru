@@ -4118,15 +4118,6 @@
     "notes": "Notes",
     "numberedList": "Llista numerada",
     "seriesPage": "Pàgina de la sèrie",
-    "serverUpdateAvailable": "Hi ha una actualització del servidor disponible",
-    "serverUpdatedTo": "S'ha actualitzat el servidor a la versió {version}",
-    "@serverUpdatedTo": {
-        "placeholders": {
-            "version": {
-                "type": "String"
-            }
-        }
-    },
     "share": "Comparteix",
     "@share": {
         "description": "Series page: share the series source link via the system share sheet"

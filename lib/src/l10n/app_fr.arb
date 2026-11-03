@@ -878,7 +878,7 @@
     "next": "Suivant",
     "onboardingSkip": "Passer",
     "onboardingAuthModeSimple": "Connexion simple",
-    "onboardingAuthModeUi": "Interface de connexion",
+    "onboardingAuthModeUi": "Connexion UI",
     "justNow": "À l'instant",
     "defaultCategoryOnAdd": "Catégorie par défaut",
     "alwaysAsk": "Toujours demander",
@@ -1140,5 +1140,573 @@
     "authTestConnectionFailedNetwork": "Impossible de joindre le serveur. Vérifiez l'URL et la connexion.",
     "@authTestConnectionFailedNetwork": {
         "description": "Error message when Test Connection cannot reach the server"
+    },
+    "settingsSearchHint": "Paramètres de recherche",
+    "authTestConnectionFailedAuth": "Échec de la connexion. Vérifiez le nom d'utilisateur et le mot de passe.",
+    "@authTestConnectionFailedAuth": {
+        "description": "Error message when Test Connection reaches the server but credentials are rejected"
+    },
+    "authTestConnectionFailedMode": "Le serveur n'est probablement pas dans le mode d'authentification sélectionné. Vérifiez le paramètre authMode du serveur.",
+    "@authTestConnectionFailedMode": {
+        "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
+    },
+    "authBrowserSessionUnverified": "Le serveur n'a pas confirmé votre session de navigateur. Vérifiez le mode d'authentification et la connexion. Pour \"Connexion simple\", servez Tsumiru depuis le même site que votre serveur.",
+    "authTestConnectionFailedShape": "Le serveur n'a pas répondu de la façon attendue. Vérifiez que l'URL pointe vers Suwayomi.",
+    "@authTestConnectionFailedShape": {
+        "description": "Error message when the server's response is not the expected shape"
+    },
+    "authTestConnectionFailedTls": "Échec de la confirmation TLS (handshake). Vérifiez si votre serveur utilise http:// ou https://.",
+    "@authTestConnectionFailedTls": {
+        "description": "Error message when the client sends TLS bytes to a plaintext server, or vice versa — typically a wrong scheme (http vs https) or wrong port"
+    },
+    "authSessionExpired": "Session expirée. Reconnectez-vous.",
+    "@authSessionExpired": {
+        "description": "Banner text shown at top of screens when the session has expired and the user must re-authenticate"
+    },
+    "authCredentialsNotSaved": "Connexion réussie. Cet appareil n'a pas pu enregistrer vos identifiants, vous devrez vous reconnecter au prochain lancement.",
+    "@authCredentialsNotSaved": {
+        "description": "Toast shown after signing in when the device refused to save the credentials; the sign-in works for this run only"
+    },
+    "authReauthenticate": "Se réauthentifier",
+    "@authReauthenticate": {
+        "description": "Button text on the session-expired banner that opens the re-auth prompt"
+    },
+    "authInsecureTransportTitle": "Connexion non sécurisée",
+    "@authInsecureTransportTitle": {
+        "description": "Title of the http:// warning confirmation dialog"
+    },
+    "authInsecureTransportWarning": "Votre nom d'utilisateur et mot de passe seront envoyés non chiffrés via HTTP. Utilisez HTTPS sauf si vous faites entièrement confiance à ce réseau.",
+    "@authInsecureTransportWarning": {
+        "description": "Warning body shown when the user is about to send credentials over http:// instead of https://"
+    },
+    "authInsecureTransportContinue": "Je comprends, continuer",
+    "@authInsecureTransportContinue": {
+        "description": "Button text to acknowledge the http:// warning and proceed anyway"
+    },
+    "authLogoutConfirm": "Se déconnecter et effacer les identifiants stockés ? Vous devrez vous reconnecter pour utiliser ce serveur.",
+    "@authLogoutConfirm": {
+        "description": "Confirmation dialog text shown when the user taps Log out"
+    },
+    "authImageUrlLogWarning": "Avec \"Connexion UI\", les URLs d'image contiennent votre jeton d'accès, qui peut alors apparaître dans les journaux d'accès au serveur.",
+    "@authImageUrlLogWarning": {
+        "description": "Additional note in helper text explaining the ui_login image URL token leak risk"
+    },
+    "autoDownloadCategoriesAll": "Toutes les catégories",
+    "autoDownloadCategoriesHint": "Les catégories exclues sont prioritaires. Appuyez pour passer au suivant : ✓ inclure · – exclure · vide par défaut.",
+    "autoDownloadCategoriesIncluded": "Incluses : {names}",
+    "@autoDownloadCategoriesIncluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "autoDownloadCategoriesExcluded": "Exclues : {names}",
+    "@autoDownloadCategoriesExcluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCategories": "Catégories à mettre à jour",
+    "updateCategoriesAll": "Toutes les catégories",
+    "updateCategoriesHint": "Les catégories exclues sont prioritaires. Appuyez pour passer au suivant : ✓ inclure · – exclure · vide par défaut.",
+    "updateCategoriesIncluded": "Incluses : {names}",
+    "@updateCategoriesIncluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCategoriesExcluded": "Exclues : {names}",
+    "@updateCategoriesExcluded": {
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
+    },
+    "autoWebtoonSnack": "Lecture en mode Webtoon",
+    "@autoWebtoonSnack": {
+        "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
+    },
+    "automaticUpdate": "Mises à jour automatiques",
+    "@automaticUpdate": {
+        "description": "Popup title and Settings text to update Automatic Global Update interval"
+    },
+    "centerMarginDoubleAndWide": "Doublée et large",
+    "@centerMarginDoubleAndWide": {
+        "description": "Center margin chip"
+    },
+    "centerMarginDoublePages": "Double-pages",
+    "@centerMarginDoublePages": {
+        "description": "Center margin chip"
+    },
+    "centerMarginType": "Type de la marge centrale",
+    "@centerMarginType": {
+        "description": "Section label for the paged center-margin chip row"
+    },
+    "centerMarginWidePages": "Pages larges",
+    "@centerMarginWidePages": {
+        "description": "Center margin chip"
+    },
+    "splitTallImages": "Scinder les images hautes",
+    "dualPageSpreadInLandscape": "Double-pages au format paysage",
+    "invertDoublePages": "Inverser les double-pages",
+    "@invertDoublePages": {
+        "description": "Paged reader toggle"
+    },
+    "invertWidePageRotation": "Inverser la rotation pour les pages larges",
+    "pageLayout": "Disposition des pages",
+    "@pageLayout": {
+        "description": "Section label for the paged page-layout chip row"
+    },
+    "pageLayoutAutomatic": "Automatique",
+    "@pageLayoutAutomatic": {
+        "description": "Page layout chip"
+    },
+    "readerGroupActions": "Actions",
+    "@readerGroupActions": {
+        "description": "Reader settings group heading for long-tap actions"
+    },
+    "readerGroupEInk": "E-Ink",
+    "@readerGroupEInk": {
+        "description": "Reader settings group heading for E-Ink screen options"
+    },
+    "readerSectionRotation": "Rotation",
+    "@readerSectionRotation": {
+        "description": "Section label for the rotation chip row"
+    },
+    "autoWebtoonMode": "Mode de lecture automatique",
+    "autoWebtoonModeSubtitle": "Ouvrir les manhwas, manhuas et webtoon en mode de défilement Webtoon",
+    "backgroundColorAuto": "Automatique",
+    "flashEveryPages": "{count, plural, =1{1 page} other{{count} pages}}",
+    "@flashEveryPages": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "forceHorizontalSeekbar": "Forcer la barre de progression horizontale",
+    "leftHandedVerticalSeekbar": "Barre de progression verticale côté gauche",
+    "showVerticalSeekbarInLandscape": "Afficher la barre de progression verticale en mode paysage",
+    "refreshChaptersFromSource": "Actualiser les chapitres depuis la source",
+    "@refreshChaptersFromSource": {
+        "description": "Switch title for refreshing chapters from the source when opening an entry"
+    },
+    "refreshChaptersFromSourceSubtitle": "Vérifier si la source a de nouveaux chapitres à l'ouverture d'une entrée.",
+    "@refreshChaptersFromSourceSubtitle": {
+        "description": "Switch subtitle explaining the refresh-chapters-from-source toggle"
+    },
+    "backupCleanupDescription": "{count, select, 0{Never} 01{Supprimer les sauvegardes datant de plus de 1 jour} other{Supprimer les sauvegardes datant de plus de {count} jours}}",
+    "backupData": "Sauvegarde des données",
+    "@backupData": {
+        "description": "Title for the automatic backup contents row"
+    },
+    "backupDataExclude": "Exclure : {list}",
+    "@backupDataExclude": {
+        "description": "Automatic backup contents summary, excluded kinds comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "backupDataInclude": "Inclure : {list}",
+    "@backupDataInclude": {
+        "description": "Automatic backup contents summary, included kinds comma separated",
+        "placeholders": {
+            "list": {
+                "type": "String"
+            }
+        }
+    },
+    "bookmark": "Marque-page",
+    "removeBookmark": "Supprimer le marque-page",
+    "bold": "Gras",
+    "bulletedList": "Liste à puces",
+    "categoryVisibilityDeviceOnly": "Modifié sur cet appareil uniquement jusqu'à votre prochaine reconnexion",
+    "@categoryVisibilityDeviceOnly": {
+        "description": "Toast when hiding or showing a category offline: the change lives on the device mirror and the server setting returns on the next online sync"
+    },
+    "sectionHeadersShowAllCategories": "Afficher toutes les catégories",
+    "@sectionHeadersShowAllCategories": {
+        "description": "Library Group checkbox to scroll all sections together in Section headers mode"
+    },
+    "scrollAmount": "Distance de défilement au clavier",
+    "@scrollAmount": {
+        "description": "Keyboard scroll step, fraction of the screen"
+    },
+    "scrollAmountLarge": "Grand",
+    "autoAdvance": "Progression automatique",
+    "@autoAdvance": {
+        "description": "Reader utils bar: auto-advance toggle label (paged)"
+    },
+    "autoScrollInterval": "Délai du défilement automatique",
+    "@autoScrollInterval": {
+        "description": "Long-strip auto-scroll: seconds per advance"
+    },
+    "autoAdvanceInterval": "Délai de la progression automatique",
+    "@autoAdvanceInterval": {
+        "description": "Paged reader auto-advance: seconds per page turn"
+    },
+    "autoScrollSeconds": "{count, plural, =1{1 seconde} other{{count} secondes}}",
+    "@autoScrollSeconds": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "sourceRemoved": "Source supprimée",
+    "@sourceRemoved": {
+        "description": "Downloads queue state when the series' source is no longer installed on the server"
+    },
+    "cancelAllForThisSeries": "Tout annuler pour cette série",
+    "@cancelAllForThisSeries": {
+        "description": "Downloads queue menu item: dequeue every queued chapter of the same series"
+    },
+    "clearCookiesAndCache": "Vider les cookies et le cache",
+    "clearedWebViewCookiesAndCache": "Les cookies et le cache WebView ont été vidés",
+    "couldNotClearWebViewCookiesAndCache": "Impossible de vider les cookies et le cache WebView",
+    "collapseSidebar": "Réduire la barre latérale",
+    "connection": "Connexion",
+    "connectionAuthNone": "Aucune authentification",
+    "connectionAuthSignedIn": "Connecté",
+    "connectionAuthSignInNeeded": "Connexion nécessaire",
+    "copied": "Copié dans le presse-papiers",
+    "@copied": {
+        "description": "Copied Text"
+    },
+    "finish": "Terminer",
+    "onboardingWelcomeTitle": "Bienvenue dans Tsumiru",
+    "onboardingWelcomeSubtitle": "Un lecteur pour votre bibliothèque Suwayomi.",
+    "onboardingChooseTheme": "Choisir le thème",
+    "onboardingServerTitle": "Connectez votre serveur",
+    "onboardingServerPortHint": "Suwayomi est servi sur le port 4567 par défaut.",
+    "onboardingServerStepLabel": "ÉTAPE 2 SUR 3",
+    "onboardingNoServerLink": "Comment mettre en place un serveur",
+    "onboardingTestConnection": "Tester la connexion",
+    "onboardingResolvedAddress": "Serveur trouvé à {url}",
+    "@onboardingResolvedAddress": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingFoundAt": "à {address}",
+    "@onboardingFoundAt": {
+        "placeholders": {
+            "address": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingSearchNetwork": "Chercher sur mon réseau",
+    "onboardingCheckingConnection": "Vérification de la connexion…",
+    "onboardingSigningIn": "Connexion en cours…",
+    "onboardingSearching": "Recherche sur votre réseau en cours…",
+    "onboardingNoServerFound": "Aucun serveur Suwayomi trouvé sur votre réseau. Entrez son adresse manuellement.",
+    "onboardingChooseServer": "Choisissez un serveur",
+    "onboardingNeedsLogin": "Ce serveur nécessite une authentification",
+    "onboardingEnterAddress": "Entrez l'adresse de votre serveur ou appuyez sur Chercher sur mon réseau.",
+    "onboardingSignIn": "Se connecter",
+    "onboardingCredsRejected": "Ces identifiants n'ont pas fonctionné. Vérifiez votre nom d'utilisateur, mot de passe et méthode de connexion.",
+    "onboardingNotReachedHttpsHint": "S'il se trouve derrière un proxy inverse, essayez plutôt avec son adresse https.",
+    "onboardingAuthMode": "Méthode de connexion",
+    "onboardingAuthModeBasic": "Authentification basique",
+    "onboardingResolvedUnconfirmed": "L'adresse {url} a été atteinte, mais elle n'a pas répondu comme étant un serveur Suwayomi. Vérifiez l'adresse et le port.",
+    "@onboardingResolvedUnconfirmed": {
+        "placeholders": {
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingNotReached": "Impossible d'accéder à un serveur à cette adresse. Vérifiez qu'il est lancé et accessible depuis cet appareil.",
+    "webUnsupportedAuthMode": "Ce serveur utilise une méthode de connexion inutilisable par le navigateur. Définissez le mode d'authentification du serveur en \"Connexion UI\" ou utilisez l'appli Android, iOS ou de bureau.",
+    "@webUnsupportedAuthMode": {
+        "description": "Shown on web instead of the generic unreachable message when the server answers but uses Basic auth or Simple login, which a cross-origin page cannot use"
+    },
+    "serverAuthSimple": "Connexion simple",
+    "webServerAuthUnconfirmed": "Ce serveur n'a pas accepté la requête du navigateur. S'il utilise \"Authentification basique\" ou \"Connexion simple\", définissez son mode d'authentification en \"Connexion UI\" ou utilisez l'appli Android, iOS ou de bureau. Sinon vérifiez l'adresse.",
+    "@webServerAuthUnconfirmed": {
+        "description": "Shown on web when the server answers 404 Not Found, which can mean Basic auth or a mistyped subpath"
+    },
+    "webUiLoginOnlyHint": "La version du navigateur ne fonctionne qu'avec \"Connexion UI\" (paramètre serveur : server.authMode).",
+    "@webUiLoginOnlyHint": {
+        "description": "Short note under the web sign-in method picker explaining why only UI login is offered"
+    },
+    "serverAuthUi": "Connexion UI",
+    "serverSignInSeparateSaves": "Sauvegarder les identifiants avant de passer à la Connexion UI.",
+    "onboardingConnected": "Connecté à Suwayomi v{version}",
+    "@onboardingConnected": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "onboardingDoneTitle": "Tout est en ordre",
+    "onboardingDoneSubtitle": "Parcourez les sources pour ajouter des mangas à votre bibliothèque.",
+    "minutesAgo": "{minutes, plural, =1{Il y a 1 minute} other{Il y a {minutes} minutes}}",
+    "@minutesAgo": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "hoursAgo": "{hours, plural, =1{Il y a 1 heure} other{Il y a {hours} heures}}",
+    "@hoursAgo": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "debugInformation": "Informations de débogage",
+    "debugLogs": "Journaux de débogage",
+    "@debugLogs": {
+        "description": "Switch title for Debug logs in settings"
+    },
+    "defaultFolderPath": "Défaut",
+    "deleteFromServer": "Supprimer du serveur…",
+    "deleteOnDeviceDownloads": "Supprimer les éléments téléchargés sur l'appareil",
+    "deleteOnDeviceDownloadsDescription": "Votre serveur garde une copie.",
+    "deleteServerDownloads": "Supprimer les éléments téléchargés sur le serveur",
+    "deleteServerDownloadsDescription": "Supprime également la copie sur cet appareil. Les paramètres sont partagés avec l'interface web.",
+    "downloadProtectionWindowTitle": "Garder les chapitres récemment lus téléchargés",
+    "downloadProtectionWindowDescription": "Re-télécharger les chapitres récemment lus manquants sur cet appareil.",
+    "gridStyle": "Style grille",
+    "@gridStyle": {
+        "description": "Library Display section label for the grid cover-geometry chip row"
+    },
+    "gridStyleUniform": "Uniformisé",
+    "@gridStyleUniform": {
+        "description": "Grid style chip: every cover cropped into the same fixed cell"
+    },
+    "gridStyleNonUniform": "Non uniformisé",
+    "@gridStyleNonUniform": {
+        "description": "Grid style chip: covers keep their aspect ratio, rows still align"
+    },
+    "gridStyleStaggered": "Décalé",
+    "@gridStyleStaggered": {
+        "description": "Grid style chip: masonry layout where columns pack independently"
+    },
+    "outlineOnCovers": "Bordure autour des couvertures",
+    "@outlineOnCovers": {
+        "description": "Library Display checkbox to draw a thin outline around every cover"
+    },
+    "filterStateAny": "Tout",
+    "@filterStateAny": {
+        "description": "Tri-state filter chip to not filter on this at all"
+    },
+    "filterStateIncluded": "Incluses",
+    "@filterStateIncluded": {
+        "description": "Generic tri-state filter chip to show only entries that match"
+    },
+    "filterHeaderDownloadStatus": "État du téléchargement",
+    "@filterHeaderDownloadStatus": {
+        "description": "Section label for the downloaded filter chip row"
+    },
+    "filterOptionNotDownloaded": "Pas téléchargé",
+    "@filterOptionNotDownloaded": {
+        "description": "Download-status filter chip: only entries with nothing downloaded"
+    },
+    "filterHeaderStorage": "Stockage",
+    "@filterHeaderStorage": {
+        "description": "Section label for the on-device filter chip row"
+    },
+    "filterOptionOnDevice": "Sur l'appareil",
+    "@filterOptionOnDevice": {
+        "description": "Storage filter chip: only entries kept on this device"
+    },
+    "filterOptionRemote": "À distance",
+    "@filterOptionRemote": {
+        "description": "Storage filter chip: only entries with nothing kept on this device"
+    },
+    "filterHeaderReadStatus": "État de la lecture",
+    "@filterHeaderReadStatus": {
+        "description": "Section label for the unread filter chip row"
+    },
+    "filterHeaderProgress": "Progression",
+    "@filterHeaderProgress": {
+        "description": "Section label for the started filter chip row"
+    },
+    "filterOptionNotStarted": "Pas commencé",
+    "@filterOptionNotStarted": {
+        "description": "Progress filter chip: only entries with no chapters read yet"
+    },
+    "filterHeaderBookmarks": "Marque-pages",
+    "@filterHeaderBookmarks": {
+        "description": "Section label for the bookmarked filter chip row"
+    },
+    "filterOptionNotBookmarked": "Pas mis en marque-page",
+    "@filterOptionNotBookmarked": {
+        "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
+    },
+    "filterHeaderSeries": "Série",
+    "@filterHeaderSeries": {
+        "description": "Section label for the series-progress filter chip row"
+    },
+    "filterOptionUnfinished": "Pas terminé",
+    "@filterOptionUnfinished": {
+        "description": "Series filter chip: only series with chapters left to read"
+    },
+    "filterOptionNotInLibrary": "Pas dans la bibliothèque",
+    "@filterOptionNotInLibrary": {
+        "description": "Library filter chip: only entries not saved to the library"
+    },
+    "filterShortDownloaded": "Téléchargé",
+    "@filterShortDownloaded": {
+        "description": "Short filter segment heading for the downloaded tri-state"
+    },
+    "filterShortStarted": "Commencé",
+    "@filterShortStarted": {
+        "description": "Short filter segment heading for the started tri-state"
+    },
+    "filterShortBookmarked": "Mis en marque-page",
+    "@filterShortBookmarked": {
+        "description": "Short filter segment heading for the bookmarked tri-state"
+    },
+    "filterShortCompleted": "Terminé",
+    "@filterShortCompleted": {
+        "description": "Short filter segment heading for the completed tri-state"
+    },
+    "filterShortLewd": "Explicite",
+    "@filterShortLewd": {
+        "description": "Short filter segment heading for the lewd tri-state"
+    },
+    "allTags": "Toutes les étiquettes",
+    "@allTags": {
+        "description": "Tags filter row that clears the tag selection"
+    },
+    "anyCategory": "Toutes catégories",
+    "@anyCategory": {
+        "description": "Categories filter summary when no category is included or excluded"
+    },
+    "searchTags": "Rechercher dans les étiquettes…",
+    "@searchTags": {
+        "description": "Hint in the tags filter search field"
+    },
+    "limitTitleLines": "Limiter les titres sur 2 lignes",
+    "@limitTitleLines": {
+        "description": "Library Display checkbox to cap titles at two ellipsized lines"
+    },
+    "longStripWidthLimit": "Largeur maximale",
+    "@longStripWidthLimit": {
+        "description": "Long strip slider: cap the strip at a percentage of the window or an absolute pixel width"
+    },
+    "longStripWidthLimitFullWidth": "Largeur entière",
+    "@longStripWidthLimitFullWidth": {
+        "description": "Readout at the width slider's 100% position (the off state)"
+    },
+    "longStripWidthLimitPercent": "{percent} %",
+    "@longStripWidthLimitPercent": {
+        "description": "Value readout for the width slider in percent mode",
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitPx": "{px} px",
+    "@longStripWidthLimitPx": {
+        "description": "Value readout for the width slider in pixel mode",
+        "placeholders": {
+            "px": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitUnitPercent": "%",
+    "@longStripWidthLimitUnitPercent": {
+        "description": "Width slider unit chip: percent of window"
+    },
+    "listSize": "Taille de la liste",
+    "@listSize": {
+        "description": "Library Display section label for the List and Descriptive List scale slider"
+    },
+    "unreadBadgeModeCount": "Afficher le nombre",
+    "@unreadBadgeModeCount": {
+        "description": "Unread badge chip: show the number of unread chapters"
+    },
+    "unreadBadgeModeDot": "Afficher un badge sans détails",
+    "@unreadBadgeModeDot": {
+        "description": "Unread badge chip: show a plain accent chip with no number"
+    },
+    "badgeLayout": "Disposition des badges",
+    "@badgeLayout": {
+        "description": "Library Badges section label for the drag-to-reorder badge list"
+    },
+    "badgeLayoutHint": "Glissez pour réordonner. Appuyez sur la flèche pour déplacer un badge dans l'autre coin.",
+    "@badgeLayoutHint": {
+        "description": "Helper text under Badge layout explaining the drag handle and side toggle"
+    },
+    "badgeMoveToLeft": "Déplacer dans le coin gauche",
+    "@badgeMoveToLeft": {
+        "description": "Tooltip on the badge side toggle when the badge is on the right"
+    },
+    "badgeMoveToRight": "Déplacer dans le coin droit",
+    "@badgeMoveToRight": {
+        "description": "Tooltip on the badge side toggle when the badge is on the left"
+    },
+    "groupStyle": "Affichage des groupes",
+    "@groupStyle": {
+        "description": "Library Group section label for the group presentation chip row"
+    },
+    "groupStyleHeaders": "Entêtes de section",
+    "@groupStyleHeaders": {
+        "description": "Group display chip: one continuous scroll with a sticky header per group"
+    },
+    "groupStyleSections": "Sections",
+    "@groupStyleSections": {
+        "description": "Group display radio in the desktop Display panel: sections style"
+    },
+    "groupByTag": "Par étiquette",
+    "@groupByTag": {
+        "description": "Group mode: one tab per source genre and user tag"
+    },
+    "groupByLanguage": "Par langue",
+    "@groupByLanguage": {
+        "description": "Group mode: one tab per source language"
+    },
+    "downloadNextChaptersN": "{n} chapitres suivants",
+    "@downloadNextChaptersN": {
+        "description": "Bulk-download menu item: queue the next N chapters after the last read.",
+        "placeholders": {
+            "n": {
+                "type": "int"
+            }
+        }
+    },
+    "onDeviceDownloads": "Téléchargements sur l'appareil",
+    "@onDeviceDownloads": {
+        "description": "Settings entry: on-device (offline) downloads screen"
+    },
+    "downloadToServer": "Télécharger sur le serveur",
+    "editNotes": "Modifier les notes",
+    "hideCategory": "Masquer la catégorie",
+    "showCategory": "Afficher la catégorie",
+    "libraryPersistentSearchBar": "Barre de recherche constante",
+    "@libraryPersistentSearchBar": {
+        "description": "Library setting: always show the search bar under the app bar instead of behind the search button"
+    },
+    "libraryPersistentSearchBarSubtitle": "Afficher un champ de recherche sous le titre sur toutes les pages plutôt qu'une icône de recherche",
+    "@libraryPersistentSearchBarSubtitle": {
+        "description": "Subtitle for the persistent search bar library setting"
+    },
+    "incognitoShort": "Incognito",
+    "@incognitoShort": {
+        "description": "Short Incognito label for the desktop sidebar foot row and its collapsed tooltip"
+    },
+    "enterProp": "Entrez {prop}",
+    "@enterProp": {
+        "description": "Hint text for text field to enter value of Property"
     }
 }
