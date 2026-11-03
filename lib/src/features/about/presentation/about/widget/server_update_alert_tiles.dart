@@ -13,6 +13,8 @@ import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/compact_switch.dart';
 import '../../../../account/data/account_providers.dart';
+import '../../../../settings/presentation/server/data/web_interface_repository.dart';
+import '../../../data/about_repository.dart';
 import '../../../data/server_update_alerts_repository.dart';
 
 class ServerUpdateAlertTiles extends ConsumerWidget {
@@ -68,6 +70,31 @@ class ServerUpdateAlertTiles extends ConsumerWidget {
                 ),
               ),
             ),
+            if (ref.watch(serverHostedWebProvider)) ...[
+              ListTile(title: Text(context.l10n.webInterface)),
+              CompactSwitchListTile(
+                controlAffinity: ListTileControlAffinity.trailing,
+                title: Text(context.l10n.informAboutVersionUpdate),
+                value: data.webUIInformVersionUpdated,
+                onChanged: (value) => save(
+                  () => repository.write(
+                    'webUIInformVersionUpdated', value, data.metas,
+                  ),
+                ),
+              ),
+              if (ref.watch(webInterfaceSettingsProvider).value?.webUIFlavor ==
+                  Enum$WebUIFlavor.TSUMIRU)
+                CompactSwitchListTile(
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  title: Text(context.l10n.informAboutAvailableUpdate),
+                  value: data.webUIInformAvailableUpdate,
+                  onChanged: (value) => save(
+                    () => repository.write(
+                      'webUIInformAvailableUpdate', value, data.metas,
+                    ),
+                  ),
+                ),
+            ],
           ],
         );
       },

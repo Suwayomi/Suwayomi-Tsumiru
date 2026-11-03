@@ -99,6 +99,7 @@ class _SignInSectionState extends ConsumerState<SignInSection> {
       userId: ref.watch(currentAccountProvider)?.id,
     );
     final web = ref.watch(isWebProvider);
+    final sameOrigin = ref.watch(webSameOriginProvider);
     final canManage =
         !_saving &&
         ref
@@ -138,6 +139,7 @@ class _SignInSectionState extends ConsumerState<SignInSection> {
           diff: diff,
           admin: admin,
           web: web,
+          sameOrigin: sameOrigin,
           hasCredentials:
               proposed.username.trim().isNotEmpty &&
               proposed.password.trim().isNotEmpty,
@@ -241,7 +243,9 @@ class _SignInSectionState extends ConsumerState<SignInSection> {
                                 signInModeLabel(context, mode),
                             isOptionEnabled: (mode) =>
                                 mode == AuthType.none ||
-                                (!(web && isWebUnsupportedAuthMode(mode)) &&
+                                (!(web &&
+                                        !sameOrigin &&
+                                        isWebUnsupportedAuthMode(mode)) &&
                                     !(accounts &&
                                         !admin &&
                                         isWebUnsupportedAuthMode(mode)) &&

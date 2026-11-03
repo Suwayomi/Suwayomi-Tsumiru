@@ -2904,15 +2904,6 @@
   "@serverUnreachableAction": {
     "description": "Button that opens the connection settings screen"
   },
-  "serverUpdateAvailable": "Server update available",
-  "serverUpdatedTo": "Server updated to {version}",
-  "@serverUpdatedTo": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
   "offlineViewBannerTitle": "You're viewing offline",
   "@offlineViewBannerTitle": {
     "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
@@ -4529,5 +4520,63 @@
   "removeCustomCovers": "Remove custom covers",
   "removeCustomCoversTitle": "Remove custom covers?",
   "removeCustomCoversBody": "Every series goes back to its server cover on all your Tsumiru clients.",
-  "customCoversRemoved": "Custom covers removed"
+  "customCoversRemoved": "Custom covers removed",
+  "updateAvailableTitle": "Update available",
+  "updatedVersionTitle": "Updated version",
+  "updateRemindLater": "Remind later",
+  "updateIgnore": "Ignore",
+  "updateChangelog": "Changelog",
+  "couldNotUpdateTsumiru": "Could not update Tsumiru",
+  "serverVersionAvailable": "Server version {version} ({channel}) available for download",
+  "@serverVersionAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "serverVersionUpdated": "Server was updated to version {version} ({channel})",
+  "@serverVersionUpdated": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "tsumiruVersionAvailable": "Tsumiru version {version} ({channel}) available for download",
+  "@tsumiruVersionAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "tsumiruVersionUpdated": "Tsumiru was updated to version {version} ({channel})",
+  "@tsumiruVersionUpdated": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "tsumiruUpdating": "{progress}% | Updating…",
+  "@tsumiruUpdating": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -402,6 +402,9 @@ class _ServerTabs extends ConsumerWidget {
         (tab) => tab.location == const ServerImagesRoute().location,
       );
     }
+    if (index < 0 && path == const ServerSettingsRoute().location) index = 0;
+    final theme = Theme.of(context);
+    final tabTheme = TabBarTheme.of(context);
     return DefaultTabController(
       key: ValueKey('$path:${tabs.length}'),
       length: tabs.length,
@@ -409,6 +412,15 @@ class _ServerTabs extends ConsumerWidget {
       child: TabBar(
         isScrollable: true,
         tabAlignment: TabAlignment.start,
+        indicator: index < 0 ? const BoxDecoration() : null,
+        labelColor: index < 0
+            ? tabTheme.unselectedLabelColor ??
+                tabTheme.unselectedLabelStyle?.color ??
+                theme.colorScheme.onSurfaceVariant
+            : null,
+        labelStyle: index < 0
+            ? tabTheme.unselectedLabelStyle ?? theme.textTheme.titleSmall
+            : null,
         tabs: [for (final tab in tabs) Tab(text: tab.title)],
         onTap: (index) => context.push(tabs[index].location),
       ),

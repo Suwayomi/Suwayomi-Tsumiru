@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -19,6 +17,7 @@ import '../../../../../account/domain/account_access.dart';
 import '../../../../search/settings_search_registry.dart';
 import '../../../../widgets/settings_group_card/settings_group_card.dart';
 import '../../data/graphql/__generated__/web_interface.graphql.dart';
+import '../../data/web_interface_installer.dart';
 import '../../data/web_interface_repository.dart';
 
 class WebInterfaceSection extends ConsumerStatefulWidget {
@@ -34,9 +33,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   Fragment$WebInterfaceUpdateStatusDto? _status;
   Enum$WebUIFlavor? _originalFlavor;
   Enum$WebUIFlavor? _checkedFlavor;
-  Timer? _pollTimer;
-  StreamSubscription? _socketSub;
-  bool _socketLive = false;
+  WebInterfaceInstaller? _installer;
   bool _busy = false;
   bool _installStarted = false;
   bool _installing = false;
@@ -44,8 +41,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
-    _socketSub?.cancel();
+    _installer?.dispose();
     super.dispose();
   }
 
@@ -60,61 +56,9 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         _originalFlavor = null;
       }
     });
-    if (!_installing) {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    }
     if (finished) {
-      _socketSub?.cancel();
-      _socketSub = null;
-      _socketLive = false;
       ref.invalidate(installedWebInterfaceProvider);
       ref.read(webBuildReloadRequiredProvider.notifier).check();
-    }
-  }
-
-  Future<void> _pollStatus() async {
-    _pollTimer = null;
-    if (!mounted || !_installing) return;
-    try {
-      final status = await ref.read(webInterfaceRepositoryProvider).status();
-      _acceptInstallStatus(status);
-    } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
-    }
-    if (mounted && _installing && !_socketLive) {
-      _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
-    }
-  }
-
-  void _watchSocket() {
-    _socketSub?.cancel();
-    _socketSub = null;
-    try {
-      _socketSub = ref
-          .read(graphQlSubscriptionClientProvider)
-          .subscribe$WebInterfaceUpdateStatusChange(
-            Options$Subscription$WebInterfaceUpdateStatusChange(),
-          )
-          .getData((data) => data.webUIUpdateStatusChange)
-          .listen(
-            (status) {
-              _pollTimer?.cancel();
-              _pollTimer = null;
-              _socketLive = true;
-              _acceptInstallStatus(status);
-            },
-            onError: (_) {
-              _socketLive = false;
-              if (mounted &&
-                  _installing &&
-                  (_pollTimer == null || !_pollTimer!.isActive)) {
-                _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
-              }
-            },
-          );
-    } catch (_) {
-      _socketLive = false;
     }
   }
 
@@ -123,18 +67,18 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
       _installStarted = true;
       _installing = true;
       _status = null;
-      _socketLive = false;
     });
+    _installer?.dispose();
+    _installer = WebInterfaceInstaller(
+      ref.read(webInterfaceRepositoryProvider),
+      ref.read(graphQlSubscriptionClientProvider),
+      onStatus: _acceptInstallStatus,
+      onError: (error) {
+        if (mounted) setState(() => _error = error.toString());
+      },
+    );
     try {
-      final status = await ref.read(webInterfaceRepositoryProvider).install();
-      if (status == null) {
-        throw StateError('Missing web interface install response');
-      }
-      _acceptInstallStatus(status);
-      if (mounted && _installing) {
-        _watchSocket();
-        _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
-      }
+      await _installer!.install();
     } catch (_) {
       if (mounted) setState(() => _installing = false);
       rethrow;
