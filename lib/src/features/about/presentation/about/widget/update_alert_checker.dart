@@ -15,6 +15,7 @@ import '../../../../account/domain/account_access.dart';
 import '../../../../settings/presentation/server/data/graphql/__generated__/web_interface.graphql.dart';
 import '../../../../settings/presentation/server/data/web_interface_repository.dart';
 import '../../../data/about_repository.dart';
+import '../../../data/hosted_web_update.dart';
 import '../../../data/server_update_alerts_repository.dart';
 import '../../../domain/about/about_dto.dart';
 import '../../../domain/server_update/server_update.dart';
@@ -103,7 +104,6 @@ class UpdateAlertChecker {
             logger.w('Update check failed', error: error, stackTrace: stack);
             _timer?.cancel();
             if (_valid) _timer = Timer(const Duration(minutes: 1), () => _run(check: true));
-            continue;
           }
         }
         if (_valid && _settings != null) await _present();
@@ -136,7 +136,8 @@ class UpdateAlertChecker {
     await container.read(webBuildReloadRequiredProvider.notifier).check();
     if (_canManage) {
       final settings = await repository.settings();
-      _checkWeb = settings?.webUIUpdateCheckInterval == 0 && _settings!.webUIInformAvailableUpdate;
+      _checkWeb = isTsumiruFlavor(settings?.webUIFlavor.name) &&
+          settings?.webUIUpdateCheckInterval == 0 && _settings!.webUIInformAvailableUpdate;
       if (_checkWeb && webReminder.nextCheck <= DateTime.now().millisecondsSinceEpoch) {
         _webUpdate = await repository.check();
         await webReminder.checked();
