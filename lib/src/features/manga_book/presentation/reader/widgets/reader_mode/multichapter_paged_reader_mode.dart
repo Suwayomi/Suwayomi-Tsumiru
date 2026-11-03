@@ -125,15 +125,14 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final isHorizontal = scrollDirection == Axis.horizontal;
     final isLandscape = context.width > context.height;
     // Explicit page layout wins; landscape spread only augments Automatic.
-    final wantDouble =
-        isHorizontal &&
-        switch (settings.pageLayout) {
-          PageLayout.doublePages => true,
-          PageLayout.singlePage => false,
-          PageLayout.automatic => isLandscape || settings.trueDualPageSpread,
-        };
+    final wantDouble = settings.pageLayout.showsDoublePages(
+      horizontal: isHorizontal,
+      landscape: isLandscape,
+      trueDualPageSpread: settings.trueDualPageSpread,
+    );
     final splitWide = settings.dualPageSplitPaged && isHorizontal;
     final splitInvert = settings.dualPageInvertPaged;
+    final offsetDoublePages = settings.offsetDoublePages;
     final reversePair = settings.invertDoublePages != reverse;
     final (pageFit, pageSize) = settings.imageScaleType.pagedFit(
       context.width,
@@ -616,6 +615,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
                 doublePages: wantDouble,
                 splitWide: splitWide,
                 splitInvert: splitInvert,
+                offsetDoublePages: offsetDoublePages,
                 isWide: (raw) =>
                     (widePages.value[loadedChapters.value[index].chapterId] ??
                             const {})
@@ -636,6 +636,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         wantDouble,
         splitWide,
         splitInvert,
+        offsetDoublePages,
         widePages.value,
         settings.alwaysShowChapterTransition,
         prevChapterExists,
@@ -847,6 +848,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         rotateWide: settings.rotateWidePages,
         rotateWideInvert: settings.rotateWideInvert,
         reversePair: reversePair,
+        offsetDoublePages: offsetDoublePages,
         cropBorders: settings.cropBorders,
         onPageWide: onPageWide,
         onChapterPageChanged: onChapterPageChanged,

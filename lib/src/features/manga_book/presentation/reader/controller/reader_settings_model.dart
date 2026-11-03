@@ -175,6 +175,13 @@ abstract final class ReaderSettings {
     fallback: DBKeys.invertDoublePages.initial as bool,
   );
 
+  static final offsetDoublePages = ReaderSetting<bool>(
+    scope: ReaderSettingScope.perSeries,
+    perSeriesKey: MangaMetaKeys.offsetDoublePages,
+    global: offsetDoublePagesProvider,
+    fallback: DBKeys.offsetDoublePages.initial as bool,
+  );
+
   static final cropBorders = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: cropBordersProvider,
@@ -430,6 +437,7 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
     required bool landscapeZoom,
     required bool navigateToPan,
     required bool invertDoublePages,
+    required bool offsetDoublePages,
     required bool cropBorders,
     required bool smallerTapZones,
     required bool animatePageTransitions,
@@ -644,6 +652,11 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       navigateToPan: ReaderSettings.navigateToPan.resolveWith(ref, null),
       invertDoublePages:
           ReaderSettings.invertDoublePages.resolveWith(ref, null),
+      offsetDoublePages:
+          ReaderSettings.offsetDoublePages.resolveWith(
+            ref,
+            meta?.offsetDoublePages,
+          ),
       cropBorders: ReaderSettings.cropBorders.resolveWith(ref, null),
       smallerTapZones: ReaderSettings.smallerTapZones.resolveWith(ref, null),
       animatePageTransitions:
@@ -744,6 +757,9 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setNavigateToPan(bool value) => _navigateToPan.update(value);
 
   void setInvertDoublePages(bool value) => _invertDoublePages.update(value);
+
+  Future<void> setOffsetDoublePages(bool value) =>
+      _patchMeta(MangaMetaKeys.offsetDoublePages, value.toString());
 
   void setCropBorders(bool value) => _cropBorders.update(value);
 

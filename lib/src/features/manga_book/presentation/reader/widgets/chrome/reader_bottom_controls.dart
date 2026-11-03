@@ -23,6 +23,7 @@ import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../widgets/download_status_icon.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
 import '../../../manga_details/controller/scanlator_dedup.dart';
+import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_mode_kind.dart';
 import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
@@ -83,6 +84,9 @@ class ReaderBottomControls extends ConsumerWidget {
     );
     final pageLayout = ref.watch(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final dualPageSplitPaged = ref.watch(dualPageSplitPagedProvider).ifNull();
+    final settingsModel =
+        ref.watch(readerSettingsModelProvider(chapter.mangaId));
+    final offsetDoublePages = settingsModel.offsetDoublePages;
     final cropBorders = isPagedMode
         ? ref.watch(cropBordersProvider).ifNull()
         : ref.watch(cropBordersWebtoonProvider).ifNull();
@@ -101,6 +105,13 @@ class ReaderBottomControls extends ConsumerWidget {
           : PageLayout.doublePages;
       ref.read(pageLayoutKeyProvider.notifier).update(next);
     }
+
+    final isLandscape = context.width > context.height;
+    final wantDouble = pageLayout.showsDoublePages(
+      horizontal: scrollDirection == Axis.horizontal,
+      landscape: isLandscape,
+      trueDualPageSpread: settingsModel.trueDualPageSpread,
+    );
 
     return MeasureSize(
       onChange: (size) {
@@ -193,6 +204,22 @@ class ReaderBottomControls extends ConsumerWidget {
                         tooltip: context.l10n.pageLayout,
                         icon: Icon(_pageLayoutIcon(pageLayout)),
                         onPressed: togglePageLayout,
+                      ),
+                    if (isPagedMode && wantDouble && !dualPageSplitPaged)
+                      IconButton(
+                        tooltip: context.l10n.offsetDoublePages,
+                        icon: Icon(
+                          offsetDoublePages
+                              ? FluentIcons.arrow_swap_24_filled
+                              : FluentIcons.arrow_swap_24_regular,
+                        ),
+                        onPressed: () => ref
+                            .read(
+                              readerSettingsModelProvider(
+                                chapter.mangaId,
+                              ).notifier,
+                            )
+                            .setOffsetDoublePages(!offsetDoublePages),
                       ),
                     IconButton(
                       tooltip: context.l10n.settings,

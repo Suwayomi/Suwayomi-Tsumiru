@@ -579,6 +579,14 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
+    id: 'offsetDoublePages',
+    title: (l) => l.offsetDoublePages,
+    breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',
+    open: (c) =>
+        const ReaderSettingsRoute(highlight: 'offsetDoublePages').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
     id: 'dualPageSpread',
     title: (l) => l.dualPageSpreadInLandscape,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',

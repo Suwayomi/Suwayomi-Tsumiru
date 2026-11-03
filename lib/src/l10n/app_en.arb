@@ -161,6 +161,9 @@
   "@navigateToPan": {
     "description": "Paged reader toggle: navigate-to-pan"
   },
+  "@offsetDoublePages": {
+    "description": "Paged reader toggle: shift double-page pairing by one"
+  },
   "@pageLayout": {
     "description": "Section label for the paged page-layout chip row"
   },
@@ -1389,6 +1392,7 @@
   "invertSplitPagesPlacement": "Invert split pages placement",
   "invertWidePageRotation": "Invert rotation of wide pages",
   "navigateToPan": "Pan wide images",
+  "offsetDoublePages": "Offset double spreads",
   "pageLayout": "Page layout",
   "pageLayoutAutomatic": "Automatic",
   "pageLayoutDoublePages": "Double pages",

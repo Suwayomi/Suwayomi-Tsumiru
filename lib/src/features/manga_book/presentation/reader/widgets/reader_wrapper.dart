@@ -39,6 +39,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import '../controller/auto_scroll_controller.dart';
 import '../controller/reader_controller.dart';
+import '../controller/reader_settings_model.dart';
 import '../utils/koreader_progress_actions.dart';
 import '../utils/last_page_swipe_utils.dart';
 import '../utils/reader_mode_kind.dart';
@@ -663,6 +664,24 @@ class ReaderWrapper extends HookConsumerWidget {
                         return null;
                       },
                     ),
+                    ToggleOffsetDoublePagesIntent:
+                        CallbackAction<ToggleOffsetDoublePagesIntent>(
+                          onInvoke: (intent) {
+                            final s = ref.read(readerSettingsModelProvider(manga.id));
+                            if (!isPagedReaderMode(resolvedReaderMode) ||
+                                !s.pageLayout.showsDoublePages(
+                                  horizontal: scrollDirection == Axis.horizontal,
+                                  landscape: context.width > context.height,
+                                  trueDualPageSpread: s.trueDualPageSpread,
+                                )) {
+                              return null;
+                            }
+                            unawaited(ref
+                                .read(readerSettingsModelProvider(manga.id).notifier)
+                                .setOffsetDoublePages(!s.offsetDoublePages));
+                            return null;
+                          },
+                        ),
                     // Without a viewport callback, fall back to page navigation; down always means down regardless of tap inversion.
                     ViewportScrollForwardIntent:
                         CallbackAction<ViewportScrollForwardIntent>(

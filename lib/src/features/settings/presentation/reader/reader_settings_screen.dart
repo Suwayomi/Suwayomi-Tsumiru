@@ -524,6 +524,18 @@ class ReaderSettingsScreen extends ConsumerWidget {
                             .update,
                       ),
                     ),
+                    SettingsHighlightTarget(
+                      id: 'offsetDoublePages',
+                      child: _BoolTile(
+                        title: context.l10n.offsetDoublePages,
+                        value: ref
+                            .watch(offsetDoublePagesProvider)
+                            .ifNull(false),
+                        onChanged: ref
+                            .read(offsetDoublePagesProvider.notifier)
+                            .update,
+                      ),
+                    ),
                   ],
                 ),
 

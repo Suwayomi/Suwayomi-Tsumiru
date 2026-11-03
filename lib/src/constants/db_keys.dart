@@ -209,6 +209,7 @@ enum DBKeys {
   landscapeZoom(true),
   navigateToPan(true),
   invertDoublePages(false),
+  offsetDoublePages(false),
   cropBorders(false),
   splitTallImages(true),
   smallerTapZones(false),

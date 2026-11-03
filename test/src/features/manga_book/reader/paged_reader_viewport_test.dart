@@ -85,6 +85,7 @@ Future<void> _pumpViewport(
         rotateWide: false,
         rotateWideInvert: false,
         reversePair: false,
+        offsetDoublePages: false,
         cropBorders: false,
         onPageWide: (_, _, _) {},
         onChapterPageChanged: (_, raw) => onRawPageChanged(raw),

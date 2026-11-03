@@ -44,6 +44,10 @@ void main() {
       manager.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
       isA<NextChapterIntent>(),
     );
+    expect(
+      manager.shortcuts[const SingleActivator(LogicalKeyboardKey.keyO)],
+      isA<ToggleOffsetDoublePagesIntent>(),
+    );
 
     // RTL flips left/right only.
     final rtl = readerShortcutManager(Axis.horizontal, isRtl: true);

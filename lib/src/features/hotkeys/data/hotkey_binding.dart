@@ -131,6 +131,7 @@ String _rLastPage(AppLocalizations l) => l.hotkeyReaderLastPage;
 String _rPrevChapter(AppLocalizations l) => l.hotkeyReaderPrevChapter;
 String _rNextChapter(AppLocalizations l) => l.hotkeyReaderNextChapter;
 String _rToggleMenu(AppLocalizations l) => l.hotkeyReaderToggleMenu;
+String _rOffsetDoublePages(AppLocalizations l) => l.offsetDoublePages;
 
 const List<HotkeyDisplay> readerHotkeyDisplays = [
   HotkeyDisplay(label: _rPrevPage, displayKeys: ['←', 'A']),
@@ -139,5 +140,6 @@ const List<HotkeyDisplay> readerHotkeyDisplays = [
   HotkeyDisplay(label: _rLastPage, displayKeys: ['End']),
   HotkeyDisplay(label: _rPrevChapter, displayKeys: [',']),
   HotkeyDisplay(label: _rNextChapter, displayKeys: ['.']),
+  HotkeyDisplay(label: _rOffsetDoublePages, displayKeys: ['O']),
   HotkeyDisplay(label: _rToggleMenu, displayKeys: ['Esc']),
 ];

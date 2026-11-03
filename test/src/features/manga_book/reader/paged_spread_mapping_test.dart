@@ -101,4 +101,42 @@ void main() {
       expect(primaries(m), [0, 1, 1, 2]);
     });
   });
+
+  group('offset double spreads', () {
+    test('offset on solos the first page and shifts every pair by one', () {
+      final m = buildSpreadMapping(
+        pageCount: 9,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        offsetDoublePages: true,
+        isWide: wideSet(noWide),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0)),
+        SpreadEntry(PageUnit(1), PageUnit(2)),
+        SpreadEntry(PageUnit(3), PageUnit(4)),
+        SpreadEntry(PageUnit(5), PageUnit(6)),
+        SpreadEntry(PageUnit(7), PageUnit(8)),
+      ]);
+    });
+
+    test('offset on with a wide page: the phase breaks around it', () {
+      final m = buildSpreadMapping(
+        pageCount: 5,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        offsetDoublePages: true,
+        isWide: wideSet({2}),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0)),
+        SpreadEntry(PageUnit(1)),
+        SpreadEntry(PageUnit(2)),
+        SpreadEntry(PageUnit(3)),
+        SpreadEntry(PageUnit(4)),
+      ]);
+    });
+  });
 }

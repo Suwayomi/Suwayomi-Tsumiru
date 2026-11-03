@@ -104,6 +104,7 @@ class PagedReaderViewport extends StatefulWidget {
     required this.rotateWide,
     required this.rotateWideInvert,
     required this.reversePair,
+    required this.offsetDoublePages,
     required this.cropBorders,
     required this.onPageWide,
     required this.onChapterPageChanged,
@@ -139,6 +140,7 @@ class PagedReaderViewport extends StatefulWidget {
   final bool rotateWide;
   final bool rotateWideInvert;
   final bool reversePair;
+  final bool offsetDoublePages;
   final bool cropBorders;
 
   /// Chapter-scoped: two chapters may each have a wide page at raw index zero.
@@ -319,7 +321,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
     // Re-anchor on window replacement so prepending cannot move the visible content.
     if (!identical(oldWidget.window, widget.window)) {
-      _reanchor(oldWidget.window);
+      _reanchor(
+        oldWidget.window,
+        anchorLast: oldWidget.offsetDoublePages && !widget.offsetDoublePages,
+      );
       _clearPendingTap();
     }
     _syncZoomBounds();
@@ -339,7 +344,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     super.dispose();
   }
 
-  void _reanchor(PagedDisplayWindow oldWindow) {
+  void _reanchor(PagedDisplayWindow oldWindow, {bool anchorLast = false}) {
     _abandonMotion('reanchor');
 
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
@@ -349,7 +354,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (item is SpreadDisplay) {
       target = widget.window.chapterUnitToDisplay(
         item.chapterId,
-        item.entry.first,
+        anchorLast ? (item.entry.second ?? item.entry.first) : item.entry.first,
       );
     } else if (item is TransitionDisplay) {
       // A transition is content too: rebuilding spread mappings (e.g. when a

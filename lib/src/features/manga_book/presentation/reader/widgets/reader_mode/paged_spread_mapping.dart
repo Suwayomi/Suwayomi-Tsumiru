@@ -87,12 +87,13 @@ class SpreadMapping {
   }
 }
 
-/// Pairs units when [doublePages]; wide pages split with [splitWide], otherwise stay solo; unknown width is false.
+/// Pairs units when [doublePages], shifted by one when [offsetDoublePages]; wide pages split with [splitWide], otherwise stay solo; unknown width is false.
 SpreadMapping buildSpreadMapping({
   required int pageCount,
   required bool doublePages,
   required bool splitWide,
   required bool splitInvert,
+  bool offsetDoublePages = false,
   required bool Function(int raw) isWide,
 }) {
   if (pageCount <= 0) return const SpreadMapping([]);
@@ -117,20 +118,29 @@ SpreadMapping buildSpreadMapping({
   bool wideSolo(PageUnit u) => u.half == PageHalf.full && isWide(u.raw);
 
   final entries = <SpreadEntry>[];
+  var slot = 0;
   var i = 0;
   while (i < units.length) {
-    final u = units[i];
-    if (wideSolo(u)) {
-      entries.add(SpreadEntry(u));
+    final unit = units[i];
+    final solo = wideSolo(unit);
+    final evenSlot = slot.isEven;
+    // A wide page fills two book slots, as in WebUI.
+    slot += solo ? 2 : 1;
+
+    if (solo || (offsetDoublePages && i == 0)) {
+      entries.add(SpreadEntry(unit));
       i++;
       continue;
     }
-    if (i + 1 < units.length && !wideSolo(units[i + 1])) {
-      entries.add(SpreadEntry(u, units[i + 1]));
+    final pairsForward = offsetDoublePages ? !evenSlot : evenSlot;
+    final next = i + 1;
+    if (pairsForward && next < units.length && !wideSolo(units[next])) {
+      entries.add(SpreadEntry(unit, units[next]));
+      slot += 1;
       i += 2;
       continue;
     }
-    entries.add(SpreadEntry(u));
+    entries.add(SpreadEntry(unit));
     i++;
   }
   return SpreadMapping(entries);
