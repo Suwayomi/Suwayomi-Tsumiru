@@ -244,7 +244,6 @@ class DesktopSidebar extends ConsumerWidget {
     return ValueListenableBuilder<LinuxButtonLayout>(
       valueListenable: linuxButtonLayoutNotifier,
       builder: (context, layout, _) {
-        // Linux leading buttons take the brand block, like macOS traffic lights.
         final brandInSidebar = isMacOS || layout.leading.isNotEmpty;
         final sidebarWidth = widthFor(
           expanded: expanded,

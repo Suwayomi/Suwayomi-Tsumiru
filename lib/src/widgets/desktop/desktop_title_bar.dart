@@ -139,10 +139,8 @@ class DesktopWindowButtons extends StatefulWidget {
   });
   final Brightness brightness;
 
-  /// Linux buttons from the desktop layout; null shows Windows caption buttons.
   final List<LinuxWindowButton>? linuxButtons;
 
-  /// Leading buttons pad on the left, trailing buttons on the right.
   final bool leading;
   @override
   State<DesktopWindowButtons> createState() => _DesktopWindowButtonsState();
