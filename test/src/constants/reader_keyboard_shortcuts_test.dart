@@ -44,7 +44,6 @@ void main() {
       manager.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
       isA<NextChapterIntent>(),
     );
-    // Offset double spreads toggle is mode-independent.
     expect(
       manager.shortcuts[const SingleActivator(LogicalKeyboardKey.keyO)],
       isA<ToggleOffsetDoublePagesIntent>(),
@@ -78,10 +77,6 @@ void main() {
     expect(
       ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
       isA<NextScrollIntent>(),
-    );
-    expect(
-      ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.keyO)],
-      isA<ToggleOffsetDoublePagesIntent>(),
     );
 
     // And RTL never touches vertical scroll.

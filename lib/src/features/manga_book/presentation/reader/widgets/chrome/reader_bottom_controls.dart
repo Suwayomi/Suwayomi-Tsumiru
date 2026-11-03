@@ -84,9 +84,6 @@ class ReaderBottomControls extends ConsumerWidget {
     );
     final pageLayout = ref.watch(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final dualPageSplitPaged = ref.watch(dualPageSplitPagedProvider).ifNull();
-    final trueDualPageSpread = ref
-        .watch(trueDualPageSpreadProvider)
-        .ifNull();
     final settingsModel =
         ref.watch(readerSettingsModelProvider(chapter.mangaId));
     final offsetDoublePages = settingsModel.offsetDoublePages;
@@ -109,16 +106,12 @@ class ReaderBottomControls extends ConsumerWidget {
       ref.read(pageLayoutKeyProvider.notifier).update(next);
     }
 
-    // Only show the offset toggle while double pages are actually displayed.
-    final isLandscape =
-        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
-    final wantDouble =
-        scrollDirection == Axis.horizontal &&
-        switch (pageLayout) {
-          PageLayout.doublePages => true,
-          PageLayout.singlePage => false,
-          PageLayout.automatic => isLandscape || trueDualPageSpread,
-        };
+    final isLandscape = context.width > context.height;
+    final wantDouble = pageLayout.showsDoublePages(
+      horizontal: scrollDirection == Axis.horizontal,
+      landscape: isLandscape,
+      trueDualPageSpread: settingsModel.trueDualPageSpread,
+    );
 
     return MeasureSize(
       onChange: (size) {

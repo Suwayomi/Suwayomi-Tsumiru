@@ -79,6 +79,7 @@ void main() {
                 rotateWide: false,
                 rotateWideInvert: false,
                 reversePair: false,
+                offsetDoublePages: false,
                 cropBorders: false,
                 onPageWide: (_, _, _) {},
                 onChapterPageChanged: (id, raw) => progress.add((id, raw)),
@@ -176,7 +177,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('offset phase flips alternate around the reported page', (
+  testWidgets('offset toggles keep the WebUI page and never drift', (
     tester,
   ) async {
     final dir = Directory.systemTemp.createTempSync('paged-offset-');
@@ -229,6 +230,7 @@ void main() {
                 rotateWide: false,
                 rotateWideInvert: false,
                 reversePair: false,
+                offsetDoublePages: offset,
                 cropBorders: false,
                 onPageWide: (_, _, _) {},
                 onChapterPageChanged: (id, raw) => progress.add((id, raw)),
@@ -252,24 +254,21 @@ void main() {
     // Slot (4,5) reports its furthest page.
     expect(progress.last, (1, 5));
 
-    // Mid-chapter toggles alternate around the reported page.
     await pump(true);
-    await tester.pumpAndSettle();
-    expect(progress.last, (1, 5));
+    expect(progress.last, (1, 4));
 
     await pump(false);
-    await tester.pumpAndSettle();
     expect(progress.last, (1, 5));
+
+    await pump(true);
+    expect(progress.last, (1, 4));
 
     // The chapter's last spread reports its final page so the chapter is marked read.
     controller.jumpToRaw(7);
     await tester.pumpAndSettle();
-    await pump(true);
-    await tester.pumpAndSettle();
     expect(progress.last, (1, 8));
 
     await pump(false);
-    await tester.pumpAndSettle();
     expect(progress.last, (1, 8));
     expect(tester.takeException(), isNull);
   });

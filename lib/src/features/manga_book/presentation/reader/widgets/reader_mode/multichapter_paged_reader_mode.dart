@@ -125,13 +125,11 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final isHorizontal = scrollDirection == Axis.horizontal;
     final isLandscape = context.width > context.height;
     // Explicit page layout wins; landscape spread only augments Automatic.
-    final wantDouble =
-        isHorizontal &&
-        switch (settings.pageLayout) {
-          PageLayout.doublePages => true,
-          PageLayout.singlePage => false,
-          PageLayout.automatic => isLandscape || settings.trueDualPageSpread,
-        };
+    final wantDouble = settings.pageLayout.showsDoublePages(
+      horizontal: isHorizontal,
+      landscape: isLandscape,
+      trueDualPageSpread: settings.trueDualPageSpread,
+    );
     final splitWide = settings.dualPageSplitPaged && isHorizontal;
     final splitInvert = settings.dualPageInvertPaged;
     final offsetDoublePages = settings.offsetDoublePages;
@@ -850,6 +848,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         rotateWide: settings.rotateWidePages,
         rotateWideInvert: settings.rotateWideInvert,
         reversePair: reversePair,
+        offsetDoublePages: offsetDoublePages,
         cropBorders: settings.cropBorders,
         onPageWide: onPageWide,
         onChapterPageChanged: onChapterPageChanged,

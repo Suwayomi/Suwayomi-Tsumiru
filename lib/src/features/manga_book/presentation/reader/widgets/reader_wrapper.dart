@@ -667,37 +667,18 @@ class ReaderWrapper extends HookConsumerWidget {
                     ToggleOffsetDoublePagesIntent:
                         CallbackAction<ToggleOffsetDoublePagesIntent>(
                           onInvoke: (intent) {
-                            // Only meaningful while double pages are on screen.
-                            final pageLayout =
-                                ref.read(pageLayoutKeyProvider) ??
-                                PageLayout.automatic;
-                            final isLandscape =
-                                MediaQuery.sizeOf(context).width >
-                                MediaQuery.sizeOf(context).height;
-                            final wantDouble =
-                                scrollDirection == Axis.horizontal &&
-                                switch (pageLayout) {
-                                  PageLayout.doublePages => true,
-                                  PageLayout.singlePage => false,
-                                  PageLayout.automatic => isLandscape ||
-                                      (ref.read(
-                                        trueDualPageSpreadProvider,
-                                      ) ??
-                                      false),
-                                };
-                            if (!wantDouble) return null;
-                            final model = ref.read(
-                              readerSettingsModelProvider(manga.id).notifier,
-                            );
-                            final current =
-                                ref
-                                    .read(
-                                      readerSettingsModelProvider(manga.id),
-                                    )
-                                    .offsetDoublePages;
-                            unawaited(
-                              model.setOffsetDoublePages(!current),
-                            );
+                            final s = ref.read(readerSettingsModelProvider(manga.id));
+                            if (!isPagedReaderMode(resolvedReaderMode) ||
+                                !s.pageLayout.showsDoublePages(
+                                  horizontal: scrollDirection == Axis.horizontal,
+                                  landscape: context.width > context.height,
+                                  trueDualPageSpread: s.trueDualPageSpread,
+                                )) {
+                              return null;
+                            }
+                            unawaited(ref
+                                .read(readerSettingsModelProvider(manga.id).notifier)
+                                .setOffsetDoublePages(!s.offsetDoublePages));
                             return null;
                           },
                         ),

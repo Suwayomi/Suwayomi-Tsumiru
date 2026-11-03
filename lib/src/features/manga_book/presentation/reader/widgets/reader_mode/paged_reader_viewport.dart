@@ -104,6 +104,7 @@ class PagedReaderViewport extends StatefulWidget {
     required this.rotateWide,
     required this.rotateWideInvert,
     required this.reversePair,
+    required this.offsetDoublePages,
     required this.cropBorders,
     required this.onPageWide,
     required this.onChapterPageChanged,
@@ -139,6 +140,7 @@ class PagedReaderViewport extends StatefulWidget {
   final bool rotateWide;
   final bool rotateWideInvert;
   final bool reversePair;
+  final bool offsetDoublePages;
   final bool cropBorders;
 
   /// Chapter-scoped: two chapters may each have a wide page at raw index zero.
@@ -204,12 +206,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   Animation<double>? _pageTween;
   Animation<Offset>? _panTween;
   double _dragOffset = 0;
-
-  /// Last raw page reported to the parent; the re-anchor anchor.
-  int? _lastEmittedRaw;
-
-  /// Raw page re-emitted after a phase-flip re-anchor so toggles alternate in place.
-  int? _reanchorEmitRaw;
 
   /// Bumped whenever a turn in flight is abandoned, so its completion can't
   /// commit a target that no longer matches where the pager ended up.
@@ -325,7 +321,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
     // Re-anchor on window replacement so prepending cannot move the visible content.
     if (!identical(oldWidget.window, widget.window)) {
-      _reanchor(oldWidget.window);
+      _reanchor(
+        oldWidget.window,
+        anchorLast: oldWidget.offsetDoublePages && !widget.offsetDoublePages,
+      );
       _clearPendingTap();
     }
     _syncZoomBounds();
@@ -345,7 +344,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     super.dispose();
   }
 
-  void _reanchor(PagedDisplayWindow oldWindow) {
+  void _reanchor(PagedDisplayWindow oldWindow, {bool anchorLast = false}) {
     _abandonMotion('reanchor');
 
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
@@ -355,27 +354,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (item is SpreadDisplay) {
       target = widget.window.chapterUnitToDisplay(
         item.chapterId,
-        item.entry.first,
+        anchorLast ? (item.entry.second ?? item.entry.first) : item.entry.first,
       );
-      // A phase flip (offset toggle) re-anchors by the reported page so repeated toggles alternate in place.
-      if (target >= 0 && _lastEmittedRaw != null) {
-        final newItem = widget.window.items[target];
-        if (newItem is SpreadDisplay &&
-            newItem.entry.first != item.entry.first &&
-            newItem.entry.second == item.entry.first) {
-          final rawTarget = widget.window.chapterRawToDisplay(
-            item.chapterId,
-            _lastEmittedRaw!,
-          );
-          if (rawTarget >= 0) {
-            target = rawTarget;
-            // Keep the preserved page unless the new slot ends the chapter.
-            if (rawTarget != widget.window.lastDisplayOf(item.chapterId)) {
-              _reanchorEmitRaw = _lastEmittedRaw;
-            }
-          }
-        }
-      }
     } else if (item is TransitionDisplay) {
       // A transition is content too: rebuilding spread mappings (e.g. when a
       // wide page is decoded) must not turn the notice into the next page.
@@ -403,9 +383,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _dragOffset = 0;
     // didUpdateWidget runs during build; defer ancestor notification.
     Future.microtask(() {
-      final override = _reanchorEmitRaw;
-      _reanchorEmitRaw = null;
-      if (mounted) _emitRawPage(overrideRaw: override);
+      if (mounted) _emitRawPage();
     });
   }
 
@@ -471,23 +449,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (_isIdle) widget.onIdle?.call();
   }
 
-  void _emitRawPage({int? overrideRaw}) {
+  void _emitRawPage() {
     if (widget.window.isEmpty) {
       _notifyIdle();
       return;
     }
-    if (overrideRaw != null) {
-      final here = widget.window.displayToChapterRaw(_displayIndex);
-      if (here != null) {
-        _lastEmittedRaw = overrideRaw;
-        widget.onChapterPageChanged(here.chapterId, overrideRaw);
-        _notifyIdle();
-        return;
-      }
-    }
     final progress = widget.window.displayToChapterProgressRaw(_displayIndex);
     if (progress != null) {
-      _lastEmittedRaw = progress.raw;
       widget.onChapterPageChanged(progress.chapterId, progress.raw);
     }
     _notifyIdle();

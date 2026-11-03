@@ -87,14 +87,7 @@ class SpreadMapping {
   }
 }
 
-/// Pairs units when [doublePages] (wide pages split with [splitWide], otherwise solo; unknown width is false).
-///
-/// [offsetDoublePages] shifts the pairing phase one page, mirroring WebUI's `getDoublePageModePages`:
-///
-/// ```text
-/// without offset: | 0 + 1 | 2 + 3 | 4 + 5 | 6 + 7 |   8   |
-/// with offset   : |   0   | 1 + 2 | 3 + 4 | 5 + 6 | 7 + 8 |
-/// ```
+/// Pairs units when [doublePages], shifted by one when [offsetDoublePages]; wide pages split with [splitWide], otherwise stay solo; unknown width is false.
 SpreadMapping buildSpreadMapping({
   required int pageCount,
   required bool doublePages,
@@ -131,6 +124,7 @@ SpreadMapping buildSpreadMapping({
     final unit = units[i];
     final solo = wideSolo(unit);
     final evenSlot = slot.isEven;
+    // A wide page fills two book slots, as in WebUI.
     slot += solo ? 2 : 1;
 
     if (solo || (offsetDoublePages && i == 0)) {
@@ -142,7 +136,7 @@ SpreadMapping buildSpreadMapping({
     final next = i + 1;
     if (pairsForward && next < units.length && !wideSolo(units[next])) {
       entries.add(SpreadEntry(unit, units[next]));
-      slot += 1; // the consumed partner's slot
+      slot += 1;
       i += 2;
       continue;
     }

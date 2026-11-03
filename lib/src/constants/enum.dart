@@ -195,6 +195,13 @@ enum PageLayout {
     PageLayout.doublePages => context.l10n.pageLayoutDoublePages,
     PageLayout.automatic => context.l10n.pageLayoutAutomatic,
   };
+
+  bool showsDoublePages({required bool horizontal, required bool landscape, required bool trueDualPageSpread}) =>
+      horizontal && switch (this) {
+        PageLayout.doublePages => true,
+        PageLayout.singlePage => false,
+        PageLayout.automatic => landscape || trueDualPageSpread,
+      };
 }
 
 enum CenterMarginType {

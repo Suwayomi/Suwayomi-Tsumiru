@@ -500,7 +500,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late LandscapeZoom _landscapeZoom;
   late NavigateToPan _navigateToPan;
   late InvertDoublePages _invertDoublePages;
-  late OffsetDoublePages _offsetDoublePages;
   late CropBorders _cropBorders;
   late SmallerTapZones _smallerTapZones;
   late AnimatePageTransitions _animatePageTransitions;
@@ -567,7 +566,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _landscapeZoom = ref.read(landscapeZoomProvider.notifier);
     _navigateToPan = ref.read(navigateToPanProvider.notifier);
     _invertDoublePages = ref.read(invertDoublePagesProvider.notifier);
-    _offsetDoublePages = ref.read(offsetDoublePagesProvider.notifier);
     _cropBorders = ref.read(cropBordersProvider.notifier);
     _smallerTapZones = ref.read(smallerTapZonesProvider.notifier);
     _animatePageTransitions = ref.read(animatePageTransitionsProvider.notifier);
@@ -760,13 +758,8 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setInvertDoublePages(bool value) => _invertDoublePages.update(value);
 
-  Future<void> setOffsetDoublePages(bool value, {bool perSeries = true}) =>
-      perSeries
-          ? _patchMeta(MangaMetaKeys.offsetDoublePages, value.toString())
-          : _clearMetaThenWriteGlobal(
-              MangaMetaKeys.offsetDoublePages,
-              () => _offsetDoublePages.update(value),
-            );
+  Future<void> setOffsetDoublePages(bool value) =>
+      _patchMeta(MangaMetaKeys.offsetDoublePages, value.toString());
 
   void setCropBorders(bool value) => _cropBorders.update(value);
 

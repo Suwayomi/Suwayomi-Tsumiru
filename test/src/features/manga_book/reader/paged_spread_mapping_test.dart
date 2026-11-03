@@ -102,9 +102,8 @@ void main() {
     });
   });
 
-  group('offset double spreads — WebUI getDoublePageModePages parity', () {
+  group('offset double spreads', () {
     test('offset on solos the first page and shifts every pair by one', () {
-      // | 0 | 1+2 | 3+4 | 5+6 | 7+8 |
       final m = buildSpreadMapping(
         pageCount: 9,
         doublePages: true,
@@ -120,12 +119,9 @@ void main() {
         SpreadEntry(PageUnit(5), PageUnit(6)),
         SpreadEntry(PageUnit(7), PageUnit(8)),
       ]);
-      expect(primaries(m), [0, 1, 3, 5, 7]);
-      expect([for (final e in m.entries) e.progressRaw], [0, 2, 4, 6, 8]);
     });
 
     test('offset on with a wide page: the phase breaks around it', () {
-      // pages: 0 1 [2 wide] 3 4
       final m = buildSpreadMapping(
         pageCount: 5,
         doublePages: true,

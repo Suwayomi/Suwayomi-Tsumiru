@@ -95,7 +95,7 @@ abstract class MangaMeta with _$MangaMeta {
     ReaderOrientation? readerOrientation,
     @JsonKey(name: "flutter_readerTapInvert") TapInvert? readerTapInvert,
     @JsonKey(
-      name: "flutter_offsetDoublePages",
+      name: "webUI_shouldOffsetDoubleSpreads",
       fromJson: MangaMeta.fromJsonToBool,
     )
     bool? offsetDoublePages,
@@ -189,7 +189,7 @@ enum MangaMetaKeys {
   readerPadding("flutter_readerPadding"),
   readerOrientation("flutter_readerOrientation"),
   readerTapInvert("flutter_readerTapInvert"),
-  offsetDoublePages("flutter_offsetDoublePages"),
+  offsetDoublePages("webUI_shouldOffsetDoubleSpreads"),
   scanlator("flutter_scanlator"),
   chapterListMode("flutter_chapterListMode"),
   rating("flutter_rating"),
