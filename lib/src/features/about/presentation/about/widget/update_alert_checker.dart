@@ -43,7 +43,7 @@ class UpdateAlertChecker {
   DialogRoute<void>? _dialog;
   bool _active = true, _running = false, _rerun = false, _needsCheck = false;
   bool _checkWeb = false;
-  bool _initialCheck = true;
+  bool _serverCheckDue = true, _webCheckDue = true;
   Duration _retryDelay = const Duration(minutes: 1);
   AboutDto? _about;
   ServerUpdate? _serverUpdate;
@@ -152,7 +152,7 @@ class UpdateAlertChecker {
     _about = await container.read(aboutRepositoryProvider).getAbout();
     if (_canManage) {
       if (_settings!.informAvailableUpdate &&
-          (_initialCheck ||
+          (_serverCheckDue ||
               serverReminder.nextCheck <=
                   DateTime.now().millisecondsSinceEpoch)) {
         final updates = await container
@@ -162,11 +162,11 @@ class UpdateAlertChecker {
             ?.where((update) => update.channel == _about?.buildType)
             .firstOrNull;
         await serverReminder.checked();
+        _serverCheckDue = false;
       }
     }
     _checkWeb = false;
     if (!_valid || !_hosted) {
-      _initialCheck = false;
       return;
     }
     final repository = container.read(webInterfaceRepositoryProvider);
@@ -180,13 +180,13 @@ class UpdateAlertChecker {
           settings?.webUIUpdateCheckInterval == 0 &&
           _settings!.webUIInformAvailableUpdate;
       if (_checkWeb &&
-          (_initialCheck ||
+          (_webCheckDue ||
               webReminder.nextCheck <= DateTime.now().millisecondsSinceEpoch)) {
         _webUpdate = await repository.check();
         await webReminder.checked();
+        _webCheckDue = false;
       }
     }
-    _initialCheck = false;
   }
 
   void _schedule() {

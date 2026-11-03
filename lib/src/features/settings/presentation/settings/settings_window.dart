@@ -403,14 +403,24 @@ class _ServerTabs extends ConsumerWidget {
       );
     }
     if (index < 0 && path == const ServerSettingsRoute().location) index = 0;
-    if (index < 0) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final tabTheme = TabBarTheme.of(context);
     return DefaultTabController(
       key: ValueKey('$path:${tabs.length}'),
       length: tabs.length,
-      initialIndex: index,
+      initialIndex: index < 0 ? 0 : index,
       child: TabBar(
         isScrollable: true,
         tabAlignment: TabAlignment.start,
+        indicator: index < 0 ? const BoxDecoration() : null,
+        labelColor: index < 0
+            ? tabTheme.unselectedLabelColor ??
+                tabTheme.unselectedLabelStyle?.color ??
+                theme.colorScheme.onSurfaceVariant
+            : null,
+        labelStyle: index < 0
+            ? tabTheme.unselectedLabelStyle ?? theme.textTheme.titleSmall
+            : null,
         tabs: [for (final tab in tabs) Tab(text: tab.title)],
         onTap: (index) => context.push(tabs[index].location),
       ),
