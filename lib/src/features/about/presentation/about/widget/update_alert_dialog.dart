@@ -33,6 +33,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
   WebInterfaceInstaller? _installer;
   bool _installing = false;
   int _progress = 0;
+  int _pollErrors = 0;
 
   @override
   void dispose() {
@@ -55,6 +56,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
       ref.read(graphQlSubscriptionClientProvider),
       onStatus: (status) {
         if (!mounted) return;
+        _pollErrors = 0;
         if (status.state == Enum$UpdateState.ERROR) {
           _failed();
         } else if (status.state == Enum$UpdateState.FINISHED) {
@@ -65,7 +67,9 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
           setState(() => _progress = status.progress);
         }
       },
-      onError: (_) {},
+      onError: (_) {
+        if (++_pollErrors >= 3) _failed();
+      },
     );
     try {
       await _installer!.install();

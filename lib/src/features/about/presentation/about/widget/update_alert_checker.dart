@@ -87,7 +87,8 @@ class UpdateAlertChecker {
         required UpdatedVersionDialog dialog,
         required void Function(String) store,
       }) async {
-        if (previous != null && previous != current && inform) {
+        if (current.isBlank) return;
+        if (previous.isNotBlank && previous != current && inform) {
           await _open(dialog);
         }
         if (_valid) store(current);
