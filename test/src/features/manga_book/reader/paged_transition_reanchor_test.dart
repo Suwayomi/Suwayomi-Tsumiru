@@ -247,24 +247,30 @@ void main() {
     }
 
     await pump(false);
-    controller.jumpToRaw(6);
+    controller.jumpToRaw(4);
     await tester.pumpAndSettle();
-    // Slot (6,7) reports its furthest page.
-    expect(progress.last, (1, 7));
+    // Slot (4,5) reports its furthest page.
+    expect(progress.last, (1, 5));
 
-    // Toggling the offset phase must alternate the pairing around the page
-    // being read — never walk it backwards through the chapter.
+    // Mid-chapter toggles alternate around the reported page.
     await pump(true);
     await tester.pumpAndSettle();
-    expect(progress.last, (1, 7));
+    expect(progress.last, (1, 5));
 
     await pump(false);
     await tester.pumpAndSettle();
-    expect(progress.last, (1, 7));
+    expect(progress.last, (1, 5));
 
+    // The chapter's last spread reports its final page so the chapter is marked read.
+    controller.jumpToRaw(7);
+    await tester.pumpAndSettle();
     await pump(true);
     await tester.pumpAndSettle();
-    expect(progress.last, (1, 7));
+    expect(progress.last, (1, 8));
+
+    await pump(false);
+    await tester.pumpAndSettle();
+    expect(progress.last, (1, 8));
     expect(tester.takeException(), isNull);
   });
 }

@@ -87,13 +87,9 @@ class SpreadMapping {
   }
 }
 
-/// Pairs units when [doublePages]; wide pages split with [splitWide], otherwise stay solo; unknown width is false.
+/// Pairs units when [doublePages] (wide pages split with [splitWide], otherwise solo; unknown width is false).
 ///
-/// Pairing follows book-slot parity, mirroring WebUI's `getDoublePageModePages`:
-/// a full wide page occupies two book slots, so the slot index of every unit
-/// after it shifts by one. Even slots pair forward, odd slots pair backward;
-/// [offsetDoublePages] inverts that rule and solos the first unit, shifting the
-/// whole pairing phase by one page:
+/// [offsetDoublePages] shifts the pairing phase one page, mirroring WebUI's `getDoublePageModePages`:
 ///
 /// ```text
 /// without offset: | 0 + 1 | 2 + 3 | 4 + 5 | 6 + 7 |   8   |

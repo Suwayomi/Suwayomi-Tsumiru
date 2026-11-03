@@ -205,12 +205,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   Animation<Offset>? _panTween;
   double _dragOffset = 0;
 
-  /// Last raw page reported through [PagedReaderViewport.onChapterPageChanged];
-  /// the anchor a mapping re-anchor preserves.
+  /// Last raw page reported to the parent; the re-anchor anchor.
   int? _lastEmittedRaw;
 
-  /// Raw page to re-emit after a phase-flip re-anchor. Kept stable so repeated
-  /// offset double-page toggles alternate around one shared page.
+  /// Raw page re-emitted after a phase-flip re-anchor so toggles alternate in place.
   int? _reanchorEmitRaw;
 
   /// Bumped whenever a turn in flight is abandoned, so its completion can't
@@ -359,11 +357,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         item.chapterId,
         item.entry.first,
       );
-      // A mapping phase flip (offset double pages) demotes the old slot's
-      // leading page to the trailing page of the adjacent pairing; anchoring
-      // by that unit would walk the read position backwards one pair per
-      // flip. Re-anchor by the page the reader last reported instead, and
-      // keep reporting it so repeated flips alternate around one page.
+      // A phase flip (offset toggle) re-anchors by the reported page so repeated toggles alternate in place.
       if (target >= 0 && _lastEmittedRaw != null) {
         final newItem = widget.window.items[target];
         if (newItem is SpreadDisplay &&
@@ -375,7 +369,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
           );
           if (rawTarget >= 0) {
             target = rawTarget;
-            _reanchorEmitRaw = _lastEmittedRaw;
+            // Keep the preserved page unless the new slot ends the chapter.
+            if (rawTarget != widget.window.lastDisplayOf(item.chapterId)) {
+              _reanchorEmitRaw = _lastEmittedRaw;
+            }
           }
         }
       }

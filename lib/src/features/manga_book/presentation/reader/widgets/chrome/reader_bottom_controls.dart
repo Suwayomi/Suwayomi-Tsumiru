@@ -23,6 +23,7 @@ import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../widgets/download_status_icon.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
 import '../../../manga_details/controller/scanlator_dedup.dart';
+import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_mode_kind.dart';
 import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
@@ -86,7 +87,9 @@ class ReaderBottomControls extends ConsumerWidget {
     final trueDualPageSpread = ref
         .watch(trueDualPageSpreadProvider)
         .ifNull();
-    final offsetDoublePages = ref.watch(offsetDoublePagesProvider).ifNull();
+    final settingsModel =
+        ref.watch(readerSettingsModelProvider(chapter.mangaId));
+    final offsetDoublePages = settingsModel.offsetDoublePages;
     final cropBorders = isPagedMode
         ? ref.watch(cropBordersProvider).ifNull()
         : ref.watch(cropBordersWebtoonProvider).ifNull();
@@ -106,8 +109,7 @@ class ReaderBottomControls extends ConsumerWidget {
       ref.read(pageLayoutKeyProvider.notifier).update(next);
     }
 
-    // Mirrors the reader's wantDouble so the offset toggle only shows when
-    // double pages are actually displayed (Automatic resolves in landscape).
+    // Only show the offset toggle while double pages are actually displayed.
     final isLandscape =
         MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
     final wantDouble =
@@ -219,8 +221,12 @@ class ReaderBottomControls extends ConsumerWidget {
                               : FluentIcons.arrow_swap_24_regular,
                         ),
                         onPressed: () => ref
-                            .read(offsetDoublePagesProvider.notifier)
-                            .update(!offsetDoublePages),
+                            .read(
+                              readerSettingsModelProvider(
+                                chapter.mangaId,
+                              ).notifier,
+                            )
+                            .setOffsetDoublePages(!offsetDoublePages),
                       ),
                     IconButton(
                       tooltip: context.l10n.settings,

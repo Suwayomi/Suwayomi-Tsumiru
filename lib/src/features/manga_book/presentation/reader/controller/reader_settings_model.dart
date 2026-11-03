@@ -176,7 +176,8 @@ abstract final class ReaderSettings {
   );
 
   static final offsetDoublePages = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
+    scope: ReaderSettingScope.perSeries,
+    perSeriesKey: MangaMetaKeys.offsetDoublePages,
     global: offsetDoublePagesProvider,
     fallback: DBKeys.offsetDoublePages.initial as bool,
   );
@@ -654,7 +655,10 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       invertDoublePages:
           ReaderSettings.invertDoublePages.resolveWith(ref, null),
       offsetDoublePages:
-          ReaderSettings.offsetDoublePages.resolveWith(ref, null),
+          ReaderSettings.offsetDoublePages.resolveWith(
+            ref,
+            meta?.offsetDoublePages,
+          ),
       cropBorders: ReaderSettings.cropBorders.resolveWith(ref, null),
       smallerTapZones: ReaderSettings.smallerTapZones.resolveWith(ref, null),
       animatePageTransitions:
@@ -756,7 +760,13 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setInvertDoublePages(bool value) => _invertDoublePages.update(value);
 
-  void setOffsetDoublePages(bool value) => _offsetDoublePages.update(value);
+  Future<void> setOffsetDoublePages(bool value, {bool perSeries = true}) =>
+      perSeries
+          ? _patchMeta(MangaMetaKeys.offsetDoublePages, value.toString())
+          : _clearMetaThenWriteGlobal(
+              MangaMetaKeys.offsetDoublePages,
+              () => _offsetDoublePages.update(value),
+            );
 
   void setCropBorders(bool value) => _cropBorders.update(value);
 

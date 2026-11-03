@@ -39,6 +39,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import '../controller/auto_scroll_controller.dart';
 import '../controller/reader_controller.dart';
+import '../controller/reader_settings_model.dart';
 import '../utils/koreader_progress_actions.dart';
 import '../utils/last_page_swipe_utils.dart';
 import '../utils/reader_mode_kind.dart';
@@ -666,11 +667,37 @@ class ReaderWrapper extends HookConsumerWidget {
                     ToggleOffsetDoublePagesIntent:
                         CallbackAction<ToggleOffsetDoublePagesIntent>(
                           onInvoke: (intent) {
+                            // Only meaningful while double pages are on screen.
+                            final pageLayout =
+                                ref.read(pageLayoutKeyProvider) ??
+                                PageLayout.automatic;
+                            final isLandscape =
+                                MediaQuery.sizeOf(context).width >
+                                MediaQuery.sizeOf(context).height;
+                            final wantDouble =
+                                scrollDirection == Axis.horizontal &&
+                                switch (pageLayout) {
+                                  PageLayout.doublePages => true,
+                                  PageLayout.singlePage => false,
+                                  PageLayout.automatic => isLandscape ||
+                                      (ref.read(
+                                        trueDualPageSpreadProvider,
+                                      ) ??
+                                      false),
+                                };
+                            if (!wantDouble) return null;
+                            final model = ref.read(
+                              readerSettingsModelProvider(manga.id).notifier,
+                            );
                             final current =
-                                ref.read(offsetDoublePagesProvider) ?? false;
-                            ref
-                                .read(offsetDoublePagesProvider.notifier)
-                                .update(!current);
+                                ref
+                                    .read(
+                                      readerSettingsModelProvider(manga.id),
+                                    )
+                                    .offsetDoublePages;
+                            unawaited(
+                              model.setOffsetDoublePages(!current),
+                            );
                             return null;
                           },
                         ),
