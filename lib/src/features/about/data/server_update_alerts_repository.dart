@@ -113,17 +113,14 @@ class UpdateReminderStore {
 
   String _key(String suffix) => 'UpdateChecker::$key::$suffix';
 
-  int get nextCheck =>
-      (preferences.getInt(_key('lastUpdateCheck')) ?? 0) +
-      updateCheckInterval.inMilliseconds;
-
-  int get reminderEnds =>
-      (preferences.getInt(_key('closeTimestamp')) ?? 0) +
-      updateCheckInterval.inMilliseconds;
+  int get lastUpdateCheck =>
+      preferences.getInt(_key('lastUpdateCheck')) ?? 0;
 
   bool show(String version) =>
       version != preferences.getString(_key('ignoreUpdate')) &&
-      DateTime.now().millisecondsSinceEpoch >= reminderEnds;
+      DateTime.now().millisecondsSinceEpoch -
+              (preferences.getInt(_key('closeTimestamp')) ?? 0) >=
+          updateCheckInterval.inMilliseconds;
 
   Future<void> checked() => preferences.setInt(
     _key('lastUpdateCheck'), DateTime.now().millisecondsSinceEpoch,

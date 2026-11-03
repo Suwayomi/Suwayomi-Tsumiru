@@ -8,7 +8,7 @@ import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../settings/presentation/server/data/web_interface_installer.dart';
 import '../../../../settings/presentation/server/data/web_interface_repository.dart';
-import '../../../data/web_update_browser.dart';
+import '../../../data/about_repository.dart';
 
 class UpdateAlertDialog extends ConsumerStatefulWidget {
   const UpdateAlertDialog({
@@ -18,15 +18,11 @@ class UpdateAlertDialog extends ConsumerStatefulWidget {
     required this.onIgnore,
     this.downloadUrl,
     this.changelogUrl,
-    this.onInstalled,
   });
 
   final String info;
-  final Future<void> Function() onRemindLater;
-  final Future<void> Function() onIgnore;
-  final String? downloadUrl;
-  final String? changelogUrl;
-  final VoidCallback? onInstalled;
+  final Future<void> Function() onRemindLater, onIgnore;
+  final String? downloadUrl, changelogUrl;
 
   @override
   ConsumerState<UpdateAlertDialog> createState() => _UpdateAlertDialogState();
@@ -34,10 +30,9 @@ class UpdateAlertDialog extends ConsumerStatefulWidget {
 
 class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
   final _closeMenu = GlobalKey<PopupMenuButtonState<bool>>();
+  WebInterfaceInstaller? _installer;
   bool _installing = false;
   int _progress = 0;
-
-  WebInterfaceInstaller? _installer;
 
   @override
   void dispose() {
@@ -64,8 +59,8 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
           _failed();
         } else if (status.state == Enum$UpdateState.FINISHED) {
           ref.invalidate(installedWebInterfaceProvider);
-          widget.onInstalled?.call();
-          if (mounted) Navigator.pop(context);
+          ref.read(webBuildReloadRequiredProvider.notifier).check();
+          Navigator.pop(context);
         } else {
           setState(() => _progress = status.progress);
         }
@@ -105,11 +100,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
         key: _closeMenu,
         enabled: !_installing,
         onSelected: (ignore) async {
-          if (ignore) {
-            await widget.onIgnore();
-          } else {
-            await widget.onRemindLater();
-          }
+          await (ignore ? widget.onIgnore() : widget.onRemindLater());
           if (context.mounted) Navigator.pop(context);
         },
         itemBuilder: (context) => [
@@ -129,19 +120,19 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
       ElevatedButton(
         onPressed: _installing
             ? null
-            : widget.downloadUrl != null
-            ? () => launchUrlInWeb(
+            : widget.downloadUrl == null
+            ? _install
+            : () => launchUrlInWeb(
                 context,
                 widget.downloadUrl!,
                 ref.read(toastProvider),
-              )
-            : _install,
+              ),
         child: Text(
           _installing
-              ? context.l10n.tsumiruUpdating(_progress.toStringAsFixed(0))
-              : widget.downloadUrl != null
-              ? context.l10n.download
-              : context.l10n.update,
+              ? context.l10n.tsumiruUpdating(_progress.toString())
+              : widget.downloadUrl == null
+              ? context.l10n.install
+              : context.l10n.download,
         ),
       ),
     ],
@@ -153,14 +144,8 @@ class UpdatedVersionDialog extends ConsumerWidget {
     super.key,
     required this.info,
     required this.changelog,
-    this.refresh = false,
-    this.onConfirm,
   });
-
-  final String info;
-  final String changelog;
-  final bool refresh;
-  final Future<void> Function()? onConfirm;
+  final String info, changelog;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => AlertDialog(
@@ -173,13 +158,8 @@ class UpdatedVersionDialog extends ConsumerWidget {
         child: Text(context.l10n.updateChangelog),
       ),
       ElevatedButton(
-        onPressed: () async {
-          await onConfirm?.call();
-          if (!context.mounted) return;
-          Navigator.pop(context);
-          if (refresh) reloadWebBuild();
-        },
-        child: Text(refresh ? context.l10n.refresh : context.l10n.ok),
+        onPressed: () => Navigator.pop(context),
+        child: Text(context.l10n.ok),
       ),
     ],
   );
