@@ -116,8 +116,9 @@ class ServerSettingsPageShell extends ConsumerWidget {
                           context.l10n.manageSettingsPermissionRequired,
                         ),
                       ),
-                    ...always,
-                    if (serverSettings.value != null)
+                    if (canManage || !showPermissionNotice) ...always,
+                    if ((canManage || !showPermissionNotice) &&
+                        serverSettings.value != null)
                       ...whenData(serverSettings.value!),
                   ],
                 ),
