@@ -49,6 +49,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
   }
 
   Future<void> _install() async {
+    _pollErrors = 0;
     setState(() => _installing = true);
     _installer?.dispose();
     _installer = WebInterfaceInstaller(
