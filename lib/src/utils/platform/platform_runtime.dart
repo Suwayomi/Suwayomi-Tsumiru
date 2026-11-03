@@ -35,7 +35,7 @@ bool get isMacOSRuntime =>
 bool? debugLinuxOverride;
 
 bool get isLinuxRuntime =>
-    debugLinuxOverride ?? (!kIsWeb && Platform.isLinux);
+    debugLinuxOverride ?? (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux);
 
 bool get isAndroidRuntime =>
     debugAndroidOverride ?? (!kIsWeb && Platform.isAndroid);
