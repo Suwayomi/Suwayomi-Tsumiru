@@ -205,6 +205,14 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   Animation<Offset>? _panTween;
   double _dragOffset = 0;
 
+  /// Last raw page reported through [PagedReaderViewport.onChapterPageChanged];
+  /// the anchor a mapping re-anchor preserves.
+  int? _lastEmittedRaw;
+
+  /// Raw page to re-emit after a phase-flip re-anchor. Kept stable so repeated
+  /// offset double-page toggles alternate around one shared page.
+  int? _reanchorEmitRaw;
+
   /// Bumped whenever a turn in flight is abandoned, so its completion can't
   /// commit a target that no longer matches where the pager ended up.
   int _motionGeneration = 0;
@@ -351,6 +359,26 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         item.chapterId,
         item.entry.first,
       );
+      // A mapping phase flip (offset double pages) demotes the old slot's
+      // leading page to the trailing page of the adjacent pairing; anchoring
+      // by that unit would walk the read position backwards one pair per
+      // flip. Re-anchor by the page the reader last reported instead, and
+      // keep reporting it so repeated flips alternate around one page.
+      if (target >= 0 && _lastEmittedRaw != null) {
+        final newItem = widget.window.items[target];
+        if (newItem is SpreadDisplay &&
+            newItem.entry.first != item.entry.first &&
+            newItem.entry.second == item.entry.first) {
+          final rawTarget = widget.window.chapterRawToDisplay(
+            item.chapterId,
+            _lastEmittedRaw!,
+          );
+          if (rawTarget >= 0) {
+            target = rawTarget;
+            _reanchorEmitRaw = _lastEmittedRaw;
+          }
+        }
+      }
     } else if (item is TransitionDisplay) {
       // A transition is content too: rebuilding spread mappings (e.g. when a
       // wide page is decoded) must not turn the notice into the next page.
@@ -378,7 +406,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _dragOffset = 0;
     // didUpdateWidget runs during build; defer ancestor notification.
     Future.microtask(() {
-      if (mounted) _emitRawPage();
+      final override = _reanchorEmitRaw;
+      _reanchorEmitRaw = null;
+      if (mounted) _emitRawPage(overrideRaw: override);
     });
   }
 
@@ -444,13 +474,23 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (_isIdle) widget.onIdle?.call();
   }
 
-  void _emitRawPage() {
+  void _emitRawPage({int? overrideRaw}) {
     if (widget.window.isEmpty) {
       _notifyIdle();
       return;
     }
+    if (overrideRaw != null) {
+      final here = widget.window.displayToChapterRaw(_displayIndex);
+      if (here != null) {
+        _lastEmittedRaw = overrideRaw;
+        widget.onChapterPageChanged(here.chapterId, overrideRaw);
+        _notifyIdle();
+        return;
+      }
+    }
     final progress = widget.window.displayToChapterProgressRaw(_displayIndex);
     if (progress != null) {
+      _lastEmittedRaw = progress.raw;
       widget.onChapterPageChanged(progress.chapterId, progress.raw);
     }
     _notifyIdle();

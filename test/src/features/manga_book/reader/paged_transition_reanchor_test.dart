@@ -175,4 +175,96 @@ void main() {
     expect(progress.last, (5, 2));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('offset phase flips alternate around the reported page', (
+    tester,
+  ) async {
+    final dir = Directory.systemTemp.createTempSync('paged-offset-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final page = File('${dir.path}/page.png')
+      ..writeAsBytesSync(
+        base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+        ),
+      );
+    WindowChapter offsetChapter(bool offset) => WindowChapter(
+      chapterId: 1,
+      chapterName: 'Chapter 1',
+      mapping: buildSpreadMapping(
+        pageCount: 9,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        offsetDoublePages: offset,
+        isWide: (_) => false,
+      ),
+      pages: List.filled(9, page.uri.toString()),
+    );
+    final controller = PagedReaderController();
+    final progress = <(int, int)>[];
+    Future<void> pump(bool offset) async {
+      final window = buildPagedDisplayWindow(
+        chapters: [offsetChapter(offset)],
+        forceTransition: false,
+      );
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+            child: SizedBox(
+              width: 600,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 0,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: false,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+                mouseScrollSpeed: 1,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, _, _) {},
+                onChapterPageChanged: (id, raw) => progress.add((id, raw)),
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: false,
+                doubleTapToZoom: false,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pump(false);
+    controller.jumpToRaw(6);
+    await tester.pumpAndSettle();
+    // Slot (6,7) reports its furthest page.
+    expect(progress.last, (1, 7));
+
+    // Toggling the offset phase must alternate the pairing around the page
+    // being read — never walk it backwards through the chapter.
+    await pump(true);
+    await tester.pumpAndSettle();
+    expect(progress.last, (1, 7));
+
+    await pump(false);
+    await tester.pumpAndSettle();
+    expect(progress.last, (1, 7));
+
+    await pump(true);
+    await tester.pumpAndSettle();
+    expect(progress.last, (1, 7));
+    expect(tester.takeException(), isNull);
+  });
 }
