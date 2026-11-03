@@ -663,6 +663,17 @@ class ReaderWrapper extends HookConsumerWidget {
                         return null;
                       },
                     ),
+                    ToggleOffsetDoublePagesIntent:
+                        CallbackAction<ToggleOffsetDoublePagesIntent>(
+                          onInvoke: (intent) {
+                            final current =
+                                ref.read(offsetDoublePagesProvider) ?? false;
+                            ref
+                                .read(offsetDoublePagesProvider.notifier)
+                                .update(!current);
+                            return null;
+                          },
+                        ),
                     // Without a viewport callback, fall back to page navigation; down always means down regardless of tap inversion.
                     ViewportScrollForwardIntent:
                         CallbackAction<ViewportScrollForwardIntent>(

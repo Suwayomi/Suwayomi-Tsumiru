@@ -31,6 +31,8 @@ class FirstPageIntent extends Intent {}
 
 class LastPageIntent extends Intent {}
 
+class ToggleOffsetDoublePagesIntent extends Intent {}
+
 ShortcutManager readerShortcutManager(Axis scrollDirection,
         {bool isRtl = false, bool autoScrollSupported = false}) =>
     ShortcutManager(
@@ -88,6 +90,8 @@ ShortcutManager readerShortcutManager(Axis scrollDirection,
             ViewportScrollForwardIntent(),
         const SingleActivator(LogicalKeyboardKey.home): FirstPageIntent(),
         const SingleActivator(LogicalKeyboardKey.end): LastPageIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyO):
+            ToggleOffsetDoublePagesIntent(),
         const SingleActivator(LogicalKeyboardKey.escape): HideQuickOpenIntent(),
       },
     );
