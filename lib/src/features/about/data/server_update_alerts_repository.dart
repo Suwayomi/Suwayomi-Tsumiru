@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
-import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../account/data/account_permission.dart';
@@ -82,26 +81,6 @@ final serverUpdateAlertSettingsProvider =
     FutureProvider.autoDispose<ServerUpdateAlertSettings?>(
       (ref) => ref.watch(serverUpdateAlertsRepositoryProvider).settings(),
     );
-
-({bool showUpdatedNotice, bool storeVersion})
-decideServerUpdateAlerts({
-  required String currentVersion,
-  required String? lastSeenVersion,
-  required bool informVersionUpdated,
-}) {
-  const none = (
-    showUpdatedNotice: false,
-    storeVersion: false,
-  );
-  if (currentVersion.isBlank) return none;
-  return (
-    showUpdatedNotice:
-        !lastSeenVersion.isBlank &&
-        lastSeenVersion != currentVersion &&
-        informVersionUpdated,
-    storeVersion: lastSeenVersion.isBlank || lastSeenVersion != currentVersion,
-  );
-}
 
 const updateCheckInterval = Duration(hours: 1);
 

@@ -26,9 +26,7 @@ bool isServerHostedWeb({
 bool isTsumiruTag(String? tag) =>
     tag != null && RegExp(r'^v\d+\.\d+\.\d+').hasMatch(tag);
 
-bool isTsumiruFlavor(String? flavor) => flavor == 'TSUMIRU';
-
 bool installedTsumiruDiffers(String? tag, String version, {String? flavor}) {
-  if (flavor != null && !isTsumiruFlavor(flavor)) return false;
+  if (flavor != null && flavor != 'TSUMIRU') return false;
   return isTsumiruTag(tag) && tag != 'v$version';
 }

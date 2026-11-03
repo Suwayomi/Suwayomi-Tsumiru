@@ -47,6 +47,7 @@ class ServerSettingsPageShell extends ConsumerWidget {
     final canManage = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.MANAGE_SETTINGS);
+    final showContent = canManage || !showPermissionNotice;
     final serverSettings = ref.watch(settingsProvider);
     Future<void> onRefresh() async {
       ref.invalidate(webInterfaceSettingsProvider);
@@ -110,14 +111,14 @@ class ServerSettingsPageShell extends ConsumerWidget {
                           );
                         },
                       ),
-                    if (!canManage && showPermissionNotice)
+                    if (!showContent)
                       ListTile(
                         subtitle: Text(
                           context.l10n.manageSettingsPermissionRequired,
                         ),
                       ),
-                    if (canManage || !showPermissionNotice) ...always,
-                    if ((canManage || !showPermissionNotice) &&
+                    if (showContent) ...always,
+                    if (showContent &&
                         serverSettings.value != null)
                       ...whenData(serverSettings.value!),
                   ],

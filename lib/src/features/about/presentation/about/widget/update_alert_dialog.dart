@@ -65,7 +65,7 @@ class _UpdateAlertDialogState extends ConsumerState<UpdateAlertDialog> {
           setState(() => _progress = status.progress);
         }
       },
-      onError: (_) => _failed(),
+      onError: (_) {},
     );
     try {
       await _installer!.install();

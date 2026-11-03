@@ -14,6 +14,7 @@ void main() {
           diff: const SignInDiff(),
           admin: true,
           web: false,
+          sameOrigin: false,
           follow: SignInFollowUp.ui,
           refusal: null,
         ),
@@ -24,6 +25,7 @@ void main() {
           diff: const SignInDiff(),
           admin: true,
           web: false,
+          sameOrigin: false,
           follow: SignInFollowUp.none,
           refusal: null,
         ),
@@ -34,6 +36,7 @@ void main() {
           diff: const SignInDiff(audience: true, password: true),
           admin: true,
           web: false,
+          sameOrigin: false,
           follow: SignInFollowUp.reauthenticate,
           refusal: null,
         ),
@@ -45,6 +48,7 @@ void main() {
             diff: const SignInDiff(),
             admin: false,
             web: false,
+            sameOrigin: false,
             follow: null,
             refusal: SignInRefusal.adminOnly,
           ),
@@ -55,9 +59,22 @@ void main() {
             diff: const SignInDiff(),
             admin: true,
             web: true,
+            sameOrigin: false,
             follow: null,
             refusal: SignInRefusal.unsupportedWebMode,
           ),
+          for (final sameOrigin in [true, false])
+            (
+              accounts: true,
+              from: AuthType.none,
+              to: mode,
+              diff: const SignInDiff(),
+              admin: true,
+              web: true,
+              sameOrigin: sameOrigin,
+              follow: sameOrigin ? SignInFollowUp.reloadBrowser : null,
+              refusal: sameOrigin ? null : SignInRefusal.unsupportedWebMode,
+            ),
         ],
       ];
       for (final row in cases) {
@@ -68,7 +85,7 @@ void main() {
           diff: row.diff,
           admin: row.admin,
           web: row.web,
-          sameOrigin: false,
+          sameOrigin: row.sameOrigin,
           hasCredentials: true,
         );
         expect(result.followUp, row.follow, reason: '$row');
@@ -76,25 +93,4 @@ void main() {
       }
     },
   );
-  test('hosted web hands Basic and Simple sign-in to the browser', () {
-    for (final mode in [AuthType.basic, AuthType.simpleLogin]) {
-      SignInDecision decide({required bool sameOrigin}) =>
-          decideSignInTransition(
-            accounts: true,
-            currentMode: AuthType.none,
-            finalMode: mode,
-            diff: const SignInDiff(),
-            admin: true,
-            web: true,
-            sameOrigin: sameOrigin,
-            hasCredentials: true,
-          );
-
-      expect(decide(sameOrigin: true).followUp, SignInFollowUp.reloadBrowser);
-      expect(
-        decide(sameOrigin: false).refusal,
-        SignInRefusal.unsupportedWebMode,
-      );
-    }
-  });
 }
