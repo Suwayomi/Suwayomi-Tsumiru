@@ -273,6 +273,12 @@ class _PagedSection extends ConsumerWidget {
         ),
         CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.offsetDoublePages),
+          value: settings.offsetDoublePages,
+          onChanged: model.setOffsetDoublePages,
+        ),
+        CompactSwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.dualPageSpreadInLandscape),
           value: settings.trueDualPageSpread,
           onChanged: model.setTrueDualPageSpread,

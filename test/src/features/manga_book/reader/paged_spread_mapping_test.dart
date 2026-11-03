@@ -101,4 +101,122 @@ void main() {
       expect(primaries(m), [0, 1, 1, 2]);
     });
   });
+
+  group('offset double spreads — WebUI getDoublePageModePages parity', () {
+    test('offset off pairs from page 0 (the current contract)', () {
+      // | 0+1 | 2+3 | 4+5 | 6+7 | 8 |
+      final m = buildSpreadMapping(
+        pageCount: 9,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        isWide: wideSet(noWide),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0), PageUnit(1)),
+        SpreadEntry(PageUnit(2), PageUnit(3)),
+        SpreadEntry(PageUnit(4), PageUnit(5)),
+        SpreadEntry(PageUnit(6), PageUnit(7)),
+        SpreadEntry(PageUnit(8)),
+      ]);
+    });
+
+    test('offset on solos the first page and shifts every pair by one', () {
+      // | 0 | 1+2 | 3+4 | 5+6 | 7+8 |
+      final m = buildSpreadMapping(
+        pageCount: 9,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        offsetDoublePages: true,
+        isWide: wideSet(noWide),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0)),
+        SpreadEntry(PageUnit(1), PageUnit(2)),
+        SpreadEntry(PageUnit(3), PageUnit(4)),
+        SpreadEntry(PageUnit(5), PageUnit(6)),
+        SpreadEntry(PageUnit(7), PageUnit(8)),
+      ]);
+      // Seekbar contract: reading-first raw per slot, last slot completes the chapter.
+      expect(primaries(m), [0, 1, 3, 5, 7]);
+      expect([for (final e in m.entries) e.progressRaw], [0, 2, 4, 6, 8]);
+      expect(m.rawToDisplay(4), 2);
+      expect(m.rawToDisplay(8), 4);
+    });
+
+    test('offset on with an even-slot wide page: phase breaks around it', () {
+      // pages: 0 1 [2 wide] 3 4 → the wide occupies two book slots, so the
+      // offset phase cannot resume cleanly and neighbours stay solo.
+      final m = buildSpreadMapping(
+        pageCount: 5,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        offsetDoublePages: true,
+        isWide: wideSet({2}),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0)),
+        SpreadEntry(PageUnit(1)),
+        SpreadEntry(PageUnit(2)),
+        SpreadEntry(PageUnit(3)),
+        SpreadEntry(PageUnit(4)),
+      ]);
+    });
+
+    test('offset on with an odd-slot wide page: pairs resume after it', () {
+      // pages: 0 1 2 [3 wide] 4 5 → | 0 | 1+2 | [3] | 4+5 |
+      final m = buildSpreadMapping(
+        pageCount: 6,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        offsetDoublePages: true,
+        isWide: wideSet({3}),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0)),
+        SpreadEntry(PageUnit(1), PageUnit(2)),
+        SpreadEntry(PageUnit(3)),
+        SpreadEntry(PageUnit(4), PageUnit(5)),
+      ]);
+    });
+
+    test('offset off with an odd-slot wide page: parity holds after it', () {
+      // pages: 0 1 2 [3 wide] 4 5 → the wide occupies two slots, so page 4
+      // lands on an odd slot (no backward partner) and stays solo.
+      final m = buildSpreadMapping(
+        pageCount: 6,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        isWide: wideSet({3}),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0), PageUnit(1)),
+        SpreadEntry(PageUnit(2)),
+        SpreadEntry(PageUnit(3)),
+        SpreadEntry(PageUnit(4)),
+        SpreadEntry(PageUnit(5)),
+      ]);
+    });
+
+    test('offset on with split wide pages: halves pair like normal units', () {
+      // pages: [0 wide] 1 2 → 0L | 0R+1 | 2
+      final m = buildSpreadMapping(
+        pageCount: 3,
+        doublePages: true,
+        splitWide: true,
+        splitInvert: false,
+        offsetDoublePages: true,
+        isWide: wideSet({0}),
+      );
+      expect(m.entries, const [
+        SpreadEntry(PageUnit(0, half: PageHalf.left)),
+        SpreadEntry(PageUnit(0, half: PageHalf.right), PageUnit(1)),
+        SpreadEntry(PageUnit(2)),
+      ]);
+    });
+  });
 }

@@ -67,6 +67,13 @@ class InvertDoublePages extends _$InvertDoublePages
 }
 
 @riverpod
+class OffsetDoublePages extends _$OffsetDoublePages
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.offsetDoublePages);
+}
+
+@riverpod
 class CropBorders extends _$CropBorders with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.cropBorders);

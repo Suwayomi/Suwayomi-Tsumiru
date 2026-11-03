@@ -83,6 +83,10 @@ class ReaderBottomControls extends ConsumerWidget {
     );
     final pageLayout = ref.watch(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final dualPageSplitPaged = ref.watch(dualPageSplitPagedProvider).ifNull();
+    final trueDualPageSpread = ref
+        .watch(trueDualPageSpreadProvider)
+        .ifNull();
+    final offsetDoublePages = ref.watch(offsetDoublePagesProvider).ifNull();
     final cropBorders = isPagedMode
         ? ref.watch(cropBordersProvider).ifNull()
         : ref.watch(cropBordersWebtoonProvider).ifNull();
@@ -101,6 +105,18 @@ class ReaderBottomControls extends ConsumerWidget {
           : PageLayout.doublePages;
       ref.read(pageLayoutKeyProvider.notifier).update(next);
     }
+
+    // Mirrors the reader's wantDouble so the offset toggle only shows when
+    // double pages are actually displayed (Automatic resolves in landscape).
+    final isLandscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    final wantDouble =
+        scrollDirection == Axis.horizontal &&
+        switch (pageLayout) {
+          PageLayout.doublePages => true,
+          PageLayout.singlePage => false,
+          PageLayout.automatic => isLandscape || trueDualPageSpread,
+        };
 
     return MeasureSize(
       onChange: (size) {
@@ -193,6 +209,18 @@ class ReaderBottomControls extends ConsumerWidget {
                         tooltip: context.l10n.pageLayout,
                         icon: Icon(_pageLayoutIcon(pageLayout)),
                         onPressed: togglePageLayout,
+                      ),
+                    if (isPagedMode && wantDouble && !dualPageSplitPaged)
+                      IconButton(
+                        tooltip: context.l10n.offsetDoublePages,
+                        icon: Icon(
+                          offsetDoublePages
+                              ? FluentIcons.arrow_swap_24_filled
+                              : FluentIcons.arrow_swap_24_regular,
+                        ),
+                        onPressed: () => ref
+                            .read(offsetDoublePagesProvider.notifier)
+                            .update(!offsetDoublePages),
                       ),
                     IconButton(
                       tooltip: context.l10n.settings,

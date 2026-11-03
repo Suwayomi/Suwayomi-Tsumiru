@@ -134,6 +134,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         };
     final splitWide = settings.dualPageSplitPaged && isHorizontal;
     final splitInvert = settings.dualPageInvertPaged;
+    final offsetDoublePages = settings.offsetDoublePages;
     final reversePair = settings.invertDoublePages != reverse;
     final (pageFit, pageSize) = settings.imageScaleType.pagedFit(
       context.width,
@@ -616,6 +617,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
                 doublePages: wantDouble,
                 splitWide: splitWide,
                 splitInvert: splitInvert,
+                offsetDoublePages: offsetDoublePages,
                 isWide: (raw) =>
                     (widePages.value[loadedChapters.value[index].chapterId] ??
                             const {})
@@ -636,6 +638,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         wantDouble,
         splitWide,
         splitInvert,
+        offsetDoublePages,
         widePages.value,
         settings.alwaysShowChapterTransition,
         prevChapterExists,
