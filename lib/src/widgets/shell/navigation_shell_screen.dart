@@ -13,16 +13,15 @@ import 'package:pub_semver/pub_semver.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/app_distribution.dart';
 import '../../features/about/data/about_repository.dart';
-import '../../features/about/data/server_update_alerts_repository.dart';
 import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
+import '../../features/about/presentation/about/widget/update_alert_checker.dart';
 import '../../features/account/data/account_providers.dart';
 import '../../features/auth/presentation/basic_auth_deprecation.dart';
 import '../../features/offline/data/account_storage_recovery_state.dart';
 import '../../features/offline/presentation/account_storage_recovery_banner.dart';
 import '../../graphql/__generated__/schema.graphql.dart';
-import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
 import '../desktop/desktop_page_frame.dart';
@@ -73,61 +72,18 @@ class NavigationShellScreen extends HookConsumerWidget {
     );
   }
 
-  Future<void> checkServerUpdateAlerts({
-    required BuildContext context,
-    required WidgetRef ref,
-  }) async {
-    final goRouter = GoRouter.of(context);
-    final aboutLocation = const AboutRoute().location;
-    try {
-      final canManage = ref
-          .read(settledAccountAccessProvider)
-          .allows(Enum$UserPermission.MANAGE_SETTINGS);
-      final settings = canManage
-          ? await ref.read(serverUpdateAlertsRepositoryProvider).settings()
-          : null;
-      final about = await ref.read(aboutRepositoryProvider).getAbout();
-      if (!context.mounted) return;
-      final currentVersion = about?.version ?? '';
-      final decision = decideServerUpdateAlerts(
-        canManage: canManage,
-        currentVersion: currentVersion,
-        lastSeenVersion: ref.read(lastSeenServerVersionProvider),
-        informVersionUpdated: settings?.informVersionUpdated ?? true,
-        informAvailableUpdate: settings?.informAvailableUpdate ?? true,
-      );
-      if (decision.storeVersion) {
-        ref.read(lastSeenServerVersionProvider.notifier).update(currentVersion);
-      }
-      final toast = ref.read(toastProvider);
-      if (decision.showUpdatedNotice && context.mounted) {
-        toast?.show(context.l10n.serverUpdatedTo(currentVersion));
-      }
-      if (!decision.checkAvailable) return;
-      final updates = await ref
-          .read(aboutRepositoryProvider)
-          .checkServerUpdate();
-      if (!context.mounted) return;
-      String? newestTag;
-      for (final entry in updates ?? []) {
-        if (entry.channel == about?.buildType) {
-          newestTag = entry.tag;
-          break;
-        }
-      }
-      if (isNewerServerVersion(currentVersion, newestTag) && context.mounted) {
-        toast?.showWithAction(
-          context.l10n.serverUpdateAvailable,
-          actionLabel: context.l10n.about,
-          onAction: () => goRouter.push(aboutLocation),
-        );
-      }
-    } catch (_) {}
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serverHosted = ref.watch(serverHostedWebProvider);
+    final canManage = ref.watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.MANAGE_SETTINGS);
+    useEffect(() {
+      final checker = UpdateAlertChecker(
+        context, ProviderScope.containerOf(context, listen: false),
+      );
+      Future.microtask(checker.start);
+      return checker.dispose;
+    }, [serverHosted, canManage]);
     useEffect(() {
       if (!serverHosted) {
         if (isGooglePlayBuild) return null;
@@ -141,8 +97,6 @@ class NavigationShellScreen extends HookConsumerWidget {
             updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
             toast: ref.read(toastProvider),
           );
-          if (!context.mounted) return;
-          await checkServerUpdateAlerts(context: context, ref: ref);
         });
         return null;
       }
@@ -172,11 +126,6 @@ class NavigationShellScreen extends HookConsumerWidget {
         container.read(webBuildReloadRequiredProvider.notifier).check();
       }
 
-      Future.microtask(() async {
-        await ref.read(startupWebRevisionProvider.future);
-        if (!context.mounted || !ref.read(serverHostedWebProvider)) return;
-        await checkServerUpdateAlerts(context: context, ref: ref);
-      });
       checkInstalledBuild();
       final removeListeners = listenForWebUpdate(checkInstalledBuild);
       return () {

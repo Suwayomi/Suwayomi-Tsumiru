@@ -6,7 +6,7 @@
 
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:pub_semver/pub_semver.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
@@ -18,6 +18,8 @@ import '../../account/data/account_permission.dart';
 typedef ServerUpdateAlertSettings = ({
   bool informVersionUpdated,
   bool informAvailableUpdate,
+  bool webUIInformVersionUpdated,
+  bool webUIInformAvailableUpdate,
   Map<String, String> metas,
 });
 
@@ -43,6 +45,14 @@ class ServerUpdateAlertsRepository {
       informAvailableUpdate: _decodeAlertFlag(
         metas,
         'serverInformAvailableUpdate',
+      ),
+      webUIInformVersionUpdated: _decodeAlertFlag(
+        metas,
+        'webUIInformVersionUpdated',
+      ),
+      webUIInformAvailableUpdate: _decodeAlertFlag(
+        metas,
+        'webUIInformAvailableUpdate',
       ),
       metas: metas,
     );
@@ -73,40 +83,67 @@ final serverUpdateAlertSettingsProvider =
       (ref) => ref.watch(serverUpdateAlertsRepositoryProvider).settings(),
     );
 
-({bool showUpdatedNotice, bool storeVersion, bool checkAvailable})
+({bool showUpdatedNotice, bool storeVersion})
 decideServerUpdateAlerts({
-  required bool canManage,
   required String currentVersion,
   required String? lastSeenVersion,
   required bool informVersionUpdated,
-  required bool informAvailableUpdate,
 }) {
   const none = (
     showUpdatedNotice: false,
     storeVersion: false,
-    checkAvailable: false,
   );
-  if (!canManage || currentVersion.isBlank) return none;
+  if (currentVersion.isBlank) return none;
   return (
     showUpdatedNotice:
         !lastSeenVersion.isBlank &&
         lastSeenVersion != currentVersion &&
         informVersionUpdated,
     storeVersion: lastSeenVersion.isBlank || lastSeenVersion != currentVersion,
-    checkAvailable: informAvailableUpdate,
   );
 }
 
-bool isNewerServerVersion(String current, String? candidate) {
-  final tag = candidate?.trim();
-  if (tag.isBlank) return false;
-  String strip(String value) =>
-      value.startsWith('v') ? value.substring(1) : value;
-  try {
-    return Version.parse(
-      strip(tag!),
-    ).compareTo(Version.parse(strip(current))).isGreaterThan(0);
-  } catch (_) {
-    return false;
-  }
+const updateCheckInterval = Duration(hours: 1);
+
+bool shouldShowUpdate({
+  required String version,
+  required String? ignoredVersion,
+  required int closedTimestamp,
+  required int now,
+}) => version != ignoredVersion &&
+    now - closedTimestamp >= updateCheckInterval.inMilliseconds;
+
+class UpdateReminderStore {
+  const UpdateReminderStore(this.preferences, this.key);
+
+  final SharedPreferences preferences;
+  final String key;
+
+  String _key(String suffix) => 'UpdateChecker::$key::$suffix';
+
+  int get nextCheck =>
+      (preferences.getInt(_key('lastUpdateCheck')) ?? 0) +
+      updateCheckInterval.inMilliseconds;
+
+  int get reminderEnds =>
+      (preferences.getInt(_key('closeTimestamp')) ?? 0) +
+      updateCheckInterval.inMilliseconds;
+
+  bool show(String version) => shouldShowUpdate(
+    version: version,
+    ignoredVersion: preferences.getString(_key('ignoreUpdate')),
+    closedTimestamp: preferences.getInt(_key('closeTimestamp')) ?? 0,
+    now: DateTime.now().millisecondsSinceEpoch,
+  );
+
+  Future<void> checked() => preferences.setInt(
+    _key('lastUpdateCheck'), DateTime.now().millisecondsSinceEpoch,
+  );
+
+  Future<void> remindLater() => preferences.setInt(
+    _key('closeTimestamp'), DateTime.now().millisecondsSinceEpoch,
+  );
+
+  Future<void> ignore(String version) =>
+      preferences.setString(_key('ignoreUpdate'), version);
 }
