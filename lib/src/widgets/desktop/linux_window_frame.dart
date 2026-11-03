@@ -7,6 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../utils/desktop/linux_button_layout.dart';
+
 const double _linuxWindowCornerRadius = 15;
 
 class LinuxWindowFrame extends StatefulWidget {
@@ -38,6 +40,8 @@ class _LinuxWindowFrameState extends State<LinuxWindowFrame> {
   }
 
   void _updateState(Map<Object?, Object?> state) {
+    linuxButtonLayoutNotifier.value =
+        parseLinuxButtonLayout(state['decorationLayout']);
     if (!mounted) return;
     setState(() {
       _rounded = state['rounded'] == true;
