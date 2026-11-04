@@ -4499,5 +4499,67 @@
     },
     "splitTallImages": "Divideix les imatges altes",
     "basicAuthDeprecationTitle": "L'autenticació bàsica està obsoleta",
-    "basicAuthDeprecationBody": "Canvieu a un altre mètode d'autenticació a la secció «Inici de sessió» de la configuració del servidor."
+    "basicAuthDeprecationBody": "Canvieu a un altre mètode d'autenticació a la secció «Inici de sessió» de la configuració del servidor.",
+    "offsetDoublePages": "Desplaça les pàgines dobles",
+    "@offsetDoublePages": {
+        "description": "Paged reader toggle: shift double-page pairing by one"
+    },
+    "updateAvailableTitle": "Hi ha una actualització disponible",
+    "updatedVersionTitle": "Versió actualitzada",
+    "updateRemindLater": "Recorda-m'ho més tard",
+    "updateIgnore": "Ignora",
+    "updateChangelog": "Registre de canvis",
+    "couldNotUpdateTsumiru": "No s'ha pogut actualitzar Tsumiru",
+    "serverVersionAvailable": "La versió {version} ({channel}) del servidor està disponible per baixar",
+    "@serverVersionAvailable": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "serverVersionUpdated": "El servidor s'ha actualitzat a la versió {version} ({channel})",
+    "@serverVersionUpdated": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruVersionAvailable": "La versió {version} ({channel}) de Tsumiru està disponible per baixar",
+    "@tsumiruVersionAvailable": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruVersionUpdated": "Tsumiru s'ha actualitzat a la versió {version} ({channel})",
+    "@tsumiruVersionUpdated": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruUpdating": "{progress}% | S'està actualitzant…",
+    "@tsumiruUpdating": {
+        "placeholders": {
+            "progress": {
+                "type": "String"
+            }
+        }
+    }
 }
