@@ -381,6 +381,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         ? target
         : _clampDisplay(widget.initialDisplayIndex);
     _dragOffset = 0;
+    _pruneDistantZoom();
     // didUpdateWidget runs during build; defer ancestor notification.
     Future.microtask(() {
       if (mounted) _emitRawPage();
@@ -417,6 +418,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       _displayIndex = target;
       _dragOffset = 0;
     });
+    _pruneDistantZoom();
     _emitRawPage();
   }
 
@@ -522,6 +524,32 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         maxMultiplier: _maxMultiplier,
       ),
     );
+  }
+
+  void _pruneDistantZoom() {
+    final keep = <({int chapterId, PageUnit unit})>{};
+    for (final index in _visibleDisplayIndexes()) {
+      final item = widget.window.items[index];
+      if (item is SpreadDisplay) {
+        keep.add((chapterId: item.chapterId, unit: item.entry.first));
+      }
+    }
+    final removed = <_PageZoomController>[];
+    _zoomControllers.removeWhere((key, controller) {
+      if (keep.contains(key)) return false;
+      if (identical(controller, _panAnimationTarget)) return false;
+      if (identical(controller, _zoomAnimationTarget)) return false;
+      removed.add(controller);
+      _naturalSizes.remove(key);
+      return true;
+    });
+    if (removed.isEmpty) return;
+    // A removed page may still be listening during this frame; dispose after it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final controller in removed) {
+        controller.dispose();
+      }
+    });
   }
 
   void _onPointerDown(PointerDownEvent event) {
@@ -1035,6 +1063,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
           _displayIndex = targetDisplay;
           _dragOffset = 0;
         });
+        _pruneDistantZoom();
         _emitRawPage();
       },
     );
@@ -1225,10 +1254,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
                     _PositionedDisplayEntry(
                       axis: widget.axis,
                       offset: _entryOffset(index),
-                      child: _buildDisplayEntry(
-                        index,
-                        active: index == _displayIndex,
-                      ),
+                      child: _buildDisplayEntry(index),
                     ),
                 ],
               ),
@@ -1248,7 +1274,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   double _entryOffset(int index) =>
       (index - _displayIndex) * _axisExtent * _axisSign + _dragOffset;
 
-  Widget _buildDisplayEntry(int index, {required bool active}) {
+  Widget _buildDisplayEntry(int index) {
     final item = widget.window.items[index];
     if (item is TransitionDisplay) {
       return widget.transitionBuilder(item);
@@ -1259,8 +1285,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     return ClipRect(
       child: _ZoomedDisplayEntry(
         controller: _zoomControllerFor(index),
-        // Only transform the focused page; retained off-screen zoom/pan would overlap it.
-        active: active,
         child: DoublePageView(
           entry: spread.entry,
           pages: widget.window.pagesAt(index)!,
@@ -1380,21 +1404,13 @@ class _PositionedDisplayEntry extends StatelessWidget {
 }
 
 class _ZoomedDisplayEntry extends StatelessWidget {
-  const _ZoomedDisplayEntry({
-    required this.controller,
-    required this.active,
-    required this.child,
-  });
+  const _ZoomedDisplayEntry({required this.controller, required this.child});
 
   final _PageZoomController controller;
-
-  /// Only the focused page applies retained zoom/pan; neighbours render at base fit.
-  final bool active;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (!active) return child;
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
