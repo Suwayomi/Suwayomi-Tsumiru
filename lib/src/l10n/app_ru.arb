@@ -3844,5 +3844,67 @@
     },
     "splitTallImages": "Разделять высокие изображения",
     "basicAuthDeprecationTitle": "Basic Auth устарел",
-    "basicAuthDeprecationBody": "Пожалуйста, переключитесь на другой метод аутентификации в настройках входа на вашем сервере."
+    "basicAuthDeprecationBody": "Пожалуйста, переключитесь на другой метод аутентификации в настройках входа на вашем сервере.",
+    "offsetDoublePages": "Сдвинуть развороты",
+    "@offsetDoublePages": {
+        "description": "Paged reader toggle: shift double-page pairing by one"
+    },
+    "updateAvailableTitle": "Доступно обновление",
+    "updatedVersionTitle": "Обновлённая версия",
+    "updateRemindLater": "Напомнить позже",
+    "updateIgnore": "Игнорировать",
+    "updateChangelog": "Список изменений",
+    "couldNotUpdateTsumiru": "Не удалось обновить Tsumiru",
+    "serverVersionAvailable": "Версия сервера {version} ({channel}) доступна для загрузки",
+    "@serverVersionAvailable": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "serverVersionUpdated": "Сервер обновлён до версии {version} ({channel})",
+    "@serverVersionUpdated": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruVersionAvailable": "Версия Tsumiru {version} ({channel}) доступна для загрузки",
+    "@tsumiruVersionAvailable": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruVersionUpdated": "Tsumiru обновлён до версии {version} ({channel})",
+    "@tsumiruVersionUpdated": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruUpdating": "{progress}% | Обновление…",
+    "@tsumiruUpdating": {
+        "placeholders": {
+            "progress": {
+                "type": "String"
+            }
+        }
+    }
 }
