@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/double_page_view.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_display_window.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_spread_mapping.dart';
@@ -153,4 +154,72 @@ void main() {
 
     expect(seen, isEmpty, reason: 'recovery moved the reader off the page');
   });
+
+  testWidgets(
+    'a zoomed page keeps its zoom beside the current page and loses it two pages away',
+    (tester) async {
+      final pages = _localPages(4);
+      final mapping = buildSpreadMapping(
+        pageCount: pages.length,
+        doublePages: false,
+        splitWide: false,
+        splitInvert: false,
+        isWide: (_) => false,
+      );
+      final controller = PagedReaderController();
+      final seen = <int>[];
+      await _pumpViewport(
+        tester,
+        controller: controller,
+        mapping: mapping,
+        pages: pages,
+        initialDisplayIndex: 1,
+        onRawPageChanged: seen.add,
+        callbacks: _callbacks(),
+      );
+      seen.clear();
+
+      bool drawnZoomed(int visibleIndex) {
+        final page = find.byType(DoublePageView).at(visibleIndex);
+        final transforms = tester.widgetList<Transform>(
+          find.ancestor(of: page, matching: find.byType(Transform)),
+        );
+        return transforms.any(
+          (transform) => (transform.transform.storage[0] - 1.0).abs() > 0.01,
+        );
+      }
+
+      final center = tester.getCenter(find.byType(PagedReaderViewport));
+      await tester.tapAt(center);
+      // Let the first tap register while staying inside the double-tap window.
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tapAt(center);
+      await tester.pumpAndSettle();
+      expect(drawnZoomed(1), isTrue);
+
+      controller.jumpToRaw(2);
+      await tester.pumpAndSettle();
+      expect(seen.last, 2);
+
+      final gesture = await tester.startGesture(center);
+      await gesture.moveBy(const Offset(100, 0));
+      await tester.pump();
+      expect(drawnZoomed(0), isTrue);
+      await gesture.moveBy(const Offset(-100, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      controller.jumpToRaw(3);
+      await tester.pumpAndSettle();
+      expect(seen.last, 3);
+      controller.jumpToRaw(2);
+      await tester.pumpAndSettle();
+      expect(seen.last, 2);
+      controller.jumpToRaw(1);
+      await tester.pumpAndSettle();
+      expect(seen.last, 1);
+
+      expect(drawnZoomed(1), isFalse);
+    },
+  );
 }
