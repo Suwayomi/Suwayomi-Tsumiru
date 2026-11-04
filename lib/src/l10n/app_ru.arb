@@ -2328,15 +2328,6 @@
     "@serverUnreachableAction": {
         "description": "Button that opens the connection settings screen"
     },
-    "serverUpdateAvailable": "Доступно обновление сервера",
-    "serverUpdatedTo": "Сервер обновлён до {version}",
-    "@serverUpdatedTo": {
-        "placeholders": {
-            "version": {
-                "type": "String"
-            }
-        }
-    },
     "offlineViewBannerTitle": "Вы просматриваете офлайн-данные",
     "@offlineViewBannerTitle": {
         "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"

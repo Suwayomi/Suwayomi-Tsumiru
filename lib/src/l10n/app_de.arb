@@ -1489,15 +1489,6 @@
     },
     "select": "Auswählen",
     "selectAll": "Alle auswählen",
-    "serverUpdateAvailable": "Server-Update verfügbar",
-    "serverUpdatedTo": "Server aktualisiert auf {version}",
-    "@serverUpdatedTo": {
-        "placeholders": {
-            "version": {
-                "type": "String"
-            }
-        }
-    },
     "offlineViewBannerTitle": "Offline-Ansicht",
     "@offlineViewBannerTitle": {
         "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
