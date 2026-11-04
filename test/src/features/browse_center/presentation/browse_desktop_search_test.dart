@@ -24,6 +24,7 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/migration/controller/bulk_migration_providers.dart';
 import 'package:tsumiru/src/features/migration/presentation/screens/migration_source_picker_screen.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -90,6 +91,7 @@ Future<ProviderContainer> _pumpBrowse(
       libraryMangaListProvider.overrideWith((ref) async => []),
       libraryTagListProvider.overrideWithValue(const AsyncData(<String>[])),
       visibleCategoryListProvider.overrideWithValue(const AsyncData([])),
+      loggedInTrackersProvider.overrideWithValue(const AsyncData([])),
       sourceListProvider.overrideWith((ref) async => <SourceDto>[]),
       sourceMapFilteredProvider.overrideWithValue(
         AsyncData(<String, List<SourceDto>>{'en': sources}),

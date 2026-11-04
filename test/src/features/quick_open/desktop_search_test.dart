@@ -14,6 +14,7 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -75,6 +76,7 @@ Future<void> _pumpField(
       sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+      loggedInTrackersProvider.overrideWithValue(const AsyncData([])),
       ...unreachableServerStubs,
     ],
   );
