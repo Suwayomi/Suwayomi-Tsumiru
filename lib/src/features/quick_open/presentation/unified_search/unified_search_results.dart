@@ -31,7 +31,7 @@ const List<String> _searchExamples = [
 ];
 
 List<GoToTarget> _categoryTargets(WidgetRef ref) => [
-  for (final c in ref.watch(visibleCategoryListProvider).value ?? const [])
+  for (final c in ref.watch(libraryShownCategoryListProvider).value ?? const [])
     GoToTarget(
       label: (_) => c.name,
       icon: FluentIcons.folder_24_regular,

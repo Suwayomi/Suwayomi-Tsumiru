@@ -27,7 +27,7 @@ VoidCallback randomLibraryEntryAction(BuildContext context, WidgetRef ref) {
     final candidates = <MangaDto>[];
     if (groupType == 0) {
       final categories =
-          ref.read(visibleCategoryListProvider).value ?? const [];
+          ref.read(libraryShownCategoryListProvider).value ?? const [];
       for (var i = 0; i < categories.length; i++) {
         if (visibleSection != null
             ? categories[i].id != visibleSection

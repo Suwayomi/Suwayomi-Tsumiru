@@ -150,6 +150,38 @@ class _TabScrollHost extends HookWidget {
   }
 }
 
+/// Remembers the selected category so a rebuilt tab bar keeps it when still shown.
+class _TabSelectionScope extends HookWidget {
+  const _TabSelectionScope({
+    required this.categories,
+    required this.selected,
+    required this.child,
+  });
+
+  final List<CategoryDto> categories;
+  final ObjectRef<int> selected;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = DefaultTabController.of(context);
+    useEffect(() {
+      void onChange() {
+        if (controller.index < categories.length) {
+          selected.value = categories[controller.index]
+              .id
+              .getValueOnNullOrNegative();
+        }
+      }
+
+      controller.addListener(onChange);
+      onChange();
+      return () => controller.removeListener(onChange);
+    }, [controller, categories]);
+    return child;
+  }
+}
+
 class LibraryScreen extends HookConsumerWidget {
   const LibraryScreen({super.key, required this.categoryId});
   final int categoryId;
@@ -296,8 +328,14 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
-    final categoryList = ref.watch(visibleCategoryListProvider);
+    final categoryList = ref.watch(libraryShownCategoryListProvider);
     final searchToggled = useState(false);
+    final selectedId = useRef(categoryId);
+    final scaffoldKey = useMemoized(GlobalKey<ScaffoldState>.new);
+    useEffect(() {
+      selectedId.value = categoryId;
+      return null;
+    }, [categoryId]);
     final style =
         ref.watch(libraryGroupStyleKeyProvider) ?? LibraryGroupStyle.tabs;
     final categoryTabsOn = ref.watch(categoryTabsProvider).ifNull(true);
@@ -343,8 +381,12 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                 ? Duration.zero
                 : kTabScrollDuration,
             // Route params are category IDs, not visible-tab indices; hidden/empty categories shift positions.
-            initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
+            initialIndex: max(
+              0,
+              data.indexWhere((c) => c.id == selectedId.value),
+            ),
             child: Scaffold(
+              key: scaffoldKey,
               appBar: desktop
                   ? null
                   : AppBar(
@@ -493,7 +535,11 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                     ),
                   ),
                 );
-                  return _libraryPageLayout(tabStrip, slot);
+                  return _TabSelectionScope(
+                    categories: data,
+                    selected: selectedId,
+                    child: _libraryPageLayout(tabStrip, slot),
+                  );
               },
             ),
             ),
@@ -525,9 +571,15 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
-    final categoryList = ref.watch(visibleCategoryListProvider);
+    final categoryList = ref.watch(libraryShownCategoryListProvider);
+    final selectedId = useRef(categoryId);
+    useEffect(() {
+      selectedId.value = categoryId;
+      return null;
+    }, [categoryId]);
     final scrollController = useScrollController();
     final searchBarKey = useMemoized(() => GlobalKey());
+    final scaffoldKey = useMemoized(GlobalKey<ScaffoldState>.new);
     final isSearchBarHidden = _useIsSearchBarHidden(
       scrollController,
       searchBarKey,
@@ -585,8 +637,12 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
               ? Duration.zero
               : kTabScrollDuration,
           // Route params are category IDs, not visible-tab indices; hidden/empty categories shift positions.
-          initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
+          initialIndex: max(
+            0,
+            data.indexWhere((c) => c.id == selectedId.value),
+          ),
           child: Scaffold(
+            key: scaffoldKey,
             endDrawerEnableOpenDragGesture: false,
             endDrawer: const Drawer(
               width: kDrawerWidth,
@@ -739,7 +795,11 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
               ),
             ),
           );
-                return _libraryPageLayout(tabStrip, slot);
+                return _TabSelectionScope(
+                  categories: data,
+                  selected: selectedId,
+                  child: _libraryPageLayout(tabStrip, slot),
+                );
         },
       ),
     ),

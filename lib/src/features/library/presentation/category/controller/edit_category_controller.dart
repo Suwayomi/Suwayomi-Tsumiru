@@ -202,3 +202,34 @@ AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
         .toList(),
   );
 }
+
+/// Shown tabs; while filtering or searching, empty categories are dropped.
+@riverpod
+AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
+  final base = ref.watch(visibleCategoryListProvider);
+  if (ref.watch(showEmptyCategoriesSearchProvider).ifNull(false)) return base;
+  final searching =
+      (ref.watch(libraryQueryDebouncedProvider)?.trim()).isNotBlank;
+  if (!searching && ref.watch(libraryFilterActiveCountProvider) == 0) {
+    return base;
+  }
+  return base.copyWithData((list) {
+    if (list.isBlank) return list;
+    final shown = list!
+        .where((category) {
+          final filtered = ref
+              .watch(
+                categoryMangaListWithQueryAndFilterProvider(
+                  categoryId: category.id,
+                ),
+              )
+              .value;
+          return filtered == null || filtered.isNotEmpty;
+        })
+        .toList();
+    if (shown.isNotEmpty) return shown;
+    final defaultId = ref.watch(settledDefaultCategoryIdProvider);
+    final fallback = list.where((category) => category.id == defaultId);
+    return fallback.isNotEmpty ? fallback.toList() : list.sublist(0, 1);
+  });
+}

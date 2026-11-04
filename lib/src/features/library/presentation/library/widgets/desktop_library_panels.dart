@@ -666,12 +666,20 @@ class _GroupColumn extends ConsumerWidget {
             provider: categoryNumberOfItemsProvider,
             onChanged: ref.read(categoryNumberOfItemsProvider.notifier).update,
           ),
-          if (current == LibraryGroup.byDefault)
+          if (current == LibraryGroup.byDefault) ...[
             _PanelCheckRow(
               title: context.l10n.showHiddenCategories,
               provider: showHiddenCategoriesProvider,
               onChanged: ref.read(showHiddenCategoriesProvider.notifier).update,
             ),
+            _PanelCheckRow(
+              title: context.l10n.showEmptyCategoriesSearch,
+              provider: showEmptyCategoriesSearchProvider,
+              onChanged: ref
+                  .read(showEmptyCategoriesSearchProvider.notifier)
+                  .update,
+            ),
+          ],
         ],
         if (isGrid) ...[
           FilterSectionHeading(context.l10n.libraryColumnsPortrait),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
@@ -10,10 +11,15 @@ import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tsumiru/src/utils/webui_meta/webui_settings.dart';
 
 class CategoryLink extends Link {
   final cursors = <Object?>[];
@@ -128,6 +134,75 @@ void main() {
       [1, 2],
     );
   });
+
+  test('filtering hides categories with no matching series', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        defaultCategoryIdProvider.overrideWith((ref) async => 1),
+        settledDefaultCategoryIdProvider.overrideWithValue(1),
+        viewOfflineNowProvider.overrideWithValue(false),
+        serverUnreachableProvider.overrideWithValue(false),
+        offlineReadDatabaseProvider.overrideWithValue(null),
+        loggedInTrackersProvider.overrideWithValue(const AsyncData([])),
+        libraryTrackerNamesProvider.overrideWithValue(const {}),
+        webUiBoolProvider('ignoreFilters').overrideWithValue(false),
+        webUiBoolProvider('fuzzySearch').overrideWithValue(false),
+        libraryQueryDebouncedProvider.overrideWith(
+          _ImmediateQueryDebounced.new,
+        ),
+        categoryControllerProvider.overrideWith(_FilterCategories.new),
+        libraryMangaListProvider.overrideWith(
+          (ref) async => [
+            _filterManga(1, unread: 1, categories: [1]),
+            _filterManga(2, unread: 0, categories: [2]),
+          ],
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(libraryShownCategoryListProvider, (_, _) {});
+    container.listen(
+      categoryMangaListWithQueryAndFilterProvider(categoryId: 1),
+      (_, _) {},
+    );
+    container.listen(
+      categoryMangaListWithQueryAndFilterProvider(categoryId: 2),
+      (_, _) {},
+    );
+    await container.read(categoryControllerProvider.future);
+    await container.read(categoryMangaListProvider(1).future);
+    await container.read(categoryMangaListProvider(2).future);
+
+    List<int?> shown() => container
+        .read(libraryShownCategoryListProvider)
+        .value!
+        .map((category) => category.id)
+        .toList();
+
+    expect(shown(), [1, 2]);
+
+    container.read(libraryMangaFilterUnreadProvider.notifier).update(true);
+    expect(shown(), [1]);
+
+    container.read(showEmptyCategoriesSearchProvider.notifier).update(true);
+    expect(shown(), [1, 2]);
+
+    container.read(showEmptyCategoriesSearchProvider.notifier).update(false);
+    container.read(libraryMangaFilterUnreadProvider.notifier).update(null);
+    container
+        .read(libraryEntryFiltersProvider('status').notifier)
+        .update(const {'ONGOING': false});
+    expect(shown(), [1]);
+
+    container
+        .read(libraryEntryFiltersProvider('status').notifier)
+        .update(const {});
+    container.read(libraryQueryProvider.notifier).update('zzz');
+    expect(shown(), [1]);
+  });
 }
 
 class _EmptyCategories extends CategoryController {
@@ -143,10 +218,24 @@ class _Categories extends CategoryController {
   ];
 }
 
+class _ImmediateQueryDebounced extends LibraryQueryDebounced {
+  @override
+  String? build() => ref.watch(libraryQueryProvider);
+}
+
+class _FilterCategories extends CategoryController {
+  @override
+  Future<List<Fragment$CategoryDto>?> build() async => [
+    _category(1, 'Default', defaultCategory: true, totalCount: 1),
+    _category(2, 'Other', totalCount: 1),
+  ];
+}
+
 Fragment$CategoryDto _category(
   int id,
   String name, {
   bool defaultCategory = false,
+  int totalCount = 0,
 }) => Fragment$CategoryDto(
   defaultCategory: defaultCategory,
   id: id,
@@ -154,6 +243,46 @@ Fragment$CategoryDto _category(
   includeInUpdate: Enum$IncludeOrExclude.UNSET,
   name: name,
   order: id,
-  mangas: Fragment$CategoryDto$mangas(totalCount: 0),
+  mangas: Fragment$CategoryDto$mangas(totalCount: totalCount),
   meta: const [],
+);
+
+Fragment$MangaDto _filterManga(
+  int id, {
+  required int unread,
+  required List<int> categories,
+}) => Fragment$MangaDto(
+  id: id,
+  title: 'Manga $id',
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  genre: const [],
+  initialized: true,
+  meta: const [],
+  source: Fragment$MangaDto$source(
+    displayName: 'Test Source',
+    iconUrl: '',
+    id: '1',
+    contentWarning: Enum$ContentWarning.SAFE,
+    lang: 'en',
+    name: 'Test Source',
+    $extension: Fragment$MangaDto$source$extension(isObsolete: false),
+  ),
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(
+    nodes: [
+      for (final categoryId in categories)
+        Fragment$MangaDto$categories$nodes(id: categoryId),
+    ],
+  ),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: 'https://example.com/manga/$id',
+  user: Fragment$MangaDto$user(
+    bookmarkCount: 0,
+    downloadCount: 0,
+    inLibrary: true,
+    inLibraryAt: '0',
+    unreadCount: unread,
+  ),
 );
