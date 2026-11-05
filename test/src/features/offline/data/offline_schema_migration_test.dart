@@ -141,6 +141,10 @@ void main() {
       await db.customStatement(
         'ALTER TABLE offline_chapters DROP COLUMN failure_reason',
       );
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await db.customStatement(
+        'ALTER TABLE offline_categories DROP COLUMN web_ui_meta_json',
+      );
       await db.customStatement('PRAGMA user_version = 17');
       await db.close();
     }
@@ -156,6 +160,17 @@ void main() {
       expect(c.uploadDate, null);
       expect(c.fetchedAt, null);
       expect(c.failureReason, isNull);
+      expect(db.schemaVersion, 21);
+      expect((await db.allOfflineCategories()).single.webUiMetaJson, isNull);
+      const meta = '{"webUI_sortBy":"dateAdded","webUI_migration":"10"}';
+      await db.upsertCategory(
+        1,
+        'Reading',
+        0,
+        isHidden: false,
+        webUiMetaJson: meta,
+      );
+      expect((await db.allOfflineCategories()).single.webUiMetaJson, meta);
 
       await db.upsertMangaMetadata(
         id: 1,

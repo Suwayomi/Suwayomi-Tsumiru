@@ -281,6 +281,16 @@ class OfflineSync {
           isHidden: cat.isHidden,
           isDefaultCategory: cat.id == defaultCategoryId,
           autoAdd: cat.defaultCategory,
+          webUiMetaJson: jsonEncode({
+            for (final meta in cat.meta)
+              if (RegExp(
+                r'^webUI_(sortBy|sortDesc|hasUnreadChapters|hasReadChapters|'
+                r'hasDownloadedChapters|hasBookmarkedChapters|'
+                r'hasDuplicateChapters|hasStatus|hasSource|hasTrackerBinding|'
+                r'migration)(_(length|[0-9]+))?$',
+              ).hasMatch(meta.key))
+                meta.key: meta.value,
+          }),
         );
       }
       await _db.pruneRemovedCategories({for (final c in categories) c.id});

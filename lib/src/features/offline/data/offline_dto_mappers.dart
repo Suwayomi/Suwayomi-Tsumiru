@@ -107,7 +107,7 @@ MangaDto offlineMangaToDto(
     latestFetchedChapter: latestFetched,
     latestUploadedChapter: latestUploaded,
     meta: [
-      for (final e in _decodeMeta(m.metaJson).entries)
+      for (final e in decodeOfflineMeta(m.metaJson).entries)
         Fragment$MangaDto$meta(key: e.key, value: e.value),
     ],
     source: source,
@@ -120,7 +120,7 @@ MangaDto offlineMangaToDto(
   );
 }
 
-Map<String, String> _decodeMeta(String? metaJson) {
+Map<String, String> decodeOfflineMeta(String? metaJson) {
   if (metaJson == null || metaJson.isEmpty) return const {};
   try {
     return Map<String, String>.from(jsonDecode(metaJson) as Map);
@@ -132,7 +132,9 @@ Map<String, String> _decodeMeta(String? metaJson) {
 extension OfflineMangaCover on OfflineManga {
   String get displayCoverUrl => resolveDisplayCover(
     thumbnailUrl: thumbnailUrl,
-    meta: _decodeMeta(metaJson).entries.map((e) => (key: e.key, value: e.value)),
+    meta: decodeOfflineMeta(metaJson).entries.map(
+      (e) => (key: e.key, value: e.value),
+    ),
   );
 
   String? get coverVersion =>

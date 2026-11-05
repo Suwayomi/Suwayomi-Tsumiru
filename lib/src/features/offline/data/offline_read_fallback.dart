@@ -295,6 +295,8 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
           order: cat.sortOrder,
           mangas: Fragment$CategoryDto$mangas(totalCount: countFor(cat)),
           meta: [
+            for (final e in decodeOfflineMeta(cat.webUiMetaJson).entries)
+              Fragment$CategoryDto$meta(key: e.key, value: e.value),
             if (cat.isHidden)
               Fragment$CategoryDto$meta(
                 key: kCategoryHiddenMetaKey,

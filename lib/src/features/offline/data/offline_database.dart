@@ -132,6 +132,7 @@ class OfflineCategories extends Table {
   TextColumn get name => text()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+  TextColumn get webUiMetaJson => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -169,7 +170,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -404,6 +405,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.failureReason,
         );
       }
+      if (from < 21 && await _hasTable(offlineCategories)) {
+        await _addColumnIfMissing(
+          m,
+          offlineCategories,
+          offlineCategories.webUiMetaJson,
+        );
+      }
     },
     beforeOpen: (details) async {
       if (!details.wasCreated) await _addMissingColumns();
@@ -609,6 +617,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     required bool isHidden,
     bool? isDefaultCategory,
     bool autoAdd = false,
+    String? webUiMetaJson,
   }) => into(offlineCategories).insertOnConflictUpdate(
     OfflineCategoriesCompanion(
       id: Value(id),
@@ -617,6 +626,9 @@ class OfflineDatabase extends _$OfflineDatabase {
       isHidden: Value(isHidden),
       isDefaultCategory: Value(isDefaultCategory ?? id == 0),
       autoAdd: Value(autoAdd),
+      webUiMetaJson: webUiMetaJson == null
+          ? const Value.absent()
+          : Value(webUiMetaJson),
     ),
   );
 

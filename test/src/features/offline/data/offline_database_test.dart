@@ -17,7 +17,18 @@ void main() {
   tearDown(() => db.close());
 
   test('schema version and defaults round-trip', () async {
-    expect(db.schemaVersion, 20);
+    expect(db.schemaVersion, 21);
+    await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+    expect((await db.allOfflineCategories()).single.webUiMetaJson, null);
+    const meta = '{"webUI_sortBy":"unreadChapters","webUI_migration":"10"}';
+    await db.upsertCategory(
+      1,
+      'Reading',
+      0,
+      isHidden: false,
+      webUiMetaJson: meta,
+    );
+    expect((await db.allOfflineCategories()).single.webUiMetaJson, meta);
 
     await db
         .into(db.offlineMangas)

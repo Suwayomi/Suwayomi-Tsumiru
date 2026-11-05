@@ -221,6 +221,7 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
   Future<void> _writes = Future.value();
   final _optimistic = <String, String?>{};
   int _pending = 0;
+  bool _hasUnsyncedEdits = false;
 
   @override
   Map<String, String> build(int categoryId) {
@@ -276,7 +277,7 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
     state = next;
     _pending++;
     _writes = _writes.then((_) async {
-      await AppUtils.guard(() async {
+      final synced = await AppUtils.guard(() async {
         for (final plan in plans) {
           for (final e in plan.set.entries) {
             await repo.setCategoryMeta(
@@ -289,8 +290,10 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
             await repo.deleteCategoryMeta(categoryId: categoryId, key: key);
           }
         }
+        return true;
       }, toast);
-      if (!ref.mounted || --_pending != 0) return;
+      if (synced != true) _hasUnsyncedEdits = true;
+      if (!ref.mounted || --_pending != 0 || _hasUnsyncedEdits) return;
       await AppUtils.guard(() async {
         ref.invalidate(categoryControllerProvider);
         await ref.read(categoryControllerProvider.future);
