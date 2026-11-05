@@ -55,6 +55,8 @@ class SavedSourceSearches extends HookConsumerWidget {
     } on FormatException {
       searches = {};
     }
+    final baseFilters =
+        ref.watch(baseSourceMangaFilterListProvider(sourceId)).value;
     final saving = useState(false);
     final nameController = useTextEditingController();
     Future<void> writeSearch(String name, Map<String, dynamic>? search) async {
@@ -63,7 +65,7 @@ class SavedSourceSearches extends HookConsumerWidget {
         await AppUtils.guard(() async {
           final repository = WebUiMetaRepository(ref.read(graphQlClientProvider));
           var latestMetas = await repository.readSourceMetas(sourceId);
-          var next = _decodeSavedSearches(
+          var next = _rawSavedSearches(
             readWebUiValue(latestMetas, 'savedSearches'),
           );
           if (!context.mounted) return;
@@ -79,7 +81,7 @@ class SavedSourceSearches extends HookConsumerWidget {
                 return;
               }
               latestMetas = await repository.readSourceMetas(sourceId);
-              next = _decodeSavedSearches(
+              next = _rawSavedSearches(
                 readWebUiValue(latestMetas, 'savedSearches'),
               );
             }
@@ -194,12 +196,27 @@ class SavedSourceSearches extends HookConsumerWidget {
                   label: Text(entry.key),
                   onPressed: saving.value
                       ? null
-                      : () {
+                      : () async {
                           final search = entry.value as Map<String, dynamic>;
-                          onSelected(
-                            search['query'] as String?,
-                            filtersFromWebUi(search['filters'] as List? ?? []),
+                          final changes = filtersFromWebUi(
+                            search['filters'] as List? ?? [],
                           );
+                          final filterList =
+                              baseFilters ??
+                              await ref.read(
+                                baseSourceMangaFilterListProvider(
+                                  sourceId,
+                                ).future,
+                              );
+                          if (!context.mounted) return;
+                          if (filterList == null ||
+                              !savedSearchFitsSource(filterList, changes)) {
+                            ref
+                                .read(toastProvider)
+                                ?.show(context.l10n.savedSearchInvalid);
+                            return;
+                          }
+                          onSelected(search['query'] as String?, changes);
                         },
                   deleteButtonTooltipMessage: context.l10n.deleteSearch,
                   deleteIcon: const Icon(
@@ -217,23 +234,31 @@ class SavedSourceSearches extends HookConsumerWidget {
   }
 }
 
+Map<String, dynamic> _rawSavedSearches(String? value) {
+  if (value == null) return {};
+  final decoded = jsonDecode(value);
+  if (decoded is! Map<String, dynamic>) return {};
+  return decoded;
+}
+
 Map<String, dynamic> _decodeSavedSearches(String? value) {
   if (value == null) return {};
   final decoded = jsonDecode(value);
-  if (decoded is! Map<String, dynamic>) {
-    throw const FormatException('Invalid saved searches');
-  }
-  for (final search in decoded.values) {
+  if (decoded is! Map<String, dynamic>) return {};
+  final searches = <String, dynamic>{};
+  for (final entry in decoded.entries) {
+    final search = entry.value;
     if (search is! Map<String, dynamic> ||
         (search['query'] != null && search['query'] is! String) ||
         (search['filters'] != null && search['filters'] is! List)) {
-      throw const FormatException('Invalid saved search');
+      continue;
     }
     try {
       filtersFromWebUi(search['filters'] as List? ?? []);
     } catch (_) {
-      throw const FormatException('Invalid saved search filters');
+      continue;
     }
+    searches[entry.key] = search;
   }
-  return decoded;
+  return searches;
 }
