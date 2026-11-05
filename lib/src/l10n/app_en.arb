@@ -1507,6 +1507,10 @@
   "@showHiddenCategories": {
     "description": "Library Display > Tabs: checkbox to include categories marked as hidden in the tab bar"
   },
+  "showEmptyCategoriesSearch": "Show empty categories during search/filtering",
+  "@showEmptyCategoriesSearch": {
+    "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+  },
   "smallerTapZones": "Smaller tap zones",
   "smoothAutoScroll": "Smooth Auto Scroll",
   "scrollAmount": "Keyboard scroll distance",

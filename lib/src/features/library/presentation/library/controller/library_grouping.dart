@@ -331,7 +331,7 @@ Future<List<GroupedTab>> libraryGroupedTabs(Ref ref) async {
       ref.watch(libraryGroupTypeProvider) ?? kDefaultLibraryGroupType;
   // Grouped modes do not use categories; watching them adds an unnecessary rebuild dependency.
   final List<CategoryProxy> catProxies = groupType == LibraryGroup.byDefault
-      ? (ref.watch(visibleCategoryListProvider).value ?? const [])
+      ? (ref.watch(libraryShownCategoryListProvider).value ?? const [])
             .map(categoryToProxy)
             .toList()
       : const [];

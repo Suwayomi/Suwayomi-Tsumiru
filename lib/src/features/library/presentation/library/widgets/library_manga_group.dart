@@ -90,12 +90,20 @@ class LibraryMangaGroup extends ConsumerWidget {
                   .read(sectionHeadersShowAllCategoriesProvider.notifier)
                   .update,
             ),
-          if (current == LibraryGroup.byDefault)
+          if (current == LibraryGroup.byDefault) ...[
             CustomCheckboxListTile(
               title: context.l10n.showHiddenCategories,
               provider: showHiddenCategoriesProvider,
               onChanged: ref.read(showHiddenCategoriesProvider.notifier).update,
             ),
+            CustomCheckboxListTile(
+              title: context.l10n.showEmptyCategoriesSearch,
+              provider: showEmptyCategoriesSearchProvider,
+              onChanged: ref
+                  .read(showEmptyCategoriesSearchProvider.notifier)
+                  .update,
+            ),
+          ],
           CustomCheckboxListTile(
             title: context.l10n.categoryNumberOfItems,
             provider: categoryNumberOfItemsProvider,

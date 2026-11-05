@@ -254,35 +254,8 @@ class LibraryFilterSegments extends ConsumerWidget {
 }
 
 /// Counts each active tri-state, rating threshold, category/tag filter and per-tracker filter.
-int watchLibraryFilterActiveCount(WidgetRef ref) {
-  var count = 0;
-  for (final provider in [
-    libraryDuplicateChaptersProvider,
-    libraryMangaFilterDownloadedProvider,
-    libraryMangaFilterOfflineProvider,
-    libraryMangaFilterUnreadProvider,
-    libraryMangaFilterStartedProvider,
-    libraryMangaFilterBookmarkedProvider,
-    libraryMangaFilterCompletedProvider,
-    libraryMangaFilterLewdProvider,
-  ]) {
-    if (ref.watch(provider) != null) count++;
-  }
-  if ((ref.watch(libraryMangaFilterMinRatingProvider) ?? 0) > 0) count++;
-  if (ref.watch(libraryFilterCategoriesProvider).ifNull(false)) count++;
-  if (ref.watch(libraryFilterTagsProvider).ifNull(false)) count++;
-  for (final value in ref.watch(libraryTrackerFiltersProvider).values) {
-    if (value != null) count++;
-  }
-  for (final kind in ['status', 'source']) {
-    count += ref
-        .watch(libraryEntryFiltersProvider(kind))
-        .values
-        .where((v) => v != null)
-        .length;
-  }
-  return count;
-}
+int watchLibraryFilterActiveCount(WidgetRef ref) =>
+    ref.watch(libraryFilterActiveCountProvider);
 
 void resetLibraryFilters(WidgetRef ref) {
   ref.read(libraryDuplicateChaptersProvider.notifier).update(null);

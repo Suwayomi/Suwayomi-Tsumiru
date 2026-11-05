@@ -709,6 +709,13 @@ class ShowHiddenCategories extends _$ShowHiddenCategories
 }
 
 @riverpod
+class ShowEmptyCategoriesSearch extends _$ShowEmptyCategoriesSearch
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.showEmptyCategoriesSearch);
+}
+
+@riverpod
 class CategoryNumberOfItems extends _$CategoryNumberOfItems
     with SharedPreferenceClientMixin<bool> {
   @override
@@ -846,4 +853,35 @@ class LibraryEntryFilters extends _$LibraryEntryFilters {
   }
 
   void update(Map<String, bool?> value) => state = value;
+}
+
+@riverpod
+int libraryFilterActiveCount(Ref ref) {
+  var count = 0;
+  for (final provider in [
+    libraryDuplicateChaptersProvider,
+    libraryMangaFilterDownloadedProvider,
+    libraryMangaFilterOfflineProvider,
+    libraryMangaFilterUnreadProvider,
+    libraryMangaFilterStartedProvider,
+    libraryMangaFilterBookmarkedProvider,
+    libraryMangaFilterCompletedProvider,
+    libraryMangaFilterLewdProvider,
+  ]) {
+    if (ref.watch(provider) != null) count++;
+  }
+  if ((ref.watch(libraryMangaFilterMinRatingProvider) ?? 0) > 0) count++;
+  if (ref.watch(libraryFilterCategoriesProvider).ifNull(false)) count++;
+  if (ref.watch(libraryFilterTagsProvider).ifNull(false)) count++;
+  for (final value in ref.watch(libraryTrackerFiltersProvider).values) {
+    if (value != null) count++;
+  }
+  for (final kind in ['status', 'source']) {
+    count += ref
+        .watch(libraryEntryFiltersProvider(kind))
+        .values
+        .where((v) => v != null)
+        .length;
+  }
+  return count;
 }

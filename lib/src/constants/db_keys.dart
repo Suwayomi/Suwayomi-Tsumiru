@@ -168,6 +168,7 @@ enum DBKeys {
   // Section headers: true uses one continuous scroll; false uses a page per section.
   sectionHeadersShowAllCategories(false),
   showHiddenCategories(false),
+  showEmptyCategoriesSearch(false),
   categoryNumberOfItems(false),
   libraryPersistentSearchBar(false),
   // 0=category, 1=source, 2=status, 3=track status, 4=ungrouped.
