@@ -210,13 +210,14 @@ AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
   if (ref.watch(showEmptyCategoriesSearchProvider).ifNull(false)) return base;
   final searching =
       (ref.watch(libraryQueryDebouncedProvider)?.trim()).isNotBlank;
-  if (!searching && ref.watch(libraryFilterActiveCountProvider) == 0) {
-    return base;
-  }
   return base.copyWithData((list) {
     if (list.isBlank) return list;
     final shown = list!
         .where((category) {
+          if (!searching &&
+              categoryLibraryFilterActiveCount(ref, category.id) == 0) {
+            return true;
+          }
           final filtered = ref
               .watch(
                 categoryMangaListWithQueryAndFilterProvider(

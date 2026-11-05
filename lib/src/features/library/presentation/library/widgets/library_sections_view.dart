@@ -7,6 +7,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -59,9 +60,11 @@ class LibrarySectionsView extends HookConsumerWidget {
           final box =
               entry.value.currentContext?.findRenderObject() as RenderBox?;
           if (box == null || !box.attached) continue;
+          final viewport = RenderAbstractViewport.of(box) as RenderBox;
+          final viewportTop = viewport.localToGlobal(Offset.zero).dy;
           final y = box.localToGlobal(Offset.zero).dy;
           // The closest header at or above the viewport top is the active pinned section.
-          if (y <= 1 && (topY == null || y > topY)) {
+          if (y <= viewportTop + 1 && (topY == null || y > topY)) {
             topY = y;
             topId = entry.key;
           }

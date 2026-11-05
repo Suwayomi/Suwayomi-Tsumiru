@@ -4,11 +4,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/library/data/category_repository.dart';
+import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/category_library_options.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_grouping.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 MangaDto _manga(int id, {required String title, int unreadCount = 0}) =>
@@ -38,6 +51,7 @@ List<int> _sorted(
   List<MangaDto> input, {
   required MangaSort by,
   required bool ascending,
+  bool pinZeroUnreadLast = true,
 }) => applyLibraryFilterSort(
   input,
   query: null,
@@ -58,9 +72,94 @@ List<int> _sorted(
   filterTagsExclude: const {},
   sortedBy: by,
   sortedDirection: ascending,
+  pinZeroUnreadLast: pinZeroUnreadLast,
 ).map((m) => m.id).toList();
 
 void main() {
+  test('category WebUI options override globals and edits keep WebUI keys',
+      () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({
+      'libraryPerCategorySettings': true,
+      'mangaFilterDownloaded': true,
+    });
+    final repository = _MetaRepository();
+    final container = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(
+        await SharedPreferences.getInstance(),
+      ),
+      categoryControllerProvider.overrideWith(
+        () => _MetaCategories(repository),
+      ),
+      categoryRepositoryProvider.overrideWithValue(repository),
+      libraryShownCategoryListProvider.overrideWith(
+        (ref) => ref.watch(categoryControllerProvider),
+      ),
+      libraryMangaListProvider.overrideWith((ref) async => [
+        _manga(1, title: 'A'),
+      ]),
+      loggedInTrackersProvider.overrideWith((ref) async => []),
+    ]);
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      effectiveCategoryLibraryOptionsProvider(7), (_, _) {},
+    );
+    addTearDown(subscription.close);
+    await container.read(categoryControllerProvider.future);
+    await container.read(libraryMangaListProvider.future);
+    final options = container.read(effectiveCategoryLibraryOptionsProvider(7));
+    expect(options.sort, MangaSort.unread);
+    expect(options.ascending, false);
+    expect(options.unread, true);
+    expect(options.downloaded, isNull);
+    expect(options.trackers, {1: true, 2: true});
+    expect(options.trackerMode, 'OR');
+    expect(
+      CategoryLibraryOptions.fromMeta({'webUI_sortDesc': 'oops'}).ascending,
+      true,
+    );
+    expect(options.source, {'1': true});
+    expect(CategoryLibraryOptions.fromMeta({
+      'webUI_hasUnreadChapters': 'oops',
+      'webUI_hasReadChapters': 'undefined',
+    }).unread, false);
+    expect(_sorted([
+      _manga(1, title: 'A', unreadCount: 0),
+      _manga(2, title: 'B', unreadCount: 5),
+    ], by: MangaSort.unread, ascending: true, pinZeroUnreadLast: false),
+      [1, 2]);
+    container.read(libraryActiveCategoryProvider.notifier).update(7);
+    final active = container.listen(activeLibraryOptionsProvider, (_, _) {});
+    addTearDown(active.close);
+    repository.writeGate = Completer<void>();
+    container.read(activeLibraryOptionsProvider.notifier)
+        .sort(MangaSort.dateAdded);
+    container.read(activeLibraryOptionsProvider.notifier).unread(false);
+    container.read(activeLibraryOptionsProvider.notifier).tracker(3, true);
+    container.invalidate(categoryControllerProvider);
+    await container.read(categoryControllerProvider.future);
+    expect(container.read(activeLibraryOptionsProvider).sort,
+      MangaSort.dateAdded);
+    expect(container.read(activeLibraryOptionsProvider).unread, false);
+    container.read(activeLibraryOptionsProvider.notifier).tracker(4, true);
+    repository.writeGate!.complete();
+    await container.pump();
+    await Future<void>.delayed(Duration.zero);
+    expect(repository.meta['webUI_migration'], '10');
+    expect(repository.meta['webUI_hasTrackerBinding'],
+      '{"filters":{"1":true,"2":true,"3":true,"4":true},"mode":"OR"}');
+    expect(repository.meta['webUI_sortBy'], 'dateAdded');
+    expect(repository.meta['webUI_hasUnreadChapters'], 'false');
+    expect(repository.categoryIds, everyElement(7));
+    expect(repository.meta.containsKey('webUI_hasDownloadedChapters'), false);
+    container.read(libraryGroupTypeProvider.notifier).update(1);
+    expect(
+      container.read(effectiveCategoryLibraryOptionsProvider(7)).unread, isNull,
+    );
+    container.read(libraryPerCategorySettingsProvider.notifier).update(false);
+    expect(repository.meta['webUI_hasUnreadChapters'], 'false');
+  });
+
   group('alphabetical sort folds case and accents', () {
     // Komikku sorts with a PRIMARY-strength collator (LibraryScreenModel.kt:
     // 635-639, SortUtil.kt:6-15); raw compareTo is UTF-16 order, which puts
@@ -103,4 +202,50 @@ void main() {
       expect(_sorted(tied, by: MangaSort.unread, ascending: false), [2, 1]);
     });
   });
+}
+
+class _MetaRepository extends CategoryRepository {
+  _MetaRepository() : super(GraphQLClient(
+    link: HttpLink('https://unused.invalid'), cache: GraphQLCache(),
+  ));
+
+  final meta = <String, String>{
+    'webUI_sortBy': 'unreadChapters',
+    'webUI_sortDesc': 'true',
+    'webUI_hasUnreadChapters': 'true',
+    'webUI_hasSource': '{"1":true,"removed":true}',
+    'webUI_hasTrackerBinding': '{"filters":{"1":true,"2":true}}',
+  };
+  final categoryIds = <int>[];
+  Completer<void>? writeGate;
+
+  @override
+  Future<void> setCategoryMeta({
+    required int categoryId,
+    required String key,
+    required String value,
+  }) async {
+    await writeGate?.future;
+    categoryIds.add(categoryId);
+    meta[key] = value;
+  }
+}
+
+class _MetaCategories extends CategoryController {
+  _MetaCategories(this.repository);
+  final _MetaRepository repository;
+
+  @override
+  Future<List<Fragment$CategoryDto>?> build() async => [
+    Fragment$CategoryDto.fromJson({
+      '__typename': 'CategoryType', 'id': 7, 'name': 'Category', 'order': 0,
+      'defaultCategory': false,
+      'includeInDownload': 'UNSET', 'includeInUpdate': 'UNSET',
+      'mangas': {'__typename': 'MangaNodeList', 'totalCount': 2},
+      'meta': [
+        for (final e in repository.meta.entries)
+          {'__typename': 'CategoryMetaType', 'key': e.key, 'value': e.value},
+      ],
+    }),
+  ];
 }

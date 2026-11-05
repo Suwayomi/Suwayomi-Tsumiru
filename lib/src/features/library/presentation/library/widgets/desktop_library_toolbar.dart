@@ -15,6 +15,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../../tracking/data/tracker_repository.dart';
+import '../controller/category_library_options.dart';
 import '../controller/library_controller.dart';
 import 'desktop_library_panels.dart';
 import 'library_filter_content.dart';
@@ -321,14 +322,19 @@ class _DesktopSortControl extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final current =
-        ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
+        ref.watch(activeLibraryOptionsProvider).sort ??
+        DBKeys.mangaSort.initial;
     final hasTrackers =
         ref.watch(loggedInTrackersProvider).value?.isNotEmpty ?? false;
     final sorts = [
       for (final sort in librarySortDisplayOrder)
-        if (sort != MangaSort.trackerScore || hasTrackers) sort,
+        if ((sort != MangaSort.trackerScore || hasTrackers) &&
+            (!ref.watch(useCategoryLibraryOptionsProvider) ||
+                categorySortModes.containsKey(sort)))
+          sort,
     ];
-    final ascending = ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
+    final ascending =
+        ref.watch(activeLibraryOptionsProvider).ascending.ifNull(true);
     final isRandom = current == MangaSort.random;
     final menuChildren = [
       for (final sort in sorts)
@@ -341,7 +347,7 @@ class _DesktopSortControl extends ConsumerWidget {
               final seed = ref.read(librarySortRandomSeedProvider) ?? 0;
               ref.read(librarySortRandomSeedProvider.notifier).update(seed + 1);
             } else {
-              ref.read(libraryMangaSortProvider.notifier).update(sort);
+              ref.read(activeLibraryOptionsProvider.notifier).sort(sort);
             }
           },
           child: Text(sort.toLocale(context)),
@@ -360,8 +366,8 @@ class _DesktopSortControl extends ConsumerWidget {
         onPressed: isRandom
             ? null
             : () => ref
-                  .read(libraryMangaSortDirectionProvider.notifier)
-                  .update(!ascending),
+                .read(activeLibraryOptionsProvider.notifier)
+                .ascending(!ascending),
       ),
     );
     if (compact) {

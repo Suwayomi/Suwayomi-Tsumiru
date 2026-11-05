@@ -19,6 +19,7 @@ import '../../../../../widgets/fluent_expansion_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../category/controller/edit_category_controller.dart';
+import '../controller/category_library_options.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_manga_list.dart';
 import 'library_filter_segments.dart';
@@ -194,10 +195,8 @@ class LibraryFilterSegments extends ConsumerWidget {
       children: [
         LibraryTriStateSegment(
           heading: context.l10n.filterShortDownloaded,
-          provider: libraryMangaFilterDownloadedProvider,
-          onChanged: ref
-              .read(libraryMangaFilterDownloadedProvider.notifier)
-              .update,
+          provider: activeLibraryOptionsProvider.select((v) => v.downloaded),
+          onChanged: ref.read(activeLibraryOptionsProvider.notifier).downloaded,
         ),
         LibraryTriStateSegment(
           heading: context.l10n.filterHeaderStorage,
@@ -210,24 +209,20 @@ class LibraryFilterSegments extends ConsumerWidget {
         ),
         LibraryTriStateSegment(
           heading: context.l10n.filterHeaderReadStatus,
-          provider: libraryMangaFilterUnreadProvider,
-          onChanged: ref.read(libraryMangaFilterUnreadProvider.notifier).update,
+          provider: activeLibraryOptionsProvider.select((v) => v.unread),
+          onChanged: ref.read(activeLibraryOptionsProvider.notifier).unread,
           includedLabel: context.l10n.filterOptionUnread,
           excludedLabel: context.l10n.filterOptionRead,
         ),
         LibraryTriStateSegment(
           heading: context.l10n.filterShortStarted,
-          provider: libraryMangaFilterStartedProvider,
-          onChanged: ref
-              .read(libraryMangaFilterStartedProvider.notifier)
-              .update,
+          provider: activeLibraryOptionsProvider.select((v) => v.started),
+          onChanged: ref.read(activeLibraryOptionsProvider.notifier).started,
         ),
         LibraryTriStateSegment(
           heading: context.l10n.filterShortBookmarked,
-          provider: libraryMangaFilterBookmarkedProvider,
-          onChanged: ref
-              .read(libraryMangaFilterBookmarkedProvider.notifier)
-              .update,
+          provider: activeLibraryOptionsProvider.select((v) => v.bookmarked),
+          onChanged: ref.read(activeLibraryOptionsProvider.notifier).bookmarked,
         ),
         LibraryTriStateSegment(
           heading: context.l10n.filterShortCompleted,
@@ -243,8 +238,8 @@ class LibraryFilterSegments extends ConsumerWidget {
         ),
         LibraryTriStateSegment(
           heading: context.l10n.duplicateChapters,
-          provider: libraryDuplicateChaptersProvider,
-          onChanged: ref.read(libraryDuplicateChaptersProvider.notifier).update,
+          provider: activeLibraryOptionsProvider.select((v) => v.duplicate),
+          onChanged: ref.read(activeLibraryOptionsProvider.notifier).duplicate,
         ),
         const LibraryEntryFilter(kind: 'status'),
         const LibraryEntryFilter(kind: 'source'),
@@ -258,15 +253,6 @@ int watchLibraryFilterActiveCount(WidgetRef ref) =>
     ref.watch(libraryFilterActiveCountProvider);
 
 void resetLibraryFilters(WidgetRef ref) {
-  ref.read(libraryDuplicateChaptersProvider.notifier).update(null);
-  for (final kind in ['status', 'source']) {
-    ref.read(libraryEntryFiltersProvider(kind).notifier).update({});
-  }
-  ref.read(libraryMangaFilterDownloadedProvider.notifier).update(null);
-  ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
-  ref.read(libraryMangaFilterUnreadProvider.notifier).update(null);
-  ref.read(libraryMangaFilterStartedProvider.notifier).update(null);
-  ref.read(libraryMangaFilterBookmarkedProvider.notifier).update(null);
   ref.read(libraryMangaFilterCompletedProvider.notifier).update(null);
   ref.read(libraryMangaFilterLewdProvider.notifier).update(null);
   ref.read(libraryMangaFilterMinRatingProvider.notifier).update(0);
@@ -276,6 +262,19 @@ void resetLibraryFilters(WidgetRef ref) {
   ref.read(libraryFilterTagsProvider.notifier).update(false);
   ref.read(libraryFilterTagsIncludeProvider.notifier).update(const []);
   ref.read(libraryFilterTagsExcludeProvider.notifier).update(const []);
+  ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
+  if (ref.read(libraryOptionsCategoryIdProvider) != null) {
+    ref.read(activeLibraryOptionsProvider.notifier).reset();
+    return;
+  }
+  ref.read(libraryDuplicateChaptersProvider.notifier).update(null);
+  for (final kind in ['status', 'source']) {
+    ref.read(activeLibraryOptionsProvider.notifier).entryFilters(kind, {});
+  }
+  ref.read(libraryMangaFilterDownloadedProvider.notifier).update(null);
+  ref.read(libraryMangaFilterUnreadProvider.notifier).update(null);
+  ref.read(libraryMangaFilterStartedProvider.notifier).update(null);
+  ref.read(libraryMangaFilterBookmarkedProvider.notifier).update(null);
   final trackers = ref.read(loggedInTrackersProvider).value ?? const [];
   for (final tracker in trackers) {
     ref
@@ -370,12 +369,10 @@ class _TrackerSegments extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AdaptiveSegments<bool?>(
-      value: ref.watch(libraryMangaFilterTrackerProvider(trackerId: trackerId)),
+      value: ref.watch(activeLibraryOptionsProvider).trackers?[trackerId],
       onChanged: (next) => ref
-          .read(
-            libraryMangaFilterTrackerProvider(trackerId: trackerId).notifier,
-          )
-          .update(next),
+          .read(activeLibraryOptionsProvider.notifier)
+          .tracker(trackerId, next),
       options: [
         SegmentOption(value: null, label: context.l10n.filterStateAny),
         SegmentOption(value: true, label: context.l10n.yes),
@@ -795,7 +792,8 @@ class LibraryEntryFilter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(libraryEntryFiltersProvider(kind));
+    final options = ref.watch(activeLibraryOptionsProvider);
+    final selected = (kind == 'status' ? options.status : options.source)!;
     final all = ref.watch(libraryMangaListProvider).value ?? const [];
     final labels = kind == 'status'
         ? {
@@ -824,8 +822,9 @@ class LibraryEntryFilter extends ConsumerWidget {
               null => FluentIcons.checkbox_unchecked_24_regular,
             }),
             title: Text(entry.value),
-            onTap: () =>
-                ref.read(libraryEntryFiltersProvider(kind).notifier).update({
+            onTap: () => ref
+                .read(activeLibraryOptionsProvider.notifier)
+                .entryFilters(kind, {
                   ...selected,
                   entry.key: switch (selected[entry.key]) {
                     null => true,

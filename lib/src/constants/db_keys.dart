@@ -183,6 +183,7 @@ enum DBKeys {
   filterTagsInclude(<String>[]),
   filterTagsExclude(<String>[]),
   librarySortRandomSeed(0),
+  libraryPerCategorySettings(false),
   // Description substring matching adds an O(n²) duplicate scan.
   libraryDuplicatesCheckDescription(false),
   forceHorizontalSeekbar(false),
