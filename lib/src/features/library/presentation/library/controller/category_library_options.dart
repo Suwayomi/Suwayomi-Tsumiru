@@ -303,9 +303,8 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
     final generation = _generation;
     final categories = ref.watch(categoryControllerProvider).value ?? const [];
     final category = categories.where((c) => c.id == categoryId).firstOrNull;
-    if (ref.watch(offlineActiveProvider)) {
-      _loadPending ??= ref
-          .read(offlineDatabaseProvider)
+    if (storage != null && ref.watch(offlineActiveProvider)) {
+      _loadPending ??= storage.db
           .categoryById(categoryId)
           .then((row) {
             if (!ref.mounted || generation != _generation) return;
@@ -380,7 +379,7 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
     }
     state = next;
     final db = ref.read(offlineActiveProvider)
-        ? ref.read(offlineDatabaseProvider)
+        ? ref.read(offlineRuntimeStorageProvider)?.db
         : null;
     final category = (ref.read(categoryControllerProvider).value ?? const [])
         .where((c) => c.id == categoryId)
