@@ -81,12 +81,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Restore prebuilt bundle into the manifest dir
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: linux-bundle-io.github.aaronbamblett.tsumiru
           path: flatpak/bundle
       - name: Restore new-ID bundle into the manifest dir
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: linux-bundle-app.tsumiru.Tsumiru
           path: flatpak/bundle-new
