@@ -14,7 +14,7 @@ Widget? detailNavigationBackButton(BuildContext context) {
   if (router == null) {
     return Navigator.of(context).canPop() ? const BackButton() : null;
   }
-  Widget? noPopFallback() {
+  (List<RouteMatch>, ShellRouteBase?) flatten() {
     final goMatches = <RouteMatch>[];
     ShellRouteBase? shell;
     void collect(List<RouteMatchBase> matches) {
@@ -28,26 +28,24 @@ Widget? detailNavigationBackButton(BuildContext context) {
       }
     }
     collect(router.routerDelegate.currentConfiguration.matches);
-    if (goMatches.length > 1) {
-      final parent = goMatches[goMatches.length - 2];
-      return BackButton(
-        onPressed: () => GoRouter.of(context).go(parent.matchedLocation),
-      );
-    }
-    if (shell is StatefulShellRoute) return null;
-    return BackButton(
-      onPressed: () => const LibraryRoute(categoryId: 0).go(context),
-    );
+    return (goMatches, shell);
   }
-  return router.canPop()
-      ? BackButton(
-          onPressed: () async {
-            // Let the shell PopScope handle selection before falling back to GoRouter at its root.
-            if (await Navigator.of(context).maybePop()) return;
-            router.pop();
-          },
-        )
-      : noPopFallback();
+  Future<void> press() async {
+    // Let the shell PopScope handle selection before falling back to GoRouter at its root.
+    if (router.canPop()) {
+      if (!await Navigator.of(context).maybePop()) router.pop();
+      return;
+    }
+    final matches = flatten();
+    if (matches.$1.length > 1) {
+      GoRouter.of(context).go(matches.$1[matches.$1.length - 2].matchedLocation);
+      return;
+    }
+    const LibraryRoute(categoryId: 0).go(context);
+  }
+  final current = flatten();
+  if (current.$1.length == 1 && current.$2 is StatefulShellRoute) return null;
+  return BackButton(onPressed: press);
 }
 
 class DetailNavigationShellScreen extends ConsumerWidget {
