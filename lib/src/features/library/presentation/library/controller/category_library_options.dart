@@ -440,10 +440,15 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
       }
       if (_synced) {
         _synced = false;
-        await AppUtils.guard(() async {
+        final refetched = await AppUtils.guard(() async {
           ref.invalidate(categoryControllerProvider);
           await ref.read(categoryControllerProvider.future);
+          return true;
         }, toast);
+        if (refetched == null) {
+          if (ref.mounted && generation == _generation) _synced = true;
+          return;
+        }
       }
       if (ref.mounted && generation == _generation && _pending == 0) {
         _optimistic.clear();

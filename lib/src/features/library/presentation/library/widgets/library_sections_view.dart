@@ -53,29 +53,36 @@ class LibrarySectionsView extends HookConsumerWidget {
 
     final scrollController = useScrollController();
 
-    useEffect(() {
-      void trackVisibleSection() {
-        if (!scrollController.hasClients) return;
-        int? topId;
-        double? topY;
-        for (final entry in headerKeys.value.entries) {
-          final box =
-              entry.value.currentContext?.findRenderObject() as RenderBox?;
-          if (box == null || !box.attached) continue;
-          final viewport = RenderAbstractViewport.of(box) as RenderBox;
-          final viewportTop = viewport.localToGlobal(Offset.zero).dy;
-          final y = box.localToGlobal(Offset.zero).dy;
-          // The closest header at or above the viewport top is the active pinned section.
-          if (y <= viewportTop + 1 && (topY == null || y > topY)) {
-            topY = y;
-            topId = entry.key;
-          }
+    void trackVisibleSection() {
+      if (!scrollController.hasClients) return;
+      int? topId;
+      double? topY;
+      int? firstId;
+      double? firstY;
+      for (final entry in headerKeys.value.entries) {
+        final box =
+            entry.value.currentContext?.findRenderObject() as RenderBox?;
+        if (box == null || !box.attached) continue;
+        final viewport = RenderAbstractViewport.of(box) as RenderBox;
+        final viewportTop = viewport.localToGlobal(Offset.zero).dy;
+        final y = box.localToGlobal(Offset.zero).dy;
+        // The closest header at or above the viewport top is the active pinned section.
+        if (y <= viewportTop + 1 && (topY == null || y > topY)) {
+          topY = y;
+          topId = entry.key;
         }
-        if (topId != null && topId != ref.read(libraryVisibleSectionProvider)) {
-          ref.read(libraryVisibleSectionProvider.notifier).update(topId);
+        if (firstY == null || y < firstY) {
+          firstY = y;
+          firstId = entry.key;
         }
       }
+      final visible = topId ?? firstId;
+      if (visible != ref.read(libraryVisibleSectionProvider)) {
+        ref.read(libraryVisibleSectionProvider.notifier).update(visible);
+      }
+    }
 
+    useEffect(() {
       scrollController.addListener(trackVisibleSection);
       // Initial layout emits no scroll event; seed the visible section after layout.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -99,18 +106,25 @@ class LibrarySectionsView extends HookConsumerWidget {
         ref.invalidate(libraryMangaListProvider);
         await ref.read(libraryMangaListProvider.future);
       },
-      child: CustomScrollView(
-        controller: scrollController,
-        slivers: [
-          for (final section in sections)
-            _Section(
-              key: ValueKey(section.id),
-              headerKey: headerKeys.value[section.id]!,
-              section: section,
-              byCategory: byCategory,
-              showCount: showCounts,
-            ),
-        ],
+      // Sections that finish loading change the extent without a scroll event.
+      child: NotificationListener<ScrollMetricsNotification>(
+        onNotification: (_) {
+          trackVisibleSection();
+          return false;
+        },
+        child: CustomScrollView(
+          controller: scrollController,
+          slivers: [
+            for (final section in sections)
+              _Section(
+                key: ValueKey(section.id),
+                headerKey: headerKeys.value[section.id]!,
+                section: section,
+                byCategory: byCategory,
+                showCount: showCounts,
+              ),
+          ],
+        ),
       ),
     );
   }
