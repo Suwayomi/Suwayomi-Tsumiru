@@ -7,6 +7,8 @@
     "flutter": "3.47.4"
   },
   "rangeStrategy": "update-lockfile",
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
   "branchConcurrentLimit": 5,
@@ -50,6 +52,12 @@
       "description": "The Android Gradle plugin sets a minimum Gradle version, so the wrapper moves with it",
       "matchDepNames": ["com.android.application", "gradle"],
       "groupName": "android-gradle"
+    },
+    {
+      "description": "0.6 rebuilt the plugin on nativeapi; hold until the desktop window code is migrated",
+      "matchManagers": ["pub"],
+      "matchPackageNames": ["window_manager"],
+      "allowedVersions": "<0.6.0"
     }
   ],
   "customManagers": [
