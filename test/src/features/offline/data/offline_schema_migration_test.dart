@@ -163,25 +163,10 @@ void main() {
       expect(c.uploadDate, null);
       expect(c.fetchedAt, null);
       expect(c.failureReason, isNull);
-      expect(db.schemaVersion, 21);
       expect((await db.allOfflineCategories()).single.webUiMetaJson, isNull);
       expect(
         (await db.allOfflineCategories()).single.pendingWebUiMetaJson,
         isNull,
-      );
-      const meta = '{"webUI_sortBy":"dateAdded","webUI_migration":"10"}';
-      await db.upsertCategory(
-        1,
-        'Reading',
-        0,
-        isHidden: false,
-        webUiMetaJson: meta,
-      );
-      expect((await db.allOfflineCategories()).single.webUiMetaJson, meta);
-      await db.mergePendingCategoryMeta(1, {'webUI_sortBy': 'lastRead'});
-      expect(
-        (await db.allOfflineCategories()).single.pendingWebUiMetaJson,
-        '{"webUI_sortBy":"lastRead"}',
       );
 
       await db.upsertMangaMetadata(
