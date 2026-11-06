@@ -643,6 +643,10 @@ class MangaDescriptionBody extends StatelessWidget {
     MarkdownBody renderMarkdown(String data) => MarkdownBody(
       data: data,
       selectable: kIsWeb,
+      contextMenuBuilder: (context, editableTextState) =>
+          AdaptiveTextSelectionToolbar.editableText(
+            editableTextState: editableTextState,
+          ),
       onTapLink: (_, href, _) {
         if (href.isNotBlank) onOpenLink?.call(href!);
       },

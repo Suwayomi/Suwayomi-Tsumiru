@@ -18,6 +18,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/desktop/desktop_window.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/inline_retry_row.dart';
 import '../../domain/manga/manga_model.dart';
 import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
@@ -303,23 +304,9 @@ class UpcomingScreen extends HookConsumerWidget {
         controls,
         if (past.isLoading) const LinearProgressIndicator(),
         if (past.hasError)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    past.error.toString(),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => ref.invalidate(pastProvider),
-                  child: Text(context.l10n.retry),
-                ),
-              ],
-            ),
+          InlineRetryRow(
+            message: past.error.toString(),
+            onRetry: () => ref.invalidate(pastProvider),
           ),
         Expanded(
           child: upcoming.when(

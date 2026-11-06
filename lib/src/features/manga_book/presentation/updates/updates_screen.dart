@@ -22,6 +22,7 @@ import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/inline_retry_row.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/widgets/desktop_library_panels.dart';
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
@@ -351,6 +352,24 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         final delegate = PagedChildBuilderDelegate<ChapterWithMangaDto>(
           firstPageProgressIndicatorBuilder: (context) =>
               const CenterTsumiruShimmerIndicator(),
+          newPageProgressIndicatorBuilder: (context) => Row(
+            children: [
+              if (isOnDesktopPage(context))
+                const SizedBox(width: kListTilePadding),
+              SizedBox(
+                height: 80,
+                width: 80,
+                child: ClipRRect(
+                  borderRadius: KBorderRadius.r8.radius,
+                  child: const TsumiruShimmerIndicator(),
+                ),
+              ),
+            ],
+          ),
+          newPageErrorIndicatorBuilder: (context) => InlineRetryRow(
+            message: state.error.toString(),
+            onRetry: fetchNextPage,
+          ),
           firstPageErrorIndicatorBuilder: (context) => Emoticons(
             title: state.error.toString(),
             button: TextButton(

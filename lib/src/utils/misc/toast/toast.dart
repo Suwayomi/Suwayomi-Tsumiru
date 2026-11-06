@@ -179,10 +179,10 @@ class ToastWidget extends StatelessWidget {
         (isError ? Icon(Icons.error_outline, color: scheme.error) : null);
     Widget textWidget = Text(
       text,
-      style: TextStyle(color: scheme.onSurface),
+      style: context.textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
       textAlign: action != null ? TextAlign.left : TextAlign.center,
     );
-    return Container(
+    final panel = Container(
       padding: KEdgeInsets.h16v8.size,
       decoration: BoxDecoration(
         borderRadius: KBorderRadius.r16.radius,
@@ -216,6 +216,7 @@ class ToastWidget extends StatelessWidget {
             )
           : textWidget,
     );
+    return Material(type: MaterialType.transparency, child: panel);
   }
 }
 
