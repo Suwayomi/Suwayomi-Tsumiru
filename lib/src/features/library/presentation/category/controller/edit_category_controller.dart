@@ -32,11 +32,27 @@ class CategoryController extends _$CategoryController {
         ref.watch(viewOfflineNowProvider) ||
         ref.watch(serverUnreachableProvider);
     final categoryRepository = ref.watch(categoryRepositoryProvider);
-    final sync = ref.read(offlineSyncProvider);
-    final defaultIdFuture = ref.watch(defaultCategoryIdProvider.future);
-    final defaultId = await defaultIdFuture.catchError((Object _) => null);
+    var sync = ref.read(offlineSyncProvider);
+    int? defaultId;
+    List<CategoryDto>? result;
     var servedFromCatalog = false;
-    final result = await categoriesWithOfflineFallback(
+    void mirrorCategories() {
+      // Catalog responses are echoes and must not be mirrored back.
+      if (sync != null &&
+          result != null &&
+          defaultId != null &&
+          !servedFromCatalog) {
+        unawaited(sync!.syncCategories(result, defaultCategoryId: defaultId));
+      }
+    }
+
+    ref.listen(offlineSyncProvider, (_, next) {
+      sync = next;
+      mirrorCategories();
+    });
+    final defaultIdFuture = ref.watch(defaultCategoryIdProvider.future);
+    defaultId = await defaultIdFuture.catchError((Object _) => null);
+    result = await categoriesWithOfflineFallback(
       fetch: () => categoryRepository.getCategoryList(),
       db: offlineDb,
       offlineEnabled: offlineDb != null,
@@ -44,13 +60,7 @@ class CategoryController extends _$CategoryController {
       defaultCategoryId: defaultId,
       onCatalogServe: () => servedFromCatalog = true,
     );
-    // Catalog responses are echoes and must not be mirrored back.
-    if (sync != null &&
-        result != null &&
-        defaultId != null &&
-        !servedFromCatalog) {
-      unawaited(sync.syncCategories(result, defaultCategoryId: defaultId));
-    }
+    mirrorCategories();
     return result;
   }
 

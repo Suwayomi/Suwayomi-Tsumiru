@@ -12,14 +12,17 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
+import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/category_library_options.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_read_fallback.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
+import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 import '../../../../helpers/offline_test_db.dart';
@@ -38,6 +41,16 @@ CategoryDto cat(int id, String name, {int order = 0, bool hidden = false}) =>
           Fragment$CategoryDto$meta(key: kCategoryHiddenMetaKey, value: 'true'),
       ],
     );
+
+class _CountingCategoryRepository extends Fake implements CategoryRepository {
+  int fetches = 0;
+
+  @override
+  Future<List<CategoryDto>?> getCategoryList() async {
+    fetches++;
+    return [cat(1, 'A')];
+  }
+}
 
 void main() {
   late OfflineDatabase db;
@@ -128,6 +141,35 @@ void main() {
       (await db.categoryById(1))!.webUiMetaJson,
       '{"webUI_sortBy":"unreadChapters"}',
     );
+  });
+
+  test('mirrors fetched categories when sync becomes available', () async {
+    await OfflineSync(db).syncCategories([cat(1, 'A', hidden: true)]);
+    final repository = _CountingCategoryRepository();
+    OfflineSync? availableSync;
+    final container = ProviderContainer(
+      overrides: [
+        offlineReadDatabaseProvider.overrideWithValue(db),
+        viewOfflineNowProvider.overrideWithValue(false),
+        serverUnreachableProvider.overrideWithValue(false),
+        categoryRepositoryProvider.overrideWithValue(repository),
+        defaultCategoryIdProvider.overrideWith((ref) async => 0),
+        offlineSyncProvider.overrideWith((ref) => availableSync),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(categoryControllerProvider, (_, _) {});
+    final categories = await container.read(categoryControllerProvider.future);
+    expect(categories!.single.isHidden, isFalse);
+    expect((await db.allOfflineCategories()).single.isHidden, isTrue);
+
+    final mirrored = Completer<void>();
+    availableSync = OfflineSync(db, onSynced: () async => mirrored.complete());
+    container.invalidate(offlineSyncProvider);
+    await mirrored.future.timeout(const Duration(seconds: 5));
+
+    expect((await db.allOfflineCategories()).single.isHidden, isFalse);
+    expect(repository.fetches, 1);
   });
 
   test('syncs prune, keep the mirror on an empty list, mirror hidden and '

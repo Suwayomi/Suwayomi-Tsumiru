@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:http/http.dart' as http;
+import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 
 void main() {
@@ -60,5 +61,42 @@ void main() {
         isTrue,
       );
     });
+
+    test(
+      'an expired token whose refresh hit a gateway 502 is a connection error',
+      () {
+        final refresh = OperationException(
+          linkException: ResponseFormatException(
+            originalException: ServerNotJsonException(502, '<html>'),
+          ),
+        );
+        expect(
+          isConnectionError(
+            OperationException(
+              linkException: AccessTokenUnavailable(
+                RefreshTransientFailure(refresh),
+              ),
+            ),
+          ),
+          isTrue,
+        );
+        final jsonProxy = OperationException(
+          linkException: HttpLinkServerException(
+            response: http.Response('{"errors":[]}', 502),
+            parsedResponse: const Response(response: {}, errors: []),
+          ),
+        );
+        expect(
+          isConnectionError(
+            OperationException(
+              linkException: AccessTokenUnavailable(
+                RefreshTransientFailure(jsonProxy),
+              ),
+            ),
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }

@@ -11,6 +11,7 @@ import 'package:tsumiru/src/features/offline/data/background/background_chapter_
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/utils/graphql/legacy_user_fields_link.dart';
 import 'package:tsumiru/src/utils/logger/logger_link.dart';
+import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 
 Request request(String source, {Map<String, dynamic> variables = const {}}) =>
     Request(
@@ -696,7 +697,12 @@ void main() {
     },
   );
 
-  for (final failure in ['network', 'graphql', 'missing fields']) {
+  for (final failure in [
+    'network',
+    'connection',
+    'graphql',
+    'missing fields',
+  ]) {
     test(
       '$failure probe failure rejects the request and retries next time',
       () async {
@@ -711,6 +717,10 @@ void main() {
               yield capability(false);
             } else if (failure == 'network') {
               throw StateError('offline');
+            } else if (failure == 'connection') {
+              throw const ServerException(
+                originalException: SocketException('down'),
+              );
             } else if (failure == 'graphql') {
               yield Response(
                 data: capability(false).data,
@@ -732,7 +742,17 @@ void main() {
 
         await expectLater(
           link.request(original, forward).first,
-          throwsStateError,
+          failure == 'connection'
+              ? throwsA(
+                  isA<ServerException>().having(
+                    (e) => isConnectionError(
+                      OperationException(linkException: e),
+                    ),
+                    'isConnectionError',
+                    isTrue,
+                  ),
+                )
+              : throwsStateError,
         );
         expect(requests, 0);
 

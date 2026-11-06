@@ -4496,6 +4496,10 @@
   "confirmOverwriteSearchTitle": "Overwrite saved search",
   "confirmOverwriteSearchMessage": "This replaces the query and filters saved under this name.",
   "confirmOverwriteAction": "Overwrite",
+  "savedSearchInvalid": "Saved search invalid, filters have changed",
+  "@savedSearchInvalid": {
+    "description": "Toast shown when a saved search no longer matches the source filters."
+  },
   "confirmDeleteBothDownloadsMessage": "This deletes the downloaded chapter from the server and this device, including matching scanlator copies.",
   "confirmDeleteDeviceMessage": "This removes the chapter download from this device.",
   "confirmDeleteSeriesDeviceMessage": "This stops keeping the series offline and deletes all its device downloads.",
