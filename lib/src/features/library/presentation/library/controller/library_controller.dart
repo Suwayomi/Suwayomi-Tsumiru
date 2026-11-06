@@ -28,6 +28,7 @@ import '../../../domain/category/category_model.dart';
 import '../../../domain/library_search_query.dart';
 import '../../../domain/track_status.dart';
 import '../../category/controller/edit_category_controller.dart';
+import 'category_library_options.dart';
 import 'library_grouping.dart';
 import 'library_manga_list.dart';
 
@@ -71,6 +72,8 @@ List<MangaDto> applyLibraryFilterSort(
   bool fuzzySearch = false,
   Map<int, double> trackerScales = const {},
   Map<int, bool?> trackerFilters = const {},
+  String trackerFilterMode = 'AND',
+  bool pinZeroUnreadLast = true,
   Map<int, String> trackerNames = const {},
 }) {
   final searchQuery = LibrarySearchQuery.parse(query);
@@ -164,13 +167,18 @@ List<MangaDto> applyLibraryFilterSort(
         return false;
       }
     }
-    for (final entry in trackerFilters.entries) {
-      final pref = entry.value;
-      if (pref == null) continue;
-      final hasTracker = manga.trackRecords.nodes.any(
-        (n) => n.trackerId == entry.key,
-      );
-      if (pref ^ hasTracker) return false;
+    final includedTrackers = trackerFilters.entries
+        .where((e) => e.value == true);
+    bool hasTracker(int id) =>
+        manga.trackRecords.nodes.any((n) => n.trackerId == id);
+    if (trackerFilters.entries
+        .any((e) => e.value == false && hasTracker(e.key))) {
+      return false;
+    }
+    if (includedTrackers.isNotEmpty && !(trackerFilterMode == 'OR'
+        ? includedTrackers.any((e) => hasTracker(e.key))
+        : includedTrackers.every((e) => hasTracker(e.key)))) {
+      return false;
     }
     if (!searchQuery.matches(fields, fuzzy: fuzzySearch)) return false;
     return true;
@@ -202,8 +210,8 @@ List<MangaDto> applyLibraryFilterSort(
       final u1 = m1.user.unreadCount.getValueOnNullOrNegative();
       final u2 = m2.user.unreadCount.getValueOnNullOrNegative();
       if (u1 == u2) return 0;
-      if (u1 == 0) return 1;
-      if (u2 == 0) return -1;
+      if (pinZeroUnreadLast && u1 == 0) return 1;
+      if (pinZeroUnreadLast && u2 == 0) return -1;
       return u1.compareTo(u2) * sortDirToggle;
     }
     return (switch (sortedBy) {
@@ -299,17 +307,16 @@ class CategoryMangaListWithQueryAndFilter
     extends _$CategoryMangaListWithQueryAndFilter {
   @override
   AsyncValue<List<MangaDto>?> build({required int categoryId}) {
+    final options = ref.watch(
+      effectiveCategoryLibraryOptionsProvider(categoryId),
+    );
     final mangaList = ref.watch(categoryMangaListProvider(categoryId));
     final query = ref.watch(libraryQueryDebouncedProvider);
-    final mangaFilterUnread = ref.watch(libraryMangaFilterUnreadProvider);
-    final mangaFilterDownloaded = ref.watch(
-      libraryMangaFilterDownloadedProvider,
-    );
+    final mangaFilterUnread = options.unread;
+    final mangaFilterDownloaded = options.downloaded;
     final mangaFilterCompleted = ref.watch(libraryMangaFilterCompletedProvider);
-    final mangaFilterStarted = ref.watch(libraryMangaFilterStartedProvider);
-    final mangaFilterBookmarked = ref.watch(
-      libraryMangaFilterBookmarkedProvider,
-    );
+    final mangaFilterStarted = options.started;
+    final mangaFilterBookmarked = options.bookmarked;
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
@@ -331,10 +338,8 @@ class CategoryMangaListWithQueryAndFilter
         (ref.watch(libraryFilterTagsExcludeProvider) ?? const <String>[])
             .toSet();
     final MangaSort sortedBy =
-        ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
-    final sortedDirection = ref
-        .watch(libraryMangaSortDirectionProvider)
-        .ifNull(true);
+        options.sort!;
+    final sortedDirection = options.ascending!;
     final seed =
         ref.watch(librarySortRandomSeedProvider) ??
         DBKeys.librarySortRandomSeed.initial as int;
@@ -348,9 +353,9 @@ class CategoryMangaListWithQueryAndFilter
                 query: query,
                 ignoreFilters: ref.watch(webUiBoolProvider('ignoreFilters')),
                 fuzzySearch: ref.watch(webUiBoolProvider('fuzzySearch')),
-                duplicateChapters: ref.watch(libraryDuplicateChaptersProvider),
-                statusFilters: ref.watch(libraryEntryFiltersProvider('status')),
-                sourceFilters: ref.watch(libraryEntryFiltersProvider('source')),
+                duplicateChapters: options.duplicate,
+                statusFilters: options.status!,
+                sourceFilters: options.source!,
                 mangaFilterUnread: mangaFilterUnread,
                 mangaFilterDownloaded: mangaFilterDownloaded,
                 mangaFilterCompleted: mangaFilterCompleted,
@@ -371,7 +376,10 @@ class CategoryMangaListWithQueryAndFilter
                 sortedDirection: sortedDirection,
                 seed: seed,
                 trackerScales: ref.watch(libraryTrackerScalesProvider),
-                trackerFilters: ref.watch(libraryTrackerFiltersProvider),
+                trackerFilters: options.trackers!,
+                trackerFilterMode: options.trackerMode!,
+                pinZeroUnreadLast:
+                    !ref.watch(useCategoryLibraryOptionsProvider),
                 trackerNames: ref.watch(libraryTrackerNamesProvider),
               ),
       ),
@@ -857,14 +865,14 @@ class LibraryEntryFilters extends _$LibraryEntryFilters {
 
 @riverpod
 int libraryFilterActiveCount(Ref ref) {
-  var count = 0;
+  final options = ref.watch(
+    effectiveCategoryLibraryOptionsProvider(
+      ref.watch(libraryOptionsCategoryIdProvider),
+    ),
+  );
+  var count = options.filterCount;
   for (final provider in [
-    libraryDuplicateChaptersProvider,
-    libraryMangaFilterDownloadedProvider,
     libraryMangaFilterOfflineProvider,
-    libraryMangaFilterUnreadProvider,
-    libraryMangaFilterStartedProvider,
-    libraryMangaFilterBookmarkedProvider,
     libraryMangaFilterCompletedProvider,
     libraryMangaFilterLewdProvider,
   ]) {
@@ -873,15 +881,5 @@ int libraryFilterActiveCount(Ref ref) {
   if ((ref.watch(libraryMangaFilterMinRatingProvider) ?? 0) > 0) count++;
   if (ref.watch(libraryFilterCategoriesProvider).ifNull(false)) count++;
   if (ref.watch(libraryFilterTagsProvider).ifNull(false)) count++;
-  for (final value in ref.watch(libraryTrackerFiltersProvider).values) {
-    if (value != null) count++;
-  }
-  for (final kind in ['status', 'source']) {
-    count += ref
-        .watch(libraryEntryFiltersProvider(kind))
-        .values
-        .where((v) => v != null)
-        .length;
-  }
   return count;
 }

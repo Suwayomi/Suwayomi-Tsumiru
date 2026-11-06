@@ -168,6 +168,56 @@ class WebUiMetaRepository {
     }
   }
 
+  Future<void> writeCategoryMetas(
+    int categoryId,
+    Map<String, String?> values,
+  ) async {
+    final set = [
+      for (final e in values.entries)
+        if (e.value != null) Input$MetaInput(key: e.key, value: e.value!),
+    ];
+    final delete = [
+      for (final e in values.entries)
+        if (e.value == null) e.key,
+    ];
+    if (set.isNotEmpty) {
+      await client
+          .mutate$SetWebUiCategoryMetas(
+            Options$Mutation$SetWebUiCategoryMetas(
+              variables: Variables$Mutation$SetWebUiCategoryMetas(
+                input: Input$SetCategoryMetasInput(
+                  items: [
+                    Input$SetCategoryMetasItemInput(
+                      categoryIds: [categoryId],
+                      metas: set,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+          .getData((data) => data.setCategoryMetas);
+    }
+    if (delete.isNotEmpty) {
+      await client
+          .mutate$DeleteWebUiCategoryMetas(
+            Options$Mutation$DeleteWebUiCategoryMetas(
+              variables: Variables$Mutation$DeleteWebUiCategoryMetas(
+                input: Input$DeleteCategoryMetasInput(
+                  items: [
+                    Input$DeleteCategoryMetasItemInput(
+                      categoryIds: [categoryId],
+                      keys: delete,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+          .getData((data) => data.deleteCategoryMetas);
+    }
+  }
+
   Future<Map<String, String>> readGlobalMetas() async {
     final nodes =
         await client

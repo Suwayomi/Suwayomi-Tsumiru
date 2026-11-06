@@ -187,6 +187,8 @@ class AccountSessionStartup {
           } else {
             await pushPendingProgress(container);
             if (!_current) return;
+            await pushPendingCategoryMeta(container);
+            if (!_current) return;
             await _resume();
           }
           if (!_current) return;
@@ -231,6 +233,8 @@ class AccountSessionStartup {
       if (!_current) return;
     }
     await pushPendingProgress(container);
+    if (!_current) return;
+    await pushPendingCategoryMeta(container);
     if (!_current) return;
     // Recovery may remove sources, so it runs after pending progress is pushed.
     await recoverBulkMigrationsAtLaunch(container);

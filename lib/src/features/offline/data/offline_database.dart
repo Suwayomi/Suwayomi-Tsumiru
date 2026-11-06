@@ -10,6 +10,7 @@ import 'package:drift/drift.dart';
 
 import '../../../utils/crash/diagnostics.dart';
 import '../../../utils/logger/logger.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import 'offline_types.dart';
 
 export 'offline_types.dart';
@@ -132,6 +133,8 @@ class OfflineCategories extends Table {
   TextColumn get name => text()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+  TextColumn get webUiMetaJson => text().nullable()();
+  TextColumn get pendingWebUiMetaJson => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -169,7 +172,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -404,6 +407,18 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.failureReason,
         );
       }
+      if (from < 21 && await _hasTable(offlineCategories)) {
+        await _addColumnIfMissing(
+          m,
+          offlineCategories,
+          offlineCategories.webUiMetaJson,
+        );
+        await _addColumnIfMissing(
+          m,
+          offlineCategories,
+          offlineCategories.pendingWebUiMetaJson,
+        );
+      }
     },
     beforeOpen: (details) async {
       if (!details.wasCreated) await _addMissingColumns();
@@ -609,6 +624,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     required bool isHidden,
     bool? isDefaultCategory,
     bool autoAdd = false,
+    String? webUiMetaJson,
   }) => into(offlineCategories).insertOnConflictUpdate(
     OfflineCategoriesCompanion(
       id: Value(id),
@@ -617,8 +633,60 @@ class OfflineDatabase extends _$OfflineDatabase {
       isHidden: Value(isHidden),
       isDefaultCategory: Value(isDefaultCategory ?? id == 0),
       autoAdd: Value(autoAdd),
+      webUiMetaJson: webUiMetaJson == null
+          ? const Value.absent()
+          : Value(webUiMetaJson),
     ),
   );
+
+  Future<OfflineCategory?> categoryById(int id) => (select(
+    offlineCategories,
+  )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<List<OfflineCategory>> pendingCategoryMeta() => (select(
+    offlineCategories,
+  )..where((t) => t.pendingWebUiMetaJson.isNotNull())).get();
+
+  Future<void> mergePendingCategoryMeta(int id, Map<String, String?> values) =>
+      transaction(() async {
+        final category = await categoryById(id);
+        if (category == null) throw StateError('Category $id is not mirrored');
+        final pending = {
+          ...decodePendingWebUiMeta(category.pendingWebUiMetaJson),
+          ...values,
+        };
+        await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
+          OfflineCategoriesCompanion(
+            pendingWebUiMetaJson: Value(jsonEncode(pending)),
+          ),
+        );
+      });
+
+  Future<void> clearPendingCategoryMetaIfUnchanged(
+    int id,
+    Map<String, String?> values,
+  ) => transaction(() async {
+    final category = await categoryById(id);
+    if (category == null) return;
+    final pending = decodePendingWebUiMeta(category.pendingWebUiMetaJson);
+    for (final e in values.entries) {
+      if (pending.containsKey(e.key) && pending[e.key] == e.value) {
+        pending.remove(e.key);
+      }
+    }
+    final meta = applyPendingWebUiMeta(
+      decodeOfflineMeta(category.webUiMetaJson),
+      values,
+    );
+    await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
+      OfflineCategoriesCompanion(
+        webUiMetaJson: Value(jsonEncode(meta)),
+        pendingWebUiMetaJson: Value(
+          pending.isEmpty ? null : jsonEncode(pending),
+        ),
+      ),
+    );
+  });
 
   /// Local override until the next category sync; false if no mirrored row matched.
   Future<bool> setCategoryHidden(int id, bool hidden) async {

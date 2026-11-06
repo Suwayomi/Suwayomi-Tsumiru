@@ -13,6 +13,7 @@ import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/paginate.dart';
+import '../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../account/data/graphql/__generated__/account.graphql.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import '../domain/category/category_model.dart';
@@ -143,6 +144,9 @@ class CategoryRepository {
         ),
       )
       .getData((data) {});
+
+  Future<void> setCategoryMetas(int categoryId, Map<String, String?> values) =>
+      WebUiMetaRepository(ferryClient).writeCategoryMetas(categoryId, values);
 
   /// Returns null on partial or failed pagination: offline pruning requires the complete library.
   /// [withFirstUnread] adds a costly per-series chapter ranking for the continue-reading button.

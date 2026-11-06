@@ -1,4 +1,5 @@
 {
+  "perCategorySortAndFilters": "Per-category settings for sort and filters",
   "settingsSearchHint": "Search settings",
   "accountPermissionDenied": "Your account does not have permission for this action.",
   "migrationIdentityUnavailable": "Connect to your server and sign in before migrating.",

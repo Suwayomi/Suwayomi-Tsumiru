@@ -226,6 +226,15 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
+    id: 'perCategorySortAndFilters',
+    title: (l) => l.perCategorySortAndFilters,
+    breadcrumb: (l) => '${l.library} › ${l.categories}',
+    open: (c) => const LibrarySettingsRoute(
+      highlight: 'perCategorySortAndFilters',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
     id: 'refreshChaptersFromSource',
     title: (l) => l.refreshChaptersFromSource,
     subtitle: (l) => l.refreshChaptersFromSourceSubtitle,

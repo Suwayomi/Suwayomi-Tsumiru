@@ -10,6 +10,7 @@ import '../../../utils/crash/diagnostics.dart';
 import '../../../utils/crash/redact_tokens.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/graphql_errors.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
@@ -295,6 +296,11 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
           order: cat.sortOrder,
           mangas: Fragment$CategoryDto$mangas(totalCount: countFor(cat)),
           meta: [
+            for (final e in applyPendingWebUiMeta(
+              decodeOfflineMeta(cat.webUiMetaJson),
+              decodePendingWebUiMeta(cat.pendingWebUiMetaJson),
+            ).entries)
+              Fragment$CategoryDto$meta(key: e.key, value: e.value),
             if (cat.isHidden)
               Fragment$CategoryDto$meta(
                 key: kCategoryHiddenMetaKey,

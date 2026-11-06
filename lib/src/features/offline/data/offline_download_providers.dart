@@ -25,9 +25,13 @@ import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/network/gateway_status.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/is_android_native.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../account/data/account_permission.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
+import '../../library/data/category_repository.dart';
+import '../../library/presentation/category/controller/edit_category_controller.dart';
+import '../../library/presentation/library/controller/category_library_options.dart';
 import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
@@ -929,6 +933,52 @@ Future<void> _deleteServerCopyIfDeletable(
     logger.e('Offline: server delete-on-read failed for $chapterId: $e');
   }
 });
+
+Future<void> pushPendingCategoryMeta(ProviderContainer container) => container
+    .read(offlineRuntimeStorageProvider.notifier)
+    .track(() => _pushPendingCategoryMeta(container));
+
+Future<void> _pushPendingCategoryMeta(ProviderContainer container) async {
+  if (!container.read(offlineActiveProvider)) return;
+  final auth = container.read(authCredentialsStoreProvider.notifier);
+  final epoch = auth.sessionEpoch;
+  bool current() => !auth.sessionChanging && auth.sessionEpoch == epoch;
+  if (!current()) return;
+  final db = container.read(offlineDatabaseProvider);
+  final repo = container.read(categoryRepositoryProvider);
+  final sync = container.read(categoryMetaSyncProvider);
+  var sent = false;
+  for (final category in await db.pendingCategoryMeta()) {
+    if (!current()) return;
+    try {
+      final values = await sync.send(repo, db, category.id);
+      if (!current()) return;
+      if (values.isEmpty) continue;
+      sent = true;
+      final metadata = categoryLibraryMetadataProvider(category.id);
+      if (container.exists(metadata)) {
+        await container.read(metadata.notifier).clearSyncedMeta(values);
+      }
+    } catch (error) {
+      if (!current()) return;
+      logger.e('Offline: category meta push failed for ${category.id}: $error');
+      final categories = await AsyncValue.guard(repo.getCategoryList);
+      if (!current()) return;
+      final serverCategories = categories.asData?.value;
+      if (serverCategories != null &&
+          !serverCategories.any((c) => c.id == category.id)) {
+        await db.clearPendingCategoryMetaIfUnchanged(
+          category.id,
+          decodePendingWebUiMeta(category.pendingWebUiMetaJson),
+        );
+        logger.w(
+          'Offline: dropped pending meta for removed category ${category.id}',
+        );
+      }
+    }
+  }
+  if (current() && sent) container.invalidate(categoryControllerProvider);
+}
 
 /// Pushes pending changes and nudges trackers for successfully synced read chapters.
 Future<void> pushPendingProgress(

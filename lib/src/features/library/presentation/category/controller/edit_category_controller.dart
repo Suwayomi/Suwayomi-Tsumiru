@@ -16,7 +16,9 @@ import '../../../../../utils/network/graphql_errors.dart';
 import '../../../data/category_repository.dart';
 import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
+import '../../library/controller/category_library_options.dart';
 import '../../library/controller/library_controller.dart';
+import '../../library/controller/library_grouping.dart';
 
 part 'edit_category_controller.g.dart';
 
@@ -220,13 +222,21 @@ AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
   if (ref.watch(showEmptyCategoriesSearchProvider).ifNull(false)) return base;
   final searching =
       (ref.watch(libraryQueryDebouncedProvider)?.trim()).isNotBlank;
-  if (!searching && ref.watch(libraryFilterActiveCountProvider) == 0) {
+  if (!searching &&
+      (ref.watch(useCategoryLibraryOptionsProvider) ||
+          ref.watch(libraryFilterActiveCountProvider) == 0)) {
     return base;
   }
+  final activeId = !searching
+      ? null
+      : libraryShowsAllCategorySections(ref)
+      ? ref.watch(libraryVisibleSectionProvider)
+      : ref.watch(libraryActiveCategoryProvider);
   return base.copyWithData((list) {
     if (list.isBlank) return list;
     final shown = list!
         .where((category) {
+          if (activeId != null && category.id == activeId) return true;
           final filtered = ref
               .watch(
                 categoryMangaListWithQueryAndFilterProvider(

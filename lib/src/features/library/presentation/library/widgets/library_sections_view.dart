@@ -7,15 +7,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/desktop/desktop_page_frame.dart';
+import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/shell/update_banner_state.dart';
 import '../../../../manga_book/data/updates/updates_repository.dart';
 import '../../../../offline/data/server_reachability.dart';
+import '../controller/category_library_options.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_grouping.dart';
 import '../controller/library_manga_list.dart';
@@ -50,27 +53,36 @@ class LibrarySectionsView extends HookConsumerWidget {
 
     final scrollController = useScrollController();
 
-    useEffect(() {
-      void trackVisibleSection() {
-        if (!scrollController.hasClients) return;
-        int? topId;
-        double? topY;
-        for (final entry in headerKeys.value.entries) {
-          final box =
-              entry.value.currentContext?.findRenderObject() as RenderBox?;
-          if (box == null || !box.attached) continue;
-          final y = box.localToGlobal(Offset.zero).dy;
-          // The closest header at or above the viewport top is the active pinned section.
-          if (y <= 1 && (topY == null || y > topY)) {
-            topY = y;
-            topId = entry.key;
-          }
+    void trackVisibleSection() {
+      if (!scrollController.hasClients) return;
+      int? topId;
+      double? topY;
+      int? firstId;
+      double? firstY;
+      for (final entry in headerKeys.value.entries) {
+        final box =
+            entry.value.currentContext?.findRenderObject() as RenderBox?;
+        if (box == null || !box.attached) continue;
+        final viewport = RenderAbstractViewport.of(box) as RenderBox;
+        final viewportTop = viewport.localToGlobal(Offset.zero).dy;
+        final y = box.localToGlobal(Offset.zero).dy;
+        // The closest header at or above the viewport top is the active pinned section.
+        if (y <= viewportTop + 1 && (topY == null || y > topY)) {
+          topY = y;
+          topId = entry.key;
         }
-        if (topId != null && topId != ref.read(libraryVisibleSectionProvider)) {
-          ref.read(libraryVisibleSectionProvider.notifier).update(topId);
+        if (firstY == null || y < firstY) {
+          firstY = y;
+          firstId = entry.key;
         }
       }
+      final visible = topId ?? firstId;
+      if (visible != ref.read(libraryVisibleSectionProvider)) {
+        ref.read(libraryVisibleSectionProvider.notifier).update(visible);
+      }
+    }
 
+    useEffect(() {
       scrollController.addListener(trackVisibleSection);
       // Initial layout emits no scroll event; seed the visible section after layout.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,18 +106,25 @@ class LibrarySectionsView extends HookConsumerWidget {
         ref.invalidate(libraryMangaListProvider);
         await ref.read(libraryMangaListProvider.future);
       },
-      child: CustomScrollView(
-        controller: scrollController,
-        slivers: [
-          for (final section in sections)
-            _Section(
-              key: ValueKey(section.id),
-              headerKey: headerKeys.value[section.id]!,
-              section: section,
-              byCategory: byCategory,
-              showCount: showCounts,
-            ),
-        ],
+      // Sections that finish loading change the extent without a scroll event.
+      child: NotificationListener<ScrollMetricsNotification>(
+        onNotification: (_) {
+          trackVisibleSection();
+          return false;
+        },
+        child: CustomScrollView(
+          controller: scrollController,
+          slivers: [
+            for (final section in sections)
+              _Section(
+                key: ValueKey(section.id),
+                headerKey: headerKeys.value[section.id]!,
+                section: section,
+                byCategory: byCategory,
+                showCount: showCounts,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -137,8 +156,12 @@ class _Section extends ConsumerWidget {
             groupedMangaListWithQueryAndFilterProvider(tabId: section.id),
           );
     final items = listAsync.value ?? const [];
+    final showEmpty =
+        byCategory &&
+        listAsync.value != null &&
+        ref.watch(useCategoryLibraryOptionsProvider);
 
-    if (items.isEmpty) {
+    if (items.isEmpty && !showEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
@@ -156,6 +179,10 @@ class _Section extends ConsumerWidget {
             foreground: context.theme.colorScheme.primary,
           ),
         ),
+        if (items.isEmpty)
+          SliverToBoxAdapter(
+            child: Emoticons(title: context.l10n.noCategoryMangaFound),
+          ),
         LibraryMangaSliver(
           items: items,
           onOpen: (manga) => MangaRoute(

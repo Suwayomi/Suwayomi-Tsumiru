@@ -141,6 +141,13 @@ void main() {
       await db.customStatement(
         'ALTER TABLE offline_chapters DROP COLUMN failure_reason',
       );
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await db.customStatement(
+        'ALTER TABLE offline_categories DROP COLUMN web_ui_meta_json',
+      );
+      await db.customStatement(
+        'ALTER TABLE offline_categories DROP COLUMN pending_web_ui_meta_json',
+      );
       await db.customStatement('PRAGMA user_version = 17');
       await db.close();
     }
@@ -156,6 +163,11 @@ void main() {
       expect(c.uploadDate, null);
       expect(c.fetchedAt, null);
       expect(c.failureReason, isNull);
+      expect((await db.allOfflineCategories()).single.webUiMetaJson, isNull);
+      expect(
+        (await db.allOfflineCategories()).single.pendingWebUiMetaJson,
+        isNull,
+      );
 
       await db.upsertMangaMetadata(
         id: 1,

@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../controller/category_library_options.dart';
 import '../controller/library_controller.dart';
 
 class LibraryMangaSortTile extends ConsumerWidget {
@@ -21,9 +22,13 @@ class LibraryMangaSortTile extends ConsumerWidget {
   final MangaSort sortType;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sortedBy = ref.watch(libraryMangaSortProvider);
+    if (ref.watch(useCategoryLibraryOptionsProvider) &&
+        !categorySortModes.containsKey(sortType)) {
+      return const SizedBox.shrink();
+    }
+    final sortedBy = ref.watch(activeLibraryOptionsProvider).sort;
     final sortedDirection =
-        ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
+        ref.watch(activeLibraryOptionsProvider).ascending.ifNull(true);
     final isSelected = sortType == sortedBy;
     final primary = context.theme.colorScheme.primary;
 
@@ -41,7 +46,7 @@ class LibraryMangaSortTile extends ConsumerWidget {
                 .read(librarySortRandomSeedProvider.notifier)
                 .update(seed + 1)
             : () =>
-                ref.read(libraryMangaSortProvider.notifier).update(sortType),
+                ref.read(activeLibraryOptionsProvider.notifier).sort(sortType),
       );
     }
 
@@ -58,10 +63,10 @@ class LibraryMangaSortTile extends ConsumerWidget {
       onTap: () {
         if (isSelected) {
           ref
-              .read(libraryMangaSortDirectionProvider.notifier)
-              .update(!sortedDirection);
+              .read(activeLibraryOptionsProvider.notifier)
+              .ascending(!sortedDirection);
         } else {
-          ref.read(libraryMangaSortProvider.notifier).update(sortType);
+          ref.read(activeLibraryOptionsProvider.notifier).sort(sortType);
         }
       },
     );

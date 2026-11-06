@@ -11,6 +11,7 @@ import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/category_library_options.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
@@ -202,6 +203,16 @@ void main() {
         .update(const {});
     container.read(libraryQueryProvider.notifier).update('zzz');
     expect(shown(), [1]);
+
+    container.read(libraryQueryProvider.notifier).update(null);
+    container.read(libraryPerCategorySettingsProvider.notifier).update(true);
+    container.read(libraryActiveCategoryProvider.notifier).update(2);
+    container.read(libraryActiveCategoryProvider.notifier).update(1);
+    expect(shown(), [1, 2]);
+    container.read(libraryQueryProvider.notifier).update('Manga');
+    expect(shown(), [1]);
+    container.read(libraryActiveCategoryProvider.notifier).update(2);
+    expect(shown(), [1, 2]);
   });
 }
 
@@ -227,7 +238,17 @@ class _FilterCategories extends CategoryController {
   @override
   Future<List<Fragment$CategoryDto>?> build() async => [
     _category(1, 'Default', defaultCategory: true, totalCount: 1),
-    _category(2, 'Other', totalCount: 1),
+    _category(
+      2,
+      'Other',
+      totalCount: 1,
+      meta: [
+        Fragment$CategoryDto$meta(
+          key: 'webUI_hasUnreadChapters',
+          value: 'true',
+        ),
+      ],
+    ),
   ];
 }
 
@@ -236,6 +257,7 @@ Fragment$CategoryDto _category(
   String name, {
   bool defaultCategory = false,
   int totalCount = 0,
+  List<Fragment$CategoryDto$meta> meta = const [],
 }) => Fragment$CategoryDto(
   defaultCategory: defaultCategory,
   id: id,
@@ -244,7 +266,7 @@ Fragment$CategoryDto _category(
   name: name,
   order: id,
   mangas: Fragment$CategoryDto$mangas(totalCount: totalCount),
-  meta: const [],
+  meta: meta,
 );
 
 Fragment$MangaDto _filterManga(

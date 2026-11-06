@@ -40,6 +40,7 @@ import '../../domain/category/category_model.dart';
 import '../../domain/library_group.dart';
 import '../category/controller/edit_category_controller.dart';
 import 'category_manga_list.dart';
+import 'controller/category_library_options.dart';
 import 'controller/library_controller.dart';
 import 'controller/library_grouping.dart';
 import 'controller/library_manga_list.dart';
@@ -151,7 +152,7 @@ class _TabScrollHost extends HookWidget {
 }
 
 /// Remembers the selected category so a rebuilt tab bar keeps it when still shown.
-class _TabSelectionScope extends HookWidget {
+class _TabSelectionScope extends HookConsumerWidget {
   const _TabSelectionScope({
     required this.categories,
     required this.selected,
@@ -163,7 +164,7 @@ class _TabSelectionScope extends HookWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final controller = DefaultTabController.of(context);
     useEffect(() {
       void onChange() {
@@ -171,6 +172,12 @@ class _TabSelectionScope extends HookWidget {
           selected.value = categories[controller.index]
               .id
               .getValueOnNullOrNegative();
+          final id = selected.value;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              ref.read(libraryActiveCategoryProvider.notifier).update(id);
+            }
+          });
         }
       }
 

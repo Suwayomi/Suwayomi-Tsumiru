@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 
 import '../../../utils/crash/diagnostics.dart';
 import '../../library/domain/category/category_model.dart';
+import '../../library/presentation/library/controller/category_library_options.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
@@ -281,6 +282,7 @@ class OfflineSync {
           isHidden: cat.isHidden,
           isDefaultCategory: cat.id == defaultCategoryId,
           autoAdd: cat.defaultCategory,
+          webUiMetaJson: categoryLibraryMetaJson(cat),
         );
       }
       await _db.pruneRemovedCategories({for (final c in categories) c.id});

@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
@@ -107,7 +108,7 @@ MangaDto offlineMangaToDto(
     latestFetchedChapter: latestFetched,
     latestUploadedChapter: latestUploaded,
     meta: [
-      for (final e in _decodeMeta(m.metaJson).entries)
+      for (final e in decodeOfflineMeta(m.metaJson).entries)
         Fragment$MangaDto$meta(key: e.key, value: e.value),
     ],
     source: source,
@@ -120,19 +121,12 @@ MangaDto offlineMangaToDto(
   );
 }
 
-Map<String, String> _decodeMeta(String? metaJson) {
-  if (metaJson == null || metaJson.isEmpty) return const {};
-  try {
-    return Map<String, String>.from(jsonDecode(metaJson) as Map);
-  } catch (_) {
-    return const {};
-  }
-}
-
 extension OfflineMangaCover on OfflineManga {
   String get displayCoverUrl => resolveDisplayCover(
     thumbnailUrl: thumbnailUrl,
-    meta: _decodeMeta(metaJson).entries.map((e) => (key: e.key, value: e.value)),
+    meta: decodeOfflineMeta(metaJson).entries.map(
+      (e) => (key: e.key, value: e.value),
+    ),
   );
 
   String? get coverVersion =>
