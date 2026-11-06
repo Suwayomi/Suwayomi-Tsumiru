@@ -22,7 +22,9 @@ final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
     accountAccessProvider.selectAsync((access) => access.capability),
   );
   final repository = ref.watch(categoryRepositoryProvider);
-  final capability = await capabilityFuture;
+  final capability = await capabilityFuture.catchError(
+    (Object _) => AccountCapability.unknown,
+  );
   return switch (capability) {
     AccountCapability.unsupported => 0,
     AccountCapability.supported => repository.getDefaultCategoryId(),
