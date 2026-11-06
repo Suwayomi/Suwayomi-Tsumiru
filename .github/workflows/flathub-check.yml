@@ -68,13 +68,13 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: flathub-manifest
           path: manifest
       - name: Lint manifest
         run: flatpak-builder-lint manifest manifest/app.tsumiru.Tsumiru.yml
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: .flatpak-builder
           key: flathub-26.08-x86_64-${{ hashFiles('manifest/**') }}

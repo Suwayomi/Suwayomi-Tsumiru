@@ -90,7 +90,7 @@ jobs:
 
       - name: Set up Java (Android)
         if: matrix.target == 'android'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: zulu
           # AGP 9 lint calls Java 21 APIs; on 17 it dies with
