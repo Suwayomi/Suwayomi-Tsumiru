@@ -8,10 +8,10 @@ import 'dart:math';
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../constants/app_sizes.dart';
@@ -237,7 +237,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
       final fresh = current.isLoading ? null : current.value;
       // Defer off the pop's build phase (Riverpod-3 modify-during-build).
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!providerContainer.exists(libraryMangaListProvider)) return;
+        if (!providerContainer.read(libraryMangaListProvider.exists)) return;
         final listed = providerContainer
             .read(libraryMangaListProvider)
             .value

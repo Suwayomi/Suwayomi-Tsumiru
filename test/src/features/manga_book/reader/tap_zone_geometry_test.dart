@@ -1,8 +1,8 @@
 // Pins tapActionForZone's geometry against the overlay it's meant to match.
 // Komikku's edge band: 1/3 of the axis, or 1/4 with smaller tap zones on.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 

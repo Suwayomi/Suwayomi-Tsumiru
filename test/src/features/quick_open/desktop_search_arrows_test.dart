@@ -8,11 +8,11 @@
 // highlight across every section in visual order, Enter opens the
 // highlighted row exactly as a tap would, and typing resets the highlight.
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';

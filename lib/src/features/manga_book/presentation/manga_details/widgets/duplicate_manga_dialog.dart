@@ -6,8 +6,8 @@
 // The caller navigates after the dialog closes; [onOpenEntry] reports the target before openedEntry.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../constants/enum.dart';

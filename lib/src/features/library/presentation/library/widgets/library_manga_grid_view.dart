@@ -6,9 +6,9 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../constants/db_keys.dart';

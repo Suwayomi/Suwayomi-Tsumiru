@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/database/data/database_repository.dart';

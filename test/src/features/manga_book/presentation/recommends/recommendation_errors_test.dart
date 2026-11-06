@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/providers/anilist_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_provider.dart';
 import 'package:tsumiru/src/features/manga_book/data/recommendations/recommendation_repository.dart';

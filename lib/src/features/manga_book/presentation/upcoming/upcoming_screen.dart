@@ -5,11 +5,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../routes/router_config.dart';
@@ -18,6 +18,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/desktop/desktop_window.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/inline_retry_row.dart';
 import '../../domain/manga/manga_model.dart';
 import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
@@ -303,23 +304,9 @@ class UpcomingScreen extends HookConsumerWidget {
         controls,
         if (past.isLoading) const LinearProgressIndicator(),
         if (past.hasError)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    past.error.toString(),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => ref.invalidate(pastProvider),
-                  child: Text(context.l10n.retry),
-                ),
-              ],
-            ),
+          InlineRetryRow(
+            message: past.error.toString(),
+            onRetry: () => ref.invalidate(pastProvider),
           ),
         Expanded(
           child: upcoming.when(

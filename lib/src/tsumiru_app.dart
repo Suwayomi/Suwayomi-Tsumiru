@@ -6,12 +6,12 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'constants/app_constants.dart';
 import 'constants/app_sizes.dart';
@@ -162,7 +162,11 @@ class TsumiruApp extends HookConsumerWidget {
       ),
       themeMode: themeMode ?? ThemeMode.system,
       scrollBehavior: const AppScrollBehavior(),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        // gen-l10n's list registers flutter/material's delegates, not material_ui's.
+        ...GlobalMaterialLocalizations.delegates,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
       locale: appLocale,
       routerConfig: routes,

@@ -17,10 +17,10 @@
 // without an entry — or an entry whose tile was removed — fails here, not
 // silently in search.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/app_theme.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';

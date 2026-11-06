@@ -4,9 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../../constants/app_sizes.dart';
@@ -17,6 +17,7 @@ import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/emoticons.dart';
+import '../../../../../widgets/inline_retry_row.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../domain/source/source_model.dart';
@@ -97,6 +98,10 @@ class SourceMangaListView extends ConsumerWidget {
               ),
               const Spacer(),
             ],
+          ),
+          newPageErrorIndicatorBuilder: (context) => InlineRetryRow(
+            message: state.error.toString(),
+            onRetry: fetchNextPage,
           ),
           firstPageErrorIndicatorBuilder: (context) => Emoticons(
             title: state.error.toString(),

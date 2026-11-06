@@ -8,9 +8,9 @@
 // padding a row is 44 px wide, and the expanded layout's 12 px horizontal row
 // padding left only 20 px for a 24 px icon, drawing circles as tall ovals.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/navigation_bar_data.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';

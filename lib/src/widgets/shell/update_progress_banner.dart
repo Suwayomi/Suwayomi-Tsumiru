@@ -7,9 +7,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../features/auth/data/auth_credentials_store.dart';
 import '../../features/manga_book/data/updates/updates_repository.dart';

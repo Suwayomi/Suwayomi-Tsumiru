@@ -6,9 +6,9 @@
 
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hooks_riverpod/legacy.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';

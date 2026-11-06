@@ -6,8 +6,8 @@
 //
 // Regression guard for #348: these buttons used to seek within the chapter.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_side_seekbar.dart';
 import 'package:tsumiru/src/utils/theme/brand.dart';
 
