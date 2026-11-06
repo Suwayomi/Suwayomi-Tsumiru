@@ -11,8 +11,8 @@ environment:
 dependencies:
   app_links: ^7.2.1
   collection: ^1.19.0
-  cached_network_image: ^3.2.2
-  cached_network_image_platform_interface: ^4.0.0
+  cached_network_image: ^4.0.6
+  cached_network_image_platform_interface: ^5.0.3
   connectivity_plus: ^7.0.0
   connectivity_plus_linux_portal: ^0.0.4
   wakelock_plus: ^1.7.0
