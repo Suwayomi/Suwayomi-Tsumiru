@@ -190,12 +190,14 @@ class LibraryActiveCategory extends _$LibraryActiveCategory {
   void update(int value) => state = value;
 }
 
+bool libraryShowsAllCategorySections(Ref ref) =>
+    ref.watch(libraryGroupStyleKeyProvider) == LibraryGroupStyle.headers &&
+    ref.watch(sectionHeadersShowAllCategoriesProvider) == true;
+
 @riverpod
 int? libraryOptionsCategoryId(Ref ref) {
   if (!ref.watch(useCategoryLibraryOptionsProvider)) return null;
-  final sections =
-      ref.watch(libraryGroupStyleKeyProvider) == LibraryGroupStyle.headers &&
-      ref.watch(sectionHeadersShowAllCategoriesProvider) == true;
+  final sections = libraryShowsAllCategorySections(ref);
   final categories = ref.watch(libraryShownCategoryListProvider).value ?? [];
   final ids = categories
       .map((category) => category.id)

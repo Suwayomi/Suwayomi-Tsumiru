@@ -16,7 +16,9 @@ import '../../../../../utils/network/graphql_errors.dart';
 import '../../../data/category_repository.dart';
 import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
+import '../../library/controller/category_library_options.dart';
 import '../../library/controller/library_controller.dart';
+import '../../library/controller/library_grouping.dart';
 
 part 'edit_category_controller.g.dart';
 
@@ -208,12 +210,16 @@ AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
 AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
   final base = ref.watch(visibleCategoryListProvider);
   if (ref.watch(showEmptyCategoriesSearchProvider).ifNull(false)) return base;
+  final activeId = libraryShowsAllCategorySections(ref)
+      ? ref.watch(libraryVisibleSectionProvider)
+      : ref.watch(libraryActiveCategoryProvider);
   final searching =
       (ref.watch(libraryQueryDebouncedProvider)?.trim()).isNotBlank;
   return base.copyWithData((list) {
     if (list.isBlank) return list;
     final shown = list!
         .where((category) {
+          if (activeId != null && category.id == activeId) return true;
           if (!searching &&
               categoryLibraryFilterActiveCount(ref, category.id) == 0) {
             return true;

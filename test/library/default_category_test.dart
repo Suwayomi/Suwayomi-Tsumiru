@@ -11,7 +11,9 @@ import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/category_library_options.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_grouping.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
@@ -185,6 +187,20 @@ void main() {
     expect(shown(), [1, 2]);
 
     container.read(libraryMangaFilterUnreadProvider.notifier).update(true);
+    expect(shown(), [1]);
+
+    container.read(libraryActiveCategoryProvider.notifier).update(2);
+    expect(shown(), [1, 2]);
+    container.read(libraryActiveCategoryProvider.notifier).update(1);
+    expect(shown(), [1]);
+
+    container
+        .read(libraryGroupStyleKeyProvider.notifier)
+        .update(LibraryGroupStyle.headers);
+    container.read(sectionHeadersShowAllCategoriesProvider.notifier).update(true);
+    container.read(libraryVisibleSectionProvider.notifier).update(2);
+    expect(shown(), [1, 2]);
+    container.read(libraryVisibleSectionProvider.notifier).update(1);
     expect(shown(), [1]);
 
     container.read(showEmptyCategoriesSearchProvider.notifier).update(true);
