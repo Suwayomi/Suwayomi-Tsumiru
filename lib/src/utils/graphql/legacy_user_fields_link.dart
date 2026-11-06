@@ -4,6 +4,8 @@ import 'package:gql/ast.dart';
 import 'package:gql/language.dart';
 import 'package:graphql/client.dart';
 
+import '../network/graphql_errors.dart';
+
 final _userFieldsProbe = parseString(
   '{ __type(name: "ChapterType") { fields { name } } }',
 );
@@ -27,7 +29,12 @@ class LegacyUserFieldsDetection {
         return null;
       }
       return _hasUser = fields.any((field) => field['name'] == 'user');
-    } catch (_) {
+    } catch (error) {
+      if (isConnectionError(
+        error is LinkException ? OperationException(linkException: error) : error,
+      )) {
+        rethrow;
+      }
       return null;
     }
   }

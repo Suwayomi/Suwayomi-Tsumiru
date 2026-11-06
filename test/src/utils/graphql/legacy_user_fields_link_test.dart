@@ -11,6 +11,7 @@ import 'package:tsumiru/src/features/offline/data/background/background_chapter_
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/utils/graphql/legacy_user_fields_link.dart';
 import 'package:tsumiru/src/utils/logger/logger_link.dart';
+import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 
 Request request(String source, {Map<String, dynamic> variables = const {}}) =>
     Request(
@@ -693,6 +694,52 @@ void main() {
       expect(result.response, same(raw));
       expect(result.context, same(context));
       expect(result.data, {'updateChapter': null});
+    },
+  );
+
+  test(
+    'offline probe preserves connection failure and retries on recovery',
+    () async {
+      const socketError = SocketException('Network is unreachable');
+      var probes = 0;
+      var requests = 0;
+      final transport = MockClient((incoming) async {
+        final source = (jsonDecode(incoming.body) as Map)['query'] as String;
+        if (source.contains('__type(')) {
+          probes++;
+          if (probes == 1) throw socketError;
+          return http.Response(jsonEncode({'data': capability(false).data}), 200);
+        }
+        requests++;
+        expect(source, isNot(contains('user {')));
+        return http.Response(jsonEncode({'data': {'chapter': null}}), 200);
+      });
+      addTearDown(transport.close);
+      final client = GraphQLClient(
+        link: LegacyUserFieldsLink().concat(
+          HttpLink('http://offline.test/graphql', httpClient: transport),
+        ),
+        cache: GraphQLCache(),
+      );
+      final options = QueryOptions(
+        document: parseString('{ chapter { user { isRead } } }'),
+        fetchPolicy: FetchPolicy.networkOnly,
+      );
+
+      final failed = await client.query(options);
+      expect(failed.exception?.linkException, isA<ServerException>());
+      expect(
+        failed.exception?.linkException?.originalException,
+        same(socketError),
+      );
+      expect(isConnectionError(failed.exception!), isTrue);
+      expect(requests, 0);
+
+      final recovered = await client.query(options);
+      expect(recovered.exception, isNull);
+      expect(recovered.data, {'chapter': null});
+      expect(probes, 2);
+      expect(requests, 1);
     },
   );
 
