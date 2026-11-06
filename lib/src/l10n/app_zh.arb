@@ -1346,7 +1346,7 @@
     "splitWidePages": "拆分宽页",
     "alwaysShowChapterTransition": "始终显示章节过渡",
     "autoWebtoonMode": "自动阅读模式",
-    "autoWebtoonModeSubtitle": "以条漫滚动模式打开韩漫、国漫和 webtoon。其他作品保持默认阅读模式。",
+    "autoWebtoonModeSubtitle": "以条漫滚动模式打开韩漫、国漫和条漫。",
     "backgroundColorAuto": "自动",
     "backgroundColorBlack": "黑色",
     "backgroundColorGray": "灰色",
@@ -3574,5 +3574,30 @@
     "chapterSwipeDisabled": "禁用",
     "chapterSwipeBookmarkChapter": "书签章节",
     "markAsUnread": "标记为未读",
-    "markPreviousAsRead": "将之前的内容标记为已读"
+    "markPreviousAsRead": "将之前的内容标记为已读",
+    "settingsSearchHint": "搜索设置",
+    "offsetDoublePages": "跨页图偏移",
+    "@offsetDoublePages": {
+        "description": "Paged reader toggle: shift double-page pairing by one"
+    },
+    "backupData": "备份数据",
+    "@backupData": {
+        "description": "Title for the automatic backup contents row"
+    },
+    "bold": "加粗",
+    "bulletedList": "项目符号列表",
+    "showEmptyCategoriesSearch": "搜索/筛选时显示空类别",
+    "@showEmptyCategoriesSearch": {
+        "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+    },
+    "sourceRemoved": "图源不存在",
+    "@sourceRemoved": {
+        "description": "Downloads queue state when the series' source is no longer installed on the server"
+    },
+    "splitTallImages": "分割长图",
+    "informAboutVersionUpdate": "通知版本更新",
+    "italic": "斜体",
+    "mangaThumbnailBackdrop": "漫画缩略图作为背景",
+    "notes": "笔记",
+    "opdsBinaryFileSizeDescription": "显示文件大小时使用二进制（KiB、MiB、GiB）而非十进制（KB、MB、GB）"
 }

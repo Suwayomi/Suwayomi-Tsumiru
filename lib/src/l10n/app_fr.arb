@@ -1105,7 +1105,7 @@
     "smartUpdateExpected": "De nouveaux chapitres sont prédits dans environ {predicted}, mise à jour prévu tous les {interval}.",
     "removeExtensionStoreBody": "Souhaitez-vous retirer le magasin d'extension \"{name}\" ({url}) ?",
     "trackRemoveAlsoOnRemote": "Supprimez également de {trackerName}",
-    "libraryLastUpdated": "Dernière mise à jour de la bibliothèque le : {time}",
+    "libraryLastUpdated": "Dernière mise à jour de la bibliothèque : {time}",
     "libraryUpdateErrorsCount": "Erreurs de mise à jour de la bibliothèque ({count})",
     "nStores": "{count, plural, =1{{count} dépôt} many{{count} dépôts} other{{count} dépôts}}",
     "invertSplitPagesPlacement": "Inverser le placement des pages divisées",
@@ -1708,5 +1708,993 @@
     "enterProp": "Entrez {prop}",
     "@enterProp": {
         "description": "Hint text for text field to enter value of Property"
-    }
+    },
+    "offsetDoublePages": "Décalage double-page",
+    "@offsetDoublePages": {
+        "description": "Paged reader toggle: shift double-page pairing by one"
+    },
+    "showEmptyCategoriesSearch": "Afficher les catégories vides lors des filtrages ou recherches",
+    "@showEmptyCategoriesSearch": {
+        "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+    },
+    "errorBackupCreate": "Impossible de créer la sauvegarde",
+    "@errorBackupCreate": {
+        "description": "Error Text to show that backup creating failed"
+    },
+    "errorBackupRestore": "Impossible de restaurer la sauvegarde",
+    "@errorBackupRestore": {
+        "description": "toast to show that backup restoration failed"
+    },
+    "expandSidebar": "Développer la barre latérale",
+    "ignoreReuploadedChapters": "Ignorer les chapitres ré-hébergés",
+    "flareSolverr": "FlareSolverr",
+    "@flareSolverr": {
+        "description": "Toggle title to enable FlareSolverr"
+    },
+    "appThemeCarbon": "Carbone",
+    "appThemePlum": "Prune",
+    "customColor": "Couleur personnalisée",
+    "@customColor": {
+        "description": "Tile to pick a custom seed color"
+    },
+    "customHeaders": "Entêtes HTTP personnalisés",
+    "@customHeaders": {
+        "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
+    },
+    "onboardingCustomHeadersHint": "Nécessaire uniquement pour certains proxys et portails d'accès.",
+    "customHeaderEmpty": "Sans entêtes personnalisés.",
+    "@customHeaderEmpty": {
+        "description": "Empty state for the custom headers list"
+    },
+    "customHeaderName": "Nom de l'entête",
+    "@customHeaderName": {
+        "description": "Label for the custom header name field"
+    },
+    "customHeaderValue": "Valeur de l'entête",
+    "@customHeaderValue": {
+        "description": "Label for the custom header value field"
+    },
+    "customHeaderAdd": "Ajouter un entête",
+    "@customHeaderAdd": {
+        "description": "Button to add a custom HTTP header"
+    },
+    "customHeaderNameInvalid": "Les noms d'entête ne doivent pas contenir d'espace ou de deux-points \":\".",
+    "@customHeaderNameInvalid": {
+        "description": "Validation error for a bad custom header name"
+    },
+    "customHeaderExists": "Un entête avec ce nom existe déjà.",
+    "@customHeaderExists": {
+        "description": "Validation error for a duplicate custom header name"
+    },
+    "colorFilterAlpha": "Alpha",
+    "pureBlackAmoled": "Noir intense (AMOLED)",
+    "@pureBlackAmoled": {
+        "description": "AMOLED dark variant toggle"
+    },
+    "libraryColumnsLandscape": "Colonnes (mode paysage)",
+    "@libraryColumnsLandscape": {
+        "description": "Library Display section heading for the landscape column count slider"
+    },
+    "libraryColumnsPortrait": "Colonnes (mode portrait)",
+    "@libraryColumnsPortrait": {
+        "description": "Library Display section heading for the portrait column count slider"
+    },
+    "lockToPortrait": "Verrouiller en mode portrait",
+    "@lockToPortrait": {
+        "description": "General setting: lock the app to portrait orientation"
+    },
+    "mangaThumbnailBackdrop": "Vignette du manga en tant qu'arrière-plan",
+    "mangaSortLastUpdate": "Dernière mise à jour",
+    "mangaSortRating": "Note",
+    "minimumRating": "Note minimale",
+    "nChapters": "{n, plural, =0{None} =1{1 chapitre} other{{n} chapitres}}",
+    "@nChapters": {
+        "description": "Text for showing N chapters"
+    },
+    "nDays": "{count, select, 01{1 jour} other{{count} jours}}",
+    "@nDays": {
+        "description": "to show Number of days with plural"
+    },
+    "inNDays": "{days, plural, =1{Dans 1 jour} other{Dans {days} jours}}",
+    "@inNDays": {
+        "description": "Next-chapter estimate on the manga details page",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "dayCount": "{count, plural, =1{1 jour} other{{count} jours}}",
+    "@dayCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "nHours": "{n, plural, =1{1 heure} other{{n} heures}}",
+    "@nHours": {
+        "description": "Text to represent 'n' hours"
+    },
+    "nMinutes": "{n, plural, =1{1 minute} other{{n} minutes}}",
+    "@nMinutes": {
+        "description": "Text to represent 'n' Minutes"
+    },
+    "nSeconds": "{n, plural, =1{1 seconde} other{{n} secondes}}",
+    "@nSeconds": {
+        "description": "Text to represent 'n' seconds"
+    },
+    "nSources": "{n, plural, =1{1 source} other{{n} sources}}",
+    "@nSources": {
+        "description": "Text to represent n number Parallel source requests"
+    },
+    "nothingToDownload": "Rien à télécharger",
+    "@nothingToDownload": {
+        "description": "Toast shown when a bulk-download preset would queue zero chapters."
+    },
+    "noVisibleCategories": "Aucune catégorie visible",
+    "needsServerConnection": "Nécessite une connexion au serveur",
+    "@needsServerConnection": {
+        "description": "Error toast when a server-stored setting is changed while the server is unreachable"
+    },
+    "notInYourLibrary": "Pas dans votre bibliothèque",
+    "@notInYourLibrary": {
+        "description": "Downloads queue group for queued chapters of series outside the current account's library"
+    },
+    "notes": "Notes",
+    "numberedList": "Liste numérotée",
+    "missingChapters": "{count, plural, =1{1 chapitre manquant} other{{count} chapitres manquants}}",
+    "@missingChapters": {
+        "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapWarning": "{count, plural, =1{Vous allez sauter 1 chapitre. Il est peut-être absent de la source ou filtré.} other{Vous allez sauter {count} chapitres. Ils sont peut-être absents de la source ou filtrés.}}",
+    "@readerChapterGapWarning": {
+        "description": "Reader warning before crossing a gap in chapter numbering, including filtered chapters",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "3"
+            }
+        }
+    },
+    "readerChapterGapContinue": "Continuer",
+    "@readerChapterGapContinue": {
+        "description": "Confirm skipping chapters in the reader"
+    },
+    "seeRecommendations": "Voir les Recommandations",
+    "@seeRecommendations": {
+        "description": "Button on the manga details page opening the recommendations screen"
+    },
+    "recommendations": "Recommandations",
+    "@recommendations": {
+        "description": "Title of the recommendations screen"
+    },
+    "noRecommendationsForTitle": "Aucune recommandation pour ce titre actuellement",
+    "@noRecommendationsForTitle": {
+        "description": "Empty state on the recommendations screen when no provider returned results"
+    },
+    "similarTo": "Similaire à {title}",
+    "@similarTo": {
+        "description": "Recommendations screen title for a single manga",
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "seriesSeeAll": "Voir tout",
+    "seriesTagsMore": "{count} de plus",
+    "@seriesTagsMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesNextChapterExpected": "Prochain chapitre prévu {days, plural, =0{soon} =1{dans 1 jour} other{dans {days} jours}}",
+    "@seriesNextChapterExpected": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "seriesPage": "Page de la série",
+    "suggestions": "Suggestions",
+    "@suggestions": {
+        "description": "Header for the inline suggestions row on the manga details page"
+    },
+    "showRecommendations": "Afficher les recommandations",
+    "@showRecommendations": {
+        "description": "Appearance setting toggling the suggestions row on manga details"
+    },
+    "showRecommendationsSubtitle": "Afficher une ligne de titres similaires sur la page de détails du manga",
+    "@showRecommendationsSubtitle": {
+        "description": "Subtitle for the show recommendations setting"
+    },
+    "noPropFound": "{prop} non trouvé",
+    "@noPropFound": {
+        "description": "Template text to say No value for property found"
+    },
+    "removeFromDevice": "Supprimer de l'appareil",
+    "download": "Télécharger",
+    "undo": "Annuler",
+    "filtered": "filtré",
+    "unreadCount": "{count, plural, =1{1 non lu} other{{count} non lus}}",
+    "@unreadCount": {
+        "description": "Chapter header subline unread segment",
+        "placeholders": {
+            "count": {
+                "type": "int",
+                "example": "6"
+            }
+        }
+    },
+    "onDeviceSize": "{size} sur l'appareil",
+    "@onDeviceSize": {
+        "description": "Chapter header subline on-device segment",
+        "placeholders": {
+            "size": {
+                "type": "String",
+                "example": "2.1 GB"
+            }
+        }
+    },
+    "onDevice": "Sur l'appareil",
+    "offlineBulkDeleteWarning": "{count} d'entre eux sont enregistrés sur cet appareil et y seront également supprimés.",
+    "@offlineBulkDeleteWarning": {
+        "description": "Bulk server-delete confirm: warns N selected chapters are also on this device",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "opds": "OPDS",
+    "opdsBinaryFileSize": "Taille binaire du fichier",
+    "opdsBinaryFileSizeDescription": "Afficher les tailles de fichier en binaire (KiB, MiB, GiB) plutôt qu'en décimal (KB, MB, GB)",
+    "opdsItemsPerPage": "Éléments par page",
+    "opdsItemsPerPageDescription": "Nombre d'éléments par page dans les flux ODPS (par ex., Historique de la Bibliothèque, Chapitres de Manga).\nUne valeur trop haute peut diminuer les performances du client.",
+    "opdsEnablePageReadProgress": "Activer la progression de lecture par page",
+    "opdsEnablePageReadProgressDescription": "Suit et met à jour la progression de votre lecture par page pour chaque chapitre pendant le défilement des pages",
+    "opdsMarkAsReadOnDownload": "Marquer les chapitres comme lus au téléchargement",
+    "opdsMarkAsReadOnDownloadDescription": "Marque automatiquement les chapitres comme lus lors de leur téléchargement.",
+    "opdsShowOnlyUnreadChapters": "Afficher uniquement les chapitres non lus",
+    "opdsShowOnlyUnreadChaptersDescription": "Filtre le flux des mangas pour n’afficher que les chapitres non lus.",
+    "opdsShowOnlyDownloadedChapters": "Afficher uniquement les chapitres téléchargés",
+    "opdsShowOnlyDownloadedChaptersDescription": "Filtre le flux des mangas pour n’afficher que les chapitres téléchargés.",
+    "opdsSkipChapterMetadataFeed": "Ignorer le flux de métadonnées des chapitres",
+    "opdsSkipChapterMetadataFeedDescription": "Les liens de téléchargement vont directement dans la liste des chapitres.",
+    "opdsChapterSortOrder": "Ordre de tri des chapitres",
+    "opdsChapterSortOrderDescription": "Choisir l'ordre dans lequel les chapitres sont affichés.",
+    "opdsSortAscending": "Du plus petit au plus grand",
+    "opdsSortDescending": "Du plus grand au plus petit",
+    "opdsCbzMimeType": "Type MIME CBZ",
+    "opdsCbzMimeTypeDescription": "Contrôle le type MIME que Suwayomi envoie dans les entrées OPDS pour les archives CBZ. Affecte aussi le téléchargement CBZ global.\nModern respecte le standard récent IANA (2017), alors que LEGACY (type MIME déprécié pour .cbz) et COMPATIBLE (type MIME déprécié pour toutes les archives de comics) peuvent être plus adaptés pour des clients anciens.",
+    "opdsCbzLegacy": "Legacy",
+    "opdsCbzModern": "Modern",
+    "opdsCbzCompatible": "Compatible",
+    "onlyMyDownloads": "Uniquement mes téléchargements",
+    "@onlyMyDownloads": {
+        "description": "Downloads queue toggle: show only queued chapters of series in the current account's library"
+    },
+    "openInWeb": "Ouvrir dans le navigateur",
+    "@openInWeb": {
+        "description": "Button title text for open the url in web"
+    },
+    "openSourceInBrowser": "Ouvrir la page source",
+    "@openSourceInBrowser": {
+        "description": "Menu item: open the manga page on the original source website"
+    },
+    "openInBrowser": "Ouvrir dans le navigateur",
+    "openOnServer": "Ouvrir sur le serveur",
+    "@openOnServer": {
+        "description": "Menu item: open the manga in the Suwayomi server WebUI"
+    },
+    "or": "ou",
+    "@or": {
+        "description": "text literal for word or"
+    },
+    "pageOfTotal": "Page {current} sur {total}",
+    "@pageOfTotal": {
+        "description": "Tooltip on the current chapter's progress line",
+        "placeholders": {
+            "current": {
+                "type": "int",
+                "example": "12"
+            },
+            "total": {
+                "type": "int",
+                "example": "45"
+            }
+        }
+    },
+    "pinnedSources": "Sources épinglées",
+    "filterSources": "Filtrer les sources",
+    "allSources": "Toutes les sources",
+    "readerMouseScrollSpeed": "Vitesse de défilement de la molette souris",
+    "@readerMouseScrollSpeed": {
+        "description": "Desktop-only reader setting: how far one wheel notch scrolls."
+    },
+    "readerModeChipLegacyContinuous": "Horizontal continu (hérité)",
+    "@readerModeChipLegacyContinuous": {
+        "description": "Reading-mode chip shown when a series still uses the legacy continuous-horizontal mode"
+    },
+    "readerNoPages": "Aucune page trouvée",
+    "@readerNoPages": {
+        "description": "Shown instead of the reader when the source returns a chapter with no pages."
+    },
+    "readerNoPagesSubtitle": "Ce chapitre est peut-être verrouillé, ou alors la source exige d'être identifié.",
+    "@readerNoPagesSubtitle": {
+        "description": "Explains why a chapter can have no pages, under readerNoPages. Paid chapters that are still locked come back empty."
+    },
+    "readerOrientationPortrait": "Portrait",
+    "@readerOrientationPortrait": {
+        "description": "Rotation chip - Portrait (sensor)"
+    },
+    "readerFeedbackToasts": "Lecture des notifications flash",
+    "@readerFeedbackToasts": {
+        "description": "Switch title for the toggle that shows reader feedback toasts"
+    },
+    "readerFeedbackToastsSubtitle": "Afficher les messages du type \"chargement du chapitre suivant\" et \"pas d'autres chapitres\"",
+    "@readerFeedbackToastsSubtitle": {
+        "description": "Switch subtitle explaining the reader feedback toasts toggle"
+    },
+    "readerLastPageSwipeToggle": "Balayage de la dernière page",
+    "@readerLastPageSwipeToggle": {
+        "description": "Last page swipe"
+    },
+    "readerLastPageSwipeToggleDescription": "Balayer vers le chapitre suivant uniquement sur la dernière page",
+    "@readerLastPageSwipeToggleDescription": {
+        "description": "Swipe to next chapter only at last page"
+    },
+    "loadingNextChapter": "Chargement du chapitre suivant...",
+    "@loadingNextChapter": {
+        "description": "Loading text shown when loading next chapter in continuous reading"
+    },
+    "loadingPreviousChapter": "Chargement du chapitre précédent...",
+    "@loadingPreviousChapter": {
+        "description": "Loading text shown when loading previous chapter in continuous reading"
+    },
+    "noMoreChaptersBehind": "Pas de chapitre précédent",
+    "@noMoreChaptersBehind": {
+        "description": "Notification text shown when user tries to scroll past the first chapter"
+    },
+    "nextChapterLoaded": "Chargé : {chapterName}",
+    "@nextChapterLoaded": {
+        "description": "Success message shown when next chapter is loaded",
+        "placeholders": {
+            "chapterName": {
+                "type": "String",
+                "description": "The name of the loaded chapter"
+            }
+        }
+    },
+    "previousChapterLoaded": "Chargé : {chapterName}",
+    "@previousChapterLoaded": {
+        "description": "Success message shown when previous chapter is loaded",
+        "placeholders": {
+            "chapterName": {
+                "type": "String",
+                "description": "The name of the loaded chapter"
+            }
+        }
+    },
+    "failedToLoadNextChapter": "Le chargement du chapitre suivant a échoué",
+    "@failedToLoadNextChapter": {
+        "description": "Error message shown when next chapter fails to load"
+    },
+    "failedToLoadPreviousChapter": "Le chargement du chapitre précédent a échoué",
+    "@failedToLoadPreviousChapter": {
+        "description": "Error message shown when previous chapter fails to load"
+    },
+    "chapterCompleted": "Chapitre terminé",
+    "@chapterCompleted": {
+        "description": "Text shown when a chapter is completed in continuous reading"
+    },
+    "readerTapInvertHorizontal": "Horizontal",
+    "@readerTapInvertHorizontal": {
+        "description": "Tap-invert option - horizontal axis"
+    },
+    "readerTapInvertVertical": "Vertical",
+    "@readerTapInvertVertical": {
+        "description": "Tap-invert option - vertical axis"
+    },
+    "readerIgnoreSafeAreaToggle": "Ignorer les marges de sécurité",
+    "@readerIgnoreSafeAreaToggle": {
+        "description": "Toggle text to ignore safe area in reader"
+    },
+    "readerIgnoreSafeAreaToggleDescription": "Permettre au contenu de s'étendre dans les zones réservées aux encoches et bouton d'accueil",
+    "@readerIgnoreSafeAreaToggleDescription": {
+        "description": "Description for ignore safe area toggle in reader settings"
+    },
+    "migrateChapters": "Migrer les chapitres",
+    "migrateCategories": "Migrer les catégories",
+    "migrateDownloads": "Migrer les téléchargements",
+    "migrateTracking": "Migrer le suivi",
+    "migrateReaderSettings": "Paramètres du lecteur",
+    "migrateOfflineSettings": "Règle \"garder hors-ligne\"",
+    "migrationSettings": "Paramètres de migration",
+    "bulkMigrationTitle": "Migrer les sources",
+    "migrationSelectSourcesTitle": "Sélectionner les sources",
+    "migrationListTitleProgress": "Migrer ({done}/{total})",
+    "@migrationListTitleProgress": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDataUnavailable": "Cette migration n'a pas été restaurée. Retournez en arrière et démarrez-la à nouveau.",
+    "migrationLatestChapter": "Chapitre le plus récent : {chapter}",
+    "@migrationLatestChapter": {
+        "placeholders": {
+            "chapter": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationSelectPinned": "Sélectionner les épinglés",
+    "migrationSelectEnabled": "Sélectionner les activés",
+    "migrationAdditionalSearchQuery": "Requête de recherche supplémentaire",
+    "migrationAdditionalSearchQueryHint": "Juxtaposé à chaque titre lors de la recherche dans les sources.",
+    "migrationHideWithoutUpdatesSubtitle": "Masquer les séries quand la nouvelle source n'a pas davantage de chapitres.",
+    "responseFallback": "Solution de secours",
+    "responseFallbackDescription": "Utilise la réponse de FlareSolverr si le serveur rencontre un défi Cloudflare que FlareSolverr ne rencontre pas et est donc incapable de résoudre (ne fonctionne pas pour les images)",
+    "githubServer": "GitHub Serveur",
+    "githubTsumiru": "GitHub Tsumiru",
+    "helpTranslate": "Aidez à traduire",
+    "informAboutAvailableUpdate": "Informer des mises à jour disponibles",
+    "informAboutVersionUpdate": "Informer sur la mise à jour de version",
+    "includeManga": "Entrées de la bibliothèque",
+    "includeServerSettings": "Paramètres serveur",
+    "invalidProp": "{property} invalide",
+    "@invalidProp": {
+        "description": "Toast text for select invalid property value"
+    },
+    "ip": "Adresse IP",
+    "@ip": {
+        "description": "Option title for Server IP Address in Server settings"
+    },
+    "ipHintText": "Entrez l'adresse IP de liaison du serveur",
+    "italic": "Italique",
+    "appThemeIndigoNight": "Nuit Indigo",
+    "migrationPickSourceTitle": "Migrer depuis une source",
+    "migrationFilterObsolete": "Afficher uniquement les obsolètes",
+    "migrationSortMode": "Mode de tri",
+    "migrationSortDirection": "Sens du tri",
+    "migrationSourceNotInstalled": "Source pas installée",
+    "migrationSortCount": "Nombre",
+    "migrationSourcesAndOptions": "Sources et options",
+    "migrationReviewMatches": "Examiner les correspondances",
+    "migrationSeriesCount": "{count} séries",
+    "@migrationSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationSeriesFromSource": "{count} séries de {source}",
+    "@migrationSeriesFromSource": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationNoLibrarySources": "Votre bibliothèque est vide — rien à migrer.",
+    "migrationActionMigrateDescription": "Déplacer toutes les séries vers la nouvelle source et supprimer les originales.",
+    "migrationActionCopyDescription": "Ajouter toutes les séries de la nouvelle source et garder les originales.",
+    "migrateSeriesCount": "Migrer {count} séries",
+    "@migrateSeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "copySeriesCount": "Copier {count} séries",
+    "@copySeriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDoneMigrated": "{count} séries migrées",
+    "@migrationDoneMigrated": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationDoneCopied": "{count} séries copiées",
+    "@migrationDoneCopied": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationNoObsoleteSources": "Aucune source obsolète",
+    "migrationShowAllSources": "Afficher toutes les sources",
+    "migrationClearSearch": "Réinitialiser la recherche",
+    "migrationFailedGeneric": "Migration échouée",
+    "migrationFailedCount": "{count, plural, =1{1 échouée} other{{count} échouées}}",
+    "@migrationFailedCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationFailedSnack": "{count, plural, =1{1 série dont la migration a échoué} other{{count} séries dont la migration a échoué}}",
+    "@migrationFailedSnack": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "migrationBlockedNoChapters": "Aucun chapitre dans {source}",
+    "@migrationBlockedNoChapters": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedUnmatched": "{count, plural, =1{1 chapitre avec progression n'a aucune correspondance dans {source}} other{{count} chapitres avec progression n'ont aucune correspondance dans {source}}}",
+    "@migrationBlockedUnmatched": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedChaptersUnavailable": "Impossible de charger les chapitres de {source}",
+    "@migrationBlockedChaptersUnavailable": {
+        "description": "Reason shown when the target source's chapters could not be loaded",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "migrationBlockedSelfTarget": "La cible est la série elle-même ou sa propre source",
+    "@migrationBlockedSelfTarget": {
+        "description": "Reason shown when the picked migration target is the series itself or lives on its origin source"
+    },
+    "migrationFailureUnsyncedReads": "Lectures hors-ligne non synchronisées. Connectez-vous, synchronisez, puis réessayez.",
+    "@migrationFailureUnsyncedReads": {
+        "description": "Failure shown when offline reads are unsynced and the source cannot be removed yet"
+    },
+    "migrationFailureCopyFailed": "Copie échouée",
+    "@migrationFailureCopyFailed": {
+        "description": "Failure shown when copying to the new source failed"
+    },
+    "migrationFailureRemovalFailed": "Copié vers la nouvelle source, mais la suppression de l'ancienne a échoué",
+    "@migrationFailureRemovalFailed": {
+        "description": "Failure shown when copying succeeded but removing the old source failed"
+    },
+    "migrationNeedsReview": "Vérifiez cette correspondance",
+    "notificationNewChaptersTitle": "Nouveaux chapitres",
+    "notificationNewChaptersSummary": "Mises à jour pour {count} séries",
+    "@notificationNewChaptersSummary": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChaptersGeneric": "{count} nouveaux chapitres",
+    "@notificationChaptersGeneric": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationChaptersMultipleAndMore": "Chapitres {numbers} et {count} de plus",
+    "@notificationChaptersMultipleAndMore": {
+        "placeholders": {
+            "numbers": {
+                "type": "String"
+            },
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "libraryUpdateErrorsEmpty": "Aucune erreur de mise à jour",
+    "notificationLibraryErrorTitle": "Mise à jour de la bibliothèque échouée",
+    "notificationLibraryErrorBody": "Mise à jour de {count} séries échouée",
+    "@notificationLibraryErrorBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationDownloadErrorTitle": "Téléchargement échoué",
+    "notificationDownloadErrorBody": "Téléchargement de {count} chapitres échoué",
+    "@notificationDownloadErrorBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "backgroundDownloadScheduleFailed": "Impossible de planifier les téléchargements en arrière-plan. Réessayez depuis le menu Téléchargements.",
+    "notificationDownloadsPausedBackground": "Android a mis en pause les téléchargements en arrière-plan. Ouvrez Tsumiru pour réessayer.",
+    "notificationDownloadsPausedService": "Impossible de démarrer les téléchargements. Appuyez sur Réessayer dans Téléchargements pour essayer à nouveau.",
+    "notificationDownloadsPausedNoServer": "Aucune connexion. Ils reprendront quand elle reviendra.",
+    "@notificationDownloadsPausedNoServer": {
+        "description": "Body when downloads pause because the Suwayomi server is unreachable"
+    },
+    "notificationDownloadsPausedWifi": "En attente du Wi-Fi.",
+    "@notificationDownloadsPausedWifi": {
+        "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
+    },
+    "notificationAppUpdateBody": "Tsumiru {version} est disponible",
+    "@notificationAppUpdateBody": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationExtensionUpdateBody": "{count} extensions ont des mises à jour",
+    "@notificationExtensionUpdateBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationIncognitoBody": "L'historique et les mises à jour de progression sont en pause",
+    "privacyPolicy": "Politique de confidentialité",
+    "notificationsAppUpdates": "Notifications de mise à jour de l'appli",
+    "notificationsExtensionUpdates": "Notifications de mise à jour d'extension",
+    "notificationDownloadsCompleteTitle": "Téléchargements terminés",
+    "notificationDownloadsCompleteBody": "{count} chapitres téléchargés",
+    "@notificationDownloadsCompleteBody": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "network": "Réseau",
+    "notifications": "Notifications",
+    "notificationsSectionNewChapters": "Nouveaux chapitres",
+    "@notificationsSectionNewChapters": {
+        "description": "Section header for new-chapter notification settings"
+    },
+    "notificationsSectionOther": "Autres",
+    "@notificationsSectionOther": {
+        "description": "Section header for the remaining notification kinds"
+    },
+    "notificationsNewChapters": "Notifications de nouveau chapitre",
+    "notificationsNewChaptersSubtitle": "Notifier quand une série suivie a de nouveaux chapitres",
+    "notificationsDownloadsComplete": "Notifications de téléchargement",
+    "notificationsCheckInterval": "Vérifier l'intervalle",
+    "notificationsChargingOnly": "Uniquement lors de la charge",
+    "notificationsHideContentSubtitle": "Montrer uniquement le nombre, ni titres ni couvertures",
+    "notificationsCheckNow": "Vérifier maintenant",
+    "notificationsReliabilityNote": "Les vérifications sont périodiques, pas instantanées. Certains appareils restreignent les mises à jour en arrière-plan.",
+    "errorGettingMigrationSources": "Échec de la récupération des sources de migration",
+    "errorSearchingMangaInSource": "Échec de la recherche du manga dans la source",
+    "errorFetchingSourceManga": "Échec de la récupération du manga source",
+    "errorSourceMangaNotFound": "Manga source non trouvé",
+    "errorFetchingTargetManga": "Échec de la récupération du manga cible",
+    "errorTargetMangaNotFound": "Manga cible non trouvé",
+    "webtoonScaleType": "Échelle du mode bande d'images verticale",
+    "@webtoonScaleType": {
+        "description": "Section label for the long-strip scale chip row"
+    },
+    "yes": "Oui",
+    "no": "Non",
+    "searchAllSources": "Rechercher dans toutes les sources",
+    "searchLibraryHint": "Rechercher par titre ou auteur...",
+    "@searchLibraryHint": {
+        "description": "Placeholder text in the library search field"
+    },
+    "select": "Sélectionner",
+    "selectAll": "Sélectionner tout",
+    "selectBelow": "Sélectionner ci-dessous",
+    "serverSignedOutTitle": "Déconnecté",
+    "@serverSignedOutTitle": {
+        "description": "Title shown when the server rejects the app's credentials."
+    },
+    "serverSignedOutSubtitle": "Votre serveur n'a pas accepté ces identifiants. Reconnectez-vous dans les paramètres de connexion.",
+    "@serverSignedOutSubtitle": {
+        "description": "Subtitle shown when the server rejects the app's credentials."
+    },
+    "serverUnreachableTitle": "Impossible d'atteindre votre serveur",
+    "@serverUnreachableTitle": {
+        "description": "Shown when the app cannot connect to the Suwayomi server"
+    },
+    "serverUnreachableSubtitle": "Assurez-vous qu'il est lancé, puis vérifiez vos paramètres de connexion.",
+    "@serverUnreachableSubtitle": {
+        "description": "Guidance under the server-unreachable message"
+    },
+    "serverUnreachableAction": "Paramètres de connexion",
+    "@serverUnreachableAction": {
+        "description": "Button that opens the connection settings screen"
+    },
+    "offlineViewBannerTitle": "Vous consultez hors-ligne",
+    "@offlineViewBannerTitle": {
+        "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
+    },
+    "offlineViewGoOnline": "Se mettre online",
+    "@offlineViewGoOnline": {
+        "description": "Banner button that leaves the offline view and loads from the server again"
+    },
+    "clearCrashLog": "Vider le journal de débogage",
+    "copyCrashLog": "Copier le journal de débogage",
+    "copyCrashLogSubtitle": "Erreurs récentes et diagnostics du lecteur pour les rapports de bugs",
+    "crashLogCleared": "Journal de débogage vidé",
+    "crashLogCopied": "Journal de débogage copié vers le presse-papiers",
+    "noCrashLog": "Aucun journal de débogage trouvé",
+    "addLocalNetworkAddress": "Ajouter une adresse de réseau local",
+    "serverLanUrl": "Interne / LAN URL",
+    "serverLanUrlOptional": "Facultatif",
+    "serverLanUrlHintText": "http://192.168.1.100:4567",
+    "serverActiveUrl": "Connexion active",
+    "serverUsingLanUrl": "Utilisation LAN",
+    "serverUsingExternalUrl": "Utilisation distante",
+    "cleartextAddressWarning": "Cette adresse utilise un http:// non chiffré sur Internet : votre connexion et votre session sont lisibles en clair par n'importe qui sur le chemin. Utilisez https://, en utilisant un proxy inverse par exemple.",
+    "@cleartextAddressWarning": {
+        "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
+    },
+    "serverUsers": "Utilisateurs",
+    "@serverUsers": {
+        "description": "Server hub entry that opens user management"
+    },
+    "settingsGroupApp": "Appli",
+    "settingsGroupSuwayomi": "Suwayomi",
+    "@settingsGroupSuwayomi": {
+        "description": "Group header for Suwayomi server settings"
+    },
+    "skipThisVersion": "Ne pas me rappeler pour cette version",
+    "stillRequestedByAnotherAccount": "Toujours demandé par un autre compte",
+    "@stillRequestedByAnotherAccount": {
+        "description": "Toast after cancelling a download that remains queued because another account requested it"
+    },
+    "systemTrayIconDescription": "Cet icône sera affiché sur le système qui héberge le serveur",
+    "tomorrow": "Demain",
+    "upcomingViewMonth": "Mois",
+    "upcomingViewWeek": "Semaine",
+    "upcomingShowPastReleases": "Afficher les sorties passées",
+    "upcomingCalendarOptions": "Options du calendrier",
+    "upcomingGuide": "Qu'est-ce que c'est ?",
+    "upcomingGuideBody": "Futures dates de sortie estimées pour votre bibliothèque, se base sur la cadence des mises à jour récentes de chaque série. Il s'agit d'estimations, pas de certitudes, et les séries terminées sont ignorées.",
+    "upcomingEmpty": "Aucune prévision de sorties à venir. Elles apparaîtront ici quand votre bibliothèque aura assez d'historique de chapitres pour estimer.",
+    "unifiedSearchHint": "Rechercher dans votre bibliothèque, dans l'appli, et dans les sources",
+    "@unifiedSearchHint": {
+        "description": "Placeholder text in the unified search field"
+    },
+    "unifiedSearchGoToSection": "Aller à",
+    "@unifiedSearchGoToSection": {
+        "description": "Unified search section header for app navigation"
+    },
+    "unifiedSearchFiltersSection": "Filtres",
+    "@unifiedSearchFiltersSection": {
+        "description": "Unified search section header for operator autocomplete suggestions"
+    },
+    "unifiedSearchExamplesSection": "Exemples",
+    "@unifiedSearchExamplesSection": {
+        "description": "Unified search section header for example queries in the empty state"
+    },
+    "unifiedSearchAllSources": "Rechercher dans toutes les sources : {query}",
+    "@unifiedSearchAllSources": {
+        "description": "Row that hands off to global source search",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchLibraryFor": "Rechercher dans la bibliothèque : {query}",
+    "@phoneSearchLibraryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Library filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchHistoryFor": "Rechercher dans l'historique : {query}",
+    "@phoneSearchHistoryFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the History filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchSourcesFor": "Rechercher dans les sources : {query}",
+    "@phoneSearchSourcesFor": {
+        "description": "Phone search: highlighted first row applying the typed text to the Sources filter",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "phoneSearchNoResults": "Aucun résultat",
+    "@phoneSearchNoResults": {
+        "description": "Phone search: trailing label on the dimmed page row when nothing on the page matches"
+    },
+    "reinstall": "Réinstaller",
+    "@reinstall": {
+        "description": "Button tooltip on an installed extension: uninstall it and install it again"
+    },
+    "reinstalling": "Réinstallation en cours",
+    "readProgressBar": "Barre de progression de lecture",
+    "updateAll": "Tout mettre à jour",
+    "updatesGroupingLabel": "Regroupement des chapitres",
+    "updatesGroupingHint": "Pour une série, rassembler les chapitres du même jour dans une entrée dépliable.",
+    "updatesGroupingModeCollapsed": "Réduit",
+    "updatesGroupingModeExpanded": "Développé",
+    "updatesGroupingShowMore": "+{count} autres",
+    "@updatesGroupingShowMore": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "updatingLibraryProgress": "Mise à jour de la bibliothèque ({percent} % · {checked}/{total})",
+    "@updatingLibraryProgress": {
+        "description": "App-root banner text while a library update is running, once the job total is known. Percent alongside the raw checked/total counts (locked in the design spec: Komikku's banner is percent-only, ours adds counts since the data is already available).",
+        "placeholders": {
+            "percent": {
+                "example": "37",
+                "type": "int"
+            },
+            "checked": {
+                "example": "44",
+                "type": "int"
+            },
+            "total": {
+                "example": "120",
+                "type": "int"
+            }
+        }
+    },
+    "validating": "Validation en cours",
+    "@validating": {
+        "description": "toast to show backup validation is in progress"
+    },
+    "kcefWebView": "WebView",
+    "kcefWebViewDescription": "Activer la WebView via CEF (Chromium)",
+    "searchHistory": "Rechercher dans l'historique...",
+    "noHistoryFound": "Aucun historique de lecture trouvé",
+    "noSearchResults": "Aucun résultat de recherche",
+    "sourceHidden": "{source} a été masqué",
+    "@sourceHidden": {
+        "description": "Toast after hiding a source, with an Undo action",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "clearSelection": "Annuler la sélection",
+    "@clearSelection": {
+        "description": "Tooltip for the clear-selection button in the desktop source catalogue selection bar"
+    },
+    "historyChapterCompleted": "Terminé",
+    "@historyChapterCompleted": {
+        "description": "Label on a History entry whose chapter is finished"
+    },
+    "searchSourceHint": "Rechercher dans {source}...",
+    "@searchSourceHint": {
+        "description": "Placeholder in the desktop source catalogue search box",
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "searchResults": "Résultats de recherche",
+    "@searchResults": {
+        "description": "Label for the Search results view in the desktop source catalogue switch"
+    },
+    "pinned": "Épinglées",
+    "@pinned": {
+        "description": "Heading for pinned sources in the desktop source switcher menu"
+    },
+    "recent": "Récentes",
+    "@recent": {
+        "description": "Heading for recently opened sources in the desktop source switcher menu"
+    },
+    "browseAllSources": "Toutes les sources",
+    "@browseAllSources": {
+        "description": "Menu item returning to the Browse sources list from the desktop source switcher"
+    },
+    "searchOtherSources": "Rechercher dans d'autres sources",
+    "@searchOtherSources": {
+        "description": "Menu item opening Global search with a catalogue entry's title"
+    },
+    "open": "Ouvrir",
+    "@open": {
+        "description": "Menu item opening the selected entry"
+    },
+    "searchTips": "Astuces de recherche",
+    "searchTipsPlainWords": "Les termes simples sont associés au titre, à l'auteur, aux genres et aux étiquettes.",
+    "@searchTipsPlainWords": {
+        "description": "First paragraph of the search tips dialog"
+    },
+    "searchTipsField": "Saisissez un champ suivi de deux-points, comme {example}, pour rechercher un champ spécifique. Des suggestions apparaissent lors de la saisie.",
+    "@searchTipsField": {
+        "description": "Second paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "searchTipsExclude": "Exclure avec un signe moins : {example}",
+    "@searchTipsExclude": {
+        "description": "Third paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+    },
+    "updateProgressManualMarkReadDesc": "Ne s'applique pas au \"marquer comme lu\" de masse",
+    "@updateProgressManualMarkReadDesc": {
+        "description": "Subtitle for the manual-mark-read progress toggle"
+    },
+    "reLogin": "Jeton expiré. Reconnectez-vous.",
+    "@reLogin": {
+        "description": "Subtitle shown on a tracker tile when the token is expired, prompting the user to log in again"
+    },
+    "trackerLoginSuccess": "Connecté à {trackerName}",
+    "@trackerLoginSuccess": {
+        "description": "Toast shown after a successful tracker login",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "manageTrackers": "Gérer les systèmes de suivi",
+    "@manageTrackers": {
+        "description": "Button / list-tile label that opens the Tracking settings screen from the track hub sheet"
+    },
+    "noTrackersLoggedIn": "Se connecter à un système de suivi",
+    "@noTrackersLoggedIn": {
+        "description": "Empty-state message shown in the track hub sheet when no tracker account is logged in"
+    },
+    "logInToEdit": "Se connecter pour modifier",
+    "@logInToEdit": {
+        "description": "Button shown on a read-only tracker card when the tracker account is logged out but the manga already has a bound record; tapping pops the sheet and opens Tracking Settings"
+    },
+    "trackBindSuccess": "Ajouté à {trackerName}",
+    "@trackBindSuccess": {
+        "description": "Success toast shown after a manga is successfully bound to a tracker",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackChaptersRead": "Chapitres lus",
+    "@trackChaptersRead": {
+        "description": "Row label for the chapters-read field in the track editor"
+    },
+    "perCategorySortAndFilters": "Paramètres de tri et filtres, par catégorie",
+    "tryDifferentSearchTerm": "Essayez un terme de recherche différent"
 }

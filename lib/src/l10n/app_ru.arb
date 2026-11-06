@@ -3906,5 +3906,9 @@
                 "type": "String"
             }
         }
+    },
+    "showEmptyCategoriesSearch": "Показывать пустые категории при поиске/фильтрации",
+    "@showEmptyCategoriesSearch": {
+        "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
     }
 }
