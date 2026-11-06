@@ -133,6 +133,7 @@ class OfflineCategories extends Table {
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   TextColumn get webUiMetaJson => text().nullable()();
+  TextColumn get pendingWebUiMetaJson => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -411,6 +412,11 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineCategories,
           offlineCategories.webUiMetaJson,
         );
+        await _addColumnIfMissing(
+          m,
+          offlineCategories,
+          offlineCategories.pendingWebUiMetaJson,
+        );
       }
     },
     beforeOpen: (details) async {
@@ -631,6 +637,65 @@ class OfflineDatabase extends _$OfflineDatabase {
           : Value(webUiMetaJson),
     ),
   );
+
+  Future<OfflineCategory?> categoryById(int id) => (select(
+    offlineCategories,
+  )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<List<OfflineCategory>> pendingCategoryMeta() => (select(
+    offlineCategories,
+  )..where((t) => t.pendingWebUiMetaJson.isNotNull())).get();
+
+  Future<void> mergePendingCategoryMeta(int id, Map<String, String?> values) =>
+      transaction(() async {
+        final category = await categoryById(id);
+        if (category == null) throw StateError('Category $id is not mirrored');
+        final pending = <String, String?>{
+          if (category.pendingWebUiMetaJson != null)
+            ...Map<String, String?>.from(
+              jsonDecode(category.pendingWebUiMetaJson!),
+            ),
+          ...values,
+        };
+        await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
+          OfflineCategoriesCompanion(
+            pendingWebUiMetaJson: Value(jsonEncode(pending)),
+          ),
+        );
+      });
+
+  Future<void> clearPendingCategoryMetaIfUnchanged(
+    int id,
+    Map<String, String?> values,
+  ) => transaction(() async {
+    final category = await categoryById(id);
+    if (category?.pendingWebUiMetaJson == null) return;
+    final pending = Map<String, String?>.from(
+      jsonDecode(category!.pendingWebUiMetaJson!),
+    );
+    final meta = <String, String>{
+      if (category.webUiMetaJson != null)
+        ...Map<String, String>.from(jsonDecode(category.webUiMetaJson!)),
+    };
+    for (final e in values.entries) {
+      if (e.value == null) {
+        meta.remove(e.key);
+      } else {
+        meta[e.key] = e.value!;
+      }
+      if (pending.containsKey(e.key) && pending[e.key] == e.value) {
+        pending.remove(e.key);
+      }
+    }
+    await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
+      OfflineCategoriesCompanion(
+        webUiMetaJson: Value(jsonEncode(meta)),
+        pendingWebUiMetaJson: Value(
+          pending.isEmpty ? null : jsonEncode(pending),
+        ),
+      ),
+    );
+  });
 
   /// Local override until the next category sync; false if no mirrored row matched.
   Future<bool> setCategoryHidden(int id, bool hidden) async {

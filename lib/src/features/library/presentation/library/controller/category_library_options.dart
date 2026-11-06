@@ -4,11 +4,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
+import '../../../../../utils/logger/logger.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/webui_meta/webui_meta_codec.dart';
+import '../../../../offline/data/offline_repository.dart';
 import '../../../data/category_repository.dart';
+import '../../../domain/category/category_model.dart';
 import '../../../domain/library_group.dart';
 import '../../category/controller/edit_category_controller.dart';
 import 'library_controller.dart';
@@ -222,18 +225,52 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
   final _optimistic = <String, String?>{};
   int _pending = 0;
   bool _hasUnsyncedEdits = false;
+  Future<void>? _loadPending;
+  String? _storedPending;
 
   @override
   Map<String, String> build(int categoryId) {
     ref.keepAlive();
     final categories = ref.watch(categoryControllerProvider).value ?? const [];
     final category = categories.where((c) => c.id == categoryId).firstOrNull;
+    if (ref.watch(offlineActiveProvider)) {
+      _loadPending ??= ref
+          .read(offlineDatabaseProvider)
+          .categoryById(categoryId)
+          .then((row) {
+            if (!ref.mounted) return;
+            _storedPending = row?.pendingWebUiMetaJson;
+            ref.invalidateSelf();
+          });
+    }
+    final metaWithPending = applyPendingWebUiMeta({
+      for (final meta in category?.meta ?? []) meta.key: meta.value,
+    }, _storedPending);
     return {
-      for (final meta in category?.meta ?? [])
+      for (final meta in metaWithPending.entries)
         if (!_optimistic.containsKey(meta.key)) meta.key: meta.value,
       for (final e in _optimistic.entries)
         if (e.value != null) e.key: e.value!,
     };
+  }
+
+  Future<void> clearSyncedMeta(Map<String, String?> values) async {
+    await _loadPending;
+    if (!ref.mounted) return;
+    final pending = _storedPending == null
+        ? <String, String?>{}
+        : Map<String, String?>.from(jsonDecode(_storedPending!));
+    for (final e in values.entries) {
+      if (pending.containsKey(e.key) && pending[e.key] == e.value) {
+        pending.remove(e.key);
+      }
+      if (_optimistic.containsKey(e.key) && _optimistic[e.key] == e.value) {
+        _optimistic.remove(e.key);
+      }
+    }
+    _storedPending = pending.isEmpty ? null : jsonEncode(pending);
+    if (_optimistic.isEmpty) _hasUnsyncedEdits = false;
+    ref.invalidateSelf();
   }
 
   void write(Map<String, String?> values) {
@@ -275,8 +312,49 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
       next.addAll(plan.set);
     }
     state = next;
+    final db = ref.read(offlineActiveProvider)
+        ? ref.read(offlineDatabaseProvider)
+        : null;
+    final category = (ref.read(categoryControllerProvider).value ?? const [])
+        .where((c) => c.id == categoryId)
+        .firstOrNull;
+    final stored = <String, String?>{
+      for (final plan in plans) ...{
+        for (final key in plan.delete) key: null,
+        ...plan.set,
+      },
+    };
+    final persisted = db == null
+        ? Future<bool>.value(false)
+        : db
+              .transaction(() async {
+                if (await db.categoryById(categoryId) == null &&
+                    category != null) {
+                  await db.upsertCategory(
+                    categoryId,
+                    category.name,
+                    category.order,
+                    isHidden: category.isHidden,
+                    autoAdd: category.defaultCategory,
+                    webUiMetaJson: jsonEncode({
+                      for (final m in category.meta) m.key: m.value,
+                    }),
+                  );
+                }
+                await db.mergePendingCategoryMeta(categoryId, stored);
+                return true;
+              })
+              .catchError((Object error, StackTrace stackTrace) {
+                logger.e(
+                  'Offline: could not save category meta for $categoryId',
+                  error: error,
+                  stackTrace: stackTrace,
+                );
+                return false;
+              });
     _pending++;
     _writes = _writes.then((_) async {
+      final saved = await persisted;
       final synced = await AppUtils.guard(() async {
         for (final plan in plans) {
           for (final e in plan.set.entries) {
@@ -290,9 +368,24 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
             await repo.deleteCategoryMeta(categoryId: categoryId, key: key);
           }
         }
+        if (db != null) {
+          await db.clearPendingCategoryMetaIfUnchanged(categoryId, stored);
+          if (ref.mounted) {
+            _storedPending = (await db.categoryById(
+              categoryId,
+            ))?.pendingWebUiMetaJson;
+          }
+        }
         return true;
-      }, toast);
-      if (synced != true) _hasUnsyncedEdits = true;
+      }, saved ? null : toast);
+      if (synced != true) {
+        _hasUnsyncedEdits = true;
+        if (saved) {
+          logger.w(
+            'Offline: category meta push failed for $categoryId; saved for retry',
+          );
+        }
+      }
       if (!ref.mounted || --_pending != 0 || _hasUnsyncedEdits) return;
       await AppUtils.guard(() async {
         ref.invalidate(categoryControllerProvider);

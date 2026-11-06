@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 String webUiKey(String key) => 'webUI_$key';
 
 String? readWebUiValue(Map<String, String> metas, String key) {
@@ -90,3 +92,20 @@ num? _webUiNumber(String? value) {
 }
 
 final _decimalNumber = RegExp(r'^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$');
+
+Map<String, String> applyPendingWebUiMeta(
+  Map<String, String> meta,
+  String? pendingJson,
+) {
+  final result = {...meta};
+  if (pendingJson == null) return result;
+  final pending = Map<String, String?>.from(jsonDecode(pendingJson));
+  for (final e in pending.entries) {
+    if (e.value == null) {
+      result.remove(e.key);
+    } else {
+      result[e.key] = e.value!;
+    }
+  }
+  return result;
+}

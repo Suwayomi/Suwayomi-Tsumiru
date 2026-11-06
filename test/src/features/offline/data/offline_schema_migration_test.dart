@@ -145,6 +145,9 @@ void main() {
       await db.customStatement(
         'ALTER TABLE offline_categories DROP COLUMN web_ui_meta_json',
       );
+      await db.customStatement(
+        'ALTER TABLE offline_categories DROP COLUMN pending_web_ui_meta_json',
+      );
       await db.customStatement('PRAGMA user_version = 17');
       await db.close();
     }
@@ -162,6 +165,10 @@ void main() {
       expect(c.failureReason, isNull);
       expect(db.schemaVersion, 21);
       expect((await db.allOfflineCategories()).single.webUiMetaJson, isNull);
+      expect(
+        (await db.allOfflineCategories()).single.pendingWebUiMetaJson,
+        isNull,
+      );
       const meta = '{"webUI_sortBy":"dateAdded","webUI_migration":"10"}';
       await db.upsertCategory(
         1,
@@ -171,6 +178,11 @@ void main() {
         webUiMetaJson: meta,
       );
       expect((await db.allOfflineCategories()).single.webUiMetaJson, meta);
+      await db.mergePendingCategoryMeta(1, {'webUI_sortBy': 'lastRead'});
+      expect(
+        (await db.allOfflineCategories()).single.pendingWebUiMetaJson,
+        '{"webUI_sortBy":"lastRead"}',
+      );
 
       await db.upsertMangaMetadata(
         id: 1,

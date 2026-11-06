@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -28,6 +29,9 @@ import '../../../utils/platform/is_android_native.dart';
 import '../../account/data/account_permission.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
+import '../../library/data/category_repository.dart';
+import '../../library/presentation/category/controller/edit_category_controller.dart';
+import '../../library/presentation/library/controller/category_library_options.dart';
 import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
@@ -928,6 +932,68 @@ Future<void> _deleteServerCopyIfDeletable(
   } catch (e) {
     logger.e('Offline: server delete-on-read failed for $chapterId: $e');
   }
+});
+
+Future<void> pushPendingCategoryMeta(
+  ProviderContainer container,
+) => container.read(offlineRuntimeStorageProvider.notifier).track(() async {
+  if (!container.read(offlineActiveProvider)) return;
+  final auth = container.read(authCredentialsStoreProvider.notifier);
+  final epoch = auth.sessionEpoch;
+  bool current() => !auth.sessionChanging && auth.sessionEpoch == epoch;
+  if (!current()) return;
+  final db = container.read(offlineDatabaseProvider);
+  final repo = container.read(categoryRepositoryProvider);
+  var sent = false;
+  for (final category in await db.pendingCategoryMeta()) {
+    if (!current()) return;
+    final pending = Map<String, String?>.from(
+      jsonDecode(category.pendingWebUiMetaJson!),
+    );
+    for (final e in pending.entries) {
+      if (!current()) return;
+      try {
+        if (e.value == null) {
+          await repo.deleteCategoryMeta(categoryId: category.id, key: e.key);
+        } else {
+          await repo.setCategoryMeta(
+            categoryId: category.id,
+            key: e.key,
+            value: e.value!,
+          );
+        }
+        if (!current()) return;
+        sent = true;
+        await db.clearPendingCategoryMetaIfUnchanged(category.id, {
+          e.key: e.value,
+        });
+        if (!current()) return;
+        final metadata = categoryLibraryMetadataProvider(category.id);
+        if (container.exists(metadata)) {
+          await container.read(metadata.notifier).clearSyncedMeta({
+            e.key: e.value,
+          });
+        }
+      } catch (error) {
+        if (!current()) return;
+        logger.e(
+          'Offline: category meta push failed for ${category.id}: $error',
+        );
+        final categories = await AsyncValue.guard(repo.getCategoryList);
+        if (!current()) return;
+        final serverCategories = categories.asData?.value;
+        if (serverCategories != null &&
+            !serverCategories.any((c) => c.id == category.id)) {
+          await db.clearPendingCategoryMetaIfUnchanged(category.id, pending);
+          logger.w(
+            'Offline: dropped pending meta for removed category ${category.id}',
+          );
+        }
+        break;
+      }
+    }
+  }
+  if (current() && sent) container.invalidate(categoryControllerProvider);
 });
 
 /// Pushes pending changes and nudges trackers for successfully synced read chapters.
