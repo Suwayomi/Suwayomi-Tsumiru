@@ -51,7 +51,7 @@ import 'widgets/library_random_entry.dart';
 import 'widgets/library_sections_view.dart';
 
 /// Keeps the mismatch banner inside the body; [grouped] chooses the provider Retry refreshes.
-/// [header] stays fixed above banners.
+/// [header] stays fixed below banners.
 Widget _libraryBody(
   WidgetRef ref,
   Widget body, {
@@ -59,13 +59,13 @@ Widget _libraryBody(
   Widget? header,
 }) => Column(
   children: [
-    ?header,
     ServerUnreachableBanner(
       onRetry: () => ref.invalidate(
         grouped ? libraryGroupedTabsProvider : categoryControllerProvider,
       ),
     ),
     const OfflineServerMismatchBanner(),
+    ?header,
     Expanded(child: body),
   ],
 );
@@ -420,15 +420,6 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                 ),
                               ),
                             ),
-                      bottom: showTabBar && data.length.isGreaterThan(1)
-                          ? TabBar(
-                              isScrollable: true,
-                              tabs: data
-                                  .map((e) => _CategoryTab(category: e))
-                                  .toList(),
-                              dividerColor: Colors.transparent,
-                            )
-                          : null,
                       actions: showSearch && !phone
                           ? const [SizedBox.shrink()]
                           : [
@@ -509,6 +500,14 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                 _openLibraryOrganizer(bodyContext),
                             trailing: trailing,
                             tabStrip: tabStrip,
+                          )
+                        : showTabBar && data.length.isGreaterThan(1)
+                        ? TabBar(
+                            isScrollable: true,
+                            tabs: data
+                                .map((e) => _CategoryTab(category: e))
+                                .toList(),
+                            dividerColor: Colors.transparent,
                           )
                         : null,
                 _groupedBody(
@@ -746,19 +745,6 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                         child: const _LibrarySearchBar(inAppBar: false),
                       ),
                     ),
-                  if (showTabs)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverTabBarDelegate(
-                        TabBar(
-                          isScrollable: true,
-                          tabs: data
-                              .map((e) => _CategoryTab(category: e))
-                              .toList(),
-                          dividerColor: Colors.transparent,
-                        ),
-                      ),
-                    ),
                 ];
               },
               // Remove the status-bar inset inside the body MediaQuery; header slivers already consume it.
@@ -768,6 +754,15 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                   removeTop: true,
                   child: _libraryBody(
                     ref,
+                    header: !desktop && !topBar && showTabs
+                        ? TabBar(
+                            isScrollable: true,
+                            tabs: data
+                                .map((e) => _CategoryTab(category: e))
+                                .toList(),
+                            dividerColor: Colors.transparent,
+                          )
+                        : null,
                     _groupedBody(
                       useTabs: useTabs,
                       sections: _categorySections(data),
@@ -926,18 +921,6 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                               ),
                             ),
                           ),
-                    bottom: showTabBar && tabs.length > 1
-                        ? TabBar(
-                            isScrollable: true,
-                            tabs: tabs
-                                .map(
-                                  (t) =>
-                                      _GroupTab(tab: t, showCount: showCounts),
-                                )
-                                .toList(),
-                            dividerColor: Colors.transparent,
-                          )
-                        : null,
                     actions: showSearch && !phone
                         ? const [SizedBox.shrink()]
                         : [
@@ -1032,6 +1015,17 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                                 _openLibraryOrganizer(bodyContext),
                             trailing: trailing,
                             tabStrip: tabStrip,
+                          )
+                        : showTabBar && tabs.length > 1
+                        ? TabBar(
+                            isScrollable: true,
+                            tabs: tabs
+                                .map(
+                                  (t) =>
+                                      _GroupTab(tab: t, showCount: showCounts),
+                                )
+                                .toList(),
+                            dividerColor: Colors.transparent,
                           )
                         : null,
               _groupedBody(
@@ -1255,21 +1249,6 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                         child: const _LibrarySearchBar(inAppBar: false),
                       ),
                     ),
-                  if (showTabBar && tabs.length > 1)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverTabBarDelegate(
-                        TabBar(
-                          isScrollable: true,
-                          tabs: tabs
-                              .map(
-                                (t) => _GroupTab(tab: t, showCount: showCounts),
-                              )
-                              .toList(),
-                          dividerColor: Colors.transparent,
-                        ),
-                      ),
-                    ),
                 ];
               },
               // Remove the body's status-bar inset; header slivers already consume it.
@@ -1280,6 +1259,19 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                   child: _libraryBody(
                     ref,
                     grouped: true,
+                    header:
+                        !desktop && !topBar && showTabBar && tabs.length > 1
+                        ? TabBar(
+                            isScrollable: true,
+                            tabs: tabs
+                                .map(
+                                  (t) =>
+                                      _GroupTab(tab: t, showCount: showCounts),
+                                )
+                                .toList(),
+                            dividerColor: Colors.transparent,
+                          )
+                        : null,
                     _groupedBody(
                       useTabs: useTabs,
                       sections: _groupSections(tabs),
@@ -1572,31 +1564,4 @@ class _SliverFixedHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverFixedHeaderDelegate oldDelegate) =>
       height != oldDelegate.height || child != oldDelegate.child;
-}
-
-class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  _SliverTabBarDelegate(this.tabBar);
-  final TabBar tabBar;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: tabBar,
-    );
-  }
-
-  // Compare TabBar instances so rebuilt headers reflect renamed or added categories.
-  @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) =>
-      tabBar != oldDelegate.tabBar;
 }
