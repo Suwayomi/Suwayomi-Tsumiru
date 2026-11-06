@@ -8,9 +8,9 @@
 // the seekbar-chain / fullscreen / flash sub-toggle visibility rules, the
 // background-color chip write, and the fullscreen→SystemUiMode branch.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';

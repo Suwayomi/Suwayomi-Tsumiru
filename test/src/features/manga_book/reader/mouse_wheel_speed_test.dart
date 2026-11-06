@@ -5,9 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/utils/wheel_scroll.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/mouse_wheel_speed.dart';
 

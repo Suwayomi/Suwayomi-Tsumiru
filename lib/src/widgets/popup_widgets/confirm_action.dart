@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../utils/motion/reduce_motion.dart';
 import 'pop_button.dart';

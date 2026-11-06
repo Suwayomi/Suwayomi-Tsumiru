@@ -9,9 +9,9 @@
 // animation), so it stays visible while reading (chrome hidden), shows
 // "currentPage / totalPages", and disappears when the pref is OFF.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';

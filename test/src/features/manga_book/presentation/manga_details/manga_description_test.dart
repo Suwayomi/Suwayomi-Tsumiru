@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/manga_description.dart';
-
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';

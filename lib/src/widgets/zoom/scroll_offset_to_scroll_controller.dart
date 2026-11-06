@@ -6,7 +6,7 @@
 
 // Requires the position getter in yakagami's scrollable_positioned_list fork; see pubspec.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 class ScrollOffsetToScrollController extends ScrollController {

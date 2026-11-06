@@ -956,7 +956,7 @@ Future<void> _pushPendingCategoryMeta(ProviderContainer container) async {
       if (values.isEmpty) continue;
       sent = true;
       final metadata = categoryLibraryMetadataProvider(category.id);
-      if (container.exists(metadata)) {
+      if (container.read(metadata.exists)) {
         await container.read(metadata.notifier).clearSyncedMeta(values);
       }
     } catch (error) {

@@ -16,9 +16,9 @@
 // — a container tied to a persistent ancestor `ProviderScope` outlives any one
 // descendant widget being removed.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_background_downloads.dart';

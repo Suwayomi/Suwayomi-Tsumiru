@@ -5,9 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../utils/crash/copy_crash_log.dart';
 import '../../../../utils/crash/crash_log.dart';
@@ -35,7 +35,7 @@ class CopyCrashLogTile extends ConsumerWidget {
         },
       ),
       onTap: () async {
-        final serverVersion = ref.exists(aboutProvider)
+        final serverVersion = ref.read(aboutProvider.exists)
             ? ref.read(aboutProvider).value?.version
             : null;
         final packageInfo = ref.read(packageInfoProvider);

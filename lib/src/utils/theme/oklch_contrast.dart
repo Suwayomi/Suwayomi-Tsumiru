@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// WCAG 2.x contrast ratio between two colors.
 double contrastRatio(Color a, Color b) {

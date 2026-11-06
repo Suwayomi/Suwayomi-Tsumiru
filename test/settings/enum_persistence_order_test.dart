@@ -2,8 +2,8 @@
 // Enum.values, so declaration order is a wire format — append new values at
 // the end, don't reorder or insert, or you'll silently remap saved settings.
 
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' show ThemeMode;
 import 'package:tsumiru/src/constants/app_theme.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 

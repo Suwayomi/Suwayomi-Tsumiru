@@ -5,8 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/features/browse_center/domain/filter/filter_model.dart';
 import 'package:tsumiru/src/features/browse_center/domain/filter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/source_manga_list/widgets/filter_to_widget.dart';

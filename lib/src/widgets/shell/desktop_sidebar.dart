@@ -7,9 +7,9 @@
 import 'dart:math' show max;
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../constants/navigation_bar_data.dart';
 import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';

@@ -2,10 +2,9 @@
 // must not register the outer swipe recognizers that steal the single-finger
 // drag from ZoomView (see multichapter_continuous_reader_mode.dart).
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
+import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/directional_swipe_gesture_handler.dart';

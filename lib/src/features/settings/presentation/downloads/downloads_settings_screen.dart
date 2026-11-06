@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
@@ -10,7 +11,6 @@ import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
-
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/touch_tab_pager.dart';

@@ -5,13 +5,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hooks_riverpod/misc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';

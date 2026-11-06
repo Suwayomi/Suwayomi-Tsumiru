@@ -8,9 +8,9 @@
 // a reader page opens the page-actions sheet; with it OFF long-press is a
 // no-op.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page_model.dart';
