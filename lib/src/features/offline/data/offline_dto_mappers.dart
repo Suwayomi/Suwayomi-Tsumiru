@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
@@ -118,15 +119,6 @@ MangaDto offlineMangaToDto(
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '',
   );
-}
-
-Map<String, String> decodeOfflineMeta(String? metaJson) {
-  if (metaJson == null || metaJson.isEmpty) return const {};
-  try {
-    return Map<String, String>.from(jsonDecode(metaJson) as Map);
-  } catch (_) {
-    return const {};
-  }
 }
 
 extension OfflineMangaCover on OfflineManga {

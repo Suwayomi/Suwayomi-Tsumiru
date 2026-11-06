@@ -298,7 +298,7 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
           meta: [
             for (final e in applyPendingWebUiMeta(
               decodeOfflineMeta(cat.webUiMetaJson),
-              cat.pendingWebUiMetaJson,
+              decodePendingWebUiMeta(cat.pendingWebUiMetaJson),
             ).entries)
               Fragment$CategoryDto$meta(key: e.key, value: e.value),
             if (cat.isHidden)

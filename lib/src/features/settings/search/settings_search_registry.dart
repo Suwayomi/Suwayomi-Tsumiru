@@ -232,7 +232,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     open: (c) => const LibrarySettingsRoute(
       highlight: 'perCategorySortAndFilters',
     ).push(c),
-    visible: (ref, _) => true,
+    visible: (_, _) => true,
   ),
   SettingsSearchEntry(
     id: 'refreshChaptersFromSource',

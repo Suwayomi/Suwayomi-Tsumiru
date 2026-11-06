@@ -14,6 +14,7 @@ import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/category_library_options.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_read_fallback.dart';
@@ -112,17 +113,16 @@ void main() {
     addTearDown(container.dispose);
     final push = pushPendingCategoryMeta(container);
     await repository.started.future;
-    await db.mergePendingCategoryMeta(1, {'webUI_sortBy': 'unreadChapters'});
+    const newer = {'webUI_sortBy': 'unreadChapters'};
+    await db.mergePendingCategoryMeta(1, newer);
+    final online = container
+        .read(categoryMetaSyncProvider)
+        .send(repository, db, 1, newer);
     repository.release.complete();
     await push;
-    expect(repository.meta['webUI_sortBy'], 'lastRead');
-    expect(repository.meta.containsKey('webUI_hasUnreadChapters'), isFalse);
-    expect(
-      (await db.categoryById(1))!.pendingWebUiMetaJson,
-      '{"webUI_sortBy":"unreadChapters"}',
-    );
-    await pushPendingCategoryMeta(container);
+    await online;
     expect(repository.meta['webUI_sortBy'], 'unreadChapters');
+    expect(repository.meta.containsKey('webUI_hasUnreadChapters'), isFalse);
     expect((await db.categoryById(1))!.pendingWebUiMetaJson, isNull);
     expect(
       (await db.categoryById(1))!.webUiMetaJson,
@@ -178,21 +178,20 @@ class _PendingMetaRepository extends CategoryRepository {
   final meta = <String, String>{'webUI_hasUnreadChapters': 'true'};
 
   @override
-  Future<void> setCategoryMeta({
-    required int categoryId,
-    required String key,
-    required String value,
-  }) async {
-    if (!started.isCompleted) started.complete();
-    await release.future;
-    meta[key] = value;
-  }
-
-  @override
-  Future<void> deleteCategoryMeta({
-    required int categoryId,
-    required String key,
-  }) async {
-    meta.remove(key);
+  Future<void> setCategoryMetas(
+    int categoryId,
+    Map<String, String?> values,
+  ) async {
+    if (!started.isCompleted) {
+      started.complete();
+      await release.future;
+    }
+    for (final e in values.entries) {
+      if (e.value == null) {
+        meta.remove(e.key);
+      } else {
+        meta[e.key] = e.value!;
+      }
+    }
   }
 }

@@ -253,6 +253,29 @@ int watchLibraryFilterActiveCount(WidgetRef ref) =>
     ref.watch(libraryFilterActiveCountProvider);
 
 void resetLibraryFilters(WidgetRef ref) {
+  if (ref.read(libraryOptionsCategoryIdProvider) != null) {
+    ref.read(activeLibraryOptionsProvider.notifier).reset();
+    ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
+    ref.read(libraryMangaFilterCompletedProvider.notifier).update(null);
+    ref.read(libraryMangaFilterLewdProvider.notifier).update(null);
+    ref.read(libraryMangaFilterMinRatingProvider.notifier).update(0);
+    ref.read(libraryFilterCategoriesProvider.notifier).update(false);
+    ref.read(libraryFilterCategoriesIncludeProvider.notifier).update(const []);
+    ref.read(libraryFilterCategoriesExcludeProvider.notifier).update(const []);
+    ref.read(libraryFilterTagsProvider.notifier).update(false);
+    ref.read(libraryFilterTagsIncludeProvider.notifier).update(const []);
+    ref.read(libraryFilterTagsExcludeProvider.notifier).update(const []);
+    return;
+  }
+  ref.read(libraryDuplicateChaptersProvider.notifier).update(null);
+  for (final kind in ['status', 'source']) {
+    ref.read(libraryEntryFiltersProvider(kind).notifier).update({});
+  }
+  ref.read(libraryMangaFilterDownloadedProvider.notifier).update(null);
+  ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
+  ref.read(libraryMangaFilterUnreadProvider.notifier).update(null);
+  ref.read(libraryMangaFilterStartedProvider.notifier).update(null);
+  ref.read(libraryMangaFilterBookmarkedProvider.notifier).update(null);
   ref.read(libraryMangaFilterCompletedProvider.notifier).update(null);
   ref.read(libraryMangaFilterLewdProvider.notifier).update(null);
   ref.read(libraryMangaFilterMinRatingProvider.notifier).update(0);
@@ -262,19 +285,6 @@ void resetLibraryFilters(WidgetRef ref) {
   ref.read(libraryFilterTagsProvider.notifier).update(false);
   ref.read(libraryFilterTagsIncludeProvider.notifier).update(const []);
   ref.read(libraryFilterTagsExcludeProvider.notifier).update(const []);
-  ref.read(libraryMangaFilterOfflineProvider.notifier).update(null);
-  if (ref.read(libraryOptionsCategoryIdProvider) != null) {
-    ref.read(activeLibraryOptionsProvider.notifier).reset();
-    return;
-  }
-  ref.read(libraryDuplicateChaptersProvider.notifier).update(null);
-  for (final kind in ['status', 'source']) {
-    ref.read(activeLibraryOptionsProvider.notifier).entryFilters(kind, {});
-  }
-  ref.read(libraryMangaFilterDownloadedProvider.notifier).update(null);
-  ref.read(libraryMangaFilterUnreadProvider.notifier).update(null);
-  ref.read(libraryMangaFilterStartedProvider.notifier).update(null);
-  ref.read(libraryMangaFilterBookmarkedProvider.notifier).update(null);
   final trackers = ref.read(loggedInTrackersProvider).value ?? const [];
   for (final tracker in trackers) {
     ref
@@ -824,13 +834,10 @@ class LibraryEntryFilter extends ConsumerWidget {
             title: Text(entry.value),
             onTap: () => ref
                 .read(activeLibraryOptionsProvider.notifier)
-                .entryFilters(kind, {
-                  ...selected,
-                  entry.key: switch (selected[entry.key]) {
-                    null => true,
-                    true => false,
-                    false => null,
-                  },
+                .entryFilter(kind, entry.key, switch (selected[entry.key]) {
+                  null => true,
+                  true => false,
+                  false => null,
                 }),
           ),
       ],

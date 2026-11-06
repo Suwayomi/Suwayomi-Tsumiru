@@ -93,13 +93,25 @@ num? _webUiNumber(String? value) {
 
 final _decimalNumber = RegExp(r'^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$');
 
+Map<String, String> decodeOfflineMeta(String? metaJson) {
+  if (metaJson == null || metaJson.isEmpty) return const {};
+  try {
+    return Map<String, String>.from(jsonDecode(metaJson) as Map);
+  } catch (_) {
+    return const {};
+  }
+}
+
+Map<String, String?> decodePendingWebUiMeta(String? pendingJson) =>
+    pendingJson == null
+    ? {}
+    : Map<String, String?>.from(jsonDecode(pendingJson) as Map);
+
 Map<String, String> applyPendingWebUiMeta(
   Map<String, String> meta,
-  String? pendingJson,
+  Map<String, String?> pending,
 ) {
   final result = {...meta};
-  if (pendingJson == null) return result;
-  final pending = Map<String, String?>.from(jsonDecode(pendingJson));
   for (final e in pending.entries) {
     if (e.value == null) {
       result.remove(e.key);

@@ -34,6 +34,18 @@ mutation DeleteWebUiGlobalMetas($input: DeleteGlobalMetasInput!) {
   }
 }
 
+mutation SetWebUiCategoryMetas($input: SetCategoryMetasInput!) {
+  setCategoryMetas(input: $input) {
+    __typename
+  }
+}
+
+mutation DeleteWebUiCategoryMetas($input: DeleteCategoryMetasInput!) {
+  deleteCategoryMetas(input: $input) {
+    __typename
+  }
+}
+
 query GetWebUiGlobalMetas {
   metas {
     nodes {

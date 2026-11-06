@@ -10,6 +10,7 @@ import 'package:drift/drift.dart';
 
 import '../../../utils/crash/diagnostics.dart';
 import '../../../utils/logger/logger.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import 'offline_types.dart';
 
 export 'offline_types.dart';
@@ -650,11 +651,8 @@ class OfflineDatabase extends _$OfflineDatabase {
       transaction(() async {
         final category = await categoryById(id);
         if (category == null) throw StateError('Category $id is not mirrored');
-        final pending = <String, String?>{
-          if (category.pendingWebUiMetaJson != null)
-            ...Map<String, String?>.from(
-              jsonDecode(category.pendingWebUiMetaJson!),
-            ),
+        final pending = {
+          ...decodePendingWebUiMeta(category.pendingWebUiMetaJson),
           ...values,
         };
         await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
@@ -669,24 +667,17 @@ class OfflineDatabase extends _$OfflineDatabase {
     Map<String, String?> values,
   ) => transaction(() async {
     final category = await categoryById(id);
-    if (category?.pendingWebUiMetaJson == null) return;
-    final pending = Map<String, String?>.from(
-      jsonDecode(category!.pendingWebUiMetaJson!),
-    );
-    final meta = <String, String>{
-      if (category.webUiMetaJson != null)
-        ...Map<String, String>.from(jsonDecode(category.webUiMetaJson!)),
-    };
+    if (category == null) return;
+    final pending = decodePendingWebUiMeta(category.pendingWebUiMetaJson);
     for (final e in values.entries) {
-      if (e.value == null) {
-        meta.remove(e.key);
-      } else {
-        meta[e.key] = e.value!;
-      }
       if (pending.containsKey(e.key) && pending[e.key] == e.value) {
         pending.remove(e.key);
       }
     }
+    final meta = applyPendingWebUiMeta(
+      decodeOfflineMeta(category.webUiMetaJson),
+      values,
+    );
     await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
       OfflineCategoriesCompanion(
         webUiMetaJson: Value(jsonEncode(meta)),

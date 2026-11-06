@@ -9,8 +9,11 @@ import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/webui_meta/webui_meta_codec.dart';
+import '../../../../offline/data/offline_database.dart';
 import '../../../../offline/data/offline_repository.dart';
+import '../../../../offline/data/offline_runtime_storage.dart';
 import '../../../data/category_repository.dart';
+import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
 import '../../../domain/library_group.dart';
 import '../../category/controller/edit_category_controller.dart';
@@ -30,6 +33,29 @@ const categorySortModes = {
   MangaSort.lastRead: 'lastRead',
   MangaSort.random: 'random',
 };
+
+const categoryFilterKeys = [
+  'hasUnreadChapters',
+  'hasReadChapters',
+  'hasDownloadedChapters',
+  'hasBookmarkedChapters',
+  'hasDuplicateChapters',
+  'hasStatus',
+  'hasSource',
+  'hasTrackerBinding',
+];
+
+final _categoryMetaKey = RegExp(
+  '^webUI_(sortBy|sortDesc|migration|${categoryFilterKeys.join('|')})'
+  r'(_(length|[0-9]+))?$',
+);
+
+bool isCategoryLibraryMetaKey(String key) => _categoryMetaKey.hasMatch(key);
+
+String categoryLibraryMetaJson(CategoryDto category) => jsonEncode({
+  for (final meta in category.meta)
+    if (isCategoryLibraryMetaKey(meta.key)) meta.key: meta.value,
+});
 
 class CategoryLibraryOptions {
   CategoryLibraryOptions({
@@ -83,16 +109,16 @@ class CategoryLibraryOptions {
     }
 
     final binding = decode('hasTrackerBinding');
+    final nested = binding is Map<String, dynamic> &&
+        binding.containsKey('filters');
     final filters = binding is Map<String, dynamic>
-        ? filterMap(binding['filters'])
+        ? filterMap(nested ? binding['filters'] : binding)
         : null;
+    final mode = nested ? binding['mode'] : 'OR';
     final validBinding =
-        binding is Map<String, dynamic> &&
         filters != null &&
         filters.keys.every((key) => int.tryParse(key) != null) &&
-        (binding['mode'] == null ||
-            binding['mode'] == 'OR' ||
-            binding['mode'] == 'AND');
+        (mode == null || mode == 'OR' || mode == 'AND');
     final rawSort = readWebUiValue(meta, 'sortBy');
     final direction = boolean('sortDesc');
     return CategoryLibraryOptions(
@@ -111,11 +137,11 @@ class CategoryLibraryOptions {
       trackers: validBinding
           ? {for (final e in filters.entries) int.parse(e.key): e.value}
           : null,
-      trackerMode: validBinding ? binding['mode'] as String? ?? 'OR' : null,
+      trackerMode: validBinding ? mode as String? ?? 'OR' : null,
     );
   }
 
-  CategoryLibraryOptions fallbackTo(
+  CategoryLibraryOptions resolveWith(
     CategoryLibraryOptions global, {
     Set<String>? sourceIds,
   }) => CategoryLibraryOptions(
@@ -221,18 +247,60 @@ int? libraryOptionsCategoryId(Ref ref) {
   return ids.contains(active) ? active : ids.firstOrNull;
 }
 
+@Riverpod(keepAlive: true)
+CategoryMetaSync categoryMetaSync(Ref ref) => CategoryMetaSync();
+
+class CategoryMetaSync {
+  Future<void> _tail = Future.value();
+
+  /// Sends [values], or the category's queued offline edits, after every earlier send.
+  Future<Map<String, String?>> send(
+    CategoryRepository repo,
+    OfflineDatabase? db,
+    int categoryId, [
+    Map<String, String?>? values,
+  ]) {
+    final result = _tail.then((_) async {
+      final sent =
+          values ??
+          decodePendingWebUiMeta(
+            (await db?.categoryById(categoryId))?.pendingWebUiMetaJson,
+          );
+      if (sent.isEmpty) return sent;
+      await repo.setCategoryMetas(categoryId, sent);
+      await db?.clearPendingCategoryMetaIfUnchanged(categoryId, sent);
+      return sent;
+    });
+    _tail = result.then((_) {}, onError: (_) {});
+    return result;
+  }
+}
+
 @riverpod
 class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
   Future<void> _writes = Future.value();
   final _optimistic = <String, String?>{};
   int _pending = 0;
-  bool _hasUnsyncedEdits = false;
+  bool _synced = false;
   Future<void>? _loadPending;
-  String? _storedPending;
+  Map<String, String?> _storedPending = {};
+  Object? _storage;
+  int _generation = 0;
 
   @override
   Map<String, String> build(int categoryId) {
     ref.keepAlive();
+    final storage = ref.watch(offlineRuntimeStorageProvider);
+    if (!identical(storage, _storage)) {
+      _storage = storage;
+      _generation++;
+      _optimistic.clear();
+      _pending = 0;
+      _synced = false;
+      _loadPending = null;
+      _storedPending = {};
+    }
+    final generation = _generation;
     final categories = ref.watch(categoryControllerProvider).value ?? const [];
     final category = categories.where((c) => c.id == categoryId).firstOrNull;
     if (ref.watch(offlineActiveProvider)) {
@@ -240,8 +308,8 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
           .read(offlineDatabaseProvider)
           .categoryById(categoryId)
           .then((row) {
-            if (!ref.mounted) return;
-            _storedPending = row?.pendingWebUiMetaJson;
+            if (!ref.mounted || generation != _generation) return;
+            _storedPending = decodePendingWebUiMeta(row?.pendingWebUiMetaJson);
             ref.invalidateSelf();
           });
     }
@@ -259,27 +327,26 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
   Future<void> clearSyncedMeta(Map<String, String?> values) async {
     await _loadPending;
     if (!ref.mounted) return;
-    final pending = _storedPending == null
-        ? <String, String?>{}
-        : Map<String, String?>.from(jsonDecode(_storedPending!));
     for (final e in values.entries) {
-      if (pending.containsKey(e.key) && pending[e.key] == e.value) {
-        pending.remove(e.key);
+      if (_storedPending.containsKey(e.key) &&
+          _storedPending[e.key] == e.value) {
+        _storedPending.remove(e.key);
       }
       if (_optimistic.containsKey(e.key) && _optimistic[e.key] == e.value) {
         _optimistic.remove(e.key);
       }
     }
-    _storedPending = pending.isEmpty ? null : jsonEncode(pending);
-    if (_optimistic.isEmpty) _hasUnsyncedEdits = false;
     ref.invalidateSelf();
   }
 
   void write(Map<String, String?> values) {
     final repo = ref.read(categoryRepositoryProvider);
+    final sync = ref.read(categoryMetaSyncProvider);
     final toast = ref.read(toastProvider);
+    final generation = _generation;
     final updates = {...values};
     final migration = num.tryParse(readWebUiValue(state, 'migration') ?? '0');
+    // WebUI migration 10 moved hasTrackerBinding under {filters, mode}.
     if (migration == null || migration < 10) {
       final raw = readWebUiValue(state, 'hasTrackerBinding');
       if (!updates.containsKey('hasTrackerBinding') && raw != null) {
@@ -297,10 +364,8 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
           updates['hasTrackerBinding'] = null;
         }
       }
+      updates['migration'] = '10';
     }
-    updates['migration'] = migration != null && migration > 10
-        ? '$migration'
-        : '10';
     final plans = [
       for (final e in updates.entries) planWebUiWrite(state, e.key, e.value),
     ];
@@ -320,6 +385,7 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
     final category = (ref.read(categoryControllerProvider).value ?? const [])
         .where((c) => c.id == categoryId)
         .firstOrNull;
+    final defaultId = ref.read(settledDefaultCategoryIdProvider);
     final stored = <String, String?>{
       for (final plan in plans) ...{
         for (final key in plan.delete) key: null,
@@ -337,10 +403,11 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
                     category.name,
                     category.order,
                     isHidden: category.isHidden,
+                    isDefaultCategory: defaultId == null
+                        ? null
+                        : defaultId == categoryId,
                     autoAdd: category.defaultCategory,
-                    webUiMetaJson: jsonEncode({
-                      for (final m in category.meta) m.key: m.value,
-                    }),
+                    webUiMetaJson: categoryLibraryMetaJson(category),
                   );
                 }
                 await db.mergePendingCategoryMeta(categoryId, stored);
@@ -357,46 +424,47 @@ class CategoryLibraryMetadata extends _$CategoryLibraryMetadata {
     _pending++;
     _writes = _writes.then((_) async {
       final saved = await persisted;
-      final synced = await AppUtils.guard(() async {
-        for (final plan in plans) {
-          for (final e in plan.set.entries) {
-            await repo.setCategoryMeta(
-              categoryId: categoryId,
-              key: e.key,
-              value: e.value,
-            );
-          }
-          for (final key in plan.delete) {
-            await repo.deleteCategoryMeta(categoryId: categoryId, key: key);
-          }
-        }
-        if (db != null) {
-          await db.clearPendingCategoryMetaIfUnchanged(categoryId, stored);
-          if (ref.mounted) {
-            _storedPending = (await db.categoryById(
-              categoryId,
-            ))?.pendingWebUiMetaJson;
+      final synced =
+          await AppUtils.guard(
+            () => sync.send(repo, db, categoryId, stored),
+            saved ? null : toast,
+          ) !=
+          null;
+      if (!ref.mounted || generation != _generation) return;
+      if (synced) {
+        _synced = true;
+      } else if (saved) {
+        logger.w(
+          'Offline: category meta push failed for $categoryId; saved for retry',
+        );
+      } else {
+        for (final e in stored.entries) {
+          if (_optimistic.containsKey(e.key) && _optimistic[e.key] == e.value) {
+            _optimistic.remove(e.key);
           }
         }
-        return true;
-      }, saved ? null : toast);
-      if (synced != true) {
-        _hasUnsyncedEdits = true;
-        if (saved) {
-          logger.w(
-            'Offline: category meta push failed for $categoryId; saved for retry',
-          );
-        }
+        ref.invalidateSelf();
       }
-      if (!ref.mounted || --_pending != 0 || _hasUnsyncedEdits) return;
-      await AppUtils.guard(() async {
-        ref.invalidate(categoryControllerProvider);
-        await ref.read(categoryControllerProvider.future);
-        if (ref.mounted && _pending == 0) {
-          _optimistic.clear();
-          ref.invalidateSelf();
-        }
-      }, toast);
+      if (--_pending != 0) return;
+      if (db != null) {
+        final row = await AppUtils.guard(
+          () => db.categoryById(categoryId),
+          null,
+        );
+        if (!ref.mounted || generation != _generation || _pending != 0) return;
+        _storedPending = decodePendingWebUiMeta(row?.pendingWebUiMetaJson);
+      }
+      if (_synced) {
+        _synced = false;
+        await AppUtils.guard(() async {
+          ref.invalidate(categoryControllerProvider);
+          await ref.read(categoryControllerProvider.future);
+        }, toast);
+      }
+      if (ref.mounted && generation == _generation && _pending == 0) {
+        _optimistic.clear();
+        ref.invalidateSelf();
+      }
     });
   }
 }
@@ -424,10 +492,12 @@ CategoryLibraryOptions effectiveCategoryLibraryOptions(
   }
   return CategoryLibraryOptions.fromMeta(
     ref.watch(categoryLibraryMetadataProvider(categoryId)),
-  ).fallbackTo(
+  ).resolveWith(
     global,
-    sourceIds: (ref.watch(libraryMangaListProvider).value ?? const [])
-        .map((manga) => manga.sourceId)
+    sourceIds: ref
+        .watch(libraryMangaListProvider)
+        .value
+        ?.map((manga) => manga.sourceId)
         .toSet(),
   );
 }
@@ -462,26 +532,29 @@ class ActiveLibraryOptions extends _$ActiveLibraryOptions {
     }
   }
 
-  void entryFilters(String kind, Map<String, bool?> value) {
-    if (!_write(
+  void entryFilter(String kind, String key, bool? value) {
+    final id = ref.read(libraryOptionsCategoryIdProvider);
+    if (id == null) {
+      ref.read(libraryEntryFiltersProvider(kind).notifier).update({
+        ...ref.read(libraryEntryFiltersProvider(kind)),
+        key: value,
+      });
+      return;
+    }
+    final stored = CategoryLibraryOptions.fromMeta(
+      ref.read(categoryLibraryMetadataProvider(id)),
+    );
+    final filters = {
+      ...?(kind == 'status' ? stored.status : stored.source),
+      key: value,
+    };
+    _write(
       kind == 'status' ? 'hasStatus' : 'hasSource',
       CategoryLibraryOptions(
-        status: kind == 'status' ? value : null,
-        source: kind == 'source' ? value : null,
+        status: kind == 'status' ? filters : null,
+        source: kind == 'source' ? filters : null,
       ),
-    )) {
-      ref.read(libraryEntryFiltersProvider(kind).notifier).update(value);
-    }
-  }
-
-  String _categoryTrackerMode() {
-    final id = ref.read(libraryOptionsCategoryIdProvider);
-    return id == null
-        ? 'OR'
-        : CategoryLibraryOptions.fromMeta(
-                ref.read(categoryLibraryMetadataProvider(id)),
-              ).trackerMode ??
-              'OR';
+    );
   }
 
   void tracker(int id, bool? value) {
@@ -490,7 +563,7 @@ class ActiveLibraryOptions extends _$ActiveLibraryOptions {
       'hasTrackerBinding',
       CategoryLibraryOptions(
         trackers: filters,
-        trackerMode: _categoryTrackerMode(),
+        trackerMode: state.trackerMode,
       ),
     )) {
       ref
@@ -503,17 +576,7 @@ class ActiveLibraryOptions extends _$ActiveLibraryOptions {
     final id = ref.read(libraryOptionsCategoryIdProvider);
     if (id == null) return;
     ref.read(categoryLibraryMetadataProvider(id).notifier).write({
-      for (final key in [
-        'hasUnreadChapters',
-        'hasReadChapters',
-        'hasDownloadedChapters',
-        'hasBookmarkedChapters',
-        'hasDuplicateChapters',
-        'hasStatus',
-        'hasSource',
-        'hasTrackerBinding',
-      ])
-        key: null,
+      for (final key in categoryFilterKeys) key: null,
     });
   }
 

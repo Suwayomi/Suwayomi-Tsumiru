@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -26,6 +25,7 @@ import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/network/gateway_status.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/is_android_native.dart';
+import '../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../account/data/account_permission.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
@@ -934,9 +934,11 @@ Future<void> _deleteServerCopyIfDeletable(
   }
 });
 
-Future<void> pushPendingCategoryMeta(
-  ProviderContainer container,
-) => container.read(offlineRuntimeStorageProvider.notifier).track(() async {
+Future<void> pushPendingCategoryMeta(ProviderContainer container) => container
+    .read(offlineRuntimeStorageProvider.notifier)
+    .track(() => _pushPendingCategoryMeta(container));
+
+Future<void> _pushPendingCategoryMeta(ProviderContainer container) async {
   if (!container.read(offlineActiveProvider)) return;
   final auth = container.read(authCredentialsStoreProvider.notifier);
   final epoch = auth.sessionEpoch;
@@ -944,57 +946,39 @@ Future<void> pushPendingCategoryMeta(
   if (!current()) return;
   final db = container.read(offlineDatabaseProvider);
   final repo = container.read(categoryRepositoryProvider);
+  final sync = container.read(categoryMetaSyncProvider);
   var sent = false;
   for (final category in await db.pendingCategoryMeta()) {
     if (!current()) return;
-    final pending = Map<String, String?>.from(
-      jsonDecode(category.pendingWebUiMetaJson!),
-    );
-    for (final e in pending.entries) {
+    try {
+      final values = await sync.send(repo, db, category.id);
       if (!current()) return;
-      try {
-        if (e.value == null) {
-          await repo.deleteCategoryMeta(categoryId: category.id, key: e.key);
-        } else {
-          await repo.setCategoryMeta(
-            categoryId: category.id,
-            key: e.key,
-            value: e.value!,
-          );
-        }
-        if (!current()) return;
-        sent = true;
-        await db.clearPendingCategoryMetaIfUnchanged(category.id, {
-          e.key: e.value,
-        });
-        if (!current()) return;
-        final metadata = categoryLibraryMetadataProvider(category.id);
-        if (container.exists(metadata)) {
-          await container.read(metadata.notifier).clearSyncedMeta({
-            e.key: e.value,
-          });
-        }
-      } catch (error) {
-        if (!current()) return;
-        logger.e(
-          'Offline: category meta push failed for ${category.id}: $error',
+      if (values.isEmpty) continue;
+      sent = true;
+      final metadata = categoryLibraryMetadataProvider(category.id);
+      if (container.exists(metadata)) {
+        await container.read(metadata.notifier).clearSyncedMeta(values);
+      }
+    } catch (error) {
+      if (!current()) return;
+      logger.e('Offline: category meta push failed for ${category.id}: $error');
+      final categories = await AsyncValue.guard(repo.getCategoryList);
+      if (!current()) return;
+      final serverCategories = categories.asData?.value;
+      if (serverCategories != null &&
+          !serverCategories.any((c) => c.id == category.id)) {
+        await db.clearPendingCategoryMetaIfUnchanged(
+          category.id,
+          decodePendingWebUiMeta(category.pendingWebUiMetaJson),
         );
-        final categories = await AsyncValue.guard(repo.getCategoryList);
-        if (!current()) return;
-        final serverCategories = categories.asData?.value;
-        if (serverCategories != null &&
-            !serverCategories.any((c) => c.id == category.id)) {
-          await db.clearPendingCategoryMetaIfUnchanged(category.id, pending);
-          logger.w(
-            'Offline: dropped pending meta for removed category ${category.id}',
-          );
-        }
-        break;
+        logger.w(
+          'Offline: dropped pending meta for removed category ${category.id}',
+        );
       }
     }
   }
   if (current() && sent) container.invalidate(categoryControllerProvider);
-});
+}
 
 /// Pushes pending changes and nudges trackers for successfully synced read chapters.
 Future<void> pushPendingProgress(
