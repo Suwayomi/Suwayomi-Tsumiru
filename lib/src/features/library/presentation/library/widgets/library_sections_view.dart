@@ -14,9 +14,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/desktop/desktop_page_frame.dart';
+import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/shell/update_banner_state.dart';
 import '../../../../manga_book/data/updates/updates_repository.dart';
 import '../../../../offline/data/server_reachability.dart';
+import '../controller/category_library_options.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_grouping.dart';
 import '../controller/library_manga_list.dart';
@@ -140,8 +142,12 @@ class _Section extends ConsumerWidget {
             groupedMangaListWithQueryAndFilterProvider(tabId: section.id),
           );
     final items = listAsync.value ?? const [];
+    final showEmpty =
+        byCategory &&
+        listAsync.value != null &&
+        ref.watch(useCategoryLibraryOptionsProvider);
 
-    if (items.isEmpty) {
+    if (items.isEmpty && !showEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
@@ -159,6 +165,10 @@ class _Section extends ConsumerWidget {
             foreground: context.theme.colorScheme.primary,
           ),
         ),
+        if (items.isEmpty)
+          SliverToBoxAdapter(
+            child: Emoticons(title: context.l10n.noCategoryMangaFound),
+          ),
         LibraryMangaSliver(
           items: items,
           onOpen: (manga) => MangaRoute(

@@ -865,14 +865,10 @@ class LibraryEntryFilters extends _$LibraryEntryFilters {
 
 @riverpod
 int libraryFilterActiveCount(Ref ref) {
-  return categoryLibraryFilterActiveCount(
-    ref, ref.watch(libraryOptionsCategoryIdProvider),
-  );
-}
-
-int categoryLibraryFilterActiveCount(Ref ref, int? categoryId) {
   final options = ref.watch(
-    effectiveCategoryLibraryOptionsProvider(categoryId),
+    effectiveCategoryLibraryOptionsProvider(
+      ref.watch(libraryOptionsCategoryIdProvider),
+    ),
   );
   var count = options.filterCount;
   for (final provider in [

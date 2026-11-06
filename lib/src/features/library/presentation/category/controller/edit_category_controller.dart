@@ -210,20 +210,23 @@ AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
 AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
   final base = ref.watch(visibleCategoryListProvider);
   if (ref.watch(showEmptyCategoriesSearchProvider).ifNull(false)) return base;
-  final activeId = libraryShowsAllCategorySections(ref)
-      ? ref.watch(libraryVisibleSectionProvider)
-      : ref.watch(libraryActiveCategoryProvider);
   final searching =
       (ref.watch(libraryQueryDebouncedProvider)?.trim()).isNotBlank;
+  if (!searching &&
+      (ref.watch(useCategoryLibraryOptionsProvider) ||
+          ref.watch(libraryFilterActiveCountProvider) == 0)) {
+    return base;
+  }
+  final activeId = !searching
+      ? null
+      : libraryShowsAllCategorySections(ref)
+      ? ref.watch(libraryVisibleSectionProvider)
+      : ref.watch(libraryActiveCategoryProvider);
   return base.copyWithData((list) {
     if (list.isBlank) return list;
     final shown = list!
         .where((category) {
           if (activeId != null && category.id == activeId) return true;
-          if (!searching &&
-              categoryLibraryFilterActiveCount(ref, category.id) == 0) {
-            return true;
-          }
           final filtered = ref
               .watch(
                 categoryMangaListWithQueryAndFilterProvider(

@@ -225,22 +225,7 @@ int? libraryOptionsCategoryId(Ref ref) {
   if (!ref.watch(useCategoryLibraryOptionsProvider)) return null;
   final sections = libraryShowsAllCategorySections(ref);
   final categories = ref.watch(libraryShownCategoryListProvider).value ?? [];
-  final ids = categories
-      .map((category) => category.id)
-      .where(
-        (id) =>
-            !sections ||
-            (ref
-                    .watch(
-                      categoryMangaListWithQueryAndFilterProvider(
-                        categoryId: id,
-                      ),
-                    )
-                    .value
-                    ?.isNotEmpty ??
-                false),
-      )
-      .toList();
+  final ids = categories.map((category) => category.id).toList();
   final active = sections
       ? ref.watch(libraryVisibleSectionProvider)
       : ref.watch(libraryActiveCategoryProvider);
