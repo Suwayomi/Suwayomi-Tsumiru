@@ -31,7 +31,9 @@ class LegacyUserFieldsDetection {
       return _hasUser = fields.any((field) => field['name'] == 'user');
     } catch (error) {
       if (isConnectionError(
-        error is LinkException ? OperationException(linkException: error) : error,
+        error is LinkException
+            ? OperationException(linkException: error)
+            : error,
       )) {
         rethrow;
       }

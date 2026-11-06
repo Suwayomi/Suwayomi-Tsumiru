@@ -125,4 +125,5 @@ bool _isSocketLike(Object? e) =>
     e is HandshakeException ||
     e is http.ClientException ||
     (e is ServerNotJsonException && isGatewayStatus(e.statusCode)) ||
+    (e is HttpLinkServerException && isGatewayStatus(e.response.statusCode)) ||
     (e is ResponseFormatException && _isSocketLike(e.originalException));

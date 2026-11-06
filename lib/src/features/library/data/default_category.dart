@@ -2,6 +2,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
+import '../../../utils/network/graphql_errors.dart';
 import '../../account/data/account_providers.dart';
 import '../../account/domain/account_access.dart';
 import '../../offline/data/offline_repository.dart';
@@ -10,8 +11,8 @@ import 'category_repository.dart';
 
 final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
   if (ref.watch(authTypeKeyProvider) != AuthType.uiLogin) return 0;
-  final offline =
-      ref.watch(viewOfflineNowProvider) || ref.watch(serverUnreachableProvider);
+  final serverUnreachable = ref.watch(serverUnreachableProvider);
+  final offline = ref.watch(viewOfflineNowProvider) || serverUnreachable;
   final db = ref.watch(offlineReadDatabaseProvider);
   if (offline && db != null) {
     final categories = await db.allOfflineCategories();
@@ -23,7 +24,12 @@ final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
   );
   final repository = ref.watch(categoryRepositoryProvider);
   final capability = await capabilityFuture.catchError(
-    (Object _) => AccountCapability.unknown,
+    (Object error, StackTrace stack) {
+      if (serverUnreachable || isConnectionError(error)) {
+        return AccountCapability.unknown;
+      }
+      Error.throwWithStackTrace(error, stack);
+    },
   );
   return switch (capability) {
     AccountCapability.unsupported => 0,

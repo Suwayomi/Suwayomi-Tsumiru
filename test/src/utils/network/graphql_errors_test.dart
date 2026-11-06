@@ -62,22 +62,41 @@ void main() {
       );
     });
 
-    test('an expired token whose refresh hit a gateway 502 falls back', () {
-      final refresh = OperationException(
-        linkException: ResponseFormatException(
-          originalException: ServerNotJsonException(502, '<html>'),
-        ),
-      );
-      expect(
-        isConnectionError(
-          OperationException(
-            linkException: AccessTokenUnavailable(
-              RefreshTransientFailure(refresh),
+    test(
+      'an expired token whose refresh hit a gateway 502 is a connection error',
+      () {
+        final refresh = OperationException(
+          linkException: ResponseFormatException(
+            originalException: ServerNotJsonException(502, '<html>'),
+          ),
+        );
+        expect(
+          isConnectionError(
+            OperationException(
+              linkException: AccessTokenUnavailable(
+                RefreshTransientFailure(refresh),
+              ),
             ),
           ),
-        ),
-        isTrue,
-      );
-    });
+          isTrue,
+        );
+        final jsonProxy = OperationException(
+          linkException: HttpLinkServerException(
+            response: http.Response('{"errors":[]}', 502),
+            parsedResponse: const Response(response: {}, errors: []),
+          ),
+        );
+        expect(
+          isConnectionError(
+            OperationException(
+              linkException: AccessTokenUnavailable(
+                RefreshTransientFailure(jsonProxy),
+              ),
+            ),
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }

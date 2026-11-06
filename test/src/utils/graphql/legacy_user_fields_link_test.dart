@@ -697,53 +697,12 @@ void main() {
     },
   );
 
-  test(
-    'offline probe preserves connection failure and retries on recovery',
-    () async {
-      const socketError = SocketException('Network is unreachable');
-      var probes = 0;
-      var requests = 0;
-      final transport = MockClient((incoming) async {
-        final source = (jsonDecode(incoming.body) as Map)['query'] as String;
-        if (source.contains('__type(')) {
-          probes++;
-          if (probes == 1) throw socketError;
-          return http.Response(jsonEncode({'data': capability(false).data}), 200);
-        }
-        requests++;
-        expect(source, isNot(contains('user {')));
-        return http.Response(jsonEncode({'data': {'chapter': null}}), 200);
-      });
-      addTearDown(transport.close);
-      final client = GraphQLClient(
-        link: LegacyUserFieldsLink().concat(
-          HttpLink('http://offline.test/graphql', httpClient: transport),
-        ),
-        cache: GraphQLCache(),
-      );
-      final options = QueryOptions(
-        document: parseString('{ chapter { user { isRead } } }'),
-        fetchPolicy: FetchPolicy.networkOnly,
-      );
-
-      final failed = await client.query(options);
-      expect(failed.exception?.linkException, isA<ServerException>());
-      expect(
-        failed.exception?.linkException?.originalException,
-        same(socketError),
-      );
-      expect(isConnectionError(failed.exception!), isTrue);
-      expect(requests, 0);
-
-      final recovered = await client.query(options);
-      expect(recovered.exception, isNull);
-      expect(recovered.data, {'chapter': null});
-      expect(probes, 2);
-      expect(requests, 1);
-    },
-  );
-
-  for (final failure in ['network', 'graphql', 'missing fields']) {
+  for (final failure in [
+    'network',
+    'connection',
+    'graphql',
+    'missing fields',
+  ]) {
     test(
       '$failure probe failure rejects the request and retries next time',
       () async {
@@ -758,6 +717,10 @@ void main() {
               yield capability(false);
             } else if (failure == 'network') {
               throw StateError('offline');
+            } else if (failure == 'connection') {
+              throw const ServerException(
+                originalException: SocketException('down'),
+              );
             } else if (failure == 'graphql') {
               yield Response(
                 data: capability(false).data,
@@ -779,7 +742,17 @@ void main() {
 
         await expectLater(
           link.request(original, forward).first,
-          throwsStateError,
+          failure == 'connection'
+              ? throwsA(
+                  isA<ServerException>().having(
+                    (e) => isConnectionError(
+                      OperationException(linkException: e),
+                    ),
+                    'isConnectionError',
+                    isTrue,
+                  ),
+                )
+              : throwsStateError,
         );
         expect(requests, 0);
 

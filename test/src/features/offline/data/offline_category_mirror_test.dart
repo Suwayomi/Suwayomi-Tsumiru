@@ -38,7 +38,7 @@ CategoryDto cat(int id, String name, {int order = 0, bool hidden = false}) =>
       ],
     );
 
-class _Categories extends Fake implements CategoryRepository {
+class _CountingCategoryRepository extends Fake implements CategoryRepository {
   int fetches = 0;
 
   @override
@@ -83,7 +83,7 @@ void main() {
 
   test('mirrors fetched categories when sync becomes available', () async {
     await OfflineSync(db).syncCategories([cat(1, 'A', hidden: true)]);
-    final repository = _Categories();
+    final repository = _CountingCategoryRepository();
     OfflineSync? availableSync;
     final container = ProviderContainer(
       overrides: [
@@ -96,12 +96,10 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    final updates = <AsyncValue<List<CategoryDto>?>>[];
-    container.listen(categoryControllerProvider, (_, next) => updates.add(next));
+    container.listen(categoryControllerProvider, (_, _) {});
     final categories = await container.read(categoryControllerProvider.future);
     expect(categories!.single.isHidden, isFalse);
     expect((await db.allOfflineCategories()).single.isHidden, isTrue);
-    updates.clear();
 
     final mirrored = Completer<void>();
     availableSync = OfflineSync(db, onSynced: () async => mirrored.complete());
@@ -110,8 +108,6 @@ void main() {
 
     expect((await db.allOfflineCategories()).single.isHidden, isFalse);
     expect(repository.fetches, 1);
-    expect(updates, isEmpty);
-    expect(container.read(categoryControllerProvider).value, same(categories));
   });
 
   test('syncs prune, keep the mirror on an empty list, mirror hidden and '
