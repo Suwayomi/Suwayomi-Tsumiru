@@ -124,4 +124,5 @@ bool _isSocketLike(Object? e) =>
     e is TimeoutException ||
     e is HandshakeException ||
     e is http.ClientException ||
-    (e is ServerNotJsonException && isGatewayStatus(e.statusCode));
+    (e is ServerNotJsonException && isGatewayStatus(e.statusCode)) ||
+    (e is ResponseFormatException && _isSocketLike(e.originalException));
