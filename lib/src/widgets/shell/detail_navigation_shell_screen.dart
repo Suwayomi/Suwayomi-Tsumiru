@@ -14,6 +14,31 @@ Widget? detailNavigationBackButton(BuildContext context) {
   if (router == null) {
     return Navigator.of(context).canPop() ? const BackButton() : null;
   }
+  Widget? noPopFallback() {
+    final goMatches = <RouteMatch>[];
+    ShellRouteBase? shell;
+    void collect(List<RouteMatchBase> matches) {
+      for (final match in matches) {
+        if (match is ShellRouteMatch) {
+          shell = match.route;
+          collect(match.matches);
+        } else if (match is RouteMatch) {
+          goMatches.add(match);
+        }
+      }
+    }
+    collect(router.routerDelegate.currentConfiguration.matches);
+    if (goMatches.length > 1) {
+      final parent = goMatches[goMatches.length - 2];
+      return BackButton(
+        onPressed: () => GoRouter.of(context).go(parent.matchedLocation),
+      );
+    }
+    if (shell is StatefulShellRoute) return null;
+    return BackButton(
+      onPressed: () => const LibraryRoute(categoryId: 0).go(context),
+    );
+  }
   return router.canPop()
       ? BackButton(
           onPressed: () async {
@@ -22,7 +47,7 @@ Widget? detailNavigationBackButton(BuildContext context) {
             router.pop();
           },
         )
-      : null;
+      : noPopFallback();
 }
 
 class DetailNavigationShellScreen extends ConsumerWidget {
