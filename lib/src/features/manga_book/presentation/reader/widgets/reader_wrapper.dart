@@ -110,6 +110,9 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
+// Fixed hide threshold in logical px, matching Mihon's readerHideThreshold LOW.
+const double _kHideMenuOnScrollThreshold = 31;
+
 final readerChromeVisibleProvider = StateProvider.autoDispose<bool?>((Ref ref) {
   final link = ref.keepAlive();
   Timer? timer;
@@ -809,6 +812,11 @@ class ReaderWrapper extends HookConsumerWidget {
                             resolvedReaderMode,
                             scrollDirection,
                             childHandlesGestures,
+                            onHideMenu: () {
+                              if (visibility.value) visibility.value = false;
+                            },
+                            hideMenuOnScroll:
+                                !isPagedReaderMode(resolvedReaderMode),
                           ),
                         ),
                       ),
@@ -873,12 +881,17 @@ class ReaderWrapper extends HookConsumerWidget {
     VoidCallback onPreviousChapter,
     ReaderMode resolvedReaderMode,
     Axis scrollDirection,
-    bool childHandlesGestures,
-  ) {
+    bool childHandlesGestures, {
+    required VoidCallback onHideMenu,
+    required bool hideMenuOnScroll,
+  }) {
+    final Widget scrolledChild = hideMenuOnScroll
+        ? _HideMenuOnUserScroll(onHide: onHideMenu, child: child)
+        : child;
     if (childHandlesGestures ||
         !lastPageSwipeEnabled ||
         readerSwipeChapterToggle) {
-      return child;
+      return scrolledChild;
     }
 
     return _BoundarySwipeDetector(
@@ -888,7 +901,51 @@ class ReaderWrapper extends HookConsumerWidget {
       resolvedReaderMode: resolvedReaderMode,
       scrollDirection: scrollDirection,
       lastPageSwipeEnabled: lastPageSwipeEnabled,
-      child: child,
+      child: scrolledChild,
+    );
+  }
+}
+
+class _HideMenuOnUserScroll extends StatefulWidget {
+  const _HideMenuOnUserScroll({required this.onHide, required this.child});
+
+  final VoidCallback onHide;
+  final Widget child;
+
+  @override
+  State<_HideMenuOnUserScroll> createState() => _HideMenuOnUserScrollState();
+}
+
+class _HideMenuOnUserScrollState extends State<_HideMenuOnUserScroll> {
+  var _armed = false;
+  var _accum = 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollStartNotification) {
+          // Only a finger drag arms tracking; taps, keys and auto-scrolls never set dragDetails.
+          if (notification.dragDetails != null) {
+            _armed = true;
+            _accum = 0;
+          }
+        } else if (notification is ScrollUpdateNotification) {
+          if (_armed) {
+            _accum += notification.scrollDelta?.abs() ?? 0;
+            if (_accum > _kHideMenuOnScrollThreshold) {
+              _armed = false;
+              _accum = 0;
+              widget.onHide();
+            }
+          }
+        } else if (notification is ScrollEndNotification) {
+          _armed = false;
+          _accum = 0;
+        }
+        return false;
+      },
+      child: widget.child,
     );
   }
 }
