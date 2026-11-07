@@ -101,7 +101,7 @@ enum DBKeys {
   readerFeedbackToasts(true),
   volumeTap(false),
   volumeTapInvert(false),
-  keepScreenOn(true),
+  keepScreenOn(false),
   hideEmptyCategory(false),
   showUpdateProgressBanner(true),
   sidebarExpanded(true),

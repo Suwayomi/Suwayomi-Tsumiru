@@ -33,7 +33,7 @@ class GeneralTab extends ConsumerWidget {
     final leftHanded = ref
         .watch(leftHandedVerticalSeekbarProvider)
         .ifNull(false);
-    final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(true);
+    final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(false);
     final autoWebtoon = ref.watch(autoWebtoonModeProvider).ifNull(true);
 
     // I7: own scroll view; never the sheet's controller.

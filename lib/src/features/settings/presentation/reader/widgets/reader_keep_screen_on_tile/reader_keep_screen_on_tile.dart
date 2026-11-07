@@ -30,7 +30,7 @@ class ReaderKeepScreenOnTile extends HookConsumerWidget {
       controlAffinity: ListTileControlAffinity.trailing,
       title: Text(context.l10n.readerKeepScreenOn),
       onChanged: ref.read(keepScreenOnProvider.notifier).update,
-      value: ref.watch(keepScreenOnProvider).ifNull(true),
+      value: ref.watch(keepScreenOnProvider).ifNull(false),
     );
   }
 }
