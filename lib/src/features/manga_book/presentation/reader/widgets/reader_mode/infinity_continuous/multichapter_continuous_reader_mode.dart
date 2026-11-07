@@ -1061,8 +1061,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       try {
         final ScrollPosition pos = scrollOffsetController.position;
         final double viewport = pos.viewportDimension;
-        // reverse:true flips the visual direction of the list.
-        final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
+        // Pixels increase toward later items even when the list is reversed.
+        final double sign = forward ? 1.0 : -1.0;
         final double offset = viewport * scrollAmount.fraction * sign;
         final double target = (pos.pixels + offset).clamp(
           pos.minScrollExtent,
@@ -1070,6 +1070,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         );
         if ((target - pos.pixels).abs() <=
             InfinityContinuousConfig.scrollExtentTolerance) {
+          // A neighbour chapter still appending must win over chapter navigation.
+          if (forward && loadingNext.value) return true;
+          if (!forward && loadingPrevious.value) return true;
           return false;
         }
         if (animatePageTransitions && !context.reduceMotion) {
@@ -1110,10 +1113,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           intervalSeconds: interval,
           dtMs: dtMs,
         );
-        final target = pos.pixels + (reverse ? -delta : delta);
-        final atEnd = reverse
-            ? target <= pos.minScrollExtent
-            : target >= pos.maxScrollExtent;
+        final target = pos.pixels + delta;
+        final atEnd = target >= pos.maxScrollExtent;
         if (atEnd && hasReachedEnd.value) {
           ref.read(autoScrollActiveProvider.notifier).stop();
           return;
