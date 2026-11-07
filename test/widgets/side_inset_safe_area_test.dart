@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:tsumiru/src/widgets/side_inset_safe_area.dart';
@@ -103,6 +105,126 @@ void main() {
     tester.view.physicalSize = _outerPortrait;
     await tester.pump();
     expect(find.text('1'), findsOneWidget, reason: 'state survived');
+  });
+
+  _stylerTests();
+}
+
+Color _insetFill(WidgetTester tester) => tester
+    .widget<ColoredBox>(
+      find
+          .descendant(
+            of: find.byType(SideInsetSafeArea),
+            matching: find.byType(ColoredBox),
+          )
+          .first,
+    )
+    .color;
+
+const _reader = Key('reader');
+
+Widget _readerPage({required bool drawUnder}) => Scaffold(
+  body: Stack(
+    children: [
+      SideInsetStyler(
+        style: SideInsetStyle(fill: Colors.black, drawUnder: drawUnder),
+        child: const SizedBox.shrink(),
+      ),
+      const SizedBox.expand(key: _reader),
+    ],
+  ),
+);
+
+Future<void> _settle(WidgetTester tester) async {
+  // Styles land after the frame that changed them, then rebuild.
+  await tester.pump();
+  await tester.pump();
+}
+
+void _stylerTests() {
+  testWidgets('a screen can paint the inset its own colour', (tester) async {
+    await _pump(
+      tester,
+      size: _outerPortrait,
+      padding: _statusColumn,
+      child: _readerPage(drawUnder: false),
+    );
+    await _settle(tester);
+
+    expect(_insetFill(tester), Colors.black);
+    expect(tester.getRect(find.byKey(_reader)).right, 466 - 84);
+  });
+
+  testWidgets('drawUnder hands the insets to the screen', (tester) async {
+    await _pump(
+      tester,
+      size: _outerPortrait,
+      padding: _statusColumn,
+      child: _readerPage(drawUnder: true),
+    );
+    await _settle(tester);
+
+    expect(tester.getRect(find.byKey(_reader)).right, 466);
+    final inner = MediaQuery.of(tester.element(find.byKey(_reader)));
+    expect(inner.padding.right, 84, reason: 'chrome can still avoid it');
+  });
+
+  testWidgets('pages below never lay out under the inset while visible', (
+    tester,
+  ) async {
+    await _pump(tester, size: _outerPortrait, padding: _statusColumn);
+    final home = Theme.of(tester.element(find.byKey(_probe)));
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+
+    unawaited(
+      navigator.push(
+        MaterialPageRoute<void>(builder: (_) => _readerPage(drawUnder: true)),
+      ),
+    );
+    await _settle(tester);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(_insetFill(tester), Colors.black, reason: 'colour from the start');
+    expect(tester.getSize(find.byKey(_probe)).width, 466 - 84);
+
+    await tester.pumpAndSettle();
+    await _settle(tester);
+    expect(tester.getSize(find.byKey(_reader)).width, 466);
+
+    navigator.pop();
+    await _settle(tester);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.getSize(find.byKey(_reader)).width, 466 - 84);
+    expect(
+      tester.getSize(find.byKey(_probe, skipOffstage: false)).width,
+      466 - 84,
+    );
+
+    await tester.pumpAndSettle();
+    await _settle(tester);
+    expect(_insetFill(tester), home.scaffoldBackgroundColor);
+  });
+
+  testWidgets('a replaced screen does not clear its successor', (tester) async {
+    await _pump(tester, size: _outerPortrait, padding: _statusColumn);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    unawaited(
+      navigator.push(
+        MaterialPageRoute<void>(builder: (_) => _readerPage(drawUnder: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _settle(tester);
+
+    unawaited(
+      navigator.pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => _readerPage(drawUnder: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _settle(tester);
+
+    expect(_insetFill(tester), Colors.black);
+    expect(tester.getRect(find.byKey(_reader)).right, 466);
   });
 }
 

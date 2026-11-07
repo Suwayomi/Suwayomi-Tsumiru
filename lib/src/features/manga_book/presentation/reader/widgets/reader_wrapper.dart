@@ -19,8 +19,10 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../../../../widgets/side_inset_safe_area.dart';
 import '../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
+import '../../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_last_page_swipe_tile/reader_last_page_swipe_tile.dart';
@@ -611,6 +613,10 @@ class ReaderWrapper extends HookConsumerWidget {
       return () => subscription?.cancel();
     }, [volumeTap, volumeTapInvert, onReaderNext, onReaderPrevious]);
 
+    final backgroundColor =
+        (ref.watch(readerBackgroundColorKeyProvider) ??
+                DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor)
+            .color(context);
     return Theme(
       data: context.theme.copyWith(
         bottomSheetTheme: const BottomSheetThemeData(
@@ -619,15 +625,26 @@ class ReaderWrapper extends HookConsumerWidget {
         ),
       ),
       child: Scaffold(
-        backgroundColor:
-            (ref.watch(readerBackgroundColorKeyProvider) ??
-                    DBKeys.readerBackgroundColor.initial
-                        as ReaderBackgroundColor)
-                .color(context),
+        backgroundColor: backgroundColor,
         extendBodyBehindAppBar: true,
         extendBody: true,
         body: Stack(
           children: [
+            // iPhone Duo's cover screen: paint the side status column like
+            // the page surround, or give it to the page when the reader
+            // ignores the safe area. Positioned, so the Stack keeps sizing
+            // to its positioned children.
+            Positioned(
+              width: 0,
+              height: 0,
+              child: SideInsetStyler(
+                style: SideInsetStyle(
+                  fill: backgroundColor,
+                  drawUnder: ref.watch(readerIgnoreSafeAreaProvider).ifNull(),
+                ),
+                child: const SizedBox.shrink(),
+              ),
+            ),
             Positioned.fill(
               child: Shortcuts.manager(
                 manager: readerShortcutManager(
