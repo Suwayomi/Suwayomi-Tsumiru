@@ -616,8 +616,10 @@ class ReaderWrapper extends HookConsumerWidget {
     useEffect(() {
       StreamSubscription<HardwareButton>? subscription;
       if (volumeTap) {
-        subscription = FlutterAndroidVolumeKeydown.stream.listen(
-          (event) => (switch (event) {
+        subscription = FlutterAndroidVolumeKeydown.stream.listen((event) {
+          // An open menu yields to the system volume UI.
+          if (visibility.value) return;
+          (switch (event) {
             HardwareButton.volume_up =>
               volumeTapInvert
                   ? advanceNextRef.value()
@@ -626,8 +628,8 @@ class ReaderWrapper extends HookConsumerWidget {
               volumeTapInvert
                   ? advancePreviousRef.value()
                   : advanceNextRef.value(),
-          }),
-        );
+          });
+        });
       }
       return () => subscription?.cancel();
     }, [volumeTap, volumeTapInvert]);
