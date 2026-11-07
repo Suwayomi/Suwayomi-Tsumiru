@@ -239,8 +239,6 @@ enum DBKeys {
   readerScrollAmount(ReaderScrollAmount.large),
   autoScrollIntervalSeconds(3),
   autoAdvanceIntervalSeconds(5),
-  dualPageSplitWebtoon(false),
-  dualPageInvertWebtoon(false),
   readerBackgroundColor(ReaderBackgroundColor.black),
   showPageNumber(true),
   landscapeVerticalSeekbar(false),

@@ -284,18 +284,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.autoAdvanceIntervalSeconds.initial as int,
   );
 
-  static final dualPageSplitWebtoon = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
-    global: dualPageSplitWebtoonProvider,
-    fallback: DBKeys.dualPageSplitWebtoon.initial as bool,
-  );
-
-  static final dualPageInvertWebtoon = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
-    global: dualPageInvertWebtoonProvider,
-    fallback: DBKeys.dualPageInvertWebtoon.initial as bool,
-  );
-
   static final backgroundColor = ReaderSetting<ReaderBackgroundColor>(
     scope: ReaderSettingScope.global,
     global: readerBackgroundColorKeyProvider,
@@ -449,8 +437,6 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
     required ReaderScrollAmount readerScrollAmount,
     required int autoScrollIntervalSeconds,
     required int autoAdvanceIntervalSeconds,
-    required bool dualPageSplitWebtoon,
-    required bool dualPageInvertWebtoon,
     required ReaderBackgroundColor backgroundColor,
     required bool showPageNumber,
     required bool landscapeVerticalSeekbar,
@@ -510,8 +496,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late ReaderScrollAmountKey _readerScrollAmount;
   late AutoScrollIntervalSeconds _autoScrollIntervalSeconds;
   late AutoAdvanceIntervalSeconds _autoAdvanceIntervalSeconds;
-  late DualPageSplitWebtoon _dualPageSplitWebtoon;
-  late DualPageInvertWebtoon _dualPageInvertWebtoon;
   late ReaderBackgroundColorKey _backgroundColor;
   late ShowPageNumber _showPageNumber;
   late LandscapeVerticalSeekbar _landscapeVerticalSeekbar;
@@ -579,8 +563,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
         ref.read(autoScrollIntervalSecondsProvider.notifier);
     _autoAdvanceIntervalSeconds =
         ref.read(autoAdvanceIntervalSecondsProvider.notifier);
-    _dualPageSplitWebtoon = ref.read(dualPageSplitWebtoonProvider.notifier);
-    _dualPageInvertWebtoon = ref.read(dualPageInvertWebtoonProvider.notifier);
     _backgroundColor = ref.read(readerBackgroundColorKeyProvider.notifier);
     _showPageNumber = ref.read(showPageNumberProvider.notifier);
     _landscapeVerticalSeekbar =
@@ -676,10 +658,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           ReaderSettings.autoScrollIntervalSeconds.resolveWith(ref, null),
       autoAdvanceIntervalSeconds:
           ReaderSettings.autoAdvanceIntervalSeconds.resolveWith(ref, null),
-      dualPageSplitWebtoon:
-          ReaderSettings.dualPageSplitWebtoon.resolveWith(ref, null),
-      dualPageInvertWebtoon:
-          ReaderSettings.dualPageInvertWebtoon.resolveWith(ref, null),
       backgroundColor: ReaderSettings.backgroundColor.resolveWith(ref, null),
       showPageNumber: ReaderSettings.showPageNumber.resolveWith(ref, null),
       landscapeVerticalSeekbar:
@@ -792,12 +770,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setRotateWideInvert(bool value) => _rotateWideInvert.update(value);
 
   void setTrueDualPageSpread(bool value) => _trueDualPageSpread.update(value);
-
-  void setDualPageSplitWebtoon(bool value) =>
-      _dualPageSplitWebtoon.update(value);
-
-  void setDualPageInvertWebtoon(bool value) =>
-      _dualPageInvertWebtoon.update(value);
 
   void setBackgroundColor(ReaderBackgroundColor value) =>
       _backgroundColor.update(value);
