@@ -16,6 +16,7 @@ import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 import '../domain/account_access.dart';
 import 'account_admin_dialogs.dart';
+import 'account_codes_screen.dart';
 import 'account_permission_labels.dart';
 
 class ManageUsersScreen extends HookConsumerWidget {
@@ -98,6 +99,11 @@ class ManageUsersScreen extends HookConsumerWidget {
                             ),
                             SettingsGroupRow(
                               icon: FluentIcons.key_24_regular,
+                              title: context.l10n.accountIssueRegistrationCode,
+                              onTap: () => issueAccountCode(context, ref),
+                            ),
+                            SettingsGroupRow(
+                              icon: FluentIcons.key_multiple_24_regular,
                               title: context.l10n.accountCodes,
                               onTap: () =>
                                   const AccountCodesRoute().push<void>(context),
