@@ -155,8 +155,6 @@ class ReadingModeTab extends ConsumerWidget {
               ? _LongStripSection(
                   key: const ValueKey('longStrip'),
                   mangaId: mangaId,
-                  showGapsSettings:
-                      resolvedMode == ReaderMode.continuousVertical,
                 )
               : _PagedSection(key: const ValueKey('paged'), mangaId: mangaId),
         ),
@@ -319,14 +317,9 @@ class _PagedSection extends ConsumerWidget {
 }
 
 class _LongStripSection extends ConsumerWidget {
-  const _LongStripSection({
-    super.key,
-    required this.mangaId,
-    required this.showGapsSettings,
-  });
+  const _LongStripSection({super.key, required this.mangaId});
 
   final int mangaId;
-  final bool showGapsSettings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -422,15 +415,6 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.longStripDisableZoomOut,
           onChanged: model.setLongStripDisableZoomOut,
         ),
-        if (showGapsSettings) ...[
-          _SectionLabel(context.l10n.readerModeChipLongStripGaps),
-          CompactSwitchListTile(
-            controlAffinity: ListTileControlAffinity.trailing,
-            title: Text(context.l10n.cropBorders),
-            value: settings.cropBordersGaps,
-            onChanged: model.setCropBordersGaps,
-          ),
-        ],
       ],
     );
   }

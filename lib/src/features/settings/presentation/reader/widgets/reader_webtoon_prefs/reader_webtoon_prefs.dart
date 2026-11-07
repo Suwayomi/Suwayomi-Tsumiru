@@ -50,13 +50,6 @@ class CropBordersWebtoon extends _$CropBordersWebtoon
 }
 
 @riverpod
-class CropBordersGaps extends _$CropBordersGaps
-    with SharedPreferenceClientMixin<bool> {
-  @override
-  bool? build() => initialize(DBKeys.cropBordersGaps);
-}
-
-@riverpod
 class SmoothAutoScroll extends _$SmoothAutoScroll
     with SharedPreferenceClientMixin<bool> {
   @override

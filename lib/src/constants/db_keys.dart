@@ -235,7 +235,6 @@ enum DBKeys {
   longStripWidthLimitPercent(100),
   longStripWidthLimitPx(800),
   cropBordersWebtoon(false),
-  cropBordersGaps(false),
   smoothAutoScroll(true),
   readerScrollAmount(ReaderScrollAmount.large),
   autoScrollIntervalSeconds(3),

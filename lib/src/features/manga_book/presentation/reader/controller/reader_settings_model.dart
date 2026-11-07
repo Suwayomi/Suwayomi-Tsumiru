@@ -260,12 +260,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.cropBordersWebtoon.initial as bool,
   );
 
-  static final cropBordersGaps = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
-    global: cropBordersGapsProvider,
-    fallback: DBKeys.cropBordersGaps.initial as bool,
-  );
-
   static final smoothAutoScroll = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: smoothAutoScrollProvider,
@@ -451,7 +445,6 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
     required int longStripWidthLimitPercent,
     required int longStripWidthLimitPx,
     required bool cropBordersWebtoon,
-    required bool cropBordersGaps,
     required bool smoothAutoScroll,
     required ReaderScrollAmount readerScrollAmount,
     required int autoScrollIntervalSeconds,
@@ -513,7 +506,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late LongStripWidthLimitPercent _longStripWidthLimitPercent;
   late LongStripWidthLimitPx _longStripWidthLimitPx;
   late CropBordersWebtoon _cropBordersWebtoon;
-  late CropBordersGaps _cropBordersGaps;
   late SmoothAutoScroll _smoothAutoScroll;
   late ReaderScrollAmountKey _readerScrollAmount;
   late AutoScrollIntervalSeconds _autoScrollIntervalSeconds;
@@ -581,7 +573,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
         ref.read(longStripWidthLimitPercentProvider.notifier);
     _longStripWidthLimitPx = ref.read(longStripWidthLimitPxProvider.notifier);
     _cropBordersWebtoon = ref.read(cropBordersWebtoonProvider.notifier);
-    _cropBordersGaps = ref.read(cropBordersGapsProvider.notifier);
     _smoothAutoScroll = ref.read(smoothAutoScrollProvider.notifier);
     _readerScrollAmount = ref.read(readerScrollAmountKeyProvider.notifier);
     _autoScrollIntervalSeconds =
@@ -678,7 +669,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           ReaderSettings.longStripWidthLimitPx.resolveWith(ref, null),
       cropBordersWebtoon:
           ReaderSettings.cropBordersWebtoon.resolveWith(ref, null),
-      cropBordersGaps: ReaderSettings.cropBordersGaps.resolveWith(ref, null),
       smoothAutoScroll: ReaderSettings.smoothAutoScroll.resolveWith(ref, null),
       readerScrollAmount:
           ReaderSettings.readerScrollAmount.resolveWith(ref, null),
@@ -781,8 +771,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       _longStripWidthLimitPx.update(value.clamp(200, 2000));
 
   void setCropBordersWebtoon(bool value) => _cropBordersWebtoon.update(value);
-
-  void setCropBordersGaps(bool value) => _cropBordersGaps.update(value);
 
   void setSmoothAutoScroll(bool value) => _smoothAutoScroll.update(value);
 
