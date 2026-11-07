@@ -236,7 +236,7 @@ Widget desktopToolbarRow({
           alignment: Alignment.centerLeft,
           child: ConstrainedBox(
             constraints: const BoxConstraints(
-              maxWidth: kTopBarSearchPreferredWidth,
+              maxWidth: kDesktopSearchMaxWidth,
             ),
             child: _desktopToolbarIconTheme(search),
           ),
