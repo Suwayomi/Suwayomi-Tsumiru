@@ -67,7 +67,9 @@ ShortcutManager readerShortcutManager(Axis scrollDirection,
             isRtl ? PreviousScrollIntent() : NextScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.comma):
             PreviousChapterIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyP): PreviousChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.period): NextChapterIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyN): NextChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowUp):
             scrollDirection == Axis.vertical
                 ? ViewportScrollBackwardIntent()
