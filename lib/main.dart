@@ -157,6 +157,22 @@ Future<void> _startApp() async {
   }
 
   try {
+    // The Scroll animation and Animate page transitions switches merged into
+    // one; either off means the survivor starts off.
+    const migratedKey = 'readerAnimationMerged';
+    if (sharedPreferences.getBool(migratedKey) != true) {
+      if (sharedPreferences.getBool('scrollAnimation') == false ||
+          sharedPreferences.getBool('animatePageTransitions') == false) {
+        await sharedPreferences.setBool('animatePageTransitions', false);
+      }
+      await sharedPreferences.remove('scrollAnimation');
+      await sharedPreferences.setBool(migratedKey, true);
+    }
+  } catch (e, st) {
+    debugPrint('reader animation merge migration failed: $e\n$st');
+  }
+
+  try {
     const migratedKey = 'updatesGroupingCollapsedMigrated';
     if (sharedPreferences.getBool(migratedKey) != true) {
       if (sharedPreferences.getInt('updatesGroupingMode') ==

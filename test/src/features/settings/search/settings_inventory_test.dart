@@ -199,9 +199,11 @@ const List<String> _preReorgIds = [
 ];
 
 /// Old id to new id (or ids) when a setting is deliberately renamed or
-/// merged. Empty: the reorg moved settings between pages without renaming
-/// or merging any of them.
-const Map<String, String> _renamedOrMergedIds = {};
+/// merged. Scroll animation merged into Animate page transitions (#731
+/// reader-parity follow-up).
+const Map<String, String> _renamedOrMergedIds = {
+  'scrollAnimation': 'animatePageTransitions',
+};
 
 void main() {
   test('no setting went missing in the reorg', () {

@@ -36,7 +36,6 @@ import '../../../../../../settings/presentation/reader/widgets/reader_general_pr
 import '../../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
-import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../../../tracking/domain/track_progress_gate.dart';
@@ -444,9 +443,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       await writeVisibleProgress(p.chapterId, p.rel, p.generation);
     });
 
-    final bool isAnimationEnabled = ref
-        .watch(readerScrollAnimationProvider)
-        .ifNull(true);
     final bool animatePageTransitions = ref
         .watch(readerEffectiveSettingsProvider(manga.id))
         .animatePageTransitions;
@@ -1043,7 +1039,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           );
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
-      if (isAnimationEnabled && !context.reduceMotion) {
+      if (animatePageTransitions && !context.reduceMotion) {
         itemScrollController.scrollTo(
           index: globalIndex,
           alignment: 0.0,
