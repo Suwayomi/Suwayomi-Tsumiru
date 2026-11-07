@@ -138,8 +138,8 @@ const List<HotkeyDisplay> readerHotkeyDisplays = [
   HotkeyDisplay(label: _rNextPage, displayKeys: ['→', 'D']),
   HotkeyDisplay(label: _rFirstPage, displayKeys: ['Home']),
   HotkeyDisplay(label: _rLastPage, displayKeys: ['End']),
-  HotkeyDisplay(label: _rPrevChapter, displayKeys: [',']),
-  HotkeyDisplay(label: _rNextChapter, displayKeys: ['.']),
+  HotkeyDisplay(label: _rPrevChapter, displayKeys: [',', 'P']),
+  HotkeyDisplay(label: _rNextChapter, displayKeys: ['.', 'N']),
   HotkeyDisplay(label: _rOffsetDoublePages, displayKeys: ['O']),
   HotkeyDisplay(label: _rToggleMenu, displayKeys: ['Esc']),
 ];

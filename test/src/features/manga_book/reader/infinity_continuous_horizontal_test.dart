@@ -34,6 +34,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/infinity_continuous/multichapter_continuous_reader_mode.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -215,5 +216,34 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  }
+
+  for (final mode in [
+    ReaderMode.continuousHorizontalLTR,
+    ReaderMode.continuousHorizontalRTL,
+  ]) {
+    testWidgets('$mode: forward viewport scroll advances the visible page', (
+      tester,
+    ) async {
+      await _pumpReaderOnChapter2(
+        tester,
+        mode: mode,
+        prevPages: () async => _pages(1, 3),
+      );
+
+      ReaderWrapper wrapper() =>
+          tester.widget<ReaderWrapper>(find.byType(ReaderWrapper));
+      final before = wrapper().currentIndex;
+      var after = before;
+      for (var i = 0; i < 4 && after <= before; i++) {
+        expect(wrapper().onViewportScrollForward!(), isTrue);
+        for (var j = 0; j < 3; j++) {
+          await tester.pump(const Duration(milliseconds: 400));
+        }
+        after = wrapper().currentIndex;
+      }
+      expect(after, greaterThan(before));
+      expect(tester.takeException(), isNull);
+    });
   }
 }

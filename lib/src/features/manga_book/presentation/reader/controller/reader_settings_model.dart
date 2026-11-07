@@ -260,12 +260,6 @@ abstract final class ReaderSettings {
     fallback: DBKeys.cropBordersWebtoon.initial as bool,
   );
 
-  static final cropBordersGaps = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
-    global: cropBordersGapsProvider,
-    fallback: DBKeys.cropBordersGaps.initial as bool,
-  );
-
   static final smoothAutoScroll = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: smoothAutoScrollProvider,
@@ -288,18 +282,6 @@ abstract final class ReaderSettings {
     scope: ReaderSettingScope.global,
     global: autoAdvanceIntervalSecondsProvider,
     fallback: DBKeys.autoAdvanceIntervalSeconds.initial as int,
-  );
-
-  static final dualPageSplitWebtoon = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
-    global: dualPageSplitWebtoonProvider,
-    fallback: DBKeys.dualPageSplitWebtoon.initial as bool,
-  );
-
-  static final dualPageInvertWebtoon = ReaderSetting<bool>(
-    scope: ReaderSettingScope.global,
-    global: dualPageInvertWebtoonProvider,
-    fallback: DBKeys.dualPageInvertWebtoon.initial as bool,
   );
 
   static final backgroundColor = ReaderSetting<ReaderBackgroundColor>(
@@ -451,13 +433,10 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
     required int longStripWidthLimitPercent,
     required int longStripWidthLimitPx,
     required bool cropBordersWebtoon,
-    required bool cropBordersGaps,
     required bool smoothAutoScroll,
     required ReaderScrollAmount readerScrollAmount,
     required int autoScrollIntervalSeconds,
     required int autoAdvanceIntervalSeconds,
-    required bool dualPageSplitWebtoon,
-    required bool dualPageInvertWebtoon,
     required ReaderBackgroundColor backgroundColor,
     required bool showPageNumber,
     required bool landscapeVerticalSeekbar,
@@ -513,13 +492,10 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late LongStripWidthLimitPercent _longStripWidthLimitPercent;
   late LongStripWidthLimitPx _longStripWidthLimitPx;
   late CropBordersWebtoon _cropBordersWebtoon;
-  late CropBordersGaps _cropBordersGaps;
   late SmoothAutoScroll _smoothAutoScroll;
   late ReaderScrollAmountKey _readerScrollAmount;
   late AutoScrollIntervalSeconds _autoScrollIntervalSeconds;
   late AutoAdvanceIntervalSeconds _autoAdvanceIntervalSeconds;
-  late DualPageSplitWebtoon _dualPageSplitWebtoon;
-  late DualPageInvertWebtoon _dualPageInvertWebtoon;
   late ReaderBackgroundColorKey _backgroundColor;
   late ShowPageNumber _showPageNumber;
   late LandscapeVerticalSeekbar _landscapeVerticalSeekbar;
@@ -581,15 +557,12 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
         ref.read(longStripWidthLimitPercentProvider.notifier);
     _longStripWidthLimitPx = ref.read(longStripWidthLimitPxProvider.notifier);
     _cropBordersWebtoon = ref.read(cropBordersWebtoonProvider.notifier);
-    _cropBordersGaps = ref.read(cropBordersGapsProvider.notifier);
     _smoothAutoScroll = ref.read(smoothAutoScrollProvider.notifier);
     _readerScrollAmount = ref.read(readerScrollAmountKeyProvider.notifier);
     _autoScrollIntervalSeconds =
         ref.read(autoScrollIntervalSecondsProvider.notifier);
     _autoAdvanceIntervalSeconds =
         ref.read(autoAdvanceIntervalSecondsProvider.notifier);
-    _dualPageSplitWebtoon = ref.read(dualPageSplitWebtoonProvider.notifier);
-    _dualPageInvertWebtoon = ref.read(dualPageInvertWebtoonProvider.notifier);
     _backgroundColor = ref.read(readerBackgroundColorKeyProvider.notifier);
     _showPageNumber = ref.read(showPageNumberProvider.notifier);
     _landscapeVerticalSeekbar =
@@ -678,7 +651,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           ReaderSettings.longStripWidthLimitPx.resolveWith(ref, null),
       cropBordersWebtoon:
           ReaderSettings.cropBordersWebtoon.resolveWith(ref, null),
-      cropBordersGaps: ReaderSettings.cropBordersGaps.resolveWith(ref, null),
       smoothAutoScroll: ReaderSettings.smoothAutoScroll.resolveWith(ref, null),
       readerScrollAmount:
           ReaderSettings.readerScrollAmount.resolveWith(ref, null),
@@ -686,10 +658,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           ReaderSettings.autoScrollIntervalSeconds.resolveWith(ref, null),
       autoAdvanceIntervalSeconds:
           ReaderSettings.autoAdvanceIntervalSeconds.resolveWith(ref, null),
-      dualPageSplitWebtoon:
-          ReaderSettings.dualPageSplitWebtoon.resolveWith(ref, null),
-      dualPageInvertWebtoon:
-          ReaderSettings.dualPageInvertWebtoon.resolveWith(ref, null),
       backgroundColor: ReaderSettings.backgroundColor.resolveWith(ref, null),
       showPageNumber: ReaderSettings.showPageNumber.resolveWith(ref, null),
       landscapeVerticalSeekbar:
@@ -782,8 +750,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setCropBordersWebtoon(bool value) => _cropBordersWebtoon.update(value);
 
-  void setCropBordersGaps(bool value) => _cropBordersGaps.update(value);
-
   void setSmoothAutoScroll(bool value) => _smoothAutoScroll.update(value);
 
   void setReaderScrollAmount(ReaderScrollAmount value) =>
@@ -804,12 +770,6 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setRotateWideInvert(bool value) => _rotateWideInvert.update(value);
 
   void setTrueDualPageSpread(bool value) => _trueDualPageSpread.update(value);
-
-  void setDualPageSplitWebtoon(bool value) =>
-      _dualPageSplitWebtoon.update(value);
-
-  void setDualPageInvertWebtoon(bool value) =>
-      _dualPageInvertWebtoon.update(value);
 
   void setBackgroundColor(ReaderBackgroundColor value) =>
       _backgroundColor.update(value);
