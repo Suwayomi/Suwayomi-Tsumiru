@@ -169,10 +169,6 @@
     "@serverPort": {
         "description": "Popup title and Button text to update Server Port"
     },
-    "readerScrollAnimation": "Animação do Scroll",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "scanlators": "Scanlators",
     "@scanlators": {
         "description": "Title text for Scanlators"

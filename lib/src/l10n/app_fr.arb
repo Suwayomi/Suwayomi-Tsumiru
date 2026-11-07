@@ -370,10 +370,6 @@
     "@readerNavigationLayoutDisabled": {
         "description": "Radio button text for Reader Navigation Layout - Disabled"
     },
-    "readerScrollAnimation": "Animation de défilement",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerNavigationLayoutKindlish": "Façon Kindle",
     "@readerNavigationLayoutKindlish": {
         "description": "Radio button text for Reader Navigation Layout - Kindle-ish"
@@ -2696,5 +2692,17 @@
         "description": "Row label for the chapters-read field in the track editor"
     },
     "perCategorySortAndFilters": "Paramètres de tri et filtres, par catégorie",
-    "tryDifferentSearchTerm": "Essayez un terme de recherche différent"
+    "tryDifferentSearchTerm": "Essayez un terme de recherche différent",
+    "errorOccurred": "Une erreur est survenue",
+    "viewManga": "Voir le manga",
+    "timeouts": "Délais d'expiration",
+    "serverRequestTimeout": "Délai d'expiration d'une requête serveur",
+    "@serverRequestTimeout": {
+        "description": "Controls how long to wait for server responses"
+    },
+    "autoRefreshOnTimeout": "Auto-rafraîchir en cas d'expiration du délai",
+    "@autoRefreshOnTimeout": {
+        "description": "Toggle automatic retry on timeout"
+    },
+    "autoRefreshOnTimeoutDescription": "Retenter automatiquement les requêtes qui expirent"
 }

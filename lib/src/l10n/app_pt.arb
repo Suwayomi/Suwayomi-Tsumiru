@@ -182,10 +182,6 @@
     "@chapterSortUploadDate": {
         "description": "Radio button text for sort by Upload Date"
     },
-    "readerScrollAnimation": "Animação de rolagem",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "noServerFound": "Servidor não encontrado em sua rede local",
     "@noServerFound": {
         "description": "Text to show that no Server found in locale network"
@@ -1280,7 +1276,6 @@
     "accountPreviousPage": "Página anterior",
     "accountRole": "Função",
     "accountBuiltInReadOnly": "A função e as permissões do administrador integrado não podem ser alteradas.",
-    "accountNoUserRemoval": "Este servidor ainda não permite eliminar utilizadores.",
     "accountCodeShownOnce": "Copie este código antes de fechar. Não voltará a ser mostrado.",
     "accountCodeExpires": "Expira em {date}",
     "accountRevokeCode": "Revogar código",

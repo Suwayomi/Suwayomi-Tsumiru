@@ -711,10 +711,6 @@
     "@chapterSortUploadDate": {
         "description": "Radio button text for sort by Upload Date"
     },
-    "readerScrollAnimation": "滚动动画",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "clearCache": "清除缓存",
     "@clearCache": {
         "description": "Button text for clear cache in General Settings screen"
@@ -3338,7 +3334,6 @@
     "accountPreviousPage": "上一页",
     "accountRole": "角色",
     "accountBuiltInReadOnly": "无法更改内置管理员的角色和权限。",
-    "accountNoUserRemoval": "此服务器目前不支持删除用户。",
     "accountCodeShownOnce": "请在关闭前复制此代码。之后将不会再次显示。",
     "accountCodeExpires": "到期时间：{date}",
     "accountRevokeCode": "撤销代码",

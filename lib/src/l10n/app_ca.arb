@@ -2248,10 +2248,6 @@
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
     },
-    "readerScrollAnimation": "Animació de desplaçament",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerFeedbackToasts": "Avisos de lectura",
     "@readerFeedbackToasts": {
         "description": "Switch title for the toggle that shows reader feedback toasts"
@@ -3551,7 +3547,6 @@
     "accountNoCodes": "No hi ha codis pendents",
     "accountRole": "Rol",
     "accountBuiltInReadOnly": "El rol i els permisos de l'administrador integrat no es poden canviar.",
-    "accountNoUserRemoval": "Aquest servidor no permet eliminar usuaris actualment.",
     "accountCodeShownOnce": "Copieu aquest codi abans de tancar. No es tornarà a mostrar.",
     "accountCodeExpires": "Caduca el {date}",
     "@accountCodeExpires": {
