@@ -963,9 +963,6 @@
   "@readerPadding": {
     "description": "Slider title text for Reader Padding"
   },
-  "@readerScrollAnimation": {
-    "description": "Switch title to Disable scroll animation in reader screen"
-  },
   "@readerFeedbackToasts": {
     "description": "Switch title for the toggle that shows reader feedback toasts"
   },
@@ -2484,7 +2481,6 @@
   "readerOverlay": "Reader initial overlay",
   "readerOverlaySubtitle": "Shows title and quick settings when opening a chapter",
   "readerPadding": "Reader padding",
-  "readerScrollAnimation": "Scroll animation",
   "readerFeedbackToasts": "Reading feedback toasts",
   "readerFeedbackToastsSubtitle": "Show messages like \"loading next chapter\" and \"no more chapters\"",
   "readerSwipeChapterToggle": "Swipe toggle",

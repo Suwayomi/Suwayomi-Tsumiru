@@ -102,12 +102,7 @@ each with a concrete architectural blocker below.
 
 | Setting(s) | Blocker |
 |---|---|
-| `dualPageSplitWebtoon` (+`Invert`) | Splitting one strip page into two entries needs a page-list remap (1→2) inside the **frozen** webtoon scroll/index math. |
 | `smoothAutoScroll` | Superseded by the auto-scroll (webtoon) / auto-advance (paged) driver shipped in #181, which is a **pull-down-bar** control (`reader_utils_bar.dart` → `autoScrollActiveProvider` + `autoScrollIntervalSeconds`), not this settings toggle. `smoothAutoScroll` is now an orphaned l10n string wired to no engine. |
-
-**Still shown but inert (niche):** `cropBordersGaps` — appears only in the
-non-default "Long strip with gaps" mode; its own key isn't read by an engine
-(the wired crop uses `cropBorders` / `cropBordersWebtoon`).
 
 **Wired this branch:** custom paged viewport · image scale type · double-page / wide-split / true-dual-spread / center-margin (paged) · paged zoom-start / automatic landscape zoom / navigate-to-pan · long-strip scale (fit / ratio columns / **original size**, plus the **width-limit** %-of-window cap; both fold into `maxContentWidth`, and the height pre-seeder reserves at the actual render width, live-read via a per-build ref so once-bound closures can't re-seed at a stale width; scale/width changes clear reservations and re-anchor on the current page) · **auto-crop borders** (decoder-level `CroppedImageProvider` → pure-Dart isolate edge-scan, applied across single/double/split/webtoon engines) · always-show-chapter-transition · smaller tap zones · page-number indicator · animate page transitions · custom brightness (page RGB on desktop/web, `screen_brightness` on Android/iOS) · **long-tap page actions** (copy link / open in web / share image / save to gallery) · **draw-under-cutout** (native `MethodChannel` → `layoutInDisplayCutoutMode`) · plus the earlier zoom toggles (double-tap / pinch / disable zoom-out→min 0.5 / disable zoom-in) · rotate-wide (+invert) · background color · seekbar chain + landscape/left-handed · fullscreen · page-change flash · keep-screen-on · auto-webtoon · orientation · tap-invert (4-value) · tap-zone layouts · all custom-filter overlays (grayscale / invert / negative brightness / blended color).
 

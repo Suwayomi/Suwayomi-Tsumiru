@@ -199,8 +199,7 @@ const List<String> _preReorgIds = [
 ];
 
 /// Old id to new id (or ids) when a setting is deliberately renamed or
-/// merged. Scroll animation merged into Animate page transitions (#731
-/// reader-parity follow-up).
+/// merged. Scroll animation merged into Animate page transitions.
 const Map<String, String> _renamedOrMergedIds = {
   'scrollAnimation': 'animatePageTransitions',
 };

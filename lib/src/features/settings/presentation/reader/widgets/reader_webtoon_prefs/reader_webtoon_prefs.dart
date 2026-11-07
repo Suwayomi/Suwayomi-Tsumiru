@@ -79,4 +79,3 @@ class AutoAdvanceIntervalSeconds extends _$AutoAdvanceIntervalSeconds
   @override
   int? build() => initialize(DBKeys.autoAdvanceIntervalSeconds);
 }
-

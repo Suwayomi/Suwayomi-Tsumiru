@@ -1153,7 +1153,6 @@ class ReaderView extends HookConsumerWidget {
   final double mangaReaderPadding;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
-
   final bool Function() onNextBoundary;
   final bool Function() onPreviousBoundary;
   final bool Function() hasNextBoundary;
