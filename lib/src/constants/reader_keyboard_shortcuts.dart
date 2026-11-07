@@ -71,19 +71,19 @@ ShortcutManager readerShortcutManager(Axis scrollDirection,
         const SingleActivator(LogicalKeyboardKey.arrowUp):
             scrollDirection == Axis.vertical
                 ? ViewportScrollBackwardIntent()
-                : NextChapterIntent(),
+                : PreviousScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.keyW):
             scrollDirection == Axis.vertical
                 ? ViewportScrollBackwardIntent()
-                : NextChapterIntent(),
+                : PreviousScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowDown):
             scrollDirection == Axis.vertical
                 ? ViewportScrollForwardIntent()
-                : PreviousChapterIntent(),
+                : NextScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.keyS):
             scrollDirection == Axis.vertical
                 ? ViewportScrollForwardIntent()
-                : PreviousChapterIntent(),
+                : NextScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.pageUp):
             ViewportScrollBackwardIntent(),
         const SingleActivator(LogicalKeyboardKey.pageDown):
