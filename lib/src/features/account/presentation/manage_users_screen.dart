@@ -156,55 +156,12 @@ class ManageUsersScreen extends HookConsumerWidget {
                                               Enum$UserRole.$unknown => context.l10n.accountRoleUnknown,
                                             }).join(', ')} · ${context.l10n.accountPermissionsSummary(accountPermissionLabels(context).keys.where(AccountAccess(capability: AccountCapability.supported, user: user).allows).length, accountPermissionLabels(context).length)}',
                                           ),
-                                          trailing: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                tooltip: context.l10n.edit,
-                                                icon: const Icon(
-                                                  FluentIcons.edit_24_regular,
-                                                ),
-                                                color: context.theme.colorScheme
-                                                    .onSurfaceVariant,
-                                                onPressed: editUser,
-                                              ),
-                                              IconButton(
-                                                tooltip: context.l10n.delete,
-                                                icon: const Icon(
-                                                  FluentIcons
-                                                      .delete_24_regular,
-                                                ),
-                                                onPressed: () => showDialog<void>(
-                                                  context: context,
-                                                  builder: (dialogContext) =>
-                                                      AlertDialog(
-                                                        title: Text(
-                                                          context.l10n.delete,
-                                                        ),
-                                                        content: Text(
-                                                          context
-                                                              .l10n
-                                                              .accountNoUserRemoval,
-                                                        ),
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed: () =>
-                                                                Navigator.pop(
-                                                                  dialogContext,
-                                                                ),
-                                                            child: Text(
-                                                              context.l10n.ok,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                  animationStyle:
-                                                      context.motionStyle,
-                                                ),
-                                              ),
-                                            ],
+                                          trailing: IconButton(
+                                            tooltip: context.l10n.edit,
+                                            icon: const Icon(
+                                              FluentIcons.edit_24_regular,
+                                            ),
+                                            onPressed: editUser,
                                           ),
                                           onTap: editUser,
                                         );
