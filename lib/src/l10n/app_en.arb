@@ -1514,9 +1514,9 @@
   },
   "smallerTapZones": "Smaller tap zones",
   "smoothAutoScroll": "Smooth Auto Scroll",
-  "scrollAmount": "Keyboard scroll distance",
+  "scrollAmount": "Scroll distance",
   "@scrollAmount": {
-    "description": "Keyboard scroll step, fraction of the screen"
+    "description": "Long strip scroll step for taps, volume keys and the keyboard, as a fraction of the screen"
   },
   "scrollAmountTiny": "Tiny",
   "scrollAmountSmall": "Small",

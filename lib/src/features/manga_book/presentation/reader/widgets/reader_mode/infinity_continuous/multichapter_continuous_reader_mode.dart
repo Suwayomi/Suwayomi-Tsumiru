@@ -1055,14 +1055,23 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-    void handleViewportScroll({required bool forward}) {
-      if (!itemScrollController.isAttached) return;
+    // False when the strip cannot move further so the caller can fall back to page/chapter navigation.
+    bool handleViewportScroll({required bool forward}) {
+      if (!itemScrollController.isAttached) return false;
       try {
         final ScrollPosition pos = scrollOffsetController.position;
         final double viewport = pos.viewportDimension;
         // reverse:true flips the visual direction of the list.
         final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
         final double offset = viewport * scrollAmount.fraction * sign;
+        final double target = (pos.pixels + offset).clamp(
+          pos.minScrollExtent,
+          pos.maxScrollExtent,
+        );
+        if ((target - pos.pixels).abs() <=
+            InfinityContinuousConfig.scrollExtentTolerance) {
+          return false;
+        }
         if (animatePageTransitions && !context.reduceMotion) {
           scrollOffsetController.animateScroll(
             offset: offset,
@@ -1070,14 +1079,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             curve: Curves.easeOut,
           );
         } else {
-          pos.jumpTo(
-            (pos.pixels + offset).clamp(
-              pos.minScrollExtent,
-              pos.maxScrollExtent,
-            ),
-          );
+          pos.jumpTo(target);
         }
+        return true;
       } catch (_) {
+        return false;
       }
     }
 

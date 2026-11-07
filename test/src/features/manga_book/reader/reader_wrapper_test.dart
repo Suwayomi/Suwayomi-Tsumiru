@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
@@ -81,4 +82,82 @@ void main() {
     expect(chapterFetches, 1);
     expect(pageFetches, 1);
   });
+
+  testWidgets(
+    'long-strip next-zone tap scrolls the strip, falling back at the end',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+
+      var viewportForwardCalls = 0;
+      var nextCalls = 0;
+      var canScroll = true;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            getNextAndPreviousChaptersProvider(
+              mangaId: 1,
+              chapterId: 1,
+            ).overrideWithValue((first: null, second: null)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ReaderWrapper(
+              manga: testManga().copyWith(
+                meta: [
+                  Fragment$MangaDto$meta(
+                    key: 'flutter_readerNavigationLayout',
+                    value: 'rightAndLeft',
+                  ),
+                ],
+              ),
+              chapter: testChapter(),
+              chapterPages: ChapterPagesDto(
+                chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
+                pages: const ['a', 'b', 'c'],
+              ),
+              currentIndex: 0,
+              onChanged: (_) {},
+              onNext: () {
+                nextCalls++;
+              },
+              onPrevious: () {},
+              onViewportScrollForward: () {
+                viewportForwardCalls++;
+                return canScroll;
+              },
+              onViewportScrollBackward: () => false,
+              scrollDirection: Axis.vertical,
+              effectiveReaderMode: ReaderMode.webtoon,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.takeException(), isNull);
+
+      // Right third of the 800-wide screen, clear of the side seekbar and chrome bars.
+      const nextZone = Offset(640, 800);
+      await tester.tapAt(nextZone);
+      await tester.pump();
+      expect(viewportForwardCalls, 1);
+      expect(nextCalls, 0);
+
+      canScroll = false;
+      await tester.tapAt(nextZone);
+      await tester.pump();
+      expect(viewportForwardCalls, 2);
+      expect(nextCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

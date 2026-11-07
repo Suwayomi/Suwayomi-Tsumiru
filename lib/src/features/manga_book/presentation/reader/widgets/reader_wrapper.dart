@@ -161,8 +161,8 @@ class ReaderWrapper extends HookConsumerWidget {
   final ValueChanged<int> onChanged;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
-  final VoidCallback? onViewportScrollForward;
-  final VoidCallback? onViewportScrollBackward;
+  final bool Function()? onViewportScrollForward;
+  final bool Function()? onViewportScrollBackward;
   final VoidCallback? onToggleAutoScroll;
   final VoidCallback? onAutoScrollFaster;
   final VoidCallback? onAutoScrollSlower;
@@ -576,6 +576,15 @@ class ReaderWrapper extends HookConsumerWidget {
       ],
     );
 
+    // Long-strip advance: scroll by the scroll distance, falling back to page/chapter navigation at the strip ends.
+    final onAdvanceNext = useCallback(() {
+      if (!(onViewportScrollForward?.call() ?? false)) onReaderNext();
+    }, [onViewportScrollForward, onReaderNext]);
+
+    final onAdvancePrevious = useCallback(() {
+      if (!(onViewportScrollBackward?.call() ?? false)) onReaderPrevious();
+    }, [onViewportScrollBackward, onReaderPrevious]);
+
     final onNextChapter = useCallback(() {
       pushNextChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
@@ -602,14 +611,14 @@ class ReaderWrapper extends HookConsumerWidget {
         subscription = FlutterAndroidVolumeKeydown.stream.listen(
           (event) => (switch (event) {
             HardwareButton.volume_up =>
-              volumeTapInvert ? onReaderNext() : onReaderPrevious(),
+              volumeTapInvert ? onAdvanceNext() : onAdvancePrevious(),
             HardwareButton.volume_down =>
-              volumeTapInvert ? onReaderPrevious() : onReaderNext(),
+              volumeTapInvert ? onAdvancePrevious() : onAdvanceNext(),
           }),
         );
       }
       return () => subscription?.cancel();
-    }, [volumeTap, volumeTapInvert, onReaderNext, onReaderPrevious]);
+    }, [volumeTap, volumeTapInvert, onAdvanceNext, onAdvancePrevious]);
 
     return Theme(
       data: context.theme.copyWith(
@@ -686,14 +695,14 @@ class ReaderWrapper extends HookConsumerWidget {
                     ViewportScrollForwardIntent:
                         CallbackAction<ViewportScrollForwardIntent>(
                           onInvoke: (intent) {
-                            (onViewportScrollForward ?? onReaderNext)();
+                            onAdvanceNext();
                             return null;
                           },
                         ),
                     ViewportScrollBackwardIntent:
                         CallbackAction<ViewportScrollBackwardIntent>(
                           onInvoke: (intent) {
-                            (onViewportScrollBackward ?? onReaderPrevious)();
+                            onAdvancePrevious();
                             return null;
                           },
                         ),
@@ -756,6 +765,8 @@ class ReaderWrapper extends HookConsumerWidget {
                           mangaReaderPadding: mangaReaderPadding.value,
                           onNext: onReaderNext,
                           onPrevious: onReaderPrevious,
+                          onNextTap: onAdvanceNext,
+                          onPreviousTap: onAdvancePrevious,
                           onNextBoundary: tryNextChapter,
                           onPreviousBoundary: tryPreviousChapter,
                           hasNextBoundary: () =>
@@ -1044,6 +1055,8 @@ class ReaderView extends HookConsumerWidget {
     required this.mangaReaderPadding,
     required this.onNext,
     required this.onPrevious,
+    this.onNextTap,
+    this.onPreviousTap,
     required this.prevNextChapterPair,
     required this.mangaReaderNavigationLayout,
     this.mangaTapInvert,
@@ -1074,6 +1087,10 @@ class ReaderView extends HookConsumerWidget {
   final double mangaReaderPadding;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
+
+  /// Long-strip tap advance (viewport scroll with page fallback); null keeps page navigation.
+  final VoidCallback? onNextTap;
+  final VoidCallback? onPreviousTap;
   final bool Function() onNextBoundary;
   final bool Function() onPreviousBoundary;
   final bool Function() hasNextBoundary;
@@ -1179,8 +1196,8 @@ class ReaderView extends HookConsumerWidget {
         callbacks: ReaderInputCallbacks(
           onTap: toggleVisibility,
           onLongPressStart: readWithLongTap ? handleLongPressStart : null,
-          onNext: onNext,
-          onPrevious: onPrevious,
+          onNext: onNextTap ?? onNext,
+          onPrevious: onPreviousTap ?? onPrevious,
           onNextBoundary: onNextBoundary,
           onPreviousBoundary: onPreviousBoundary,
           hasNextBoundary: hasNextBoundary,
@@ -1223,8 +1240,8 @@ class ReaderView extends HookConsumerWidget {
         IgnorePointer(
           ignoring: childHandlesGestures,
           child: ReaderNavigationLayoutWidget(
-            onNext: onNext,
-            onPrevious: onPrevious,
+            onNext: onNextTap ?? onNext,
+            onPrevious: onPreviousTap ?? onPrevious,
             navigationLayout: resolvedNavigationLayout,
             tapInvert: resolvedTapInvert,
             showReaderLayoutAnimation: showZonesOnOpen,
