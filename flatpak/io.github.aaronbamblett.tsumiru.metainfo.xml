@@ -78,6 +78,9 @@
     <display_length compare="ge">360</display_length>
   </requires>
   <releases>
+    <release version="1.6.5" date="2026-11-07">
+      <url type="details">https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v1.6.5</url>
+    </release>
     <release version="1.6.4" date="2026-11-01">
       <url type="details">https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v1.6.4</url>
     </release>
