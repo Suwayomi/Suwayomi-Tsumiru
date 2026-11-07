@@ -709,7 +709,6 @@
     "accountPreviousPage": "Página anterior",
     "accountRole": "Função",
     "accountBuiltInReadOnly": "A função e as permissões do administrador integrado não podem ser alteradas.",
-    "accountNoUserRemoval": "Este servidor ainda não permite excluir usuários.",
     "accountCodeShownOnce": "Copie este código antes de fechar. Ele não será mostrado novamente.",
     "accountCodeExpires": "Expira em {date}",
     "accountRevokeCode": "Revogar código",

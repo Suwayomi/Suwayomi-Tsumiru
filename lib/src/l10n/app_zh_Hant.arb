@@ -722,10 +722,6 @@
     "@noCategoriesFound": {
         "description": "Hint text to add new Category when category list is empty"
     },
-    "readerScrollAnimation": "滑動動畫",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "uninstalling": "正在解除安裝",
     "@uninstalling": {
         "description": "Button text to show that the extension is uninstalling"
@@ -3340,7 +3336,6 @@
     "accountPreviousPage": "上一頁",
     "accountRole": "角色",
     "accountBuiltInReadOnly": "無法變更內建管理員的角色和權限。",
-    "accountNoUserRemoval": "此伺服器目前不支援刪除使用者。",
     "accountCodeShownOnce": "請在關閉前複製此代碼。之後將不會再次顯示。",
     "accountCodeExpires": "到期時間：{date}",
     "accountRevokeCode": "撤銷代碼",
