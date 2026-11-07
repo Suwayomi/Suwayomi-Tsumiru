@@ -351,11 +351,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a deep link straight to a series shows no back button', (
+  testWidgets('a deep link straight to a series goes back to the library', (
     tester,
   ) async {
     await _pump(tester, const Size(412, 915), location: '/manga/1');
     expect(find.byType(MangaDetailsScreen), findsOneWidget);
-    expect(find.byType(BackButton), findsNothing);
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('LIBRARY'), findsOneWidget);
+    expect(find.byType(MangaDetailsScreen), findsNothing);
   });
 }
