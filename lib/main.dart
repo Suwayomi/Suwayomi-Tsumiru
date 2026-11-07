@@ -157,8 +157,7 @@ Future<void> _startApp() async {
   }
 
   try {
-    // The Scroll animation and Animate page transitions switches merged into
-    // one; either off means the survivor starts off.
+    // Scroll animation merged into Animate page transitions; either off keeps it off.
     const migratedKey = 'readerAnimationMerged';
     if (sharedPreferences.getBool(migratedKey) != true) {
       if (sharedPreferences.getBool('scrollAnimation') == false ||
