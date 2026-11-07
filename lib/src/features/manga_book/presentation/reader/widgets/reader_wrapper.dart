@@ -110,7 +110,7 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
-// Fixed hide threshold in logical px, matching Mihon's readerHideThreshold LOW.
+// Matches Mihon's readerHideThreshold LOW.
 const double _kHideMenuOnScrollThreshold = 31;
 
 final readerChromeVisibleProvider = StateProvider.autoDispose<bool?>((Ref ref) {
@@ -579,7 +579,6 @@ class ReaderWrapper extends HookConsumerWidget {
       ],
     );
 
-    // Long-strip advance: scroll by the scroll distance, falling back to page/chapter navigation at the strip ends.
     final onAdvanceNext = useCallback(() {
       if (gapConfirmationPending.value) return;
       if (!(onViewportScrollForward?.call() ?? false)) onReaderNext();

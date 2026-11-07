@@ -1051,7 +1051,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-    // False when the strip cannot move further so the caller can fall back to page/chapter navigation.
+    // False at the strip ends so the caller falls back to page/chapter navigation.
     bool handleViewportScroll({required bool forward}) {
       if (!itemScrollController.isAttached) return false;
       try {

@@ -48,6 +48,7 @@ import 'src/features/offline/data/offline_runtime_storage.dart';
 import 'src/features/offline/data/offline_server_identity_repository.dart';
 import 'src/features/onboarding/data/onboarding_complete.dart';
 import 'src/features/settings/data/grid_cover_preference_migration.dart';
+import 'src/features/settings/data/reader_animation_preference_migration.dart';
 import 'src/features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/hosted_base_uri.dart';
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -157,16 +158,7 @@ Future<void> _startApp() async {
   }
 
   try {
-    // Scroll animation merged into Animate page transitions; either off keeps it off.
-    const migratedKey = 'readerAnimationMerged';
-    if (sharedPreferences.getBool(migratedKey) != true) {
-      if (sharedPreferences.getBool('scrollAnimation') == false ||
-          sharedPreferences.getBool('animatePageTransitions') == false) {
-        await sharedPreferences.setBool('animatePageTransitions', false);
-      }
-      await sharedPreferences.remove('scrollAnimation');
-      await sharedPreferences.setBool(migratedKey, true);
-    }
+    await migrateReaderAnimationPreference(sharedPreferences);
   } catch (e, st) {
     debugPrint('reader animation merge migration failed: $e\n$st');
   }
