@@ -178,10 +178,6 @@
     "@chapterSortUploadDate": {
         "description": "Radio button text for sort by Upload Date"
     },
-    "readerScrollAnimation": "Animación del desplazamiento",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "clearCache": "Borrar la caché",
     "@clearCache": {
         "description": "Button text for clear cache in General Settings screen"

@@ -450,10 +450,6 @@
     "@readerNavigationLayoutInvert": {
         "description": "Switch title to invert Tap to scroll in reader screen"
     },
-    "readerScrollAnimation": "مؤثرات الانتقال بين الصفحات",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "refresh": "تحديث",
     "@refresh": {
         "description": "Refresh button text"

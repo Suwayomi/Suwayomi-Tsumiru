@@ -334,10 +334,6 @@
     "@readerNavigationLayoutEdge": {
         "description": "Radio button text for Reader Navigation Layout - Edge"
     },
-    "readerScrollAnimation": "Анімація прокрутки",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerNavigationLayoutKindlish": "Kindle-ish",
     "@readerNavigationLayoutKindlish": {
         "description": "Radio button text for Reader Navigation Layout - Kindle-ish"
