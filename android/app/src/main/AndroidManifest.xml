@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="io.github.aaronbamblett.tsumiru">
      <uses-permission android:name="android.permission.INTERNET" />
      <!-- Background chapter downloads: keep the download orchestration alive with
@@ -19,7 +20,6 @@
    <application
         android:label="${appLabel}"
         android:name="${applicationName}"
-        android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -71,6 +71,13 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
+        <!-- The plugin's boot receiver only acts with autoRunOnBoot or
+             autoRunOnMyPackageReplaced, neither of which is used. Dropping it
+             removes an exported boot hook; RECEIVE_BOOT_COMPLETED stays for
+             WorkManager's periodic new-chapter check. -->
+        <receiver
+            android:name="com.pravera.flutter_foreground_task.service.RebootReceiver"
+            tools:node="remove" />
         <!-- Copy a reader page image to the clipboard: ClipData.newUri needs a
              content:// URI. Distinct authority from share_plus's own provider. -->
         <provider
