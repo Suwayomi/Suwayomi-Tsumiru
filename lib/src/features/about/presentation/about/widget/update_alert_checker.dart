@@ -90,10 +90,13 @@ class UpdateAlertChecker {
         required void Function(String) store,
       }) async {
         if (current.isBlank) return;
+        // Record the version before showing it: the shell recreates this
+        // checker while account access settles, and a recreated checker, or a
+        // restart with the dialog still open, must not show it again.
+        store(current);
         if (previous.isNotBlank && previous != current && inform) {
           await _open(dialog);
         }
-        if (_valid) store(current);
       }
 
       if (about != null) {
@@ -162,6 +165,8 @@ class UpdateAlertChecker {
           serverReminder.show(update.tag!) &&
           GoRouter.of(context).routeInformationProvider.value.uri.path !=
               const AboutRoute().location) {
+        // Snooze on display for the same reason; Ignore still overrides it.
+        await serverReminder.remindLater();
         await _open(
           UpdateAlertDialog(
             info: l10n.serverVersionAvailable(
@@ -179,6 +184,7 @@ class UpdateAlertChecker {
           checkWeb &&
           webUpdate?.updateAvailable == true &&
           webReminder.show(webUpdate!.tag)) {
+        await webReminder.remindLater();
         await _open(
           UpdateAlertDialog(
             info: l10n.tsumiruVersionAvailable(
