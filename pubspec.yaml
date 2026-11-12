@@ -49,7 +49,7 @@ dependencies:
   http: ^1.2.0
   infinite_scroll_pagination: ^5.1.1
   intl: ^0.20.2
-  json_annotation: ^4.9.0
+  json_annotation: ^4.12.0
   logger: ^2.5.0
   material_color_utilities: ^0.13.0
   material_hooks: ^0.1.0
@@ -92,8 +92,7 @@ dev_dependencies:
   flutter_riverpod: ^3.5.0
   flutter_test:
     sdk: flutter
-  # 4.0.2+ needs analyzer 14, which graphql_codegen's gql_code_builder (<14) blocks.
-  freezed: ^4.0.1
+  freezed: ^4.0.3
   go_router_builder: ^4.0.0
   graphql_codegen: ^3.0.0
   json_serializable: ^6.5.4
