@@ -28,7 +28,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk 36 // bumped for background_downloader / flutter_foreground_task
+    compileSdk 37 // flutter_local_notifications 23 compiles against API 37
     ndkVersion "28.2.13676358"
     namespace "io.github.aaronbamblett.tsumiru"
     compileOptions {
