@@ -15,6 +15,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../utils/avif/avif_file_io.dart';
+import 'cover_cache_key.dart';
 
 export '../../utils/avif/avif_header.dart' show isAvifHeader;
 
@@ -161,9 +162,13 @@ CacheManager createCoverCacheManager({String? serverOrigin}) =>
       ),
     );
 
+/// Covers never revalidate while their version holds; a new version first asks
+/// the server whether the previous version's file is still current (ETag).
 class _CoverCacheManager extends CacheManager
     with _AvifTranscodingCacheManager {
   _CoverCacheManager(super.config);
+
+  final _carryOvers = <String, Future<FileInfo?>>{};
 
   @override
   Stream<FileResponse> getFileStream(
@@ -172,9 +177,15 @@ class _CoverCacheManager extends CacheManager
     Map<String, String>? headers,
     bool withProgress = false,
   }) async* {
-    final cached = await getFileFromCache(key ?? url);
+    final cacheKey = key ?? url;
+    final cached = await getFileFromCache(cacheKey);
     if (cached != null) {
       yield cached;
+      return;
+    }
+    final carried = await _carryOverPreviousVersion(url, cacheKey, headers);
+    if (carried != null) {
+      yield carried;
       return;
     }
     yield* super.getFileStream(
@@ -184,6 +195,163 @@ class _CoverCacheManager extends CacheManager
       withProgress: withProgress,
     );
   }
+
+  @override
+  Future<FileInfo> downloadFile(
+    String url, {
+    String? key,
+    Map<String, String>? authHeaders,
+    bool force = false,
+  }) async {
+    if (!force) {
+      final carried = await _carryOverPreviousVersion(
+        url,
+        key ?? url,
+        authHeaders,
+      );
+      if (carried != null) return carried;
+    }
+    return super.downloadFile(
+      url,
+      key: key,
+      authHeaders: authHeaders,
+      force: force,
+    );
+  }
+
+  /// Null when there is nothing to carry over, so the caller downloads as usual.
+  Future<FileInfo?> _carryOverPreviousVersion(
+    String url,
+    String key,
+    Map<String, String>? headers,
+  ) {
+    final unversioned = unversionedCoverKey(key);
+    if (unversioned == null) return Future.value();
+    return _carryOvers[key] ??=
+        carryOverCoverVersion(
+          cache: this,
+          url: url,
+          key: key,
+          unversionedKey: unversioned,
+          headers: headers,
+        ).whenComplete(() {
+          _carryOvers.remove(key);
+        });
+  }
+}
+
+/// Moves the previous version of [key]'s cover to [key] when the server
+/// answers 304 to its ETag, or stores the 200 body; the old entry is then
+/// dropped. Null when no previous version with an ETag exists or the
+/// exchange fails for a non-network reason; network errors are rethrown so a
+/// failed request is not sent twice.
+@visibleForTesting
+Future<FileInfo?> carryOverCoverVersion({
+  required CacheManager cache,
+  required String url,
+  required String key,
+  required String unversionedKey,
+  Map<String, String>? headers,
+}) async {
+  final ({CacheObject entry, File file})? found;
+  try {
+    found = await cache.store.retrieveCacheData(key) != null
+        ? null
+        : await _previousCoverVersion(cache, key, unversionedKey);
+  } catch (_) {
+    return null;
+  }
+  if (found == null) return null;
+  final (:entry, file: previousFile) = found;
+  final eTag = entry.eTag!;
+  final response = await cache.config.fileService.get(
+    url,
+    headers: {...?headers, io.HttpHeaders.ifNoneMatchHeader: eTag},
+  );
+  try {
+    final maxAge = response.validTill.difference(DateTime.now());
+    switch (response.statusCode) {
+      case io.HttpStatus.notModified:
+        await response.content.drain<void>();
+        await cache.putFileStream(
+          url,
+          previousFile.openRead(),
+          key: key,
+          eTag: response.eTag ?? eTag,
+          maxAge: maxAge,
+          fileExtension: _extensionOf(entry.relativePath),
+        );
+      case io.HttpStatus.ok:
+        await cache.putFileStream(
+          url,
+          response.content,
+          key: key,
+          eTag: response.eTag,
+          maxAge: maxAge,
+          fileExtension: _withoutDot(response.fileExtension),
+        );
+      default:
+        await response.content.drain<void>();
+        return null;
+    }
+    await cache.removeFile(entry.key);
+    return await cache.getFileFromCache(key);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Most recently used other version of the same cover that has an ETag and a file.
+Future<({CacheObject entry, File file})?> _previousCoverVersion(
+  CacheManager cache,
+  String key,
+  String unversionedKey,
+) async {
+  final prefix = '$unversionedKey$coverVersionMarker';
+  final repo = cache.config.repo;
+  final List<CacheObject> candidates;
+  final db = repo is CacheObjectProvider ? repo.db : null;
+  if (db != null) {
+    // instr() is an exact, case-sensitive prefix test, unlike LIKE.
+    candidates = CacheObject.fromMapList(
+      await db.query(
+        'cacheObject',
+        where:
+            '${CacheObject.columnKey} = ? OR '
+            'instr(${CacheObject.columnKey}, ?) = 1',
+        whereArgs: [unversionedKey, prefix],
+      ),
+    );
+  } else {
+    candidates = await repo.getAllObjects();
+  }
+  CacheObject? best;
+  for (final candidate in candidates) {
+    final k = candidate.key;
+    if (k == key || (k != unversionedKey && !k.startsWith(prefix))) continue;
+    final eTag = candidate.eTag;
+    if (eTag == null || eTag.isEmpty) continue;
+    final touched = candidate.touched;
+    final bestTouched = best?.touched;
+    if (best == null ||
+        (touched != null &&
+            (bestTouched == null || touched.isAfter(bestTouched)))) {
+      best = candidate;
+    }
+  }
+  if (best == null) return null;
+  final file = await cache.config.fileSystem.createFile(best.relativePath);
+  return await file.exists() ? (entry: best, file: file) : null;
+}
+
+String _extensionOf(String relativePath) {
+  final ext = p.extension(relativePath);
+  return ext.isEmpty ? 'file' : _withoutDot(ext);
+}
+
+String _withoutDot(String extension) {
+  final ext = extension.startsWith('.') ? extension.substring(1) : extension;
+  return ext.isEmpty ? 'file' : ext;
 }
 
 class _ServerPageCacheManager extends CacheManager

@@ -16,3 +16,9 @@ String withCoverVersion(String key, String? coverVersion) =>
 /// Prefix that keeps one ui-login account's images apart from another's.
 String accountImageKeyPrefix(String catalogId) =>
     'tsumiru-image:account:${Uri.encodeComponent(catalogId)}/';
+
+/// The key without its version, shared by every version of the same cover; null when unversioned.
+String? unversionedCoverKey(String key) {
+  final marker = key.lastIndexOf(coverVersionMarker);
+  return marker < 0 ? null : key.substring(0, marker);
+}
