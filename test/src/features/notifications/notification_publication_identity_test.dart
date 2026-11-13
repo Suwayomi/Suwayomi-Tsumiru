@@ -93,6 +93,7 @@ class _Client extends NotificationBackgroundClient {
           fetchedAt: 200,
           mangaTitle: 'A private title',
           thumbnailUrl: '/cover',
+          coverVersion: null,
           categoryIds: <int>{},
         ),
       ],
@@ -102,7 +103,7 @@ class _Client extends NotificationBackgroundClient {
   }
 
   @override
-  Future<List<int>?> fetchCover(String thumbnailUrl) async {
+  Future<List<int>?> fetchCover(String cover, {String? coverVersion}) async {
     await _delay('cover');
     return [1, 2, 3];
   }
