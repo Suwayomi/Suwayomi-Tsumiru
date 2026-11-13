@@ -7,12 +7,18 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/app_distribution.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../utils/crash/diagnostics.dart';
+import '../../../../utils/network/server_file_url.dart';
+import '../../../../widgets/cover_cache/cover_cache_key.dart';
+import '../../../../widgets/cover_cache/cover_cache_manager_stub.dart'
+    if (dart.library.io) '../../../../widgets/cover_cache/cover_cache_manager_io.dart';
 import '../../../account/data/account_permission.dart';
+import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_endpoint.dart';
 import '../../../offline/data/background/background_token_record.dart'
@@ -90,7 +96,10 @@ typedef NotifChapter = ({
   String name,
   int fetchedAt,
   String mangaTitle,
+  // The cover the app draws: the custom cover when set, else the server one.
   String? thumbnailUrl,
+  // Server cover version; null for custom covers, like MangaDto.coverVersion.
+  String? coverVersion,
   Set<int> categoryIds,
 });
 
@@ -110,10 +119,18 @@ class NotificationBackgroundClient {
     this.isCancelled,
     this.onDownloadPermissionDenied,
     this.admitDownload,
+    this.cacheEndpoint,
+    CacheManager? coverCache,
   }) : _record = record,
-       _http = httpClient ?? http.Client();
+       _http = httpClient ?? http.Client(),
+       _coverCache = coverCache;
 
   final NotificationEndpoint endpoint;
+
+  /// Foreground address the app's cover cache keys are built from; [endpoint]
+  /// may be another address of the same server. Null skips the shared cache.
+  final NotificationEndpoint? cacheEndpoint;
+  CacheManager? _coverCache;
   final bool Function()? isCancelled;
   final Future<void> Function()? onDownloadPermissionDenied;
   final Future<bool> Function()? admitDownload;
@@ -238,7 +255,13 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
       chapterNumber
       name
       fetchedAt
-      manga { title thumbnailUrl categories { nodes { id } } }
+      manga {
+        title
+        thumbnailUrl
+        thumbnailUrlLastFetched
+        meta { key value }
+        categories { nodes { id } }
+      }
     }
   }
 }''';
@@ -269,6 +292,16 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
         ((manga?['categories'] as Map<String, Object?>?)?['nodes'] as List? ??
                 const [])
             .cast<Object?>();
+    final serverCover = manga?['thumbnailUrl'] as String?;
+    final meta = <({String key, String value})>[];
+    for (final m in (manga?['meta'] as List? ?? const []).cast<Object?>()) {
+      if (m is! Map<String, Object?>) continue;
+      final key = m['key'];
+      final value = m['value'];
+      if (key is String && value is String) meta.add((key: key, value: value));
+    }
+    final cover = resolveDisplayCover(thumbnailUrl: serverCover, meta: meta);
+    final lastFetched = manga?['thumbnailUrlLastFetched'];
     return (
       id: (n['id'] as num).toInt(),
       mangaId: (n['mangaId'] as num).toInt(),
@@ -276,7 +309,8 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
       name: (n['name'] as String?) ?? '',
       fetchedAt: int.tryParse('${n['fetchedAt']}') ?? 0,
       mangaTitle: (manga?['title'] as String?) ?? '',
-      thumbnailUrl: manga?['thumbnailUrl'] as String?,
+      thumbnailUrl: cover.isEmpty ? null : cover,
+      coverVersion: cover == serverCover ? lastFetched?.toString() : null,
       categoryIds: {
         for (final c in cats)
           ((c as Map<String, Object?>)['id'] as num).toInt(),
@@ -340,36 +374,89 @@ mutation NotifEnqueue($ids: [Int!]!) {
     }
   }
 
-  /// Cover paths already include /api; fetch failures fall back to text without a 401 retry.
-  Future<List<int>?> fetchCover(String thumbnailUrl) async {
-    final base = Endpoints.baseApi(
+  /// Reads [cover] from the app's cover cache, or downloads it into that cache
+  /// so neither side fetches it again; failures fall back to text without a 401 retry.
+  Future<List<int>?> fetchCover(String cover, {String? coverVersion}) async {
+    final url = serverFileUrl(
+      path: cover,
       baseUrl: endpoint.baseUrl,
       port: endpoint.port,
       addPort: endpoint.addPort,
       appendApiToUrl: false,
     );
-    final url = '$base$thumbnailUrl';
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return null;
+    final external =
+        isExternalImageUrl(
+          imageUrl: url,
+          baseUrl: endpoint.baseUrl,
+          port: endpoint.port,
+          addPort: endpoint.addPort,
+        ) &&
+        (cacheEndpoint == null ||
+            isExternalImageUrl(
+              imageUrl: url,
+              baseUrl: cacheEndpoint!.baseUrl,
+              port: cacheEndpoint!.port,
+              addPort: cacheEndpoint!.addPort,
+            ));
+    // External covers carry no server credentials, like their widgets.
     final headers = <String, String>{};
-    switch (_record.authType) {
-      case 'uiLogin':
-        final token = _record.accessToken;
-        if (token != null && token.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $token';
-        }
-      case 'basic':
-        final cred = _record.basicCredential;
-        if (cred != null && cred.isNotEmpty) headers['Authorization'] = cred;
-      case 'simpleLogin':
-        final cookie = _record.simpleCookie;
-        if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
+    if (!external) {
+      switch (_record.authType) {
+        case 'uiLogin':
+          final token = _record.accessToken;
+          if (token != null && token.isNotEmpty) {
+            headers['Authorization'] = 'Bearer $token';
+          }
+        case 'basic':
+          final cred = _record.basicCredential;
+          if (cred != null && cred.isNotEmpty) headers['Authorization'] = cred;
+        case 'simpleLogin':
+          final cookie = _record.simpleCookie;
+          if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
+      }
+      applyIsolateCustomHeaders(headers, _record.extraHeaders);
     }
-    applyIsolateCustomHeaders(headers, _record.extraHeaders);
+    final key = external ? url : _coverCacheKey(cover, coverVersion);
     try {
-      final res = await _http.get(Uri.parse(url), headers: headers);
-      return res.statusCode == 200 ? res.bodyBytes : null;
+      if (key == null) {
+        final res = await _http.get(Uri.parse(url), headers: headers);
+        return res.statusCode == 200 ? res.bodyBytes : null;
+      }
+      // Never disposed: Android shares one native SQLite handle per database
+      // path across isolates, so closing it here would close the app's too.
+      final cache = _coverCache ??= createCoverCacheManager();
+      final cached = await cache.getFileFromCache(key);
+      final info =
+          cached ??
+          await cache.downloadFile(url, key: key, authHeaders: headers);
+      return await info.file.readAsBytes();
     } catch (_) {
       return null;
     }
+  }
+
+  /// The key the app stores this server cover under; null when the app's key
+  /// is session-scoped and cannot be rebuilt here.
+  String? _coverCacheKey(String cover, String? coverVersion) {
+    final keyEndpoint = cacheEndpoint;
+    if (keyEndpoint == null) return null;
+    final url = serverFileUrl(
+      path: cover,
+      baseUrl: keyEndpoint.baseUrl,
+      port: keyEndpoint.port,
+      addPort: keyEndpoint.addPort,
+      appendApiToUrl: false,
+    );
+    if (_record.authType != 'uiLogin') {
+      return withCoverVersion(url, coverVersion);
+    }
+    final catalogId = _record.catalogServerId;
+    if (catalogId == null || catalogId.isEmpty) return null;
+    return withCoverVersion(
+      '${accountImageKeyPrefix(catalogId)}$url',
+      coverVersion,
+    );
   }
 
   static const _extensionUpdatesQuery =

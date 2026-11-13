@@ -14,7 +14,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../constants/app_sizes.dart';
-import '../constants/endpoints.dart';
 import '../constants/enum.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
@@ -29,9 +28,12 @@ import '../utils/extensions/custom_extensions.dart';
 import '../utils/hooks/debounced_hook.dart';
 import '../utils/misc/app_utils.dart';
 import '../utils/motion/reduce_motion.dart';
+import '../utils/network/server_file_url.dart';
 import '../utils/texture_limit.dart';
 import 'cover_cache/cover_cache.dart';
 import 'custom_circular_progress_indicator.dart';
+
+export '../utils/network/server_file_url.dart';
 
 Future<bool> reloadServerImage({
   required Iterable<String> cacheKeys,
@@ -61,37 +63,6 @@ Future<void> retryFailedReaderPages(WidgetRef ref) async {
     for (final reload in {...ref.read(failedReaderPageReloadsProvider)})
       reload(),
   ]);
-}
-
-final _trailingSlashes = RegExp(r'/+$');
-final _leadingSlashes = RegExp(r'^/+');
-
-/// Join server-relative paths without duplicating /api/v1; blank paths return '' and must not be fetched.
-String serverFileUrl({
-  required String path,
-  required String? baseUrl,
-  required int? port,
-  required bool addPort,
-  required bool appendApiToUrl,
-}) {
-  if (path.isEmpty) return '';
-  if (path.startsWith('http://') ||
-      path.startsWith('https://') ||
-      path.startsWith('file://')) {
-    return path;
-  }
-
-  final hasApiPrefix = path.startsWith('/api/') || path.startsWith('api/');
-  final origin = Endpoints.baseApi(
-    baseUrl: baseUrl,
-    port: port,
-    addPort: addPort,
-    appendApiToUrl: appendApiToUrl && !hasApiPrefix,
-  );
-
-  final root = origin.replaceAll(_trailingSlashes, '');
-  final relative = path.replaceAll(_leadingSlashes, '');
-  return '$root/$relative';
 }
 
 /// Web uses URL tokens to avoid CORS preflights; native uses headers to keep tokens out of logs/cache keys.
@@ -135,36 +106,6 @@ String appendUiLoginToken(String url, String? token) {
   final hasQuery = Uri.tryParse(url)?.hasQuery ?? url.contains('?');
   final separator = hasQuery ? '&' : '?';
   return '$url${separator}token=${Uri.encodeQueryComponent(token)}';
-}
-
-/// Absolute http(s) URL hosted anywhere but the configured server; those load
-/// with no server credentials, so an unparsable server matches nothing.
-bool isExternalImageUrl({
-  required String imageUrl,
-  required String? baseUrl,
-  required int? port,
-  required bool addPort,
-}) {
-  final uri = Uri.tryParse(imageUrl);
-  if (uri == null ||
-      (uri.scheme != 'http' && uri.scheme != 'https') ||
-      uri.host.isEmpty) {
-    return false;
-  }
-  final server = Uri.tryParse(
-    Endpoints.baseApi(
-      baseUrl: baseUrl,
-      port: port,
-      addPort: addPort,
-      appendApiToUrl: false,
-    ),
-  );
-  if (server == null ||
-      (server.scheme != 'http' && server.scheme != 'https') ||
-      server.host.isEmpty) {
-    return true;
-  }
-  return uri.origin != server.origin;
 }
 
 class ServerImage extends HookConsumerWidget {
