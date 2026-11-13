@@ -163,6 +163,7 @@ class PendingSeriesNotification {
     required this.mangaId,
     required this.mangaTitle,
     required this.thumbnailUrl,
+    this.coverVersion,
     required this.chapterIds,
     required this.chapterNumbers,
     required this.firstChapterId,
@@ -171,7 +172,12 @@ class PendingSeriesNotification {
 
   final int mangaId;
   final String mangaTitle;
+
+  /// The cover the app draws, custom or server.
   final String? thumbnailUrl;
+
+  /// Server cover version for the shared cover cache key; null for custom covers.
+  final String? coverVersion;
   final List<int> chapterIds;
   final List<double> chapterNumbers;
 
@@ -183,6 +189,7 @@ class PendingSeriesNotification {
     'mangaId': mangaId,
     'mangaTitle': mangaTitle,
     'thumbnailUrl': thumbnailUrl,
+    if (coverVersion != null) 'coverVersion': coverVersion,
     'chapterIds': chapterIds,
     'chapterNumbers': chapterNumbers,
     'firstChapterId': firstChapterId,
@@ -194,6 +201,7 @@ class PendingSeriesNotification {
         mangaId: (j['mangaId'] as num).toInt(),
         mangaTitle: j['mangaTitle'] as String,
         thumbnailUrl: j['thumbnailUrl'] as String?,
+        coverVersion: j['coverVersion'] as String?,
         chapterIds: [
           for (final id in (j['chapterIds'] as List)) (id as num).toInt(),
         ],

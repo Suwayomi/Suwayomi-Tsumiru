@@ -16,6 +16,7 @@ import '../../features/auth/data/auth_credentials_store.dart';
 import '../../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 
+import 'cover_cache_key.dart';
 import 'cover_cache_manager_stub.dart'
     if (dart.library.io) 'cover_cache_manager_io.dart';
 
@@ -30,11 +31,7 @@ String accountImageCacheKey(
   required AuthCredentialsState? credentials,
   String? coverVersion,
 }) {
-  // A changed server cover gets a new key and downloads; an unchanged one keeps its key.
-  final versionSuffix = (coverVersion == null || coverVersion.isEmpty)
-      ? ''
-      : '#cover-$coverVersion';
-  if (authType != AuthType.uiLogin) return '$url$versionSuffix';
+  if (authType != AuthType.uiLogin) return withCoverVersion(url, coverVersion);
   final uri = Uri.tryParse(url);
   if (uri != null && uri.queryParameters.containsKey('token')) {
     final query = Map<String, dynamic>.from(uri.queryParametersAll)
@@ -44,10 +41,16 @@ String accountImageCacheKey(
   }
   final binding = credentials?.accountBinding;
   if (!store.sessionChanging && binding != null) {
-    return 'tsumiru-image:account:${Uri.encodeComponent(binding.catalogId)}/$url$versionSuffix';
+    return withCoverVersion(
+      '${accountImageKeyPrefix(binding.catalogId)}$url',
+      coverVersion,
+    );
   }
   final session = _imageCacheSessions[store] ??= const Uuid().v4();
-  return 'tsumiru-image:session:$session:${store.sessionEpoch}/$url$versionSuffix';
+  return withCoverVersion(
+    'tsumiru-image:session:$session:${store.sessionEpoch}/$url',
+    coverVersion,
+  );
 }
 
 /// Native covers are durable; web memory caches rotate with endpoint credentials.
