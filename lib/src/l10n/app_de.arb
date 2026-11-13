@@ -631,7 +631,7 @@
     "backupCleanupDescription": "{count, select, 0{Nie} 01{Sicherungen löschen, die älter als 1 Tag sind} other{Sicherungen löschen, die älter als {count} Tage sind}}",
     "categoryVisibilityDeviceOnly": "Bis zur nächsten Verbindung nur auf diesem Gerät geändert",
     "sectionHeadersShowAllCategories": "Alle Kategorien anzeigen",
-    "scrollAmount": "Scrollstrecke per Tastatur",
+    "scrollAmount": "Scrollstrecke",
     "autoAdvance": "Automatisch weiterblättern",
     "autoScrollInterval": "Intervall für automatisches Scrollen",
     "autoAdvanceInterval": "Intervall für automatisches Weiterblättern",
@@ -2196,5 +2196,76 @@
     "removeCustomCovers": "Entferne Benutzerdefinierte Cover",
     "removeCustomCoversTitle": "Entferne Benutzerdefinierte Cover?",
     "removeCustomCoversBody": "Jede Serie wird auf die Server-Cover bei allen Tsumiru-Apps zurückgesetzt.",
-    "customCoversRemoved": "Benutzerdefinierte Cover entfernt"
+    "customCoversRemoved": "Benutzerdefinierte Cover entfernt",
+    "perCategorySortAndFilters": "Kategorie-spezifische Einstellungen für Sortierung und Filter",
+    "offsetDoublePages": "Doppelseiten-Versatz",
+    "@offsetDoublePages": {
+        "description": "Paged reader toggle: shift double-page pairing by one"
+    },
+    "showEmptyCategoriesSearch": "Leere Kategorien in der Suche oder beim Filtern anzeigen",
+    "@showEmptyCategoriesSearch": {
+        "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+    },
+    "savedSearchInvalid": "Gespeicherte Suche invalide, Filter wurden geändert",
+    "@savedSearchInvalid": {
+        "description": "Toast shown when a saved search no longer matches the source filters."
+    },
+    "updateAvailableTitle": "Aktualisierung verfügbar",
+    "updatedVersionTitle": "Version aktualisiert",
+    "updateRemindLater": "Später erinnern",
+    "updateIgnore": "Ignorieren",
+    "updateChangelog": "Änderungsprotokoll",
+    "couldNotUpdateTsumiru": "Konnte Tsumiru nicht aktualisieren",
+    "serverVersionAvailable": "Server-Version {version} ({channel}) zum Download verfügbar",
+    "@serverVersionAvailable": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "serverVersionUpdated": "Server wurde zu Version {version} ({channel}) aktualisiert",
+    "@serverVersionUpdated": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruVersionAvailable": "Tsumiru-Version {version} ({channel}) zum Download verfügbar",
+    "@tsumiruVersionAvailable": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruVersionUpdated": "Tsumiru wurde zu Version {version} ({channel}) aktualisiert",
+    "@tsumiruVersionUpdated": {
+        "placeholders": {
+            "version": {
+                "type": "String"
+            },
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "tsumiruUpdating": "{progress}% | Aktualisiere…",
+    "@tsumiruUpdating": {
+        "placeholders": {
+            "progress": {
+                "type": "String"
+            }
+        }
+    }
 }
