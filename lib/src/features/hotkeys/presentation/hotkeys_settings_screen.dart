@@ -111,7 +111,20 @@ class _HotkeyRow extends StatelessWidget {
             alignment: WrapAlignment.end,
             spacing: 12,
             runSpacing: 6,
-            children: [for (final chord in chords) _Chord(chord)],
+            children: [
+              for (var i = 0; i < chords.length; i++) ...[
+                if (i > 0)
+                  SizedBox(
+                    height: 24,
+                    child: VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: context.colorScheme.outlineVariant,
+                    ),
+                  ),
+                _Chord(chords[i]),
+              ],
+            ],
           ),
         ),
       ],
