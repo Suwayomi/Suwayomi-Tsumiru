@@ -105,6 +105,12 @@ mutation SetMangaMeta($input: SetMangaMetaInput!) {
   }
 }
 
+mutation SetChapterMeta($input: SetChapterMetaInput!) {
+  setChapterMeta(input: $input) {
+    __typename
+  }
+}
+
 mutation DeleteMangaMeta($input: DeleteMangaMetaInput!) {
   deleteMangaMeta(input: $input) {
     __typename

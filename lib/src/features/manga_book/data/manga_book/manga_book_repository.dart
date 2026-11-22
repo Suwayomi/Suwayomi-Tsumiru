@@ -257,6 +257,27 @@ class MangaBookRepository {
     await mirrorMangaMeta(readOfflineDb, mangaId, key, '$value');
   }
 
+  /// Server-side key/value on a chapter; other clients ignore unknown keys.
+  Future<void> setChapterMeta({
+    required int chapterId,
+    required String key,
+    required String value,
+  }) async => client
+      .mutate$SetChapterMeta(
+        Options$Mutation$SetChapterMeta(
+          variables: Variables$Mutation$SetChapterMeta(
+            input: Input$SetChapterMetaInput(
+              meta: Input$ChapterMetaTypeInput(
+                chapterId: chapterId,
+                key: key,
+                value: value,
+              ),
+            ),
+          ),
+        ),
+      )
+      .getData<Object>((data) => null);
+
   Future<void> setCustomCover({
     required int mangaId,
     required String coverUrl,
