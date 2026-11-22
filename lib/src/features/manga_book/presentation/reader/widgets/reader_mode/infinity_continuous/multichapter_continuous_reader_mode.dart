@@ -1533,7 +1533,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               scrollAxis: scrollDirection,
               reverse: reverse,
               maxScale: InfinityContinuousConfig.maxZoomScale,
-              minScale: isZoomOutDisabled ? 1 : 0.5,
+              minScale: isZoomOutDisabled
+                  ? 1
+                  : InfinityContinuousConfig.minZoomScale,
               pinchEnabled: isPinchToZoomEnabled,
               doubleTapToZoom: isDoubleTapZoomEnabled,
               modifierScrollToZoom: modifierScrollToZoom,

@@ -46,6 +46,7 @@ Future<ZoomViewController> _pumpHarness(
   required Axis scrollAxis,
   bool reverse = false,
   bool pinchEnabled = true,
+  double minScale = 1.0,
 }) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = const Size(_viewportWidth, _viewportHeight);
@@ -68,7 +69,7 @@ Future<ZoomViewController> _pumpHarness(
             zoomViewController: zoomController,
             scrollAxis: scrollAxis,
             reverse: reverse,
-            minScale: 1.0,
+            minScale: minScale,
             maxScale: 4.0,
             pinchEnabled: pinchEnabled,
             child: ListView(
@@ -197,6 +198,22 @@ double _paintScale() {
 }
 
 void main() {
+  testWidgets('ZoomView allows zooming out to its configured minimum', (
+    tester,
+  ) async {
+    final zoomController = await _pumpHarness(
+      tester,
+      scrollAxis: Axis.vertical,
+      minScale: 0.2,
+    );
+
+    zoomController.setScale(0.1);
+    await tester.pumpAndSettle();
+
+    expect(zoomController.scale, closeTo(0.2, 0.001));
+    expect(_paintScale(), closeTo(0.2, 0.01));
+  });
+
   testWidgets('Ctrl plus wheel zooms without scrolling the reader list', (
     tester,
   ) async {
