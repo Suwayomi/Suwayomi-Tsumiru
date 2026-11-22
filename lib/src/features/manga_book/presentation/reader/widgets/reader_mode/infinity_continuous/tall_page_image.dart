@@ -32,6 +32,63 @@ Future<ui.Size> tallPageIntrinsicSize(String path) async {
   }
 }
 
+/// How a tall page is cut: [stripHeight] is in source pixels and each strip is
+/// decoded at 1/[sampleSize] of the source resolution.
+typedef TallPagePlan = ({int stripHeight, int sampleSize});
+
+/// Upper bound on one strip, in source pixels (mirrored by the native guard).
+const tallPageMaxStripHeight = 8192;
+const _minStripHeight = 512;
+
+/// Width the page is drawn at, in logical pixels.
+double tallPageDisplayWidth({
+  required ui.Size source,
+  required double crossAxisExtent,
+  required bool horizontal,
+  required bool naturalSize,
+}) {
+  if (horizontal) {
+    final height = naturalSize
+        ? math.min(crossAxisExtent, source.height)
+        : crossAxisExtent;
+    return height * source.width / source.height;
+  }
+  return naturalSize
+      ? math.min(crossAxisExtent, source.width)
+      : crossAxisExtent;
+}
+
+/// Cut plan for a page, or null when it can be decoded whole.
+///
+/// A page is cut once it would be drawn taller than two viewports or taller
+/// than the GPU texture limit, so no decoded strip ever covers more than two
+/// screens. Strips are downsampled by a power of two while the result stays
+/// at least as wide as the drawn width in device pixels.
+TallPagePlan? tallPagePlan({
+  required ui.Size source,
+  required double displayWidth,
+  required double viewportHeight,
+  required double devicePixelRatio,
+  required int? textureLimit,
+}) {
+  if (source.width <= 0 ||
+      source.height <= 0 ||
+      displayWidth <= 0 ||
+      viewportHeight <= 0) {
+    return null;
+  }
+  var sampleSize = 1;
+  final targetWidth = displayWidth * math.max(devicePixelRatio, 1);
+  while (source.width / (sampleSize * 2) >= targetWidth) {
+    sampleSize *= 2;
+  }
+  var stripHeight = (2 * viewportHeight * source.width / displayWidth).floor();
+  if (textureLimit != null) stripHeight = math.min(stripHeight, textureLimit);
+  stripHeight = stripHeight.clamp(_minStripHeight, tallPageMaxStripHeight);
+  if (source.height <= stripHeight) return null;
+  return (stripHeight: stripHeight, sampleSize: sampleSize);
+}
+
 class _StripPixels {
   const _StripPixels(this.rgba, this.width, this.height);
 
@@ -40,34 +97,54 @@ class _StripPixels {
   final int height;
 }
 
-List<_StripPixels> _cutStrips((String, int) request) {
-  final bytes = File(request.$1).readAsBytesSync();
-  final decoded = img.decodeImage(normalizeAvifBytesSync(bytes));
+/// Desktop/iOS (and Android decoder failure) path: one full decode, scaled
+/// down to the strip resolution before cutting so the kept strips stay small.
+List<_StripPixels> _cutStrips((String, int, int) request) {
+  final (path, stripHeight, sampleSize) = request;
+  final bytes = File(path).readAsBytesSync();
+  var decoded = img.decodeImage(normalizeAvifBytesSync(bytes));
   if (decoded == null) throw StateError('Cannot decode page');
-  return [
-    for (var y = 0; y < decoded.height; y += request.$2)
+  final sourceHeight = decoded.height;
+  if (sampleSize > 1) {
+    decoded = img.copyResize(
+      decoded,
+      width: math.max(1, (decoded.width / sampleSize).ceil()),
+      height: math.max(1, (decoded.height / sampleSize).ceil()),
+      interpolation: img.Interpolation.average,
+    );
+  }
+  final scale = decoded.height / sourceHeight;
+  final strips = <_StripPixels>[];
+  for (var y = 0; y < sourceHeight; y += stripHeight) {
+    final top = (y * scale).round();
+    final bottom = math.min(
+      ((y + stripHeight) * scale).round(),
+      decoded.height,
+    );
+    final height = math.max(1, bottom - top);
+    strips.add(
       _StripPixels(
-        img.copyCrop(
-          decoded,
-          x: 0,
-          y: y,
-          width: decoded.width,
-          height: math.min(request.$2, decoded.height - y),
-        ).getBytes(order: img.ChannelOrder.rgba),
+        img
+            .copyCrop(decoded, x: 0, y: top, width: decoded.width, height: height)
+            .getBytes(order: img.ChannelOrder.rgba),
         decoded.width,
-        math.min(request.$2, decoded.height - y),
+        height,
       ),
-  ];
+    );
+  }
+  return strips;
 }
 
 class _TallPageSource {
-  _TallPageSource(this.path, this.cacheKey, this.size, int limit)
-    : stripHeight = math.min(limit, 4096);
+  _TallPageSource(this.path, this.cacheKey, this.size, TallPagePlan plan)
+    : stripHeight = plan.stripHeight,
+      sampleSize = plan.sampleSize;
 
   final String path;
   final String cacheKey;
   final ui.Size size;
   final int stripHeight;
+  final int sampleSize;
   final String owner = '${_nextStripOwner++}';
   Future<List<_StripPixels>>? _fallback;
   final _decodedStrips = <int>{};
@@ -91,6 +168,7 @@ class _TallPageSource {
             'owner': owner,
             'top': index * stripHeight,
             'height': heightAt(index),
+            'sampleSize': sampleSize,
           },
         );
         final pixels = _StripPixels(
@@ -98,8 +176,9 @@ class _TallPageSource {
           result['width'] as int,
           result['height'] as int,
         );
-        if (pixels.width != size.width ||
-            pixels.height != heightAt(index) ||
+        // Region decoders round sampled edges either way; allow one pixel.
+        if ((pixels.width - size.width / sampleSize).abs() > 1 ||
+            (pixels.height - heightAt(index) / sampleSize).abs() > 1 ||
             pixels.rgba.length != pixels.width * pixels.height * 4) {
           throw StateError('Invalid strip dimensions');
         }
@@ -112,7 +191,10 @@ class _TallPageSource {
       }
     }
     if (_disposed) throw StateError('Page has been released');
-    final strips = await (_fallback ??= compute(_cutStrips, (path, stripHeight)));
+    final strips = await (_fallback ??= compute(
+      _cutStrips,
+      (path, stripHeight, sampleSize),
+    ));
     return strips[index];
   }
 
@@ -168,10 +250,16 @@ class _StripImageProvider extends ImageProvider<_StripImageProvider> {
       other is _StripImageProvider &&
       source.cacheKey == other.source.cacheKey &&
       source.stripHeight == other.source.stripHeight &&
+      source.sampleSize == other.source.sampleSize &&
       index == other.index;
 
   @override
-  int get hashCode => Object.hash(source.cacheKey, index, source.stripHeight);
+  int get hashCode => Object.hash(
+    source.cacheKey,
+    index,
+    source.stripHeight,
+    source.sampleSize,
+  );
 }
 
 class TallPageImage extends HookWidget {
@@ -190,7 +278,9 @@ class TallPageImage extends HookWidget {
 
   final String cacheKey;
   final Future<String> Function() filePath;
-  final int limit;
+
+  /// GPU texture limit, or null when the device has none worth cutting for.
+  final int? limit;
   final double crossAxisExtent;
   final bool horizontal;
   final bool naturalSize;
@@ -202,33 +292,41 @@ class TallPageImage extends HookWidget {
   Widget build(BuildContext context) {
     final future = useMemoized(() async {
       final path = await filePath();
-      final size = await tallPageIntrinsicSize(path);
-      return size.height > limit
-          ? _TallPageSource(path, cacheKey, size, limit)
-          : null;
-    }, [cacheKey, limit]);
-    useEffect(() {
-      return () {
-        unawaited(
-          future.then((source) => source?.dispose()).catchError((Object _) {}),
-        );
-      };
-    }, [future]);
+      return (path: path, size: await tallPageIntrinsicSize(path));
+    }, [cacheKey]);
     final snapshot = useFuture(future);
+    final data = snapshot.data;
+    final width = data == null
+        ? 0.0
+        : tallPageDisplayWidth(
+            source: data.size,
+            crossAxisExtent: crossAxisExtent,
+            horizontal: horizontal,
+            naturalSize: naturalSize,
+          );
+    final plan = data == null
+        ? null
+        : tallPagePlan(
+            source: data.size,
+            displayWidth: width,
+            viewportHeight: MediaQuery.sizeOf(context).height,
+            devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+            textureLimit: limit,
+          );
+    final source = useMemoized(
+      () => data == null || plan == null
+          ? null
+          : _TallPageSource(data.path, cacheKey, data.size, plan),
+      [data?.path, plan?.stripHeight, plan?.sampleSize],
+    );
+    useEffect(() => source?.dispose, [source]);
     final ready = useState(false);
     useEffect(() {
       ready.value = false;
       return null;
-    }, [future]);
+    }, [source]);
     if (snapshot.connectionState != ConnectionState.done) return placeholder;
-    final source = snapshot.data;
     if (source == null) return fallback;
-    final width = horizontal
-        ? (naturalSize ? math.min(crossAxisExtent, source.size.height)
-            : crossAxisExtent) * source.size.width / source.size.height
-        : naturalSize
-            ? math.min(crossAxisExtent, source.size.width)
-            : crossAxisExtent;
     final column = SizedBox(
       width: width,
       child: Column(
@@ -306,13 +404,18 @@ class _LazyStripState extends State<_LazyStrip> {
       final margin = position.viewportDimension;
       final near = start + extent >= position.pixels - margin &&
           start <= position.pixels + position.viewportDimension + margin;
-      if (near != _nearViewport) setState(() => _nearViewport = near);
+      if (near == _nearViewport) return;
+      // Drop a strip from the image cache once it leaves the window so only
+      // the strips around the viewport stay decoded.
+      if (!near) unawaited(widget.image.evict());
+      setState(() => _nearViewport = near);
     });
   }
 
   @override
   void dispose() {
     _position?.removeListener(_schedule);
+    if (_nearViewport) unawaited(widget.image.evict());
     super.dispose();
   }
 

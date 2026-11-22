@@ -16,7 +16,6 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
-import '../../../../utils/texture_limit.dart';
 import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
@@ -594,7 +593,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
                             .update(v.clamp(200, 2000)),
                       ),
                     ),
-                    if (ref.watch(textureLimitProvider).value != null)
+                    if (!kIsWeb)
                       _BoolTile(
                         title: context.l10n.splitTallImages,
                         value: ref.watch(splitTallImagesProvider).ifNull(true),

@@ -462,10 +462,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       notifier.state = false;
       return () => notifier.state = false;
     }, const []);
-    final textureLimit = kIsWeb ? null : ref.watch(textureLimitProvider).value;
+    // A null limit means the GPU takes any height; pages are still cut so a
+    // decoded strip never spans more than two screens.
+    final textureLimitState = ref.watch(textureLimitProvider);
+    final textureLimit = textureLimitState.value;
     final splitTallImages = !kIsWeb &&
         ref.watch(splitTallImagesProvider).ifNull(true) &&
-        textureLimit != null;
+        textureLimitState.hasValue;
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
     final bool alwaysShowTransition = ref
         .watch(alwaysShowChapterTransitionProvider)
@@ -539,20 +542,30 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // Cache decoded aspect-derived extents before display so pages cannot resize on arrival.
     Future<void> decodeAndCacheHeight(String url, int gen) async {
       if (pageHeights.value.containsKey(url)) return;
-      final limit = kIsWeb ? null : await ref.read(textureLimitProvider.future);
-      if (limit != null && ref.read(splitTallImagesProvider).ifNull(true)) {
+      if (!kIsWeb && ref.read(splitTallImagesProvider).ifNull(true)) {
+        final limit = await ref.read(textureLimitProvider.future);
         final size = await tallPageIntrinsicSize(
           await serverPageFilePath(ref, url),
         );
-        if (size.height > limit) {
-          if (context.mounted && prefetchGen.value == gen) {
-            final layout = layoutParams.value;
-            final cross = layout.naturalSize
-                ? math.min(
-                    isHorizontal ? size.height : size.width,
-                    isHorizontal ? context.height : context.width,
-                  )
-                : layout.columnWidth;
+        if (!context.mounted) return;
+        final layout = layoutParams.value;
+        final cross = layout.naturalSize
+            ? math.min(
+                isHorizontal ? size.height : size.width,
+                isHorizontal ? context.height : context.width,
+              )
+            : layout.columnWidth;
+        // Same decision as TallPageImage, so strip pages reserve their extent
+        // from the header alone instead of a full decode.
+        final plan = tallPagePlan(
+          source: size,
+          displayWidth: isHorizontal ? cross * size.width / size.height : cross,
+          viewportHeight: MediaQuery.sizeOf(context).height,
+          devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+          textureLimit: limit,
+        );
+        if (plan != null) {
+          if (prefetchGen.value == gen) {
             pageHeights.value[url] = isHorizontal
                 ? cross * size.width / size.height
                 : cross * size.height / size.width;
