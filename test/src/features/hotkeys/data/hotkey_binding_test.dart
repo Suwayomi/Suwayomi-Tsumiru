@@ -6,11 +6,11 @@ void main() {
   test('reader zoom shortcut displays the platform modifier', () {
     final macOSDisplays = readerHotkeyDisplaysForPlatform(
       TargetPlatform.macOS,
-      includeModifierZoom: true,
+      isKeyboardRuntime: true,
     );
     final windowsDisplays = readerHotkeyDisplaysForPlatform(
       TargetPlatform.windows,
-      includeModifierZoom: true,
+      isKeyboardRuntime: true,
     );
 
     expect(macOSDisplays.last.displayKeys, ['Cmd', 'Scroll']);
@@ -26,7 +26,7 @@ void main() {
   test('reader zoom shortcut is omitted outside keyboard runtimes', () {
     final displays = readerHotkeyDisplaysForPlatform(
       TargetPlatform.iOS,
-      includeModifierZoom: false,
+      isKeyboardRuntime: false,
     );
 
     expect(displays, hasLength(readerHotkeyDisplays.length));

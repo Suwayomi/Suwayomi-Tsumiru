@@ -152,10 +152,10 @@ const List<HotkeyDisplay> readerHotkeyDisplays = [
 
 List<HotkeyDisplay> readerHotkeyDisplaysForPlatform(
   TargetPlatform platform, {
-  required bool includeModifierZoom,
+  required bool isKeyboardRuntime,
 }) => [
   ...readerHotkeyDisplays,
-  if (includeModifierZoom)
+  if (isKeyboardRuntime)
     HotkeyDisplay(
       label: _rZoom,
       displayKeys: [

@@ -49,7 +49,7 @@ class HotkeysSettingsScreen extends StatelessWidget {
         children: [
           for (final h in readerHotkeyDisplaysForPlatform(
             defaultTargetPlatform,
-            includeModifierZoom: isKeyboardRuntime,
+            isKeyboardRuntime: isKeyboardRuntime,
           ))
             _HotkeyRow(
               label: h.label(l),
