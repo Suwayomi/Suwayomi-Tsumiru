@@ -4,10 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/platform/platform_runtime.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../widgets/web_selection_area.dart';
@@ -45,7 +47,10 @@ class HotkeysSettingsScreen extends StatelessWidget {
       SettingsGroupHeading(label: l.hotkeysReaderSection),
       SettingsGroupCard(
         children: [
-          for (final h in readerHotkeyDisplays)
+          for (final h in readerHotkeyDisplaysForPlatform(
+            defaultTargetPlatform,
+            includeModifierZoom: isKeyboardRuntime,
+          ))
             _HotkeyRow(label: h.label(l), chords: [h.displayKeys]),
         ],
       ),

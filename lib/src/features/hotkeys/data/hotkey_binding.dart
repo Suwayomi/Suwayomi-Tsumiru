@@ -132,6 +132,7 @@ String _rPrevChapter(AppLocalizations l) => l.hotkeyReaderPrevChapter;
 String _rNextChapter(AppLocalizations l) => l.hotkeyReaderNextChapter;
 String _rToggleMenu(AppLocalizations l) => l.hotkeyReaderToggleMenu;
 String _rOffsetDoublePages(AppLocalizations l) => l.offsetDoublePages;
+String _rZoom(AppLocalizations l) => l.hotkeyReaderZoom;
 
 const List<HotkeyDisplay> readerHotkeyDisplays = [
   HotkeyDisplay(label: _rPrevPage, displayKeys: ['←', 'A']),
@@ -142,4 +143,19 @@ const List<HotkeyDisplay> readerHotkeyDisplays = [
   HotkeyDisplay(label: _rNextChapter, displayKeys: ['.', 'N']),
   HotkeyDisplay(label: _rOffsetDoublePages, displayKeys: ['O']),
   HotkeyDisplay(label: _rToggleMenu, displayKeys: ['Esc']),
+];
+
+List<HotkeyDisplay> readerHotkeyDisplaysForPlatform(
+  TargetPlatform platform, {
+  required bool includeModifierZoom,
+}) => [
+  ...readerHotkeyDisplays,
+  if (includeModifierZoom)
+    HotkeyDisplay(
+      label: _rZoom,
+      displayKeys: [
+        platform == TargetPlatform.macOS ? 'Cmd' : 'Ctrl',
+        'Scroll',
+      ],
+    ),
 ];

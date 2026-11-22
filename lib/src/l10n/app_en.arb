@@ -3748,6 +3748,10 @@
   "@hotkeyReaderToggleMenu": {
     "description": "Reader hotkey action"
   },
+  "hotkeyReaderZoom": "Zoom in/out",
+  "@hotkeyReaderZoom": {
+    "description": "Reader hotkey action shown as a modifier plus scroll"
+  },
   "extensionStores": "Extension stores",
   "@extensionStores": {
     "description": "Screen title for the Extension stores screen"
