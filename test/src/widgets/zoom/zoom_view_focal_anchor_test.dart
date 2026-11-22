@@ -20,8 +20,12 @@
 // centered on that exact point isolates the anchor math from every layout
 // detail of the surrounding scroll views.
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/mouse_wheel_speed.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/reader_zoom_view.dart';
 import 'package:tsumiru/src/widgets/zoom/zoom_view.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
@@ -96,6 +100,84 @@ Future<ZoomViewController> _pumpHarness(
   return zoomController;
 }
 
+Future<void> _pumpScrollZoomHarness(
+  WidgetTester tester, {
+  required ScrollController scrollController,
+  required ValueNotifier<double> scale,
+}) async {
+  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = const Size(_viewportWidth, _viewportHeight);
+  addTearDown(() {
+    tester.view.resetDevicePixelRatio();
+    tester.view.resetPhysicalSize();
+  });
+
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: _viewportWidth,
+          height: _viewportHeight,
+          child: ReaderZoomView(
+            controller: scrollController,
+            scrollAxis: Axis.vertical,
+            maxScale: 4.0,
+            minScale: 1.0,
+            pinchEnabled: true,
+            doubleTapToZoom: true,
+            modifierScrollToZoom: true,
+            onScaleChanged: (value) => scale.value = value,
+            child: MouseWheelSpeed(
+              speed: 1,
+              axis: Axis.vertical,
+              reverse: false,
+              positionOf: () {
+                if (isZoomScrollModifierPressed()) return null;
+                if (!scrollController.hasClients) return null;
+                return scrollController.position;
+              },
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: 20,
+                itemBuilder: (_, i) => SizedBox(height: 200, child: Text('$i')),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _sendScroll(WidgetTester tester, Offset delta) async {
+  final pointer = TestPointer(1, PointerDeviceKind.mouse);
+  pointer.hover(tester.getCenter(find.byType(ListView)));
+  await tester.sendEventToBinding(pointer.scroll(delta));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _sendTrackpadPan(
+  WidgetTester tester,
+  Offset delta, {
+  bool control = false,
+}) async {
+  if (control) await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  final pointer = TestPointer(1, PointerDeviceKind.trackpad);
+  final position = tester.getCenter(find.byType(ListView));
+  await tester.sendEventToBinding(pointer.panZoomStart(position));
+  await tester.sendEventToBinding(pointer.panZoomUpdate(position, pan: delta));
+  await tester.sendEventToBinding(pointer.panZoomEnd());
+  await tester.pumpAndSettle();
+  if (control) await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+}
+
+double _expectedScrollForZoomAnchor(WidgetTester tester, double scale) {
+  final focalPoint = tester.getCenter(find.byType(ListView));
+  final viewportTop = tester.getTopLeft(find.byType(ZoomView));
+  return (1 - 1 / scale) * (focalPoint.dy - viewportTop.dy);
+}
+
 // Off-center on purpose (not the viewport/page center, and not (0,0)) so a
 // bug specific to one axis or one sign shows up clearly.
 const _localFocal = Offset(120, 250);
@@ -115,6 +197,114 @@ double _paintScale() {
 }
 
 void main() {
+  testWidgets('Ctrl plus wheel zooms without scrolling the reader list', (
+    tester,
+  ) async {
+    final scrollController = ScrollController();
+    final scale = ValueNotifier<double>(1);
+    addTearDown(scrollController.dispose);
+    addTearDown(scale.dispose);
+    await _pumpScrollZoomHarness(
+      tester,
+      scrollController: scrollController,
+      scale: scale,
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await _sendScroll(tester, const Offset(0, -53));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(scale.value, greaterThan(1.2));
+    expect(
+      scrollController.position.pixels,
+      closeTo(_expectedScrollForZoomAnchor(tester, scale.value), 1),
+      reason: 'only the focal-point adjustment should move the list',
+    );
+  });
+
+  testWidgets('Cmd plus wheel zooms on macOS', (tester) async {
+    final scrollController = ScrollController();
+    final scale = ValueNotifier<double>(1);
+    addTearDown(scrollController.dispose);
+    addTearDown(scale.dispose);
+    await _pumpScrollZoomHarness(
+      tester,
+      scrollController: scrollController,
+      scale: scale,
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await _sendScroll(tester, const Offset(0, -53));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+
+    expect(scale.value, greaterThan(1.2));
+  }, variant: TargetPlatformVariant({TargetPlatform.macOS}));
+
+  testWidgets('ordinary wheel scrolling moves the reader list without zoom', (
+    tester,
+  ) async {
+    final scrollController = ScrollController();
+    final scale = ValueNotifier<double>(1);
+    addTearDown(scrollController.dispose);
+    addTearDown(scale.dispose);
+    await _pumpScrollZoomHarness(
+      tester,
+      scrollController: scrollController,
+      scale: scale,
+    );
+
+    await _sendScroll(tester, const Offset(0, 53));
+
+    expect(scrollController.position.pixels, greaterThan(0));
+    expect(scale.value, closeTo(1, 0.001));
+  });
+
+  testWidgets(
+    'ordinary trackpad scrolling moves the reader list without zoom',
+    (tester) async {
+      final scrollController = ScrollController();
+      final scale = ValueNotifier<double>(1);
+      addTearDown(scrollController.dispose);
+      addTearDown(scale.dispose);
+      await _pumpScrollZoomHarness(
+        tester,
+        scrollController: scrollController,
+        scale: scale,
+      );
+
+      await _sendTrackpadPan(tester, const Offset(0, -53));
+
+      expect(scrollController.position.pixels, greaterThan(0));
+      expect(scale.value, closeTo(1, 0.001));
+    },
+  );
+
+  testWidgets('Ctrl plus trackpad scrolling zooms without scrolling the list', (
+    tester,
+  ) async {
+    final scrollController = ScrollController();
+    final scale = ValueNotifier<double>(1);
+    addTearDown(scrollController.dispose);
+    addTearDown(scale.dispose);
+    await _pumpScrollZoomHarness(
+      tester,
+      scrollController: scrollController,
+      scale: scale,
+    );
+    scrollController.jumpTo(500);
+    await tester.pumpAndSettle();
+    final initialOffset = scrollController.position.pixels;
+
+    await _sendTrackpadPan(tester, const Offset(0, 53), control: true);
+
+    expect(scale.value, greaterThan(1.2));
+    expect(
+      scrollController.position.pixels - initialOffset,
+      inInclusiveRange(80, 130),
+      reason: 'only the focal-point adjustment should move the list',
+    );
+  });
+
   testWidgets(
     'setScale keeps the on-screen size honest and anchors an off-center focal '
     'point — scrollAxis: horizontal, reverse: true',

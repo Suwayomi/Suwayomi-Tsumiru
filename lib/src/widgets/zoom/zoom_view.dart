@@ -9,8 +9,18 @@
 
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+
+/// Whether the platform's modifier for scroll-to-zoom is currently pressed.
+bool isZoomScrollModifierPressed() {
+  final keyboard = HardwareKeyboard.instance;
+  return defaultTargetPlatform == TargetPlatform.macOS
+      ? keyboard.isMetaPressed
+      : keyboard.isControlPressed;
+}
 
 class ZoomViewController {
   _ZoomViewState? _state;
@@ -318,7 +328,7 @@ class _ZoomListViewState extends State<ZoomListView> {
   }
 }
 
-enum DragMode { pan, doubleTapDrag, pinchScale, none }
+enum DragMode { pan, doubleTapDrag, pinchScale, trackpadScrollScale, none }
 
 final class ZoomViewScaleEndDetails {
   final int pointerCount;
@@ -346,9 +356,10 @@ class ZoomView extends StatefulWidget {
     this.doubleTapDrag = false,
     this.forceHoldOnPointerDown = false,
     this.pinchEnabled = true,
+    this.modifierScrollToZoom = false,
     this.onScaleChanged,
     this.onScaleEnd,
-  });
+  }) : assert(!modifierScrollToZoom || zoomViewController != null);
 
   final void Function(TapDownDetails details)? onDoubleTap;
   final Widget child;
@@ -375,6 +386,9 @@ class ZoomView extends StatefulWidget {
 
   /// Disabling pinch resets to 1x; double-tap zoom remains available.
   final bool pinchEnabled;
+
+  /// Requires [zoomViewController]; scroll zoom uses Ctrl/Cmd as a modifier.
+  final bool modifierScrollToZoom;
 
   final void Function(double scale)? onScaleChanged;
 
@@ -547,6 +561,41 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
     });
   }
 
+  void _zoomByScroll(double scrollDelta, Offset focalPoint) {
+    final controller = widget.zoomViewController;
+    if (controller == null || !controller.isAttached) return;
+    controller.setScale(
+      controller.scale * exp(-scrollDelta / 200),
+      focalPoint: focalPoint,
+    );
+  }
+
+  void _onPointerSignal(
+    PointerSignalEvent event,
+    BuildContext viewportContext,
+  ) {
+    if (!widget.modifierScrollToZoom ||
+        event is! PointerScrollEvent ||
+        !isZoomScrollModifierPressed()) {
+      return;
+    }
+
+    GestureBinding.instance.pointerSignalResolver.register(event, (
+      resolvedEvent,
+    ) {
+      if (resolvedEvent is! PointerScrollEvent) return;
+      final delta = resolvedEvent.scrollDelta.dy != 0
+          ? resolvedEvent.scrollDelta.dy
+          : resolvedEvent.scrollDelta.dx;
+      if (delta == 0) return;
+      final renderObject = viewportContext.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) return;
+
+      resolvedEvent.respond(allowPlatformDefault: false);
+      _zoomByScroll(delta, renderObject.globalToLocal(resolvedEvent.position));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -555,6 +604,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
         double width = constraints.maxWidth;
         return Listener(
           behavior: HitTestBehavior.translucent,
+          onPointerSignal: (event) => _onPointerSignal(event, context),
           onPointerUp: (PointerUpEvent event) {
             _dragMode = DragMode.none;
           },
@@ -593,25 +643,36 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
               if (_dragMode == DragMode.none) {
                 if (_trackPadState == TrackPadState.waiting) {
                   if (details.scale != 1.0) {
-                    if (widget.pinchEnabled) {
+                    if (widget.pinchEnabled &&
+                        (!widget.modifierScrollToZoom ||
+                            isZoomScrollModifierPressed())) {
                       _trackPadState = TrackPadState.scale;
                       _dragMode = DragMode.pinchScale;
                     }
                   } else {
                     _globalTrackpadDistance += details.focalPointDelta * _scale;
-                    if (_globalTrackpadDistance.longestSide > kPrecisePointerPanSlop) {
-                      _trackPadState = TrackPadState.pan;
-                      _dragMode = DragMode.pan;
-                      DragStartDetails dragDetails = DragStartDetails(
-                        globalPosition: details.focalPoint,
-                        kind: PointerDeviceKind.touch,
-                      );
-                      _verticalTouchHandler.handleDragStart(dragDetails);
-                      _horizontalTouchHandler.handleDragStart(dragDetails);
+                    if (_globalTrackpadDistance.longestSide >
+                        kPrecisePointerPanSlop) {
+                      if (widget.modifierScrollToZoom &&
+                          isZoomScrollModifierPressed()) {
+                        _trackPadState = TrackPadState.scale;
+                        _dragMode = DragMode.trackpadScrollScale;
+                      } else {
+                        _trackPadState = TrackPadState.pan;
+                        _dragMode = DragMode.pan;
+                        DragStartDetails dragDetails = DragStartDetails(
+                          globalPosition: details.focalPoint,
+                          kind: PointerDeviceKind.touch,
+                        );
+                        _verticalTouchHandler.handleDragStart(dragDetails);
+                        _horizontalTouchHandler.handleDragStart(dragDetails);
+                      }
                     }
                   }
                 } else if (details.pointerCount > 1) {
-                  if (widget.pinchEnabled) {
+                  if (widget.pinchEnabled &&
+                      (!widget.modifierScrollToZoom ||
+                          isZoomScrollModifierPressed())) {
                     _dragMode = DragMode.pinchScale;
                   }
                 } else {
@@ -690,7 +751,9 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   _verticalTouchHandler.handleDragUpdate(verticalDetails);
                   _horizontalTouchHandler.handleDragUpdate(horizontalDetails);
                 case DragMode.pinchScale:
-                  if (!widget.pinchEnabled) {
+                  if (!widget.pinchEnabled ||
+                      (widget.modifierScrollToZoom &&
+                          !isZoomScrollModifierPressed())) {
                     _dragMode = DragMode.none;
                     break;
                   }
@@ -735,6 +798,13 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   _updateScale(newScale);
                   _verticalController.jumpTo(verticalOffset);
                   _horizontalController.jumpTo(horizontalOffset);
+                case DragMode.trackpadScrollScale:
+                  final panDelta = details.focalPointDelta.dy != 0
+                      ? details.focalPointDelta.dy
+                      : details.focalPointDelta.dx;
+                  if (isZoomScrollModifierPressed()) {
+                    _zoomByScroll(-panDelta, details.localFocalPoint);
+                  }
                 case DragMode.none:
               }
             },
