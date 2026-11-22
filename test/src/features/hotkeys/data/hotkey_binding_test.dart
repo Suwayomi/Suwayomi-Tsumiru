@@ -14,7 +14,13 @@ void main() {
     );
 
     expect(macOSDisplays.last.displayKeys, ['Cmd', 'Scroll']);
+    expect(macOSDisplays.last.additionalChords, [
+      ['Cmd', 'Pinch'],
+    ]);
     expect(windowsDisplays.last.displayKeys, ['Ctrl', 'Scroll']);
+    expect(windowsDisplays.last.additionalChords, [
+      ['Ctrl', 'Pinch'],
+    ]);
   });
 
   test('reader zoom shortcut is omitted outside keyboard runtimes', () {

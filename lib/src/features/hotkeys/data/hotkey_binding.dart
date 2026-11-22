@@ -119,9 +119,14 @@ List<GlobalHotkey> activeGlobalHotkeys() =>
     globalHotkeys.where((h) => !h.desktopOnly || isDesktopPlatform).toList();
 
 class HotkeyDisplay {
-  const HotkeyDisplay({required this.label, required this.displayKeys});
+  const HotkeyDisplay({
+    required this.label,
+    required this.displayKeys,
+    this.additionalChords = const [],
+  });
   final String Function(AppLocalizations) label;
   final List<String> displayKeys;
+  final List<List<String>> additionalChords;
 }
 
 String _rPrevPage(AppLocalizations l) => l.hotkeyReaderPrevPage;
@@ -156,6 +161,9 @@ List<HotkeyDisplay> readerHotkeyDisplaysForPlatform(
       displayKeys: [
         platform == TargetPlatform.macOS ? 'Cmd' : 'Ctrl',
         'Scroll',
+      ],
+      additionalChords: [
+        [platform == TargetPlatform.macOS ? 'Cmd' : 'Ctrl', 'Pinch'],
       ],
     ),
 ];

@@ -51,7 +51,10 @@ class HotkeysSettingsScreen extends StatelessWidget {
             defaultTargetPlatform,
             includeModifierZoom: isKeyboardRuntime,
           ))
-            _HotkeyRow(label: h.label(l), chords: [h.displayKeys]),
+            _HotkeyRow(
+              label: h.label(l),
+              chords: [h.displayKeys, ...h.additionalChords],
+            ),
         ],
       ),
     ];
