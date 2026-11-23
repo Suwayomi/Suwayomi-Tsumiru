@@ -62,8 +62,11 @@ double tallPageDisplayWidth({
 ///
 /// A page is cut once it would be drawn taller than two viewports or taller
 /// than the GPU texture limit, so no decoded strip ever covers more than two
-/// screens. Strips are downsampled by a power of two while the result stays
-/// at least as wide as the drawn width in device pixels.
+/// screens. The page is split into the fewest strips that fit, all of the same
+/// height, so the last one is never a thin leftover: when two screens set the
+/// limit, every strip covers between one and two screens. Strips are
+/// downsampled by a power of two while the result stays at least as wide as
+/// the drawn width in device pixels.
 TallPagePlan? tallPagePlan({
   required ui.Size source,
   required double displayWidth,
@@ -82,10 +85,18 @@ TallPagePlan? tallPagePlan({
   while (source.width / (sampleSize * 2) >= targetWidth) {
     sampleSize *= 2;
   }
-  var stripHeight = (2 * viewportHeight * source.width / displayWidth).floor();
-  if (textureLimit != null) stripHeight = math.min(stripHeight, textureLimit);
-  stripHeight = stripHeight.clamp(_minStripHeight, tallPageMaxStripHeight);
-  if (source.height <= stripHeight) return null;
+  var maxStripHeight = (2 * viewportHeight * source.width / displayWidth)
+      .floor();
+  if (textureLimit != null) {
+    maxStripHeight = math.min(maxStripHeight, textureLimit);
+  }
+  maxStripHeight = maxStripHeight.clamp(
+    _minStripHeight,
+    tallPageMaxStripHeight,
+  );
+  if (source.height <= maxStripHeight) return null;
+  final stripCount = (source.height / maxStripHeight).ceil();
+  final stripHeight = (source.height / stripCount).ceil();
   return (stripHeight: stripHeight, sampleSize: sampleSize);
 }
 
@@ -125,7 +136,13 @@ List<_StripPixels> _cutStrips((String, int, int) request) {
     strips.add(
       _StripPixels(
         img
-            .copyCrop(decoded, x: 0, y: top, width: decoded.width, height: height)
+            .copyCrop(
+              decoded,
+              x: 0,
+              y: top,
+              width: decoded.width,
+              height: height,
+            )
             .getBytes(order: img.ChannelOrder.rgba),
         decoded.width,
         height,
@@ -152,25 +169,21 @@ class _TallPageSource {
   bool _disposed = false;
 
   int get count => (size.height / stripHeight).ceil();
-  int heightAt(int index) => math.min(
-    stripHeight,
-    size.height.toInt() - index * stripHeight,
-  );
+  int heightAt(int index) =>
+      math.min(stripHeight, size.height.toInt() - index * stripHeight);
 
   Future<_StripPixels> pixels(int index) async {
     if (_disposed) throw StateError('Page has been released');
     if (defaultTargetPlatform == TargetPlatform.android && !_nativeFailed) {
       try {
-        final result = await _stripChannel.invokeMapMethod<String, dynamic>(
-          'decodeStrip',
-          {
-            'path': path,
-            'owner': owner,
-            'top': index * stripHeight,
-            'height': heightAt(index),
-            'sampleSize': sampleSize,
-          },
-        );
+        final result = await _stripChannel
+            .invokeMapMethod<String, dynamic>('decodeStrip', {
+              'path': path,
+              'owner': owner,
+              'top': index * stripHeight,
+              'height': heightAt(index),
+              'sampleSize': sampleSize,
+            });
         final pixels = _StripPixels(
           result!['rgba'] as Uint8List,
           result['width'] as int,
@@ -191,20 +204,20 @@ class _TallPageSource {
       }
     }
     if (_disposed) throw StateError('Page has been released');
-    final strips = await (_fallback ??= compute(
-      _cutStrips,
-      (path, stripHeight, sampleSize),
-    ));
+    final strips = await (_fallback ??= compute(_cutStrips, (
+      path,
+      stripHeight,
+      sampleSize,
+    )));
     return strips[index];
   }
 
   void _releaseNative() {
     if (defaultTargetPlatform != TargetPlatform.android) return;
     unawaited(
-      _stripChannel.invokeMethod<void>('release', {
-        'path': path,
-        'owner': owner,
-      }).catchError((Object _) {}),
+      _stripChannel
+          .invokeMethod<void>('release', {'path': path, 'owner': owner})
+          .catchError((Object _) {}),
     );
   }
 
@@ -394,15 +407,19 @@ class _LazyStripState extends State<_LazyStrip> {
       final box = context.findRenderObject();
       final viewport = box == null ? null : RenderAbstractViewport.maybeOf(box);
       final position = _position;
-      if (box is! RenderBox || !box.hasSize ||
-          viewport == null || position == null) {
+      if (box is! RenderBox ||
+          !box.hasSize ||
+          viewport == null ||
+          position == null) {
         return;
       }
       final start = viewport.getOffsetToReveal(box, 0).offset;
       final extent = position.axis == Axis.vertical
-          ? box.size.height : box.size.width;
+          ? box.size.height
+          : box.size.width;
       final margin = position.viewportDimension;
-      final near = start + extent >= position.pixels - margin &&
+      final near =
+          start + extent >= position.pixels - margin &&
           start <= position.pixels + position.viewportDimension + margin;
       if (near == _nearViewport) return;
       // Drop a strip from the image cache once it leaves the window so only

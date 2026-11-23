@@ -31,9 +31,24 @@ void main() {
     });
 
     test('cuts longer pages into strips of at most two screens', () {
+      // Eight strips are needed; 30000 / 8 = 3750 rather than 7 × 4000 + 2000.
       final plan = _plan(const Size(1000, 30000))!;
-      expect(plan.stripHeight, 4000);
+      expect(plan.stripHeight, 3750);
       expect(plan.sampleSize, 1);
+    });
+
+    test('never leaves a strip shorter than one screen', () {
+      // One 800dp screen is 2000 source px, two screens are 4000.
+      for (var height = 4001; height <= 60000; height += 499) {
+        final plan = _plan(Size(1000, height.toDouble()))!;
+        final count = (height / plan.stripHeight).ceil();
+        final last = height - (count - 1) * plan.stripHeight;
+        expect(plan.stripHeight, lessThanOrEqualTo(4000), reason: '$height');
+        expect(plan.stripHeight, greaterThanOrEqualTo(2000), reason: '$height');
+        expect(last, greaterThanOrEqualTo(2000), reason: '$height');
+      }
+      // Just over two screens: two strips of about one screen, not 4000 + 1.
+      expect(_plan(const Size(1000, 4001))!.stripHeight, 2001);
     });
 
     test('cuts even when the GPU has no texture limit', () {
@@ -42,7 +57,7 @@ void main() {
 
     test('never exceeds the texture limit', () {
       final plan = _plan(const Size(1000, 30000), textureLimit: 2048)!;
-      expect(plan.stripHeight, 2048);
+      expect(plan.stripHeight, 2000);
       expect(_plan(const Size(1000, 3000), textureLimit: 2048), isNotNull);
     });
 
@@ -50,7 +65,9 @@ void main() {
       // 400dp * 2.5 = 1000 device px; a 4000px source halves twice.
       final plan = _plan(const Size(4000, 60000))!;
       expect(plan.sampleSize, 4);
-      expect(plan.stripHeight, tallPageMaxStripHeight);
+      // Capped at tallPageMaxStripHeight: 8 strips, 60000 / 8 = 7500.
+      expect(plan.stripHeight, lessThanOrEqualTo(tallPageMaxStripHeight));
+      expect(plan.stripHeight, 7500);
     });
 
     test('rejects degenerate sizes', () {
