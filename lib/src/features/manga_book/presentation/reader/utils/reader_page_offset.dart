@@ -107,25 +107,37 @@ double? resolveResumeFraction({
   ReaderPageOffset? local,
 }) => resolveResumeOffset(chapter: chapter, local: local)?.fraction;
 
-/// Offset from a later server answer that should replace [current], the one
-/// the reader resumed at (null when it opened at the page top).
+/// Position from a later server answer that should replace where the reader
+/// opened: [page], resumed at [current] (null when it opened at the page top).
 ///
 /// A downloaded chapter opens from the device catalogue before the server
-/// answers, so an offset saved on another device only shows up afterwards. It
-/// applies only on the same page the reader opened at and only when it is
-/// newer; a move back to the page top on the other device counts too.
+/// answers, so progress saved on another device only shows up afterwards.
+///
+/// - Same page: a newer offset applies, including a move back to the top.
+/// - Another page: followed only when the offset was saved for that page,
+///   which is what another Tsumiru device writes alongside `lastPageRead`.
+///   A page change from a client without offsets (KOReader, web UI) is left
+///   alone, as before. The offset must also be newer than [localProgressAt],
+///   this device's last recorded progress, so reading done here offline and
+///   not yet synced is never rolled back.
 ReaderPageOffset? newerServerResume({
   required ChapterDto server,
   required int page,
   ReaderPageOffset? current,
+  DateTime? localProgressAt,
 }) {
   if (server.user.isRead.ifNull()) return null;
-  if (server.user.lastPageRead.getValueOnNullOrNegative() != page) return null;
+  final serverPage = server.user.lastPageRead.getValueOnNullOrNegative();
   final remote = readerPageOffsetFromMeta(server);
-  if (remote == null || remote.page != page) return null;
-  if (current == null) return remote.fraction > 0 ? remote : null;
-  if (!remote.updatedAt.isAfter(current.updatedAt)) return null;
-  if (remote.page == current.page && remote.fraction == current.fraction) {
+  if (remote == null || remote.page != serverPage) return null;
+  if (current != null && !remote.updatedAt.isAfter(current.updatedAt)) {
+    return null;
+  }
+  if (serverPage == page) {
+    if (current == null) return remote.fraction > 0 ? remote : null;
+    return remote.fraction == current.fraction ? null : remote;
+  }
+  if (localProgressAt != null && !remote.updatedAt.isAfter(localProgressAt)) {
     return null;
   }
   return remote;

@@ -155,18 +155,68 @@ void main() {
       );
     });
 
-    test('ignores another page or a read chapter', () {
-      // The other device is on page 5 now: not the page this reader opened.
+    test('follows another Tsumiru device to another page', () {
+      // It wrote lastPageRead 5 together with an offset on page 5.
+      final server = _chapter(
+        lastPageRead: 5,
+        remote: _offset(5, 0.7, 5000).encode(),
+      );
+      expect(
+        newerServerResume(
+          server: server,
+          page: 3,
+          current: _offset(3, 0.4, 1000),
+          localProgressAt: DateTime.fromMillisecondsSinceEpoch(2000),
+        ),
+        _offset(5, 0.7, 5000),
+      );
+      // Its new page counts even at the top: the page itself changed.
+      expect(
+        newerServerResume(
+          server: _chapter(
+            lastPageRead: 5,
+            remote: _offset(5, 0, 5000).encode(),
+          ),
+          page: 3,
+        ),
+        _offset(5, 0, 5000),
+      );
+    });
+
+    test('leaves a page change from a client without offsets alone', () {
+      // KOReader moved to page 5; the stored offset still says page 3.
+      expect(
+        newerServerResume(
+          server: _chapter(
+            lastPageRead: 5,
+            remote: _offset(3, 0.7, 5000).encode(),
+          ),
+          page: 3,
+        ),
+        isNull,
+      );
+      expect(
+        newerServerResume(server: _chapter(lastPageRead: 5), page: 3),
+        isNull,
+      );
+    });
+
+    test('never rolls back progress made here and not yet synced', () {
+      // This device read on to page 8 offline after the other device saved.
       expect(
         newerServerResume(
           server: _chapter(
             lastPageRead: 5,
             remote: _offset(5, 0.7, 5000).encode(),
           ),
-          page: 3,
+          page: 8,
+          localProgressAt: DateTime.fromMillisecondsSinceEpoch(9000),
         ),
         isNull,
       );
+    });
+
+    test('ignores a read chapter', () {
       expect(
         newerServerResume(
           server: _chapter(

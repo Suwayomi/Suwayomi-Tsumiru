@@ -412,7 +412,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         local: ref.read(readerPageOffsetStoreProvider).read(chapter.id),
       );
     });
-    final pendingResume = useRef<double?>(resumeOffset?.fraction);
+    // Page and share of it to scroll to once that page has its real extent.
+    final pendingResume = useRef<ReaderPageOffset?>(resumeOffset);
+    // The page the reader opened at, or moved to for another device's offset.
+    final resumePage = useRef<int>(initialChapterPageIndex);
     // The saved offset the reader currently shows, to tell whether a later
     // server answer (another device) is newer.
     final resumeBasis = useRef<ReaderPageOffset?>(resumeOffset);
@@ -976,15 +979,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // Scroll into the resume page once it has its real extent; a placeholder
     // height would put the saved share of the page somewhere else.
     void tryResume(List<ItemPosition> positions) {
-      final fraction = pendingResume.value;
-      if (fraction == null) return;
+      final pending = pendingResume.value;
+      if (pending == null) return;
+      final fraction = pending.fraction;
       final loaded = loadedRef.value;
       // A prepended chapter shifts global indices; the user has moved on.
       if (loaded.isEmpty || loaded.first.chapterId != chapter.id) {
         readerTookOver();
         return;
       }
-      final index = initialChapterPageIndex;
+      final index = pending.page;
       final url = loaded.first.pages.pages.elementAtOrNull(index);
       final expected = url == null ? null : pageHeights.value[url];
       final position = positions.where((p) => p.index == index).firstOrNull;
@@ -1010,8 +1014,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }
 
     // A downloaded chapter opens from the device catalogue, then the server
-    // answers in the background. If another device saved a newer offset on
-    // this page and the reader has not moved yet, resume there instead.
+    // answers in the background. If another Tsumiru device saved newer
+    // progress (on this page or another one) and the reader has not moved yet,
+    // resume there instead.
     ref.listen(chapterProvider(chapterId: chapter.id), (_, next) {
       final server = next.value;
       if (server == null || openAtEnd) return;
@@ -1019,12 +1024,27 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (readerMoved.value) return;
       final remote = newerServerResume(
         server: server,
-        page: initialChapterPageIndex,
+        page: resumePage.value,
         current: resumeBasis.value,
+        localProgressAt: chapter.user.lastReadAt.parseTimestamp,
       );
       if (remote == null) return;
+      final loaded = loadedRef.value;
+      if (loaded.isEmpty ||
+          loaded.first.chapterId != chapter.id ||
+          remote.page >= loaded.first.pages.pages.length) {
+        return;
+      }
       resumeBasis.value = remote;
-      pendingResume.value = remote.fraction;
+      pendingResume.value = remote;
+      if (remote.page != resumePage.value) {
+        // Bring the other device's page in; tryResume scrolls into it once
+        // it is measured (the listener runs again when the jump settles).
+        resumePage.value = remote.page;
+        markScrollAdjusting();
+        jumpToIndex(index: remote.page);
+        return;
+      }
       final positions = positionsListener.itemPositions.value
           .where((p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1)
           .toList();
