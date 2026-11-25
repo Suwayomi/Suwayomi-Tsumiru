@@ -276,12 +276,21 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         .read(readerProgressQueuesProvider)
         .putIfAbsent(id, ReaderProgressQueue.new);
 
+    // Last page saved per chapter: lastPageRead at open, then each write.
+    final savedPages = useRef<Map<int, int>>({});
+
+    // Progress follows the page actually shown, backwards too, so another
+    // device resumes where reading stopped. Only a page that differs from the
+    // last one saved is written, so opening a chapter writes nothing. A read
+    // chapter keeps its saved state; completion always writes.
     bool shouldWriteProgress(_LoadedChapter lc, int rel) {
       if (lc.chapter.user.isRead.ifNull()) return false;
       final pageCount = lc.pages.pages.length;
       final completed = pageCount > 0 && rel >= pageCount - 1;
-      return completed ||
-          rel > lc.chapter.user.lastPageRead.getValueOnNullOrNegative();
+      final saved =
+          savedPages.value[lc.chapterId] ??
+          lc.chapter.user.lastPageRead.getValueOnNullOrNegative();
+      return completed || rel != saved;
     }
 
     Future<void> writeVisibleProgress(
@@ -300,6 +309,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (completedChapterIds.value.contains(chapterId)) return;
       final lc = loadedById(chapterId);
       if (lc == null || !shouldWriteProgress(lc, rel)) return;
+      savedPages.value[chapterId] = rel;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
       final progressResult = await recordReadingProgress(
