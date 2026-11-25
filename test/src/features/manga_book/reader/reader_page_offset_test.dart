@@ -103,6 +103,83 @@ void main() {
     });
   });
 
+  group('newerServerResume', () {
+    test('takes a newer offset saved by another device on the same page', () {
+      final server = _chapter(remote: _offset(3, 0.7, 5000).encode());
+      expect(
+        newerServerResume(
+          server: server,
+          page: 3,
+          current: _offset(3, 0.4, 1000),
+        ),
+        _offset(3, 0.7, 5000),
+      );
+    });
+
+    test('applies when the reader opened at the page top', () {
+      final server = _chapter(remote: _offset(3, 0.7, 5000).encode());
+      expect(newerServerResume(server: server, page: 3), _offset(3, 0.7, 5000));
+      final top = _chapter(remote: _offset(3, 0, 5000).encode());
+      expect(newerServerResume(server: top, page: 3), isNull);
+    });
+
+    test('follows a move back to the page top on the other device', () {
+      final server = _chapter(remote: _offset(3, 0, 5000).encode());
+      expect(
+        newerServerResume(
+          server: server,
+          page: 3,
+          current: _offset(3, 0.4, 1000),
+        ),
+        _offset(3, 0, 5000),
+      );
+    });
+
+    test('ignores an older or identical offset', () {
+      final current = _offset(3, 0.4, 5000);
+      expect(
+        newerServerResume(
+          server: _chapter(remote: _offset(3, 0.7, 1000).encode()),
+          page: 3,
+          current: current,
+        ),
+        isNull,
+      );
+      expect(
+        newerServerResume(
+          server: _chapter(remote: current.encode()),
+          page: 3,
+          current: current,
+        ),
+        isNull,
+      );
+    });
+
+    test('ignores another page or a read chapter', () {
+      // The other device is on page 5 now: not the page this reader opened.
+      expect(
+        newerServerResume(
+          server: _chapter(
+            lastPageRead: 5,
+            remote: _offset(5, 0.7, 5000).encode(),
+          ),
+          page: 3,
+        ),
+        isNull,
+      );
+      expect(
+        newerServerResume(
+          server: _chapter(
+            isRead: true,
+            remote: _offset(3, 0.7, 5000).encode(),
+          ),
+          page: 3,
+        ),
+        isNull,
+      );
+    });
+  });
+
   test('differsFrom ignores moves under 2% of the page', () {
     final base = _offset(3, 0.40, 1000);
     expect(_offset(3, 0.41, 2000).differsFrom(base), isFalse);
@@ -125,5 +202,35 @@ void main() {
     }
     expect(a.read(1), isNull, reason: 'oldest entry evicted');
     expect(a.read(205), isNotNull);
+  });
+
+  test('store survives a switch between LAN and external address', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    // Same configured server, active address changes with the network.
+    final onLan = ReaderPageOffsetStore(
+      preferences,
+      'https://ext',
+      aliases: ['http://lan', 'http://lan'],
+    );
+    final outside = ReaderPageOffsetStore(
+      preferences,
+      'https://ext',
+      aliases: ['https://ext', 'http://lan'],
+    );
+    await onLan.write(1, _offset(3, 0.4, 1000));
+    expect(outside.read(1), _offset(3, 0.4, 1000));
+
+    // An entry left under the active address by an older build is still read,
+    // the newest copy wins, and the next write leaves a single entry.
+    await preferences.setString(
+      'readerPageOffsets',
+      '{"http://lan|2":"${_offset(5, 0.7, 3000).encode()}",'
+          '"https://ext|2":"${_offset(5, 0.2, 2000).encode()}"}',
+    );
+    expect(outside.read(2), _offset(5, 0.7, 3000));
+    await outside.write(2, _offset(5, 0.8, 4000));
+    expect(preferences.getString('readerPageOffsets'), isNot(contains('lan')));
+    expect(onLan.read(2), _offset(5, 0.8, 4000));
   });
 }

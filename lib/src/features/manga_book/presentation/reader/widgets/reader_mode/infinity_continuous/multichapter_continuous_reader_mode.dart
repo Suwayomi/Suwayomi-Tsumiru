@@ -403,19 +403,38 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         ref.read(mangaBookRepositoryProvider),
       )..seed(chapter),
     );
-    final resumeFraction = useMemoized(() {
+    final resumeOffset = useMemoized(() {
       if (openAtEnd) return null;
       final lastPageRead = chapter.user.lastPageRead.getValueOnNullOrNegative();
       if (initialChapterPageIndex != lastPageRead) return null;
-      return resolveResumeFraction(
+      return resolveResumeOffset(
         chapter: chapter,
         local: ref.read(readerPageOffsetStoreProvider).read(chapter.id),
       );
     });
-    final pendingResume = useRef<double?>(resumeFraction);
-    final latestOffset =
-        useRef<({int chapterId, ReaderPageOffset offset})?>(null);
+    final pendingResume = useRef<double?>(resumeOffset?.fraction);
+    // The saved offset the reader currently shows, to tell whether a later
+    // server answer (another device) is newer.
+    final resumeBasis = useRef<ReaderPageOffset?>(resumeOffset);
+    // Set once the reader moved away from where it opened or resumed; from
+    // then on its own position wins over anything the server sends.
+    final readerMoved = useRef(false);
+    // Where the reader settled after opening or resuming. Only a move away
+    // from it is recorded: re-saving the landing spot with a fresh timestamp
+    // would bury a newer offset from another device.
+    final settledAt = useRef<({int chapterId, int page, double fraction})?>(
+      null,
+    );
+    final resumeJumping = useRef(false);
+    final latestOffset = useRef<({int chapterId, ReaderPageOffset offset})?>(
+      null,
+    );
     final offsetDebounce = useRef<Timer?>(null);
+
+    void readerTookOver() {
+      pendingResume.value = null;
+      readerMoved.value = true;
+    }
 
     void flushOffset() {
       offsetDebounce.value?.cancel();
@@ -428,15 +447,37 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     void trackOffset(int chapterId, int rel, ItemPosition? position) {
       // Until the saved offset is applied the strip sits at the page top;
       // recording that would overwrite the offset being restored.
-      if (position == null || pendingResume.value != null) return;
+      if (position == null ||
+          pendingResume.value != null ||
+          resumeJumping.value) {
+        return;
+      }
       final extent = position.itemTrailingEdge - position.itemLeadingEdge;
       // A page that fits on screen is fully described by its index.
       if (extent <= 1.05) return;
+      final fraction = (-position.itemLeadingEdge / extent).clamp(0.0, 1.0);
+      if (!readerMoved.value) {
+        final settled = settledAt.value;
+        if (settled == null) {
+          settledAt.value = (
+            chapterId: chapterId,
+            page: rel,
+            fraction: fraction,
+          );
+          return;
+        }
+        if (settled.chapterId == chapterId &&
+            settled.page == rel &&
+            (settled.fraction - fraction).abs() < 0.005) {
+          return;
+        }
+        readerMoved.value = true;
+      }
       latestOffset.value = (
         chapterId: chapterId,
         offset: ReaderPageOffset(
           page: rel,
-          fraction: (-position.itemLeadingEdge / extent).clamp(0.0, 1.0),
+          fraction: fraction,
           updatedAt: DateTime.now(),
         ),
       );
@@ -521,7 +562,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // decoded strip never spans more than two screens.
     final textureLimitState = ref.watch(textureLimitProvider);
     final textureLimit = textureLimitState.value;
-    final splitTallImages = !kIsWeb &&
+    final splitTallImages =
+        !kIsWeb &&
         ref.watch(splitTallImagesProvider).ifNull(true) &&
         textureLimitState.hasValue;
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
@@ -712,13 +754,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     void markScrollAdjusting() {
       isAdjustingScroll.value = true;
       adjustIdleTimer.value?.cancel();
-      adjustIdleTimer.value = Timer(
-        const Duration(milliseconds: 350),
-        () {
-          isAdjustingScroll.value = false;
-          positionListener.value?.call();
-        },
-      );
+      adjustIdleTimer.value = Timer(const Duration(milliseconds: 350), () {
+        isAdjustingScroll.value = false;
+        positionListener.value?.call();
+      });
     }
 
     void jumpToIndex({required int index, double alignment = 0}) {
@@ -785,7 +824,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       });
       return null;
     }, [scaleType, crossAxisExtent]);
-
 
     Future<void> loadNextChapter(ChapterDto next) async {
       if (loadingNext.value || hasReachedEnd.value) return;
@@ -888,8 +926,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 -anchorLeadingEdge *
                 scrollOffsetController.position.viewportDimension;
           }
-        } catch (_) {
-        }
+        } catch (_) {}
 
         loadedChapters.value = [
           (pages: pages, chapter: prev, chapterId: prev.id),
@@ -936,7 +973,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-
     // Scroll into the resume page once it has its real extent; a placeholder
     // height would put the saved share of the page somewhere else.
     void tryResume(List<ItemPosition> positions) {
@@ -945,7 +981,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final loaded = loadedRef.value;
       // A prepended chapter shifts global indices; the user has moved on.
       if (loaded.isEmpty || loaded.first.chapterId != chapter.id) {
-        pendingResume.value = null;
+        readerTookOver();
         return;
       }
       final index = initialChapterPageIndex;
@@ -959,7 +995,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if ((extent - expected).abs() > 2) return;
       pendingResume.value = null;
       if (extent <= viewport) return;
+      resumeJumping.value = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // The next position seen is the landing spot, not a move.
+        settledAt.value = null;
+        resumeJumping.value = false;
         if (!context.mounted || !itemScrollController.isAttached) return;
         markScrollAdjusting();
         jumpToIndex(index: index);
@@ -968,6 +1008,28 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         );
       });
     }
+
+    // A downloaded chapter opens from the device catalogue, then the server
+    // answers in the background. If another device saved a newer offset on
+    // this page and the reader has not moved yet, resume there instead.
+    ref.listen(chapterProvider(chapterId: chapter.id), (_, next) {
+      final server = next.value;
+      if (server == null || openAtEnd) return;
+      offsetSaver.seed(server);
+      if (readerMoved.value) return;
+      final remote = newerServerResume(
+        server: server,
+        page: initialChapterPageIndex,
+        current: resumeBasis.value,
+      );
+      if (remote == null) return;
+      resumeBasis.value = remote;
+      pendingResume.value = remote.fraction;
+      final positions = positionsListener.itemPositions.value
+          .where((p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1)
+          .toList();
+      if (positions.isNotEmpty) tryResume(positions);
+    });
 
     useEffect(() {
       void listener() {
@@ -1118,7 +1180,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       };
     }, const []);
 
-
     void jumpToChapterRelative(int chapterIdx) {
       final globalIndex =
           InfinityContinuousUtils.convertChapterIndexToGlobalIndex(
@@ -1128,7 +1189,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           );
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
-      pendingResume.value = null;
+      readerTookOver();
       currentChapterPageIndex.value = chapterIdx;
       // Jump before background decoding so neighbour loads cannot shift the pending target indices.
       markScrollAdjusting();
@@ -1138,7 +1199,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }
 
     void handlePageNavigation({required bool isNext}) {
-      pendingResume.value = null;
+      readerTookOver();
       final globalIndex =
           InfinityContinuousUtils.convertChapterIndexToGlobalIndex(
             currentChapterPageIndex.value + (isNext ? 1 : -1),
@@ -1297,7 +1358,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return listener.dispose;
     }, const []);
 
-
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
 
     Widget capWidth(Widget page) {
@@ -1392,6 +1452,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ),
         );
       }
+
       Widget page = ServerImage(
         showReloadButton: true,
         fit: fit,
@@ -1546,7 +1607,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           onNotification: (notification) {
             if (!programmaticScroll.value) stripInMotion.value = true;
             // The reader took over before the page measured: keep their spot.
-            if (notification.dragDetails != null) pendingResume.value = null;
+            if (notification.dragDetails != null) readerTookOver();
             return false;
           },
           child: positionedList,

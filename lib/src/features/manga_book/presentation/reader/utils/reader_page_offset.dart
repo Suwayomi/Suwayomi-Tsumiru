@@ -83,37 +83,75 @@ ReaderPageOffset? readerPageOffsetFromMeta(ChapterDto chapter) =>
           ?.value,
     );
 
-/// Share of the resume page to scroll past on open, or null to open at its top.
+/// Saved offset to resume at on open, or null to open the page at its top.
 ///
 /// An offset only counts while it still points at the chapter's current
 /// `lastPageRead`: once KOReader, the web UI or another device moved the
 /// progress, the stored offset belongs to an older page and is dropped.
 /// Between the local and the server copy, the most recent one wins.
-double? resolveResumeFraction({
+ReaderPageOffset? resolveResumeOffset({
   required ChapterDto chapter,
   ReaderPageOffset? local,
 }) {
   if (chapter.user.isRead.ifNull()) return null;
   final page = chapter.user.lastPageRead.getValueOnNullOrNegative();
-  final best = [local, readerPageOffsetFromMeta(chapter)]
-      .nonNulls
+  return [local, readerPageOffsetFromMeta(chapter)].nonNulls
       .where((o) => o.page == page && o.fraction > 0)
       .sorted((a, b) => b.updatedAt.compareTo(a.updatedAt))
       .firstOrNull;
-  return best?.fraction;
+}
+
+/// Share of the resume page to scroll past on open; see [resolveResumeOffset].
+double? resolveResumeFraction({
+  required ChapterDto chapter,
+  ReaderPageOffset? local,
+}) => resolveResumeOffset(chapter: chapter, local: local)?.fraction;
+
+/// Offset from a later server answer that should replace [current], the one
+/// the reader resumed at (null when it opened at the page top).
+///
+/// A downloaded chapter opens from the device catalogue before the server
+/// answers, so an offset saved on another device only shows up afterwards. It
+/// applies only on the same page the reader opened at and only when it is
+/// newer; a move back to the page top on the other device counts too.
+ReaderPageOffset? newerServerResume({
+  required ChapterDto server,
+  required int page,
+  ReaderPageOffset? current,
+}) {
+  if (server.user.isRead.ifNull()) return null;
+  if (server.user.lastPageRead.getValueOnNullOrNegative() != page) return null;
+  final remote = readerPageOffsetFromMeta(server);
+  if (remote == null || remote.page != page) return null;
+  if (current == null) return remote.fraction > 0 ? remote : null;
+  if (!remote.updatedAt.isAfter(current.updatedAt)) return null;
+  if (remote.page == current.page && remote.fraction == current.fraction) {
+    return null;
+  }
+  return remote;
 }
 
 /// Device-local copy, so offline reads and an unreachable server still resume.
+///
+/// Keyed by the configured server, not the active address: moving between
+/// the LAN and the external URL reaches the same server and must not lose the
+/// offset. Entries written under one of its [aliases] are still read.
 class ReaderPageOffsetStore {
-  ReaderPageOffsetStore(this._preferences, this._server);
+  ReaderPageOffsetStore(
+    this._preferences,
+    this._server, {
+    Iterable<String> aliases = const [],
+  }) : _aliases = aliases.where((a) => a.isNotEmpty && a != _server).toSet();
 
   static const _preferencesKey = 'readerPageOffsets';
   static const _maxEntries = 200;
 
   final SharedPreferences _preferences;
   final String _server;
+  final Set<String> _aliases;
 
-  String _key(int chapterId) => '$_server|$chapterId';
+  String _key(int chapterId, [String? server]) =>
+      '${server ?? _server}|$chapterId';
 
   Map<String, String> _all() {
     try {
@@ -127,19 +165,29 @@ class ReaderPageOffsetStore {
     }
   }
 
-  ReaderPageOffset? read(int chapterId) =>
-      ReaderPageOffset.decode(_all()[_key(chapterId)]);
+  ReaderPageOffset? read(int chapterId) {
+    final all = _all();
+    return [_server, ..._aliases]
+        .map((server) => ReaderPageOffset.decode(all[_key(chapterId, server)]))
+        .nonNulls
+        .sorted((a, b) => b.updatedAt.compareTo(a.updatedAt))
+        .firstOrNull;
+  }
 
   Future<void> write(int chapterId, ReaderPageOffset offset) async {
     final all = _all()..[_key(chapterId)] = offset.encode();
+    // One entry per chapter: drop copies left under another address.
+    for (final alias in _aliases) {
+      all.remove(_key(chapterId, alias));
+    }
     if (all.length > _maxEntries) {
       // Keep the most recently written chapters.
       final kept = all.entries
           .sortedBy<num>(
             (e) =>
-                -(ReaderPageOffset.decode(e.value)
-                        ?.updatedAt
-                        .millisecondsSinceEpoch ??
+                -(ReaderPageOffset.decode(
+                      e.value,
+                    )?.updatedAt.millisecondsSinceEpoch ??
                     0),
           )
           .take(_maxEntries);
@@ -151,12 +199,16 @@ class ReaderPageOffsetStore {
   }
 }
 
-final readerPageOffsetStoreProvider = Provider<ReaderPageOffsetStore>(
-  (ref) => ReaderPageOffsetStore(
+final readerPageOffsetStoreProvider = Provider<ReaderPageOffsetStore>((ref) {
+  final active = ref.watch(serverUrlProvider) ?? '';
+  final external = ref.watch(serverExternalUrlProvider) ?? '';
+  final lan = ref.watch(serverLanUrlProvider) ?? '';
+  return ReaderPageOffsetStore(
     ref.watch(sharedPreferencesProvider),
-    ref.watch(serverUrlProvider) ?? '',
-  ),
-);
+    external.isNotEmpty ? external : active,
+    aliases: [active, lan],
+  );
+});
 
 /// Writes the offset locally every time and to the chapter meta when it moved
 /// enough. Holds no `ref`, so it is safe to call from a widget teardown.
@@ -168,9 +220,14 @@ class ReaderPageOffsetSaver {
   final _pushed = <int, ReaderPageOffset>{};
 
   /// Seeds what the server already holds so reopening does not rewrite it.
+  /// A later, fresher answer from the server replaces an older seed.
   void seed(ChapterDto chapter) {
     final remote = readerPageOffsetFromMeta(chapter);
-    if (remote != null) _pushed.putIfAbsent(chapter.id, () => remote);
+    if (remote == null) return;
+    final known = _pushed[chapter.id];
+    if (known == null || remote.updatedAt.isAfter(known.updatedAt)) {
+      _pushed[chapter.id] = remote;
+    }
   }
 
   Future<void> save(int chapterId, ReaderPageOffset offset) async {
