@@ -409,6 +409,14 @@ class _MangaCoverGridTileState extends State<MangaCoverGridTile> {
                     .round()
                     .clamp(1, 1 << 16)
               : null,
+          // A uniform tile crops the cover to its own shape, so decode enough of
+          // it to cover both sides; capping the width alone blurs wide covers.
+          memCacheHeight: !freeform && constraints.hasBoundedHeight
+              ? (constraints.maxHeight * MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(1, 1 << 16)
+              : null,
+          decodeToCover: !freeform,
           // Match shimmer to cover geometry so decoded art does not shift the grid.
           progressIndicatorBuilder: freeform
               ? (context, url, progress) => const _FreeformCoverPlaceholder()
