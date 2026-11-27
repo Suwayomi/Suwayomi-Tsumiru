@@ -4,7 +4,7 @@
   "enabledManagers": ["fvm", "pub", "github-actions", "gradle", "gradle-wrapper", "cocoapods", "custom.regex"],
   "ignoreDeps": ["dev.flutter.flutter-plugin-loader"],
   "constraints": {
-    "flutter": "3.47.4"
+    "flutter": "3.50.0"
   },
   "rangeStrategy": "update-lockfile",
   "minimumReleaseAge": "14 days",
