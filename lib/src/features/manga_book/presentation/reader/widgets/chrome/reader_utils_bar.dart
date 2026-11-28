@@ -16,6 +16,7 @@ import '../../../../../../utils/theme/brand.dart';
 import '../../../../../../widgets/compact_switch.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../controller/auto_scroll_controller.dart';
+import 'chrome_extents.dart';
 
 class ReaderUtilsBar extends ConsumerWidget {
   const ReaderUtilsBar({
@@ -69,75 +70,78 @@ class ReaderUtilsBar extends ConsumerWidget {
       color: readerNavSurface(cs),
       child: ValueListenableBuilder<bool>(
         valueListenable: expanded,
-        builder: (context, isOpen, _) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSize(
-              duration: context.reduceMotion
-                  ? Duration.zero
-                  : const Duration(milliseconds: 200),
-              curve: Curves.fastOutSlowIn,
-              alignment: Alignment.topCenter,
-              child: !isOpen
-                  ? const SizedBox(width: double.infinity, height: 0)
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        children: [
-                          CompactSwitch(
-                            value: active,
-                            activeThumbColor: cs.primary,
-                            onChanged: (_) => ref
-                                .read(autoScrollActiveProvider.notifier)
-                                .toggle(),
-                          ),
-                          Expanded(
-                            child: Text(
-                              label,
-                              style: TextStyle(color: cs.onSurface),
-                              overflow: TextOverflow.ellipsis,
+        builder: (context, isOpen, _) => Padding(
+          padding: readerChromeSideInsets(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedSize(
+                duration: context.reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 200),
+                curve: Curves.fastOutSlowIn,
+                alignment: Alignment.topCenter,
+                child: !isOpen
+                    ? const SizedBox(width: double.infinity, height: 0)
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          children: [
+                            CompactSwitch(
+                              value: active,
+                              activeThumbColor: cs.primary,
+                              onChanged: (_) => ref
+                                  .read(autoScrollActiveProvider.notifier)
+                                  .toggle(),
                             ),
-                          ),
-                          // Faster = shorter interval, so "-" lowers seconds.
-                          IconButton(
-                            icon: Icon(FluentIcons.subtract_24_regular, color: cs.onSurface),
-                            onPressed: () => setInterval(interval - 1),
-                          ),
-                          Text(
-                            context.l10n.autoScrollSeconds(interval),
-                            style: TextStyle(color: cs.onSurface),
-                          ),
-                          IconButton(
-                            icon: Icon(FluentIcons.add_24_regular, color: cs.onSurface),
-                            onPressed: () => setInterval(interval + 1),
-                          ),
-                        ],
+                            Expanded(
+                              child: Text(
+                                label,
+                                style: TextStyle(color: cs.onSurface),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            // Faster = shorter interval, so "-" lowers seconds.
+                            IconButton(
+                              icon: Icon(FluentIcons.subtract_24_regular, color: cs.onSurface),
+                              onPressed: () => setInterval(interval - 1),
+                            ),
+                            Text(
+                              context.l10n.autoScrollSeconds(interval),
+                              style: TextStyle(color: cs.onSurface),
+                            ),
+                            IconButton(
+                              icon: Icon(FluentIcons.add_24_regular, color: cs.onSurface),
+                              onPressed: () => setInterval(interval + 1),
+                            ),
+                          ],
+                        ),
                       ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: SizedBox(
+                  height: 30,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 26,
+                    visualDensity: VisualDensity.compact,
+                    tooltip: label,
+                    onPressed: () => expanded.value = !expanded.value,
+                    icon: Icon(
+                      isOpen
+                          ? FluentIcons.chevron_up_24_regular
+                          : FluentIcons.chevron_down_24_regular,
+                      color: cs.onSurface,
                     ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: SizedBox(
-                height: 30,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  iconSize: 26,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: label,
-                  onPressed: () => expanded.value = !expanded.value,
-                  icon: Icon(
-                    isOpen
-                        ? FluentIcons.chevron_up_24_regular
-                        : FluentIcons.chevron_down_24_regular,
-                    color: cs.onSurface,
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

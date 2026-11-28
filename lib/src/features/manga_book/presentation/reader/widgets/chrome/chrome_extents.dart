@@ -45,6 +45,18 @@ class ChromeExtents {
       'ChromeExtents(topInset: $topInset, bottomInset: $bottomInset)';
 }
 
+/// Side insets the reader chrome keeps its controls out of.
+///
+/// With "Ignore safe area" on, the page draws under the side insets (iPhone
+/// Duo's cover-screen status column, a notch in landscape) and nothing above
+/// the chrome applies them, so the bars inset their contents by this while
+/// their backgrounds still run to the edge. With it off, the reader's
+/// SafeArea has already taken the insets and this is zero.
+EdgeInsets readerChromeSideInsets(BuildContext context) {
+  final padding = MediaQuery.viewPaddingOf(context);
+  return EdgeInsets.only(left: padding.left, right: padding.right);
+}
+
 /// Measure fully shown bars and update after layout to avoid build writes and animation feedback.
 @Riverpod(keepAlive: false)
 class ChromeExtentsNotifier extends _$ChromeExtentsNotifier {

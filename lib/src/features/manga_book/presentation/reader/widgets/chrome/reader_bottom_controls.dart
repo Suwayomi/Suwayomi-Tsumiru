@@ -76,6 +76,7 @@ class ReaderBottomControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final sideInsets = readerChromeSideInsets(context);
     final isPagedMode = isPagedReaderMode(resolvedReaderMode);
     final chapterButtons = chapterNavCallbacks(
       isRtl: isRTLReaderMode(resolvedReaderMode),
@@ -129,37 +130,41 @@ class ReaderBottomControls extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (useBottomSeekBar) ...[
-              Row(
-                children: [
-                  Card(
-                    shape: const CircleBorder(),
-                    elevation: 0,
-                    color: readerNavSurface(context.theme.colorScheme),
-                    child: IconButton(
-                      onPressed: chapterButtons.leading,
-                      icon: const Icon(FluentIcons.previous_24_filled),
+              // Floats over the page, so keep the whole row out of the insets.
+              Padding(
+                padding: sideInsets,
+                child: Row(
+                  children: [
+                    Card(
+                      shape: const CircleBorder(),
+                      elevation: 0,
+                      color: readerNavSurface(context.theme.colorScheme),
+                      child: IconButton(
+                        onPressed: chapterButtons.leading,
+                        icon: const Icon(FluentIcons.previous_24_filled),
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: BrandPageSeekBar(
-                      currentValue: currentIndex,
-                      maxValue:
-                          totalPageCount ?? chapterPages.chapter.pageCount,
-                      onChanged: onChanged,
-                      inverted: reverseSeekBar,
-                      capsuleColor: readerNavSurface(context.theme.colorScheme),
+                    Expanded(
+                      child: BrandPageSeekBar(
+                        currentValue: currentIndex,
+                        maxValue:
+                            totalPageCount ?? chapterPages.chapter.pageCount,
+                        onChanged: onChanged,
+                        inverted: reverseSeekBar,
+                        capsuleColor: readerNavSurface(context.theme.colorScheme),
+                      ),
                     ),
-                  ),
-                  Card(
-                    shape: const CircleBorder(),
-                    elevation: 0,
-                    color: readerNavSurface(context.theme.colorScheme),
-                    child: IconButton(
-                      onPressed: chapterButtons.trailing,
-                      icon: const Icon(FluentIcons.next_24_filled),
+                    Card(
+                      shape: const CircleBorder(),
+                      elevation: 0,
+                      color: readerNavSurface(context.theme.colorScheme),
+                      child: IconButton(
+                        onPressed: chapterButtons.trailing,
+                        icon: const Icon(FluentIcons.next_24_filled),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const Gap(8),
             ],
@@ -171,6 +176,7 @@ class ReaderBottomControls extends ConsumerWidget {
               child: Padding(
                 padding:
                     KEdgeInsets.h16.size +
+                    sideInsets +
                     EdgeInsets.only(bottom: systemBottomInset),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,

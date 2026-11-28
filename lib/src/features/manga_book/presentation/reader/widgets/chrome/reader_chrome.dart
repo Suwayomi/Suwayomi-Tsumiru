@@ -189,6 +189,7 @@ class ReaderChrome extends HookConsumerWidget {
         .ifNull(false);
     final showPageNumber = ref.watch(showPageNumberProvider).ifNull(true);
     final pageCount = totalPageCount ?? chapterPages.chapter.pageCount;
+    final sideInsets = readerChromeSideInsets(context);
 
     return ValueListenableBuilder<bool>(
       valueListenable: visibility,
@@ -276,8 +277,8 @@ class ReaderChrome extends HookConsumerWidget {
             // Fade the side seek bar without sliding to avoid fighting seek gestures.
             if (showSideSeekBar && !forceHorizontal)
               Positioned(
-                right: leftHanded ? null : 6,
-                left: leftHanded ? 6 : null,
+                right: leftHanded ? null : 6 + sideInsets.right,
+                left: leftHanded ? 6 + sideInsets.left : null,
                 top: extents.topInset + 8,
                 bottom: extents.bottomInset + 8,
                 width: 56,
