@@ -7,9 +7,11 @@
 -->
 
 <network-security-config>
+    <!-- Applies to native Android networking only: dart:io trusts the system
+         store and ignores this file. Cleartext stays allowed because the
+         server address is user-entered and often plain http on the LAN. -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
-            <certificates src="user"/>
             <certificates src="system"/>
         </trust-anchors>
     </base-config>
