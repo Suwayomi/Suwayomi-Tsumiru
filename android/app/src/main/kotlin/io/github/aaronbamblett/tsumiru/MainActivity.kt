@@ -125,6 +125,7 @@ class MainActivity: FlutterAndroidVolumeKeydownActivity() {
                         } else {
                             val top = call.argument<Int>("top") ?: -1
                             val height = call.argument<Int>("height") ?: 0
+                            val sampleSize = call.argument<Int>("sampleSize") ?: 1
                             val entry = stripDecoders.getOrPut(path) {
                                 Pair(
                                     requireNotNull(BitmapRegionDecoder.newInstance(path, false)),
@@ -133,11 +134,14 @@ class MainActivity: FlutterAndroidVolumeKeydownActivity() {
                             }
                             entry.second.add(owner)
                             val decoder = entry.first
-                            require(top >= 0 && height > 0 && height <= 4096 &&
-                                top.toLong() + height <= decoder.height)
+                            // Mirrors tallPageMaxStripHeight on the Dart side.
+                            require(top >= 0 && height > 0 && height <= 8192 &&
+                                top.toLong() + height <= decoder.height &&
+                                sampleSize in 1..16 && (sampleSize and (sampleSize - 1)) == 0)
                             val options = BitmapFactory.Options().apply {
                                 inPreferredConfig = Bitmap.Config.ARGB_8888
                                 inScaled = false
+                                inSampleSize = sampleSize
                             }
                             val bitmap = requireNotNull(decoder.decodeRegion(
                                 Rect(0, top, decoder.width, top + height), options

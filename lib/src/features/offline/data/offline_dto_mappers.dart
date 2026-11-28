@@ -15,7 +15,6 @@ import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dar
 import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
 
-
 List<String> offlineGenre(String? stored) {
   if (stored == null || stored.isEmpty) return const [];
   try {
@@ -124,9 +123,9 @@ MangaDto offlineMangaToDto(
 extension OfflineMangaCover on OfflineManga {
   String get displayCoverUrl => resolveDisplayCover(
     thumbnailUrl: thumbnailUrl,
-    meta: decodeOfflineMeta(metaJson).entries.map(
-      (e) => (key: e.key, value: e.value),
-    ),
+    meta: decodeOfflineMeta(
+      metaJson,
+    ).entries.map((e) => (key: e.key, value: e.value)),
   );
 
   String? get coverVersion =>
@@ -144,7 +143,9 @@ ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
     isBookmarked: c.isBookmarked,
     isDownloaded: c.serverIsDownloaded,
     lastPageRead: c.lastPageRead,
-    lastReadAt: '0',
+    // Last progress known here (local write or down-synced from the server);
+    // the reader compares it with progress saved on other devices.
+    lastReadAt: c.lastReadAt ?? '0',
   ),
   pageCount: c.pageCount,
   fetchedAt: c.fetchedAt ?? '0',

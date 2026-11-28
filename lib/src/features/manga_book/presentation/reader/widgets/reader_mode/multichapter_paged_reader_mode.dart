@@ -180,8 +180,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           // The container may be disposed before this microtask; ignore that teardown race.
           try {
             sessionNotifier.record(id);
-          } catch (_) {
-          }
+          } catch (_) {}
         }
       }
 
@@ -197,8 +196,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         Future.microtask(() {
           try {
             sessionNotifier.discard(sessionChapterIds.value);
-          } catch (_) {
-          }
+          } catch (_) {}
         });
       };
     }, const []);
@@ -240,12 +238,21 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         .read(readerProgressQueuesProvider)
         .putIfAbsent(id, ReaderProgressQueue.new);
 
+    // Last page saved per chapter: lastPageRead at open, then each write.
+    final savedPages = useRef<Map<int, int>>({});
+
+    // Progress follows the page actually shown, backwards too, so another
+    // device resumes where reading stopped. Only a page that differs from the
+    // last one saved is written, so opening a chapter writes nothing. A read
+    // chapter keeps its saved state; completion always writes.
     bool shouldWriteProgress(_LoadedChapter lc, int rel) {
       if (lc.chapter.user.isRead.ifNull()) return false;
       final pageCount = lc.pages.pages.length;
       final completed = pageCount > 0 && rel >= pageCount - 1;
-      return completed ||
-          rel > lc.chapter.user.lastPageRead.getValueOnNullOrNegative();
+      final saved =
+          savedPages.value[lc.chapterId] ??
+          lc.chapter.user.lastPageRead.getValueOnNullOrNegative();
+      return completed || rel != saved;
     }
 
     Future<void> writeVisibleProgress(
@@ -262,6 +269,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       if (completedChapterIds.value.contains(chapterId)) return;
       final lc = loadedById(chapterId);
       if (lc == null || !shouldWriteProgress(lc, rel)) return;
+      savedPages.value[chapterId] = rel;
       final pageCount = lc.pages.pages.length;
       final completed = rel >= (pageCount - 1) && pageCount > 0;
       final progressResult = await recordReadingProgress(
@@ -386,20 +394,21 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
             return Future.value(const AsyncValue<void>.data(null));
           }
           return recordReadingProgressWithDependencies(
-          offlineEnabled: offlineEnabledForFlush,
-          offlineDatabase: offlineDbForFlush,
-          repository: repoForFlush,
-          chapterId: p.chapterId,
+            offlineEnabled: offlineEnabledForFlush,
+            offlineDatabase: offlineDbForFlush,
+            repository: repoForFlush,
+            chapterId: p.chapterId,
             lastPageRead: p.rel,
-          isRead: isCompletion,
-          completionChapterIds: isCompletion
-              ? expandIdsForDuplicates(allChaptersForFlush.value, [p.chapterId])
-              : null,
+            isRead: isCompletion,
+            completionChapterIds: isCompletion
+                ? expandIdsForDuplicates(allChaptersForFlush.value, [
+                    p.chapterId,
+                  ])
+                : null,
           );
         }).ignore();
       };
     }, const []);
-
 
     Future<void> loadNextChapter(ChapterDto next) async {
       if (loadingNext.value || hasReachedEnd.value) return;
@@ -572,7 +581,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       ],
     );
 
-
     final firstLoadedId = loadedChapters.value.first.chapterId;
     final lastLoadedId = loadedChapters.value.last.chapterId;
     final headAdjacency = ref.watch(
@@ -649,7 +657,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       final d = window.chapterRawToDisplay(chapter.id, raw);
       return d >= 0 ? d : window.firstDisplayOf(chapter.id).clamp(0, 1 << 30);
     }, const []);
-
 
     void onChapterPageChanged(int chapterId, int raw) {
       if (currentVisibleChapter.value.id != chapterId) {
@@ -764,7 +771,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         ),
       );
     }
-
 
     final visibleChapterPages = InfinityContinuousUtils.createChapterPagesDto(
       loadedChapters.value,

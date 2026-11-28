@@ -254,6 +254,74 @@ void main() {
     },
   );
 
+  testWidgets('progress follows the reader back to an earlier page', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = _RecordingRepo();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          chapterProvider(
+            chapterId: 1,
+          ).overrideWithBuild((ref, _) => _chapter()),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ReaderScreen(mangaId: 1, chapterId: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // Opening writes nothing: the page shown is the one already saved.
+    await tester.pump(const Duration(seconds: 3));
+    expect(repo.putChapterCalls, isEmpty);
+
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-320, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 3'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(320, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 / 3'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+
+    // Another device resumes on page 1, where reading stopped, not page 2.
+    expect(repo.putChapterCalls.map((c) => c.patch.lastPageRead), [1, 0]);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 3));
+    expect(repo.putChapterCalls, hasLength(2));
+  });
+
   testWidgets('opening at the end does not mark an unread chapter read', (
     tester,
   ) async {
