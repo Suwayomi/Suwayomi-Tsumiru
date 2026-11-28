@@ -96,13 +96,7 @@ class ReaderTopBar extends ConsumerWidget {
                   case 'retry':
                     await retryFailedReaderPages(ref);
                   case 'web':
-                    if (serverMangaUrl != null) {
-                      launchUrlInWeb(
-                        context,
-                        '${serverMangaUrl.substring(0, serverMangaUrl.lastIndexOf('/manga/'))}/api/v1/webview#$link',
-                        ref.read(toastProvider),
-                      );
-                    }
+                    openServerWebView(context, ref, link);
                   case 'share':
                     if (link.isBlank) return;
                     if (kIsWeb || isDesktopPlatform) {

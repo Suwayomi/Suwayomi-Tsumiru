@@ -43,7 +43,6 @@ import 'widgets/big_screen_manga_details.dart';
 import 'widgets/chapter_context_menu.dart';
 import 'widgets/edit_manga_category_dialog.dart';
 import 'widgets/manga_chapter_organizer.dart';
-import 'widgets/manga_description.dart';
 import 'widgets/manga_notes_dialog.dart';
 import 'widgets/series_header.dart';
 import 'widgets/series_info_column.dart';
@@ -369,10 +368,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
                         label: context.l10n.share,
                       ),
                     ),
-                  if (data != null)
+                  if (data?.realUrl.isNotBlank == true)
                     PopupMenuItem(
                       onTap: () =>
-                          MangaDescription.openInBrowser(context, ref, data),
+                          openServerWebView(context, ref, data?.realUrl),
                       child: ChapterMenuRow(
                         icon: FluentIcons.globe_24_regular,
                         label: context.l10n.webView,

@@ -2401,7 +2401,7 @@
   "openInWeb": "Open in browser",
   "openSourceInBrowser": "Open source page",
   "openInBrowser": "Open in browser",
-  "openOnServer": "Open on server",
+  "openOnServer": "Open in web UI",
   "or": "or",
   "page": "Page: {number}",
   "pageOfTotal": "Page {current} of {total}",

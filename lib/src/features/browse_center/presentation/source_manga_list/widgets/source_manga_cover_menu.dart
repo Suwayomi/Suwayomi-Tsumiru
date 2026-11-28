@@ -11,11 +11,12 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../../routes/navigation.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart'
     show ChapterMenuRow;
-import '../../../../manga_book/presentation/manga_details/widgets/manga_description.dart';
 
 Future<void> showSourceMangaCoverMenu({
   required BuildContext context,
@@ -65,7 +66,11 @@ Future<void> showSourceMangaCoverMenu({
       ),
       if (manga.realUrl.isNotBlank)
         PopupMenuItem<void>(
-          onTap: () => MangaDescription.openInBrowser(context, ref, manga),
+          onTap: () => launchUrlInWeb(
+            context,
+            manga.realUrl ?? '',
+            ref.read(toastProvider),
+          ),
           child: ChapterMenuRow(
             icon: FluentIcons.globe_24_regular,
             label: context.l10n.openInBrowser,

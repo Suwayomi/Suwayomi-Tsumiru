@@ -121,49 +121,6 @@ class MangaDescription extends HookConsumerWidget {
   final AsyncCallback removeMangaFromLibrary;
   final AsyncCallback addMangaToLibrary;
 
-  /// With no source realUrl, opens the server WebUI directly; otherwise offers both.
-  static void openInBrowser(
-    BuildContext context,
-    WidgetRef ref,
-    MangaDto manga,
-  ) {
-    final toast = ref.read(toastProvider);
-    final serverUrl = serverMangaWebUrl(ref, manga.id);
-    if (manga.realUrl.isBlank) {
-      if (serverUrl != null) launchUrlInWeb(context, serverUrl, toast);
-      return;
-    }
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(FluentIcons.globe_24_regular),
-              title: Text(sheetContext.l10n.openSourceInBrowser),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                launchUrlInWeb(context, manga.realUrl ?? '', toast);
-              },
-            ),
-            ListTile(
-              leading: const Icon(FluentIcons.server_24_regular),
-              title: Text(sheetContext.l10n.openOnServer),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                if (serverUrl != null) {
-                  launchUrlInWeb(context, serverUrl, toast);
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-      sheetAnimationStyle: context.motionStyle,
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final twoColumn = context.windowSizeClass >= WindowSizeClass.expanded;
@@ -544,7 +501,11 @@ class MangaDescription extends HookConsumerWidget {
                                 case 'migrate':
                                   await onMigrate();
                                 case 'web':
-                                  openInBrowser(context, ref, manga);
+                                  openServerWebView(
+                                    context,
+                                    ref,
+                                    manga.realUrl,
+                                  );
                               }
                             },
                             itemBuilder: (context) => [
@@ -562,13 +523,14 @@ class MangaDescription extends HookConsumerWidget {
                                   label: context.l10n.migrate,
                                 ),
                               ),
-                              PopupMenuItem(
-                                value: 'web',
-                                child: ChapterMenuRow(
-                                  icon: FluentIcons.globe_24_regular,
-                                  label: context.l10n.webView,
+                              if (manga.realUrl.isNotBlank)
+                                PopupMenuItem(
+                                  value: 'web',
+                                  child: ChapterMenuRow(
+                                    icon: FluentIcons.globe_24_regular,
+                                    label: context.l10n.webView,
+                                  ),
                                 ),
-                              ),
                             ],
                             child: MangaActionButton(
                               icon: const Icon(FluentIcons.more_horizontal_24_regular),
