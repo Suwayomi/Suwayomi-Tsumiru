@@ -1162,7 +1162,7 @@
     "@smoothAutoScroll": {
         "description": "Long-strip reader toggle"
     },
-    "scrollAmount": "Distància de desplaçament amb el teclat",
+    "scrollAmount": "Distància de desplaçament",
     "@scrollAmount": {
         "description": "Keyboard scroll step, fraction of the screen"
     },
@@ -4556,5 +4556,14 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "showEmptyCategoriesSearch": "Mostra les categories buides durant la cerca o el filtratge",
+    "@showEmptyCategoriesSearch": {
+        "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+    },
+    "savedSearchInvalid": "La cerca desada no és vàlida, els filtres han canviat",
+    "@savedSearchInvalid": {
+        "description": "Toast shown when a saved search no longer matches the source filters."
+    },
+    "perCategorySortAndFilters": "Configuració d'ordenació i filtres per categoria"
 }
