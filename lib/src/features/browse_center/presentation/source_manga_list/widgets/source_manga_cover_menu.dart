@@ -68,7 +68,7 @@ Future<void> showSourceMangaCoverMenu({
         PopupMenuItem<void>(
           onTap: () => launchUrlInWeb(
             context,
-            manga.realUrl ?? '',
+            manga.realUrl!,
             ref.read(toastProvider),
           ),
           child: ChapterMenuRow(
