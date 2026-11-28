@@ -20,6 +20,7 @@ class ReaderZoomView extends HookWidget {
     required this.minScale,
     required this.pinchEnabled,
     required this.doubleTapToZoom,
+    this.modifierScrollToZoom = false,
     this.onScaleChanged,
     required this.child,
   });
@@ -34,6 +35,9 @@ class ReaderZoomView extends HookWidget {
   final double minScale;
   final bool pinchEnabled;
   final bool doubleTapToZoom;
+
+  /// Zoom wheel/trackpad scrolling only while the platform modifier is held.
+  final bool modifierScrollToZoom;
 
   /// Invoked with the live user-facing scale (1.0 = unzoomed) any time it
   /// changes, e.g. so callers can yield competing single-finger gestures
@@ -66,6 +70,7 @@ class ReaderZoomView extends HookWidget {
       maxScale: maxScale,
       minScale: minScale,
       pinchEnabled: pinchEnabled,
+      modifierScrollToZoom: modifierScrollToZoom,
       onDoubleTap: doubleTapToZoom ? onDoubleTap : null,
       onScaleChanged: onScaleChanged,
       // Hold the scrollable so the scale recognizer can win its gesture arena.

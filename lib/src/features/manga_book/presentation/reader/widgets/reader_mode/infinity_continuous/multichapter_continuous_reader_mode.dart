@@ -27,6 +27,7 @@ import '../../../../../../../utils/platform/platform_runtime.dart';
 import '../../../../../../../utils/texture_limit.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
+import '../../../../../../../widgets/zoom/zoom_view.dart';
 import '../../../../../../history/presentation/history_controller.dart';
 import '../../../../../../offline/data/offline_download_providers.dart';
 import '../../../../../../offline/data/offline_repository.dart';
@@ -452,6 +453,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isDoubleTapZoomEnabled = ref
         .watch(longStripDoubleTapToZoomProvider)
         .ifNull(true);
+    final bool modifierScrollToZoom =
+        isKeyboardRuntime && (isPinchToZoomEnabled || isDoubleTapZoomEnabled);
     final bool isZoomOutDisabled = ref
         .watch(longStripDisableZoomOutProvider)
         .ifNull();
@@ -1500,7 +1503,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             speed: mouseScrollSpeed,
             axis: scrollDirection,
             reverse: reverse,
-            positionOf: () => scrollOffsetController.position,
+            positionOf: () {
+              if (modifierScrollToZoom && isZoomScrollModifierPressed()) {
+                return null;
+              }
+              return scrollOffsetController.position;
+            },
             child: edgeAwareList,
           )
         : edgeAwareList;
@@ -1517,17 +1525,20 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     );
 
     final child = AppUtils.wrapOn(
-      !kIsWeb &&
-              (Platform.isAndroid || Platform.isIOS) &&
+      (isKeyboardRuntime ||
+              (!kIsWeb && (Platform.isAndroid || Platform.isIOS))) &&
               (isPinchToZoomEnabled || isDoubleTapZoomEnabled)
           ? (Widget child) => ReaderZoomView(
               controller: zoomScrollController,
               scrollAxis: scrollDirection,
               reverse: reverse,
               maxScale: InfinityContinuousConfig.maxZoomScale,
-              minScale: isZoomOutDisabled ? 1 : 0.5,
+              minScale: isZoomOutDisabled
+                  ? 1
+                  : InfinityContinuousConfig.minZoomScale,
               pinchEnabled: isPinchToZoomEnabled,
               doubleTapToZoom: isDoubleTapZoomEnabled,
+              modifierScrollToZoom: modifierScrollToZoom,
               onScaleChanged: (scale) {
                 final notifier = ref.read(readerIsZoomedInProvider.notifier);
                 final zoomed = scale > 1.01;

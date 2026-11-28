@@ -4,10 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/platform/platform_runtime.dart';
 import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../widgets/web_selection_area.dart';
@@ -45,8 +47,14 @@ class HotkeysSettingsScreen extends StatelessWidget {
       SettingsGroupHeading(label: l.hotkeysReaderSection),
       SettingsGroupCard(
         children: [
-          for (final h in readerHotkeyDisplays)
-            _HotkeyRow(label: h.label(l), chords: [h.displayKeys]),
+          for (final h in readerHotkeyDisplaysForPlatform(
+            defaultTargetPlatform,
+            isKeyboardRuntime: isKeyboardRuntime,
+          ))
+            _HotkeyRow(
+              label: h.label(l),
+              chords: [h.displayKeys, ...h.additionalChords],
+            ),
         ],
       ),
     ];
@@ -103,7 +111,20 @@ class _HotkeyRow extends StatelessWidget {
             alignment: WrapAlignment.end,
             spacing: 12,
             runSpacing: 6,
-            children: [for (final chord in chords) _Chord(chord)],
+            children: [
+              for (var i = 0; i < chords.length; i++) ...[
+                if (i > 0)
+                  SizedBox(
+                    height: 24,
+                    child: VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: context.colorScheme.outlineVariant,
+                    ),
+                  ),
+                _Chord(chords[i]),
+              ],
+            ],
           ),
         ),
       ],

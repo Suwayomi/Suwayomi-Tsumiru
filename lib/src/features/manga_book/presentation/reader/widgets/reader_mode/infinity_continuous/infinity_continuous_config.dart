@@ -49,6 +49,7 @@ class InfinityContinuousConfig {
   static const double horizontalPageWidthRatio = 0.7;
 
   static const double maxZoomScale = 5.0;
+  static const double minZoomScale = 0.2;
 
   /// Space below the end-of-strip card, clear of the reader's bottom menu.
   static const double endOfStripSpace = 96.0;
