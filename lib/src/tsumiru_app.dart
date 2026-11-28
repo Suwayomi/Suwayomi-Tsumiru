@@ -35,6 +35,7 @@ import 'utils/motion/reduce_motion.dart';
 import 'utils/theme/app_theme_builder.dart';
 import 'widgets/desktop/desktop_page_frame.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
+import 'widgets/side_inset_safe_area.dart';
 import 'widgets/web_page_title.dart';
 
 class TsumiruApp extends HookConsumerWidget {
@@ -110,7 +111,9 @@ class TsumiruApp extends HookConsumerWidget {
     applyForcePortrait(ref.watch(forcePortraitProvider).ifNull());
     return MaterialApp.router(
       builder: (context, child) {
-        final toastWrapped = FToastBuilder()(context, child);
+        final toastWrapped = SideInsetSafeArea(
+          child: FToastBuilder()(context, child),
+        );
         return ScrollbarTheme(
           data: context.windowSizeClass >= WindowSizeClass.medium
               ? wideScreenScrollbarTheme(Theme.of(context).colorScheme)

@@ -189,6 +189,7 @@ class ReaderChrome extends HookConsumerWidget {
         .ifNull(false);
     final showPageNumber = ref.watch(showPageNumberProvider).ifNull(true);
     final pageCount = totalPageCount ?? chapterPages.chapter.pageCount;
+    final sideInsets = readerChromeSideInsets(context);
 
     return ValueListenableBuilder<bool>(
       valueListenable: visibility,
@@ -208,14 +209,24 @@ class ReaderChrome extends HookConsumerWidget {
                 right: 0,
                 bottom: 0,
                 child: IgnorePointer(
+                  // Centred on the screen like the toolbar it sits in, not
+                  // beside a one-sided inset; it is too narrow to reach one.
                   child: SafeArea(
                     top: false,
+                    left: false,
+                    right: false,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Center(
-                        child: _PageNumberIndicator(
-                          currentPage: currentIndex + 1,
-                          pageCount: pageCount,
+                        // The bottom controls cover this spot while they show
+                        // (behind the middle button, or squeezed between two)
+                        // and the seek bar shows the page, so make way.
+                        child: FadeTransition(
+                          opacity: ReverseAnimation(fade),
+                          child: _PageNumberIndicator(
+                            currentPage: currentIndex + 1,
+                            pageCount: pageCount,
+                          ),
                         ),
                       ),
                     ),
@@ -276,8 +287,8 @@ class ReaderChrome extends HookConsumerWidget {
             // Fade the side seek bar without sliding to avoid fighting seek gestures.
             if (showSideSeekBar && !forceHorizontal)
               Positioned(
-                right: leftHanded ? null : 6,
-                left: leftHanded ? 6 : null,
+                right: leftHanded ? null : 6 + sideInsets.right,
+                left: leftHanded ? 6 + sideInsets.left : null,
                 top: extents.topInset + 8,
                 bottom: extents.bottomInset + 8,
                 width: 56,

@@ -76,6 +76,7 @@ class ReaderBottomControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final sideInsets = readerChromeSideInsets(context);
     final isPagedMode = isPagedReaderMode(resolvedReaderMode);
     final chapterButtons = chapterNavCallbacks(
       isRtl: isRTLReaderMode(resolvedReaderMode),
@@ -129,37 +130,41 @@ class ReaderBottomControls extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (useBottomSeekBar) ...[
-              Row(
-                children: [
-                  Card(
-                    shape: const CircleBorder(),
-                    elevation: 0,
-                    color: readerNavSurface(context.theme.colorScheme),
-                    child: IconButton(
-                      onPressed: chapterButtons.leading,
-                      icon: const Icon(FluentIcons.previous_24_filled),
+              // Floats over the page, so keep the whole row out of the insets.
+              Padding(
+                padding: sideInsets,
+                child: Row(
+                  children: [
+                    Card(
+                      shape: const CircleBorder(),
+                      elevation: 0,
+                      color: readerNavSurface(context.theme.colorScheme),
+                      child: IconButton(
+                        onPressed: chapterButtons.leading,
+                        icon: const Icon(FluentIcons.previous_24_filled),
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: BrandPageSeekBar(
-                      currentValue: currentIndex,
-                      maxValue:
-                          totalPageCount ?? chapterPages.chapter.pageCount,
-                      onChanged: onChanged,
-                      inverted: reverseSeekBar,
-                      capsuleColor: readerNavSurface(context.theme.colorScheme),
+                    Expanded(
+                      child: BrandPageSeekBar(
+                        currentValue: currentIndex,
+                        maxValue:
+                            totalPageCount ?? chapterPages.chapter.pageCount,
+                        onChanged: onChanged,
+                        inverted: reverseSeekBar,
+                        capsuleColor: readerNavSurface(context.theme.colorScheme),
+                      ),
                     ),
-                  ),
-                  Card(
-                    shape: const CircleBorder(),
-                    elevation: 0,
-                    color: readerNavSurface(context.theme.colorScheme),
-                    child: IconButton(
-                      onPressed: chapterButtons.trailing,
-                      icon: const Icon(FluentIcons.next_24_filled),
+                    Card(
+                      shape: const CircleBorder(),
+                      elevation: 0,
+                      color: readerNavSurface(context.theme.colorScheme),
+                      child: IconButton(
+                        onPressed: chapterButtons.trailing,
+                        icon: const Icon(FluentIcons.next_24_filled),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const Gap(8),
             ],
@@ -172,61 +177,76 @@ class ReaderBottomControls extends ConsumerWidget {
                 padding:
                     KEdgeInsets.h16.size +
                     EdgeInsets.only(bottom: systemBottomInset),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      icon: const Icon(FluentIcons.text_number_list_ltr_24_regular),
-                      onPressed: () => _showChapterPicker(
-                        context: context,
-                        mangaId: chapter.mangaId,
-                        currentChapterId: chapter.id,
-                        readerScanlatorGroup: readerScanlatorGroup,
-                        transVertical: scrollDirection == Axis.vertical,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: context.l10n.readerMode,
-                      icon: Icon(_readerModeIcon(resolvedReaderMode)),
-                      onPressed: onOpenReaderMode,
-                    ),
-                    IconButton(
-                      tooltip: context.l10n.cropBorders,
-                      icon: Icon(
-                        cropBorders
-                            ? FluentIcons.crop_24_regular
-                            : FluentIcons.full_screen_maximize_24_regular,
-                      ),
-                      onPressed: toggleCropBorders,
-                    ),
-                    if (isPagedMode && !dualPageSplitPaged)
+                // Centre the buttons on the screen, not beside a one-sided
+                // inset, as long as they all still fit.
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final actions = <Widget>[
                       IconButton(
-                        tooltip: context.l10n.pageLayout,
-                        icon: Icon(_pageLayoutIcon(pageLayout)),
-                        onPressed: togglePageLayout,
-                      ),
-                    if (isPagedMode && wantDouble && !dualPageSplitPaged)
-                      IconButton(
-                        tooltip: context.l10n.offsetDoublePages,
-                        icon: Icon(
-                          offsetDoublePages
-                              ? FluentIcons.arrow_swap_24_filled
-                              : FluentIcons.arrow_swap_24_regular,
+                        icon: const Icon(FluentIcons.text_number_list_ltr_24_regular),
+                        onPressed: () => _showChapterPicker(
+                          context: context,
+                          mangaId: chapter.mangaId,
+                          currentChapterId: chapter.id,
+                          readerScanlatorGroup: readerScanlatorGroup,
+                          transVertical: scrollDirection == Axis.vertical,
                         ),
-                        onPressed: () => ref
-                            .read(
-                              readerSettingsModelProvider(
-                                chapter.mangaId,
-                              ).notifier,
-                            )
-                            .setOffsetDoublePages(!offsetDoublePages),
                       ),
-                    IconButton(
-                      tooltip: context.l10n.settings,
-                      onPressed: onOpenSettings,
-                      icon: const Icon(FluentIcons.settings_24_regular),
-                    ),
-                  ],
+                      IconButton(
+                        tooltip: context.l10n.readerMode,
+                        icon: Icon(_readerModeIcon(resolvedReaderMode)),
+                        onPressed: onOpenReaderMode,
+                      ),
+                      IconButton(
+                        tooltip: context.l10n.cropBorders,
+                        icon: Icon(
+                          cropBorders
+                              ? FluentIcons.crop_24_regular
+                              : FluentIcons.full_screen_maximize_24_regular,
+                        ),
+                        onPressed: toggleCropBorders,
+                      ),
+                      if (isPagedMode && !dualPageSplitPaged)
+                        IconButton(
+                          tooltip: context.l10n.pageLayout,
+                          icon: Icon(_pageLayoutIcon(pageLayout)),
+                          onPressed: togglePageLayout,
+                        ),
+                      if (isPagedMode && wantDouble && !dualPageSplitPaged)
+                        IconButton(
+                          tooltip: context.l10n.offsetDoublePages,
+                          icon: Icon(
+                            offsetDoublePages
+                                ? FluentIcons.arrow_swap_24_filled
+                                : FluentIcons.arrow_swap_24_regular,
+                          ),
+                          onPressed: () => ref
+                              .read(
+                                readerSettingsModelProvider(
+                                  chapter.mangaId,
+                                ).notifier,
+                              )
+                              .setOffsetDoublePages(!offsetDoublePages),
+                        ),
+                      IconButton(
+                        tooltip: context.l10n.settings,
+                        onPressed: onOpenSettings,
+                        icon: const Icon(FluentIcons.settings_24_regular),
+                      ),
+                    ];
+                    return Padding(
+                      padding: balancedSideInsets(
+                        sideInsets,
+                        width: constraints.maxWidth,
+                        contentWidth:
+                            actions.length * kMinInteractiveDimension,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: actions,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

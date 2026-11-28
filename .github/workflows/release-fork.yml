@@ -55,7 +55,10 @@ jobs:
             target: web
           - os: macos-latest
             target: macos
-          - os: macos-latest
+          # iPhone Duo letterboxes apps built against the iOS 26 SDK; the
+          # 27.1 SDK is the first that fills both displays. macos-latest
+          # still defaults to Xcode 26, so iOS builds on the Xcode 27 image.
+          - os: xcode-27
             target: ios
           # Pinned to 2022: windows-latest (Server 2025) ships VS 2022 in a
           # layout Flutter 3.32.4 fails to detect, so CMake falls back to the
@@ -188,6 +191,25 @@ jobs:
         # No Apple Developer account / signing certs in CI — build an unsigned
         # binary. Flutter runs `pod install` automatically as part of this.
         run: flutter build ios --release --no-codesign
+
+      - name: Check the iOS SDK
+        if: matrix.target == 'ios'
+        # Fails the release if the runner image falls back to an Xcode whose
+        # SDK would leave the app letterboxed on iPhone Duo.
+        run: |
+          APP=$(find build/ios/iphoneos -maxdepth 1 -name "*.app" | head -1)
+          sdk=$(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$APP/Info.plist")
+          echo "Built against $sdk"
+          v=${sdk#iphoneos}
+          major=${v%%.*}
+          case "$v" in
+            *.*) minor=${v#*.}; minor=${minor%%.*} ;;
+            *) minor=0 ;;
+          esac
+          if [ "$major" -lt 27 ] || { [ "$major" -eq 27 ] && [ "$minor" -lt 1 ]; }; then
+            echo "::error::iPhone Duo needs the iOS 27.1 SDK or later; got $sdk"
+            exit 1
+          fi
 
       # ---- package into dist/ ----
       - name: Package Android

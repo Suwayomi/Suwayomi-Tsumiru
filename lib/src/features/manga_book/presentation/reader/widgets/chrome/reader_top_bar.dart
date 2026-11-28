@@ -23,6 +23,7 @@ import '../../../../domain/manga/manga_model.dart';
 import '../../../manga_details/server_web_url.dart';
 import '../../../manga_details/widgets/chapter_context_menu.dart';
 import '../../utils/koreader_progress_actions.dart';
+import 'chrome_extents.dart';
 import 'reader_bookmark_button.dart';
 
 /// Measure this bar together with ReaderUtilsBar so expanded controls are included in the top inset.
@@ -58,7 +59,9 @@ class ReaderTopBar extends ConsumerWidget {
       color: readerNavSurface(context.theme.colorScheme),
       elevation: 0,
       child: Padding(
-        padding: EdgeInsets.only(top: systemTopInset),
+        padding:
+            EdgeInsets.only(top: systemTopInset) +
+            readerChromeSideInsets(context),
         child: Row(
           children: [
             IconButton(onPressed: onBack, icon: const BackButtonIcon()),
