@@ -209,8 +209,12 @@ class ReaderChrome extends HookConsumerWidget {
                 right: 0,
                 bottom: 0,
                 child: IgnorePointer(
+                  // Centred on the screen like the toolbar it sits in, not
+                  // beside a one-sided inset; it is too narrow to reach one.
                   child: SafeArea(
                     top: false,
+                    left: false,
+                    right: false,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Center(

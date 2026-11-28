@@ -66,12 +66,22 @@ class ReaderUtilsBar extends ConsumerWidget {
         ? context.l10n.autoScroll
         : context.l10n.autoAdvance;
 
+    final sideInsets = readerChromeSideInsets(context);
+    // The chevron centres on the screen, not beside a one-sided inset.
+    final chevronInsets =
+        balancedSideInsets(
+          sideInsets,
+          width: double.infinity,
+          contentWidth: 0,
+        ) -
+        sideInsets;
+
     return Material(
       color: readerNavSurface(cs),
       child: ValueListenableBuilder<bool>(
         valueListenable: expanded,
         builder: (context, isOpen, _) => Padding(
-          padding: readerChromeSideInsets(context),
+          padding: sideInsets,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -122,7 +132,7 @@ class ReaderUtilsBar extends ConsumerWidget {
                       ),
               ),
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: chevronInsets + const EdgeInsets.only(bottom: 6),
                 child: SizedBox(
                   height: 30,
                   child: IconButton(

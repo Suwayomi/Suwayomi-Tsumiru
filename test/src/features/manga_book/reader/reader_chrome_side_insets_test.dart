@@ -8,6 +8,8 @@
 // cover-screen status column, a notch in landscape), so the reader chrome has
 // to keep its controls out of them while its bars still run to the edge.
 
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,6 +18,7 @@ import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/brand_page_seekbar.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/chrome_extents.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_bottom_controls.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_chrome.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_side_seekbar.dart';
@@ -188,6 +191,88 @@ void main() {
 
     _expectClear(tester, left: 59, right: 59);
     expect(tester.getRect(find.byType(ReaderSideSeekBar)).left, 59 + 6);
+  });
+
+  testWidgets('centred controls centre on the screen beside a column', (
+    tester,
+  ) async {
+    await _pumpChrome(
+      tester,
+      insets: const EdgeInsets.only(right: _column),
+    );
+
+    final toolbar = find
+        .descendant(
+          of: find.byType(ReaderBottomControls),
+          matching: find.byType(Card),
+        )
+        .last;
+    final buttons = find
+        .descendant(of: toolbar, matching: find.byType(IconButton))
+        .evaluate()
+        .map((element) {
+          final box = element.renderObject! as RenderBox;
+          return box.localToGlobal(Offset.zero) & box.size;
+        })
+        .toList();
+    expect(buttons, hasLength(greaterThan(1)));
+    final left = buttons.map((rect) => rect.left).reduce(math.min);
+    final right = buttons.map((rect) => rect.right).reduce(math.max);
+    expect((left + right) / 2, moreOrLessEquals(_window.width / 2));
+
+    final chevron = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(ReaderUtilsBar),
+            matching: find.byType(IconButton),
+          )
+          .last,
+    );
+    expect(chevron.center.dx, moreOrLessEquals(_window.width / 2));
+    // The page number shows through the toolbar between its middle buttons,
+    // so it has to share the toolbar's centre.
+    expect(
+      tester.getCenter(find.text('1 / 3')).dx,
+      moreOrLessEquals(_window.width / 2),
+    );
+    _expectClear(tester, right: _column);
+  });
+
+  group('balancedSideInsets', () {
+    const column = EdgeInsets.only(right: _column);
+
+    test('takes the larger inset on both sides when there is room', () {
+      expect(
+        balancedSideInsets(column, width: 434, contentWidth: 192),
+        const EdgeInsets.symmetric(horizontal: _column),
+      );
+    });
+
+    test('gives back the smaller side until the content fits', () {
+      expect(
+        balancedSideInsets(column, width: 434, contentWidth: 288),
+        const EdgeInsets.only(left: 62, right: _column),
+      );
+    });
+
+    test('never goes below either inset', () {
+      expect(
+        balancedSideInsets(
+          const EdgeInsets.only(left: 20, right: _column),
+          width: 300,
+          contentWidth: 288,
+        ),
+        const EdgeInsets.only(left: 20, right: _column),
+      );
+      expect(
+        balancedSideInsets(
+          const EdgeInsets.only(left: 59),
+          width: 800,
+          contentWidth: 288,
+        ),
+        const EdgeInsets.symmetric(horizontal: 59),
+      );
+    });
   });
 
   testWidgets('no side insets leaves the layout as it was', (tester) async {

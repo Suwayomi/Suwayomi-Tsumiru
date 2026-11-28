@@ -176,63 +176,77 @@ class ReaderBottomControls extends ConsumerWidget {
               child: Padding(
                 padding:
                     KEdgeInsets.h16.size +
-                    sideInsets +
                     EdgeInsets.only(bottom: systemBottomInset),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      icon: const Icon(FluentIcons.text_number_list_ltr_24_regular),
-                      onPressed: () => _showChapterPicker(
-                        context: context,
-                        mangaId: chapter.mangaId,
-                        currentChapterId: chapter.id,
-                        readerScanlatorGroup: readerScanlatorGroup,
-                        transVertical: scrollDirection == Axis.vertical,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: context.l10n.readerMode,
-                      icon: Icon(_readerModeIcon(resolvedReaderMode)),
-                      onPressed: onOpenReaderMode,
-                    ),
-                    IconButton(
-                      tooltip: context.l10n.cropBorders,
-                      icon: Icon(
-                        cropBorders
-                            ? FluentIcons.crop_24_regular
-                            : FluentIcons.full_screen_maximize_24_regular,
-                      ),
-                      onPressed: toggleCropBorders,
-                    ),
-                    if (isPagedMode && !dualPageSplitPaged)
+                // Centre the buttons on the screen, not beside a one-sided
+                // inset, as long as they all still fit.
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final actions = <Widget>[
                       IconButton(
-                        tooltip: context.l10n.pageLayout,
-                        icon: Icon(_pageLayoutIcon(pageLayout)),
-                        onPressed: togglePageLayout,
-                      ),
-                    if (isPagedMode && wantDouble && !dualPageSplitPaged)
-                      IconButton(
-                        tooltip: context.l10n.offsetDoublePages,
-                        icon: Icon(
-                          offsetDoublePages
-                              ? FluentIcons.arrow_swap_24_filled
-                              : FluentIcons.arrow_swap_24_regular,
+                        icon: const Icon(FluentIcons.text_number_list_ltr_24_regular),
+                        onPressed: () => _showChapterPicker(
+                          context: context,
+                          mangaId: chapter.mangaId,
+                          currentChapterId: chapter.id,
+                          readerScanlatorGroup: readerScanlatorGroup,
+                          transVertical: scrollDirection == Axis.vertical,
                         ),
-                        onPressed: () => ref
-                            .read(
-                              readerSettingsModelProvider(
-                                chapter.mangaId,
-                              ).notifier,
-                            )
-                            .setOffsetDoublePages(!offsetDoublePages),
                       ),
-                    IconButton(
-                      tooltip: context.l10n.settings,
-                      onPressed: onOpenSettings,
-                      icon: const Icon(FluentIcons.settings_24_regular),
-                    ),
-                  ],
+                      IconButton(
+                        tooltip: context.l10n.readerMode,
+                        icon: Icon(_readerModeIcon(resolvedReaderMode)),
+                        onPressed: onOpenReaderMode,
+                      ),
+                      IconButton(
+                        tooltip: context.l10n.cropBorders,
+                        icon: Icon(
+                          cropBorders
+                              ? FluentIcons.crop_24_regular
+                              : FluentIcons.full_screen_maximize_24_regular,
+                        ),
+                        onPressed: toggleCropBorders,
+                      ),
+                      if (isPagedMode && !dualPageSplitPaged)
+                        IconButton(
+                          tooltip: context.l10n.pageLayout,
+                          icon: Icon(_pageLayoutIcon(pageLayout)),
+                          onPressed: togglePageLayout,
+                        ),
+                      if (isPagedMode && wantDouble && !dualPageSplitPaged)
+                        IconButton(
+                          tooltip: context.l10n.offsetDoublePages,
+                          icon: Icon(
+                            offsetDoublePages
+                                ? FluentIcons.arrow_swap_24_filled
+                                : FluentIcons.arrow_swap_24_regular,
+                          ),
+                          onPressed: () => ref
+                              .read(
+                                readerSettingsModelProvider(
+                                  chapter.mangaId,
+                                ).notifier,
+                              )
+                              .setOffsetDoublePages(!offsetDoublePages),
+                        ),
+                      IconButton(
+                        tooltip: context.l10n.settings,
+                        onPressed: onOpenSettings,
+                        icon: const Icon(FluentIcons.settings_24_regular),
+                      ),
+                    ];
+                    return Padding(
+                      padding: balancedSideInsets(
+                        sideInsets,
+                        width: constraints.maxWidth,
+                        contentWidth:
+                            actions.length * kMinInteractiveDimension,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: actions,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

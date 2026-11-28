@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -55,6 +57,28 @@ class ChromeExtents {
 EdgeInsets readerChromeSideInsets(BuildContext context) {
   final padding = MediaQuery.viewPaddingOf(context);
   return EdgeInsets.only(left: padding.left, right: padding.right);
+}
+
+/// [sideInsets] evened out for a centred group of controls.
+///
+/// Both sides take the larger inset, so the group centres on the screen (and
+/// the page under it) rather than on the space beside a one-sided inset. When
+/// [contentWidth] would no longer fit in [width] that way, the smaller side
+/// gives padding back until it does, but never below its own inset.
+EdgeInsets balancedSideInsets(
+  EdgeInsets sideInsets, {
+  required double width,
+  required double contentWidth,
+}) {
+  final larger = math.max(sideInsets.left, sideInsets.right);
+  final spare = width - contentWidth - larger;
+  final smaller = math.max(
+    math.min(sideInsets.left, sideInsets.right),
+    math.min(larger, spare),
+  );
+  return sideInsets.left >= sideInsets.right
+      ? EdgeInsets.only(left: larger, right: smaller)
+      : EdgeInsets.only(left: smaller, right: larger);
 }
 
 /// Measure fully shown bars and update after layout to avoid build writes and animation feedback.
