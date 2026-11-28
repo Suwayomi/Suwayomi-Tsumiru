@@ -57,7 +57,10 @@ class DesktopSourceCoverTile extends HookConsumerWidget {
       child: GestureDetector(
         onSecondaryTapDown: (details) =>
             _openMenu(context, ref, details.globalPosition),
+        // Passthrough keeps the grid cell's tight constraints on the tile, so uniform covers fill
+        // their cell as on phones; the default loose fit let each card shrink to its art.
         child: Stack(
+          fit: StackFit.passthrough,
           children: [
             child,
             if (inLibrary && !selecting)
