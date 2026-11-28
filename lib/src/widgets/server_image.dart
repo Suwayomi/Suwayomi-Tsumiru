@@ -185,6 +185,14 @@ class ServerImage extends HookConsumerWidget {
   /// For images drawn with [BoxFit.cover] whose shape may differ from the box.
   final bool decodeToCover;
 
+  Widget _loadingWidget(BuildContext context, String url, Widget fallback) =>
+      progressIndicatorBuilder?.call(
+        context,
+        url,
+        DownloadProgress(url, null, 0),
+      ) ??
+      fallback;
+
   ImageProvider _capDecode(ImageProvider base, int? width, int? height) {
     final capped = (width == null && height == null)
       ? base
@@ -234,8 +242,13 @@ class ServerImage extends HookConsumerWidget {
           width: size?.width,
           height: size?.height,
           fit: fit ?? BoxFit.cover,
-          frameBuilder: (ctx, child, frame, wasSync) =>
-              frame != null ? child : const CenterTsumiruShimmerIndicator(),
+          frameBuilder: (ctx, child, frame, wasSync) => frame != null
+              ? child
+              : _loadingWidget(
+                  ctx,
+                  imageUrl,
+                  const CenterTsumiruShimmerIndicator(),
+                ),
           errorBuilder: (ctx, error, stack) => AppUtils.wrapOn(
             wrapper,
             Icon(
@@ -511,15 +524,20 @@ class ServerImage extends HookConsumerWidget {
           height: size?.height,
           fit: fit ?? BoxFit.cover,
           webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-          frameBuilder: (ctx, child, frame, wasSync) =>
-              frame != null ? child : defaultIndicator,
+          frameBuilder: (ctx, child, frame, wasSync) => frame != null
+              ? child
+              : _loadingWidget(ctx, fetchUrl, defaultIndicator),
           errorBuilder: (ctx, error, stack) => errorWidget(ctx, '', stack),
         ),
       );
     }
 
     if (imageBuilder != null && ref.watch(textureLimitProvider).isLoading) {
-      return AppUtils.wrapOn(wrapper, defaultIndicator);
+      return finalProgressIndicatorBuilder(
+        context,
+        fetchUrl,
+        DownloadProgress(fetchUrl, null, 0),
+      );
     }
 
     if (wantCrop) {
@@ -552,7 +570,7 @@ class ServerImage extends HookConsumerWidget {
           key: key.value,
           image: provider,
           frameBuilder: (ctx, child, frame, wasSync) => frame == null
-              ? defaultIndicator
+              ? _loadingWidget(ctx, fetchUrl, defaultIndicator)
               : imageBuilder!(ctx, provider),
           errorBuilder: (ctx, error, stack) => errorWidget(ctx, '', stack),
         ),
