@@ -238,6 +238,30 @@ void main() {
     _expectClear(tester, right: _column);
   });
 
+  testWidgets('page number makes way while the controls show', (
+    tester,
+  ) async {
+    await _pumpChrome(tester, insets: EdgeInsets.zero);
+
+    double opacity() => tester
+        .widget<FadeTransition>(
+          find
+              .ancestor(
+                of: find.text('1 / 3'),
+                matching: find.byType(FadeTransition),
+              )
+              .first,
+        )
+        .opacity
+        .value;
+
+    expect(opacity(), 0);
+    tester.widget<ReaderChrome>(find.byType(ReaderChrome)).visibility.value =
+        false;
+    await tester.pumpAndSettle();
+    expect(opacity(), 1);
+  });
+
   group('balancedSideInsets', () {
     const column = EdgeInsets.only(right: _column);
 

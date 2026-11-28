@@ -218,9 +218,15 @@ class ReaderChrome extends HookConsumerWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Center(
-                        child: _PageNumberIndicator(
-                          currentPage: currentIndex + 1,
-                          pageCount: pageCount,
+                        // The bottom controls cover this spot while they show
+                        // (behind the middle button, or squeezed between two)
+                        // and the seek bar shows the page, so make way.
+                        child: FadeTransition(
+                          opacity: ReverseAnimation(fade),
+                          child: _PageNumberIndicator(
+                            currentPage: currentIndex + 1,
+                            pageCount: pageCount,
+                          ),
                         ),
                       ),
                     ),
