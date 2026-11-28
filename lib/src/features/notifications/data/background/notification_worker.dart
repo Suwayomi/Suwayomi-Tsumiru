@@ -67,6 +67,8 @@ Future<bool> runNewChapterCheck() async {
   final endpoint = await config.endpoint.forThisNetwork(source: 'worker');
   final client = NotificationBackgroundClient(
     endpoint: endpoint,
+    // Cover cache keys follow the app's own address, not this network's.
+    cacheEndpoint: config.endpoint,
     record: token,
     broker: _brokerFor(endpoint, token),
     isCancelled: () =>
@@ -499,6 +501,7 @@ PendingSeriesNotification _toPending(
     mangaId: group.mangaId,
     mangaTitle: first.mangaTitle,
     thumbnailUrl: first.thumbnailUrl,
+    coverVersion: first.coverVersion,
     chapterIds: [for (final c in group.chapters) c.id],
     chapterNumbers: [for (final c in group.chapters) c.chapterNumber],
     firstChapterId: group.chapters.first.id,
@@ -636,7 +639,7 @@ Future<String?> _fetchCover(
   final url = p.thumbnailUrl;
   if (url == null || url.isEmpty) return null;
   try {
-    final bytes = await client.fetchCover(url);
+    final bytes = await client.fetchCover(url, coverVersion: p.coverVersion);
     if (bytes == null) return null;
     final dir = await getTemporaryDirectory();
     final file = File(

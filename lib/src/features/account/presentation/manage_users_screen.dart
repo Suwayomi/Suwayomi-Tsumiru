@@ -16,6 +16,7 @@ import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 import '../domain/account_access.dart';
 import 'account_admin_dialogs.dart';
+import 'account_codes_screen.dart';
 import 'account_permission_labels.dart';
 
 class ManageUsersScreen extends HookConsumerWidget {
@@ -98,6 +99,11 @@ class ManageUsersScreen extends HookConsumerWidget {
                             ),
                             SettingsGroupRow(
                               icon: FluentIcons.key_24_regular,
+                              title: context.l10n.accountIssueRegistrationCode,
+                              onTap: () => issueAccountCode(context, ref),
+                            ),
+                            SettingsGroupRow(
+                              icon: FluentIcons.key_multiple_24_regular,
                               title: context.l10n.accountCodes,
                               onTap: () =>
                                   const AccountCodesRoute().push<void>(context),
@@ -124,8 +130,23 @@ class ManageUsersScreen extends HookConsumerWidget {
                                         ),
                                       )
                                     else
-                                      for (final user in data.nodes)
-                                        ListTile(
+                                      ...data.nodes.map((user) {
+                                        Future<void> editUser() async {
+                                          await showDialog<void>(
+                                            context: context,
+                                            builder: (_) => EditAccountDialog(
+                                              user: user,
+                                            ),
+                                            animationStyle:
+                                                context.motionStyle,
+                                          );
+                                          if (context.mounted) {
+                                            ref.invalidate(
+                                              accountUsersProvider,
+                                            );
+                                          }
+                                        }
+                                        return ListTile(
                                           title: Text(user.username),
                                           subtitle: Text(
                                             '${user.roles.map((role) => switch (role) {
@@ -136,53 +157,15 @@ class ManageUsersScreen extends HookConsumerWidget {
                                             }).join(', ')} · ${context.l10n.accountPermissionsSummary(accountPermissionLabels(context).keys.where(AccountAccess(capability: AccountCapability.supported, user: user).allows).length, accountPermissionLabels(context).length)}',
                                           ),
                                           trailing: IconButton(
-                                            tooltip: context.l10n.delete,
+                                            tooltip: context.l10n.edit,
                                             icon: const Icon(
-                                              FluentIcons.delete_24_regular,
+                                              FluentIcons.edit_24_regular,
                                             ),
-                                            onPressed: () => showDialog<void>(
-                                              context: context,
-                                              builder: (dialogContext) =>
-                                                  AlertDialog(
-                                                    title: Text(
-                                                      context.l10n.delete,
-                                                    ),
-                                                    content: Text(
-                                                      context
-                                                          .l10n
-                                                          .accountNoUserRemoval,
-                                                    ),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.pop(
-                                                              dialogContext,
-                                                            ),
-                                                        child: Text(
-                                                          context.l10n.ok,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                              animationStyle:
-                                                  context.motionStyle,
-                                            ),
+                                            onPressed: editUser,
                                           ),
-                                          onTap: () async {
-                                            await showDialog<void>(
-                                              context: context,
-                                              builder: (_) =>
-                                                  EditAccountDialog(user: user),
-                                              animationStyle:
-                                                  context.motionStyle,
-                                            );
-                                            if (context.mounted) {
-                                              ref.invalidate(
-                                                accountUsersProvider,
-                                              );
-                                            }
-                                          },
-                                        ),
+                                          onTap: editUser,
+                                        );
+                                      }),
                                   ],
                                 ),
                                 if (cursors.value.length > 1 ||

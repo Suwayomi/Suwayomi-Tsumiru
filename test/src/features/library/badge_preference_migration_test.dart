@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/library/data/badge_preference_migration.dart';
 import 'package:tsumiru/src/features/settings/data/grid_cover_preference_migration.dart';
+import 'package:tsumiru/src/features/settings/data/reader_animation_preference_migration.dart';
 
 Future<SharedPreferences> _migrated(Map<String, Object> initial) async {
   SharedPreferences.setMockInitialValues(initial);
@@ -38,6 +39,24 @@ void main() {
     await prefs.setDouble('gridMangaCoverMinWidth', 150.0);
     await migrateGridCoverPreference(prefs);
     expect(prefs.getDouble('gridMangaCoverMinWidth'), 150.0);
+  });
+
+  test('scroll animation off carries into Animate page transitions once',
+      () async {
+    SharedPreferences.setMockInitialValues({'scrollAnimation': false});
+    var prefs = await SharedPreferences.getInstance();
+    await migrateReaderAnimationPreference(prefs);
+    expect(prefs.getBool('animatePageTransitions'), isFalse);
+    expect(prefs.containsKey('scrollAnimation'), isFalse);
+
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    prefs = await SharedPreferences.getInstance();
+    await migrateReaderAnimationPreference(prefs);
+    expect(prefs.getBool('animatePageTransitions'), isNull);
+
+    await prefs.setBool('animatePageTransitions', true);
+    await migrateReaderAnimationPreference(prefs);
+    expect(prefs.getBool('animatePageTransitions'), isTrue);
   });
 
   group('unreadBadge → unreadBadgeMode', () {

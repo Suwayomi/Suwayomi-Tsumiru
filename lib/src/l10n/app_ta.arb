@@ -679,10 +679,6 @@
         "description": "Toggle subtile text for Initial Reader Overlay"
     },
     "readerOverlaySubtitle": "ஒரு அத்தியாயத்தைத் திறக்கும்போது தலைப்பு மற்றும் விரைவான அமைப்புகளைக் காட்டுகிறது",
-    "readerScrollAnimation": "உருள் அனிமேசன்",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerSwipeChapterToggle": "மாற்றுவதை ச்வைப் செய்யுங்கள்",
     "@readerSwipeChapterToggle": {
         "description": "Switch title to toggle `swipe to change chapter` in reader screen"

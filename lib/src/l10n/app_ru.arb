@@ -571,10 +571,6 @@
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
     },
-    "readerScrollAnimation": "Анимация прокрутки",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerSwipeChapterToggle": "Пролистывание с помощью свайпа",
     "@readerSwipeChapterToggle": {
         "description": "Switch title to toggle `swipe to change chapter` in reader screen"
@@ -3107,7 +3103,6 @@
     "accountPreviousPage": "Предыдущая страница",
     "accountRole": "Роль",
     "accountBuiltInReadOnly": "Роль и права встроенного администратора изменить нельзя.",
-    "accountNoUserRemoval": "Удаление пользователей на этом сервере пока не поддерживается.",
     "accountCodeShownOnce": "Скопируйте код до закрытия. Он больше не будет показан.",
     "accountCodeExpires": "Истекает {date}",
     "@accountCodeExpires": {
@@ -3910,5 +3905,10 @@
     "showEmptyCategoriesSearch": "Показывать пустые категории при поиске/фильтрации",
     "@showEmptyCategoriesSearch": {
         "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+    },
+    "perCategorySortAndFilters": "Настройки сортировки и фильтров для каждой категории",
+    "savedSearchInvalid": "Сохранённый поиск недействителен: фильтры источника изменились",
+    "@savedSearchInvalid": {
+        "description": "Toast shown when a saved search no longer matches the source filters."
     }
 }

@@ -50,13 +50,6 @@ class CropBordersWebtoon extends _$CropBordersWebtoon
 }
 
 @riverpod
-class CropBordersGaps extends _$CropBordersGaps
-    with SharedPreferenceClientMixin<bool> {
-  @override
-  bool? build() => initialize(DBKeys.cropBordersGaps);
-}
-
-@riverpod
 class SmoothAutoScroll extends _$SmoothAutoScroll
     with SharedPreferenceClientMixin<bool> {
   @override
@@ -85,20 +78,4 @@ class AutoAdvanceIntervalSeconds extends _$AutoAdvanceIntervalSeconds
     with SharedPreferenceClientMixin<int> {
   @override
   int? build() => initialize(DBKeys.autoAdvanceIntervalSeconds);
-}
-
-// Stored for future support; the webtoon engine cannot split one page into two entries.
-
-@riverpod
-class DualPageSplitWebtoon extends _$DualPageSplitWebtoon
-    with SharedPreferenceClientMixin<bool> {
-  @override
-  bool? build() => initialize(DBKeys.dualPageSplitWebtoon);
-}
-
-@riverpod
-class DualPageInvertWebtoon extends _$DualPageInvertWebtoon
-    with SharedPreferenceClientMixin<bool> {
-  @override
-  bool? build() => initialize(DBKeys.dualPageInvertWebtoon);
 }

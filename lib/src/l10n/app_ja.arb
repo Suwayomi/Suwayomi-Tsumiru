@@ -516,10 +516,6 @@
     "@readerNavigationLayoutDisabled": {
         "description": "Radio button text for Reader Navigation Layout - Disabled"
     },
-    "readerScrollAnimation": "スクロールアニメーション",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerSwipeChapterToggle": "スワイプの切り替え",
     "@readerSwipeChapterToggle": {
         "description": "Switch title to toggle `swipe to change chapter` in reader screen"
@@ -1827,7 +1823,6 @@
     "accountPreviousPage": "前のページ",
     "accountRole": "役割",
     "accountBuiltInReadOnly": "組み込みの管理者の役割と権限は変更できません。",
-    "accountNoUserRemoval": "このサーバーは、現在ユーザーの削除に対応していません。",
     "accountCodeShownOnce": "閉じる前にこのコードをコピーしてください。再表示はできません。",
     "accountCodeExpires": "有効期限：{date}",
     "accountRevokeCode": "コードを無効化",

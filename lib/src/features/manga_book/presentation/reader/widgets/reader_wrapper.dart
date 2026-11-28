@@ -112,6 +112,9 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
+// Matches Mihon's readerHideThreshold LOW.
+const double _kHideMenuOnScrollThreshold = 31;
+
 final readerChromeVisibleProvider = StateProvider.autoDispose<bool?>((Ref ref) {
   final link = ref.keepAlive();
   Timer? timer;
@@ -163,8 +166,8 @@ class ReaderWrapper extends HookConsumerWidget {
   final ValueChanged<int> onChanged;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
-  final VoidCallback? onViewportScrollForward;
-  final VoidCallback? onViewportScrollBackward;
+  final bool Function()? onViewportScrollForward;
+  final bool Function()? onViewportScrollBackward;
   final VoidCallback? onToggleAutoScroll;
   final VoidCallback? onAutoScrollFaster;
   final VoidCallback? onAutoScrollSlower;
@@ -578,6 +581,22 @@ class ReaderWrapper extends HookConsumerWidget {
       ],
     );
 
+    final onAdvanceNext = useCallback(() {
+      if (gapConfirmationPending.value) return;
+      if (!(onViewportScrollForward?.call() ?? false)) onReaderNext();
+    }, [onViewportScrollForward, onReaderNext]);
+
+    final onAdvancePrevious = useCallback(() {
+      if (gapConfirmationPending.value) return;
+      if (!(onViewportScrollBackward?.call() ?? false)) onReaderPrevious();
+    }, [onViewportScrollBackward, onReaderPrevious]);
+
+    // Latest advance callbacks without resubscribing the volume stream every build.
+    final advanceNextRef = useRef(onAdvanceNext);
+    advanceNextRef.value = onAdvanceNext;
+    final advancePreviousRef = useRef(onAdvancePrevious);
+    advancePreviousRef.value = onAdvancePrevious;
+
     final onNextChapter = useCallback(() {
       pushNextChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
@@ -598,20 +617,25 @@ class ReaderWrapper extends HookConsumerWidget {
       return null;
     }, const []);
 
+    // No subscription while the menu is open, so Android handles the keys.
     useEffect(() {
       StreamSubscription<HardwareButton>? subscription;
-      if (volumeTap) {
+      if (volumeTap && !visibility.value) {
         subscription = FlutterAndroidVolumeKeydown.stream.listen(
           (event) => (switch (event) {
             HardwareButton.volume_up =>
-              volumeTapInvert ? onReaderNext() : onReaderPrevious(),
+              volumeTapInvert
+                  ? advanceNextRef.value()
+                  : advancePreviousRef.value(),
             HardwareButton.volume_down =>
-              volumeTapInvert ? onReaderPrevious() : onReaderNext(),
+              volumeTapInvert
+                  ? advancePreviousRef.value()
+                  : advanceNextRef.value(),
           }),
         );
       }
       return () => subscription?.cancel();
-    }, [volumeTap, volumeTapInvert, onReaderNext, onReaderPrevious]);
+    }, [volumeTap, volumeTapInvert, visibility.value]);
 
     final backgroundColor =
         (ref.watch(readerBackgroundColorKeyProvider) ??
@@ -656,11 +680,11 @@ class ReaderWrapper extends HookConsumerWidget {
                   actions: {
                     PreviousScrollIntent: CallbackAction<PreviousScrollIntent>(
                       onInvoke: (intent) =>
-                          invertTap ? onReaderNext() : onReaderPrevious(),
+                          invertTap ? onAdvanceNext() : onAdvancePrevious(),
                     ),
                     NextScrollIntent: CallbackAction<NextScrollIntent>(
                       onInvoke: (intent) =>
-                          invertTap ? onReaderPrevious() : onReaderNext(),
+                          invertTap ? onAdvancePrevious() : onAdvanceNext(),
                     ),
                     PreviousChapterIntent:
                         CallbackAction<PreviousChapterIntent>(
@@ -703,14 +727,14 @@ class ReaderWrapper extends HookConsumerWidget {
                     ViewportScrollForwardIntent:
                         CallbackAction<ViewportScrollForwardIntent>(
                           onInvoke: (intent) {
-                            (onViewportScrollForward ?? onReaderNext)();
+                            onAdvanceNext();
                             return null;
                           },
                         ),
                     ViewportScrollBackwardIntent:
                         CallbackAction<ViewportScrollBackwardIntent>(
                           onInvoke: (intent) {
-                            (onViewportScrollBackward ?? onReaderPrevious)();
+                            onAdvancePrevious();
                             return null;
                           },
                         ),
@@ -771,8 +795,8 @@ class ReaderWrapper extends HookConsumerWidget {
                           mangaId: manga.id,
                           readerScanlatorGroup: readerScanlatorGroup ?? '',
                           mangaReaderPadding: mangaReaderPadding.value,
-                          onNext: onReaderNext,
-                          onPrevious: onReaderPrevious,
+                          onNext: onAdvanceNext,
+                          onPrevious: onAdvancePrevious,
                           onNextBoundary: tryNextChapter,
                           onPreviousBoundary: tryPreviousChapter,
                           hasNextBoundary: () =>
@@ -803,6 +827,11 @@ class ReaderWrapper extends HookConsumerWidget {
                             resolvedReaderMode,
                             scrollDirection,
                             childHandlesGestures,
+                            onHideMenu: () {
+                              if (visibility.value) visibility.value = false;
+                            },
+                            hideMenuOnScroll:
+                                !isPagedReaderMode(resolvedReaderMode),
                           ),
                         ),
                       ),
@@ -867,12 +896,17 @@ class ReaderWrapper extends HookConsumerWidget {
     VoidCallback onPreviousChapter,
     ReaderMode resolvedReaderMode,
     Axis scrollDirection,
-    bool childHandlesGestures,
-  ) {
+    bool childHandlesGestures, {
+    required VoidCallback onHideMenu,
+    required bool hideMenuOnScroll,
+  }) {
+    final Widget scrolledChild = hideMenuOnScroll
+        ? _HideMenuOnUserScroll(onHide: onHideMenu, child: child)
+        : child;
     if (childHandlesGestures ||
         !lastPageSwipeEnabled ||
         readerSwipeChapterToggle) {
-      return child;
+      return scrolledChild;
     }
 
     return _BoundarySwipeDetector(
@@ -882,7 +916,51 @@ class ReaderWrapper extends HookConsumerWidget {
       resolvedReaderMode: resolvedReaderMode,
       scrollDirection: scrollDirection,
       lastPageSwipeEnabled: lastPageSwipeEnabled,
-      child: child,
+      child: scrolledChild,
+    );
+  }
+}
+
+class _HideMenuOnUserScroll extends StatefulWidget {
+  const _HideMenuOnUserScroll({required this.onHide, required this.child});
+
+  final VoidCallback onHide;
+  final Widget child;
+
+  @override
+  State<_HideMenuOnUserScroll> createState() => _HideMenuOnUserScrollState();
+}
+
+class _HideMenuOnUserScrollState extends State<_HideMenuOnUserScroll> {
+  var _armed = false;
+  var _accum = 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollStartNotification) {
+          // Only a finger drag arms tracking; taps, keys and auto-scrolls never set dragDetails.
+          if (notification.dragDetails != null) {
+            _armed = true;
+            _accum = 0;
+          }
+        } else if (notification is ScrollUpdateNotification) {
+          if (_armed) {
+            _accum += notification.scrollDelta?.abs() ?? 0;
+            if (_accum > _kHideMenuOnScrollThreshold) {
+              _armed = false;
+              _accum = 0;
+              widget.onHide();
+            }
+          }
+        } else if (notification is ScrollEndNotification) {
+          _armed = false;
+          _accum = 0;
+        }
+        return false;
+      },
+      child: widget.child,
     );
   }
 }

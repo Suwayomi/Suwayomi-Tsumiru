@@ -533,10 +533,6 @@
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
     },
-    "readerScrollAnimation": "Hoạt ảnh cuộn",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "readerSwipeChapterToggle": "Vuốt chuyển đổi",
     "@readerSwipeChapterToggle": {
         "description": "Switch title to toggle `swipe to change chapter` in reader screen"

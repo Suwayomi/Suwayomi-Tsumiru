@@ -692,10 +692,6 @@
     "@readerModeWebtoon": {
         "description": "Radio button text for Reader Mode Type - Webtoon"
     },
-    "readerScrollAnimation": "Animazione di scorrimento",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
-    },
     "uninstall": "Disinstalla",
     "@uninstall": {
         "description": "Button text to Uninstall the extension"

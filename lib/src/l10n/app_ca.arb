@@ -1162,7 +1162,7 @@
     "@smoothAutoScroll": {
         "description": "Long-strip reader toggle"
     },
-    "scrollAmount": "Distància de desplaçament amb el teclat",
+    "scrollAmount": "Distància de desplaçament",
     "@scrollAmount": {
         "description": "Keyboard scroll step, fraction of the screen"
     },
@@ -2247,10 +2247,6 @@
     "readerPadding": "Farciment del lector",
     "@readerPadding": {
         "description": "Slider title text for Reader Padding"
-    },
-    "readerScrollAnimation": "Animació de desplaçament",
-    "@readerScrollAnimation": {
-        "description": "Switch title to Disable scroll animation in reader screen"
     },
     "readerFeedbackToasts": "Avisos de lectura",
     "@readerFeedbackToasts": {
@@ -3551,7 +3547,6 @@
     "accountNoCodes": "No hi ha codis pendents",
     "accountRole": "Rol",
     "accountBuiltInReadOnly": "El rol i els permisos de l'administrador integrat no es poden canviar.",
-    "accountNoUserRemoval": "Aquest servidor no permet eliminar usuaris actualment.",
     "accountCodeShownOnce": "Copieu aquest codi abans de tancar. No es tornarà a mostrar.",
     "accountCodeExpires": "Caduca el {date}",
     "@accountCodeExpires": {
@@ -4561,5 +4556,14 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "showEmptyCategoriesSearch": "Mostra les categories buides durant la cerca o el filtratge",
+    "@showEmptyCategoriesSearch": {
+        "description": "Library Group checkbox to keep categories with no matching series visible while a search or filter is active"
+    },
+    "savedSearchInvalid": "La cerca desada no és vàlida, els filtres han canviat",
+    "@savedSearchInvalid": {
+        "description": "Toast shown when a saved search no longer matches the source filters."
+    },
+    "perCategorySortAndFilters": "Configuració d'ordenació i filtres per categoria"
 }

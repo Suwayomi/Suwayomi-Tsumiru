@@ -473,14 +473,6 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
-    id: 'scrollAnimation',
-    title: (l) => l.readerScrollAnimation,
-    breadcrumb: (l) => '${l.reader} › ${l.readerGroupReading}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'scrollAnimation').push(c),
-    visible: (_, _) => true,
-  ),
-  SettingsSearchEntry(
     id: 'feedbackToasts',
     title: (l) => l.readerFeedbackToasts,
     subtitle: (l) => l.readerFeedbackToastsSubtitle,

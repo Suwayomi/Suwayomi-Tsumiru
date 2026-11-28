@@ -185,7 +185,10 @@ class AccountCodesScreen extends HookConsumerWidget {
                 child: Column(
                   children: [
                     Padding(
-                      padding: settingsPagePadding(context) ?? EdgeInsets.zero,
+                      padding: settingsPagePadding(
+                        context,
+                        const EdgeInsets.only(top: 16),
+                      )!,
                       child: SettingsGroupCard(
                         children: [
                           ListTile(

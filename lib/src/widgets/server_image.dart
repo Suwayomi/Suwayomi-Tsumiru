@@ -14,7 +14,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../constants/app_sizes.dart';
-import '../constants/endpoints.dart';
 import '../constants/enum.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
@@ -25,13 +24,17 @@ import '../features/settings/presentation/server/widget/client/server_port_tile/
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../global_providers/global_providers.dart';
+import '../utils/cover_decode_image.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/hooks/debounced_hook.dart';
 import '../utils/misc/app_utils.dart';
 import '../utils/motion/reduce_motion.dart';
+import '../utils/network/server_file_url.dart';
 import '../utils/texture_limit.dart';
 import 'cover_cache/cover_cache.dart';
 import 'custom_circular_progress_indicator.dart';
+
+export '../utils/network/server_file_url.dart';
 
 Future<bool> reloadServerImage({
   required Iterable<String> cacheKeys,
@@ -61,37 +64,6 @@ Future<void> retryFailedReaderPages(WidgetRef ref) async {
     for (final reload in {...ref.read(failedReaderPageReloadsProvider)})
       reload(),
   ]);
-}
-
-final _trailingSlashes = RegExp(r'/+$');
-final _leadingSlashes = RegExp(r'^/+');
-
-/// Join server-relative paths without duplicating /api/v1; blank paths return '' and must not be fetched.
-String serverFileUrl({
-  required String path,
-  required String? baseUrl,
-  required int? port,
-  required bool addPort,
-  required bool appendApiToUrl,
-}) {
-  if (path.isEmpty) return '';
-  if (path.startsWith('http://') ||
-      path.startsWith('https://') ||
-      path.startsWith('file://')) {
-    return path;
-  }
-
-  final hasApiPrefix = path.startsWith('/api/') || path.startsWith('api/');
-  final origin = Endpoints.baseApi(
-    baseUrl: baseUrl,
-    port: port,
-    addPort: addPort,
-    appendApiToUrl: appendApiToUrl && !hasApiPrefix,
-  );
-
-  final root = origin.replaceAll(_trailingSlashes, '');
-  final relative = path.replaceAll(_leadingSlashes, '');
-  return '$root/$relative';
 }
 
 /// Web uses URL tokens to avoid CORS preflights; native uses headers to keep tokens out of logs/cache keys.
@@ -137,35 +109,29 @@ String appendUiLoginToken(String url, String? token) {
   return '$url${separator}token=${Uri.encodeQueryComponent(token)}';
 }
 
-/// Absolute http(s) URL hosted anywhere but the configured server; those load
-/// with no server credentials, so an unparsable server matches nothing.
-bool isExternalImageUrl({
-  required String imageUrl,
-  required String? baseUrl,
-  required int? port,
-  required bool addPort,
-}) {
-  final uri = Uri.tryParse(imageUrl);
-  if (uri == null ||
-      (uri.scheme != 'http' && uri.scheme != 'https') ||
-      uri.host.isEmpty) {
-    return false;
-  }
-  final server = Uri.tryParse(
-    Endpoints.baseApi(
-      baseUrl: baseUrl,
-      port: port,
-      addPort: addPort,
-      appendApiToUrl: false,
+/// Fades an image in over [placeholder] without loosening the constraints it
+/// gets. AnimatedSwitcher's default layout is a loose Stack, which would let an
+/// unsized Image shrink to its own shape inside a fixed tile.
+ImageFrameBuilder coverFadeFrameBuilder(
+  Duration duration,
+  WidgetBuilder placeholder,
+) => (context, child, frame, wasSynchronouslyLoaded) {
+  if (wasSynchronouslyLoaded) return child;
+  return AnimatedSwitcher(
+    duration: duration,
+    layoutBuilder: (current, previous) => Stack(
+      fit: StackFit.passthrough,
+      alignment: Alignment.center,
+      children: [...previous, ?current],
     ),
+    child: frame == null
+        ? KeyedSubtree(
+            key: const ValueKey('loading'),
+            child: placeholder(context),
+          )
+        : child,
   );
-  if (server == null ||
-      (server.scheme != 'http' && server.scheme != 'https') ||
-      server.host.isEmpty) {
-    return true;
-  }
-  return uri.origin != server.origin;
-}
+};
 
 class ServerImage extends HookConsumerWidget {
   const ServerImage({
@@ -182,6 +148,7 @@ class ServerImage extends HookConsumerWidget {
     this.cropBorders = false,
     this.memCacheWidth,
     this.memCacheHeight,
+    this.decodeToCover = false,
     this.fallbackImageUrl,
     this.coverVersion,
     this.fallbackCoverVersion,
@@ -212,6 +179,11 @@ class ServerImage extends HookConsumerWidget {
   /// Display-pixel decode size (logical × DPR); one dimension preserves aspect ratio.
   final int? memCacheWidth;
   final int? memCacheHeight;
+
+  /// With both [memCacheWidth] and [memCacheHeight], decode just large enough
+  /// to cover that box (see [CoverDecodeImage]) instead of capping one side.
+  /// For images drawn with [BoxFit.cover] whose shape may differ from the box.
+  final bool decodeToCover;
 
   ImageProvider _capDecode(ImageProvider base, int? width, int? height) {
     final capped = (width == null && height == null)
@@ -462,6 +434,7 @@ class ServerImage extends HookConsumerWidget {
             fit: fit,
             memCacheWidth: cacheWidth,
             memCacheHeight: cacheHeight,
+            decodeToCover: decodeToCover,
           ),
         );
       }
@@ -475,6 +448,7 @@ class ServerImage extends HookConsumerWidget {
             fit: fit,
             memCacheWidth: cacheWidth,
             memCacheHeight: cacheHeight,
+            decodeToCover: decodeToCover,
             coverVersion: fallbackCoverVersion ?? coverVersion,
           ),
         );
@@ -594,6 +568,48 @@ class ServerImage extends HookConsumerWidget {
     final fadeDuration = context.reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 150);
+
+    // cached_network_image can only cap one side or stretch to both, so cover
+    // decoding goes through an Image with the cover-sized provider instead.
+    if (decodeToCover &&
+        imageBuilder == null &&
+        cacheWidth != null &&
+        cacheHeight != null) {
+      final provider = TextureLimitedImageProvider(
+        CoverDecodeImage(
+          CachedNetworkImageProvider(
+            fetchUrl,
+            cacheKey: cacheKey,
+            cacheManager: cacheManager,
+            headers: httpHeaders,
+            // Like the CachedNetworkImage path below: HtmlImage on web would
+            // skip the headers, the cache manager and the cover decode.
+            imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
+          ),
+          width: cacheWidth,
+          height: cacheHeight,
+        ),
+      );
+      return KeyedSubtree(
+        key: ValueKey(cacheManager),
+        child: Image(
+          key: key.value,
+          image: provider,
+          width: size?.width,
+          height: size?.height,
+          fit: fit ?? BoxFit.cover,
+          frameBuilder: coverFadeFrameBuilder(
+            fadeDuration,
+            (ctx) => finalProgressIndicatorBuilder(
+              ctx,
+              fetchUrl,
+              DownloadProgress(fetchUrl, null, 0),
+            ),
+          ),
+          errorBuilder: (ctx, error, stack) => errorWidget(ctx, '', stack),
+        ),
+      );
+    }
     // Changing managers must invalidate the widget load even if the cache key is unchanged.
     return KeyedSubtree(
       key: ValueKey(cacheManager),

@@ -274,7 +274,7 @@ class ReaderScreen extends HookConsumerWidget {
     }, [readerOrientation]);
 
     // Release only a wakelock acquired by this reader; ignore platform transition errors.
-    final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(true);
+    final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(false);
     useEffect(() {
       if (!keepScreenOn) return null;
       WakelockPlus.enable().ignore();
