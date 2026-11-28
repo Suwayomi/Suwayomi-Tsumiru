@@ -10,16 +10,13 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../../../constants/endpoints.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../manga_book/presentation/manga_details/server_web_url.dart';
 import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart'
     show ChapterMenuRow;
-import '../../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
-import '../../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/source/source_model.dart';
 import '../../extension/widgets/extension_info_dialog.dart';
@@ -72,20 +69,6 @@ Future<void> toggleSourcePin(BuildContext context, SourceDto source) async {
       container.read(toastProvider)?.showError(e.toString());
     }
   }
-}
-
-void openSourceHomepage(BuildContext context, WidgetRef ref, String? homeUrl) {
-  if (homeUrl.isBlank) return;
-  final api = Endpoints.baseApi(
-    baseUrl: ref.read(serverUrlProvider),
-    port: ref.read(serverPortProvider),
-    addPort: ref.read(serverPortToggleProvider).ifNull(),
-  );
-  launchUrlInWeb(
-    context,
-    '${api.endsWith('/') ? api : '$api/'}webview#$homeUrl',
-    ref.read(toastProvider),
-  );
 }
 
 Future<void> showSourceContextMenu({
@@ -157,7 +140,7 @@ Future<void> showSourceContextMenu({
         ),
       if (source.homeUrl.isNotBlank)
         PopupMenuItem(
-          onTap: () => openSourceHomepage(context, ref, source.homeUrl),
+          onTap: () => openServerWebView(context, ref, source.homeUrl),
           child: ChapterMenuRow(
             icon: FluentIcons.globe_24_regular,
             label: context.l10n.openHomepage,

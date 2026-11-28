@@ -24,11 +24,11 @@ import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../library/presentation/library/widgets/desktop_library_panels.dart';
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../manga_book/presentation/manga_details/server_web_url.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/source/source_model.dart';
 import '../source/controller/source_controller.dart';
-import '../source/widgets/source_context_menu.dart';
 import 'controller/source_manga_controller.dart';
 import 'source_page_sequence.dart';
 import 'widgets/desktop_source_display_panel.dart';
@@ -205,7 +205,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
               itemBuilder: (_) => [
                 PopupMenuItem<void>(
                   onTap: () =>
-                      openSourceHomepage(context, ref, data!.homeUrl),
+                      openServerWebView(context, ref, data!.homeUrl),
                   child: Text(context.l10n.openHomepage),
                 ),
               ],
@@ -375,7 +375,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
           );
 
           void openWebView() {
-            openSourceHomepage(context, ref, data?.homeUrl);
+            openServerWebView(context, ref, data?.homeUrl);
           }
 
           Widget switcherButton({

@@ -51,7 +51,6 @@ class ReaderTopBar extends ConsumerWidget {
         koSyncOnline(ref) &&
         ref.watch(koSyncStatusProvider).value?.isLoggedIn == true;
     final link = chapter.realUrl.isNotBlank ? chapter.realUrl : chapter.url;
-    final serverMangaUrl = serverMangaWebUrl(ref, manga.id);
     final systemTopInset = MediaQuery.viewPaddingOf(context).top;
 
     return Material(
@@ -96,13 +95,7 @@ class ReaderTopBar extends ConsumerWidget {
                   case 'retry':
                     await retryFailedReaderPages(ref);
                   case 'web':
-                    if (serverMangaUrl != null) {
-                      launchUrlInWeb(
-                        context,
-                        '${serverMangaUrl.substring(0, serverMangaUrl.lastIndexOf('/manga/'))}/api/v1/webview#$link',
-                        ref.read(toastProvider),
-                      );
-                    }
+                    openServerWebView(context, ref, link);
                   case 'share':
                     if (link.isBlank) return;
                     if (kIsWeb || isDesktopPlatform) {
@@ -140,7 +133,7 @@ class ReaderTopBar extends ConsumerWidget {
                 ),
                 PopupMenuItem(
                   value: 'web',
-                  enabled: serverMangaUrl != null && link.isNotBlank,
+                  enabled: link.isNotBlank,
                   child: ChapterMenuRow(
                     icon: FluentIcons.globe_24_regular,
                     label: context.l10n.openChapterInWebView,
